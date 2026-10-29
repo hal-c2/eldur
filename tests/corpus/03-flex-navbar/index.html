@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flex Navbar Test</title>
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #1a1f2b;
+  background: #ffffff;
+}
+
+.site-header {
+  background: #ffffff;
+  border-bottom: 1px solid #e3e7ee;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px 32px;
+}
+
+.logo {
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #1a1f2b;
+  text-decoration: none;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nav-links a {
+  color: #3d4659;
+  text-decoration: none;
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.nav-links a:hover {
+  color: #0b5cad;
+}
+
+.btn {
+  display: inline-block;
+  padding: 0.625rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: #0b5cad;
+  color: #ffffff;
+  border-color: #0b5cad;
+}
+
+.btn-primary:hover {
+  background: #094a8a;
+  border-color: #094a8a;
+  transition: background 150ms ease-out;
+}
+
+.btn-outline {
+  background: #ffffff;
+  color: #0b5cad;
+  border-color: #0b5cad;
+}
+
+.btn-outline:hover {
+  background: #eef5fc;
+}
+
+.nav-cta {
+  padding: 0.5rem 1rem;
+}
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  min-height: 520px;
+  padding: 64px 32px;
+  text-align: center;
+  background: linear-gradient(180deg, #f4f8fd 0%, #e6eef9 100%);
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #0b5cad;
+}
+
+.hero h1 {
+  margin: 0;
+  max-width: 720px;
+  font-size: 3rem;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: #111827;
+}
+
+.hero-lead {
+  margin: 0;
+  max-width: 560px;
+  font-size: 1.125rem;
+  color: #4b5567;
+}
+
+.hero-actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.hero-actions .btn {
+  padding: 0.875rem 1.75rem;
+  font-size: 1rem;
+}
+
+.hero-note {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7589;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #c9d8ec;
+  font-size: 0.8125rem;
+  color: #334155;
+}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <nav class="navbar">
+    <a class="logo" href="#">Lumen</a>
+    <ul class="nav-links">
+      <li><a href="#">Product</a></li>
+      <li><a href="#">Solutions</a></li>
+      <li><a href="#">Pricing</a></li>
+      <li><a href="#">Docs</a></li>
+      <li><a class="btn btn-primary nav-cta" href="#">Sign up</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <span class="badge">New: version 4 is here</span>
+    <p class="eyebrow">Analytics for small teams</p>
+    <h1>See what your customers do, before they leave</h1>
+    <p class="hero-lead">Lumen turns page views, clicks and sign-ups into a single clear picture, with no tagging plan required.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#">Start free trial</a>
+      <a class="btn btn-outline" href="#">Watch the demo</a>
+    </div>
+    <p class="hero-note">No credit card needed. Cancel at any time.</p>
+  </section>
+</main>
+</body>
+</html>

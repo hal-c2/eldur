@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block Flow Test</title>
+<style>
+body {
+  margin: 0;
+  font-family: sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #1f2430;
+  background: #f5f6f8;
+}
+
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.hero {
+  margin-top: 32px;
+  padding: 1.5em 2em;
+  background: #e9eef6;
+  border: 1px solid #b8c4d6;
+}
+
+.hero h1 {
+  margin: 0.67em 0;
+  font-size: 2em;
+  line-height: 1.2;
+}
+
+.hero p {
+  margin: 0;
+}
+
+.section {
+  margin: 24px 0;
+  padding: 16px 20px;
+  background: #ffffff;
+  border: 1px solid #d0d7e2;
+}
+
+.section h2 {
+  margin: 0 0 0.5em;
+  font-size: 1.25em;
+}
+
+.section p {
+  margin: 0 0 1em;
+}
+
+.section p:last-child {
+  margin-bottom: 0;
+}
+
+.section--accent {
+  border-left: 4px solid #0b5cad;
+}
+
+.section--tinted {
+  background: #f0f7ee;
+  border-color: #b9d6b0;
+}
+
+.section--plain {
+  background: #fff8e6;
+  border: none;
+  padding: 1rem 1.5rem;
+}
+
+.half {
+  width: 50%;
+  margin-bottom: 24px;
+  padding: 12px 16px;
+  background: #eef0f4;
+  border: 1px solid #c4cad6;
+}
+
+.half-row {
+  overflow: hidden;
+}
+
+.half-row .half {
+  float: left;
+}
+
+.half-row .half + .half {
+  float: right;
+}
+
+.fixed-box {
+  width: 480px;
+  margin: 0 auto 24px;
+  padding: 1em;
+  background: #f6f1e4;
+  border: 1px solid #d8c9a0;
+}
+
+.border-box {
+  box-sizing: border-box;
+  width: 320px;
+  margin: 0 auto;
+  padding: 2em;
+  background: #e8e3f5;
+  border: 6px solid #4b3f7a;
+}
+
+.border-box p {
+  margin: 0;
+}
+
+.em-padded {
+  padding: 1em 1.5em;
+  font-size: 0.9rem;
+  background: #fdf0f0;
+  border: 1px solid #e0b4b4;
+}
+
+.collapse-parent {
+  margin-top: 16px;
+  padding-bottom: 8px;
+  background: #f2f2f2;
+}
+
+.collapse-parent h3 {
+  margin: 1.25em 0 0.5em;
+  font-size: 1.05em;
+}
+
+.collapse-parent p {
+  margin: 0 0 0.75em;
+}
+
+.footer {
+  margin: 0 0 32px;
+  padding: 12px 0;
+  font-size: 0.875em;
+  color: #5b6375;
+  border-top: 1px solid #d0d7e2;
+}
+
+.footer p {
+  margin: 0;
+}
+
+.clearfix::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="hero">
+    <h1>Block flow</h1>
+    <p>Nested block boxes, collapsing margins, and widths in normal flow.</p>
+  </header>
+
+  <section class="section section--accent">
+    <h2>Collapsing margins between siblings</h2>
+    <p>Adjacent sections are separated by a 24px margin. The gap is 24px, not 48px, because the bottom margin of one section and the top margin of the next collapse into one.</p>
+    <p>This paragraph sits inside the section and has a one-em bottom margin.</p>
+  </section>
+
+  <section class="section section--tinted">
+    <h2>Padding in pixels and ems</h2>
+    <p>The outer padding is set in pixels. The box below uses <code>padding: 1em 1.5em</code> and a slightly smaller font, so its spacing scales with its own text.</p>
+    <div class="em-padded">
+      Padding in em units follows the element's own font size, which is 0.9rem here.
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Half-width columns</h2>
+    <div class="clearfix half-row">
+      <div class="half">
+        Left column with width 50 percent of the containing block.
+      </div>
+      <div class="half">
+        Right column, also 50 percent wide, floated to the right edge.
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--plain">
+    <h2>Fixed width, centred</h2>
+    <div class="fixed-box">
+      A 480 pixel box with <code>margin: 0 auto</code> centres itself in the page wrapper, so the free space is split equally on both sides.
+    </div>
+    <div class="border-box">
+      <p>Border-box sizing: this 320 pixel box includes its 2em padding and 6 pixel border in that width.</p>
+    </div>
+  </section>
+
+  <div class="collapse-parent">
+    <h3>Parent and first child</h3>
+    <p>The heading's top margin collapses through the grey parent, so the parent's top edge sits at the margin set on the parent itself and the heading appears flush with it.</p>
+    <p>The parent has no top padding or border, which is why the collapse happens.</p>
+  </div>
+
+  <footer class="footer">
+    <p>End of block flow test.</p>
+  </footer>
+</div>
+</body>
+</html>

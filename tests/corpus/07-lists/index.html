@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lists and Definitions</title>
+  <style>
+    :root {
+      --bg: #f5f6fa;
+      --surface: #ffffff;
+      --ink: #1d2233;
+      --muted: #5f6880;
+      --line: #e1e5ee;
+      --accent: #3550d6;
+      --tag-bg: #e6ebff;
+      --tag-ink: #2a3ea6;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    .page-title {
+      margin: 0 0 4px;
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .page-lead {
+      margin: 0 0 24px;
+      color: var(--muted);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .card {
+      padding: 22px 24px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    .card + .card {
+      margin-top: 24px;
+    }
+
+    .card-title {
+      margin: 0 0 12px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .list-square {
+      margin: 0;
+      padding-left: 24px;
+      list-style-type: square;
+    }
+
+    .list-square > li {
+      margin-bottom: 8px;
+    }
+
+    .list-roman {
+      margin: 6px 0 0;
+      padding-left: 24px;
+      list-style-type: lower-roman;
+    }
+
+    .list-roman > li {
+      margin-bottom: 6px;
+    }
+
+    .list-none {
+      margin: 6px 0 0;
+      padding-left: 0;
+      list-style-type: none;
+    }
+
+    .list-none > li {
+      position: relative;
+      padding-left: 16px;
+      color: var(--muted);
+    }
+
+    .list-none > li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.6em;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .list-alpha {
+      margin: 0;
+      padding-left: 24px;
+      list-style-type: upper-alpha;
+    }
+
+    .list-alpha > li {
+      margin-bottom: 6px;
+    }
+
+    .faq {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 14px 24px;
+      margin: 0;
+    }
+
+    .faq dt {
+      font-weight: 600;
+    }
+
+    .faq dd {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .tags a {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: var(--tag-bg);
+      color: var(--tag-ink);
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .tags a:hover {
+      background: #d3dcff;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1 class="page-title">Release checklist</h1>
+    <p class="page-lead">Notes for the spring release, with nested steps and common questions.</p>
+
+    <div class="layout">
+      <div>
+        <section class="card">
+          <h2 class="card-title">Nested steps</h2>
+          <ul class="list-square">
+            <li>Plan the release
+              <ol class="list-roman">
+                <li>Freeze the feature set
+                  <ul class="list-none">
+                    <li>Review open issues</li>
+                    <li>Tag the milestone</li>
+                  </ul>
+                </li>
+                <li>Write release notes</li>
+              </ol>
+            </li>
+            <li>Build and sign the packages</li>
+            <li>Publish to the stores</li>
+          </ul>
+        </section>
+
+        <section class="card">
+          <h2 class="card-title">Review order</h2>
+          <ol class="list-alpha">
+            <li>Design sign-off</li>
+            <li>Security review</li>
+            <li>Accessibility pass</li>
+            <li>Localization check</li>
+          </ol>
+        </section>
+      </div>
+
+      <div>
+        <section class="card">
+          <h2 class="card-title">Frequently asked questions</h2>
+          <dl class="faq">
+            <dt>Who approves a release?</dt>
+            <dd>The release manager, after the three sign-offs above are recorded.</dd>
+
+            <dt>How long does a build take?</dt>
+            <dd>About twelve minutes on a clean cache, under three with it warm.</dd>
+
+            <dt>Can I skip the accessibility pass?</dt>
+            <dd>No. It is required for every public-facing change.</dd>
+
+            <dt>Where are the release notes kept?</dt>
+            <dd>In the docs repository, under the current version folder.</dd>
+          </dl>
+        </section>
+
+        <section class="card">
+          <h2 class="card-title">Topics</h2>
+          <ul class="tags">
+            <li><a href="#">Performance</a></li>
+            <li><a href="#">Accessibility</a></li>
+            <li><a href="#">Localization</a></li>
+            <li><a href="#">Security</a></li>
+            <li><a href="#">Release notes</a></li>
+            <li><a href="#">Rollback</a></li>
+            <li><a href="#">Telemetry</a></li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flex Wrap Product Cards</title>
+  <style>
+    :root {
+      --bg: #f3f4f8;
+      --surface: #ffffff;
+      --text: #1c2130;
+      --muted: #5c6378;
+      --accent: #3550d6;
+      --border: #e2e5ee;
+      --radius: 12px;
+      --shadow: 0 2px 10px rgba(22, 32, 68, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    .site-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 72px;
+      padding: 0 32px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .site-nav {
+      display: flex;
+      gap: 24px;
+    }
+
+    .site-nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 15px;
+    }
+
+    .page {
+      padding: 32px;
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .page-subtitle {
+      margin: 4px 0 24px;
+      color: var(--muted);
+    }
+
+    .product-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 24px;
+    }
+
+    .card {
+      display: flex;
+      flex-direction: column;
+      width: 280px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-media {
+      height: 120px;
+    }
+
+    .card-media--coral {
+      background: linear-gradient(135deg, #ff9a8b 0%, #ff6a88 100%);
+    }
+
+    .card-media--ocean {
+      background: linear-gradient(135deg, #56ccf2 0%, #2f80ed 100%);
+    }
+
+    .card-media--sunset {
+      background: linear-gradient(160deg, #f6d365 0%, #fda085 100%);
+    }
+
+    .card-media--forest {
+      background: linear-gradient(135deg, #85d8a8 0%, #1f8a5b 100%);
+    }
+
+    .card-media--violet {
+      background: linear-gradient(135deg, #c3a6ff 0%, #6a4bd8 100%);
+    }
+
+    .card-media--amber {
+      background: linear-gradient(135deg, #ffe29a 0%, #f2a518 100%);
+    }
+
+    .card-body {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      padding: 16px 20px 20px;
+    }
+
+    .card-title {
+      margin: 0 0 4px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .card-price {
+      margin: 0 0 8px;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .card-text {
+      margin: 0 0 16px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .card-button {
+      margin-top: auto;
+      width: 100%;
+      padding: 12px 16px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .card-button:hover {
+      background: #2b43b8;
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">Lumen Goods</div>
+    <nav class="site-nav">
+      <a href="#">New</a>
+      <a href="#">Lighting</a>
+      <a href="#">Textiles</a>
+      <a href="#">Cart (2)</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <h1 class="page-title">Home essentials</h1>
+    <p class="page-subtitle">Hand-picked pieces for every room.</p>
+
+    <section class="product-grid">
+      <article class="card">
+        <div class="card-media card-media--coral"></div>
+        <div class="card-body">
+          <h2 class="card-title">Aurora Desk Lamp</h2>
+          <p class="card-price">$68.00</p>
+          <p class="card-text">Dimmable light with a bendable arm and USB-C charging.</p>
+          <button class="card-button" type="button">Add to cart</button>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-media card-media--ocean"></div>
+        <div class="card-body">
+          <h2 class="card-title">Tidewater Vase</h2>
+          <p class="card-price">$42.50</p>
+          <p class="card-text">Glazed stoneware with a soft, wave-like rim.</p>
+          <button class="card-button" type="button">Add to cart</button>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-media card-media--sunset"></div>
+        <div class="card-body">
+          <h2 class="card-title">Dune Throw Blanket</h2>
+          <p class="card-price">$96.00</p>
+          <p class="card-text">Brushed cotton with a woven stripe in warm tones.</p>
+          <button class="card-button" type="button">Add to cart</button>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-media card-media--forest"></div>
+        <div class="card-body">
+          <h2 class="card-title">Fern Planter</h2>
+          <p class="card-price">$29.90</p>
+          <p class="card-text">Matte ceramic pot with a removable drainage tray.</p>
+          <button class="card-button" type="button">Add to cart</button>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-media card-media--violet"></div>
+        <div class="card-body">
+          <h2 class="card-title">Lilac Wall Clock</h2>
+          <p class="card-price">$54.00</p>
+          <p class="card-text">Silent quartz movement on a thin brushed frame.</p>
+          <button class="card-button" type="button">Add to cart</button>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-media card-media--amber"></div>
+        <div class="card-body">
+          <h2 class="card-title">Ember Candle Set</h2>
+          <p class="card-price">$36.00</p>
+          <p class="card-text">Three soy candles with cedar and amber notes.</p>
+          <button class="card-button" type="button">Add to cart</button>
+        </div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

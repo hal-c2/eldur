@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Why we stopped rewriting our build system every two years</title>
+  <style>
+    :root {
+      --ink: #1f1d1a;
+      --muted: #6e675e;
+      --paper: #fbf9f4;
+      --rule: #e4ded2;
+      --accent: #b4442c;
+      --code-bg: #f0ebe0;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: serif;
+      font-size: 19px;
+      line-height: 1.75;
+      color: var(--ink);
+      background: var(--paper);
+    }
+
+    h1, h2, h3, .site-name, .nav-links, .category, .byline, .related-title, figcaption {
+      font-family: sans-serif;
+    }
+
+    p {
+      margin: 0 0 1.3em;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    /* Site header */
+
+    .site-header {
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1000px;
+      height: 64px;
+      padding-inline: 24px;
+      margin-inline: auto;
+    }
+
+    .site-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 24px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    /* Article header */
+
+    .article {
+      max-width: 680px;
+      padding: 56px 24px 80px;
+      margin-inline: auto;
+    }
+
+    .category {
+      margin: 0 0 16px;
+      color: var(--accent);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .article h1 {
+      margin: 0 0 24px;
+      font-size: 2.75rem;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+    }
+
+    .byline {
+      margin: 0 0 40px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--rule);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .author {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    .lead {
+      font-size: 1.3rem;
+      line-height: 1.6;
+      color: #3a3731;
+    }
+
+    .lead::first-letter {
+      float: left;
+      margin: 6px 10px 0 0;
+      font-size: 3.4rem;
+      line-height: 1;
+      color: var(--accent);
+    }
+
+    /* Body */
+
+    .prose h2 {
+      margin: 2.2em 0 0.6em;
+      font-size: 1.55rem;
+      line-height: 1.25;
+    }
+
+    code {
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: var(--code-bg);
+      font-family: monospace;
+      font-size: 0.85em;
+    }
+
+    .pull-quote {
+      margin: 2.2em -48px;
+      padding: 8px 0 8px 28px;
+      border-left: 4px solid var(--accent);
+      font-size: 1.5rem;
+      font-style: italic;
+      line-height: 1.45;
+      color: #2b2823;
+    }
+
+    .figure {
+      margin: 2.4em 0;
+    }
+
+    .figure-art {
+      height: 280px;
+      border-radius: 6px;
+      background:
+        linear-gradient(160deg, rgba(255, 255, 255, 0) 40%, rgba(31, 29, 26, 0.25) 100%),
+        linear-gradient(120deg, #e8a87c 0%, #c38d9e 45%, #41b3a3 100%);
+    }
+
+    figcaption {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .note {
+      margin: 2em 0;
+      padding: 18px 24px;
+      border-left: 4px solid #3c6e71;
+      background: #eef3f2;
+      font-size: 0.95em;
+    }
+
+    .note p {
+      margin: 0;
+    }
+
+    .note strong {
+      font-family: sans-serif;
+      color: #2f5558;
+    }
+
+    .steps {
+      margin: 0 0 2em;
+      padding: 0;
+      list-style: none;
+      counter-reset: step;
+    }
+
+    .steps li {
+      position: relative;
+      margin-bottom: 14px;
+      padding-left: 44px;
+      counter-increment: step;
+    }
+
+    .steps li::before {
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      top: 2px;
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--ink);
+      color: var(--paper);
+      font-family: sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    /* Related posts */
+
+    .related {
+      margin-top: 72px;
+      padding-top: 40px;
+      border-top: 1px solid var(--rule);
+    }
+
+    .related-title {
+      margin: 0 0 24px;
+      font-size: 1.1rem;
+    }
+
+    .related-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .related-card h3 {
+      margin: 0 0 6px;
+      font-size: 1rem;
+      line-height: 1.35;
+    }
+
+    .related-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="site-name" href="#">The Long Read</a>
+      <nav class="nav-links">
+        <a href="#">Engineering</a>
+        <a href="#">Design</a>
+        <a href="#">Culture</a>
+        <a href="#">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="article">
+    <header>
+      <p class="category">Engineering</p>
+      <h1>Why we stopped rewriting our build system every two years</h1>
+      <p class="byline">
+        By <span class="author">Maya Chen</span> &middot;
+        <time datetime="2026-10-12">12 October 2026</time> &middot; 9 min read
+      </p>
+    </header>
+
+    <p class="lead">Every few years our team felt the same itch: the build was slow, the configuration had grown brittle, and someone had found a newer tool that promised to fix everything. We rewrote it three times before we understood the real problem.</p>
+
+    <div class="prose">
+      <p>The first rewrite moved us from a set of hand-written scripts to a single orchestrator. It worked for a while. Then the scripts came back in the form of <code>pre-build.sh</code> hooks, one for each team, each with its own idea of what a clean checkout means.</p>
+
+      <p>The second rewrite replaced the orchestrator with a faster one. Builds dropped from eleven minutes to four, and everyone celebrated. Six months later, the cache was returning stale artifacts for about one change in fifty, and nobody could say which change.</p>
+
+      <blockquote class="pull-quote">
+        The tool was never the problem. We kept changing the tool because it was easier than agreeing on what a build is supposed to guarantee.
+      </blockquote>
+
+      <p>The third time we started with a question instead of a tool: what must be true about an artifact before we are allowed to ship it? The answer was short. A build must be reproducible from its inputs, and every input must be declared.</p>
+
+      <figure class="figure">
+        <div class="figure-art" role="img" aria-label="Abstract gradient placeholder"></div>
+        <figcaption>Figure 1. Build time per commit before and after the declared-inputs change, sampled across four weeks.</figcaption>
+      </figure>
+
+      <aside class="note">
+        <p><strong>Note.</strong> Declared inputs are not the same as fast builds. The speedup came from the cache finally being trustworthy, which let us stop disabling it on CI.</p>
+      </aside>
+
+      <h2>The steps we took</h2>
+
+      <ol class="steps">
+        <li>Listed every file, environment variable and tool version that a build reads, and removed the ones nobody could justify.</li>
+        <li>Hashed those inputs and used the hash as the only cache key, with no timestamps involved.</li>
+        <li>Ran each build twice on separate machines and failed the pipeline if the outputs differed.</li>
+        <li>Moved the per-team hooks into the repository as declared steps, so they show up in review like any other change.</li>
+      </ol>
+
+      <p>None of these steps is novel. The discipline was in refusing to skip the first one when the tooling made it tempting to jump straight to the second.</p>
+    </div>
+
+    <section class="related">
+      <h2 class="related-title">Related posts</h2>
+      <div class="related-grid">
+        <article class="related-card">
+          <h3>Caching is a contract, not an optimisation</h3>
+          <p>How a single missing input turned a fast cache into a source of silent bugs.</p>
+        </article>
+        <article class="related-card">
+          <h3>Reproducible builds for small teams</h3>
+          <p>A practical checklist for getting identical outputs without a dedicated platform group.</p>
+        </article>
+        <article class="related-card">
+          <h3>Reviewing infrastructure changes</h3>
+          <p>Why we treat build configuration as code that deserves the same scrutiny as product code.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

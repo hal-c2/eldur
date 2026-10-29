@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hover, active and focus states</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 40px;
+      background: #f4f6fa;
+      color: #1f2937;
+      font-family: sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 26px;
+    }
+
+    .lead {
+      margin: 0 0 28px;
+      color: #5b6478;
+    }
+
+    .section {
+      margin-bottom: 32px;
+    }
+
+    .section__title {
+      margin: 0 0 12px;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #6b7280;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      font: inherit;
+      font-weight: 600;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.2s;
+    }
+
+    .btn:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(59, 111, 224, 0.35);
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn--primary {
+      background: #3b6fe0;
+      color: #ffffff;
+    }
+
+    .btn--primary:hover {
+      background: #2d5bc4;
+    }
+
+    .btn--secondary {
+      background: #ffffff;
+      color: #1f2937;
+      border-color: #cfd6e4;
+    }
+
+    .btn--secondary:hover {
+      background: #e9eef8;
+    }
+
+    .btn--ghost {
+      background: transparent;
+      color: #3b6fe0;
+    }
+
+    .btn--ghost:hover {
+      background: rgba(59, 111, 224, 0.1);
+    }
+
+    .btn:disabled {
+      background: #e5e7eb;
+      color: #9ca3af;
+      border-color: #e5e7eb;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .lift-card {
+      padding: 22px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .lift-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 14px 28px rgba(20, 30, 60, 0.18);
+    }
+
+    .lift-card h3 {
+      margin: 0 0 6px;
+      font-size: 17px;
+    }
+
+    .lift-card p {
+      margin: 0;
+      color: #5b6478;
+    }
+
+    .link {
+      color: #3b6fe0;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .link:hover {
+      text-decoration: underline;
+    }
+
+    .columns {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 32px;
+      align-items: start;
+    }
+
+    .menu {
+      list-style: none;
+      margin: 0;
+      padding: 8px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+
+    .item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .item:hover {
+      background: #f1f5ff;
+    }
+
+    .icon {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      background: #9aa3b5;
+      transition: background-color 0.2s;
+    }
+
+    .item:hover .icon {
+      background: #3b6fe0;
+    }
+
+    .item__label {
+      color: #1f2937;
+    }
+  </style>
+</head>
+<body>
+  <h1>Interaction states</h1>
+  <p class="lead">Hover, press and focus each control to see its styles. Disabled and link states are included.</p>
+
+  <section class="section">
+    <h2 class="section__title">Buttons</h2>
+    <div class="button-row">
+      <button class="btn btn--primary" type="button">Primary</button>
+      <button class="btn btn--secondary" type="button">Secondary</button>
+      <button class="btn btn--ghost" type="button">Ghost</button>
+      <button class="btn btn--primary" type="button" disabled>Disabled</button>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="section__title">Cards</h2>
+    <div class="cards">
+      <article class="lift-card">
+        <h3>Analytics</h3>
+        <p>Track visits, conversions and retention across your pages.</p>
+      </article>
+      <article class="lift-card">
+        <h3>Releases</h3>
+        <p>Publish versioned builds and roll back in one click.</p>
+      </article>
+      <article class="lift-card">
+        <h3>Billing</h3>
+        <p>Review invoices, usage and upcoming payments.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="section columns">
+    <div>
+      <h2 class="section__title">Links</h2>
+      <p><a class="link" href="#">Read the documentation</a></p>
+      <p><a class="link" href="#">View the changelog</a></p>
+      <p><a class="link" href="#">Contact support</a></p>
+    </div>
+
+    <div>
+      <h2 class="section__title">Menu</h2>
+      <ul class="menu">
+        <li class="item"><span class="icon"></span><span class="item__label">Dashboard</span></li>
+        <li class="item"><span class="icon"></span><span class="item__label">Projects</span></li>
+        <li class="item"><span class="icon"></span><span class="item__label">Members</span></li>
+        <li class="item"><span class="icon"></span><span class="item__label">Settings</span></li>
+      </ul>
+    </div>
+  </section>
+</body>
+</html>

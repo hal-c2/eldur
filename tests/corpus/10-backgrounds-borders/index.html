@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Backgrounds and borders gallery</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 36px 40px;
+      background: #fafafa;
+      color: #222;
+      font-family: sans-serif;
+    }
+
+    .page-title {
+      margin: 0 0 6px;
+      font-size: 26px;
+      font-weight: 700;
+    }
+
+    .page-lead {
+      margin: 0 0 28px;
+      color: #666;
+      font-size: 15px;
+    }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 28px 24px;
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    .cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .box {
+      width: 200px;
+      height: 130px;
+      background: #ffffff;
+      border: 2px solid #333;
+    }
+
+    .caption {
+      margin: 0;
+      font-size: 13px;
+      color: #555;
+      text-align: center;
+    }
+
+    /* Rounded corners with a 45 degree angle gradient */
+    .b1 {
+      border: none;
+      border-radius: 16px;
+      background: linear-gradient(45deg, #ff7e5f, #feb47b);
+    }
+
+    /* Per-corner radii and a dashed border */
+    .b2 {
+      background: #e8f0ff;
+      border: 3px dashed #3b6fe0;
+      border-radius: 40px 6px 40px 6px;
+    }
+
+    /* Circle with a dotted border */
+    .b3 {
+      width: 130px;
+      height: 130px;
+      border: 3px dotted #2e8b57;
+      border-radius: 50%;
+      background: #e6f7ec;
+    }
+
+    /* Double border with a different colour on each side */
+    .b4 {
+      border-style: double;
+      border-width: 6px;
+      border-color: #e74c3c #3b6fe0 #2ecc71 #f1c40f;
+      background: #ffffff;
+    }
+
+    /* Outer and inset shadows layered together */
+    .b5 {
+      border: none;
+      border-radius: 12px;
+      background: #ffffff;
+      box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.1),
+        0 8px 20px rgba(0, 0, 0, 0.15),
+        inset 0 -6px 12px rgba(59, 111, 224, 0.25);
+    }
+
+    /* Linear gradient running to the right */
+    .b6 {
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(to right, #11998e, #38ef7d);
+    }
+
+    /* Radial gradient with an offset outline */
+    .b7 {
+      border: none;
+      border-radius: 8px;
+      background: radial-gradient(circle at 30% 30%, #ffffff 0%, #ffd166 45%, #ef476f 100%);
+      outline: 3px solid #6c5ce7;
+      outline-offset: 6px;
+    }
+
+    /* Semi-transparent box over a striped parent */
+    .stripes {
+      padding: 20px;
+      border-radius: 8px;
+      background: repeating-linear-gradient(45deg, #ffb703 0 10px, #fb8500 10px 20px);
+    }
+
+    .b8 {
+      background: rgba(255, 255, 255, 0.55);
+      border: 1px solid rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h1 class="page-title">Backgrounds and borders</h1>
+  <p class="page-lead">Eight boxes covering radius, border styles, shadows, gradients, outlines and translucency.</p>
+
+  <div class="gallery">
+    <div class="cell">
+      <div class="box b1"></div>
+      <p class="caption">1. Rounded corners, angle gradient</p>
+    </div>
+
+    <div class="cell">
+      <div class="box b2"></div>
+      <p class="caption">2. Per-corner radius, dashed border</p>
+    </div>
+
+    <div class="cell">
+      <div class="box b3"></div>
+      <p class="caption">3. Circle, dotted border</p>
+    </div>
+
+    <div class="cell">
+      <div class="box b4"></div>
+      <p class="caption">4. Double border, colour per side</p>
+    </div>
+
+    <div class="cell">
+      <div class="box b5"></div>
+      <p class="caption">5. Multiple outer and inset shadows</p>
+    </div>
+
+    <div class="cell">
+      <div class="box b6"></div>
+      <p class="caption">6. Linear gradient to right</p>
+    </div>
+
+    <div class="cell">
+      <div class="box b7"></div>
+      <p class="caption">7. Radial gradient, outline offset</p>
+    </div>
+
+    <div class="cell">
+      <div class="stripes">
+        <div class="box b8"></div>
+      </div>
+      <p class="caption">8. Translucent RGBA over stripes</p>
+    </div>
+  </div>
+</body>
+</html>

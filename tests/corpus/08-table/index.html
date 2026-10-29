@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Regional Sales Report</title>
+  <style>
+    :root {
+      --bg: #f2f4f8;
+      --surface: #ffffff;
+      --ink: #1b2231;
+      --muted: #5f6880;
+      --line: #d5dbe7;
+      --stripe: #f5f7fb;
+      --head: #1f2a44;
+      --total: #e6ebf5;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    .page {
+      padding: 32px;
+    }
+
+    .page-header {
+      max-width: 900px;
+      margin: 0 auto 24px;
+    }
+
+    .page-title {
+      margin: 0 0 4px;
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .page-meta {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .table-wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 15px;
+    }
+
+    .data-table caption {
+      caption-side: top;
+      padding: 0 0 12px;
+      text-align: left;
+      font-size: 17px;
+      font-weight: 600;
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+    }
+
+    .data-table thead th {
+      background: var(--head);
+      color: #ffffff;
+      font-weight: 600;
+      text-align: left;
+    }
+
+    .data-table tbody tr:nth-child(even) {
+      background: var(--stripe);
+    }
+
+    .data-table tbody th {
+      text-align: left;
+      font-weight: 500;
+    }
+
+    .data-table .num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .data-table tfoot th,
+    .data-table tfoot td {
+      background: var(--total);
+      font-weight: 700;
+    }
+
+    .data-table tfoot th {
+      text-align: left;
+    }
+
+    .note {
+      max-width: 900px;
+      margin: 16px auto 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="page-header">
+      <h1 class="page-title">Regional sales report</h1>
+      <p class="page-meta">Fiscal year 2026 · Q3 · Figures in USD</p>
+    </header>
+
+    <div class="table-wrap">
+      <table class="data-table">
+        <caption>Sales by region, Q3 2026</caption>
+        <thead>
+          <tr>
+            <th scope="col">Region</th>
+            <th scope="col" class="num">Orders</th>
+            <th scope="col" class="num">Average order (USD)</th>
+            <th scope="col" class="num">Revenue (USD k)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">North America</th>
+            <td class="num">4,812</td>
+            <td class="num">128.40</td>
+            <td class="num">617.8</td>
+          </tr>
+          <tr>
+            <th scope="row">Latin America</th>
+            <td class="num">2,140</td>
+            <td class="num">96.10</td>
+            <td class="num">205.7</td>
+          </tr>
+          <tr>
+            <th scope="row">Western Europe</th>
+            <td class="num">3,906</td>
+            <td class="num">121.75</td>
+            <td class="num">475.5</td>
+          </tr>
+          <tr>
+            <th scope="row">Northern Europe</th>
+            <td class="num">1,287</td>
+            <td class="num">139.20</td>
+            <td class="num">179.2</td>
+          </tr>
+          <tr>
+            <th scope="row">Eastern Europe</th>
+            <td class="num">1,654</td>
+            <td class="num">84.60</td>
+            <td class="num">139.9</td>
+          </tr>
+          <tr>
+            <th scope="row">Middle East</th>
+            <td class="num">732</td>
+            <td class="num">110.00</td>
+            <td class="num">80.5</td>
+          </tr>
+          <tr>
+            <th scope="row">Asia Pacific</th>
+            <td class="num">5,378</td>
+            <td class="num">102.35</td>
+            <td class="num">550.5</td>
+          </tr>
+          <tr>
+            <th scope="row">Oceania</th>
+            <td class="num">611</td>
+            <td class="num">147.90</td>
+            <td class="num">90.4</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <th scope="row" colspan="2">Total</th>
+            <td class="num">114.01</td>
+            <td class="num">2,339.5</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <p class="note">Average order is revenue divided by orders for each region.</p>
+  </main>
+</body>
+</html>

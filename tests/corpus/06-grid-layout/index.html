@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Grid Layout — Dashboard Shell</title>
+  <style>
+    :root {
+      --bg: #eef1f6;
+      --surface: #ffffff;
+      --ink: #1b2231;
+      --muted: #64708a;
+      --line: #dde2ec;
+      --accent: #0f766e;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      line-height: 1.5;
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    .app {
+      display: grid;
+      grid-template-areas:
+        "header header"
+        "sidebar main"
+        "footer footer";
+      grid-template-columns: 220px 1fr;
+      grid-template-rows: 64px 1fr 48px;
+      height: 100vh;
+    }
+
+    .site-header {
+      grid-area: header;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .search {
+      width: 320px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0f766e 0%, #34d399 100%);
+    }
+
+    .sidebar {
+      grid-area: sidebar;
+      padding: 20px 12px;
+      background: var(--surface);
+      border-right: 1px solid var(--line);
+    }
+
+    .sidebar ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .sidebar li + li {
+      margin-top: 4px;
+    }
+
+    .sidebar a {
+      display: block;
+      padding: 8px 12px;
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 15px;
+      text-decoration: none;
+    }
+
+    .sidebar a.is-active {
+      background: #e3f4f1;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .main {
+      grid-area: main;
+      padding: 24px;
+      overflow: hidden;
+    }
+
+    .main-title {
+      margin: 0 0 4px;
+      font-size: 26px;
+    }
+
+    .main-lead {
+      margin: 0 0 20px;
+      color: var(--muted);
+    }
+
+    .tiles {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-auto-rows: 120px;
+      gap: 16px;
+    }
+
+    .tile {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px 18px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    .tile--wide {
+      grid-column: span 2;
+      border-color: transparent;
+      background: linear-gradient(120deg, #0f766e 0%, #155e75 100%);
+      color: #ffffff;
+    }
+
+    .tile--tall {
+      grid-row: span 2;
+    }
+
+    .tile-label {
+      margin: 0;
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .tile--wide .tile-label {
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .tile-value {
+      margin: 0;
+      font-size: 32px;
+      font-weight: 700;
+    }
+
+    .tile-note {
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .bar {
+      flex: 1;
+      background: var(--accent);
+      border-radius: 4px 4px 0 0;
+    }
+
+    .bar--a { height: 40px; }
+    .bar--b { height: 64px; }
+    .bar--c { height: 52px; }
+    .bar--d { height: 88px; }
+    .bar--e { height: 72px; }
+
+    .site-footer {
+      grid-area: footer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      background: var(--surface);
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="site-header">
+      <div class="brand">Northwind Ops</div>
+      <div class="search">Search projects, people, reports</div>
+      <div class="avatar" aria-hidden="true"></div>
+    </header>
+
+    <aside class="sidebar">
+      <ul>
+        <li><a class="is-active" href="#">Overview</a></li>
+        <li><a href="#">Projects</a></li>
+        <li><a href="#">Deployments</a></li>
+        <li><a href="#">Incidents</a></li>
+        <li><a href="#">Reports</a></li>
+        <li><a href="#">Settings</a></li>
+      </ul>
+    </aside>
+
+    <main class="main">
+      <h1 class="main-title">Overview</h1>
+      <p class="main-lead">Activity across all teams this week.</p>
+
+      <section class="tiles">
+        <article class="tile tile--wide">
+          <p class="tile-label">Deployments this week</p>
+          <p class="tile-value">184</p>
+          <p class="tile-note">+12% against the previous week</p>
+        </article>
+
+        <article class="tile tile--tall">
+          <p class="tile-label">Requests per day</p>
+          <div class="bars">
+            <div class="bar bar--a"></div>
+            <div class="bar bar--b"></div>
+            <div class="bar bar--c"></div>
+            <div class="bar bar--d"></div>
+            <div class="bar bar--e"></div>
+          </div>
+          <p class="tile-note">Peak on Thursday</p>
+        </article>
+
+        <article class="tile">
+          <p class="tile-label">Open incidents</p>
+          <p class="tile-value">3</p>
+          <p class="tile-note">One severity 1</p>
+        </article>
+
+        <article class="tile">
+          <p class="tile-label">Mean time to recover</p>
+          <p class="tile-value">42m</p>
+          <p class="tile-note">Down from 58m</p>
+        </article>
+
+        <article class="tile">
+          <p class="tile-label">Uptime</p>
+          <p class="tile-value">99.97%</p>
+          <p class="tile-note">Last 30 days</p>
+        </article>
+
+        <article class="tile">
+          <p class="tile-label">Active users</p>
+          <p class="tile-value">1,208</p>
+          <p class="tile-note">Across 14 teams</p>
+        </article>
+
+        <article class="tile">
+          <p class="tile-label">Build queue</p>
+          <p class="tile-value">7</p>
+          <p class="tile-note">Average wait 2m 10s</p>
+        </article>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>Northwind Ops · v4.12.0</span>
+      <span>Status: all systems operational</span>
+    </footer>
+  </div>
+</body>
+</html>

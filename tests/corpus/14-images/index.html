@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Images Showcase</title>
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: sans-serif;
+  color: #1f2430;
+  background: #ffffff;
+  line-height: 1.55;
+}
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  padding: 0 32px;
+  border-bottom: 1px solid #e3e7ef;
+}
+
+.logo {
+  display: block;
+  height: 40px;
+  width: auto;
+}
+
+.site-nav {
+  display: flex;
+  gap: 24px;
+}
+
+.site-nav a {
+  color: #3a4256;
+  text-decoration: none;
+  font-size: 15px;
+}
+
+.site-nav a:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.hero {
+  position: relative;
+  margin: 0;
+}
+
+.hero-img {
+  display: block;
+  width: 100%;
+  height: 320px;
+  object-fit: cover;
+  object-position: center;
+}
+
+.hero-caption {
+  position: absolute;
+  left: 32px;
+  bottom: 24px;
+  max-width: 480px;
+  padding: 16px 20px;
+  border-radius: 8px;
+  background: rgba(15, 20, 35, 0.72);
+  color: #ffffff;
+}
+
+.hero-caption h1 {
+  margin: 0 0 6px;
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+.hero-caption p {
+  margin: 0;
+  font-size: 15px;
+  opacity: 0.9;
+}
+
+.content {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px;
+}
+
+.author {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.avatar {
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 0 0 3px #eef2ff;
+}
+
+.author-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.author-bio {
+  margin: 4px 0 0;
+  color: #5c6578;
+  font-size: 14px;
+}
+
+.feature {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-items: start;
+  margin-bottom: 32px;
+}
+
+.feature figure {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #e3e7ef;
+  border-radius: 10px;
+  background: #fafbfd;
+}
+
+.feature figure img {
+  display: block;
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.feature figcaption {
+  margin-top: 10px;
+  color: #5c6578;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.feature-text h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+}
+
+.feature-text p {
+  margin: 0 0 12px;
+  color: #3a4256;
+}
+
+.thumb {
+  display: block;
+  width: 400px;
+  height: 250px;
+  max-width: 100%;
+  border-radius: 10px;
+  border: 1px solid #e3e7ef;
+}
+
+.gallery-note {
+  margin-top: 8px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.site-footer {
+  padding: 24px 32px;
+  border-top: 1px solid #e3e7ef;
+  color: #6b7280;
+  font-size: 13px;
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .feature {
+    grid-template-columns: 1fr;
+  }
+
+  .site-nav {
+    display: none;
+  }
+
+  .hero-img {
+    height: 240px;
+  }
+}
+
+@media (min-width: 1100px) {
+  .content {
+    padding-top: 48px;
+  }
+}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <img class="logo" src="logo.svg" alt="Northwind logo">
+  <nav class="site-nav">
+    <a href="#">Journal</a>
+    <a href="#">Gallery</a>
+    <a href="#">About</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <img class="hero-img" src="photo.jpg" alt="Mountain lake at sunrise">
+  <div class="hero-caption">
+    <h1>Morning on the lake</h1>
+    <p>Photographed before the first light reached the shore.</p>
+  </div>
+</section>
+
+<main class="content">
+  <div class="author">
+    <img class="avatar" src="avatar.png" alt="Portrait of Maren Holt">
+    <div>
+      <p class="author-name">Maren Holt</p>
+      <p class="author-bio">Landscape photographer and writer based in the north. Shoots mostly on film.</p>
+    </div>
+  </div>
+
+  <section class="feature">
+    <figure>
+      <img src="photo.jpg" alt="Lake surface reflecting the morning sky">
+      <figcaption>Figure 1. The lake surface, 6:12 a.m.</figcaption>
+    </figure>
+
+    <div class="feature-text">
+      <h2>Working before dawn</h2>
+      <p>The best light arrives in the few minutes before the sun clears the ridge. Planning the walk in the dark is most of the work.</p>
+      <p>Each frame here was exposed for four seconds on a tripod, with the shutter released by a cable.</p>
+    </div>
+  </section>
+
+  <img class="thumb" src="photo.jpg" width="400" height="250" alt="Thumbnail of the lake shore with pine trees">
+  <p class="gallery-note">Thumbnail shown at its natural 400 by 250 size.</p>
+</main>
+
+<footer class="site-footer">
+  Northwind Journal &middot; Images are shown for demonstration purposes
+</footer>
+</body>
+</html>

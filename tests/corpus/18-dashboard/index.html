@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Northwind Admin: Dashboard</title>
+  <style>
+    :root {
+      --sidebar: #111827;
+      --sidebar-hover: #1f2937;
+      --sidebar-text: #9ca3af;
+      --page: #f3f4f6;
+      --card: #ffffff;
+      --ink: #111827;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --brand: #4f46e5;
+      --good: #059669;
+      --bad: #dc2626;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      color: var(--ink);
+      background: var(--page);
+      font-size: 14px;
+    }
+
+    h1, h2, p {
+      margin: 0;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+
+    .sidebar {
+      padding: 24px 16px;
+      background: var(--sidebar);
+      color: var(--sidebar-text);
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 12px 24px;
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .logo {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #6366f1, #ec4899);
+    }
+
+    .nav-label {
+      margin: 24px 12px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #6b7280;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px;
+      border-radius: 8px;
+      color: var(--sidebar-text);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .nav-item:hover {
+      background: var(--sidebar-hover);
+      color: #fff;
+    }
+
+    .nav-item.active {
+      background: var(--sidebar-hover);
+      color: #fff;
+      box-shadow: inset 3px 0 0 var(--brand);
+    }
+
+    .badge {
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--brand);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* Top bar */
+
+    .main {
+      min-width: 0;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 32px;
+      background: var(--card);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .topbar h1 {
+      font-size: 1.5rem;
+      letter-spacing: -0.01em;
+    }
+
+    .topbar .subtitle {
+      margin-top: 4px;
+      color: var(--muted);
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .search {
+      width: 240px;
+      height: 36px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--page);
+      font: inherit;
+    }
+
+    .avatar {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #ec4899);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .content {
+      display: grid;
+      gap: 20px;
+      padding: 24px 32px 32px;
+    }
+
+    /* Cards */
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+
+    .card {
+      padding: 20px 22px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--card);
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .stat-value {
+      margin: 8px 0 6px;
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .stat-delta {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .up {
+      color: var(--good);
+    }
+
+    .down {
+      color: var(--bad);
+    }
+
+    .row-2 {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+    }
+
+    .card-title {
+      margin-bottom: 16px;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    /* Horizontal bar chart */
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 120px 1fr 48px;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .bar-name {
+      color: var(--muted);
+    }
+
+    .bar-track {
+      height: 12px;
+      border-radius: 999px;
+      background: #eef2ff;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: var(--brand);
+    }
+
+    .bar-value {
+      text-align: right;
+      font-weight: 600;
+    }
+
+    .w-18 { width: 18%; }
+    .w-31 { width: 31%; }
+    .w-47 { width: 47%; }
+    .w-64 { width: 64%; }
+    .w-82 { width: 82%; }
+
+    /* Progress */
+
+    .progress-group + .progress-group {
+      margin-top: 20px;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      color: var(--muted);
+    }
+
+    progress {
+      width: 100%;
+      height: 12px;
+      accent-color: var(--brand);
+    }
+
+    .progress {
+      height: 12px;
+      border-radius: 999px;
+      background: var(--line);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: var(--good);
+    }
+
+    .p-45 { width: 45%; }
+
+    /* Orders table */
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .pill-paid {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .pill-pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .pill-shipped {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .pill-refunded {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <span class="logo"></span>
+        Northwind
+      </div>
+
+      <nav>
+        <p class="nav-label">Overview</p>
+        <a class="nav-item active" href="#">Dashboard</a>
+        <a class="nav-item" href="#">Analytics</a>
+        <a class="nav-item" href="#">Reports</a>
+
+        <p class="nav-label">Sales</p>
+        <a class="nav-item" href="#">Orders <span class="badge">12</span></a>
+        <a class="nav-item" href="#">Customers</a>
+        <a class="nav-item" href="#">Products</a>
+
+        <p class="nav-label">Settings</p>
+        <a class="nav-item" href="#">Team</a>
+        <a class="nav-item" href="#">Billing</a>
+      </nav>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div>
+          <h1>Dashboard</h1>
+          <p class="subtitle">Welcome back, Sam. Here is what happened today.</p>
+        </div>
+        <div class="topbar-right">
+          <input class="search" type="search" placeholder="Search orders">
+          <div class="avatar" title="Sam Kowalski">SK</div>
+        </div>
+      </header>
+
+      <main class="content">
+        <section class="stats">
+          <article class="card">
+            <p class="stat-label">Revenue</p>
+            <p class="stat-value">$48,290</p>
+            <p class="stat-delta up">&#9650; 12.4% vs last month</p>
+          </article>
+          <article class="card">
+            <p class="stat-label">Orders</p>
+            <p class="stat-value">1,284</p>
+            <p class="stat-delta down">&#9660; 3.1% vs last month</p>
+          </article>
+          <article class="card">
+            <p class="stat-label">New customers</p>
+            <p class="stat-value">356</p>
+            <p class="stat-delta up">&#9650; 5.6% vs last month</p>
+          </article>
+          <article class="card">
+            <p class="stat-label">Refund rate</p>
+            <p class="stat-value">1.8%</p>
+            <p class="stat-delta down">&#9650; 0.4 pts vs last month</p>
+          </article>
+        </section>
+
+        <section class="row-2">
+          <div class="card">
+            <h2 class="card-title">Sales by region</h2>
+            <div class="bar-row">
+              <span class="bar-name">North America</span>
+              <div class="bar-track"><div class="bar-fill w-82"></div></div>
+              <span class="bar-value">82%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-name">Europe</span>
+              <div class="bar-track"><div class="bar-fill w-64"></div></div>
+              <span class="bar-value">64%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-name">Asia Pacific</span>
+              <div class="bar-track"><div class="bar-fill w-47"></div></div>
+              <span class="bar-value">47%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-name">Latin America</span>
+              <div class="bar-track"><div class="bar-fill w-31"></div></div>
+              <span class="bar-value">31%</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-name">Middle East</span>
+              <div class="bar-track"><div class="bar-fill w-18"></div></div>
+              <span class="bar-value">18%</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2 class="card-title">Targets</h2>
+            <div class="progress-group">
+              <div class="progress-label"><span>Quarterly goal</span><span>68%</span></div>
+              <progress max="100" value="68">68%</progress>
+            </div>
+            <div class="progress-group">
+              <div class="progress-label"><span>Support queue cleared</span><span>45%</span></div>
+              <div class="progress"><div class="progress-fill p-45"></div></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="card-title">Recent orders</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Customer</th>
+                <th>Date</th>
+                <th class="num">Total</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>#10284</td>
+                <td>Lena Park</td>
+                <td>28 Oct 2026</td>
+                <td class="num">$240.00</td>
+                <td><span class="pill pill-paid">Paid</span></td>
+              </tr>
+              <tr>
+                <td>#10283</td>
+                <td>Marco Ruiz</td>
+                <td>28 Oct 2026</td>
+                <td class="num">$89.50</td>
+                <td><span class="pill pill-pending">Pending</span></td>
+              </tr>
+              <tr>
+                <td>#10282</td>
+                <td>Aiko Tanaka</td>
+                <td>27 Oct 2026</td>
+                <td class="num">$1,120.00</td>
+                <td><span class="pill pill-shipped">Shipped</span></td>
+              </tr>
+              <tr>
+                <td>#10281</td>
+                <td>Ben Okafor</td>
+                <td>27 Oct 2026</td>
+                <td class="num">$56.20</td>
+                <td><span class="pill pill-refunded">Refunded</span></td>
+              </tr>
+              <tr>
+                <td>#10280</td>
+                <td>Priya Nair</td>
+                <td>26 Oct 2026</td>
+                <td class="num">$412.75</td>
+                <td><span class="pill pill-paid">Paid</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

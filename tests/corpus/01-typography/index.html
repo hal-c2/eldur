@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Typography Test: Notes on Type</title>
+<style>
+:root {
+  --ink: #1d1f23;
+  --muted: #5b616e;
+  --accent: #0b5cad;
+  --paper: #fdfcf8;
+  --rule: #d9d5c9;
+  --mono-bg: #f1efe8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+  font-family: serif;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: sans-serif;
+  line-height: 1.25;
+  color: var(--ink);
+  margin: 1.5em 0 0.5em;
+}
+
+h1 {
+  font-size: 2.5rem;
+  margin-top: 0;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: 1.75rem;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.25rem;
+}
+
+h3 {
+  font-size: 1.375rem;
+}
+
+h4 {
+  font-size: 1.125rem;
+}
+
+h5 {
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+h6 {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+p {
+  margin: 0 0 1rem;
+}
+
+.kicker {
+  font-family: sans-serif;
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+mark {
+  background: #fff1a8;
+  padding: 0 0.2em;
+  color: inherit;
+}
+
+small {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+sub, sup {
+  font-size: 0.75em;
+  line-height: 0;
+  position: relative;
+}
+
+sub {
+  bottom: -0.25em;
+}
+
+sup {
+  top: -0.5em;
+}
+
+code {
+  font-family: monospace;
+  font-size: 0.9em;
+  background: var(--mono-bg);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+}
+
+pre {
+  background: #20242b;
+  color: #e6e9ef;
+  padding: 1rem 1.25rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin: 1.25rem 0;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  font-size: 1em;
+  color: inherit;
+}
+
+blockquote {
+  margin: 1.5rem 0;
+  padding: 0.25rem 0 0.25rem 1.25rem;
+  border-left: 4px solid var(--accent);
+  color: var(--muted);
+  font-style: italic;
+}
+
+blockquote p {
+  margin-bottom: 0.5rem;
+}
+
+cite {
+  display: block;
+  font-style: normal;
+  font-family: sans-serif;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 2rem 0;
+}
+
+ul, ol {
+  margin: 0 0 1rem;
+  padding-left: 1.5rem;
+}
+
+li {
+  margin-bottom: 0.25rem;
+}
+
+footer {
+  margin-top: 2.5rem;
+  border-top: 1px solid var(--rule);
+  padding-top: 0.75rem;
+  font-family: sans-serif;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+</style>
+</head>
+<body>
+<header>
+  <p class="kicker">Typography notes &middot; Issue 14</p>
+  <h1>On Setting Text for the Screen</h1>
+  <p>A short essay on rhythm, measure and the <b>quiet</b> work that <strong>good type</strong> does when nobody is looking. Read it at your own pace; the <i>argument</i> is <em>deliberately</em> simple.</p>
+</header>
+
+<main>
+  <h2>Why measure matters</h2>
+  <p>Line length decides how far the eye travels before it returns to the left edge. Most readers are comfortable somewhere around 60 to 75 characters per line, which is why this column is capped near 760 pixels. The full specification lives in the <a href="#spec">type guidelines</a>, and the earlier draft is <a href="https://example.com/draft" rel="noopener">archived here</a>.</p>
+  <p>Vertical rhythm follows from the baseline. With a line height of 1.6, each line sits far enough from its neighbour to breathe, and a paragraph gap of one line keeps sections distinct without turning the page into a list of islands.<br>
+  A forced line break, like this one, is useful for addresses and poems but should be rare in running text.</p>
+
+  <h3>Scale and hierarchy</h3>
+  <p>A modular scale gives headings a consistent relationship to body text. Here the steps are expressed in <code>rem</code> so that they follow the user's preferred base size.</p>
+
+  <h4>Choosing a typeface</h4>
+  <p>Serif faces suit long reading, while sans-serif faces are often preferred for interface labels and captions. Mixing the two is common, provided each has a clear job.</p>
+
+  <h5>Practical tip</h5>
+  <p>Test every heading at the smallest supported width before you ship it.</p>
+
+  <h6>Note on sources</h6>
+  <p>Figures in this section come from the 2025 readability survey.</p>
+
+  <h2>Inline emphasis and marks</h2>
+  <p>Emphasis should be used sparingly. <mark>Highlighted passages</mark> help a reader find their place during revision, but they are not a substitute for structure. Water is H<sub>2</sub>O, and the area of a circle is &pi;r<sup>2</sup>. Footnotes are often set in <small>smaller type, typically around 13 pixels</small>, so that they do not compete with the main text.</p>
+
+  <h2>A quotation worth keeping</h2>
+  <blockquote>
+    <p>Typography exists to honour content. It is the craft of endowing human language with a durable visual form.</p>
+    <cite>Robert Bringhurst, <em>The Elements of Typographic Style</em></cite>
+  </blockquote>
+
+  <h2>Code in running text</h2>
+  <p>Inline identifiers such as <code>line-height</code> or <code>max-width</code> sit on the baseline. Longer examples belong in a block:</p>
+  <pre><code>body {
+  max-width: 760px;
+  margin: 0 auto;
+  line-height: 1.6;
+  font-size: 1.0625rem;
+}</code></pre>
+
+  <p>Lists remain simple:</p>
+  <ul>
+    <li>Set body text between 16 and 18 pixels.</li>
+    <li>Keep measure between 45 and 75 characters.</li>
+    <li>Use one typeface family per role.</li>
+  </ul>
+  <hr>
+  <p>Continue reading in the next issue.</p>
+</main>
+
+<footer>
+  <p>Typography notes is a test page. All faces are generic families.</p>
+</footer>
+</body>
+</html>

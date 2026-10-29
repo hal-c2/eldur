@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pricing: Lumen Analytics</title>
+  <style>
+    :root {
+      --brand: #2563eb;
+      --brand-dark: #1e40af;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --page: #f8fafc;
+      --check: #16a34a;
+      --radius: 20px;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      color: var(--ink);
+      background: var(--page);
+      line-height: 1.6;
+    }
+
+    .page {
+      max-width: 1080px;
+      padding: 64px 24px 96px;
+      margin-inline: auto;
+    }
+
+    .page-head {
+      text-align: center;
+    }
+
+    .eyebrow {
+      margin: 0 0 12px;
+      color: var(--brand);
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .page-head h1 {
+      margin: 0 0 16px;
+      font-size: 3rem;
+      letter-spacing: -0.02em;
+    }
+
+    .page-head p {
+      margin: 0 auto;
+      max-width: 560px;
+      color: var(--muted);
+      font-size: 1.125rem;
+    }
+
+    /* Billing toggle */
+
+    .billing-toggle {
+      display: inline-flex;
+      gap: 4px;
+      margin: 36px auto 56px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+    }
+
+    .toggle-btn {
+      height: 40px;
+      padding: 0 22px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .toggle-btn.active {
+      background: var(--ink);
+      color: #fff;
+    }
+
+    .save {
+      margin-left: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #dcfce7;
+      color: #166534;
+      font-size: 0.75rem;
+    }
+
+    /* Pricing cards */
+
+    .pricing-grid {
+      display: flex;
+      align-items: stretch;
+      gap: 28px;
+    }
+
+    .plan {
+      position: relative;
+      display: flex;
+      flex: 1 1 0;
+      flex-direction: column;
+      padding: 40px 32px 32px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    .plan.featured {
+      border: 2px solid var(--brand);
+      box-shadow: 0 24px 48px rgba(37, 99, 235, 0.18);
+      transform: scale(1.05);
+    }
+
+    .badge {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: var(--brand);
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .plan-name {
+      margin: 0 0 8px;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .plan-desc {
+      min-height: 44px;
+      margin: 0 0 24px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .price {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      margin: 0 0 28px;
+    }
+
+    .amount {
+      font-size: 3.25rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .period {
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .features {
+      display: grid;
+      gap: 12px;
+      margin: 0 0 32px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .features li {
+      display: flex;
+      gap: 10px;
+      font-size: 0.95rem;
+    }
+
+    .check {
+      color: var(--check);
+      font-weight: 700;
+    }
+
+    .plan-btn {
+      margin-top: auto;
+      width: 100%;
+      height: 50px;
+      border: 2px solid var(--brand);
+      border-radius: 12px;
+      background: transparent;
+      color: var(--brand);
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .plan-btn:hover {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .plan-btn.solid {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .fine-print {
+      margin: 24px 0 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="page-head">
+      <p class="eyebrow">Pricing</p>
+      <h1>Simple plans that grow with you</h1>
+      <p>Start free, upgrade when your data grows, and cancel any time without a support ticket.</p>
+
+      <div class="billing-toggle" role="group" aria-label="Billing period">
+        <button class="toggle-btn active" type="button">Monthly</button>
+        <button class="toggle-btn" type="button">Yearly <span class="save">Save 20%</span></button>
+      </div>
+    </header>
+
+    <section class="pricing-grid">
+      <article class="plan">
+        <h2 class="plan-name">Starter</h2>
+        <p class="plan-desc">For side projects and small sites getting their first visitors.</p>
+        <p class="price"><span class="amount">$0</span><span class="period">/mo</span></p>
+        <ul class="features">
+          <li><span class="check">&check;</span> Up to 3 websites</li>
+          <li><span class="check">&check;</span> 10,000 events per month</li>
+          <li><span class="check">&check;</span> 30-day data retention</li>
+          <li><span class="check">&check;</span> Community support</li>
+        </ul>
+        <button class="plan-btn" type="button">Start for free</button>
+      </article>
+
+      <article class="plan featured">
+        <span class="badge">Most popular</span>
+        <h2 class="plan-name">Growth</h2>
+        <p class="plan-desc">For product teams tracking funnels, retention and experiments.</p>
+        <p class="price"><span class="amount">$29</span><span class="period">/mo</span></p>
+        <ul class="features">
+          <li><span class="check">&check;</span> Unlimited websites</li>
+          <li><span class="check">&check;</span> 1,000,000 events per month</li>
+          <li><span class="check">&check;</span> 1-year data retention</li>
+          <li><span class="check">&check;</span> A/B testing and funnels</li>
+          <li><span class="check">&check;</span> Email support within 24 hours</li>
+        </ul>
+        <button class="plan-btn solid" type="button">Start 14-day trial</button>
+      </article>
+
+      <article class="plan">
+        <h2 class="plan-name">Enterprise</h2>
+        <p class="plan-desc">For organisations that need controls, audit logs and a dedicated contact.</p>
+        <p class="price"><span class="amount">$99</span><span class="period">/mo</span></p>
+        <ul class="features">
+          <li><span class="check">&check;</span> Everything in Growth</li>
+          <li><span class="check">&check;</span> Unlimited events</li>
+          <li><span class="check">&check;</span> Custom data retention</li>
+          <li><span class="check">&check;</span> SSO and audit logs</li>
+          <li><span class="check">&check;</span> Dedicated success manager</li>
+        </ul>
+        <button class="plan-btn" type="button">Talk to sales</button>
+      </article>
+    </section>
+
+    <p class="fine-print">All prices in USD. Taxes are calculated at checkout.</p>
+  </main>
+</body>
+</html>
