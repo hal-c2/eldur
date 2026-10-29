@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Run the HTML-vs-QML visual parity harness (tools/visual/run.py)"
+set -euo pipefail
+exec python3 "${MISE_PROJECT_ROOT:-.}/tools/visual/run.py" "$@"
