@@ -80,14 +80,12 @@ pub(crate) struct StyleRule {
     pub(crate) declarations: Vec<ParsedDecl>,
     pub(crate) media: Vec<MediaQueryList>,
     pub(crate) layer: Option<LayerPath>,
-    pub(crate) line: u32,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct ParsedDecl {
     pub(crate) value: DeclValue,
     pub(crate) important: bool,
-    pub(crate) line: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -429,7 +427,6 @@ fn process_qualified_rule(
         &converted.selectors,
         media_stack,
         layer_stack,
-        line,
     );
 }
 
@@ -442,7 +439,6 @@ fn process_style_block_contents(
     active_selectors: &[Selector],
     media_stack: &[MediaQueryList],
     layer_stack: &[LayerSegment],
-    block_line: u32,
 ) {
     // `swc_css_parser` groups declarations before nested rules when building a
     // `StyleBlock`; sorting by `span_lo()` restores exact CSS source order so
@@ -451,16 +447,14 @@ fn process_style_block_contents(
     items.sort_by_key(|cv| cv.span_lo());
 
     let mut current_decls: Vec<ParsedDecl> = Vec::new();
-    let mut current_start_line = block_line;
 
-    let flush_decls = |ctx: &mut ParseCtx<'_>, decls: &mut Vec<ParsedDecl>, line: u32| {
+    let flush_decls = |ctx: &mut ParseCtx<'_>, decls: &mut Vec<ParsedDecl>| {
         if !decls.is_empty() {
             ctx.sheet.rules.push(StyleRule {
                 selectors: active_selectors.to_vec(),
                 declarations: std::mem::take(decls),
                 media: media_stack.to_vec(),
                 layer: (!layer_stack.is_empty()).then(|| layer_stack.to_vec()),
-                line,
             });
         }
     };
@@ -468,13 +462,10 @@ fn process_style_block_contents(
     for cv in items {
         match cv {
             ast::ComponentValue::Declaration(decl) => {
-                if current_decls.is_empty() {
-                    current_start_line = ctx.line_of(decl.span);
-                }
                 process_declaration(ctx, decl, &mut current_decls);
             }
             ast::ComponentValue::QualifiedRule(nested_qr) => {
-                flush_decls(ctx, &mut current_decls, current_start_line);
+                flush_decls(ctx, &mut current_decls);
                 process_qualified_rule(
                     ctx,
                     nested_qr,
@@ -484,7 +475,7 @@ fn process_style_block_contents(
                 );
             }
             ast::ComponentValue::AtRule(nested_at) => {
-                flush_decls(ctx, &mut current_decls, current_start_line);
+                flush_decls(ctx, &mut current_decls);
                 process_at_rule(
                     ctx,
                     nested_at,
@@ -502,7 +493,7 @@ fn process_style_block_contents(
         }
     }
 
-    flush_decls(ctx, &mut current_decls, current_start_line);
+    flush_decls(ctx, &mut current_decls);
 }
 
 fn process_at_rule(
@@ -514,15 +505,15 @@ fn process_at_rule(
     is_top_level: bool,
 ) {
     let raw_name = match &at.name {
-        ast::AtRuleName::Ident(id) => id.value.as_str(),
-        ast::AtRuleName::DashedIdent(di) => di.value.as_str(),
+        ast::AtRuleName::Ident(id) => id.value.to_string(),
+        ast::AtRuleName::DashedIdent(di) => format!("--{}", di.value),
     };
     let name_lower = raw_name.to_ascii_lowercase();
     let line = ctx.line_of(at.span);
 
     // Vendor-prefixed at-rules (`@-webkit-keyframes`, `@-moz-document`, …) are
     // ignored silently per Requirement 1.
-    if name_lower.starts_with('-') {
+    if name_lower.starts_with('-') && !name_lower.starts_with("--") {
         if is_top_level {
             ctx.allow_imports = false;
         }
@@ -583,7 +574,6 @@ fn process_at_rule(
                 &next_media,
                 layer_stack,
                 parent_selectors,
-                line,
             );
         }
         "supports" => {
@@ -618,7 +608,6 @@ fn process_at_rule(
                     media_stack,
                     layer_stack,
                     parent_selectors,
-                    line,
                 );
             }
         }
@@ -711,7 +700,6 @@ fn process_at_rule(
                     &converted.selectors,
                     media_stack,
                     layer_stack,
-                    line,
                 );
             }
         }
@@ -811,7 +799,6 @@ fn process_layer_at_rule(
                 media_stack,
                 &next_layer,
                 parent_selectors,
-                line,
             );
         }
         // Named layer block: `@layer a.b { ... }`
@@ -857,7 +844,6 @@ fn process_layer_at_rule(
                 media_stack,
                 &next_layer,
                 parent_selectors,
-                line,
             );
         }
         (None, None) => {
@@ -884,10 +870,9 @@ fn process_conditional_group_block(
     media_stack: &[MediaQueryList],
     layer_stack: &[LayerSegment],
     parent_selectors: Option<&[Selector]>,
-    block_line: u32,
 ) {
     if let Some(parents) = parent_selectors {
-        process_style_block_contents(ctx, block, parents, media_stack, layer_stack, block_line);
+        process_style_block_contents(ctx, block, parents, media_stack, layer_stack);
         return;
     }
 
@@ -1485,7 +1470,8 @@ fn declaration_property_name(name: &ast::DeclarationName) -> String {
     match name {
         ast::DeclarationName::Ident(id) => id.value.as_str().to_ascii_lowercase(),
         // Custom properties (`--foo`) are case-sensitive per CSS Custom Properties 1 §2.
-        ast::DeclarationName::DashedIdent(di) => di.value.to_string(),
+        // `swc_css_ast::DashedIdent` stores the identifier without the leading `--`.
+        ast::DeclarationName::DashedIdent(di) => format!("--{}", di.value),
     }
 }
 
@@ -1537,7 +1523,6 @@ fn process_declaration(
                     value: custom_val,
                 },
                 important,
-                line,
             });
         }
         PropertyKind::Longhand(_) | PropertyKind::Shorthand => {
@@ -1556,7 +1541,6 @@ fn process_declaration(
                     out.push(ParsedDecl {
                         value: DeclValue::Wide(l, kw),
                         important,
-                        line,
                     });
                 }
                 return;
@@ -1579,7 +1563,6 @@ fn process_declaration(
                             raw_value: raw_val.clone(),
                         },
                         important,
-                        line,
                     });
                 }
                 return;
@@ -1591,7 +1574,6 @@ fn process_declaration(
                         out.push(ParsedDecl {
                             value: DeclValue::Expanded(l, v),
                             important,
-                            line,
                         });
                     }
                 }

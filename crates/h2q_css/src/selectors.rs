@@ -1721,9 +1721,9 @@ fn matches_attribute(sel: &AttrSelector, elem: &Element) -> bool {
             continue;
         }
         let name_matches = if is_html {
-            &*attr.name.local == sel.lower_name
+            *attr.name.local == sel.lower_name
         } else {
-            &*attr.name.local == sel.raw_name
+            *attr.name.local == sel.raw_name
         };
         if !name_matches {
             continue;
