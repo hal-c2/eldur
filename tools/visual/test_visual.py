@@ -11,6 +11,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from unittest import mock
 
 import numpy as np
 from PIL import Image
@@ -176,8 +177,10 @@ Item {
             appwin_png = tmp_dir / "appwin.png"
             item_png = tmp_dir / "item.png"
 
-            render_qml.render_qml(appwin_dir, appwin_png, width=200, height=120)
-            render_qml.render_qml(item_dir, item_png, width=200, height=120)
+            w1 = render_qml.render_qml(appwin_dir, appwin_png, width=200, height=120, strict=True)
+            w2 = render_qml.render_qml(item_dir, item_png, width=200, height=120, strict=True)
+            self.assertEqual(w1, [])
+            self.assertEqual(w2, [])
 
             arr_win = compare.load_rgb(appwin_png)
             arr_item = compare.load_rgb(item_png)
@@ -205,6 +208,32 @@ Item {
                 rc = render_qml.main([str(tmp_dir), str(tmp_dir / "out.png")])
             self.assertEqual(rc, 1)
             self.assertIn("Main.qml", err_buf.getvalue())
+
+    def test_render_qml_strict_fails_on_runtime_warnings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text(
+                """import QtQuick
+
+Rectangle {
+    color: "#2563eb"
+    property int brokenBinding: undefinedVariable + 1
+}
+""",
+                encoding="utf-8",
+            )
+            out_png = tmp_dir / "out.png"
+
+            warnings = render_qml.render_qml(tmp_dir, out_png, width=120, height=80, strict=False)
+            self.assertTrue(any("ReferenceError" in line for line in warnings), warnings)
+
+            err_buf = io.StringIO()
+            with redirect_stderr(err_buf):
+                rc = render_qml.main(
+                    [str(tmp_dir), str(out_png), "--width", "120", "--height", "80", "--strict"]
+                )
+            self.assertEqual(rc, 1)
+            self.assertIn("ReferenceError", err_buf.getvalue())
 
 
 class RenderHtmlAndRunnerTests(unittest.TestCase):
@@ -293,8 +322,6 @@ color = Path(sys.argv[4]).read_text().strip() if len(sys.argv) > 4 else "#2563eb
                 f"{sys.executable} {converter} {{input}} -o {{output}} {color_cfg}"
             )
 
-            # First run with --update-baseline: broken_convert recorded as convert_failed,
-            # good_case scores ~100 and writes baseline.json.
             with redirect_stdout(io.StringIO()):
                 rc1 = visual_run.main(
                     [
@@ -319,7 +346,10 @@ color = Path(sys.argv[4]).read_text().strip() if len(sys.argv) > 4 else "#2563eb
             report1 = json.loads((out_dir / "report.json").read_text(encoding="utf-8"))
             statuses = {c["case"]: c["status"] for c in report1["cases"]}
             self.assertEqual(statuses, {"broken_convert": "convert_failed", "good_case": "ok"})
-            self.assertIn("[side-by-side](cases/good_case/diff.png)", (out_dir / "report.md").read_text(encoding="utf-8"))
+            self.assertIn(
+                "[side-by-side](cases/good_case/diff.png)",
+                (out_dir / "report.md").read_text(encoding="utf-8"),
+            )
 
             # Degrade good_case colour to trigger > 2 point regression against baseline.
             color_cfg.write_text("#ef4444\n", encoding="utf-8")
@@ -345,6 +375,352 @@ color = Path(sys.argv[4]).read_text().strip() if len(sys.argv) > 4 else "#2563eb
                 )
             self.assertEqual(rc2, 1)
             self.assertIn("good_case", err_buf.getvalue())
+
+    def test_compare_error_records_compare_failed_and_writes_reports(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            corpus = tmp_dir / "corpus"
+            out_dir = tmp_dir / "out"
+            converter = tmp_dir / "conv.py"
+
+            for case_name in ("case_bad_cmp", "case_ok"):
+                cdir = corpus / case_name
+                cdir.mkdir(parents=True)
+                (cdir / "index.html").write_text(
+                    "<!doctype html><html><body style='margin:0;background:#2563eb'></body></html>",
+                    encoding="utf-8",
+                )
+
+            converter.write_text(
+                """import sys
+from pathlib import Path
+
+out_dir = Path(sys.argv[3])
+out_dir.mkdir(parents=True, exist_ok=True)
+(out_dir / "Main.qml").write_text('import QtQuick\\nRectangle { color: "#2563eb" }\\n', encoding="utf-8")
+""",
+                encoding="utf-8",
+            )
+            convert_cmd = f"{sys.executable} {converter}"
+
+            real_compare = compare.compare_images
+
+            def flaky_compare(path_a: Path, path_b: Path, *, diff_path: Path | None = None):
+                if "case_bad_cmp" in str(path_a):
+                    raise compare.CompareError("corrupt PNG stream in case_bad_cmp")
+                return real_compare(path_a, path_b, diff_path=diff_path)
+
+            with mock.patch.object(compare, "compare_images", side_effect=flaky_compare):
+                with redirect_stdout(io.StringIO()):
+                    rc = visual_run.main(
+                        [
+                            "--corpus",
+                            str(corpus),
+                            "--out",
+                            str(out_dir),
+                            "--convert-cmd",
+                            convert_cmd,
+                            "--width",
+                            "120",
+                            "--height",
+                            "80",
+                        ]
+                    )
+
+            self.assertEqual(rc, 0)
+            self.assertTrue((out_dir / "report.md").is_file())
+            report = json.loads((out_dir / "report.json").read_text(encoding="utf-8"))
+            self.assertEqual(report["summary"]["compare_failed"], 1)
+            by_case = {c["case"]: c for c in report["cases"]}
+            self.assertEqual(by_case["case_bad_cmp"]["status"], "compare_failed")
+            self.assertIn("corrupt PNG", by_case["case_bad_cmp"]["error"])
+            self.assertEqual(by_case["case_ok"]["status"], "ok")
+            self.assertEqual(by_case["case_ok"]["score"], 100.0)
+
+    def test_update_baseline_merges_subset_and_refuses_selftest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            corpus = tmp_dir / "corpus"
+            out_dir = tmp_dir / "out"
+            baseline = tmp_dir / "baseline.json"
+            state_file = tmp_dir / "state.json"
+            converter = tmp_dir / "conv.py"
+
+            for case_name in ("alpha", "beta"):
+                cdir = corpus / case_name
+                cdir.mkdir(parents=True)
+                (cdir / "index.html").write_text(
+                    "<!doctype html><html><body style='margin:0;background:#2563eb'></body></html>",
+                    encoding="utf-8",
+                )
+
+            state_file.write_text(
+                json.dumps({"alpha": "#2563eb", "beta": "#2563eb"}),
+                encoding="utf-8",
+            )
+            converter.write_text(
+                """import json
+import sys
+from pathlib import Path
+
+html_in = Path(sys.argv[1])
+out_dir = Path(sys.argv[3])
+state = json.loads(Path(sys.argv[4]).read_text(encoding="utf-8"))
+case = html_in.parent.name
+val = state[case]
+if val == "FAIL":
+    sys.exit(1)
+out_dir.mkdir(parents=True, exist_ok=True)
+(out_dir / "Main.qml").write_text(f'import QtQuick\\nRectangle {{ color: "{val}" }}\\n', encoding="utf-8")
+""",
+                encoding="utf-8",
+            )
+            convert_cmd = f"{sys.executable} {converter} {{input}} -o {{output}} {state_file}"
+
+            # 1) Refuse --selftest --update-baseline without touching baseline.json.
+            err_buf = io.StringIO()
+            with redirect_stderr(err_buf):
+                rc_refused = visual_run.main(
+                    ["--selftest", "--update-baseline", "--baseline", str(baseline)]
+                )
+            self.assertEqual(rc_refused, 1)
+            self.assertIn("--update-baseline", err_buf.getvalue())
+            self.assertFalse(baseline.exists())
+
+            # 2) Seed baseline with both alpha and beta.
+            with redirect_stdout(io.StringIO()):
+                rc_seed = visual_run.main(
+                    [
+                        "--corpus",
+                        str(corpus),
+                        "--out",
+                        str(out_dir),
+                        "--convert-cmd",
+                        convert_cmd,
+                        "--baseline",
+                        str(baseline),
+                        "--update-baseline",
+                        "--width",
+                        "120",
+                        "--height",
+                        "80",
+                    ]
+                )
+            self.assertEqual(rc_seed, 0)
+            b1 = json.loads(baseline.read_text(encoding="utf-8"))
+            self.assertEqual(sorted(b1["cases"].keys()), ["alpha", "beta"])
+            self.assertEqual(b1["cases"]["alpha"]["score"], 100.0)
+            self.assertEqual(b1["cases"]["beta"]["score"], 100.0)
+
+            # 3) Partial --cases alpha --update-baseline updates alpha and preserves beta.
+            state_file.write_text(
+                json.dumps({"alpha": "#1e40af", "beta": "#2563eb"}),
+                encoding="utf-8",
+            )
+            with redirect_stdout(io.StringIO()):
+                rc_partial = visual_run.main(
+                    [
+                        "--corpus",
+                        str(corpus),
+                        "--out",
+                        str(out_dir),
+                        "--convert-cmd",
+                        convert_cmd,
+                        "--baseline",
+                        str(baseline),
+                        "--cases",
+                        "alpha",
+                        "--update-baseline",
+                        "--width",
+                        "120",
+                        "--height",
+                        "80",
+                    ]
+                )
+            self.assertEqual(rc_partial, 0)
+            b2 = json.loads(baseline.read_text(encoding="utf-8"))
+            self.assertEqual(sorted(b2["cases"].keys()), ["alpha", "beta"])
+            self.assertLess(b2["cases"]["alpha"]["score"], 100.0)
+            self.assertEqual(b2["cases"]["beta"]["score"], 100.0)
+
+            # 4) Failed beta during --update-baseline must not drop beta from baseline.json.
+            state_file.write_text(
+                json.dumps({"alpha": "#2563eb", "beta": "FAIL"}),
+                encoding="utf-8",
+            )
+            with redirect_stdout(io.StringIO()):
+                rc_fail_keep = visual_run.main(
+                    [
+                        "--corpus",
+                        str(corpus),
+                        "--out",
+                        str(out_dir),
+                        "--convert-cmd",
+                        convert_cmd,
+                        "--baseline",
+                        str(baseline),
+                        "--update-baseline",
+                        "--width",
+                        "120",
+                        "--height",
+                        "80",
+                    ]
+                )
+            self.assertEqual(rc_fail_keep, 0)
+            b3 = json.loads(baseline.read_text(encoding="utf-8"))
+            self.assertEqual(sorted(b3["cases"].keys()), ["alpha", "beta"])
+            self.assertEqual(b3["cases"]["alpha"]["score"], 100.0)
+            self.assertEqual(b3["cases"]["beta"]["score"], 100.0)
+
+    def test_baseline_viewport_mismatch_fails_loudly(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            corpus = tmp_dir / "corpus"
+            (corpus / "only").mkdir(parents=True)
+            (corpus / "only" / "index.html").write_text(
+                "<!doctype html><html><body></body></html>",
+                encoding="utf-8",
+            )
+            baseline = tmp_dir / "baseline.json"
+            baseline.write_text(
+                json.dumps(
+                    {
+                        "viewport": {"width": 160, "height": 120},
+                        "cases": {"only": {"score": 95.0}},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            err_buf = io.StringIO()
+            with redirect_stderr(err_buf):
+                rc = visual_run.main(
+                    [
+                        "--corpus",
+                        str(corpus),
+                        "--out",
+                        str(tmp_dir / "out"),
+                        "--baseline",
+                        str(baseline),
+                        "--width",
+                        "320",
+                        "--height",
+                        "240",
+                    ]
+                )
+            self.assertEqual(rc, 1)
+            self.assertIn("viewport mismatch", err_buf.getvalue())
+            self.assertIn("160x120", err_buf.getvalue())
+            self.assertIn("320x240", err_buf.getvalue())
+
+    def test_runner_strict_default_marks_qml_warnings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            corpus = tmp_dir / "corpus"
+            out_dir = tmp_dir / "out"
+            baseline = tmp_dir / "baseline.json"
+            converter = tmp_dir / "conv.py"
+
+            (corpus / "warn_case").mkdir(parents=True)
+            (corpus / "warn_case" / "index.html").write_text(
+                "<!doctype html><html><body style='margin:0;background:#2563eb'></body></html>",
+                encoding="utf-8",
+            )
+
+            converter.write_text(
+                """import sys
+from pathlib import Path
+
+out_dir = Path(sys.argv[3])
+out_dir.mkdir(parents=True, exist_ok=True)
+(out_dir / "Main.qml").write_text(
+    'import QtQuick\\nRectangle { color: "#2563eb"; property int bad: missingSym + 1 }\\n',
+    encoding="utf-8",
+)
+""",
+                encoding="utf-8",
+            )
+            convert_cmd = f"{sys.executable} {converter}"
+
+            # Default (--strict): status must be 'qml_warnings' and warning surfaced in report.
+            with redirect_stdout(io.StringIO()):
+                rc_strict = visual_run.main(
+                    [
+                        "--corpus",
+                        str(corpus),
+                        "--out",
+                        str(out_dir),
+                        "--convert-cmd",
+                        convert_cmd,
+                        "--width",
+                        "120",
+                        "--height",
+                        "80",
+                    ]
+                )
+            self.assertEqual(rc_strict, 0)
+            report_strict = json.loads((out_dir / "report.json").read_text(encoding="utf-8"))
+            self.assertEqual(report_strict["summary"]["qml_warnings"], 1)
+            self.assertEqual(report_strict["summary"]["ok"], 0)
+            case_rec = report_strict["cases"][0]
+            self.assertEqual(case_rec["status"], "qml_warnings")
+            self.assertIn("ReferenceError", case_rec["error"])
+            self.assertIn("ReferenceError", (out_dir / "report.md").read_text(encoding="utf-8"))
+
+            # Against a clean baseline entry, introducing QML warnings flags a regression (rc == 1).
+            baseline.write_text(
+                json.dumps(
+                    {
+                        "viewport": {"width": 120, "height": 80},
+                        "cases": {"warn_case": {"score": 100.0}},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            err_buf = io.StringIO()
+            with redirect_stdout(io.StringIO()), redirect_stderr(err_buf):
+                rc_reg = visual_run.main(
+                    [
+                        "--corpus",
+                        str(corpus),
+                        "--out",
+                        str(out_dir),
+                        "--convert-cmd",
+                        convert_cmd,
+                        "--baseline",
+                        str(baseline),
+                        "--width",
+                        "120",
+                        "--height",
+                        "80",
+                    ]
+                )
+            self.assertEqual(rc_reg, 1)
+            self.assertIn("warn_case", err_buf.getvalue())
+
+            # --no-strict keeps status 'ok' while still recording warnings.
+            with redirect_stdout(io.StringIO()):
+                rc_nostrict = visual_run.main(
+                    [
+                        "--corpus",
+                        str(corpus),
+                        "--out",
+                        str(out_dir),
+                        "--convert-cmd",
+                        convert_cmd,
+                        "--no-strict",
+                        "--width",
+                        "120",
+                        "--height",
+                        "80",
+                    ]
+                )
+            self.assertEqual(rc_nostrict, 0)
+            report_nostrict = json.loads((out_dir / "report.json").read_text(encoding="utf-8"))
+            self.assertEqual(report_nostrict["cases"][0]["status"], "ok")
+            self.assertTrue(
+                any("ReferenceError" in w for w in report_nostrict["cases"][0]["warnings"])
+            )
 
 
 if __name__ == "__main__":

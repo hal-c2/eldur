@@ -2,7 +2,7 @@
 """Render a QML scene (directory containing Main.qml) to a PNG screenshot.
 
 Usage:
-    python3 tools/visual/render_qml.py <dir-with-Main.qml> <out.png> [--width 1280] [--height 800]
+    python3 tools/visual/render_qml.py <dir-with-Main.qml> <out.png> [--width 1280] [--height 800] [--strict]
 
 Runs Qt 6 `qml6` off-screen (`QT_QPA_PLATFORM=offscreen`) with software
 rasterisation (`QT_QUICK_BACKEND=software`, `--software`), deterministic DPI/scale
@@ -65,8 +65,13 @@ def render_qml(
     width: int = 1280,
     height: int = 800,
     timeout: float = DEFAULT_TIMEOUT_SEC,
-) -> None:
-    """Render `qml_target` at `width`x`height` into `out_png`, raising QmlRenderError on failure."""
+    strict: bool = False,
+) -> list[str]:
+    """Render `qml_target` at `width`x`height` into `out_png`.
+
+    Returns any diagnostic/warning lines printed by `qml6`. When `strict=True`,
+    any diagnostic output from `qml6` raises `QmlRenderError`.
+    """
     if width <= 0 or height <= 0:
         raise QmlRenderError(f"Invalid viewport dimensions: {width}x{height}")
     if not SHOT_QML.is_file():
@@ -121,6 +126,7 @@ def render_qml(
     combined_output = "\n".join(
         part.strip() for part in (proc.stdout, proc.stderr) if part and part.strip()
     )
+    warnings = [line for line in combined_output.splitlines() if line.strip()]
 
     if proc.returncode != 0:
         detail = f"\n{combined_output}" if combined_output else "\n(no output from qml6)"
@@ -140,6 +146,13 @@ def render_qml(
         raise QmlRenderError(
             f"Rendered QML screenshot {out_abs} has size {actual_w}x{actual_h}, expected {width}x{height}"
         )
+
+    if strict and warnings:
+        raise QmlRenderError(
+            f"qml6 emitted warnings/errors for {main_qml}:\n{combined_output}"
+        )
+
+    return warnings
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -175,6 +188,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_TIMEOUT_SEC,
         help=f"Timeout in seconds for qml6 execution (default: {DEFAULT_TIMEOUT_SEC:g})",
     )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Fail with non-zero exit status if qml6 prints any QML warnings or errors",
+    )
     return parser
 
 
@@ -182,16 +200,19 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
-        render_qml(
+        warnings = render_qml(
             args.qml_dir,
             args.out_png,
             width=args.width,
             height=args.height,
             timeout=args.timeout,
+            strict=args.strict,
         )
     except QmlRenderError as exc:
         print(f"render_qml.py: error: {exc}", file=sys.stderr)
         return 1
+    for line in warnings:
+        print(f"render_qml.py: warning: {line}", file=sys.stderr)
     return 0
 
 

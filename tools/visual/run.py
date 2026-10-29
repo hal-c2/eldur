@@ -5,7 +5,8 @@ Usage:
     python3 tools/visual/run.py [--corpus tests/corpus] [--out target/visual]
                                 [--convert-cmd "cargo run -q -p h2q_cli -- convert"]
                                 [--cases a,b] [--baseline tools/visual/baseline.json]
-                                [--update-baseline] [--width 1280] [--height 800]
+                                [--update-baseline] [--strict | --no-strict]
+                                [--width 1280] [--height 800]
     python3 tools/visual/run.py --selftest
 
 For each case directory containing `index.html`:
@@ -13,12 +14,15 @@ For each case directory containing `index.html`:
   2. Converts `index.html` to QML via `--convert-cmd` (unless `--selftest`, where
      hand-written `Main.qml` sits alongside `index.html`). Conversion failures are
      recorded as `convert_failed` and execution continues.
-  3. Renders `Main.qml` off-screen in `qml6` (`render_qml.py` + `Shot.qml`).
+  3. Renders `Main.qml` off-screen in `qml6` (`render_qml.py` + `Shot.qml`). Under
+     `--strict` (the default), any QML runtime/binding warnings mark the case
+     `qml_warnings` in the report.
   4. Computes `score`, `ssim`, `edge_iou`, `pixel_mismatch`, and a side-by-side
-     `diff.png` (`compare.py`).
-  5. Writes `<out>/report.md` and `<out>/report.json`, compares against
-     `tools/visual/baseline.json` when present (flagging regressions > 2 points),
-     and updates `baseline.json` when `--update-baseline` is passed.
+     `diff.png` (`compare.py`), recording `compare_failed` on image errors.
+  5. Writes `<out>/report.md` and `<out>/report.json`, validates viewport and
+     compares against `tools/visual/baseline.json` when present (flagging
+     regressions > 2 points), and merges updates into `baseline.json` when
+     `--update-baseline` is passed.
 """
 
 from __future__ import annotations
@@ -48,14 +52,16 @@ DEFAULT_OUT_DIR = Path("target/visual")
 DEFAULT_CONVERT_CMD = "cargo run -q -p h2q_cli -- convert"
 REGRESSION_THRESHOLD_POINTS = 2.0
 SELFTEST_MIN_GOOD_SCORE = 85.0
-SELFTEST_MIN_MARGIN_POINTS = 20.0
+SELFTEST_MIN_NEAR_MISS_GAP = 10.0
+SELFTEST_MIN_WRONG_GAP = 15.0
 
 SELFTEST_GOOD_CASES = (
     "01_colored_box",
     "02_two_columns",
     "03_list",
 )
-SELFTEST_WRONG_CASE = "04_wrong_layout"
+SELFTEST_NEAR_MISS_CASE = "04_near_miss"
+SELFTEST_WRONG_CASE = "05_wrong_layout"
 
 
 class HarnessError(RuntimeError):
@@ -206,24 +212,47 @@ def run_converter(
     return True, ""
 
 
-def load_baseline(baseline_path: Path) -> dict[str, float]:
-    """Load baseline scores keyed by case name from `baseline.json`."""
+def load_baseline(
+    baseline_path: Path,
+    *,
+    expected_width: int | None = None,
+    expected_height: int | None = None,
+) -> tuple[dict[str, float], dict[str, dict[str, Any]]]:
+    """Load `(scores_by_case, full_entries_by_case)` from `baseline.json` and check viewport."""
     try:
         raw = json.loads(baseline_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise HarnessError(f"Failed to read baseline file {baseline_path}: {exc}") from exc
 
-    cases_obj = raw.get("cases", raw) if isinstance(raw, dict) else None
+    if not isinstance(raw, dict):
+        raise HarnessError(f"Invalid baseline format in {baseline_path}: expected JSON object")
+
+    vp = raw.get("viewport")
+    if expected_width is not None and expected_height is not None and isinstance(vp, dict):
+        bw = vp.get("width")
+        bh = vp.get("height")
+        if isinstance(bw, int) and isinstance(bh, int) and (bw, bh) != (expected_width, expected_height):
+            raise HarnessError(
+                f"Baseline viewport mismatch in {baseline_path}: "
+                f"baseline recorded at {bw}x{bh}, current run is {expected_width}x{expected_height}"
+            )
+
+    cases_obj = raw.get("cases", raw)
     if not isinstance(cases_obj, dict):
-        raise HarnessError(f"Invalid baseline format in {baseline_path}: expected object")
+        raise HarnessError(f"Invalid baseline cases table in {baseline_path}: expected object")
 
     scores: dict[str, float] = {}
+    entries: dict[str, dict[str, Any]] = {}
     for case_name, entry in cases_obj.items():
+        if case_name == "viewport":
+            continue
         if isinstance(entry, (int, float)):
             scores[case_name] = float(entry)
+            entries[case_name] = {"score": float(entry)}
         elif isinstance(entry, dict) and isinstance(entry.get("score"), (int, float)):
             scores[case_name] = float(entry["score"])
-    return scores
+            entries[case_name] = dict(entry)
+    return scores, entries
 
 
 def write_baseline(
@@ -232,22 +261,35 @@ def write_baseline(
     *,
     width: int,
     height: int,
+    existing_entries: dict[str, dict[str, Any]] | None = None,
 ) -> None:
-    """Write `baseline.json` from completed case results."""
-    cases_payload: dict[str, dict[str, float]] = {}
-    for entry in sorted(results, key=lambda r: str(r["case"])):
+    """Merge `"ok"` case scores into `baseline.json`, preserving untouched/failed entries."""
+    if existing_entries is not None:
+        merged: dict[str, dict[str, Any]] = {k: dict(v) for k, v in existing_entries.items()}
+    elif baseline_path.is_file():
+        _, loaded_entries = load_baseline(
+            baseline_path,
+            expected_width=width,
+            expected_height=height,
+        )
+        merged = {k: dict(v) for k, v in loaded_entries.items()}
+    else:
+        merged = {}
+
+    for entry in results:
         if entry.get("status") != "ok":
             continue
-        cases_payload[str(entry["case"])] = {
+        merged[str(entry["case"])] = {
             "score": float(entry["score"]),
             "ssim": float(entry["ssim"]),
             "edge_iou": float(entry["edge_iou"]),
             "pixel_mismatch": float(entry["pixel_mismatch"]),
         }
 
+    ordered_cases = {name: merged[name] for name in sorted(merged)}
     payload = {
         "viewport": {"width": width, "height": height},
-        "cases": cases_payload,
+        "cases": ordered_cases,
     }
     baseline_path.parent.mkdir(parents=True, exist_ok=True)
     baseline_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
@@ -262,7 +304,7 @@ def format_report_markdown(
     *,
     has_baseline: bool,
 ) -> str:
-    """Format `report.md` with summary metrics, links to side-by-side PNGs, and failure logs."""
+    """Format `report.md` with summary metrics, links to side-by-side PNGs, and diagnostic logs."""
     vp = report["viewport"]
     summary = report["summary"]
     mean_str = f"{summary['mean_score']:.2f}" if summary["mean_score"] is not None else "n/a"
@@ -271,9 +313,12 @@ def format_report_markdown(
         "# Visual Parity Report",
         "",
         f"- **Viewport:** {vp['width']}×{vp['height']}",
-        f"- **Cases:** {summary['total']} total, {summary['ok']} scored, "
-        f"{summary['convert_failed']} `convert_failed`, {summary['render_failed']} render failed",
-        f"- **Mean score:** {mean_str}",
+        f"- **Cases:** {summary['total']} total, {summary['ok']} `ok`, "
+        f"{summary['qml_warnings']} `qml_warnings`, "
+        f"{summary['convert_failed']} `convert_failed`, "
+        f"{summary['render_failed']} render failed, "
+        f"{summary['compare_failed']} `compare_failed`",
+        f"- **Mean score (`ok` cases):** {mean_str}",
     ]
     if has_baseline:
         reg_list = summary["regressions"]
@@ -292,7 +337,7 @@ def format_report_markdown(
         lines.append("| Case | Status | Score | SSIM | Edge IoU | Mismatch | Images |")
         lines.append("|---|---|---:|---:|---:|---:|---|")
 
-    failures: list[tuple[str, str, str]] = []
+    diagnostics: list[tuple[str, str, str]] = []
 
     for item in report["cases"]:
         case = item["case"]
@@ -302,7 +347,7 @@ def format_report_markdown(
         else:
             status_cell = status
 
-        if status == "ok":
+        if item.get("score") is not None:
             score_cell = f"{item['score']:.2f}"
             ssim_cell = f"{item['ssim']:.4f}"
             edge_cell = f"{item['edge_iou']:.4f}"
@@ -312,8 +357,11 @@ def format_report_markdown(
             ssim_cell = "—"
             edge_cell = "—"
             mismatch_cell = "—"
-            if item.get("error"):
-                failures.append((case, status, str(item["error"])))
+
+        if item.get("error"):
+            diagnostics.append((case, status, str(item["error"])))
+        elif item.get("warnings"):
+            diagnostics.append((case, f"{status} (warnings)", "\n".join(item["warnings"])))
 
         links: list[str] = []
         if item.get("diff_png"):
@@ -343,13 +391,13 @@ def format_report_markdown(
                 f"{ssim_cell} | {edge_cell} | {mismatch_cell} | {links_cell} |"
             )
 
-    if failures:
-        lines.extend(["", "## Errors", ""])
-        for case, status, err in failures:
-            trimmed = "\n".join(err.splitlines()[:25])
+    if diagnostics:
+        lines.extend(["", "## Errors and Warnings", ""])
+        for case, label, detail in diagnostics:
+            trimmed = "\n".join(detail.splitlines()[:25])
             lines.extend(
                 [
-                    f"### `{case}` (`{status}`)",
+                    f"### `{case}` (`{label}`)",
                     "",
                     "```text",
                     trimmed,
@@ -370,6 +418,7 @@ def evaluate_cases(
     selftest: bool,
     convert_cmd: str,
     baseline_scores: dict[str, float] | None,
+    strict: bool = True,
 ) -> dict[str, Any]:
     """Run rendering, optional conversion, and comparison across `cases`."""
     out_abs = out_dir.resolve()
@@ -401,6 +450,7 @@ def evaluate_cases(
             "html_png": None,
             "qml_png": None,
             "diff_png": None,
+            "warnings": [],
             "error": None,
         }
 
@@ -431,8 +481,15 @@ def evaluate_cases(
                 continue
 
         try:
-            render_qml.render_qml(qml_source_dir, qml_png, width=width, height=height)
+            qml_warnings = render_qml.render_qml(
+                qml_source_dir,
+                qml_png,
+                width=width,
+                height=height,
+                strict=False,
+            )
             record["qml_png"] = _rel_posix(qml_png, out_abs)
+            record["warnings"] = qml_warnings
         except render_qml.QmlRenderError as exc:
             record["status"] = "qml_render_failed"
             record["error"] = str(exc)
@@ -442,36 +499,60 @@ def evaluate_cases(
             results.append(record)
             continue
 
-        metrics = compare.compare_images(html_png, qml_png, diff_path=diff_png)
+        try:
+            metrics = compare.compare_images(html_png, qml_png, diff_path=diff_png)
+        except compare.CompareError as exc:
+            record["status"] = "compare_failed"
+            record["error"] = str(exc)
+            if record["baseline_score"] is not None:
+                record["regression"] = True
+                regressions.append(case_name)
+            results.append(record)
+            continue
+
         record["diff_png"] = _rel_posix(diff_png, out_abs)
         record["score"] = metrics["score"]
         record["ssim"] = metrics["ssim"]
         record["edge_iou"] = metrics["edge_iou"]
         record["pixel_mismatch"] = metrics["pixel_mismatch"]
 
+        if strict and qml_warnings:
+            record["status"] = "qml_warnings"
+            record["error"] = "\n".join(qml_warnings)
+
         b_score = record["baseline_score"]
         if b_score is not None:
             delta = round(float(metrics["score"]) - float(b_score), 4)
             record["delta"] = delta
-            if (float(b_score) - float(metrics["score"])) > REGRESSION_THRESHOLD_POINTS:
+            if record["status"] != "ok" or (
+                float(b_score) - float(metrics["score"])
+            ) > REGRESSION_THRESHOLD_POINTS:
                 record["regression"] = True
                 regressions.append(case_name)
 
         results.append(record)
 
-    ok_scores = [float(r["score"]) for r in results if r["status"] == "ok" and r["score"] is not None]
+    ok_scores = [
+        float(r["score"])
+        for r in results
+        if r["status"] == "ok" and r["score"] is not None
+    ]
+    qml_warnings_count = sum(1 for r in results if r["status"] == "qml_warnings")
     convert_failed_count = sum(1 for r in results if r["status"] == "convert_failed")
     render_failed_count = sum(
         1 for r in results if r["status"] in ("html_render_failed", "qml_render_failed")
     )
+    compare_failed_count = sum(1 for r in results if r["status"] == "compare_failed")
 
     report = {
         "viewport": {"width": width, "height": height},
         "summary": {
             "total": len(results),
             "ok": len(ok_scores),
+            "qml_warnings": qml_warnings_count,
             "convert_failed": convert_failed_count,
             "render_failed": render_failed_count,
+            "compare_failed": compare_failed_count,
             "mean_score": round(sum(ok_scores) / len(ok_scores), 4) if ok_scores else None,
             "regressions": regressions,
         },
@@ -498,7 +579,7 @@ def print_console_summary(report: dict[str, Any], out_dir: Path) -> None:
         status = str(item["status"])
         if item.get("regression"):
             status = f"{status}!"
-        if item["status"] == "ok":
+        if item.get("score") is not None:
             print(
                 f"{case:<24} {status:<18} {item['score']:>7.2f} "
                 f"{item['ssim']:>8.4f} {item['edge_iou']:>9.4f} {item['pixel_mismatch']:>9.4f}"
@@ -510,16 +591,17 @@ def print_console_summary(report: dict[str, Any], out_dir: Path) -> None:
     mean_txt = f"{summary['mean_score']:.2f}" if summary["mean_score"] is not None else "n/a"
     print(
         f"Total: {summary['total']} | OK: {summary['ok']} | "
+        f"qml_warnings: {summary['qml_warnings']} | "
         f"convert_failed: {summary['convert_failed']} | mean score: {mean_txt}"
     )
     print(f"Report written to {out_dir / 'report.md'} and {out_dir / 'report.json'}")
 
 
 def verify_selftest(report: dict[str, Any]) -> None:
-    """Assert selftest score thresholds and ordering, raising HarnessError on failure."""
+    """Assert selftest score thresholds and strict ranking: good > near_miss > wrong."""
     by_name = {str(item["case"]): item for item in report["cases"]}
 
-    required = [*SELFTEST_GOOD_CASES, SELFTEST_WRONG_CASE]
+    required = [*SELFTEST_GOOD_CASES, SELFTEST_NEAR_MISS_CASE, SELFTEST_WRONG_CASE]
     missing = [name for name in required if name not in by_name]
     if missing:
         raise HarnessError(f"Selftest missing expected case(s): {', '.join(missing)}")
@@ -540,20 +622,29 @@ def verify_selftest(report: dict[str, Any]) -> None:
                 f"expected > {SELFTEST_MIN_GOOD_SCORE:.1f}"
             )
 
+    near_miss_score = float(by_name[SELFTEST_NEAR_MISS_CASE]["score"])
     wrong_score = float(by_name[SELFTEST_WRONG_CASE]["score"])
     min_good_name = min(good_scores, key=lambda k: good_scores[k])
     min_good_score = good_scores[min_good_name]
 
-    if wrong_score >= min_good_score - SELFTEST_MIN_MARGIN_POINTS:
+    if near_miss_score >= min_good_score - SELFTEST_MIN_NEAR_MISS_GAP:
         raise HarnessError(
-            f"Selftest deliberately wrong pair {SELFTEST_WRONG_CASE!r} scored {wrong_score:.2f}, "
-            f"not clearly lower than {min_good_name!r} ({min_good_score:.2f}; "
-            f"required margin >= {SELFTEST_MIN_MARGIN_POINTS:.1f} pts)"
+            f"Selftest near-miss pair {SELFTEST_NEAR_MISS_CASE!r} scored {near_miss_score:.2f}, "
+            f"not clearly below {min_good_name!r} ({min_good_score:.2f}; "
+            f"required gap >= {SELFTEST_MIN_NEAR_MISS_GAP:.1f} pts)"
+        )
+
+    if wrong_score >= near_miss_score - SELFTEST_MIN_WRONG_GAP:
+        raise HarnessError(
+            f"Selftest wrong pair {SELFTEST_WRONG_CASE!r} scored {wrong_score:.2f}, "
+            f"not clearly below near-miss {SELFTEST_NEAR_MISS_CASE!r} ({near_miss_score:.2f}; "
+            f"required gap >= {SELFTEST_MIN_WRONG_GAP:.1f} pts)"
         )
 
     print(
         f"SELFTEST PASSED: all {len(SELFTEST_GOOD_CASES)} matching pairs scored "
         f"> {SELFTEST_MIN_GOOD_SCORE:.0f} (min={min_good_score:.2f} on {min_good_name}), "
+        f"{SELFTEST_NEAR_MISS_CASE} ranked in between ({near_miss_score:.2f}), "
         f"and {SELFTEST_WRONG_CASE} scored clearly lower ({wrong_score:.2f})."
     )
 
@@ -596,7 +687,20 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--update-baseline",
         action="store_true",
-        help="Write current case scores to baseline.json",
+        help="Merge current 'ok' case scores into baseline.json (cannot be combined with --selftest)",
+    )
+    parser.add_argument(
+        "--strict",
+        dest="strict",
+        action="store_true",
+        default=True,
+        help="Mark cases emitting QML runtime/binding warnings as 'qml_warnings' (default: enabled)",
+    )
+    parser.add_argument(
+        "--no-strict",
+        dest="strict",
+        action="store_false",
+        help="Keep status 'ok' even when qml6 prints QML runtime/binding warnings",
     )
     parser.add_argument(
         "--selftest",
@@ -623,12 +727,23 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
+        if args.selftest and args.update_baseline:
+            raise HarnessError("--update-baseline cannot be used with --selftest")
+
         corpus_dir = SELFTEST_DIR if args.selftest else args.corpus
         out_dir = args.out
 
         baseline_path = args.baseline if args.baseline is not None else DEFAULT_BASELINE_PATH
         use_baseline = (not args.selftest or args.baseline is not None) and baseline_path.is_file()
-        baseline_scores = load_baseline(baseline_path) if use_baseline else None
+
+        baseline_scores: dict[str, float] | None = None
+        existing_entries: dict[str, dict[str, Any]] | None = None
+        if use_baseline:
+            baseline_scores, existing_entries = load_baseline(
+                baseline_path,
+                expected_width=args.width,
+                expected_height=args.height,
+            )
 
         cases = discover_cases(corpus_dir, args.cases)
         report = evaluate_cases(
@@ -639,6 +754,7 @@ def main(argv: list[str] | None = None) -> int:
             selftest=args.selftest,
             convert_cmd=args.convert_cmd,
             baseline_scores=baseline_scores,
+            strict=args.strict,
         )
         print_console_summary(report, out_dir)
 
@@ -648,6 +764,7 @@ def main(argv: list[str] | None = None) -> int:
                 report["cases"],
                 width=args.width,
                 height=args.height,
+                existing_entries=existing_entries,
             )
             print(f"Updated baseline: {baseline_path}")
 

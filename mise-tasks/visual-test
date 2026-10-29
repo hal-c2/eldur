@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Run unit and integration tests for the visual parity harness (tools/visual/test_visual.py)"
+set -euo pipefail
+exec python3 -m unittest discover -s "${MISE_PROJECT_ROOT:-.}/tools/visual" -p "test_*.py" -v "$@"
