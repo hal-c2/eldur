@@ -228,5 +228,8 @@ pub fn compute_styles(doc: &Document, sheets: &[Stylesheet], viewport: &Viewport
 
 mod cascade;
 mod collect;
+mod media;
 mod parse;
+mod properties;
+mod selectors;
 mod ua;

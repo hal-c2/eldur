@@ -378,8 +378,8 @@ pub enum LineHeight {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TextAlign {
-    /// `start`, and `left` in LTR, both arrive here as `Start` when the
-    /// direction is LTR; `left` in RTL stays `Left`.
+    /// Values are kept as written (`start` → `Start`, `left` → `Left`); the
+    /// converter resolves them against `direction`.
     #[default]
     Start,
     End,
