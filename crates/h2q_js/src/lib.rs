@@ -25,6 +25,7 @@
 /// to `page.js`.
 pub const RUNTIME_JS: &str = include_str!("h2q_runtime.js");
 
+/// How a script snippet was embedded in the HTML document.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScriptKind {
     /// `<script>` / `<script src>` without `type=module`.
@@ -44,11 +45,14 @@ pub enum ScriptKind {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ElementKey(pub u32);
 
+/// One script or inline event handler attribute extracted from a page.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ScriptInput {
+    /// Raw JavaScript source text.
     pub source: String,
     /// File path/URL or `inline script #N` / `onclick of <button id=x>`.
     pub name: String,
+    /// Execution mode of the script.
     pub kind: ScriptKind,
     /// 1-based line in the HTML where inline code starts (for diagnostics).
     pub line_offset: u32,
@@ -57,6 +61,7 @@ pub struct ScriptInput {
 /// A DOM query found in the scripts with a literal argument.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum DomQuery {
+    /// `document.getElementById(id)`.
     ById(String),
     /// `querySelector` (first match).
     Selector(String),
@@ -65,6 +70,7 @@ pub enum DomQuery {
     SelectorAll(String),
 }
 
+/// Static summary of DOM queries, mutations, writes and event listeners found across scripts.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Analysis {
     /// Every literal DOM query, deduplicated, in first-seen order.
@@ -79,14 +85,18 @@ pub struct Analysis {
     /// `style.color`, `classList`, `hidden`, …), so the converter can make
     /// the corresponding QML properties writable/bound.
     pub writes: Vec<(DomQuery, String)>,
+    /// Syntax errors and unsupported-feature warnings discovered during analysis.
     pub diagnostics: Vec<Diagnostic>,
 }
 
 /// What the converter made of an element.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct QmlTarget {
+    /// Converter's element key.
     pub key: ElementKey,
+    /// Sanitized QML `id` emitted in `Main.qml`.
     pub qml_id: String,
+    /// QML component family chosen for the element.
     pub kind: TargetKind,
 }
 
@@ -131,6 +141,7 @@ pub trait DomResolver {
 /// A function in `page.js` the converter wires to a QML signal handler.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EventBinding {
+    /// Resolved QML element receiving the signal handler.
     pub target: QmlTarget,
     /// DOM event type: `click`, `input`, `change`, `keydown`, ….
     pub event: String,
@@ -140,6 +151,7 @@ pub struct EventBinding {
     pub function: String,
 }
 
+/// Rewritten `page.js` output along with initialization hook, static event bindings, and diagnostics.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct JsOutput {
     /// Contents of `page.js`.
@@ -151,9 +163,11 @@ pub struct JsOutput {
     /// Static event bindings (handler attributes, `addEventListener` and
     /// `onX =` on resolved targets).
     pub bindings: Vec<EventBinding>,
+    /// Syntax errors and unsupported-feature warnings encountered during rewrite.
     pub diagnostics: Vec<Diagnostic>,
 }
 
+/// Severity of a JavaScript conversion diagnostic.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Severity {
     /// Valid JS that will not work (or only partly) in QML.
@@ -162,11 +176,16 @@ pub enum Severity {
     Error,
 }
 
+/// A diagnostic emitted while analyzing or rewriting page scripts.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Diagnostic {
+    /// Error or unsupported-feature warning level.
     pub severity: Severity,
+    /// Originating [`ScriptInput::name`].
     pub source: String,
+    /// 1-based line number adjusted by [`ScriptInput::line_offset`].
     pub line: Option<u32>,
+    /// Human-readable description of the issue.
     pub message: String,
 }
 
@@ -187,4 +206,8 @@ pub fn rewrite(
 }
 
 mod analyze;
+mod edit;
+mod lower;
+mod parse;
+mod resolve;
 mod rewrite;
