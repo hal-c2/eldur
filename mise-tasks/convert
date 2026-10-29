@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Convert an HTML5 + CSS + JS page to QML"
+set -euo pipefail
+cargo run -q -p h2q_cli -- convert "$@"
