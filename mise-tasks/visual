@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
-#MISE description="Run the HTML-vs-QML visual parity harness (tools/visual/run.py)"
+#MISE description="Run the HTML-vs-QML visual parity harness (pass 'test' or '--test' for unit tests, '--selftest' for self-test)"
 set -euo pipefail
+if [[ "${1:-}" == "test" ]]; then
+  shift
+  exec python3 -m unittest discover -s "${MISE_PROJECT_ROOT:-.}/tools/visual" -p "test_*.py" -v "$@"
+fi
 exec python3 "${MISE_PROJECT_ROOT:-.}/tools/visual/run.py" "$@"

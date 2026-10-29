@@ -708,6 +708,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run built-in hand-written HTML/QML pairs in tools/visual/selftest/ without converter",
     )
     parser.add_argument(
+        "--test",
+        action="store_true",
+        help="Run the unit and integration test suite (tools/visual/test_visual.py)",
+    )
+    parser.add_argument(
         "--width",
         type=_positive_int,
         default=1280,
@@ -725,6 +730,14 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    if args.test:
+        import unittest
+
+        suite = unittest.defaultTestLoader.discover(str(SCRIPT_DIR), pattern="test_*.py")
+        runner = unittest.TextTestRunner(verbosity=2)
+        result = runner.run(suite)
+        return 0 if result.wasSuccessful() else 1
 
     try:
         if args.selftest and args.update_baseline:

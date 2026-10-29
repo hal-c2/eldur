@@ -12,7 +12,8 @@ python3 tools/visual/run.py --selftest
 mise run visual -- --selftest
 
 # Run the unit and integration test suite:
-mise run visual-test
+mise run visual test
+mise run visual -- --test
 
 # Score the converter on tests/corpus/ -> target/visual/report.{md,json}:
 mise run visual
@@ -88,7 +89,7 @@ Implemented with Pillow + NumPy only:
 Passing `--diff <out.png>` writes a labelled three-panel PNG:
 `Browser (HTML) | Qt Quick (QML) | Diff Heatmap`.
 
-### 4. `run.py`, `mise-tasks/visual`, and `mise-tasks/visual-test`
+### 4. `run.py` and `mise-tasks/visual`
 
 - Discovers every case directory containing `index.html` under `--corpus`
   (default `tests/corpus`), optionally filtered by `--cases a,b`.
