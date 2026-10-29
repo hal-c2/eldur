@@ -16,10 +16,7 @@ use super::cursor::{
 };
 
 /// Parses a complete component-value slice as a single CSS `<color>`.
-pub(crate) fn parse_color_cvs(
-    cvs: &[ComponentValue],
-    current_color: Rgba,
-) -> Result<Rgba, String> {
+pub(crate) fn parse_color_cvs(cvs: &[ComponentValue], current_color: Rgba) -> Result<Rgba, String> {
     parse_color_cvs_depth(cvs, current_color, 0)
 }
 
@@ -41,10 +38,7 @@ fn parse_color_cvs_depth(
 ///   begin a colour (for example `solid`, `1px`, `inset`, `none`).
 /// - Returns `Err` if the next token *is* a colour token/function (`#...`,
 ///   `rgb(...)`, `color-mix(...)`, …) whose syntax or arguments are invalid.
-pub(crate) fn eat_color(
-    cur: &mut Cursor<'_>,
-    current_color: Rgba,
-) -> Result<Option<Rgba>, String> {
+pub(crate) fn eat_color(cur: &mut Cursor<'_>, current_color: Rgba) -> Result<Option<Rgba>, String> {
     eat_color_depth(cur, current_color, 0)
 }
 
@@ -211,7 +205,9 @@ fn validate_color_fn_separators(fname: &str, args: &[ComponentValue]) -> Result<
         }
         let parts = split_comma_separated(args)?;
         if !matches!(parts.len(), 3 | 4) {
-            return Err(format!("expected 3 or 4 comma-separated arguments in {fname}()"));
+            return Err(format!(
+                "expected 3 or 4 comma-separated arguments in {fname}()"
+            ));
         }
         if fname.eq_ignore_ascii_case("rgb") || fname.eq_ignore_ascii_case("rgba") {
             // CSS Color 4 §5.1: legacy comma-separated rgb()/rgba() requires all three
@@ -422,7 +418,9 @@ fn parse_mix_component(
 
 fn validate_mix_pct(pct: f32) -> Result<(), String> {
     if !(0.0..=100.0).contains(&pct) {
-        Err(format!("color-mix() percentage {pct}% out of [0%, 100%] range"))
+        Err(format!(
+            "color-mix() percentage {pct}% out of [0%, 100%] range"
+        ))
     } else {
         Ok(())
     }
@@ -437,28 +435,25 @@ fn float_to_u8(v: f32) -> u8 {
 /// deprecated CSS 2 aliases mapped to their CSS Color 4 equivalents.
 fn system_color(ident: &str) -> Option<Rgba> {
     match ident.to_ascii_lowercase().as_str() {
-        "canvas"
-        | "field"
-        | "window"
-        | "infobackground"
-        | "menu"
-        | "appworkspace"
-        | "background"
-        | "scrollbar" => Some(Rgba::WHITE),
-        "canvastext" | "fieldtext" | "buttontext" | "marktext" | "windowtext" | "infotext"
-        | "menutext" | "captiontext" | "inactivecaptiontext" => Some(Rgba::BLACK),
+        "canvas" | "field" | "window" | "infobackground" | "menu" | "appworkspace"
+        | "background" | "scrollbar" => Some(Rgba::WHITE),
+        "canvastext"
+        | "fieldtext"
+        | "buttontext"
+        | "marktext"
+        | "windowtext"
+        | "infotext"
+        | "menutext"
+        | "captiontext"
+        | "inactivecaptiontext" => Some(Rgba::BLACK),
         "linktext" => Some(Rgba::new(0, 0, 238, 255)),
         "visitedtext" => Some(Rgba::new(85, 26, 139, 255)),
         "activetext" => Some(Rgba::new(255, 0, 0, 255)),
         "buttonface" | "threedface" => Some(Rgba::new(240, 240, 240, 255)),
-        "buttonborder"
-        | "windowframe"
-        | "activeborder"
-        | "inactiveborder"
-        | "threedshadow"
-        | "threeddarkshadow"
-        | "threedhighlight"
-        | "threedlightshadow" => Some(Rgba::new(118, 118, 118, 255)),
+        "buttonborder" | "windowframe" | "activeborder" | "inactiveborder" | "threedshadow"
+        | "threeddarkshadow" | "threedhighlight" | "threedlightshadow" => {
+            Some(Rgba::new(118, 118, 118, 255))
+        }
         "highlight" | "selecteditem" | "accentcolor" | "activecaption" => {
             Some(Rgba::new(0, 96, 223, 255))
         }

@@ -201,8 +201,7 @@ pub(crate) fn parse_size(
         cur.restore(saved);
     }
 
-    let len = eat_length(&mut cur, uctx, true)?
-        .ok_or_else(|| "invalid sizing value".to_owned())?;
+    let len = eat_length(&mut cur, uctx, true)?.ok_or_else(|| "invalid sizing value".to_owned())?;
     cur.expect_eof()?;
     Ok(Size::Length(len))
 }
@@ -226,8 +225,7 @@ pub(crate) fn parse_aspect_ratio(cvs: &[ComponentValue]) -> Result<Option<f32>, 
 }
 
 fn eat_ratio(cur: &mut Cursor<'_>) -> Result<f32, String> {
-    let w = eat_number_or_calc(cur, true)?
-        .ok_or_else(|| "expected ratio number".to_owned())?;
+    let w = eat_number_or_calc(cur, true)?.ok_or_else(|| "expected ratio number".to_owned())?;
     if w <= 0.0 || !w.is_finite() {
         return Err("aspect-ratio width must be positive".to_owned());
     }
@@ -278,13 +276,9 @@ pub(crate) fn eat_line_width(
     eat_px(cur, uctx, true)
 }
 
-pub(crate) fn parse_line_width(
-    cvs: &[ComponentValue],
-    uctx: &UnitContext,
-) -> Result<f32, String> {
+pub(crate) fn parse_line_width(cvs: &[ComponentValue], uctx: &UnitContext) -> Result<f32, String> {
     let mut cur = Cursor::new(cvs);
-    let w = eat_line_width(&mut cur, uctx)?
-        .ok_or_else(|| "expected <line-width>".to_owned())?;
+    let w = eat_line_width(&mut cur, uctx)?.ok_or_else(|| "expected <line-width>".to_owned())?;
     cur.expect_eof()?;
     Ok(w)
 }
@@ -317,8 +311,8 @@ pub(crate) fn parse_border_style(
     allow_auto: bool,
 ) -> Result<BorderStyle, String> {
     let mut cur = Cursor::new(cvs);
-    let st = eat_border_style(&mut cur, allow_auto)
-        .ok_or_else(|| "expected <line-style>".to_owned())?;
+    let st =
+        eat_border_style(&mut cur, allow_auto).ok_or_else(|| "expected <line-style>".to_owned())?;
     cur.expect_eof()?;
     Ok(st)
 }

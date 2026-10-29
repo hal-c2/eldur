@@ -27,8 +27,8 @@ pub(crate) fn eat_flex_direction(cur: &mut Cursor<'_>) -> Option<FlexDirection> 
 
 pub(crate) fn parse_flex_direction(cvs: &[ComponentValue]) -> Result<FlexDirection, String> {
     let mut cur = Cursor::new(cvs);
-    let dir = eat_flex_direction(&mut cur)
-        .ok_or_else(|| "expected flex-direction keyword".to_owned())?;
+    let dir =
+        eat_flex_direction(&mut cur).ok_or_else(|| "expected flex-direction keyword".to_owned())?;
     cur.expect_eof()?;
     Ok(dir)
 }
@@ -169,8 +169,7 @@ fn match_position_keyword(kw: &str, target: AlignTarget) -> Option<Align> {
 
 pub(crate) fn parse_align(cvs: &[ComponentValue], target: AlignTarget) -> Result<Align, String> {
     let mut cur = Cursor::new(cvs);
-    let align = eat_align(&mut cur, target)
-        .ok_or_else(|| "invalid alignment value".to_owned())?;
+    let align = eat_align(&mut cur, target).ok_or_else(|| "invalid alignment value".to_owned())?;
     cur.expect_eof()?;
     Ok(align)
 }
@@ -191,10 +190,7 @@ pub(crate) fn parse_flex_factor(cvs: &[ComponentValue]) -> Result<f32, String> {
     parse_number_cvs(cvs, true)
 }
 
-pub(crate) fn parse_flex_basis(
-    cvs: &[ComponentValue],
-    uctx: &UnitContext,
-) -> Result<Size, String> {
+pub(crate) fn parse_flex_basis(cvs: &[ComponentValue], uctx: &UnitContext) -> Result<Size, String> {
     parse_size(cvs, uctx, false, true)
 }
 

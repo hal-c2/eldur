@@ -2,7 +2,9 @@
 //! lightweight backtracking cursor over [`ComponentValue`] slices.
 
 use swc_common::{BytePos, input::StringInput};
-use swc_css_ast::{ComponentValue, Function, ListOfComponentValues, NumberType, SimpleBlock, Token};
+use swc_css_ast::{
+    ComponentValue, Function, ListOfComponentValues, NumberType, SimpleBlock, Token,
+};
 use swc_css_parser::{error::ErrorKind, parse_string_input, parser::ParserConfig};
 
 /// Maximum nesting depth of functions and parenthesised/bracketed blocks.
@@ -15,7 +17,8 @@ pub(crate) const MAX_NESTING_DEPTH: usize = 32;
 /// Rejects lexing/syntax errors, unmatched closing brackets, semicolons, and
 /// excessive nesting so downstream property parsers only see well-formed trees.
 pub(crate) fn parse_component_values(value: &str) -> Result<Vec<ComponentValue>, String> {
-    let len = u32::try_from(value.len()).map_err(|_| "CSS value exceeds maximum length".to_owned())?;
+    let len =
+        u32::try_from(value.len()).map_err(|_| "CSS value exceeds maximum length".to_owned())?;
     let input = StringInput::new(value, BytePos(1), BytePos(1 + len));
     let mut errors = Vec::new();
     let list: ListOfComponentValues =
@@ -396,11 +399,9 @@ fn write_escaped_ident(s: &str, out: &mut String) {
                 || ch == '_'
                 || ch > '\x7f'
                 || (ch == '-'
-                    && chars
-                        .peek()
-                        .is_some_and(|&next| {
-                            next.is_ascii_alphabetic() || next == '_' || next == '-' || next > '\x7f'
-                        }))
+                    && chars.peek().is_some_and(|&next| {
+                        next.is_ascii_alphabetic() || next == '_' || next == '-' || next > '\x7f'
+                    }))
         } else {
             ch.is_ascii_alphanumeric() || ch == '_' || ch == '-' || ch > '\x7f'
         };
@@ -573,7 +574,9 @@ impl<'a> Cursor<'a> {
                 }
                 Ok(None)
             }
-            Some(ComponentValue::Function(func)) if func.name.as_str().eq_ignore_ascii_case("url") => {
+            Some(ComponentValue::Function(func))
+                if func.name.as_str().eq_ignore_ascii_case("url") =>
+            {
                 self.pos += 1;
                 let mut inner = Cursor::new(&func.value);
                 if inner.is_eof() {
@@ -624,7 +627,10 @@ impl<'a> Cursor<'a> {
         let saved = self.save();
         if let Some((v, NumberType::Integer)) = self.eat_number_raw() {
             let rounded = v.round();
-            if (v - rounded).abs() < 1e-6 && rounded >= f64::from(i32::MIN) && rounded <= f64::from(i32::MAX) {
+            if (v - rounded).abs() < 1e-6
+                && rounded >= f64::from(i32::MIN)
+                && rounded <= f64::from(i32::MAX)
+            {
                 return Some(rounded as i32);
             }
             self.restore(saved);

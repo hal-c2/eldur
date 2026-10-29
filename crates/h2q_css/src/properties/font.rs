@@ -54,7 +54,9 @@ pub(crate) fn parse_font_family(cvs: &[ComponentValue]) -> Result<Vec<String>, S
                 .eat_ident()
                 .ok_or_else(|| "invalid token in unquoted font-family".to_owned())?;
             if is_css_wide_keyword(id) || id.eq_ignore_ascii_case("default") {
-                return Err(format!("reserved keyword '{id}' is not allowed in font-family"));
+                return Err(format!(
+                    "reserved keyword '{id}' is not allowed in font-family"
+                ));
             }
             words.push(id);
         }
@@ -177,8 +179,8 @@ fn relative_lighter(inherited: u16) -> u16 {
 /// Parses `font-style` (`normal | italic | oblique <angle [-90deg, 90deg]>?`).
 pub(crate) fn parse_font_style(cvs: &[ComponentValue]) -> Result<FontStyle, String> {
     let mut cur = Cursor::new(cvs);
-    let style = eat_font_style(&mut cur)?
-        .ok_or_else(|| "expected font-style keyword".to_owned())?;
+    let style =
+        eat_font_style(&mut cur)?.ok_or_else(|| "expected font-style keyword".to_owned())?;
     cur.expect_eof()?;
     Ok(style)
 }
@@ -200,7 +202,9 @@ pub(crate) fn eat_font_style(cur: &mut Cursor<'_>) -> Result<Option<FontStyle>, 
                 && !is_calc
                 && !(-90.0..=90.0).contains(&deg)
             {
-                return Err(format!("oblique angle '{deg}deg' out of range [-90deg, 90deg]"));
+                return Err(format!(
+                    "oblique angle '{deg}deg' out of range [-90deg, 90deg]"
+                ));
             }
             Ok(Some(FontStyle::Oblique))
         }

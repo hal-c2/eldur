@@ -87,17 +87,6 @@ impl LengthPercentage {
         }
     }
 
-    /// Sums two linear length-percentage combinations term-by-term.
-    #[must_use]
-    pub fn add(self, other: Self) -> Self {
-        Self {
-            px: self.px + other.px,
-            percent: self.percent + other.percent,
-            vw: self.vw + other.vw,
-            vh: self.vh + other.vh,
-        }
-    }
-
     /// Multiplies every component by a scalar factor.
     #[must_use]
     pub fn scale(self, factor: f32) -> Self {
@@ -118,6 +107,19 @@ impl LengthPercentage {
     #[must_use]
     pub fn is_zero(&self) -> bool {
         self.as_px() == Some(0.0)
+    }
+}
+
+impl std::ops::Add for LengthPercentage {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self {
+            px: self.px + other.px,
+            percent: self.percent + other.percent,
+            vw: self.vw + other.vw,
+            vh: self.vh + other.vh,
+        }
     }
 }
 

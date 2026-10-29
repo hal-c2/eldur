@@ -95,8 +95,7 @@ pub(crate) fn eat_easing(cur: &mut Cursor<'_>) -> Result<Option<Easing>, String>
 
 pub(crate) fn parse_easing_cvs(cvs: &[ComponentValue]) -> Result<Easing, String> {
     let mut cur = Cursor::new(cvs);
-    let easing = eat_easing(&mut cur)?
-        .ok_or_else(|| "expected <easing-function>".to_owned())?;
+    let easing = eat_easing(&mut cur)?.ok_or_else(|| "expected <easing-function>".to_owned())?;
     cur.expect_eof()?;
     Ok(easing)
 }
@@ -120,7 +119,9 @@ fn parse_unit_interval_x(cvs: &[ComponentValue]) -> Result<f32, String> {
         .is_some_and(|cv| matches!(cv, ComponentValue::Function(f) if is_math_fn(f.name.as_str())));
     let x = parse_number_cvs(cvs, false)?;
     if !is_calc && !(0.0..=1.0).contains(&x) {
-        return Err(format!("cubic-bezier() X coordinate '{x}' must be in [0, 1]"));
+        return Err(format!(
+            "cubic-bezier() X coordinate '{x}' must be in [0, 1]"
+        ));
     }
     Ok(x.clamp(0.0, 1.0))
 }
@@ -176,8 +177,8 @@ pub(crate) fn parse_time_list(
             out.push(0.0);
             continue;
         }
-        let ms = eat_time_ms(&mut cur, non_negative)?
-            .ok_or_else(|| "expected <time>".to_owned())?;
+        let ms =
+            eat_time_ms(&mut cur, non_negative)?.ok_or_else(|| "expected <time>".to_owned())?;
         cur.expect_eof()?;
         out.push(ms);
     }
@@ -221,10 +222,7 @@ pub(crate) fn parse_transition_property_list(
     Ok(Some(props))
 }
 
-pub(crate) fn apply_transition_properties(
-    style: &mut ComputedStyle,
-    props: Option<Vec<String>>,
-) {
+pub(crate) fn apply_transition_properties(style: &mut ComputedStyle, props: Option<Vec<String>>) {
     let Some(props) = props else {
         style.transitions.clear();
         return;
@@ -359,8 +357,8 @@ pub(crate) fn parse_animation_direction_list(
     let mut out = Vec::with_capacity(parts.len());
     for part in parts {
         let mut cur = Cursor::new(part);
-        let dir = eat_anim_direction(&mut cur)
-            .ok_or_else(|| "invalid animation-direction".to_owned())?;
+        let dir =
+            eat_anim_direction(&mut cur).ok_or_else(|| "invalid animation-direction".to_owned())?;
         cur.expect_eof()?;
         out.push(dir);
     }
@@ -390,8 +388,8 @@ pub(crate) fn parse_animation_fill_mode_list(
     let mut out = Vec::with_capacity(parts.len());
     for part in parts {
         let mut cur = Cursor::new(part);
-        let fm = eat_anim_fill_mode(&mut cur)
-            .ok_or_else(|| "invalid animation-fill-mode".to_owned())?;
+        let fm =
+            eat_anim_fill_mode(&mut cur).ok_or_else(|| "invalid animation-fill-mode".to_owned())?;
         cur.expect_eof()?;
         out.push(fm);
     }
@@ -412,9 +410,7 @@ pub(crate) fn eat_anim_play_state(cur: &mut Cursor<'_>) -> Option<bool> {
     }
 }
 
-pub(crate) fn parse_animation_play_state_list(
-    cvs: &[ComponentValue],
-) -> Result<Vec<bool>, String> {
+pub(crate) fn parse_animation_play_state_list(cvs: &[ComponentValue]) -> Result<Vec<bool>, String> {
     let parts = split_comma_separated(cvs)?;
     let mut out = Vec::with_capacity(parts.len());
     for part in parts {
@@ -427,10 +423,7 @@ pub(crate) fn parse_animation_play_state_list(
     Ok(out)
 }
 
-pub(crate) fn apply_animation_names(
-    style: &mut ComputedStyle,
-    names: Vec<Option<String>>,
-) {
+pub(crate) fn apply_animation_names(style: &mut ComputedStyle, names: Vec<Option<String>>) {
     let old = std::mem::take(&mut style.animations);
     let mut next = Vec::new();
     for (i, maybe_name) in names.into_iter().enumerate() {

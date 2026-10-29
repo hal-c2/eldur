@@ -258,8 +258,8 @@ fn parse_scale_arg(cvs: &[ComponentValue]) -> Result<f32, String> {
 
 fn parse_angle_arg(cvs: &[ComponentValue]) -> Result<f32, String> {
     let mut cur = Cursor::new(cvs);
-    let deg = eat_angle_deg(&mut cur, true)?
-        .ok_or_else(|| "expected <angle> in transform".to_owned())?;
+    let deg =
+        eat_angle_deg(&mut cur, true)?.ok_or_else(|| "expected <angle> in transform".to_owned())?;
     cur.expect_eof()?;
     Ok(deg)
 }

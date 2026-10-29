@@ -221,7 +221,11 @@ fn combine_min_max(vals: Vec<CalcVal>, is_min: bool) -> Result<CalcVal, String> 
     let first = vals.first().ok_or_else(|| "empty min()/max()".to_owned())?;
     match first {
         CalcVal::Number(_) => {
-            let mut acc = if is_min { f32::INFINITY } else { f32::NEG_INFINITY };
+            let mut acc = if is_min {
+                f32::INFINITY
+            } else {
+                f32::NEG_INFINITY
+            };
             for v in vals {
                 let CalcVal::Number(n) = v else {
                     return Err("mismatched types in min()/max()".to_owned());
@@ -231,7 +235,11 @@ fn combine_min_max(vals: Vec<CalcVal>, is_min: bool) -> Result<CalcVal, String> 
             Ok(CalcVal::Number(acc))
         }
         CalcVal::AngleDeg(_) => {
-            let mut acc = if is_min { f32::INFINITY } else { f32::NEG_INFINITY };
+            let mut acc = if is_min {
+                f32::INFINITY
+            } else {
+                f32::NEG_INFINITY
+            };
             for v in vals {
                 let CalcVal::AngleDeg(n) = v else {
                     return Err("mismatched types in min()/max()".to_owned());
@@ -241,7 +249,11 @@ fn combine_min_max(vals: Vec<CalcVal>, is_min: bool) -> Result<CalcVal, String> 
             Ok(CalcVal::AngleDeg(acc))
         }
         CalcVal::TimeMs(_) => {
-            let mut acc = if is_min { f32::INFINITY } else { f32::NEG_INFINITY };
+            let mut acc = if is_min {
+                f32::INFINITY
+            } else {
+                f32::NEG_INFINITY
+            };
             for v in vals {
                 let CalcVal::TimeMs(n) = v else {
                     return Err("mismatched types in min()/max()".to_owned());
@@ -253,7 +265,11 @@ fn combine_min_max(vals: Vec<CalcVal>, is_min: bool) -> Result<CalcVal, String> 
         CalcVal::Dim(_) => {
             let mut nodes = Vec::with_capacity(vals.len());
             let mut all_px = true;
-            let mut acc_px = if is_min { f32::INFINITY } else { f32::NEG_INFINITY };
+            let mut acc_px = if is_min {
+                f32::INFINITY
+            } else {
+                f32::NEG_INFINITY
+            };
             for v in vals {
                 let CalcVal::Dim(node) = v else {
                     return Err("mismatched types in min()/max()".to_owned());
@@ -261,7 +277,11 @@ fn combine_min_max(vals: Vec<CalcVal>, is_min: bool) -> Result<CalcVal, String> 
                 if let CalcNode::Leaf(lp) = &node
                     && let Some(px) = lp.as_px()
                 {
-                    acc_px = if is_min { acc_px.min(px) } else { acc_px.max(px) };
+                    acc_px = if is_min {
+                        acc_px.min(px)
+                    } else {
+                        acc_px.max(px)
+                    };
                 } else {
                     all_px = false;
                 }
@@ -516,11 +536,11 @@ fn scale_calc_node(node: CalcNode, factor: f32) -> CalcNode {
 
 fn add_calc_nodes(lhs: CalcNode, rhs: CalcNode) -> CalcNode {
     match (lhs, rhs) {
-        (CalcNode::Leaf(a), CalcNode::Leaf(b)) => CalcNode::Leaf(a.add(b)),
+        (CalcNode::Leaf(a), CalcNode::Leaf(b)) => CalcNode::Leaf(a + b),
         (CalcNode::Sum(mut items), CalcNode::Leaf(b)) => {
             for item in &mut items {
                 if let CalcNode::Leaf(existing) = item {
-                    *existing = existing.add(b);
+                    *existing = *existing + b;
                     return CalcNode::Sum(items);
                 }
             }
@@ -530,7 +550,7 @@ fn add_calc_nodes(lhs: CalcNode, rhs: CalcNode) -> CalcNode {
         (CalcNode::Leaf(a), CalcNode::Sum(mut items)) => {
             for item in &mut items {
                 if let CalcNode::Leaf(existing) = item {
-                    *existing = a.add(*existing);
+                    *existing = a + *existing;
                     return CalcNode::Sum(items);
                 }
             }
@@ -737,7 +757,11 @@ pub(crate) fn length_to_lp(
         }
         Length::Calc(node) => {
             let px = calc_node_to_px(&node, uctx)?;
-            Ok(LengthPercentage::px(if non_negative { px.max(0.0) } else { px }))
+            Ok(LengthPercentage::px(if non_negative {
+                px.max(0.0)
+            } else {
+                px
+            }))
         }
     }
 }
@@ -763,8 +787,8 @@ pub(crate) fn parse_px_cvs(
     non_negative: bool,
 ) -> Result<f32, String> {
     let mut cur = Cursor::new(cvs);
-    let px = eat_px(&mut cur, uctx, non_negative)?
-        .ok_or_else(|| "expected a <length>".to_owned())?;
+    let px =
+        eat_px(&mut cur, uctx, non_negative)?.ok_or_else(|| "expected a <length>".to_owned())?;
     cur.expect_eof()?;
     Ok(px)
 }
@@ -801,10 +825,7 @@ pub(crate) fn eat_number_or_calc(
     Ok(None)
 }
 
-pub(crate) fn parse_number_cvs(
-    cvs: &[ComponentValue],
-    non_negative: bool,
-) -> Result<f32, String> {
+pub(crate) fn parse_number_cvs(cvs: &[ComponentValue], non_negative: bool) -> Result<f32, String> {
     let mut cur = Cursor::new(cvs);
     let n = eat_number_or_calc(&mut cur, non_negative)?
         .ok_or_else(|| "expected a <number>".to_owned())?;
@@ -889,13 +910,11 @@ pub(crate) fn eat_angle_deg(
         cur.restore(saved);
         return Ok(None);
     }
-    if allow_unitless_zero {
-        if let Some(n) = cur.eat_number() {
-            if n == 0.0 {
-                return Ok(Some(0.0));
-            }
-            cur.restore(saved);
+    if allow_unitless_zero && let Some(n) = cur.eat_number() {
+        if n == 0.0 {
+            return Ok(Some(0.0));
         }
+        cur.restore(saved);
     }
     Ok(None)
 }
@@ -909,10 +928,7 @@ pub(crate) fn unit_to_ms(val: f32, unit: &str) -> Option<f32> {
 }
 
 /// Consumes a `<time>` in milliseconds. Unitless `0` is rejected per CSS Values 4 §6.2.
-pub(crate) fn eat_time_ms(
-    cur: &mut Cursor<'_>,
-    non_negative: bool,
-) -> Result<Option<f32>, String> {
+pub(crate) fn eat_time_ms(cur: &mut Cursor<'_>, non_negative: bool) -> Result<Option<f32>, String> {
     let saved = cur.save();
     if let Some((fname, fargs)) = cur.eat_function() {
         if is_math_fn(fname) {

@@ -100,7 +100,10 @@ fn resolve_pos_tokens(
 ) -> Result<(LengthPercentage, LengthPercentage), String> {
     match toks {
         [t1] => match *t1 {
-            PosTok::Left => Ok((LengthPercentage::percent(0.0), LengthPercentage::percent(50.0))),
+            PosTok::Left => Ok((
+                LengthPercentage::percent(0.0),
+                LengthPercentage::percent(50.0),
+            )),
             PosTok::Right => Ok((
                 LengthPercentage::percent(100.0),
                 LengthPercentage::percent(50.0),
@@ -109,7 +112,10 @@ fn resolve_pos_tokens(
                 LengthPercentage::percent(50.0),
                 LengthPercentage::percent(50.0),
             )),
-            PosTok::Top => Ok((LengthPercentage::percent(50.0), LengthPercentage::percent(0.0))),
+            PosTok::Top => Ok((
+                LengthPercentage::percent(50.0),
+                LengthPercentage::percent(0.0),
+            )),
             PosTok::Bottom => Ok((
                 LengthPercentage::percent(50.0),
                 LengthPercentage::percent(100.0),
@@ -130,13 +136,15 @@ fn resolve_pos_tokens(
             // When a `<length-percentage>` is present in 2-value syntax, CSS requires (H, V).
             let x = match *t1 {
                 PosTok::Lp(lp) => lp,
-                other => horiz_kw_lp(other)
-                    .ok_or_else(|| "first token of 2-value <position> must be horizontal".to_owned())?,
+                other => horiz_kw_lp(other).ok_or_else(|| {
+                    "first token of 2-value <position> must be horizontal".to_owned()
+                })?,
             };
             let y = match *t2 {
                 PosTok::Lp(lp) => lp,
-                other => vert_kw_lp(other)
-                    .ok_or_else(|| "second token of 2-value <position> must be vertical".to_owned())?,
+                other => vert_kw_lp(other).ok_or_else(|| {
+                    "second token of 2-value <position> must be vertical".to_owned()
+                })?,
             };
             Ok((x, y))
         }
@@ -188,8 +196,8 @@ pub(crate) fn parse_position_2d(
     let mut cur = Cursor::new(cvs);
     let mut toks = Vec::new();
     while !cur.is_eof() {
-        let tok = eat_pos_tok(&mut cur, uctx)?
-            .ok_or_else(|| "invalid token in <position>".to_owned())?;
+        let tok =
+            eat_pos_tok(&mut cur, uctx)?.ok_or_else(|| "invalid token in <position>".to_owned())?;
         toks.push(tok);
         if toks.len() > 4 {
             return Err("too many tokens in <position>".to_owned());
@@ -895,7 +903,10 @@ pub(crate) fn validate_bg_attachment_list(cvs: &[ComponentValue]) -> Result<(), 
         let id = cur
             .eat_ident()
             .ok_or_else(|| "expected background-attachment keyword".to_owned())?;
-        if !matches!(id.to_ascii_lowercase().as_str(), "scroll" | "fixed" | "local") {
+        if !matches!(
+            id.to_ascii_lowercase().as_str(),
+            "scroll" | "fixed" | "local"
+        ) {
             return Err(format!("invalid background-attachment '{id}'"));
         }
         cur.expect_eof()?;
@@ -910,10 +921,8 @@ pub(crate) fn validate_bg_box_list(cvs: &[ComponentValue], allow_text: bool) -> 
             .eat_ident()
             .ok_or_else(|| "expected box keyword".to_owned())?;
         let lower = id.to_ascii_lowercase();
-        let ok = matches!(
-            lower.as_str(),
-            "border-box" | "padding-box" | "content-box"
-        ) || (allow_text && lower == "text");
+        let ok = matches!(lower.as_str(), "border-box" | "padding-box" | "content-box")
+            || (allow_text && lower == "text");
         if !ok {
             return Err(format!("invalid background box '{id}'"));
         }
@@ -924,10 +933,7 @@ pub(crate) fn validate_bg_box_list(cvs: &[ComponentValue], allow_text: bool) -> 
 
 /// Applies a parsed `background-image` list to `style.background_layers` (CSS Backgrounds 3 §2.1:
 /// `background-image` determines the layer count).
-pub(crate) fn apply_background_images(
-    style: &mut ComputedStyle,
-    images: Vec<Option<Image>>,
-) {
+pub(crate) fn apply_background_images(style: &mut ComputedStyle, images: Vec<Option<Image>>) {
     if images.len() == 1 && images[0].is_none() {
         style.background_layers.clear();
         return;

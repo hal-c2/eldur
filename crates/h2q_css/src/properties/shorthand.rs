@@ -28,11 +28,13 @@ use super::{
         eat_font_style, is_font_stretch_kw, parse_font_family, parse_font_size,
         parse_font_variant_caps, parse_font_weight, parse_line_height,
     },
-    grid::{eat_track_size, parse_grid_line, parse_grid_template_areas, parse_grid_template_tracks},
+    grid::{
+        eat_track_size, parse_grid_line, parse_grid_template_areas, parse_grid_template_tracks,
+    },
     length::{UnitContext, eat_length, eat_time_ms, parse_length_cvs, parse_number_cvs},
     text::{
         eat_decoration_color_token, eat_list_style_position, eat_list_style_type,
-        eat_text_decoration_style, parse_white_space_collapse, parse_text_wrap_mode,
+        eat_text_decoration_style, parse_text_wrap_mode, parse_white_space_collapse,
     },
 };
 
@@ -152,7 +154,7 @@ pub(crate) fn shorthand_longhands(lower_name: &str) -> Option<Vec<Longhand>> {
         ]),
         "border-block-color" => Some(vec![Longhand::BorderTopColor, Longhand::BorderBottomColor]),
         "border-inline-color" => Some(vec![Longhand::BorderLeftColor, Longhand::BorderRightColor]),
-        "border-radius" => Some(vec![
+        "border-radius" | "-webkit-border-radius" => Some(vec![
             Longhand::BorderTopLeftRadius,
             Longhand::BorderTopRightRadius,
             Longhand::BorderBottomRightRadius,
@@ -187,12 +189,14 @@ pub(crate) fn shorthand_longhands(lower_name: &str) -> Option<Vec<Longhand>> {
             Longhand::FontFamily,
         ]),
         "font-variant" => Some(vec![Longhand::FontVariantCaps]),
-        "flex" => Some(vec![
+        "flex" | "-webkit-flex" => Some(vec![
             Longhand::FlexGrow,
             Longhand::FlexShrink,
             Longhand::FlexBasis,
         ]),
-        "flex-flow" => Some(vec![Longhand::FlexDirection, Longhand::FlexWrap]),
+        "flex-flow" | "-webkit-flex-flow" => {
+            Some(vec![Longhand::FlexDirection, Longhand::FlexWrap])
+        }
         "gap" | "grid-gap" => Some(vec![Longhand::RowGap, Longhand::ColumnGap]),
         "place-content" => Some(vec![Longhand::AlignContent, Longhand::JustifyContent]),
         "place-items" => Some(vec![Longhand::AlignItems, Longhand::JustifyItems]),
@@ -224,7 +228,7 @@ pub(crate) fn shorthand_longhands(lower_name: &str) -> Option<Vec<Longhand>> {
             Longhand::ListStyleImage,
             Longhand::ListStyleType,
         ]),
-        "text-decoration" => Some(vec![
+        "text-decoration" | "-webkit-text-decoration" => Some(vec![
             Longhand::TextDecorationLine,
             Longhand::TextDecorationStyle,
             Longhand::TextDecorationColor,
@@ -414,13 +418,13 @@ pub(crate) fn expand_shorthand(
                 (Longhand::OutlineColor, c),
             ])
         }
-        "border-radius" => expand_border_radius(cvs),
+        "border-radius" | "-webkit-border-radius" => expand_border_radius(cvs),
         "background" => expand_background(cvs),
         "background-position" => expand_background_position(cvs),
         "font" => expand_font(cvs),
         "font-variant" => expand_font_variant(cvs),
-        "flex" => expand_flex(cvs),
-        "flex-flow" => expand_flex_flow(cvs),
+        "flex" | "-webkit-flex" => expand_flex(cvs),
+        "flex-flow" | "-webkit-flex-flow" => expand_flex_flow(cvs),
         "gap" | "grid-gap" => expand_two_sides(cvs, [Longhand::RowGap, Longhand::ColumnGap]),
         "place-content" => expand_place_content(cvs),
         "place-items" => expand_place_items(cvs),
@@ -434,7 +438,7 @@ pub(crate) fn expand_shorthand(
         "grid-area" => expand_grid_area(cvs),
         "overflow" => expand_two_sides(cvs, [Longhand::OverflowX, Longhand::OverflowY]),
         "list-style" => expand_list_style(cvs),
-        "text-decoration" => expand_text_decoration(cvs),
+        "text-decoration" | "-webkit-text-decoration" => expand_text_decoration(cvs),
         "transition" | "-webkit-transition" => expand_transition(cvs),
         "animation" | "-webkit-animation" => expand_animation(cvs),
         "white-space" => expand_white_space(cvs),
@@ -630,9 +634,8 @@ fn classify_pos_token(cv: &ComponentValue, uctx: &UnitContext) -> Result<Option<
 fn split_bg_position_tokens(
     toks: &[(&ComponentValue, PosKind)],
 ) -> Result<(String, String), String> {
-    let join2 = |a: &ComponentValue, b: &ComponentValue| {
-        format!("{} {}", serialize_cv(a), serialize_cv(b))
-    };
+    let join2 =
+        |a: &ComponentValue, b: &ComponentValue| format!("{} {}", serialize_cv(a), serialize_cv(b));
 
     match toks {
         [(c0, k0)] => match k0 {
@@ -827,7 +830,10 @@ fn expand_background(cvs: &[ComponentValue]) -> Result<Vec<(Longhand, String)>, 
             // 3. `<attachment>`
             if att.is_none()
                 && let Some(id) = cur.eat_ident()
-                && matches!(id.to_ascii_lowercase().as_str(), "scroll" | "fixed" | "local")
+                && matches!(
+                    id.to_ascii_lowercase().as_str(),
+                    "scroll" | "fixed" | "local"
+                )
             {
                 att = Some(id.to_ascii_lowercase());
                 matched_any = true;
@@ -1067,7 +1073,10 @@ fn expand_font(cvs: &[ComponentValue]) -> Result<Vec<(Longhand, String)>, String
     let _ = parse_font_family(family_slice)?;
 
     Ok(vec![
-        (Longhand::FontStyle, f_style.unwrap_or_else(|| "normal".to_owned())),
+        (
+            Longhand::FontStyle,
+            f_style.unwrap_or_else(|| "normal".to_owned()),
+        ),
         (
             Longhand::FontVariantCaps,
             f_variant.unwrap_or_else(|| "normal".to_owned()),
@@ -1123,7 +1132,8 @@ fn expand_flex(cvs: &[ComponentValue]) -> Result<Vec<(Longhand, String)>, String
         return Err("flex shorthand expects 1 to 3 components".to_owned());
     }
 
-    let is_flex_number = |cv: &ComponentValue| parse_number_cvs(std::slice::from_ref(cv), true).is_ok();
+    let is_flex_number =
+        |cv: &ComponentValue| parse_number_cvs(std::slice::from_ref(cv), true).is_ok();
     let is_flex_basis =
         |cv: &ComponentValue| parse_size(std::slice::from_ref(cv), &uctx, false, true).is_ok();
 
@@ -1202,8 +1212,14 @@ fn expand_flex_flow(cvs: &[ComponentValue]) -> Result<Vec<(Longhand, String)>, S
     }
 
     Ok(vec![
-        (Longhand::FlexDirection, dir.unwrap_or_else(|| "row".to_owned())),
-        (Longhand::FlexWrap, wrap.unwrap_or_else(|| "nowrap".to_owned())),
+        (
+            Longhand::FlexDirection,
+            dir.unwrap_or_else(|| "row".to_owned()),
+        ),
+        (
+            Longhand::FlexWrap,
+            wrap.unwrap_or_else(|| "nowrap".to_owned()),
+        ),
     ])
 }
 
@@ -1224,7 +1240,9 @@ fn expand_place_content(cvs: &[ComponentValue]) -> Result<Vec<(Longhand, String)
             if eat_align(&mut check, AlignTarget::JustifyContent).is_some() && check.is_eof() {
                 first_str.clone()
             } else {
-                return Err("single place-content value is not valid for justify-content".to_owned());
+                return Err(
+                    "single place-content value is not valid for justify-content".to_owned(),
+                );
             }
         }
     } else {
@@ -1323,7 +1341,9 @@ fn expand_grid_template(cvs: &[ComponentValue]) -> Result<Vec<(Longhand, String)
 
     if !has_area_strings {
         if parts.len() != 2 {
-            return Err("grid-template without area strings requires '<rows> / <columns>'".to_owned());
+            return Err(
+                "grid-template without area strings requires '<rows> / <columns>'".to_owned(),
+            );
         }
         let _ = parse_grid_template_tracks(parts[0], &uctx)?;
         let _ = parse_grid_template_tracks(parts[1], &uctx)?;
@@ -1388,8 +1408,9 @@ fn expand_grid_template(cvs: &[ComponentValue]) -> Result<Vec<(Longhand, String)
 }
 
 fn expand_grid(cvs: &[ComponentValue]) -> Result<Vec<(Longhand, String)>, String> {
-    let mut out = expand_grid_template(cvs)
-        .map_err(|_| "unsupported or invalid 'grid' shorthand (only template forms are supported)".to_owned())?;
+    let mut out = expand_grid_template(cvs).map_err(|_| {
+        "unsupported or invalid 'grid' shorthand (only template forms are supported)".to_owned()
+    })?;
     out.push((Longhand::GridAutoFlow, "row".to_owned()));
     out.push((Longhand::GridAutoRows, "auto".to_owned()));
     out.push((Longhand::GridAutoColumns, "auto".to_owned()));
@@ -1534,12 +1555,16 @@ fn expand_list_style(cvs: &[ComponentValue]) -> Result<Vec<(Longhand, String)>, 
                 img = Some("none".to_owned());
             }
             (Some(_), Some(_)) => {
-                return Err("'none' conflicts with both list-style-image and list-style-type".to_owned());
+                return Err(
+                    "'none' conflicts with both list-style-image and list-style-type".to_owned(),
+                );
             }
         },
         2 => {
             if img.is_some() || ty.is_some() {
-                return Err("too many image/type values with two 'none' keywords in list-style".to_owned());
+                return Err(
+                    "too many image/type values with two 'none' keywords in list-style".to_owned(),
+                );
             }
             img = Some("none".to_owned());
             ty = Some("none".to_owned());
@@ -1818,7 +1843,10 @@ fn expand_transition(cvs: &[ComponentValue]) -> Result<Vec<(Longhand, String)>, 
             // Optional CSS Transitions 2 `<transition-behavior>`
             if !behavior_seen
                 && let Some(id) = cur.eat_ident()
-                && matches!(id.to_ascii_lowercase().as_str(), "normal" | "allow-discrete")
+                && matches!(
+                    id.to_ascii_lowercase().as_str(),
+                    "normal" | "allow-discrete"
+                )
             {
                 behavior_seen = true;
                 count += 1;

@@ -40,8 +40,8 @@ pub(crate) fn parse_grid_template_tracks(
             cur.restore(saved);
         }
 
-        let track = eat_track_size(&mut cur, uctx)?
-            .ok_or_else(|| "expected grid track size".to_owned())?;
+        let track =
+            eat_track_size(&mut cur, uctx)?.ok_or_else(|| "expected grid track size".to_owned())?;
         if tracks.len() >= MAX_EXPANDED_TRACKS {
             return Err("grid track list exceeds maximum track count".to_owned());
         }
@@ -121,7 +121,9 @@ fn parse_repeat(
         };
         count_cur.expect_eof()?;
         if *saw_auto_repeat {
-            return Err("only one auto-fill/auto-fit repeat() is allowed per track list".to_owned());
+            return Err(
+                "only one auto-fill/auto-fit repeat() is allowed per track list".to_owned(),
+            );
         }
         // CSS Grid 1 §7.2.3.2: bare flexible (`fr`) tracks cannot appear directly inside auto-repeat.
         for t in &inner_tracks {
@@ -284,7 +286,9 @@ pub(crate) fn tokenize_area_row(row: &str) -> Result<Vec<Option<String>>, String
             }
         }
         if i == start {
-            return Err(format!("invalid character in grid-template-areas row '{row}'"));
+            return Err(format!(
+                "invalid character in grid-template-areas row '{row}'"
+            ));
         }
         let name = &row[start..i];
         if is_css_wide_keyword(name) {
@@ -314,7 +318,9 @@ pub(crate) fn validate_area_rectangles(rows: &[Vec<Option<String>>]) -> Result<(
 
     for (r, row) in rows.iter().enumerate() {
         if row.len() != expected_cols {
-            return Err("grid-template-areas rows must all have the same number of columns".to_owned());
+            return Err(
+                "grid-template-areas rows must all have the same number of columns".to_owned(),
+            );
         }
         for (c, cell) in row.iter().enumerate() {
             if let Some(name) = cell.as_deref() {
@@ -335,7 +341,9 @@ pub(crate) fn validate_area_rectangles(rows: &[Vec<Option<String>>]) -> Result<(
     for (name, (min_r, max_r, min_c, max_c, count)) in bounds {
         let rect_area = (max_r - min_r + 1) * (max_c - min_c + 1);
         if rect_area != count {
-            return Err(format!("grid area '{name}' does not form a single rectangle"));
+            return Err(format!(
+                "grid area '{name}' does not form a single rectangle"
+            ));
         }
     }
 

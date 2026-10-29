@@ -15,7 +15,9 @@ use super::{
     background::parse_shadow_list,
     color::{eat_color, parse_color_cvs},
     cursor::{Cursor, split_comma_separated},
-    length::{UnitContext, eat_length, eat_number_or_calc, length_to_px, parse_length_cvs, parse_px_cvs},
+    length::{
+        UnitContext, eat_length, eat_number_or_calc, length_to_px, parse_length_cvs, parse_px_cvs,
+    },
 };
 
 pub(crate) fn parse_spacing(
@@ -47,9 +49,10 @@ pub(crate) fn parse_text_align(
         "center" | "-webkit-center" => Ok(TextAlign::Center),
         "justify" | "justify-all" => Ok(TextAlign::Justify),
         "match-parent" => {
-            let (parent_align, parent_dir) = ctx
-                .parent
-                .map_or((TextAlign::Start, Direction::Ltr), |p| (p.text_align, p.direction));
+            let (parent_align, parent_dir) =
+                ctx.parent.map_or((TextAlign::Start, Direction::Ltr), |p| {
+                    (p.text_align, p.direction)
+                });
             Ok(match (parent_align, parent_dir) {
                 (TextAlign::Start, Direction::Ltr) | (TextAlign::End, Direction::Rtl) => {
                     TextAlign::Left
@@ -347,8 +350,7 @@ pub(crate) fn eat_list_style_type(cur: &mut Cursor<'_>) -> Option<ListStyleType>
 
 pub(crate) fn parse_list_style_type(cvs: &[ComponentValue]) -> Result<ListStyleType, String> {
     let mut cur = Cursor::new(cvs);
-    let ty = eat_list_style_type(&mut cur)
-        .ok_or_else(|| "invalid list-style-type".to_owned())?;
+    let ty = eat_list_style_type(&mut cur).ok_or_else(|| "invalid list-style-type".to_owned())?;
     cur.expect_eof()?;
     Ok(ty)
 }
