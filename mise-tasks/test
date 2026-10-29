@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="All Rust tests"
+set -euo pipefail
+cargo test --workspace "$@"

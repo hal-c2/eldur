@@ -1,0 +1,69 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+license = "MIT"
+repository = "https://github.com/olafura/html-2-qml"
+
+[workspace.dependencies]
+# Ours
+h2q_dom = { path = "crates/h2q_dom" }
+h2q_css = { path = "crates/h2q_css" }
+h2q_js = { path = "crates/h2q_js" }
+h2q_qml = { path = "crates/h2q_qml" }
+h2q_convert = { path = "crates/h2q_convert" }
+h2q_cache = { path = "crates/h2q_cache" }
+
+# Parsers. All permissively licensed (no MPL: no servo `selectors`,
+# `cssparser`, `stylo` or `lightningcss`).
+html5ever = "0.40"                 # WHATWG HTML parser, MIT/Apache
+# CSS Syntax 3 parser with spec error recovery and a typed selector AST,
+# Apache-2.0. Chosen over raffia (MIT), which fails the whole sheet on one
+# bad declaration (scratch spike, 2026-10-29).
+swc_css_parser = "26"
+swc_css_ast = "26"
+swc_css_visit = "26"
+swc_common = "26"
+swc_atoms = "10"
+swc_css_codegen = "26"
+csscolorparser = "0.9"             # CSS Color 4 values, MIT/Apache
+# Same oxc version as ~/dev/ljos-ui so the shared sccache is reused and a
+# future link to ljos crates sees one oxc.
+oxc_allocator = "0.144"
+oxc_ast = "0.144"
+oxc_ast_visit = "0.144"
+oxc_codegen = "0.144"
+oxc_parser = "0.144"
+oxc_semantic = "0.144"
+oxc_span = "0.144"
+oxc_syntax = "0.144"
+
+# Infrastructure (versions as in ljos-ui)
+blake3 = "1.8"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+anyhow = "1.0"
+clap = { version = "4.6", features = ["derive"] }
+notify = "8.2"
+insta = { version = "1.49", features = ["json"] }
+indexmap = "2"
+smallvec = "1"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+unwrap_used = "warn"
+
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.release]
+lto = "thin"

@@ -1,0 +1,16 @@
+[package]
+name = "h2q_dom"
+description = "HTML5 documents parsed by html5ever into an arena DOM"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+html5ever.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+
+[lints]
+workspace = true

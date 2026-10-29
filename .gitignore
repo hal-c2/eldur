@@ -1,0 +1,10 @@
+/target
+**/*.rs.bk
+# Machine-local build cache and scratch settings
+/.cargo/config.toml
+mise.local.toml
+/out/
+/.h2q-cache/
+*.pending-snap
+*.snap.new
+/.work/
