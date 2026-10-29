@@ -549,7 +549,9 @@ Item {
 
     let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
     assert!(
-        output.contains("H2Q_OK_MOD_CONTROLS TRK=27|Admin|true|75|#224466|1|2|win|9|ControlsMod|500 true"),
+        output.contains(
+            "H2Q_OK_MOD_CONTROLS TRK=27|Admin|true|75|#224466|1|2|win|9|ControlsMod|500 true"
+        ),
         "unexpected qml6 controls/modules output:\n{output}\npage.js:\n{}",
         out.page_js
     );
