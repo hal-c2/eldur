@@ -509,7 +509,11 @@ pub(crate) fn compute_styles(
     for (cond_node, state) in variant_candidates {
         // An element without a box in the base style (or under a `display: none`
         // ancestor) cannot be hovered/focused/activated.
-        if styles.get(cond_node.index()).and_then(Option::as_ref).is_none() {
+        if styles
+            .get(cond_node.index())
+            .and_then(Option::as_ref)
+            .is_none()
+        {
             continue;
         }
         let parent_id = parent_elements[cond_node.index()];
@@ -1051,8 +1055,7 @@ impl<'a> CascadeEngine<'a> {
 
             if let Some(mut cands) = longhand_candidates.remove(&l) {
                 cands.sort_by(|(ka, _), (kb, _)| ka.cmp(kb));
-                let action =
-                    select_winning_longhand_action(l, &cands, &style.custom_properties);
+                let action = select_winning_longhand_action(l, &cands, &style.custom_properties);
                 let compute_ctx = ComputeContext {
                     parent: parent_style,
                     root_font_size: *root_font_size,
@@ -1645,7 +1648,10 @@ mod tests {
             map.style(card).expect("card style").margin.top,
             LengthAuto::Length(crate::Length::px(0.0))
         );
-        assert_eq!(map.style(title).expect("title style").display, Display::Block);
+        assert_eq!(
+            map.style(title).expect("title style").display,
+            Display::Block
+        );
 
         // `@layer theme` was declared BEFORE `components`, so its `!important` beats `components`,
         // and inline `style="margin-top: 12px"` beats normal `.btn { margin-top: 4px }` AND

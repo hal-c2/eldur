@@ -200,8 +200,7 @@ fn collect_parsed_sheet(
         );
         ancestors.truncate(prev_len);
 
-        let import_layer_segs: Option<Vec<LayerSegment>> =
-            imp.layer.map(|l| l.into_segments());
+        let import_layer_segs: Option<Vec<LayerSegment>> = imp.layer.map(|l| l.into_segments());
         for s in &mut imported_sheets {
             s.inner
                 .wrap_imported(imp.media.as_ref(), import_layer_segs.as_deref());
@@ -421,10 +420,7 @@ mod tests {
             "css/tokens.css"
         );
         assert_eq!(
-            resolve_href(
-                Some("https://example.com/app/page.html"),
-                "styles/site.css"
-            ),
+            resolve_href(Some("https://example.com/app/page.html"), "styles/site.css"),
             "https://example.com/app/styles/site.css"
         );
         assert_eq!(

@@ -847,9 +847,15 @@ pub(crate) fn parse_selector_list_str(selector_text: &str) -> ConvertedSelectorL
     }
 }
 
-fn prepend_implicit_parent(parents: &[Selector], comb: Combinator, mut child: Selector) -> Selector {
+fn prepend_implicit_parent(
+    parents: &[Selector],
+    comb: Combinator,
+    mut child: Selector,
+) -> Selector {
     let mut parent_compound = CompoundSelector::default();
-    parent_compound.pseudos.push(PseudoClass::Is(parents.to_vec()));
+    parent_compound
+        .pseudos
+        .push(PseudoClass::Is(parents.to_vec()));
     child.compounds.insert(0, parent_compound);
     child.combinators.insert(0, comb);
     child.specificity = compute_selector_specificity(&child.compounds, child.pseudo_element);
@@ -1182,34 +1188,11 @@ fn convert_pseudo_class(
             "focus-visible" => Ok(PseudoClass::Dynamic(PseudoState::FocusVisible)),
             "focus-within" => Ok(PseudoClass::Dynamic(PseudoState::FocusWithin)),
             "visited" => Ok(PseudoClass::Dynamic(PseudoState::Visited)),
-            "target"
-            | "target-within"
-            | "local-link"
-            | "defined"
-            | "fullscreen"
-            | "modal"
-            | "picture-in-picture"
-            | "popover-open"
-            | "autofill"
-            | "-webkit-autofill"
-            | "playing"
-            | "paused"
-            | "seeking"
-            | "buffering"
-            | "stalled"
-            | "muted"
-            | "volume-locked"
-            | "open"
-            | "closed"
-            | "valid"
-            | "invalid"
-            | "user-valid"
-            | "user-invalid"
-            | "in-range"
-            | "out-of-range"
-            | "blank"
-            | "current"
-            | "past"
+            "target" | "target-within" | "local-link" | "defined" | "fullscreen" | "modal"
+            | "picture-in-picture" | "popover-open" | "autofill" | "-webkit-autofill"
+            | "playing" | "paused" | "seeking" | "buffering" | "stalled" | "muted"
+            | "volume-locked" | "open" | "closed" | "valid" | "invalid" | "user-valid"
+            | "user-invalid" | "in-range" | "out-of-range" | "blank" | "current" | "past"
             | "future" => Ok(PseudoClass::Never),
             _ => Err(ConvertError::Invalid),
         },
@@ -1332,7 +1315,8 @@ fn convert_functional_pseudo_class(
             Ok(PseudoClass::Has(list))
         }
         "nth-child" | "nth-last-child" => {
-            let (formula, of_list) = convert_nth_with_optional_of(children, &inner_opts, used_nesting)?;
+            let (formula, of_list) =
+                convert_nth_with_optional_of(children, &inner_opts, used_nesting)?;
             if name_lower == "nth-child" {
                 Ok(PseudoClass::NthChild(formula, of_list))
             } else {
@@ -1499,10 +1483,11 @@ fn convert_lang_preserved_tokens(
         return Err(ConvertError::Invalid);
     }
     ranges.push(current.to_ascii_lowercase());
-    if ranges
-        .iter()
-        .all(|r| r.split('-').all(|sub| sub == "*" || (!sub.is_empty() && sub.bytes().all(|b| b.is_ascii_alphanumeric()))))
-    {
+    if ranges.iter().all(|r| {
+        r.split('-').all(|sub| {
+            sub == "*" || (!sub.is_empty() && sub.bytes().all(|b| b.is_ascii_alphanumeric()))
+        })
+    }) {
         Ok(ranges)
     } else {
         Err(ConvertError::Invalid)
@@ -1517,9 +1502,9 @@ fn compute_selector_specificity(
     compounds: &[CompoundSelector],
     pseudo_element: Option<PseudoElement>,
 ) -> Specificity {
-    let mut spec = compounds
-        .iter()
-        .fold(Specificity::default(), |acc, c| acc + compute_compound_specificity(c));
+    let mut spec = compounds.iter().fold(Specificity::default(), |acc, c| {
+        acc + compute_compound_specificity(c)
+    });
     if pseudo_element.is_some() {
         spec = spec + Specificity(0, 0, 1);
     }
@@ -1540,23 +1525,16 @@ fn compute_compound_specificity(c: &CompoundSelector) -> Specificity {
 fn compute_pseudo_class_specificity(pc: &PseudoClass) -> Specificity {
     match pc {
         PseudoClass::Where(_) => Specificity(0, 0, 0),
-        PseudoClass::Is(list) | PseudoClass::Not(list) => list
-            .iter()
-            .map(|s| s.specificity)
-            .max()
-            .unwrap_or_default(),
+        PseudoClass::Is(list) | PseudoClass::Not(list) => {
+            list.iter().map(|s| s.specificity).max().unwrap_or_default()
+        }
         PseudoClass::Has(rels) => rels
             .iter()
             .map(|r| r.selector.specificity)
             .max()
             .unwrap_or_default(),
         PseudoClass::NthChild(_, Some(list)) | PseudoClass::NthLastChild(_, Some(list)) => {
-            Specificity(0, 1, 0)
-                + list
-                    .iter()
-                    .map(|s| s.specificity)
-                    .max()
-                    .unwrap_or_default()
+            Specificity(0, 1, 0) + list.iter().map(|s| s.specificity).max().unwrap_or_default()
         }
         _ => Specificity(0, 1, 0),
     }
@@ -2051,8 +2029,7 @@ fn matches_relative_step(
             let Some(next) = doc.next_element_sibling(from) else {
                 return false;
             };
-            doc.element(next)
-                .is_some_and(|el| test_candidate(next, el))
+            doc.element(next).is_some_and(|el| test_candidate(next, el))
         }
         Combinator::LaterSibling => {
             for sib in doc.next_siblings(from) {
@@ -2135,8 +2112,8 @@ fn is_disabled_control(doc: &Document, node: NodeId, elem: &Element) -> bool {
                     doc.element(c)
                         .is_some_and(|ce| ce.is_html() && ce.local_name() == "legend")
                 });
-                let inside_first_legend =
-                    first_legend.is_some_and(|leg| node == leg || doc.ancestors(node).any(|a| a == leg));
+                let inside_first_legend = first_legend
+                    .is_some_and(|leg| node == leg || doc.ancestors(node).any(|a| a == leg));
                 if !inside_first_legend {
                     return true;
                 }
@@ -2435,7 +2412,10 @@ mod tests {
             let Some(el) = doc.element(node) else {
                 continue;
             };
-            if list.selectors.iter().any(|s| matches_selector(s, node, &ctx))
+            if list
+                .selectors
+                .iter()
+                .any(|s| matches_selector(s, node, &ctx))
                 && let Some(id) = el.id()
             {
                 out.push(id.to_owned());
@@ -2463,7 +2443,10 @@ mod tests {
             (":not(.a, #id.b)", Specificity(1, 1, 0)),
             ("div:has(> #hero, .sub)", Specificity(1, 0, 1)),
             ("li:nth-child(2n+1)", Specificity(0, 1, 1)),
-            ("li:nth-child(2n+1 of .featured, #top)", Specificity(1, 1, 1)),
+            (
+                "li:nth-child(2n+1 of .featured, #top)",
+                Specificity(1, 1, 1),
+            ),
             ("p::before", Specificity(0, 0, 2)),
             ("p:after", Specificity(0, 0, 2)),
             ("input.field::placeholder", Specificity(0, 1, 2)),
@@ -2471,7 +2454,10 @@ mod tests {
 
         for &(css, expected) in cases {
             let sel = parse_one(css);
-            assert_eq!(sel.specificity, expected, "specificity mismatch for `{css}`");
+            assert_eq!(
+                sel.specificity, expected,
+                "specificity mismatch for `{css}`"
+            );
         }
     }
 
@@ -2568,10 +2554,7 @@ mod tests {
             matched_ids(&doc, "#list > :nth-child(-n+3)"),
             vec!["c1", "c2", "c3"]
         );
-        assert_eq!(
-            matched_ids(&doc, "#list > :nth-last-child(2)"),
-            vec!["c4"]
-        );
+        assert_eq!(matched_ids(&doc, "#list > :nth-last-child(2)"), vec!["c4"]);
         assert_eq!(
             matched_ids(&doc, "#list > :nth-child(2 of .hot)"),
             vec!["c3"]
@@ -2588,10 +2571,7 @@ mod tests {
             matched_ids(&doc, "#box > p:nth-last-of-type(2)"),
             vec!["p-a"]
         );
-        assert_eq!(
-            matched_ids(&doc, "div:empty"),
-            vec!["empty-comment"]
-        );
+        assert_eq!(matched_ids(&doc, "div:empty"), vec!["empty-comment"]);
     }
 
     #[test]
@@ -2617,10 +2597,7 @@ mod tests {
             matched_ids(&doc, "h3:has(~ p.warning)"),
             vec!["h3-a", "h3-b"]
         );
-        assert_eq!(
-            matched_ids(&doc, "section:not(:has(img))"),
-            vec!["s2"]
-        );
+        assert_eq!(matched_ids(&doc, "section:not(:has(img))"), vec!["s2"]);
         assert_eq!(
             matched_ids(&doc, ":is(section, invalid..syntax!!):where(#s2)"),
             vec!["s2"]
@@ -2671,21 +2648,17 @@ mod tests {
             vec!["chk", "opt2", "btn-submit"]
         );
         assert_eq!(matched_ids(&doc, ":indeterminate"), vec!["prog"]);
-        assert_eq!(
-            matched_ids(&doc, "#rtl-child:lang(ar)"),
-            vec!["rtl-child"]
-        );
+        assert_eq!(matched_ids(&doc, "#rtl-child:lang(ar)"), vec!["rtl-child"]);
         assert_eq!(matched_ids(&doc, "#link1:lang(en)"), vec!["link1"]);
-        assert_eq!(
-            matched_ids(&doc, "#rtl-child:dir(rtl)"),
-            vec!["rtl-child"]
-        );
+        assert_eq!(matched_ids(&doc, "#rtl-child:dir(rtl)"), vec!["rtl-child"]);
         assert_eq!(matched_ids(&doc, "#link1:dir(ltr)"), vec!["link1"]);
     }
 
     #[test]
     fn pseudo_elements_dynamic_rejection_and_rule_index() {
-        let res = parse_selector_list_str("a::before, b:after, input::placeholder, li::marker, ::-webkit-scrollbar");
+        let res = parse_selector_list_str(
+            "a::before, b:after, input::placeholder, li::marker, ::-webkit-scrollbar",
+        );
         assert!(!res.invalid);
         assert_eq!(res.selectors.len(), 3);
         assert_eq!(res.selectors[0].pseudo_element, Some(PseudoElement::Before));

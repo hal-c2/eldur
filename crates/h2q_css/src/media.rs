@@ -573,8 +573,10 @@ fn convert_feature(f: &ast::MediaFeature) -> FeatureExpr {
                         value: convert_feature_value(left),
                     }
                 }
-                (ast::MediaFeatureValue::Ident(left_id), ast::MediaFeatureValue::Ident(right_id)) =>
-                {
+                (
+                    ast::MediaFeatureValue::Ident(left_id),
+                    ast::MediaFeatureValue::Ident(right_id),
+                ) => {
                     // Discrete `=` like `(orientation = landscape)` or unknown range feature.
                     let l = left_id.value.as_str().to_ascii_lowercase();
                     let r_low = right_id.value.as_str().to_ascii_lowercase();
@@ -954,14 +956,26 @@ mod tests {
             ("(resolution: 1x)", &desktop, true),
             ("(resolution: 96dpi)", &desktop, true),
             ("(min-resolution: 2dppx)", &desktop, false),
-            ("screen and (min-width: 1000px) and (max-height: 900px)", &desktop, true),
+            (
+                "screen and (min-width: 1000px) and (max-height: 900px)",
+                &desktop,
+                true,
+            ),
             ("(max-width: 500px) or (min-width: 1200px)", &desktop, true),
             ("not (max-width: 500px)", &desktop, true),
             ("not screen and (min-width: 2000px)", &desktop, true),
             ("(unknown-feature: 123px)", &desktop, false),
             ("not (unknown-feature: 123px)", &desktop, false),
-            ("(unknown-feature: 123px) or (min-width: 500px)", &desktop, true),
-            ("(unknown-feature: 123px) and (min-width: 500px)", &desktop, false),
+            (
+                "(unknown-feature: 123px) or (min-width: 500px)",
+                &desktop,
+                true,
+            ),
+            (
+                "(unknown-feature: 123px) and (min-width: 500px)",
+                &desktop,
+                false,
+            ),
             ("bad$$$, (min-width: 500px)", &desktop, true),
             ("(400px < width > 200px)", &desktop, false),
             ("(min-width >= 600px)", &desktop, false),

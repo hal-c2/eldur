@@ -487,7 +487,11 @@ fn process_style_block_contents(
             }
             ast::ComponentValue::ListOfComponentValues(locv) => {
                 let line = ctx.line_of(locv.span);
-                ctx.report(Severity::Invalid, Some(line), "invalid declaration or nested rule");
+                ctx.report(
+                    Severity::Invalid,
+                    Some(line),
+                    "invalid declaration or nested rule",
+                );
             }
             _ => {}
         }
@@ -568,13 +572,7 @@ fn process_at_rule(
             };
             let mut next_media = media_stack.to_vec();
             next_media.push(mql);
-            process_conditional_group_block(
-                ctx,
-                block,
-                &next_media,
-                layer_stack,
-                parent_selectors,
-            );
+            process_conditional_group_block(ctx, block, &next_media, layer_stack, parent_selectors);
         }
         "supports" => {
             if is_top_level {
@@ -631,11 +629,7 @@ fn process_at_rule(
                 return;
             };
             let ast::AtRulePrelude::KeyframesPrelude(kf_name) = prelude else {
-                ctx.report(
-                    Severity::Invalid,
-                    Some(line),
-                    "invalid `@keyframes` name",
-                );
+                ctx.report(Severity::Invalid, Some(line), "invalid `@keyframes` name");
                 return;
             };
             if let Some(kf_rule) = parse_keyframes_rule(ctx, kf_name, block, media_stack) {
@@ -793,13 +787,7 @@ fn process_layer_at_rule(
                 path: next_layer.clone(),
                 media: media_stack.to_vec(),
             });
-            process_conditional_group_block(
-                ctx,
-                block,
-                media_stack,
-                &next_layer,
-                parent_selectors,
-            );
+            process_conditional_group_block(ctx, block, media_stack, &next_layer, parent_selectors);
         }
         // Named layer block: `@layer a.b { ... }`
         (Some(prelude), Some(block)) => {
@@ -838,13 +826,7 @@ fn process_layer_at_rule(
                 path: next_layer.clone(),
                 media: media_stack.to_vec(),
             });
-            process_conditional_group_block(
-                ctx,
-                block,
-                media_stack,
-                &next_layer,
-                parent_selectors,
-            );
+            process_conditional_group_block(ctx, block, media_stack, &next_layer, parent_selectors);
         }
         (None, None) => {
             ctx.report(Severity::Invalid, Some(line), "empty `@layer` rule");
@@ -1390,7 +1372,11 @@ fn extract_font_family(cvs: &[ast::ComponentValue]) -> Option<String> {
     let unquoted = trimmed
         .strip_prefix('"')
         .and_then(|s| s.strip_suffix('"'))
-        .or_else(|| trimmed.strip_prefix('\'').and_then(|s| s.strip_suffix('\'')))
+        .or_else(|| {
+            trimmed
+                .strip_prefix('\'')
+                .and_then(|s| s.strip_suffix('\''))
+        })
         .unwrap_or(trimmed);
     let collapsed = unquoted
         .split_ascii_whitespace()
@@ -1415,7 +1401,11 @@ fn collect_urls_in_cvs(cvs: &[ast::ComponentValue], out: &mut Vec<String>) {
                 let unquoted = trimmed
                     .strip_prefix('"')
                     .and_then(|s| s.strip_suffix('"'))
-                    .or_else(|| trimmed.strip_prefix('\'').and_then(|s| s.strip_suffix('\'')))
+                    .or_else(|| {
+                        trimmed
+                            .strip_prefix('\'')
+                            .and_then(|s| s.strip_suffix('\''))
+                    })
                     .unwrap_or(trimmed);
                 if !unquoted.is_empty() {
                     out.push(unquoted.to_owned());
@@ -1475,11 +1465,7 @@ fn declaration_property_name(name: &ast::DeclarationName) -> String {
     }
 }
 
-fn process_declaration(
-    ctx: &mut ParseCtx<'_>,
-    decl: &ast::Declaration,
-    out: &mut Vec<ParsedDecl>,
-) {
+fn process_declaration(ctx: &mut ParseCtx<'_>, decl: &ast::Declaration, out: &mut Vec<ParsedDecl>) {
     let line = ctx.line_of(decl.span);
     let prop_name = declaration_property_name(&decl.name);
     let important = decl.important.is_some();
@@ -1817,8 +1803,12 @@ mod tests {
             }
         "#;
 
-        let (sheet, diags) =
-            parse_stylesheet(css, Origin::Author, "app.css", Some("https://example.com/css/app.css"));
+        let (sheet, diags) = parse_stylesheet(
+            css,
+            Origin::Author,
+            "app.css",
+            Some("https://example.com/css/app.css"),
+        );
 
         // Only `@namespace` produces an Unsupported diagnostic; `@-webkit-keyframes` is silent
         // and the false `@supports` block is skipped without diagnostics.
