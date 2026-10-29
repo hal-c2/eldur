@@ -133,6 +133,21 @@ pub(crate) fn rewrite(
         let unsupported = collect_unsupported_diagnostics(input, &parsed.program, &parsed.scoping);
         diagnostics.extend(unsupported);
 
+        if let ScriptKind::HandlerAttribute { element, .. } = &input.kind
+            && resolver.element(*element).is_none()
+        {
+            diagnostics.push(Diagnostic {
+                severity: Severity::Unsupported,
+                source: input.name.clone(),
+                line: Some(input.line_offset.max(1)),
+                message: format!(
+                    "handler attribute target ElementKey({}) could not be resolved",
+                    element.0
+                ),
+            });
+            continue;
+        }
+
         valid_scripts.push(ValidScript { idx, input, parsed });
     }
 

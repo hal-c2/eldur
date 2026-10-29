@@ -838,11 +838,17 @@ function _unwrap(item) {
     return item;
 }
 
+function _isQObject(obj) {
+    return Boolean(
+        obj
+        && typeof obj === "object"
+        && typeof obj.objectName === "string"
+        && typeof obj.objectNameChanged === "function"
+    );
+}
+
 function _isPlainJsObject(obj) {
-    if (!obj || typeof obj !== "object") {
-        return false;
-    }
-    if (obj.__h2qWrapper) {
+    if (!obj || typeof obj !== "object" || obj.__h2qWrapper || _isQObject(obj)) {
         return false;
     }
     var proto = Object.getPrototypeOf(obj);

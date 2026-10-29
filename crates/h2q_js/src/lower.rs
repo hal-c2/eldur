@@ -1349,7 +1349,7 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             } else {
                 instance_fields.push((access, init_val));
             }
-            self.editor.replace(prop.span, "");
+            self.editor.remove_statement_line(prop.span);
         }
 
         if !instance_fields.is_empty() {
