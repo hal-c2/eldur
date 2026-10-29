@@ -16,6 +16,7 @@ pub struct Fingerprints {
 }
 
 impl Fingerprints {
+    /// Creates an empty fingerprint table.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
@@ -25,19 +26,31 @@ impl Fingerprints {
     /// what was recorded for `key`.
     #[must_use]
     pub fn differs(&self, key: &str, text: Option<&str>) -> bool {
-        match (self.seen.get(key), text) {
-            (None, None) => false,
-            (Some(old), Some(text)) => *old != blake3::hash(text.as_bytes()),
-            _ => true,
-        }
+        self.differs_bytes(key, text.map(str::as_bytes))
     }
 
     /// Takes `text` as what `key` says from now on.
     pub fn record(&mut self, key: &str, text: Option<&str>) {
-        match text {
-            Some(text) => {
-                self.seen
-                    .insert(key.to_owned(), blake3::hash(text.as_bytes()));
+        self.record_bytes(key, text.map(str::as_bytes));
+    }
+
+    /// Whether `bytes` (`None`: the file is gone) differs from what was
+    /// recorded for `key`. Works for binary assets as well as UTF-8 text.
+    #[must_use]
+    pub fn differs_bytes(&self, key: &str, bytes: Option<&[u8]>) -> bool {
+        match (self.seen.get(key), bytes) {
+            (None, None) => false,
+            (Some(old), Some(bytes)) => *old != blake3::hash(bytes),
+            _ => true,
+        }
+    }
+
+    /// Records `bytes` (`None`: the file is gone) as the current content of
+    /// `key`.
+    pub fn record_bytes(&mut self, key: &str, bytes: Option<&[u8]>) {
+        match bytes {
+            Some(bytes) => {
+                self.seen.insert(key.to_owned(), blake3::hash(bytes));
             }
             None => {
                 self.seen.remove(key);
@@ -57,11 +70,13 @@ impl Fingerprints {
         changed
     }
 
+    /// Number of currently recorded existing files.
     #[must_use]
     pub fn len(&self) -> usize {
         self.seen.len()
     }
 
+    /// Whether no existing files are currently recorded.
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.seen.is_empty()
@@ -100,5 +115,18 @@ mod tests {
         assert!(f.replace([("A", "1")].into_iter()));
         assert_eq!(f.len(), 1);
         assert!(f.replace([("A", "one")].into_iter()));
+    }
+
+    #[test]
+    fn binary_bytes_are_fingerprinted_without_utf8_assumption() {
+        let mut f = Fingerprints::new();
+        let png_a: &[u8] = &[0x89, b'P', b'N', b'G', 0xff, 0xfe, 0x00];
+        let png_b: &[u8] = &[0x89, b'P', b'N', b'G', 0xff, 0xfe, 0x01];
+        assert!(f.differs_bytes("icon.png", Some(png_a)));
+        f.record_bytes("icon.png", Some(png_a));
+        assert!(!f.differs_bytes("icon.png", Some(png_a)));
+        assert!(f.differs_bytes("icon.png", Some(png_b)));
+        f.record_bytes("icon.png", None);
+        assert!(!f.differs_bytes("icon.png", None));
     }
 }

@@ -31,14 +31,17 @@ pub use fingerprint::Fingerprints;
 mod fingerprint;
 mod store;
 
+/// Errors returned when opening, writing, or garbage-collecting a [`Cache`].
 #[derive(Debug, thiserror::Error)]
 pub enum CacheError {
+    /// A file-system operation inside the cache directory failed.
     #[error("cache I/O at {path}: {source}")]
     Io {
         path: PathBuf,
         #[source]
         source: std::io::Error,
     },
+    /// A cache manifest could not be parsed.
     #[error("corrupt cache manifest {path}: {message}")]
     Corrupt { path: PathBuf, message: String },
 }
@@ -80,6 +83,25 @@ impl Input {
             hash: blake3::hash(bytes),
         }
     }
+
+    /// Records a path that did not exist when conversion tried to read it.
+    ///
+    /// A missing file is still a dependency: creating it later invalidates the
+    /// cached entry, while remaining absent counts as fresh.
+    #[must_use]
+    pub fn missing(path: impl Into<PathBuf>) -> Self {
+        Self {
+            path: path.into(),
+            hash: store::missing_sentinel_hash(),
+        }
+    }
+
+    /// Whether this input records a missing-file dependency created with
+    /// [`Input::missing`].
+    #[must_use]
+    pub fn is_missing(&self) -> bool {
+        self.hash == store::missing_sentinel_hash()
+    }
 }
 
 /// A file the conversion produced, relative to the output directory.
@@ -110,6 +132,7 @@ impl Cache {
         store::open(dir.as_ref()).map(|dir| Self { dir })
     }
 
+    /// Directory on disk holding this cache.
     #[must_use]
     pub fn dir(&self) -> &Path {
         &self.dir
@@ -121,6 +144,14 @@ impl Cache {
     #[must_use]
     pub fn lookup(&self, key: &CacheKey) -> Option<Cached> {
         store::lookup(&self.dir, key)
+    }
+
+    /// Like [`Cache::lookup`], also returning the recorded [`Input`]s from the
+    /// manifest so callers such as `html2qml watch` know which dependencies to
+    /// watch after a cache hit.
+    #[must_use]
+    pub fn lookup_with_inputs(&self, key: &CacheKey) -> Option<(Cached, Vec<Input>)> {
+        store::lookup_with_inputs(&self.dir, key)
     }
 
     /// Records a conversion. Writes are atomic (temp file + rename), so a
