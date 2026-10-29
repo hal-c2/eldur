@@ -48,9 +48,18 @@ impl Fingerprints {
     /// Records `bytes` (`None`: the file is gone) as the current content of
     /// `key`.
     pub fn record_bytes(&mut self, key: &str, bytes: Option<&[u8]>) {
-        match bytes {
-            Some(bytes) => {
-                self.seen.insert(key.to_owned(), blake3::hash(bytes));
+        self.record_hash(key, bytes.map(blake3::hash));
+    }
+
+    /// Records a precomputed BLAKE3 `hash` (`None`: the file is gone) for
+    /// `key`.
+    ///
+    /// Recording the hash captured when an input was actually read prevents
+    /// watch baselines from racing with edits made while conversion runs.
+    pub fn record_hash(&mut self, key: &str, hash: Option<blake3::Hash>) {
+        match hash {
+            Some(hash) => {
+                self.seen.insert(key.to_owned(), hash);
             }
             None => {
                 self.seen.remove(key);
@@ -128,5 +137,16 @@ mod tests {
         assert!(f.differs_bytes("icon.png", Some(png_b)));
         f.record_bytes("icon.png", None);
         assert!(!f.differs_bytes("icon.png", None));
+    }
+
+    #[test]
+    fn record_hash_baselines_exact_precomputed_digest() {
+        let mut f = Fingerprints::new();
+        let h1 = blake3::hash(b"v1");
+        f.record_hash("style.css", Some(h1));
+        assert!(!f.differs_bytes("style.css", Some(b"v1")));
+        assert!(f.differs_bytes("style.css", Some(b"v2")));
+        f.record_hash("style.css", None);
+        assert!(!f.differs_bytes("style.css", None));
     }
 }

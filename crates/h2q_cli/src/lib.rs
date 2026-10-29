@@ -290,6 +290,10 @@ pub fn run_watch_with_channel(
 }
 
 /// Executes `html2qml check` using `qmllint` and `qml6` from `PATH`.
+///
+/// Validates all `.qml` files recursively under `args.dir` with `qmllint` and
+/// loads every `Main.qml` under `args.dir` in `qml6` off-screen for 3 s, failing
+/// on any diagnostic output or early non-zero exit.
 pub fn run_check(args: &CheckArgs) -> anyhow::Result<()> {
     let mut stdout = io::stdout();
     let ok = check_dir_with_tools(&args.dir, &QmlTools::default(), &mut stdout)?;

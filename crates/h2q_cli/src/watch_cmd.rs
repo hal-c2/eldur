@@ -14,6 +14,11 @@ use crate::{ConvertArgs, ConvertOutcome, Converter};
 
 const DEBOUNCE_WINDOW: Duration = Duration::from_millis(100);
 
+/// Upper bound on consecutive immediate catch-up conversions when a file keeps
+/// changing *while* conversion runs, preventing unbounded spinning on a
+/// self-modifying writer.
+const MAX_CATCHUP_PASSES: usize = 8;
+
 #[derive(Debug)]
 enum WatchSignal {
     Fs(notify::Result<Event>),
@@ -51,13 +56,69 @@ impl WatchStop {
     }
 }
 
-pub(crate) fn execute_watch(
+struct WatchLoopState<'a, 'cb> {
+    args: &'a ConvertArgs,
+    converter: &'a dyn Converter,
+    watcher: RecommendedWatcher,
+    active_watches: BTreeMap<PathBuf, RecursiveMode>,
+    tracked_paths: BTreeSet<PathBuf>,
+    fingerprints: h2q_cache::Fingerprints,
+    stdout: &'a mut dyn Write,
+    stderr: &'a mut dyn Write,
+    on_cycle: Option<&'a mut (dyn FnMut(&ConvertOutcome) + 'cb)>,
+}
+
+impl WatchLoopState<'_, '_> {
+    fn run_conversion_and_catch_up(&mut self) -> anyhow::Result<()> {
+        for _ in 0..MAX_CATCHUP_PASSES {
+            match execute_convert(self.args, self.converter, self.stdout, self.stderr) {
+                Ok(outcome) => {
+                    self.tracked_paths.clear();
+                    self.fingerprints = h2q_cache::Fingerprints::new();
+                    seed_fingerprints(
+                        &outcome.dependencies,
+                        &mut self.tracked_paths,
+                        &mut self.fingerprints,
+                    );
+                    sync_watches(
+                        &mut self.watcher,
+                        &mut self.active_watches,
+                        &self.tracked_paths,
+                    )?;
+                    // Check whether disk diverged from `outcome.dependencies`
+                    // *before* invoking `on_cycle`, so observers triggered by
+                    // `on_cycle` only interact with the debounced event loop.
+                    let changed_during_pass =
+                        dependencies_changed(&self.tracked_paths, &self.fingerprints);
+                    if let Some(cb) = self.on_cycle.as_deref_mut() {
+                        cb(&outcome);
+                    }
+                    if !changed_during_pass {
+                        break;
+                    }
+                }
+                Err(err) => {
+                    // Record current disk state so a transient mid-save missing
+                    // entry file does not spin; restoring the file changes its
+                    // fingerprint again and triggers recovery.
+                    refresh_fingerprints_from_disk(&self.tracked_paths, &mut self.fingerprints);
+                    writeln!(self.stderr, "error: {err:#}")
+                        .context("failed to write watch error")?;
+                    break;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+pub(crate) fn execute_watch<'cb>(
     args: &ConvertArgs,
     converter: &dyn Converter,
     channel: WatchChannel,
     stdout: &mut dyn Write,
     stderr: &mut dyn Write,
-    mut on_cycle: Option<&mut dyn FnMut(&ConvertOutcome)>,
+    on_cycle: Option<&mut (dyn FnMut(&ConvertOutcome) + 'cb)>,
 ) -> anyhow::Result<()> {
     let initial = execute_convert(args, converter, stdout, stderr)?;
 
@@ -78,8 +139,28 @@ pub(crate) fn execute_watch(
     let mut active_watches: BTreeMap<PathBuf, RecursiveMode> = BTreeMap::new();
     sync_watches(&mut watcher, &mut active_watches, &tracked_paths)?;
 
-    if let Some(cb) = on_cycle.as_deref_mut() {
+    let mut state = WatchLoopState {
+        args,
+        converter,
+        watcher,
+        active_watches,
+        tracked_paths,
+        fingerprints,
+        stdout,
+        stderr,
+        on_cycle,
+    };
+
+    let changed_during_initial = dependencies_changed(&state.tracked_paths, &state.fingerprints);
+    if let Some(cb) = state.on_cycle.as_deref_mut() {
         cb(&initial);
+    }
+
+    // If an input was edited while the initial conversion was running, disk
+    // already differs from `dep.hash`; catch up immediately so the edit is
+    // never lost.
+    if changed_during_initial {
+        state.run_conversion_and_catch_up()?;
     }
 
     loop {
@@ -88,61 +169,59 @@ pub(crate) fn execute_watch(
             Err(_) => return Ok(()),
         };
 
+        let mut saw_watch_error = false;
         match first_signal {
             WatchSignal::Stop => return Ok(()),
-            WatchSignal::Fs(Err(_)) => continue,
+            WatchSignal::Fs(Err(err)) => {
+                writeln!(state.stderr, "warning[watch]: {err}")
+                    .context("failed to write watcher warning")?;
+                saw_watch_error = true;
+            }
             WatchSignal::Fs(Ok(event)) => {
-                if !is_relevant_event(&event, &ignore_dirs, &tracked_paths) {
+                if !is_relevant_event(&event, &ignore_dirs, &state.tracked_paths) {
                     continue;
                 }
             }
         }
 
         // Trailing 100 ms debounce over incoming relevant events without polling.
-        let mut deadline = Instant::now() + DEBOUNCE_WINDOW;
-        loop {
-            let now = Instant::now();
-            if now >= deadline {
-                break;
-            }
-            match channel.rx.recv_timeout(deadline - now) {
-                Ok(WatchSignal::Stop) => return Ok(()),
-                Ok(WatchSignal::Fs(Ok(ev))) => {
-                    if is_relevant_event(&ev, &ignore_dirs, &tracked_paths) {
-                        deadline = Instant::now() + DEBOUNCE_WINDOW;
-                    }
+        // Skip waiting if we woke solely on a watcher error (e.g. queue overflow)
+        // so dropped events are re-checked immediately.
+        if !saw_watch_error {
+            let mut deadline = Instant::now() + DEBOUNCE_WINDOW;
+            loop {
+                let now = Instant::now();
+                if now >= deadline {
+                    break;
                 }
-                Ok(WatchSignal::Fs(Err(_))) => {}
-                Err(mpsc::RecvTimeoutError::Timeout) => break,
-                Err(mpsc::RecvTimeoutError::Disconnected) => return Ok(()),
+                match channel.rx.recv_timeout(deadline - now) {
+                    Ok(WatchSignal::Stop) => return Ok(()),
+                    Ok(WatchSignal::Fs(Ok(ev))) => {
+                        if is_relevant_event(&ev, &ignore_dirs, &state.tracked_paths) {
+                            deadline = Instant::now() + DEBOUNCE_WINDOW;
+                        }
+                    }
+                    Ok(WatchSignal::Fs(Err(err))) => {
+                        writeln!(state.stderr, "warning[watch]: {err}")
+                            .context("failed to write watcher warning")?;
+                    }
+                    Err(mpsc::RecvTimeoutError::Timeout) => break,
+                    Err(mpsc::RecvTimeoutError::Disconnected) => return Ok(()),
+                }
             }
         }
 
-        if !dependencies_changed(&tracked_paths, &fingerprints) {
+        if !dependencies_changed(&state.tracked_paths, &state.fingerprints) {
             continue;
         }
 
-        match execute_convert(args, converter, stdout, stderr) {
-            Ok(outcome) => {
-                tracked_paths.clear();
-                fingerprints = h2q_cache::Fingerprints::new();
-                seed_fingerprints(&outcome.dependencies, &mut tracked_paths, &mut fingerprints);
-                sync_watches(&mut watcher, &mut active_watches, &tracked_paths)?;
-                if let Some(cb) = on_cycle.as_deref_mut() {
-                    cb(&outcome);
-                }
-            }
-            Err(err) => {
-                // Record current disk state so a transient mid-save missing
-                // entry file does not spin; restoring the file changes its
-                // fingerprint again and triggers recovery.
-                refresh_fingerprints_from_disk(&tracked_paths, &mut fingerprints);
-                writeln!(stderr, "error: {err:#}").context("failed to write watch error")?;
-            }
-        }
+        state.run_conversion_and_catch_up()?;
     }
 }
 
+/// Seeds `fingerprints` with the exact `dep.hash` values that conversion read,
+/// never re-reading disk post-conversion (which would swallow concurrent edits
+/// made while the converter ran).
 fn seed_fingerprints(
     dependencies: &[h2q_cache::Input],
     tracked_paths: &mut BTreeSet<PathBuf>,
@@ -152,10 +231,9 @@ fn seed_fingerprints(
         tracked_paths.insert(dep.path.clone());
         let key = dep.path.to_string_lossy();
         if dep.is_missing() {
-            fingerprints.record_bytes(&key, None);
+            fingerprints.record_hash(&key, None);
         } else {
-            let current = fs::read(&dep.path).ok();
-            fingerprints.record_bytes(&key, current.as_deref());
+            fingerprints.record_hash(&key, Some(dep.hash));
         }
     }
 }
@@ -289,4 +367,116 @@ fn sync_watches(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+    use std::thread;
+
+    use h2q_convert::{Input, Options, Output, OutputFile, Resources};
+
+    use super::*;
+    use crate::ConvertStatus;
+
+    static SEQ: AtomicU64 = AtomicU64::new(0);
+
+    #[test]
+    fn watcher_error_logs_warning_and_rechecks_fingerprints() {
+        let pid = std::process::id();
+        let n = SEQ.fetch_add(1, Ordering::Relaxed);
+        let dir = std::env::temp_dir().join(format!("h2q_watch_err_{pid}_{n}"));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).expect("create dir");
+
+        let html = dir.join("index.html");
+        let unwatched_dep = dir.join("sub_unwatched");
+        // Write index.html in `dir`, and mutate it ONLY after moving/simulating
+        // a dropped event via WatchSignal::Fs(Err(...)).
+        fs::write(&html, b"<h1>v1</h1>").expect("write html");
+        let _ = unwatched_dep;
+
+        let calls = Arc::new(AtomicUsize::new(0));
+        let calls_c = Arc::clone(&calls);
+        let conv = move |inp: &Input, _opts: &Options, _res: &mut dyn Resources| -> Output {
+            calls_c.fetch_add(1, Ordering::SeqCst);
+            Output {
+                files: vec![OutputFile {
+                    path: PathBuf::from("Main.qml"),
+                    contents: format!("Item {{ /* {} */ }}", inp.html.trim()).into_bytes(),
+                }],
+                diagnostics: Vec::new(),
+            }
+        };
+
+        let mut args = ConvertArgs::new(&html);
+        args.output = Some(dir.join("out_qml"));
+        args.quiet = true;
+
+        let (channel, stop) = WatchChannel::new();
+        let err_tx = channel.tx.clone();
+        let (cycle_tx, cycle_rx) = mpsc::channel::<ConvertStatus>();
+
+        let handle = thread::spawn(move || {
+            let mut stdout = Vec::new();
+            let mut stderr = Vec::new();
+            let mut on_cycle = |outcome: &ConvertOutcome| {
+                let _ = cycle_tx.send(outcome.status);
+            };
+            execute_watch(
+                &args,
+                &conv,
+                channel,
+                &mut stdout,
+                &mut stderr,
+                Some(&mut on_cycle),
+            )
+            .expect("watch ok");
+            String::from_utf8_lossy(&stderr).into_owned()
+        });
+
+        assert_eq!(
+            cycle_rx
+                .recv_timeout(Duration::from_secs(5))
+                .expect("initial cycle"),
+            ConvertStatus::Converted
+        );
+
+        // Inject a synthetic notify queue-overflow error even without any file
+        // change first: must log warning[watch] without crashing.
+        err_tx
+            .send(WatchSignal::Fs(Err(notify::Error::generic(
+                "inotify queue overflow",
+            ))))
+            .expect("send watch error");
+
+        // Now modify the file and immediately inject another overflow error so
+        // the immediate fingerprint re-check path executes without waiting for
+        // debounce.
+        fs::write(&html, b"<h1>v2</h1>").expect("write v2");
+        err_tx
+            .send(WatchSignal::Fs(Err(notify::Error::generic(
+                "inotify queue overflow",
+            ))))
+            .expect("send second watch error");
+
+        assert_eq!(
+            cycle_rx
+                .recv_timeout(Duration::from_secs(5))
+                .expect("reconvert on error recheck"),
+            ConvertStatus::Converted
+        );
+        assert!(calls.load(Ordering::SeqCst) >= 2);
+
+        stop.stop();
+        let stderr_text = handle.join().expect("join watch");
+        assert!(
+            stderr_text.contains("warning[watch]:"),
+            "stderr was: {stderr_text}"
+        );
+        assert!(stderr_text.contains("inotify queue overflow"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
 }

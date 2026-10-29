@@ -340,6 +340,160 @@ fn convert_io_errors_include_offending_path() {
 }
 
 #[test]
+fn convert_rejects_output_paths_escaping_output_dir() {
+    let td = TempDir::new("escape");
+    let html = td.path.join("index.html");
+    fs::write(&html, b"<p>hi</p>").expect("write html");
+
+    let parent_target = td.path.join("escaped.qml");
+    let abs_target = td.path.join("abs_escaped.qml");
+
+    for bad_path in [PathBuf::from("../escaped.qml"), abs_target.clone()] {
+        let out_dir = td.path.join("sub_out");
+        let mut args = ConvertArgs::new(&html);
+        args.output = Some(out_dir.clone());
+        args.no_cache = true;
+
+        let bad_conv = move |_inp: &Input, _opts: &Options, _res: &mut dyn Resources| Output {
+            files: vec![OutputFile {
+                path: bad_path.clone(),
+                contents: b"Item {}".to_vec(),
+            }],
+            diagnostics: Vec::new(),
+        };
+
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let res = run_convert_with_io(&args, &bad_conv, &mut out, &mut err);
+        assert!(res.is_err(), "expected escaping output path to fail");
+        assert!(!parent_target.exists());
+        assert!(!abs_target.exists());
+    }
+}
+
+#[test]
+fn watch_catches_edit_made_mid_conversion() {
+    let td = TempDir::new("watch_mid_edit");
+    let html = td.path.join("index.html");
+    let css = td.path.join("style.css");
+    let out_dir = td.path.join("out_qml");
+    fs::write(&html, b"<div>card</div>").expect("write html");
+    fs::write(&css, b"div { color: red; }").expect("write v1 css");
+
+    let calls = Arc::new(AtomicUsize::new(0));
+    let calls_conv = Arc::clone(&calls);
+    let css_for_conv = css.clone();
+
+    // Simulate a user saving `style.css` *after* the converter read v1 during
+    // conversion #1, before conversion #1 finishes and seeds watch baselines.
+    let mid_edit_converter =
+        move |input: &Input, _opts: &Options, resources: &mut dyn Resources| -> Output {
+            let n = calls_conv.fetch_add(1, Ordering::SeqCst);
+            let style = resources
+                .read("style.css", &input.url)
+                .map(|r| String::from_utf8_lossy(&r.bytes).into_owned())
+                .unwrap_or_default();
+
+            if n == 0 {
+                fs::write(&css_for_conv, b"div { color: lime; }")
+                    .expect("concurrent edit during initial conversion");
+            } else if n == 2 {
+                fs::write(&css_for_conv, b"div { color: gold; }")
+                    .expect("concurrent edit during event-triggered conversion");
+            }
+
+            Output {
+                files: vec![OutputFile {
+                    path: PathBuf::from("Main.qml"),
+                    contents: format!("Item {{ /* {} */ }}\n", style.trim()).into_bytes(),
+                }],
+                diagnostics: Vec::new(),
+            }
+        };
+
+    let mut args = ConvertArgs::new(&html);
+    args.output = Some(out_dir.clone());
+    args.quiet = true;
+
+    let (channel, stop) = WatchChannel::new();
+    let (cycle_tx, cycle_rx) = mpsc::channel::<ConvertStatus>();
+
+    let handle = thread::spawn(move || {
+        let mut stdout = Vec::new();
+        let mut stderr = Vec::new();
+        let mut on_cycle = |outcome: &h2q_cli::ConvertOutcome| {
+            let _ = cycle_tx.send(outcome.status);
+        };
+        run_watch_with_channel(
+            &args,
+            &mid_edit_converter,
+            channel,
+            &mut stdout,
+            &mut stderr,
+            Some(&mut on_cycle),
+        )
+    });
+
+    // Cycle 1 (initial) and Cycle 2 (immediate catch-up for the mid-convert
+    // edit) must both execute without requiring any further edits!
+    assert_eq!(
+        cycle_rx
+            .recv_timeout(Duration::from_secs(5))
+            .expect("initial cycle"),
+        ConvertStatus::Converted
+    );
+    assert_eq!(
+        cycle_rx
+            .recv_timeout(Duration::from_secs(5))
+            .expect("catch-up cycle for mid-conversion edit"),
+        ConvertStatus::Converted
+    );
+    assert_eq!(calls.load(Ordering::SeqCst), 2);
+
+    let qml_after_initial_catchup =
+        fs::read_to_string(out_dir.join("Main.qml")).expect("read Main.qml");
+    assert!(
+        qml_after_initial_catchup.contains("div { color: lime; }"),
+        "Main.qml remained stale after initial catch-up: {qml_after_initial_catchup}"
+    );
+
+    // Trigger an event-driven conversion (n == 2), during which the converter
+    // performs another concurrent edit (`gold`); Cycle 3 and Cycle 4 must both run.
+    fs::write(&css, b"div { color: navy; }").expect("write v3 css");
+    assert_eq!(
+        cycle_rx
+            .recv_timeout(Duration::from_secs(5))
+            .expect("event-triggered cycle"),
+        ConvertStatus::Converted
+    );
+    assert_eq!(
+        cycle_rx
+            .recv_timeout(Duration::from_secs(5))
+            .expect("catch-up cycle after mid-conversion edit in watch loop"),
+        ConvertStatus::Converted
+    );
+    assert_eq!(calls.load(Ordering::SeqCst), 4);
+
+    let final_qml = fs::read_to_string(out_dir.join("Main.qml")).expect("read Main.qml");
+    assert!(
+        final_qml.contains("div { color: gold; }"),
+        "Main.qml remained stale after watch-loop catch-up: {final_qml}"
+    );
+
+    // Ensure no stray atomic-write temp files remain in out_dir.
+    for entry in fs::read_dir(&out_dir).expect("read out_dir") {
+        let name = entry.expect("dir entry").file_name();
+        assert!(
+            !name.to_string_lossy().contains(".h2q-tmp."),
+            "stray temp file left behind: {name:?}"
+        );
+    }
+
+    stop.stop();
+    handle.join().expect("join").expect("watch ok");
+}
+
+#[test]
 fn watch_ignores_same_content_writes_and_reconverts_on_real_changes() {
     let td = TempDir::new("watch");
     let html = td.path.join("index.html");

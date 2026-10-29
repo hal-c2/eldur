@@ -32,6 +32,14 @@ impl Default for QmlTools {
 /// Runs `qmllint` on every `.qml` file under `dir` and off-screen `qml6` on
 /// every `Main.qml` under `dir`, writing any diagnostic output to `out`.
 ///
+/// Mirrors `mise-tasks/qml/check`:
+/// - `Main.qml` files are discovered recursively (`find "$dir" -name 'Main.qml'`)
+///   so both a single converted application directory (`out_qml/`) and a corpus
+///   tree (`tests/corpus/`) can be validated with one command.
+/// - In addition to failing whenever `qmllint` or `qml6` prints anything, an
+///   early non-zero `qml6` exit before the 3 s timeout (such as a silent crash)
+///   is also treated as a check failure.
+///
 /// Returns `Ok(true)` when every check succeeded silently, `Ok(false)` when any
 /// tool printed output or exited non-zero, and `Err` on I/O or process-spawn
 /// failure.

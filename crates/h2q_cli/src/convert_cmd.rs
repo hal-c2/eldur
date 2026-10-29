@@ -1,7 +1,9 @@
 use std::collections::BTreeMap;
-use std::fs;
-use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::ffi::{OsStr, OsString};
+use std::fs::{self, OpenOptions};
+use std::io::{self, Write};
+use std::path::{Component, Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, bail};
@@ -11,6 +13,8 @@ use crate::{ConvertArgs, Converter, FsResources};
 /// Format constant mixed into [`h2q_cache::CacheKey::converter_version`].
 /// Bump whenever output generation changes without a crate version bump.
 pub const CONVERTER_FORMAT_VERSION: u32 = 1;
+
+static OUT_TMP_SEQ: AtomicU64 = AtomicU64::new(0);
 
 /// Whether a conversion run was served from [`h2q_cache::Cache`] or executed
 /// through [`Converter`].
@@ -155,6 +159,8 @@ pub(crate) fn execute_convert(
 
     let raw_html = fs::read(&canonical_input)
         .with_context(|| format!("failed to read input file {}", canonical_input.display()))?;
+    // Non-UTF-8 bytes are decoded with U+FFFD replacement per WHATWG stream
+    // decoding fallback while the cache hashes the exact raw bytes on disk.
     let conv_input = h2q_convert::Input {
         html: String::from_utf8_lossy(&raw_html).into_owned(),
         url: canonical_input.to_string_lossy().into_owned(),
@@ -218,10 +224,39 @@ pub(crate) fn execute_convert(
     })
 }
 
+fn validate_relative_output_path(rel: &Path) -> anyhow::Result<()> {
+    if rel.as_os_str().is_empty() {
+        bail!("refusing to write empty output file path");
+    }
+    let mut has_normal = false;
+    for comp in rel.components() {
+        match comp {
+            Component::Normal(_) => has_normal = true,
+            Component::CurDir => {}
+            Component::Prefix(_) | Component::RootDir | Component::ParentDir => {
+                bail!(
+                    "refusing output path '{}' that escapes output directory",
+                    rel.display()
+                );
+            }
+        }
+    }
+    if !has_normal {
+        bail!(
+            "refusing output path '{}' without a file name",
+            rel.display()
+        );
+    }
+    Ok(())
+}
+
 fn write_cached_outputs(
     out_dir: &Path,
     files: &[h2q_cache::OutputFile],
 ) -> anyhow::Result<(usize, usize)> {
+    for file in files {
+        validate_relative_output_path(&file.path)?;
+    }
     fs::create_dir_all(out_dir)
         .with_context(|| format!("failed to create output directory {}", out_dir.display()))?;
     let mut written = 0_usize;
@@ -240,6 +275,9 @@ fn write_convert_outputs(
     out_dir: &Path,
     files: &[h2q_convert::OutputFile],
 ) -> anyhow::Result<(usize, usize)> {
+    for file in files {
+        validate_relative_output_path(&file.path)?;
+    }
     fs::create_dir_all(out_dir)
         .with_context(|| format!("failed to create output directory {}", out_dir.display()))?;
     let mut written = 0_usize;
@@ -254,22 +292,71 @@ fn write_convert_outputs(
     Ok((written, skipped))
 }
 
-/// Writes `contents` to `target` unless `target` already exists with identical
-/// bytes. Avoiding redundant writes keeps QML live-reloaders idle when nothing
-/// actually changed.
+/// Atomically writes `contents` to `target` (temp file + `fsync` + `rename`)
+/// unless `target` already exists with identical bytes.
+///
+/// Skipping identical files avoids unnecessary reloads in `qml6` / `qmlscene`,
+/// and atomic rename ensures live-reloaders never observe a half-written file.
 fn write_if_changed(target: &Path, contents: &[u8]) -> anyhow::Result<bool> {
     if let Ok(existing) = fs::read(target)
         && existing == contents
     {
         return Ok(false);
     }
-    if let Some(parent) = target.parent()
-        && !parent.as_os_str().is_empty()
-    {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("failed to create directory {}", parent.display()))?;
+
+    let parent = target
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
+    fs::create_dir_all(parent)
+        .with_context(|| format!("failed to create directory {}", parent.display()))?;
+
+    let pid = std::process::id();
+    let base_name = target
+        .file_name()
+        .map_or_else(|| OsString::from("out"), OsStr::to_os_string);
+
+    let (mut file, tmp_path) = loop {
+        let seq = OUT_TMP_SEQ.fetch_add(1, Ordering::Relaxed);
+        let mut tmp_name = OsString::from(".");
+        tmp_name.push(&base_name);
+        tmp_name.push(format!(".h2q-tmp.{pid}.{seq}"));
+        let candidate = parent.join(tmp_name);
+        match OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&candidate)
+        {
+            Ok(f) => break (f, candidate),
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(err) => {
+                return Err(err).with_context(|| {
+                    format!(
+                        "failed to create temporary output file {}",
+                        candidate.display()
+                    )
+                });
+            }
+        }
+    };
+
+    if let Err(err) = file.write_all(contents).and_then(|()| file.sync_all()) {
+        drop(file);
+        let _ = fs::remove_file(&tmp_path);
+        return Err(err).with_context(|| {
+            format!(
+                "failed to write temporary output file {}",
+                tmp_path.display()
+            )
+        });
     }
-    fs::write(target, contents)
-        .with_context(|| format!("failed to write output file {}", target.display()))?;
+    drop(file);
+
+    if let Err(err) = fs::rename(&tmp_path, target) {
+        let _ = fs::remove_file(&tmp_path);
+        return Err(err)
+            .with_context(|| format!("failed to publish output file {}", target.display()));
+    }
+
     Ok(true)
 }
