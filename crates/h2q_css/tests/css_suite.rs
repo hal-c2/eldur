@@ -1184,3 +1184,50 @@ fn performance_3000_elements_by_1000_rules_under_2s_in_debug() {
         "3,000 elements x 1,000 rules took {elapsed:?} (limit: 2s in debug)"
     );
 }
+
+#[test]
+fn pre_import_layer_statement_ordering() {
+    let doc = Document::parse(
+        r#"<!doctype html>
+        <html>
+          <head>
+            <link rel="stylesheet" href="main.css">
+          </head>
+          <body><div id="t"></div></body>
+        </html>"#,
+    );
+
+    let mut loader = MemoryLoader::default()
+        .with_file(
+            "main.css",
+            r#"@layer first, second; @import "second.css" layer(second); @layer first { #t { margin-top: 10px; } }"#,
+        )
+        .with_file("second.css", r#"#t { margin-top: 20px; }"#);
+
+    let vp = Viewport::default();
+    let (sheets, diags) = collect_stylesheets(&doc, &mut loader, &vp);
+    assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
+
+    let map = compute_styles(&doc, &sheets, &vp);
+    let t = doc.element_by_id("t").expect("t");
+    assert_eq!(map.style(t).expect("t").margin.top, px(20.0));
+}
+
+#[test]
+fn atomic_invalid_layer_statement_ignored() {
+    let doc = Document::parse(
+        r#"<!doctype html><html><head></head><body><div id="x"></div></body></html>"#,
+    );
+    let css = r#"@layer first, initial, second; @layer second { #x { margin-top: 10px; } } @layer first { #x { margin-top: 20px; } }"#;
+
+    let (sheet, diags) = Stylesheet::parse(css, Origin::Author, "atomic_layer.css", None);
+    assert_eq!(
+        diags.len(),
+        1,
+        "expected 1 diagnostic for invalid @layer statement: {diags:?}"
+    );
+
+    let map = compute_styles(&doc, &[sheet], &Viewport::default());
+    let x = doc.element_by_id("x").expect("x");
+    assert_eq!(map.style(x).expect("x").margin.top, px(20.0));
+}

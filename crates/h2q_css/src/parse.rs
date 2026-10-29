@@ -62,6 +62,8 @@ pub(crate) struct ImportRule {
     pub(crate) supports_matches: bool,
     pub(crate) media: Option<MediaQueryList>,
     pub(crate) line: u32,
+    /// Number of `@layer` registrations recorded in the stylesheet before this `@import`.
+    pub(crate) preceding_layer_registrations: usize,
 }
 
 /// Records the declaration of a cascade layer in source order so `cascade.rs`
@@ -545,7 +547,8 @@ fn process_at_rule(
                 ctx.report(Severity::Invalid, Some(line), "invalid `@import` prelude");
                 return;
             };
-            if let Some(import_rule) = convert_import_rule(ctx.source_text, imp, line) {
+            if let Some(mut import_rule) = convert_import_rule(ctx.source_text, imp, line) {
+                import_rule.preceding_layer_registrations = ctx.sheet.layer_registrations.len();
                 ctx.sheet.imports.push(import_rule);
             } else {
                 ctx.report(Severity::Invalid, Some(line), "invalid `@import` rule");
@@ -747,6 +750,7 @@ fn process_layer_at_rule(
                     ctx.report(Severity::Invalid, Some(line), "empty `@layer` statement");
                     return;
                 }
+                let mut paths = Vec::with_capacity(list.name_list.len());
                 for ln in &list.name_list {
                     let Some(segs) = convert_layer_name(ln) else {
                         ctx.report(Severity::Invalid, Some(line), "invalid `@layer` name");
@@ -754,8 +758,11 @@ fn process_layer_at_rule(
                     };
                     let mut full = layer_stack.to_vec();
                     full.extend(segs);
+                    paths.push(full);
+                }
+                for path in paths {
                     ctx.sheet.layer_registrations.push(LayerRegistration {
-                        path: full,
+                        path,
                         media: media_stack.to_vec(),
                     });
                 }
@@ -930,6 +937,7 @@ fn convert_import_rule(
         supports_matches,
         media,
         line,
+        preceding_layer_registrations: 0,
     })
 }
 

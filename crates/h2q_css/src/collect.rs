@@ -127,7 +127,17 @@ fn collect_parsed_sheet(
     out_diagnostics.extend(sheet_diags);
 
     let imports = std::mem::take(&mut sheet.inner.imports);
+    let mut sheet_layer_regs = std::mem::take(&mut sheet.inner.layer_registrations).into_iter();
+    let mut consumed_regs = 0usize;
+    let mut pending_regs = Vec::new();
+
     for imp in imports {
+        while consumed_regs < imp.preceding_layer_registrations {
+            if let Some(reg) = sheet_layer_regs.next() {
+                pending_regs.push(reg);
+            }
+            consumed_regs += 1;
+        }
         if !imp.supports_matches {
             continue;
         }
@@ -205,9 +215,18 @@ fn collect_parsed_sheet(
             s.inner
                 .wrap_imported(imp.media.as_ref(), import_layer_segs.as_deref());
         }
+        if !pending_regs.is_empty()
+            && let Some(first_imported) = imported_sheets.first_mut()
+        {
+            let mut combined = std::mem::take(&mut pending_regs);
+            combined.append(&mut first_imported.inner.layer_registrations);
+            first_imported.inner.layer_registrations = combined;
+        }
         out_sheets.extend(imported_sheets);
     }
 
+    pending_regs.extend(sheet_layer_regs);
+    sheet.inner.layer_registrations = pending_regs;
     out_sheets.push(sheet);
 }
 
