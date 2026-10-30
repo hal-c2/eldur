@@ -1027,3 +1027,156 @@ fn empty_scripts_slice_produces_minimal_valid_header_with_no_init() {
     assert_eq!(out.init_function, None);
     assert_eq!(out.page_js, ".import \"h2q_runtime.js\" as H2Q\n");
 }
+
+#[test]
+fn rewrites_compound_and_logical_assignments_across_resolved_dom_properties() {
+    let resolver = FakeResolver::default()
+        .with_id("title", 1, "titleLabel", TargetKind::Text)
+        .with_id("card", 2, "cardBox", TargetKind::Box)
+        .with_id("name", 3, "nameInput", TargetKind::TextField)
+        .with_id("vol", 4, "volSlider", TargetKind::Range)
+        .with_id("agree", 5, "agreeCheck", TargetKind::CheckBox)
+        .with_id("role", 6, "roleCombo", TargetKind::ComboBox)
+        .with_id("avatar", 7, "avatarImg", TargetKind::Image)
+        .with_id("save", 8, "saveBtn", TargetKind::Button);
+
+    let script = classic(
+        "compound_logical_dom.js",
+        r##"
+function updateDom(suffix, extraClass, htmlChunk, fallbackRole, node, state) {
+    const title = document.getElementById("title");
+    const card = document.getElementById("card");
+    const name = document.getElementById("name");
+    const vol = document.getElementById("vol");
+    const agree = document.getElementById("agree");
+    const role = document.getElementById("role");
+    const avatar = document.getElementById("avatar");
+    const save = document.getElementById("save");
+
+    document.title += suffix;
+    document.title ||= "Untitled";
+    document.title &&= "Prefixed: " + suffix;
+    document.title ??= "DefaultTitle";
+
+    save.disabled ||= true;
+    save.disabled &&= false;
+    save.disabled ??= true;
+    save.hidden &&= false;
+    save.hidden ||= true;
+    save.hidden ??= false;
+    save.disabled |= true;
+    save.hidden &= false;
+
+    role.value ||= fallbackRole;
+    role.value &&= "Admin";
+    role.value ??= "Viewer";
+    role.value += suffix;
+
+    card.className += extraClass;
+    card.className ||= "card-default";
+    card.className &&= "card-active";
+    card.className ??= "card-fallback";
+
+    card.innerHTML += htmlChunk;
+    card.innerHTML ||= "<b>empty</b>";
+    card.innerHTML &&= "<i>ready</i>";
+    card.innerHTML ??= "<u>init</u>";
+
+    title.textContent += suffix;
+    title.textContent ||= "N/A";
+    card.textContent += suffix;
+    name.value += suffix;
+    name.value ||= "anon";
+    name.placeholder ??= "Enter name";
+    vol.value -= 5;
+    agree.checked &&= true;
+    avatar.src ||= "qrc:/fallback.png";
+
+    card.style.color += "00";
+    card.style.color ||= "#112233";
+    card.style.color &&= "#445566";
+    card.style.color ??= "#778899";
+    card.style.display ||= "none";
+    card.style.display &&= "flex";
+
+    node.innerHTML += htmlChunk;
+    node.innerHTML ||= "<span>node</span>";
+    node.textContent ||= "plain";
+
+    state.count += 1;
+    state.label ||= "default";
+    state.active &&= false;
+    state.meta ??= "none";
+}
+"##,
+    );
+
+    let out = run_rewrite(&[script], &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    assert!(
+        !out.page_js.contains(".innerHTML"),
+        "raw .innerHTML access leaked into page_js:\n{}",
+        out.page_js
+    );
+    insta::assert_snapshot!(out.page_js, @r###"
+.import "h2q_runtime.js" as H2Q
+
+function updateDom(suffix, extraClass, htmlChunk, fallbackRole, node, state) {
+
+    H2Q.setTitle(H2Q.getTitle() + (suffix));
+    H2Q.getTitle() || H2Q.setTitle("Untitled");
+    H2Q.getTitle() && H2Q.setTitle("Prefixed: " + suffix);
+    H2Q.getTitle() ?? H2Q.setTitle("DefaultTitle");
+
+    !saveBtn.enabled || (saveBtn.enabled = false);
+    !saveBtn.enabled && (saveBtn.enabled = true);
+    (!saveBtn.enabled) ?? (saveBtn.enabled = false);
+    !saveBtn.visible && (saveBtn.visible = true);
+    !saveBtn.visible || (saveBtn.visible = false);
+    (!saveBtn.visible) ?? (saveBtn.visible = true);
+    saveBtn.enabled = !((!saveBtn.enabled) | (true));
+    saveBtn.visible = !((!saveBtn.visible) & (false));
+
+    roleCombo.currentText || (roleCombo.currentIndex = roleCombo.find(fallbackRole));
+    roleCombo.currentText && (roleCombo.currentIndex = roleCombo.find("Admin"));
+    roleCombo.currentText ?? (roleCombo.currentIndex = roleCombo.find("Viewer"));
+    roleCombo.currentIndex = roleCombo.find(roleCombo.currentText + (suffix));
+
+    H2Q.setClassName(cardBox, H2Q.getClassName(cardBox) + (extraClass));
+    H2Q.getClassName(cardBox) || H2Q.setClassName(cardBox, "card-default");
+    H2Q.getClassName(cardBox) && H2Q.setClassName(cardBox, "card-active");
+    H2Q.getClassName(cardBox) ?? H2Q.setClassName(cardBox, "card-fallback");
+
+    H2Q.setInnerHTML(cardBox, H2Q.getInnerHTML(cardBox) + (htmlChunk));
+    H2Q.getInnerHTML(cardBox) || H2Q.setInnerHTML(cardBox, "<b>empty</b>");
+    H2Q.getInnerHTML(cardBox) && H2Q.setInnerHTML(cardBox, "<i>ready</i>");
+    H2Q.getInnerHTML(cardBox) ?? H2Q.setInnerHTML(cardBox, "<u>init</u>");
+
+    titleLabel.text += suffix;
+    titleLabel.text = titleLabel.text || "N/A";
+    cardBoxText.text += suffix;
+    nameInput.text += suffix;
+    nameInput.text = nameInput.text || "anon";
+    nameInput.placeholderText = nameInput.placeholderText ?? "Enter name";
+    volSlider.value -= 5;
+    agreeCheck.checked = agreeCheck.checked && true;
+    avatarImg.source = avatarImg.source || "qrc:/fallback.png";
+
+    H2Q.setStyle(cardBox, "color", H2Q.getStyle(cardBox, "color") + ("00"));
+    H2Q.getStyle(cardBox, "color") || H2Q.setStyle(cardBox, "color", "#112233");
+    H2Q.getStyle(cardBox, "color") && H2Q.setStyle(cardBox, "color", "#445566");
+    H2Q.getStyle(cardBox, "color") ?? H2Q.setStyle(cardBox, "color", "#778899");
+    (cardBox.visible ? "" : "none") || (cardBox.visible = false);
+    (cardBox.visible ? "" : "none") && (cardBox.visible = true);
+
+    H2Q.setInnerHTML(node, H2Q.getInnerHTML(node) + (htmlChunk));
+    H2Q.getInnerHTML(node) || H2Q.setInnerHTML(node, "<span>node</span>");
+    H2Q.getText(node) || H2Q.setText(node, "plain");
+
+    state.count += 1;
+    state.label = state.label || "default";
+    state.active = state.active && false;
+    state.meta = state.meta ?? "none";
+}
+"###);
+}

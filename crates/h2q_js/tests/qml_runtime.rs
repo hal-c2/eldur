@@ -723,3 +723,169 @@ Item {
         out.page_js
     );
 }
+
+#[test]
+fn qml6_executes_compound_and_logical_dom_assignments_with_short_circuiting() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 compound/logical assignment test: qml6 not on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("compound_logical");
+    let resolver = FakeResolver::default()
+        .with_id("saveBtn", 1, "saveBtn", TargetKind::Button)
+        .with_id("roleCombo", 2, "roleCombo", TargetKind::ComboBox)
+        .with_id("cardBox", 3, "cardBox", TargetKind::Box)
+        .with_id("htmlLabel", 4, "htmlLabel", TargetKind::Text)
+        .with_id("nameInput", 5, "nameInput", TargetKind::TextField);
+
+    let script = ScriptInput {
+        name: "compound_logical.js".to_string(),
+        kind: ScriptKind::Classic,
+        line_offset: 1,
+        source: r##"
+let rhsCalls = 0;
+function rhs(val) {
+    rhsCalls += 1;
+    return val;
+}
+
+const save = document.getElementById("saveBtn");
+const role = document.getElementById("roleCombo");
+const card = document.getElementById("cardBox");
+const htmlEl = document.getElementById("htmlLabel");
+const nameEl = document.getElementById("nameInput");
+document.title = "Doc";
+
+function runChecks() {
+    // 1. document.title += and logical operators with short-circuiting
+    document.title += rhs(":v1"); // evaluates rhs (1) -> "Doc:v1"
+    document.title ||= rhs("unused-title"); // short-circuits!
+    document.title ??= rhs("unused-nullish"); // short-circuits!
+
+    // 2. disabled ||= true and hidden &&= false with inversion + short-circuiting
+    // Initially saveBtn.enabled = true (disabled = false), saveBtn.visible = false (hidden = true)
+    save.disabled ||= rhs(true); // evaluates rhs (2) -> enabled becomes false
+    save.disabled ||= rhs(false); // short-circuits! (disabled is already true)
+    save.hidden &&= rhs(false); // evaluates rhs (3) -> visible becomes true
+    save.hidden &&= rhs(true); // short-circuits! (hidden is now false)
+
+    // 3. ComboBox value ||= text only assigns currentIndex/find when falsy
+    // Initially roleCombo index 0 is "" (falsy)
+    role.value &&= rhs("Admin"); // short-circuits! (currentText is "")
+    role.value ||= rhs("Editor"); // evaluates rhs (4) -> selects "Editor" (index 2)
+    role.value ||= rhs("Admin"); // short-circuits! (currentText is "Editor")
+    role.value ??= rhs("Viewer"); // short-circuits!
+
+    // 4. className += appends rather than replacing, logical ops short-circuit
+    card.className = "card";
+    card.className += rhs(" primary"); // evaluates rhs (5) -> "card primary"
+    card.className ||= rhs("fallback"); // short-circuits!
+
+    // 5. resolved innerHTML += and ||= &&= ??=
+    htmlEl.innerHTML = "<b>Hi</b>";
+    htmlEl.innerHTML += rhs("<i>!</i>"); // evaluates rhs (6) -> "<b>Hi</b><i>!</i>"
+    htmlEl.innerHTML ||= rhs("<b>skip</b>"); // short-circuits!
+    htmlEl.innerHTML ??= rhs("<b>skip2</b>"); // short-circuits!
+    htmlEl.innerHTML &&= rhs("<u>OK</u>"); // evaluates rhs (7) -> "<u>OK</u>"
+
+    // 6. mapped text/value/style and ordinary JS object logical assignments
+    nameEl.value ||= rhs("Alice"); // evaluates rhs (8)
+    nameEl.value ||= rhs("Bob"); // short-circuits!
+    nameEl.value += rhs("!"); // evaluates rhs (9) -> "Alice!"
+    card.style.color ||= rhs("#123456"); // evaluates rhs (10)
+    card.style.color ||= rhs("#654321"); // short-circuits!
+
+    const obj = { count: 2, tag: "" };
+    obj.count += 3;
+    obj.tag ||= rhs("tagged"); // evaluates rhs (11)
+    obj.tag ||= rhs("ignored"); // short-circuits!
+
+    return [
+        document.title,
+        save.disabled,
+        saveBtn.enabled,
+        save.hidden,
+        saveBtn.visible,
+        role.value,
+        roleCombo.currentIndex,
+        card.className,
+        cardBox.cls_card,
+        cardBox.cls_primary,
+        htmlEl.innerHTML,
+        nameEl.value,
+        card.style.color,
+        obj.count,
+        obj.tag,
+        rhsCalls
+    ].join("|");
+}
+"##
+        .to_string(),
+    };
+
+    let scripts = [script];
+    let analysis = analyze(&scripts);
+    let out = rewrite(&scripts, &analysis, &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+
+    let runtime_path = dir.write_file("h2q_runtime.js", RUNTIME_JS);
+    let page_path = dir.write_file("page.js", &out.page_js);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import QtQuick.Controls.Basic
+import "page.js" as Page
+
+Item {
+    id: root
+    width: 400
+    height: 300
+    property string title: ""
+
+    Button { id: saveBtn; enabled: true; visible: false }
+    ComboBox { id: roleCombo; model: ["", "Viewer", "Editor", "Admin"]; currentIndex: 0 }
+    Rectangle {
+        id: cardBox
+        property bool cls_card: false
+        property bool cls_primary: false
+        Text { id: cardBoxText; text: "" }
+    }
+    Text { id: htmlLabel; text: "" }
+    TextField { id: nameInput; text: "" }
+
+    Component.onCompleted: {
+        Page.__h2q_init(root);
+        var res = Page.runChecks();
+        console.log("H2Q_OK_COMPOUND_LOGICAL", res);
+        Qt.quit();
+    }
+}
+"#,
+    );
+
+    if has_binary("qmllint") {
+        for path in [&runtime_path, &page_path, &main_qml] {
+            let lint = Command::new("qmllint")
+                .arg(path)
+                .output()
+                .expect("failed to run qmllint");
+            assert!(
+                lint.status.success(),
+                "qmllint failed on {}: {}{}",
+                path.display(),
+                String::from_utf8_lossy(&lint.stdout),
+                String::from_utf8_lossy(&lint.stderr)
+            );
+        }
+    }
+
+    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    assert!(
+        output.contains(
+            "H2Q_OK_COMPOUND_LOGICAL Doc:v1|true|false|false|true|Editor|2|card primary|true|true|<u>OK</u>|Alice!|#123456|5|tagged|11"
+        ),
+        "unexpected qml6 compound/logical output:\n{output}\npage.js:\n{}",
+        out.page_js
+    );
+}
