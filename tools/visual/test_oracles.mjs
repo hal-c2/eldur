@@ -34,6 +34,12 @@ const cases = [
     select: "#t", props: ["background-color"], run: [{ hover: "#t" }],
   },
   {
+    // Same page, no steps: the previous case's mouse must not hover it.
+    name: "after-hover",
+    html: "<style>#t{background:red;width:50px;height:50px}#t:hover{background:blue}</style><div id=t></div>",
+    select: "#t", props: ["background-color"],
+  },
+  {
     name: "focus",
     html: "<style>#t{color:red}#t:focus{color:blue}</style><button id=t>x</button>",
     select: "#t", props: ["color"], run: [{ focus: "#t" }],
@@ -59,6 +65,7 @@ const by = Object.fromEntries(out.map((o) => [o.name, o]));
 check("no-run output format unchanged", out[0], { name: "plain", color: "rgb(255, 0, 0)" });
 check("click toggles class: colour", by["click-class"].color, "rgb(0, 0, 255)");
 check("hover: background", by.hover["background-color"], "rgb(0, 0, 255)");
+check("no hover left over from the previous case", by["after-hover"]["background-color"], "rgb(255, 0, 0)");
 check("focus: colour", by.focus.color, "rgb(0, 0, 255)");
 check("type: value reached the input", by.type.display, "block");
 const mid = parseFloat(by.mid.width);

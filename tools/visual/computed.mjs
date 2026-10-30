@@ -41,8 +41,10 @@ const cases = JSON.parse(input);
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();
 try {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   for (const c of cases) {
+    // A page per case: the mouse position and focus of one case's `run`
+    // steps must not carry into the next.
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     const html = /^\s*<!doctype/i.test(c.html) ? c.html : `<!DOCTYPE html>${c.html}`;
     await page.setContent(html);
     if (c.run) await runSteps(page, c.run);
@@ -54,6 +56,7 @@ try {
       return Object.fromEntries(props.map((p) => [p, s.getPropertyValue(p)]));
     }, { select: c.select, props: c.props });
     process.stdout.write(`${JSON.stringify({ name: c.name, ...values })}\n`);
+    await page.close();
   }
 } finally {
   await browser.close();
