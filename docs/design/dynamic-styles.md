@@ -770,11 +770,18 @@ Attribute selectors on script-written attributes (`[aria-expanded=true]`,
 
 ---
 
-## 14. Open questions for the lead
+## 14. Lead decisions (2026-10-31)
 
-1. Is `Options::state_variants` the right switch for classes and templates
-   too, or should there be a separate `dynamic_styles` option? (A new field
-   would be add-only.)
-2. Is `baseUrl` = `Qt.resolvedUrl(<file name>)` for local inputs
-   acceptable, given that relative links then resolve next to the output
-   rather than the source?
+1. **One switch.** `Options::state_variants` turns on classes and
+   templates too. They are one feature, precomputing styles for runtime
+   conditions, and a page that wants :hover variants but not class
+   toggles has no use case. Rename it only with the next breaking options
+   change; its doc comment is updated now.
+2. **`baseUrl` follows the converted app, not the source.**
+   - **Local inputs:** `Qt.resolvedUrl("Main.qml")`. Assets are copied
+     next to the output, so this is where relative links actually
+     resolve. A browser would show `file:///…/source/…` instead, which is
+     the one visible difference, and it is accepted.
+   - **`http(s)` inputs:** the source URL.
+   - **`<base href>`:** overrides both, resolved against them, as in
+     HTML.
