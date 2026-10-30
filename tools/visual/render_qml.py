@@ -92,6 +92,10 @@ def render_qml(
     env["QT_SCALE_FACTOR"] = "1"
     # Prevent stale .qmlc bytecode caches when Main.qml is regenerated between runs.
     env["QML_DISABLE_DISK_CACHE"] = "1"
+    # Qt 6 routes QML/qWarning diagnostics to systemd-journald when stderr is a
+    # pipe (non-TTY) unless stderr logging is explicitly forced.
+    env["QT_FORCE_STDERR_LOGGING"] = "1"
+    env["QT_ASSUME_STDERR_HAS_CONSOLE"] = "1"
 
     cmd = [
         "qml6",
