@@ -804,3 +804,29 @@ fn border_color_transparent_vs_unset() {
     compute(&mut s2, Longhand::BorderTopStyle, "solid", &ctx).expect("border-top-style: solid");
     assert_eq!(s2.border.top.color, Rgba::new(255, 0, 0, 255));
 }
+
+#[test]
+fn border_width_before_and_after_style() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+
+    let mut s1 = ComputedStyle::default();
+    compute(&mut s1, Longhand::BorderTopWidth, "10px", &ctx).expect("border-top-width: 10px");
+    compute(&mut s1, Longhand::BorderTopStyle, "solid", &ctx).expect("border-top-style: solid");
+    assert_eq!(s1.border.top.width, 10.0);
+
+    let mut s2 = ComputedStyle::default();
+    compute(&mut s2, Longhand::BorderTopStyle, "solid", &ctx).expect("border-top-style: solid");
+    compute(&mut s2, Longhand::BorderTopWidth, "10px", &ctx).expect("border-top-width: 10px");
+    assert_eq!(s2.border.top.width, 10.0);
+
+    let mut s3 = ComputedStyle::default();
+    compute(&mut s3, Longhand::BorderTopWidth, "10px", &ctx).expect("border-top-width: 10px");
+    compute(&mut s3, Longhand::BorderTopStyle, "none", &ctx).expect("border-top-style: none");
+    assert_eq!(s3.border.top.width, 0.0);
+
+    let mut s4 = ComputedStyle::default();
+    compute(&mut s4, Longhand::BorderTopStyle, "none", &ctx).expect("border-top-style: none");
+    compute(&mut s4, Longhand::BorderTopWidth, "10px", &ctx).expect("border-top-width: 10px");
+    assert_eq!(s4.border.top.width, 0.0);
+}

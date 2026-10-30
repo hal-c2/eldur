@@ -39,10 +39,10 @@ use self::{
         parse_position_2d, parse_shadow_list, validate_bg_attachment_list, validate_bg_box_list,
     },
     box_model::{
-        apply_border_color, apply_border_style, apply_border_width, parse_aspect_ratio, parse_border_style,
-        parse_box_sizing, parse_corner_radius, parse_display, parse_float, parse_inset_side,
-        parse_line_width, parse_margin_side, parse_outline_offset, parse_padding_side,
-        parse_position, parse_size, parse_z_index,
+        apply_border_color, apply_border_style, apply_border_width, parse_aspect_ratio,
+        parse_border_style, parse_box_sizing, parse_corner_radius, parse_display, parse_float,
+        parse_inset_side, parse_line_width, parse_margin_side, parse_outline_offset,
+        parse_padding_side, parse_position, parse_size, parse_z_index,
     },
     color::{is_current_color_cvs, parse_color_cvs},
     cursor::{parse_component_values, trim_ws},
@@ -812,7 +812,10 @@ pub(crate) fn compute(
                 &mut style.outline,
             ] {
                 if side.explicit_color.is_none()
-                    && !matches!(side.style, crate::BorderStyle::None | crate::BorderStyle::Hidden)
+                    && !matches!(
+                        side.style,
+                        crate::BorderStyle::None | crate::BorderStyle::Hidden
+                    )
                 {
                     side.color = c;
                 }
@@ -1307,10 +1310,22 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
         Longhand::BorderLeftStyle => dst.border.left.style = src.border.left.style,
         Longhand::OutlineStyle => dst.outline.style = src.outline.style,
 
-        Longhand::BorderTopWidth => dst.border.top.width = src.border.top.width,
-        Longhand::BorderRightWidth => dst.border.right.width = src.border.right.width,
-        Longhand::BorderBottomWidth => dst.border.bottom.width = src.border.bottom.width,
-        Longhand::BorderLeftWidth => dst.border.left.width = src.border.left.width,
+        Longhand::BorderTopWidth => {
+            dst.border.top.width = src.border.top.width;
+            dst.border.top.explicit_width = src.border.top.explicit_width;
+        }
+        Longhand::BorderRightWidth => {
+            dst.border.right.width = src.border.right.width;
+            dst.border.right.explicit_width = src.border.right.explicit_width;
+        }
+        Longhand::BorderBottomWidth => {
+            dst.border.bottom.width = src.border.bottom.width;
+            dst.border.bottom.explicit_width = src.border.bottom.explicit_width;
+        }
+        Longhand::BorderLeftWidth => {
+            dst.border.left.width = src.border.left.width;
+            dst.border.left.explicit_width = src.border.left.explicit_width;
+        }
         Longhand::BorderTopColor => {
             dst.border.top.color = src.border.top.color;
             dst.border.top.explicit_color = src.border.top.explicit_color;
@@ -1327,7 +1342,10 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
             dst.border.left.color = src.border.left.color;
             dst.border.left.explicit_color = src.border.left.explicit_color;
         }
-        Longhand::OutlineWidth => dst.outline.width = src.outline.width,
+        Longhand::OutlineWidth => {
+            dst.outline.width = src.outline.width;
+            dst.outline.explicit_width = src.outline.explicit_width;
+        }
         Longhand::OutlineColor => {
             dst.outline.color = src.outline.color;
             dst.outline.explicit_color = src.outline.explicit_color;
