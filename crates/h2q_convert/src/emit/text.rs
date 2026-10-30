@@ -207,6 +207,8 @@ impl Emitter<'_, '_> {
                     m.prev_space = true;
                 }
                 Inline::Span(span) => self.span(span, state, m),
+                // A line with boxes is a Flow (see `inline`), not one Text.
+                Inline::Atomic(_) => {}
             }
         }
     }

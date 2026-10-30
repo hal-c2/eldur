@@ -7,7 +7,7 @@
 use h2q_css::{ComputedStyle, WhiteSpace};
 use h2q_dom::NodeId;
 
-use super::{Inline, Span};
+use super::{Inline, LayoutBox, Span};
 
 /// Inline content as it comes from the DOM.
 #[derive(Debug, Clone)]
@@ -22,6 +22,7 @@ pub(crate) enum Raw<'a> {
         style: &'a ComputedStyle,
         children: Vec<Raw<'a>>,
     },
+    Atomic(Box<LayoutBox<'a>>),
 }
 
 enum Token<'a> {
@@ -33,6 +34,7 @@ enum Token<'a> {
         collapsible: bool,
     },
     Break,
+    Atomic(Box<LayoutBox<'a>>),
 }
 
 /// Collapses white space in an inline formatting context. Returns no items
@@ -44,7 +46,7 @@ pub(crate) fn collapse(raw: Vec<Raw<'_>>) -> Vec<Inline<'_>> {
     // A run that is only empty spans renders nothing.
     if !tokens
         .iter()
-        .any(|t| matches!(t, Token::Text { .. } | Token::Break))
+        .any(|t| matches!(t, Token::Text { .. } | Token::Break | Token::Atomic(_)))
     {
         tokens.clear();
     }
@@ -56,6 +58,7 @@ fn flatten<'a>(raw: Vec<Raw<'a>>, out: &mut Vec<Token<'a>>) {
         match item {
             Raw::Text { text, white_space } => segment(&text, white_space, out),
             Raw::LineBreak => out.push(Token::Break),
+            Raw::Atomic(b) => out.push(Token::Atomic(b)),
             Raw::Span {
                 node,
                 style,
@@ -166,6 +169,11 @@ fn remove_line_edge_spaces(tokens: Vec<Token<'_>>) -> Vec<Token<'_>> {
                 after_space = true;
                 out.push(Token::Break);
             }
+            // Like a glyph: a space after it is kept.
+            Token::Atomic(b) => {
+                after_space = false;
+                out.push(Token::Atomic(b));
+            }
             other => out.push(other),
         }
     }
@@ -178,7 +186,7 @@ fn trim_trailing_space(out: &mut Vec<Token<'_>>) {
     for i in (0..out.len()).rev() {
         match &mut out[i] {
             Token::Open(..) | Token::Close => {}
-            Token::Break => return,
+            Token::Break | Token::Atomic(_) => return,
             Token::Text { text, collapsible } => {
                 if *collapsible && text.ends_with(' ') {
                     text.pop();
@@ -213,6 +221,7 @@ fn rebuild(tokens: Vec<Token<'_>>) -> Vec<Inline<'_>> {
             },
             Token::Text { text, .. } => Inline::Text(text),
             Token::Break => Inline::LineBreak,
+            Token::Atomic(b) => Inline::Atomic(b),
         };
         let parent = stack.last_mut().map_or(&mut root, |s| &mut s.children);
         // Adjacent text (from split text nodes) is merged.

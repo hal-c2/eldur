@@ -4,5 +4,4 @@ expression: "diagnostics.join(\"\\n\")"
 ---
 info[css]: <style>#1:42: unknown property `font-variant-numeric`
 info[css]: index.html:190: <p id="empty" class="empty"> is `display: none` and used by a script: it is kept invisible, as a block when shown
-warning[css]: index.html:178: `box-shadow` is not converted yet
 info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

@@ -6,6 +6,7 @@ expression: qml
 
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Effects
 import QtQuick.Layouts
 
 ApplicationWindow {
@@ -248,6 +249,15 @@ ApplicationWindow {
                                 Layout.preferredWidth: 0
                                 Layout.fillHeight: true
 
+                                RectangularShadow {
+                                    anchors.fill: parent
+                                    z: -1
+                                    offset: Qt.vector2d(0, 2)
+                                    blur: 9.2
+                                    color: "#14000000"
+                                    radius: 12
+                                }
+
                                 ColumnLayout {
                                     id: liftCardContent
                                     spacing: 0
@@ -304,6 +314,15 @@ ApplicationWindow {
                                 Layout.preferredWidth: 0
                                 Layout.fillHeight: true
 
+                                RectangularShadow {
+                                    anchors.fill: parent
+                                    z: -1
+                                    offset: Qt.vector2d(0, 2)
+                                    blur: 9.2
+                                    color: "#14000000"
+                                    radius: 12
+                                }
+
                                 ColumnLayout {
                                     id: liftCardContent2
                                     spacing: 0
@@ -359,6 +378,15 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 0
                                 Layout.fillHeight: true
+
+                                RectangularShadow {
+                                    anchors.fill: parent
+                                    z: -1
+                                    offset: Qt.vector2d(0, 2)
+                                    blur: 9.2
+                                    color: "#14000000"
+                                    radius: 12
+                                }
 
                                 ColumnLayout {
                                     id: liftCardContent3
@@ -552,6 +580,15 @@ ApplicationWindow {
                                 implicitHeight: menuContent.implicitHeight + 16
                                 Layout.fillWidth: true
                                 Layout.topMargin: 12
+
+                                RectangularShadow {
+                                    anchors.fill: parent
+                                    z: -1
+                                    offset: Qt.vector2d(0, 2)
+                                    blur: 9.2
+                                    color: "#14000000"
+                                    radius: 12
+                                }
 
                                 ColumnLayout {
                                     id: menuContent
