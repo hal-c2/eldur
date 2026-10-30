@@ -187,6 +187,10 @@ pub struct StyleMap {
     /// Indexed by `NodeId::index()`; `None` for non-elements and for
     /// elements under a `display: none` ancestor (they have no box).
     pub(crate) styles: Vec<Option<ElementStyle>>,
+    pub(crate) parent_elements: Vec<Option<NodeId>>,
+    pub(crate) element_cascades: Vec<Option<cascade::ElementCascade>>,
+    pub(crate) root_font_size: f32,
+    pub(crate) viewport: Viewport,
     pub variants: Vec<StateVariant>,
     pub keyframes: BTreeMap<String, Vec<Keyframe>>,
     pub font_faces: Vec<FontFace>,
