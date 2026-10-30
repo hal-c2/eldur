@@ -331,7 +331,7 @@ ApplicationWindow {
                                 GridLayout {
                                     id: containerContent2
                                     columns: 9
-                                    columnSpacing: 48
+                                    columnSpacing: 0
                                     rowSpacing: 0
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -352,6 +352,7 @@ ApplicationWindow {
                                         Layout.maximumHeight: Number.POSITIVE_INFINITY
                                         Layout.fillHeight: false
                                         Layout.alignment: Qt.AlignVCenter
+                                        Layout.rightMargin: 26.67
 
                                         Flow {
                                             id: blockFlow
@@ -533,6 +534,7 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
                                         Layout.alignment: Qt.AlignVCenter
+                                        Layout.leftMargin: 21.33
 
                                         ColumnLayout {
                                             id: heroPanelContent
@@ -840,6 +842,7 @@ ApplicationWindow {
                                         Layout.column: 0
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 5.33
                                     }
 
                                     Item {
@@ -847,6 +850,7 @@ ApplicationWindow {
                                         Layout.column: 1
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 5.33
                                     }
 
                                     Item {
@@ -854,6 +858,7 @@ ApplicationWindow {
                                         Layout.column: 2
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 5.33
                                     }
 
                                     Item {
@@ -861,6 +866,7 @@ ApplicationWindow {
                                         Layout.column: 3
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 5.33
                                     }
 
                                     Item {
@@ -868,6 +874,7 @@ ApplicationWindow {
                                         Layout.column: 4
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 5.33
                                     }
 
                                     Item {
@@ -875,6 +882,7 @@ ApplicationWindow {
                                         Layout.column: 5
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 5.33
                                     }
 
                                     Item {
@@ -882,6 +890,7 @@ ApplicationWindow {
                                         Layout.column: 6
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 5.33
                                     }
 
                                     Item {
@@ -889,6 +898,7 @@ ApplicationWindow {
                                         Layout.column: 7
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 5.33
                                     }
 
                                     Item {
@@ -896,6 +906,7 @@ ApplicationWindow {
                                         Layout.column: 8
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 5.33
                                     }
                                 }
                             }
@@ -1695,7 +1706,7 @@ ApplicationWindow {
                                 // <div class="footer-grid">
                                 GridLayout {
                                     columns: 5
-                                    columnSpacing: 40
+                                    columnSpacing: 0
                                     rowSpacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
@@ -1712,6 +1723,7 @@ ApplicationWindow {
                                         Layout.maximumHeight: Number.POSITIVE_INFINITY
                                         Layout.fillHeight: false
                                         Layout.alignment: Qt.AlignTop
+                                        Layout.rightMargin: 48
 
                                         // <p class="footer-brand">
                                         Text {
@@ -1760,6 +1772,8 @@ ApplicationWindow {
                                         Layout.maximumHeight: Number.POSITIVE_INFINITY
                                         Layout.fillHeight: false
                                         Layout.alignment: Qt.AlignTop
+                                        Layout.leftMargin: -8
+                                        Layout.rightMargin: 32
 
                                         // <h4>
                                         Text {
@@ -1890,6 +1904,8 @@ ApplicationWindow {
                                         Layout.maximumHeight: Number.POSITIVE_INFINITY
                                         Layout.fillHeight: false
                                         Layout.alignment: Qt.AlignTop
+                                        Layout.leftMargin: 8
+                                        Layout.rightMargin: 16
 
                                         // <h4>
                                         Text {
@@ -2020,6 +2036,7 @@ ApplicationWindow {
                                         Layout.maximumHeight: Number.POSITIVE_INFINITY
                                         Layout.fillHeight: false
                                         Layout.alignment: Qt.AlignTop
+                                        Layout.leftMargin: 24
 
                                         // <h4>
                                         Text {
@@ -2144,6 +2161,7 @@ ApplicationWindow {
                                         Layout.column: 0
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 24
                                     }
 
                                     Item {
@@ -2151,6 +2169,7 @@ ApplicationWindow {
                                         Layout.column: 1
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 24
                                     }
                                 }
 

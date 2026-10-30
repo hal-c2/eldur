@@ -1100,3 +1100,23 @@ fn text_of_a_flex_or_grid_box_is_placed_as_its_one_item() {
     );
     assert!(!d.contains("verticalAlignment"), "{d}");
 }
+
+#[test]
+fn fr_ratio_reported_only_when_sub_columns_approximate_it() {
+    let diags_for = |cols: &str| {
+        convert(&page(
+            &format!(".g{{display:grid;grid-template-columns:{cols};gap:20px}}"),
+            "<div class=g><div>a</div><div>b</div></div>",
+        ))
+        .1
+    };
+    let exact = diags_for("2fr 1fr");
+    assert!(!exact.iter().any(|d| d.contains("`fr`")), "{exact:?}");
+    let inexact = diags_for("1.1fr 0.9fr");
+    assert!(
+        inexact
+            .iter()
+            .any(|d| d.contains("1.1:0.9") && d.contains("5:4")),
+        "{inexact:?}"
+    );
+}

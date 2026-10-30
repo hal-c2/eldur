@@ -1091,7 +1091,7 @@ ApplicationWindow {
                                     // <section class="row-2">
                                     GridLayout {
                                         columns: 3
-                                        columnSpacing: 20
+                                        columnSpacing: 0
                                         rowSpacing: 0
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
@@ -1112,6 +1112,7 @@ ApplicationWindow {
                                             Layout.fillWidth: true
                                             Layout.preferredWidth: 0
                                             Layout.fillHeight: true
+                                            Layout.rightMargin: 13.33
 
                                             ColumnLayout {
                                                 id: cardContent5
@@ -1506,6 +1507,7 @@ ApplicationWindow {
                                             Layout.fillWidth: true
                                             Layout.preferredWidth: 0
                                             Layout.fillHeight: true
+                                            Layout.leftMargin: 6.67
 
                                             ColumnLayout {
                                                 id: cardContent6
@@ -1680,6 +1682,7 @@ ApplicationWindow {
                                             Layout.column: 0
                                             Layout.fillWidth: true
                                             Layout.preferredWidth: 0
+                                            Layout.rightMargin: 6.67
                                         }
 
                                         Item {
@@ -1687,6 +1690,7 @@ ApplicationWindow {
                                             Layout.column: 1
                                             Layout.fillWidth: true
                                             Layout.preferredWidth: 0
+                                            Layout.rightMargin: 6.67
                                         }
                                     }
 

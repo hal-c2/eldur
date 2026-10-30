@@ -7,9 +7,8 @@ info[qml]: index.html:433: <a> is underlined: StyledText always underlines links
 info[qml]: index.html:434: <a> is underlined: StyledText always underlines links
 info[qml]: index.html:435: <a> is underlined: StyledText always underlines links
 info[qml]: index.html:436: <a> is underlined: StyledText always underlines links
-info[qml]: index.html:445: unequal `fr` columns on <div class="container hero-grid"> are split into 9 equal sub-columns; items are off by a fraction of the gap
+info[qml]: index.html:445: `fr` columns 1.1:0.9 on <div class="container hero-grid"> are split into equal sub-columns as 5:4
 info[qml]: index.html:509: <span class="author-role">: font size 15.2px inside 16px text is approximated with <small>
-info[qml]: index.html:531: unequal `fr` columns on <div class="footer-grid"> are split into 5 equal sub-columns; items are off by a fraction of the gap
 info[qml]: index.html:539: <a> is underlined: StyledText always underlines links
 info[qml]: index.html:540: <a> is underlined: StyledText always underlines links
 info[qml]: index.html:541: <a> is underlined: StyledText always underlines links
