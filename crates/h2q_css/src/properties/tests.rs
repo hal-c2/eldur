@@ -1011,3 +1011,53 @@ fn border_radius_rejects_multiple_slashes() {
 
     assert!(apply_decl(&mut s, "border-radius", "10px / 20px / 30px", &ctx).is_err());
 }
+
+#[test]
+fn negative_calc_in_non_negative_properties() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    let mut s = ComputedStyle::default();
+
+    compute(&mut s, Longhand::PaddingTop, "calc(10% - 30%)", &ctx)
+        .expect("padding-top negative percentage calc");
+    assert_eq!(s.padding.top, Length::Linear(LengthPercentage::ZERO));
+
+    compute(&mut s, Longhand::BorderTopLeftRadius, "calc(-20%)", &ctx)
+        .expect("border-top-left-radius negative percentage calc");
+    assert_eq!(s.border_radius.top_left, LengthPercentage::ZERO);
+    assert_eq!(s.border_radius_calc.top_left, None);
+
+    compute(&mut s, Longhand::PaddingTop, "calc(10px - 5%)", &ctx)
+        .expect("padding-top mixed-sign calc");
+    assert_eq!(
+        s.padding.top,
+        Length::Calc(CalcNode::Max(vec![
+            CalcNode::Leaf(LengthPercentage::ZERO),
+            CalcNode::Leaf(LengthPercentage {
+                px: 10.0,
+                percent: -5.0,
+                vw: 0.0,
+                vh: 0.0,
+            }),
+        ]))
+    );
+
+    compute(&mut s, Longhand::PaddingTop, "calc(20px + 5%)", &ctx)
+        .expect("padding-top positive calc");
+    assert_eq!(
+        s.padding.top,
+        Length::Linear(LengthPercentage {
+            px: 20.0,
+            percent: 5.0,
+            vw: 0.0,
+            vh: 0.0,
+        })
+    );
+
+    compute(&mut s, Longhand::MarginTop, "calc(10% - 30%)", &ctx)
+        .expect("margin-top negative percentage calc");
+    assert_eq!(
+        s.margin.top,
+        LengthAuto::Length(Length::Linear(LengthPercentage::percent(-20.0)))
+    );
+}
