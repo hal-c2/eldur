@@ -971,3 +971,34 @@ fn min_max_clamp_with_percentages_preserved_as_calc_tree() {
         )]
     );
 }
+
+#[test]
+fn grid_template_areas_dots_and_adjacent_tokens() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    let mut s = ComputedStyle::default();
+
+    compute(&mut s, Longhand::GridTemplateAreas, "\"a . b\"", &ctx).expect("single dot");
+    assert_eq!(
+        s.grid_template_areas,
+        vec![vec![Some("a".to_owned()), None, Some("b".to_owned()),]]
+    );
+
+    compute(&mut s, Longhand::GridTemplateAreas, "\"a .. b\"", &ctx).expect("double dot");
+    assert_eq!(
+        s.grid_template_areas,
+        vec![vec![Some("a".to_owned()), None, Some("b".to_owned()),]]
+    );
+
+    compute(&mut s, Longhand::GridTemplateAreas, "\".a\"", &ctx).expect("dot before ident");
+    assert_eq!(
+        s.grid_template_areas,
+        vec![vec![None, Some("a".to_owned())]]
+    );
+
+    compute(&mut s, Longhand::GridTemplateAreas, "\"a.b\"", &ctx).expect("dot between idents");
+    assert_eq!(
+        s.grid_template_areas,
+        vec![vec![Some("a".to_owned()), None, Some("b".to_owned()),]]
+    );
+}
