@@ -574,6 +574,8 @@ pub struct BackgroundLayer {
 #[derive(Debug, Clone, PartialEq)]
 pub enum TransformFn {
     Translate(LengthPercentage, LengthPercentage),
+    /// A translation with a non-linear component (`min()`/`max()`/`clamp()`
+    /// over percentages), kept as an expression for a QML binding.
     TranslateCalc(Length, Length),
     Scale(f32, f32),
     /// Degrees, clockwise.
@@ -728,6 +730,9 @@ pub struct ComputedStyle {
     pub padding: Sides<Length>,
     pub border: Sides<BorderSide>,
     pub border_radius: Corners,
+    /// A corner's radius when it is a non-linear expression that cannot be
+    /// resolved before layout; `Some` overrides the same corner of
+    /// `border_radius`.
     pub border_radius_calc: Corners<Option<CalcNode>>,
     pub outline: BorderSide,
     pub outline_offset: f32,
@@ -770,9 +775,14 @@ pub struct ComputedStyle {
     pub opacity: f32,
     pub overflow_x: Overflow,
     pub overflow_y: Overflow,
+    /// The individual `translate`/`rotate`/`scale` properties. They are
+    /// already included at the front of `transform`; kept separately so
+    /// each can be replaced without touching the `transform` property.
     pub translate: Option<TransformFn>,
     pub rotate: Option<TransformFn>,
     pub scale: Option<TransformFn>,
+    /// The effective list: `translate`, `rotate`, `scale` (when set), then
+    /// the `transform` property's functions (CSS Transforms 2 §4).
     pub transform: Vec<TransformFn>,
     /// Percentages of the border box; default 50% 50%.
     pub transform_origin: (LengthPercentage, LengthPercentage),
