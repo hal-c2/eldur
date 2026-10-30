@@ -72,6 +72,9 @@ pub(crate) struct Emitter<'a, 'd> {
     /// The box being emitted is an overlay of its positioned parent, so its
     /// `position` is handled.
     positioned_child: bool,
+    /// `position: fixed` boxes, placed over the window outside the
+    /// `Flickable` so they do not scroll.
+    fixed: Vec<(Option<String>, Object)>,
     /// QML modules the emitted objects need beyond the default imports.
     pub imports: std::collections::BTreeSet<&'static str>,
 }
@@ -104,6 +107,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             root_node: None,
             has_table: false,
             positioned_child: false,
+            fixed: Vec::new(),
             imports: std::collections::BTreeSet::new(),
         }
     }
@@ -226,6 +230,12 @@ impl<'a, 'd> Emitter<'a, 'd> {
         }
         flickable.set("contentHeight", Value::expr(content_height));
         root.push_child(flickable);
+        for (comment, fixed) in std::mem::take(&mut self.fixed) {
+            if let Some(comment) = comment {
+                root.members.push(Member::Comment(comment));
+            }
+            root.push_child(fixed);
+        }
         for group in self.radio_groups.values() {
             root.push_child(Object::new("ButtonGroup").with_id(group.clone()));
         }
@@ -301,7 +311,21 @@ impl<'a, 'd> Emitter<'a, 'd> {
 
         let mut escaped_top = MarginSet::default();
         let mut escaped_bottom = MarginSet::default();
-        let (in_flow, overlays) = self.split_positioned(b);
+        let lists::Positioned {
+            flow: in_flow,
+            overlays,
+            fixed,
+        } = self.split_positioned(b);
+        for f in fixed {
+            // The viewport has no border, so the initial style stands in
+            // for the containing block's.
+            let obj = self.overlay(&ComputedStyle::default(), f);
+            let comment = f
+                .node
+                .filter(|_| self.options.source_comments)
+                .map(|n| describe(self.doc, n));
+            self.fixed.push((comment, obj));
+        }
         let mut inner = match &b.content {
             Content::Blocks(_) if b.kind == BoxKind::Flex => {
                 Some((self.flex(b, &in_flow, decoration, line), "Content"))
@@ -531,7 +555,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         match style.position {
             Position::Static => {}
             Position::Relative if is_unmoved(style) => {}
-            Position::Absolute if positioned => {}
+            Position::Absolute | Position::Fixed if positioned => {}
             p => self.diags.warning(
                 "css",
                 line,

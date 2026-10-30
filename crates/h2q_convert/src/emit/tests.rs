@@ -964,3 +964,31 @@ fn a_transformed_text_keeps_its_baseline_shift_first() {
     let moved = text.find("x: 10").expect("translate");
     assert!(nudge < moved, "{text}");
 }
+
+#[test]
+fn fixed_box_leaves_the_flow_for_the_window() {
+    // Chromium: header at (0, 0) 1280×20; p at y 30 (the body's padding
+    // only, the header takes no space).
+    let (qml, diags) = convert(&page(
+        "body{padding-top:30px} header{position:fixed;top:0;left:0;right:0;height:20px;\
+         background:red} p{margin:0}",
+        "<header>h</header><p>x</p>",
+    ));
+    // The window's children are at indent 4; the header follows the
+    // Flickable, so it does not scroll.
+    let flickable = qml.find("\n    Flickable {").expect("flickable");
+    let flickable_end = flickable + qml[flickable..].find("\n    }\n").expect("end");
+    let header = &qml[flickable_end..];
+    assert!(
+        header.starts_with("\n    }\n\n    // <header>\n    Rectangle {"),
+        "{qml}"
+    );
+    assert!(header.contains("color: \"#ff0000\""), "{qml}");
+    assert!(header.contains("anchors.left: parent.left"), "{qml}");
+    assert!(header.contains("anchors.right: parent.right"), "{qml}");
+    assert!(header.contains("height: 20"), "{qml}");
+    assert!(
+        !diags.iter().any(|d| d.contains("position: fixed")),
+        "{diags:?}"
+    );
+}
