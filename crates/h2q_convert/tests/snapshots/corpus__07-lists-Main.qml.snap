@@ -89,8 +89,10 @@ ApplicationWindow {
                         }
 
                         // <div class="layout">
-                        ColumnLayout {
-                            spacing: 0
+                        GridLayout {
+                            columns: 2
+                            columnSpacing: 24
+                            rowSpacing: 24
                             Layout.fillWidth: true
                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                             Layout.topMargin: 24
@@ -99,7 +101,10 @@ ApplicationWindow {
                             ColumnLayout {
                                 spacing: 0
                                 Layout.fillWidth: true
+                                Layout.preferredWidth: 0
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                Layout.fillHeight: true
+                                Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                 // <section class="card">
                                 Rectangle {
@@ -486,7 +491,10 @@ ApplicationWindow {
                             ColumnLayout {
                                 spacing: 0
                                 Layout.fillWidth: true
+                                Layout.preferredWidth: 0
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                Layout.fillHeight: true
+                                Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                 // <section class="card">
                                 Rectangle {
@@ -526,8 +534,10 @@ ApplicationWindow {
                                         }
 
                                         // <dl class="faq">
-                                        ColumnLayout {
-                                            spacing: 0
+                                        GridLayout {
+                                            columns: 2
+                                            columnSpacing: 24
+                                            rowSpacing: 14
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.topMargin: 12
@@ -546,7 +556,10 @@ ApplicationWindow {
                                                     y: 2.8
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                Layout.fillWidth: true
+                                                Layout.preferredWidth: 200
+                                                Layout.minimumWidth: 200
+                                                Layout.maximumWidth: 200
+                                                Layout.fillHeight: true
                                             }
 
                                             // <dd>
@@ -563,6 +576,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.preferredWidth: 0
+                                                Layout.fillHeight: true
                                             }
 
                                             // <dt>
@@ -579,7 +594,10 @@ ApplicationWindow {
                                                     y: 2.8
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                Layout.fillWidth: true
+                                                Layout.preferredWidth: 200
+                                                Layout.minimumWidth: 200
+                                                Layout.maximumWidth: 200
+                                                Layout.fillHeight: true
                                             }
 
                                             // <dd>
@@ -596,6 +614,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.preferredWidth: 0
+                                                Layout.fillHeight: true
                                             }
 
                                             // <dt>
@@ -612,7 +632,10 @@ ApplicationWindow {
                                                     y: 2.8
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                Layout.fillWidth: true
+                                                Layout.preferredWidth: 200
+                                                Layout.minimumWidth: 200
+                                                Layout.maximumWidth: 200
+                                                Layout.fillHeight: true
                                             }
 
                                             // <dd>
@@ -629,6 +652,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.preferredWidth: 0
+                                                Layout.fillHeight: true
                                             }
 
                                             // <dt>
@@ -645,7 +670,10 @@ ApplicationWindow {
                                                     y: 2.8
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                Layout.fillWidth: true
+                                                Layout.preferredWidth: 200
+                                                Layout.minimumWidth: 200
+                                                Layout.maximumWidth: 200
+                                                Layout.fillHeight: true
                                             }
 
                                             // <dd>
@@ -662,6 +690,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.preferredWidth: 0
+                                                Layout.fillHeight: true
                                             }
                                         }
                                     }
@@ -706,10 +736,9 @@ ApplicationWindow {
                                         }
 
                                         // <ul class="tags">
-                                        ColumnLayout {
-                                            spacing: 0
+                                        Flow {
+                                            spacing: 8
                                             Layout.fillWidth: true
-                                            Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.topMargin: 12
 
                                             // <li>
@@ -726,7 +755,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 linkColor: "#2a3ea6"
-                                                Layout.fillWidth: true
+                                                width: Math.min(Math.ceil(implicitWidth), parent.width)
 
                                                 onLinkActivated: (link) => {
                                                     Qt.openUrlExternally(link)
@@ -747,7 +776,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 linkColor: "#2a3ea6"
-                                                Layout.fillWidth: true
+                                                width: Math.min(Math.ceil(implicitWidth), parent.width)
 
                                                 onLinkActivated: (link) => {
                                                     Qt.openUrlExternally(link)
@@ -768,7 +797,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 linkColor: "#2a3ea6"
-                                                Layout.fillWidth: true
+                                                width: Math.min(Math.ceil(implicitWidth), parent.width)
 
                                                 onLinkActivated: (link) => {
                                                     Qt.openUrlExternally(link)
@@ -789,7 +818,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 linkColor: "#2a3ea6"
-                                                Layout.fillWidth: true
+                                                width: Math.min(Math.ceil(implicitWidth), parent.width)
 
                                                 onLinkActivated: (link) => {
                                                     Qt.openUrlExternally(link)
@@ -810,7 +839,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 linkColor: "#2a3ea6"
-                                                Layout.fillWidth: true
+                                                width: Math.min(Math.ceil(implicitWidth), parent.width)
 
                                                 onLinkActivated: (link) => {
                                                     Qt.openUrlExternally(link)
@@ -831,7 +860,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 linkColor: "#2a3ea6"
-                                                Layout.fillWidth: true
+                                                width: Math.min(Math.ceil(implicitWidth), parent.width)
 
                                                 onLinkActivated: (link) => {
                                                     Qt.openUrlExternally(link)
@@ -852,7 +881,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 linkColor: "#2a3ea6"
-                                                Layout.fillWidth: true
+                                                width: Math.min(Math.ceil(implicitWidth), parent.width)
 
                                                 onLinkActivated: (link) => {
                                                     Qt.openUrlExternally(link)

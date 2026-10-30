@@ -42,15 +42,21 @@ ApplicationWindow {
                 implicitHeight: bodyContent.implicitHeight + 96
                 Layout.fillWidth: true
 
-                ColumnLayout {
+                RowLayout {
                     id: bodyContent
                     spacing: 0
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.top: parent.top
+                    anchors.bottom: parent.bottom
                     anchors.leftMargin: 16
                     anchors.rightMargin: 16
                     anchors.topMargin: 48
+                    anchors.bottomMargin: 48
+
+                    Item {
+                        Layout.fillWidth: true
+                    }
 
                     // <main class="widget">
                     Rectangle {
@@ -58,8 +64,10 @@ ApplicationWindow {
                         radius: 16
                         implicitWidth: widgetContent.implicitWidth + 64
                         implicitHeight: widgetContent.implicitHeight + 64
+                        Layout.fillWidth: true
                         Layout.preferredWidth: parent.width
-                        Layout.maximumWidth: 520
+                        Layout.maximumWidth: Math.min(parent.width, 520)
+                        Layout.alignment: Qt.AlignTop
 
                         ColumnLayout {
                             id: widgetContent
@@ -106,11 +114,15 @@ ApplicationWindow {
                             }
 
                             // <div class="controls">
-                            ColumnLayout {
+                            RowLayout {
                                 spacing: 0
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
                                 Layout.topMargin: 24
+
+                                Item {
+                                    Layout.fillWidth: true
+                                }
 
                                 // <button id="dec" class="btn">
                                 Rectangle {
@@ -123,7 +135,9 @@ ApplicationWindow {
                                     border.color: "#c9d1e0"
                                     objectName: "dec"
                                     Layout.fillWidth: true
+                                    Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.minimumWidth: 64
+                                    Layout.fillHeight: true
 
                                     Text {
                                         id: decText
@@ -161,7 +175,10 @@ ApplicationWindow {
                                     border.color: "#1d4ed8"
                                     objectName: "inc"
                                     Layout.fillWidth: true
+                                    Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.minimumWidth: 64
+                                    Layout.fillHeight: true
+                                    Layout.leftMargin: 12
 
                                     Text {
                                         id: incText
@@ -199,7 +216,10 @@ ApplicationWindow {
                                     border.color: "#c9d1e0"
                                     objectName: "reset"
                                     Layout.fillWidth: true
+                                    Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.minimumWidth: 64
+                                    Layout.fillHeight: true
+                                    Layout.leftMargin: 12
 
                                     Text {
                                         id: resetText
@@ -224,6 +244,10 @@ ApplicationWindow {
                                             Page.__h2q_on_click_reset(H2Q.event("click", reset, eventPoint));
                                         }
                                     }
+                                }
+
+                                Item {
+                                    Layout.fillWidth: true
                                 }
                             }
 
@@ -278,7 +302,7 @@ ApplicationWindow {
                             }
 
                             // <label class="toggle">
-                            ColumnLayout {
+                            RowLayout {
                                 spacing: 0
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
@@ -290,8 +314,11 @@ ApplicationWindow {
                                     implicitWidth: 18
                                     implicitHeight: 18
                                     objectName: "details-toggle"
+                                    Layout.fillWidth: true
                                     Layout.preferredWidth: 18
+                                    Layout.maximumWidth: 18
                                     Layout.preferredHeight: 18
+                                    Layout.alignment: Qt.AlignVCenter
                                 }
 
                                 // <span>
@@ -302,6 +329,13 @@ ApplicationWindow {
                                     font.family: "sans-serif"
                                     font.pixelSize: 15
                                     wrapMode: Text.WordWrap
+                                    Layout.fillWidth: true
+                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                    Layout.alignment: Qt.AlignVCenter
+                                    Layout.leftMargin: 8
+                                }
+
+                                Item {
                                     Layout.fillWidth: true
                                 }
                             }
@@ -321,6 +355,10 @@ ApplicationWindow {
                                 Layout.topMargin: 16
                             }
                         }
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
                     }
                 }
             }

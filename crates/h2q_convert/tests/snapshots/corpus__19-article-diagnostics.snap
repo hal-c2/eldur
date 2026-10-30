@@ -9,15 +9,11 @@ warning[css]: index.html:295: generated content `Counter("step", Decimal)` on <l
 warning[css]: index.html:296: generated content `Counter("step", Decimal)` on <li> is not supported; dropped
 warning[css]: index.html:297: generated content `Counter("step", Decimal)` on <li> is not supported; dropped
 warning[css]: index.html:298: generated content `Counter("step", Decimal)` on <li> is not supported; dropped
-warning[css]: index.html:249: `display: flex` on <div class="wrap"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:251: `display: flex` on <nav class="nav-links"> is laid out as block flow (not implemented yet)
 info[qml]: index.html:273: <code>: font size 16.15px inside 19px text is approximated with <small>
 info[qml]: index.html:273: <code>: font family `monospace` inside `serif` text is not converted
 info[qml]: index.html:273: <code>: inline background is not converted
 info[qml]: index.html:273: <code>: inline padding and borders are not converted
 warning[css]: index.html:284: background images and gradients are not converted yet
 info[qml]: index.html:289: <strong>: font family `sans-serif` inside `serif` text is not converted
-warning[css]: index.html: `display: grid` on a generated box is laid out as block flow (not implemented yet)
 warning[css]: index.html: `position: absolute` on a generated box is laid out in normal flow (not implemented yet)
 info[css]: index.html: percentage `border-radius` uses its px part only
-warning[css]: index.html:306: `display: grid` on <div class="related-grid"> is laid out as block flow (not implemented yet)

@@ -56,20 +56,31 @@ ApplicationWindow {
                             implicitWidth: appContent.implicitWidth
                             implicitHeight: appContent.implicitHeight
                             Layout.fillWidth: true
+                            Layout.preferredHeight: root.height
 
-                            ColumnLayout {
+                            GridLayout {
                                 id: appContent
-                                spacing: 0
+                                columns: 2
+                                columnSpacing: 0
+                                rowSpacing: 0
                                 anchors.left: parent.left
                                 anchors.right: parent.right
                                 anchors.top: parent.top
+                                anchors.bottom: parent.bottom
 
                                 // <header class="site-header">
                                 Rectangle {
                                     color: "#ffffff"
                                     implicitWidth: siteHeaderContent.implicitWidth + 48
                                     implicitHeight: siteHeaderContent.implicitHeight + 1
+                                    Layout.row: 0
+                                    Layout.column: 0
+                                    Layout.columnSpan: 2
                                     Layout.fillWidth: true
+                                    Layout.preferredWidth: 0
+                                    Layout.preferredHeight: 64
+                                    Layout.minimumHeight: 64
+                                    Layout.maximumHeight: 64
 
                                     Rectangle {
                                         anchors.left: parent.left
@@ -79,14 +90,16 @@ ApplicationWindow {
                                         color: "#dde2ec"
                                     }
 
-                                    ColumnLayout {
+                                    RowLayout {
                                         id: siteHeaderContent
                                         spacing: 0
                                         anchors.left: parent.left
                                         anchors.right: parent.right
                                         anchors.top: parent.top
+                                        anchors.bottom: parent.bottom
                                         anchors.leftMargin: 24
                                         anchors.rightMargin: 24
+                                        anchors.bottomMargin: 1
 
                                         // <div class="brand">
                                         Text {
@@ -103,6 +116,12 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                                            Layout.alignment: Qt.AlignVCenter
+                                        }
+
+                                        Item {
+                                            Layout.fillWidth: true
                                         }
 
                                         // <div class="search">
@@ -113,7 +132,10 @@ ApplicationWindow {
                                             implicitHeight: searchText.implicitHeight + 18
                                             border.width: 1
                                             border.color: "#dde2ec"
+                                            Layout.fillWidth: true
                                             Layout.preferredWidth: 320
+                                            Layout.maximumWidth: 320
+                                            Layout.alignment: Qt.AlignVCenter
 
                                             Text {
                                                 id: searchText
@@ -137,12 +159,19 @@ ApplicationWindow {
                                             }
                                         }
 
+                                        Item {
+                                            Layout.fillWidth: true
+                                        }
+
                                         // <div class="avatar">
                                         Item {
                                             implicitWidth: 0
                                             implicitHeight: 0
+                                            Layout.fillWidth: true
                                             Layout.preferredWidth: 36
+                                            Layout.maximumWidth: 36
                                             Layout.preferredHeight: 36
+                                            Layout.alignment: Qt.AlignVCenter
                                         }
                                     }
                                 }
@@ -152,7 +181,13 @@ ApplicationWindow {
                                     color: "#ffffff"
                                     implicitWidth: sidebarContent.implicitWidth + 25
                                     implicitHeight: sidebarContent.implicitHeight + 40
-                                    Layout.fillWidth: true
+                                    Layout.row: 1
+                                    Layout.column: 0
+                                    Layout.preferredWidth: 220
+                                    Layout.minimumWidth: 220
+                                    Layout.maximumWidth: 220
+                                    Layout.fillHeight: true
+                                    Layout.preferredHeight: 0
 
                                     Rectangle {
                                         anchors.top: parent.top
@@ -404,7 +439,12 @@ ApplicationWindow {
                                     clip: true
                                     implicitWidth: mainContent.implicitWidth + 48
                                     implicitHeight: mainContent.implicitHeight + 48
+                                    Layout.row: 1
+                                    Layout.column: 1
                                     Layout.fillWidth: true
+                                    Layout.preferredWidth: 0
+                                    Layout.fillHeight: true
+                                    Layout.preferredHeight: 0
 
                                     ColumnLayout {
                                         id: mainContent
@@ -451,8 +491,10 @@ ApplicationWindow {
                                         }
 
                                         // <section class="tiles">
-                                        ColumnLayout {
-                                            spacing: 0
+                                        GridLayout {
+                                            columns: 3
+                                            columnSpacing: 16
+                                            rowSpacing: 16
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.topMargin: 20
@@ -465,7 +507,14 @@ ApplicationWindow {
                                                 implicitHeight: tileContent.implicitHeight + 34
                                                 border.width: 1
                                                 border.color: "#00000000"
+                                                Layout.row: 0
+                                                Layout.column: 0
+                                                Layout.columnSpan: 2
                                                 Layout.fillWidth: true
+                                                Layout.preferredWidth: 0
+                                                Layout.preferredHeight: 120
+                                                Layout.minimumHeight: 120
+                                                Layout.maximumHeight: 120
 
                                                 ColumnLayout {
                                                     id: tileContent
@@ -473,9 +522,11 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.top: parent.top
+                                                    anchors.bottom: parent.bottom
                                                     anchors.leftMargin: 19
                                                     anchors.rightMargin: 19
                                                     anchors.topMargin: 17
+                                                    anchors.bottomMargin: 17
 
                                                     // <p class="tile-label">
                                                     Text {
@@ -495,6 +546,10 @@ ApplicationWindow {
                                                         Layout.fillWidth: true
                                                     }
 
+                                                    Item {
+                                                        Layout.fillHeight: true
+                                                    }
+
                                                     // <p class="tile-value">
                                                     Text {
                                                         text: "184"
@@ -510,6 +565,10 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         Layout.fillWidth: true
+                                                    }
+
+                                                    Item {
+                                                        Layout.fillHeight: true
                                                     }
 
                                                     // <p class="tile-note">
@@ -538,7 +597,14 @@ ApplicationWindow {
                                                 implicitHeight: tileContent2.implicitHeight + 34
                                                 border.width: 1
                                                 border.color: "#dde2ec"
+                                                Layout.row: 0
+                                                Layout.column: 2
+                                                Layout.rowSpan: 2
                                                 Layout.fillWidth: true
+                                                Layout.preferredWidth: 0
+                                                Layout.preferredHeight: 256
+                                                Layout.minimumHeight: 256
+                                                Layout.maximumHeight: 256
 
                                                 ColumnLayout {
                                                     id: tileContent2
@@ -546,9 +612,11 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.top: parent.top
+                                                    anchors.bottom: parent.bottom
                                                     anchors.leftMargin: 19
                                                     anchors.rightMargin: 19
                                                     anchors.topMargin: 17
+                                                    anchors.bottomMargin: 17
 
                                                     // <p class="tile-label">
                                                     Text {
@@ -568,9 +636,13 @@ ApplicationWindow {
                                                         Layout.fillWidth: true
                                                     }
 
+                                                    Item {
+                                                        Layout.fillHeight: true
+                                                    }
+
                                                     // <div class="bars">
-                                                    ColumnLayout {
-                                                        spacing: 0
+                                                    RowLayout {
+                                                        spacing: 8
                                                         Layout.fillWidth: true
                                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
 
@@ -584,7 +656,9 @@ ApplicationWindow {
                                                             implicitWidth: 0
                                                             implicitHeight: 0
                                                             Layout.fillWidth: true
+                                                            Layout.preferredWidth: 0
                                                             Layout.preferredHeight: 40
+                                                            Layout.alignment: Qt.AlignBottom
                                                         }
 
                                                         // <div class="bar bar--b">
@@ -597,7 +671,9 @@ ApplicationWindow {
                                                             implicitWidth: 0
                                                             implicitHeight: 0
                                                             Layout.fillWidth: true
+                                                            Layout.preferredWidth: 0
                                                             Layout.preferredHeight: 64
+                                                            Layout.alignment: Qt.AlignBottom
                                                         }
 
                                                         // <div class="bar bar--c">
@@ -610,7 +686,9 @@ ApplicationWindow {
                                                             implicitWidth: 0
                                                             implicitHeight: 0
                                                             Layout.fillWidth: true
+                                                            Layout.preferredWidth: 0
                                                             Layout.preferredHeight: 52
+                                                            Layout.alignment: Qt.AlignBottom
                                                         }
 
                                                         // <div class="bar bar--d">
@@ -623,7 +701,9 @@ ApplicationWindow {
                                                             implicitWidth: 0
                                                             implicitHeight: 0
                                                             Layout.fillWidth: true
+                                                            Layout.preferredWidth: 0
                                                             Layout.preferredHeight: 88
+                                                            Layout.alignment: Qt.AlignBottom
                                                         }
 
                                                         // <div class="bar bar--e">
@@ -636,8 +716,14 @@ ApplicationWindow {
                                                             implicitWidth: 0
                                                             implicitHeight: 0
                                                             Layout.fillWidth: true
+                                                            Layout.preferredWidth: 0
                                                             Layout.preferredHeight: 72
+                                                            Layout.alignment: Qt.AlignBottom
                                                         }
+                                                    }
+
+                                                    Item {
+                                                        Layout.fillHeight: true
                                                     }
 
                                                     // <p class="tile-note">
@@ -666,7 +752,13 @@ ApplicationWindow {
                                                 implicitHeight: tileContent3.implicitHeight + 34
                                                 border.width: 1
                                                 border.color: "#dde2ec"
+                                                Layout.row: 1
+                                                Layout.column: 0
                                                 Layout.fillWidth: true
+                                                Layout.preferredWidth: 0
+                                                Layout.preferredHeight: 120
+                                                Layout.minimumHeight: 120
+                                                Layout.maximumHeight: 120
 
                                                 ColumnLayout {
                                                     id: tileContent3
@@ -674,9 +766,11 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.top: parent.top
+                                                    anchors.bottom: parent.bottom
                                                     anchors.leftMargin: 19
                                                     anchors.rightMargin: 19
                                                     anchors.topMargin: 17
+                                                    anchors.bottomMargin: 17
 
                                                     // <p class="tile-label">
                                                     Text {
@@ -696,6 +790,10 @@ ApplicationWindow {
                                                         Layout.fillWidth: true
                                                     }
 
+                                                    Item {
+                                                        Layout.fillHeight: true
+                                                    }
+
                                                     // <p class="tile-value">
                                                     Text {
                                                         text: "3"
@@ -711,6 +809,10 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         Layout.fillWidth: true
+                                                    }
+
+                                                    Item {
+                                                        Layout.fillHeight: true
                                                     }
 
                                                     // <p class="tile-note">
@@ -739,7 +841,13 @@ ApplicationWindow {
                                                 implicitHeight: tileContent4.implicitHeight + 34
                                                 border.width: 1
                                                 border.color: "#dde2ec"
+                                                Layout.row: 1
+                                                Layout.column: 1
                                                 Layout.fillWidth: true
+                                                Layout.preferredWidth: 0
+                                                Layout.preferredHeight: 120
+                                                Layout.minimumHeight: 120
+                                                Layout.maximumHeight: 120
 
                                                 ColumnLayout {
                                                     id: tileContent4
@@ -747,9 +855,11 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.top: parent.top
+                                                    anchors.bottom: parent.bottom
                                                     anchors.leftMargin: 19
                                                     anchors.rightMargin: 19
                                                     anchors.topMargin: 17
+                                                    anchors.bottomMargin: 17
 
                                                     // <p class="tile-label">
                                                     Text {
@@ -769,6 +879,10 @@ ApplicationWindow {
                                                         Layout.fillWidth: true
                                                     }
 
+                                                    Item {
+                                                        Layout.fillHeight: true
+                                                    }
+
                                                     // <p class="tile-value">
                                                     Text {
                                                         text: "42m"
@@ -784,6 +898,10 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         Layout.fillWidth: true
+                                                    }
+
+                                                    Item {
+                                                        Layout.fillHeight: true
                                                     }
 
                                                     // <p class="tile-note">
@@ -812,7 +930,13 @@ ApplicationWindow {
                                                 implicitHeight: tileContent5.implicitHeight + 34
                                                 border.width: 1
                                                 border.color: "#dde2ec"
+                                                Layout.row: 2
+                                                Layout.column: 0
                                                 Layout.fillWidth: true
+                                                Layout.preferredWidth: 0
+                                                Layout.preferredHeight: 120
+                                                Layout.minimumHeight: 120
+                                                Layout.maximumHeight: 120
 
                                                 ColumnLayout {
                                                     id: tileContent5
@@ -820,9 +944,11 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.top: parent.top
+                                                    anchors.bottom: parent.bottom
                                                     anchors.leftMargin: 19
                                                     anchors.rightMargin: 19
                                                     anchors.topMargin: 17
+                                                    anchors.bottomMargin: 17
 
                                                     // <p class="tile-label">
                                                     Text {
@@ -842,6 +968,10 @@ ApplicationWindow {
                                                         Layout.fillWidth: true
                                                     }
 
+                                                    Item {
+                                                        Layout.fillHeight: true
+                                                    }
+
                                                     // <p class="tile-value">
                                                     Text {
                                                         text: "99.97%"
@@ -857,6 +987,10 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         Layout.fillWidth: true
+                                                    }
+
+                                                    Item {
+                                                        Layout.fillHeight: true
                                                     }
 
                                                     // <p class="tile-note">
@@ -885,7 +1019,13 @@ ApplicationWindow {
                                                 implicitHeight: tileContent6.implicitHeight + 34
                                                 border.width: 1
                                                 border.color: "#dde2ec"
+                                                Layout.row: 2
+                                                Layout.column: 1
                                                 Layout.fillWidth: true
+                                                Layout.preferredWidth: 0
+                                                Layout.preferredHeight: 120
+                                                Layout.minimumHeight: 120
+                                                Layout.maximumHeight: 120
 
                                                 ColumnLayout {
                                                     id: tileContent6
@@ -893,9 +1033,11 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.top: parent.top
+                                                    anchors.bottom: parent.bottom
                                                     anchors.leftMargin: 19
                                                     anchors.rightMargin: 19
                                                     anchors.topMargin: 17
+                                                    anchors.bottomMargin: 17
 
                                                     // <p class="tile-label">
                                                     Text {
@@ -915,6 +1057,10 @@ ApplicationWindow {
                                                         Layout.fillWidth: true
                                                     }
 
+                                                    Item {
+                                                        Layout.fillHeight: true
+                                                    }
+
                                                     // <p class="tile-value">
                                                     Text {
                                                         text: "1,208"
@@ -930,6 +1076,10 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         Layout.fillWidth: true
+                                                    }
+
+                                                    Item {
+                                                        Layout.fillHeight: true
                                                     }
 
                                                     // <p class="tile-note">
@@ -958,7 +1108,13 @@ ApplicationWindow {
                                                 implicitHeight: tileContent7.implicitHeight + 34
                                                 border.width: 1
                                                 border.color: "#dde2ec"
+                                                Layout.row: 2
+                                                Layout.column: 2
                                                 Layout.fillWidth: true
+                                                Layout.preferredWidth: 0
+                                                Layout.preferredHeight: 120
+                                                Layout.minimumHeight: 120
+                                                Layout.maximumHeight: 120
 
                                                 ColumnLayout {
                                                     id: tileContent7
@@ -966,9 +1122,11 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.top: parent.top
+                                                    anchors.bottom: parent.bottom
                                                     anchors.leftMargin: 19
                                                     anchors.rightMargin: 19
                                                     anchors.topMargin: 17
+                                                    anchors.bottomMargin: 17
 
                                                     // <p class="tile-label">
                                                     Text {
@@ -988,6 +1146,10 @@ ApplicationWindow {
                                                         Layout.fillWidth: true
                                                     }
 
+                                                    Item {
+                                                        Layout.fillHeight: true
+                                                    }
+
                                                     // <p class="tile-value">
                                                     Text {
                                                         text: "7"
@@ -1003,6 +1165,10 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         Layout.fillWidth: true
+                                                    }
+
+                                                    Item {
+                                                        Layout.fillHeight: true
                                                     }
 
                                                     // <p class="tile-note">
@@ -1031,7 +1197,14 @@ ApplicationWindow {
                                     color: "#ffffff"
                                     implicitWidth: siteFooterContent.implicitWidth + 48
                                     implicitHeight: siteFooterContent.implicitHeight + 1
+                                    Layout.row: 2
+                                    Layout.column: 0
+                                    Layout.columnSpan: 2
                                     Layout.fillWidth: true
+                                    Layout.preferredWidth: 0
+                                    Layout.preferredHeight: 48
+                                    Layout.minimumHeight: 48
+                                    Layout.maximumHeight: 48
 
                                     Rectangle {
                                         anchors.left: parent.left
@@ -1041,12 +1214,13 @@ ApplicationWindow {
                                         color: "#dde2ec"
                                     }
 
-                                    ColumnLayout {
+                                    RowLayout {
                                         id: siteFooterContent
                                         spacing: 0
                                         anchors.left: parent.left
                                         anchors.right: parent.right
                                         anchors.top: parent.top
+                                        anchors.bottom: parent.bottom
                                         anchors.leftMargin: 24
                                         anchors.rightMargin: 24
                                         anchors.topMargin: 1
@@ -1065,6 +1239,12 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                                            Layout.alignment: Qt.AlignVCenter
+                                        }
+
+                                        Item {
+                                            Layout.fillWidth: true
                                         }
 
                                         // <span>
@@ -1081,6 +1261,8 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                                            Layout.alignment: Qt.AlignVCenter
                                         }
                                     }
                                 }

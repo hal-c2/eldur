@@ -2,31 +2,17 @@
 source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-warning[css]: index.html:164: `display: flex` on <header class="site-header"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:166: `display: flex` on <nav class="site-nav"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:178: `display: flex` on <section class="product-grid"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:179: `display: flex` on <article class="card"> is laid out as block flow (not implemented yet)
 warning[css]: index.html:179: `box-shadow` is not converted yet
 warning[css]: index.html:180: background images and gradients are not converted yet
-warning[css]: index.html:181: `display: flex` on <div class="card-body"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:189: `display: flex` on <article class="card"> is laid out as block flow (not implemented yet)
 warning[css]: index.html:189: `box-shadow` is not converted yet
 warning[css]: index.html:190: background images and gradients are not converted yet
-warning[css]: index.html:191: `display: flex` on <div class="card-body"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:199: `display: flex` on <article class="card"> is laid out as block flow (not implemented yet)
 warning[css]: index.html:199: `box-shadow` is not converted yet
 warning[css]: index.html:200: background images and gradients are not converted yet
-warning[css]: index.html:201: `display: flex` on <div class="card-body"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:209: `display: flex` on <article class="card"> is laid out as block flow (not implemented yet)
 warning[css]: index.html:209: `box-shadow` is not converted yet
 warning[css]: index.html:210: background images and gradients are not converted yet
-warning[css]: index.html:211: `display: flex` on <div class="card-body"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:219: `display: flex` on <article class="card"> is laid out as block flow (not implemented yet)
 warning[css]: index.html:219: `box-shadow` is not converted yet
 warning[css]: index.html:220: background images and gradients are not converted yet
-warning[css]: index.html:221: `display: flex` on <div class="card-body"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:229: `display: flex` on <article class="card"> is laid out as block flow (not implemented yet)
 warning[css]: index.html:229: `box-shadow` is not converted yet
 warning[css]: index.html:230: background images and gradients are not converted yet
-warning[css]: index.html:231: `display: flex` on <div class="card-body"> is laid out as block flow (not implemented yet)
+info[qml]: index.html:178: items of the wrapping <section class="product-grid"> are not stretched to their line's height
 info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

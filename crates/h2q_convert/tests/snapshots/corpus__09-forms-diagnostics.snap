@@ -4,32 +4,16 @@ expression: "diagnostics.join(\"\\n\")"
 ---
 info[css]: <style>#1:85: unknown property `resize`
 info[css]: <style>#1:105: unknown property `accent-color`
-warning[css]: index.html:186: `display: flex` on <body> is laid out as block flow (not implemented yet)
 warning[css]: index.html:187: `box-shadow` is not converted yet
-warning[css]: index.html:191: `display: grid` on <form class="form"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:192: `display: flex` on <div class="field"> is laid out as block flow (not implemented yet)
 warning[html]: index.html:194: <input id="name" class="input"> is not converted yet; an empty placeholder keeps its space
-warning[css]: index.html:197: `display: flex` on <div class="field"> is laid out as block flow (not implemented yet)
 warning[html]: index.html:199: <input id="email" class="input"> is not converted yet; an empty placeholder keeps its space
-warning[css]: index.html:202: `display: flex` on <div class="field"> is laid out as block flow (not implemented yet)
 warning[html]: index.html:204: <input id="password" class="input"> is not converted yet; an empty placeholder keeps its space
-warning[css]: index.html:207: `display: flex` on <div class="field"> is laid out as block flow (not implemented yet)
 warning[html]: index.html:209: <select id="team" class="input"> is not converted yet; an empty placeholder keeps its space
-warning[css]: index.html:217: `display: flex` on <div class="field"> is laid out as block flow (not implemented yet)
 warning[html]: index.html:219: <textarea id="bio" class="input"> is not converted yet; an empty placeholder keeps its space
-warning[css]: index.html:224: `display: flex` on <div class="options"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:225: `display: flex` on <label class="option"> is laid out as block flow (not implemented yet)
 warning[html]: index.html:225: <input> is not converted yet; an empty placeholder keeps its space
-warning[css]: index.html:226: `display: flex` on <label class="option"> is laid out as block flow (not implemented yet)
 warning[html]: index.html:226: <input> is not converted yet; an empty placeholder keeps its space
-warning[css]: index.html:227: `display: flex` on <label class="option"> is laid out as block flow (not implemented yet)
 warning[html]: index.html:227: <input> is not converted yet; an empty placeholder keeps its space
-warning[css]: index.html:231: `display: grid` on <div class="row"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:232: `display: flex` on <div class="field"> is laid out as block flow (not implemented yet)
 warning[html]: index.html:234: <input id="seats" class="input"> is not converted yet; an empty placeholder keeps its space
-warning[css]: index.html:236: `display: flex` on <div class="field"> is laid out as block flow (not implemented yet)
 warning[html]: index.html:238: <input id="volume"> is not converted yet; an empty placeholder keeps its space
-warning[css]: index.html:243: `display: flex` on <label class="check"> is laid out as block flow (not implemented yet)
 warning[html]: index.html:244: <input> is not converted yet; an empty placeholder keeps its space
-warning[css]: index.html:248: `display: flex` on <div class="actions"> is laid out as block flow (not implemented yet)
 info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

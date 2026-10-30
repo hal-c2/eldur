@@ -67,12 +67,13 @@ ApplicationWindow {
                             Layout.maximumWidth: 1000
                             Layout.preferredHeight: 64
 
-                            ColumnLayout {
+                            RowLayout {
                                 id: wrapContent
                                 spacing: 0
                                 anchors.left: parent.left
                                 anchors.right: parent.right
                                 anchors.top: parent.top
+                                anchors.bottom: parent.bottom
                                 anchors.leftMargin: 24
                                 anchors.rightMargin: 24
 
@@ -93,13 +94,21 @@ ApplicationWindow {
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
+                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                    Layout.alignment: Qt.AlignVCenter
+                                }
+
+                                Item {
+                                    Layout.fillWidth: true
                                 }
 
                                 // <nav class="nav-links">
-                                ColumnLayout {
+                                RowLayout {
                                     spacing: 0
                                     Layout.fillWidth: true
-                                    Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                    Layout.fillHeight: false
+                                    Layout.alignment: Qt.AlignVCenter
 
                                     // <a>
                                     Text {
@@ -116,6 +125,8 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: Math.ceil(implicitWidth)
+                                        Layout.fillHeight: true
                                     }
 
                                     // <a>
@@ -133,6 +144,9 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: Math.ceil(implicitWidth)
+                                        Layout.fillHeight: true
+                                        Layout.leftMargin: 24
                                     }
 
                                     // <a>
@@ -150,6 +164,9 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: Math.ceil(implicitWidth)
+                                        Layout.fillHeight: true
+                                        Layout.leftMargin: 24
                                     }
 
                                     // <a>
@@ -166,6 +183,13 @@ ApplicationWindow {
                                             y: 4.32
                                         }
                                         wrapMode: Text.WordWrap
+                                        Layout.fillWidth: true
+                                        Layout.maximumWidth: Math.ceil(implicitWidth)
+                                        Layout.fillHeight: true
+                                        Layout.leftMargin: 24
+                                    }
+
+                                    Item {
                                         Layout.fillWidth: true
                                     }
                                 }
@@ -705,8 +729,10 @@ ApplicationWindow {
                                 }
 
                                 // <div class="related-grid">
-                                ColumnLayout {
-                                    spacing: 0
+                                GridLayout {
+                                    columns: 3
+                                    columnSpacing: 24
+                                    rowSpacing: 24
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
                                     Layout.topMargin: 24
@@ -715,7 +741,10 @@ ApplicationWindow {
                                     ColumnLayout {
                                         spacing: 0
                                         Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                        Layout.fillHeight: true
+                                        Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                         // <h3>
                                         Text {
@@ -756,7 +785,10 @@ ApplicationWindow {
                                     ColumnLayout {
                                         spacing: 0
                                         Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                        Layout.fillHeight: true
+                                        Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                         // <h3>
                                         Text {
@@ -797,7 +829,10 @@ ApplicationWindow {
                                     ColumnLayout {
                                         spacing: 0
                                         Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                        Layout.fillHeight: true
+                                        Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                         // <h3>
                                         Text {

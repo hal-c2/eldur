@@ -4,14 +4,9 @@ expression: "diagnostics.join(\"\\n\")"
 ---
 info[css]: index.html:229: <div class="tooltip-wrap"> contains block-level boxes; laid out as a block
 info[css]: index.html:230: `display: inline-block` on <button class="btn"> is laid out as inline text
-warning[css]: index.html:212: `display: flex` on <header class="site-header"> is laid out as block flow (not implemented yet)
 warning[css]: index.html:212: `position: fixed` on <header class="site-header"> is laid out in normal flow (not implemented yet)
 warning[css]: index.html:212: `box-shadow` is not converted yet
-warning[css]: index.html:214: `display: flex` on <nav class="nav"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:221: `display: flex` on <main class="page"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:224: `display: flex` on <section class="row"> is laid out as block flow (not implemented yet)
 warning[css]: index.html:225: `box-shadow` is not converted yet
-warning[css]: index.html:226: `display: flex` on <span class="badge"> is laid out as block flow (not implemented yet)
 warning[css]: index.html:226: `position: absolute` on <span class="badge"> is laid out in normal flow (not implemented yet)
 info[css]: index.html:226: percentage `border-radius` uses its px part only
 info[qml]: index.html:230: <button class="btn">: inline background is not converted

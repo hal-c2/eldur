@@ -3,36 +3,11 @@ source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
 info[css]: index.html:231: <div class="billing-toggle"> contains block-level boxes; laid out as a block
-warning[css]: index.html:231: `display: inline-flex` on <div class="billing-toggle"> is laid out as block flow (not implemented yet)
 info[qml]: index.html:233: <span class="save">: font size 12px inside 15.2px text is approximated with <small>
 info[qml]: index.html:233: <span class="save">: inline background is not converted
 info[qml]: index.html:233: <span class="save">: inline padding and borders are not converted
-warning[css]: index.html:237: `display: flex` on <section class="pricing-grid"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:238: `display: flex` on <article class="plan"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:241: `display: flex` on <p class="price"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:242: `display: grid` on <ul class="features"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:243: `display: flex` on <li> is laid out as block flow (not implemented yet)
-warning[css]: index.html:244: `display: flex` on <li> is laid out as block flow (not implemented yet)
-warning[css]: index.html:245: `display: flex` on <li> is laid out as block flow (not implemented yet)
-warning[css]: index.html:246: `display: flex` on <li> is laid out as block flow (not implemented yet)
-warning[css]: index.html:251: `display: flex` on <article class="plan featured"> is laid out as block flow (not implemented yet)
 warning[css]: index.html:251: `transform` on <article class="plan featured"> is not converted yet
 warning[css]: index.html:251: `box-shadow` is not converted yet
 warning[css]: index.html:252: `position: absolute` on <span class="badge"> is laid out in normal flow (not implemented yet)
 warning[css]: index.html:252: `transform` on <span class="badge"> is not converted yet
-warning[css]: index.html:255: `display: flex` on <p class="price"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:256: `display: grid` on <ul class="features"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:257: `display: flex` on <li> is laid out as block flow (not implemented yet)
-warning[css]: index.html:258: `display: flex` on <li> is laid out as block flow (not implemented yet)
-warning[css]: index.html:259: `display: flex` on <li> is laid out as block flow (not implemented yet)
-warning[css]: index.html:260: `display: flex` on <li> is laid out as block flow (not implemented yet)
-warning[css]: index.html:261: `display: flex` on <li> is laid out as block flow (not implemented yet)
-warning[css]: index.html:266: `display: flex` on <article class="plan"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:269: `display: flex` on <p class="price"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:270: `display: grid` on <ul class="features"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:271: `display: flex` on <li> is laid out as block flow (not implemented yet)
-warning[css]: index.html:272: `display: flex` on <li> is laid out as block flow (not implemented yet)
-warning[css]: index.html:273: `display: flex` on <li> is laid out as block flow (not implemented yet)
-warning[css]: index.html:274: `display: flex` on <li> is laid out as block flow (not implemented yet)
-warning[css]: index.html:275: `display: flex` on <li> is laid out as block flow (not implemented yet)
 info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet
