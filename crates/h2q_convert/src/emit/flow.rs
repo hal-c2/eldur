@@ -351,7 +351,20 @@ impl Emitter<'_, '_> {
         if is_layout(&obj.type_name) && matches!(style.width, Size::Length(_)) {
             obj.set("Layout.fillWidth", false);
         }
+        let image = b
+            .node
+            .and_then(|n| self.doc.element(n))
+            .is_some_and(|e| e.is_html() && e.local_name() == "img");
         match &style.width {
+            // A preferred width bound to the column's width feeds the
+            // column's implicit width back into itself, which can widen
+            // the whole page; an image fills up to its percentage instead.
+            Size::Length(w) if image && super::image::is_percent_width(style) => {
+                obj.set("Layout.fillWidth", true);
+                if *w != Length::Linear(h2q_css::LengthPercentage::percent(100.0)) {
+                    obj.set("Layout.maximumWidth", size_value(w, extra_w));
+                }
+            }
             Size::Length(w) => {
                 obj.set("Layout.preferredWidth", size_value(w, extra_w));
                 if let Some(a) = alignment {

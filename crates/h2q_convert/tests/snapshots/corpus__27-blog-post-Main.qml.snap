@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Shapes
 
 ApplicationWindow {
     id: root
@@ -160,11 +161,43 @@ ApplicationWindow {
 
                         // <img class="photo">
                         Item {
+                            clip: true
                             implicitWidth: 280
+                            implicitHeight: 192.5
                             Layout.preferredWidth: 280
                             Layout.alignment: Qt.AlignRight
                             Layout.leftMargin: 24
                             Layout.topMargin: 28
+
+                            Image {
+                                source: "assets/harbour.svg"
+                                sourceSize.width: width
+                                sourceSize.height: height
+                                Accessible.name: "The harbour with two hills and a red boat"
+                                anchors.fill: parent
+                            }
+
+                            Shape {
+                                id: photoCorners
+                                anchors.fill: parent
+
+                                ShapePath {
+                                    strokeWidth: -1
+                                    fillColor: "#fffdf8"
+                                    fillRule: ShapePath.OddEvenFill
+
+                                    PathRectangle {
+                                        width: photoCorners.width
+                                        height: photoCorners.height
+                                    }
+
+                                    PathRectangle {
+                                        width: photoCorners.width
+                                        height: photoCorners.height
+                                        radius: 4
+                                    }
+                                }
+                            }
                         }
 
                         // <p class="intro">
@@ -432,7 +465,18 @@ ApplicationWindow {
 
                             // <img>
                             Item {
-                                Layout.preferredWidth: parent.width
+                                implicitWidth: 640
+                                implicitHeight: 200
+                                Layout.preferredHeight: width * 0.3125
+                                Layout.fillWidth: true
+
+                                Image {
+                                    source: "assets/chart.svg"
+                                    sourceSize.width: width
+                                    sourceSize.height: height
+                                    Accessible.name: "Bar chart of daylight hours rising from January to June"
+                                    anchors.fill: parent
+                                }
                             }
 
                             // <figcaption>

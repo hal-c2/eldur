@@ -6,7 +6,9 @@ expression: qml
 
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Effects
 import QtQuick.Layouts
+import QtQuick.Shapes
 
 ApplicationWindow {
     id: root
@@ -65,6 +67,7 @@ ApplicationWindow {
 
                         // <img class="logo">
                         Item {
+                            implicitWidth: 0
                             implicitHeight: 40
                             Layout.fillWidth: true
                             Layout.maximumWidth: Math.ceil(implicitWidth)
@@ -162,8 +165,9 @@ ApplicationWindow {
 
                         // <img class="hero-img">
                         Item {
+                            implicitWidth: 0
                             implicitHeight: 320
-                            Layout.preferredWidth: parent.width
+                            Layout.fillWidth: true
                             Layout.preferredHeight: 320
                         }
                     }
@@ -265,6 +269,46 @@ ApplicationWindow {
                                 Layout.minimumWidth: 64
                                 Layout.preferredHeight: 64
                                 Layout.alignment: Qt.AlignVCenter
+
+                                RectangularShadow {
+                                    anchors.fill: parent
+                                    z: -1
+                                    offset: Qt.vector2d(0, 0)
+                                    blur: 0
+                                    spread: 3
+                                    color: "#eef2ff"
+                                    radius: 32
+                                }
+
+                                Item {
+                                    id: avatarClip
+                                    clip: true
+                                    implicitWidth: 0
+                                    implicitHeight: 0
+                                    anchors.fill: parent
+
+                                    Shape {
+                                        id: avatarCorners
+                                        anchors.fill: parent
+
+                                        ShapePath {
+                                            strokeWidth: -1
+                                            fillColor: "#ffffff"
+                                            fillRule: ShapePath.OddEvenFill
+
+                                            PathRectangle {
+                                                width: avatarCorners.width
+                                                height: avatarCorners.height
+                                            }
+
+                                            PathRectangle {
+                                                width: avatarCorners.width
+                                                height: avatarCorners.height
+                                                radius: 32
+                                            }
+                                        }
+                                    }
+                                }
                             }
 
                             // <div>
@@ -349,9 +393,33 @@ ApplicationWindow {
 
                                     // <img>
                                     Item {
+                                        clip: true
+                                        implicitWidth: 0
                                         implicitHeight: 220
-                                        Layout.preferredWidth: parent.width
+                                        Layout.fillWidth: true
                                         Layout.preferredHeight: 220
+
+                                        Shape {
+                                            id: imgCorners
+                                            anchors.fill: parent
+
+                                            ShapePath {
+                                                strokeWidth: -1
+                                                fillColor: "#fafbfd"
+                                                fillRule: ShapePath.OddEvenFill
+
+                                                PathRectangle {
+                                                    width: imgCorners.width
+                                                    height: imgCorners.height
+                                                }
+
+                                                PathRectangle {
+                                                    width: imgCorners.width
+                                                    height: imgCorners.height
+                                                    radius: 6
+                                                }
+                                            }
+                                        }
                                     }
 
                                     // <figcaption>
@@ -439,13 +507,48 @@ ApplicationWindow {
                         }
 
                         // <img class="thumb">
-                        Item {
+                        Rectangle {
+                            color: "#00000000"
+                            radius: 10
+                            clip: true
                             implicitWidth: 400
                             implicitHeight: 250
+                            border.width: 1
+                            border.color: "#e3e7ef"
                             Layout.preferredWidth: 400
                             Layout.maximumWidth: parent.width
                             Layout.preferredHeight: 250
                             Layout.topMargin: 32
+
+                            Shape {
+                                id: thumbCorners
+                                anchors.fill: parent
+
+                                ShapePath {
+                                    strokeWidth: -1
+                                    fillColor: "#ffffff"
+                                    fillRule: ShapePath.OddEvenFill
+
+                                    PathRectangle {
+                                        width: thumbCorners.width
+                                        height: thumbCorners.height
+                                    }
+
+                                    PathRectangle {
+                                        width: thumbCorners.width
+                                        height: thumbCorners.height
+                                        radius: 10
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                anchors.fill: parent
+                                color: "transparent"
+                                radius: 10
+                                border.width: 1
+                                border.color: "#e3e7ef"
+                            }
                         }
 
                         // <p class="gallery-note">

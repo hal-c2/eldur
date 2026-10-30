@@ -12,7 +12,10 @@
 
 use std::collections::{BTreeMap, HashSet};
 
-use h2q_css::{Align, BoxSizing, ComputedStyle, GridLine, Size, TextDecorationLine, Track};
+use h2q_css::{
+    Align, BoxSizing, ComputedStyle, GridLine, Length, LengthPercentage, Size, TextDecorationLine,
+    Track,
+};
 use h2q_qml::{Member, Object, Value};
 
 use super::Emitter;
@@ -1018,6 +1021,13 @@ impl Emitter<'_, '_> {
         ] {
             let dim = if horizontal { "Width" } else { "Height" };
             let own = match size {
+                // `100%` is the grid area, which filling it gives; a
+                // binding to the grid's width would be the whole grid.
+                Size::Length(Length::Linear(l))
+                    if horizontal && *l == LengthPercentage::percent(100.0) =>
+                {
+                    None
+                }
                 Size::Length(l) if horizontal || l.as_px().is_some() || is_viewport_relative(l) => {
                     Some(size_value(l, extra))
                 }

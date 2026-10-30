@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Shapes
 
 ApplicationWindow {
     id: root
@@ -162,36 +163,240 @@ ApplicationWindow {
                             Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                             // <img class="main">
-                            Item {
+                            Rectangle {
+                                color: "#00000000"
+                                radius: 8
+                                clip: true
+                                implicitWidth: 482
+                                implicitHeight: 482
+                                border.width: 1
+                                border.color: "#e3e7eb"
+                                Layout.preferredHeight: (width - 2) * 1 + 2
                                 Layout.row: 0
                                 Layout.column: 0
                                 Layout.columnSpan: 3
-                                Layout.preferredWidth: parent.width
+                                Layout.fillWidth: true
+                                Layout.preferredWidth: 0
                                 Layout.fillHeight: true
+
+                                Image {
+                                    source: "assets/kettle-1.svg"
+                                    sourceSize.width: width
+                                    sourceSize.height: height
+                                    Accessible.name: "Fjord Kettle in blue"
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 1
+                                    anchors.rightMargin: 1
+                                    anchors.topMargin: 1
+                                    anchors.bottomMargin: 1
+                                }
+
+                                Shape {
+                                    id: mainCorners
+                                    anchors.fill: parent
+
+                                    ShapePath {
+                                        strokeWidth: -1
+                                        fillColor: "#ffffff"
+                                        fillRule: ShapePath.OddEvenFill
+
+                                        PathRectangle {
+                                            width: mainCorners.width
+                                            height: mainCorners.height
+                                        }
+
+                                        PathRectangle {
+                                            width: mainCorners.width
+                                            height: mainCorners.height
+                                            radius: 8
+                                        }
+                                    }
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    radius: 8
+                                    border.width: 1
+                                    border.color: "#e3e7eb"
+                                }
                             }
 
                             // <img>
-                            Item {
+                            Rectangle {
+                                color: "#00000000"
+                                radius: 8
+                                clip: true
+                                implicitWidth: 162
+                                implicitHeight: 162
+                                border.width: 1
+                                border.color: "#e3e7eb"
+                                Layout.preferredHeight: (width - 2) * 1 + 2
                                 Layout.row: 1
                                 Layout.column: 0
-                                Layout.preferredWidth: parent.width
+                                Layout.fillWidth: true
+                                Layout.preferredWidth: 0
                                 Layout.fillHeight: true
+
+                                Image {
+                                    source: "assets/kettle-2.svg"
+                                    sourceSize.width: width
+                                    sourceSize.height: height
+                                    Accessible.name: "Fjord Kettle in red"
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 1
+                                    anchors.rightMargin: 1
+                                    anchors.topMargin: 1
+                                    anchors.bottomMargin: 1
+                                }
+
+                                Shape {
+                                    id: imgCorners
+                                    anchors.fill: parent
+
+                                    ShapePath {
+                                        strokeWidth: -1
+                                        fillColor: "#ffffff"
+                                        fillRule: ShapePath.OddEvenFill
+
+                                        PathRectangle {
+                                            width: imgCorners.width
+                                            height: imgCorners.height
+                                        }
+
+                                        PathRectangle {
+                                            width: imgCorners.width
+                                            height: imgCorners.height
+                                            radius: 8
+                                        }
+                                    }
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    radius: 8
+                                    border.width: 1
+                                    border.color: "#e3e7eb"
+                                }
                             }
 
                             // <img>
-                            Item {
+                            Rectangle {
+                                color: "#00000000"
+                                radius: 8
+                                clip: true
+                                implicitWidth: 162
+                                implicitHeight: 162
+                                border.width: 1
+                                border.color: "#e3e7eb"
+                                Layout.preferredHeight: (width - 2) * 1 + 2
                                 Layout.row: 1
                                 Layout.column: 1
-                                Layout.preferredWidth: parent.width
+                                Layout.fillWidth: true
+                                Layout.preferredWidth: 0
                                 Layout.fillHeight: true
+
+                                Image {
+                                    source: "assets/kettle-3.svg"
+                                    sourceSize.width: width
+                                    sourceSize.height: height
+                                    Accessible.name: "Fjord Kettle in green"
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 1
+                                    anchors.rightMargin: 1
+                                    anchors.topMargin: 1
+                                    anchors.bottomMargin: 1
+                                }
+
+                                Shape {
+                                    id: imgCorners2
+                                    anchors.fill: parent
+
+                                    ShapePath {
+                                        strokeWidth: -1
+                                        fillColor: "#ffffff"
+                                        fillRule: ShapePath.OddEvenFill
+
+                                        PathRectangle {
+                                            width: imgCorners2.width
+                                            height: imgCorners2.height
+                                        }
+
+                                        PathRectangle {
+                                            width: imgCorners2.width
+                                            height: imgCorners2.height
+                                            radius: 8
+                                        }
+                                    }
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    radius: 8
+                                    border.width: 1
+                                    border.color: "#e3e7eb"
+                                }
                             }
 
                             // <img>
-                            Item {
+                            Rectangle {
+                                color: "#00000000"
+                                radius: 8
+                                clip: true
+                                implicitWidth: 162
+                                implicitHeight: 162
+                                border.width: 1
+                                border.color: "#e3e7eb"
+                                Layout.preferredHeight: (width - 2) * 1 + 2
                                 Layout.row: 1
                                 Layout.column: 2
-                                Layout.preferredWidth: parent.width
+                                Layout.fillWidth: true
+                                Layout.preferredWidth: 0
                                 Layout.fillHeight: true
+
+                                Image {
+                                    source: "assets/kettle-4.svg"
+                                    sourceSize.width: width
+                                    sourceSize.height: height
+                                    Accessible.name: "Fjord Kettle in yellow"
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 1
+                                    anchors.rightMargin: 1
+                                    anchors.topMargin: 1
+                                    anchors.bottomMargin: 1
+                                }
+
+                                Shape {
+                                    id: imgCorners3
+                                    anchors.fill: parent
+
+                                    ShapePath {
+                                        strokeWidth: -1
+                                        fillColor: "#ffffff"
+                                        fillRule: ShapePath.OddEvenFill
+
+                                        PathRectangle {
+                                            width: imgCorners3.width
+                                            height: imgCorners3.height
+                                        }
+
+                                        PathRectangle {
+                                            width: imgCorners3.width
+                                            height: imgCorners3.height
+                                            radius: 8
+                                        }
+                                    }
+                                }
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    color: "transparent"
+                                    radius: 8
+                                    border.width: 1
+                                    border.color: "#e3e7eb"
+                                }
                             }
                         }
 

@@ -11,6 +11,7 @@ h2q_css.workspace = true
 h2q_js.workspace = true
 h2q_qml.workspace = true
 thiserror.workspace = true
+imagesize.workspace = true
 
 [dev-dependencies]
 insta.workspace = true

@@ -15,5 +15,3 @@ warning[css]: index.html:170: generated content `Counter("section", Decimal)` on
 info[qml]: index.html:146: <a>: font size 22px inside 18px text is approximated with <big>
 info[qml]: index.html:146: <a>: font family `sans-serif` inside `serif` text is not converted
 info[css]: index.html:146: border style `double` is drawn solid
-warning[html]: index.html:152: <img class="photo"> is not converted yet; an empty placeholder keeps its space
-warning[html]: index.html:179: <img> is not converted yet; an empty placeholder keeps its space
