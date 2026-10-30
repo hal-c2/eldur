@@ -945,6 +945,64 @@ fn transforms_apply_in_css_order_around_the_origin() {
 }
 
 #[test]
+fn controls_tables_and_placeholders_are_transformed_too() {
+    // Chromium moves each of these by its own translate (geometry.mjs).
+    let (qml, diags) = convert(&page(
+        "",
+        "<div><input id=field style=\"transform:translateX(20px)\"></div>\
+         <div><button id=go style=\"transform:translate(10px,5px)\">Go</button></div>\
+         <table id=t style=\"transform:translateX(30px)\"><tr><td>a</td></tr></table>\
+         <fieldset id=f style=\"transform:translateX(11px)\"><legend>L</legend>x</fieldset>\
+         <img id=pic width=80 height=40 style=\"transform:translateX(13px)\">",
+    ));
+    for (tag, x) in [
+        ("<input id=\"field\">", 20),
+        ("<button id=\"go\">", 10),
+        ("<table id=\"t\">", 30),
+        ("<fieldset id=\"f\">", 11),
+        ("<img id=\"pic\">", 13),
+    ] {
+        let obj = object_after(&qml, tag);
+        let t = obj.find("transform: Translate {").expect(tag);
+        assert!(obj[t..].contains(&format!("x: {x}")), "{tag}: {obj}");
+    }
+    assert!(object_after(&qml, "<button id=\"go\">").contains("y: 5"));
+    assert!(!diags.iter().any(|d| d.contains("transform")), "{diags:?}");
+}
+
+#[test]
+fn a_row_translation_moves_its_cells() {
+    // Chromium: the cell lands at table + row + cell translation.
+    let (qml, diags) = convert(&page(
+        "",
+        "<table><tbody style=\"transform:translateY(2px)\">\
+         <tr style=\"transform:translateX(7px)\">\
+         <td id=c style=\"transform:translateX(3px)\">a</td></tr></tbody></table>",
+    ));
+    // The only translations on the page, all on the one cell.
+    let list = &qml[qml.find("transform: [").expect("a list")..];
+    let own = list.find("x: 3").expect("the cell's own");
+    let row = list.find("x: 7").expect("the row's");
+    let group = list.find("y: 2").expect("the group's");
+    // QML applies the list from the front: the cell's own first.
+    assert!(own < row && row < group, "{qml}");
+    assert!(!diags.iter().any(|d| d.contains("transform")), "{diags:?}");
+}
+
+#[test]
+fn a_row_rotation_is_reported() {
+    let (qml, diags) = convert(&page(
+        "",
+        "<table><tr style=\"transform:rotate(5deg)\"><td id=c>a</td></tr></table>",
+    ));
+    assert!(!qml.contains("Rotation"), "{qml}");
+    assert!(
+        diags.iter().any(|d| d.contains("`transform` on <tr>")),
+        "{diags:?}"
+    );
+}
+
+#[test]
 fn transform_origin_in_px_is_a_number() {
     let (qml, _) = convert(&page(
         ".t{width:100px;height:50px;background:#eee;transform:rotate(10deg);\

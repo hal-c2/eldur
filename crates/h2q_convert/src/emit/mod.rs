@@ -294,15 +294,18 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 if let Some(node) = b.node
                     && let Some(control) = controls::classify(self.doc, node)
                 {
-                    return self.control(b, node, control, line);
+                    let e = self.control(b, node, control, line);
+                    return self.transformed(e, b, line);
                 }
-                return self.replaced(b, line);
+                let e = self.replaced(b, line);
+                return self.transformed(e, b, line);
             }
             BoxKind::Table => match style.display {
                 Display::Table | Display::InlineTable => {
                     self.has_table = true;
                     self.positioned_child = false;
-                    return self.table(b, inherited, line);
+                    let e = self.table(b, inherited, line);
+                    return self.transformed(e, b, line);
                 }
                 Display::TableCell | Display::TableCaption => {}
                 _ => self.unsupported_layout(b, line),
@@ -312,7 +315,8 @@ impl<'a, 'd> Emitter<'a, 'd> {
         if let Some(node) = b.node
             && let Some((legend, rest)) = fieldset_parts(self.doc, b)
         {
-            return self.fieldset(b, node, legend, rest, inherited, line);
+            let e = self.fieldset(b, node, legend, rest, inherited, line);
+            return self.transformed(e, b, line);
         }
         let decoration = TextDecorationLine {
             underline: inherited.underline || style.text_decoration_line.underline,
@@ -491,19 +495,25 @@ impl<'a, 'd> Emitter<'a, 'd> {
             }
         }
         self.label_tap(&mut obj, b.node);
-        if !style.transform.is_empty() {
-            let what = b
-                .node
-                .map_or_else(|| "a generated box".to_owned(), |n| describe(self.doc, n));
-            self.transform(&mut obj, style, &hint(self.doc, b), &what, line);
-        }
         self.visibility(&mut obj, style);
-        Emitted {
+        let e = Emitted {
             obj,
             top,
             bottom,
             collapse_through: false,
+        };
+        self.transformed(e, b, line)
+    }
+
+    /// `e` with `b`'s `transform`, which every kind of box takes.
+    fn transformed(&mut self, mut e: Emitted, b: &LayoutBox<'_>, line: Option<u32>) -> Emitted {
+        if !b.style.transform.is_empty() {
+            let what = b
+                .node
+                .map_or_else(|| "a generated box".to_owned(), |n| describe(self.doc, n));
+            self.transform(&mut e.obj, &b.style, &hint(self.doc, b), &what, line);
         }
+        e
     }
 
     /// Replaced elements and form controls have no emitter yet: an empty
