@@ -142,6 +142,26 @@ ol {
     list-style-type: decimal;
 }
 
+ol[type="1"], li[type="1"] {
+    list-style-type: decimal;
+}
+
+ol[type="a" s], li[type="a" s] {
+    list-style-type: lower-alpha;
+}
+
+ol[type="A" s], li[type="A" s] {
+    list-style-type: upper-alpha;
+}
+
+ol[type="i" s], li[type="i" s] {
+    list-style-type: lower-roman;
+}
+
+ol[type="I" s], li[type="I" s] {
+    list-style-type: upper-roman;
+}
+
 li {
     display: list-item;
 }

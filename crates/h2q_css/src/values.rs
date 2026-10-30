@@ -681,6 +681,27 @@ pub enum ListStyleType {
     None,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum BorderCollapse {
+    #[default]
+    Separate,
+    Collapse,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CaptionSide {
+    #[default]
+    Top,
+    Bottom,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TableLayout {
+    #[default]
+    Auto,
+    Fixed,
+}
+
 /// Generated content of `::before` / `::after` (`content` property).
 #[derive(Debug, Clone, PartialEq)]
 pub enum ContentItem {
@@ -818,6 +839,10 @@ pub struct ComputedStyle {
     pub list_style_inside: bool,
     pub list_style_image: Option<String>,
     pub user_select_none: bool,
+    pub border_collapse: BorderCollapse,
+    /// `border-spacing`: horizontal, then vertical, in px.
+    pub border_spacing: (f32, f32),
+    pub caption_side: CaptionSide,
 
     // Not inherited, but propagated to inline descendants by the converter
     pub text_decoration_line: TextDecorationLine,
@@ -825,6 +850,8 @@ pub struct ComputedStyle {
     pub text_decoration_style: BorderStyle,
     pub text_overflow: TextOverflow,
     pub vertical_align: VerticalAlign,
+
+    pub table_layout: TableLayout,
 
     // Animation
     pub transitions: Vec<Transition>,
@@ -931,6 +958,10 @@ impl Default for ComputedStyle {
             list_style_inside: false,
             list_style_image: None,
             user_select_none: false,
+            border_collapse: BorderCollapse::Separate,
+            border_spacing: (0.0, 0.0),
+            caption_side: CaptionSide::Top,
+            table_layout: TableLayout::Auto,
             text_decoration_line: TextDecorationLine::default(),
             text_decoration_color: None,
             text_decoration_style: BorderStyle::Solid,
