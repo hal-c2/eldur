@@ -757,6 +757,27 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             "navigator" => Some("H2Q.navigator"),
             "Event" => Some("H2Q.Event"),
             "CustomEvent" => Some("H2Q.CustomEvent"),
+            "EventTarget" => Some("H2Q.EventTarget"),
+            "KeyboardEvent" => Some("H2Q.KeyboardEvent"),
+            "MouseEvent" => Some("H2Q.MouseEvent"),
+            "PointerEvent" => Some("H2Q.PointerEvent"),
+            "FocusEvent" => Some("H2Q.FocusEvent"),
+            "InputEvent" => Some("H2Q.InputEvent"),
+            "WheelEvent" => Some("H2Q.WheelEvent"),
+            "MutationObserver" => Some("H2Q.MutationObserver"),
+            "ResizeObserver" => Some("H2Q.ResizeObserver"),
+            "IntersectionObserver" => Some("H2Q.IntersectionObserver"),
+            "getComputedStyle" => Some("H2Q.getComputedStyle"),
+            "scrollTo" => Some("H2Q.scrollTo"),
+            "scrollBy" => Some("H2Q.scrollBy"),
+            "scroll" => Some("H2Q.scroll"),
+            "innerWidth" => Some("H2Q.window.innerWidth"),
+            "innerHeight" => Some("H2Q.window.innerHeight"),
+            "scrollX" => Some("H2Q.window.scrollX"),
+            "scrollY" => Some("H2Q.window.scrollY"),
+            "pageXOffset" => Some("H2Q.window.pageXOffset"),
+            "pageYOffset" => Some("H2Q.window.pageYOffset"),
+            "devicePixelRatio" => Some("H2Q.window.devicePixelRatio"),
             "document" => Some("H2Q.document"),
             "window" | "globalThis" | "self" => Some("H2Q.window"),
             _ => None,
@@ -779,6 +800,7 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
         // 2. `el.style.<prop>` read on resolved element
         if let Expression::StaticMemberExpression(style_member) = unwrap_parens(&it.object)
             && style_member.property.name == "style"
+            && !matches!(prop, "setProperty" | "getPropertyValue" | "removeProperty")
             && let Some(target) = self.resolve_single_target(&style_member.object)
         {
             let id = &target.qml_id;
@@ -836,6 +858,10 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                 "atob" => "H2Q.atob".to_string(),
                 "btoa" => "H2Q.btoa".to_string(),
                 "matchMedia" => "H2Q.matchMedia".to_string(),
+                "getComputedStyle" => "H2Q.getComputedStyle".to_string(),
+                "scrollTo" => "H2Q.scrollTo".to_string(),
+                "scrollBy" => "H2Q.scrollBy".to_string(),
+                "scroll" => "H2Q.scroll".to_string(),
                 _ => format!("H2Q.window.{prop}"),
             };
             self.editor.replace(it.span, rep);
@@ -1078,6 +1104,24 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                 return;
             }
 
+            // 4b. `el.style.setProperty(...)` / `getPropertyValue(...)` / `removeProperty(...)` on resolved target
+            if let Expression::StaticMemberExpression(style_member) = unwrap_parens(&member.object)
+                && style_member.property.name == "style"
+                && matches!(
+                    method,
+                    "setProperty" | "getPropertyValue" | "removeProperty"
+                )
+                && let Some(target) = self.resolve_single_target(&style_member.object)
+            {
+                let id = &target.qml_id;
+                let args_str = self.render_call_args(&it.arguments);
+                self.editor.replace(
+                    it.span,
+                    format!("H2Q.wrap({id}).style.{method}({args_str})"),
+                );
+                return;
+            }
+
             // 5. Method call on statically resolved single `QmlTarget`
             if let Some(target) = self.resolve_single_target(&member.object) {
                 let id = &target.qml_id;
@@ -1099,7 +1143,8 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                             .replace(it.span, format!("H2Q.getBoundingClientRect({id})"));
                         return;
                     }
-                    "setAttribute" | "getAttribute" | "removeAttribute" | "hasAttribute" => {
+                    "setAttribute" | "getAttribute" | "removeAttribute" | "hasAttribute"
+                    | "toggleAttribute" => {
                         let args_str = self.render_call_args(&it.arguments);
                         let sep = if args_str.is_empty() { "" } else { ", " };
                         self.editor
@@ -1156,8 +1201,32 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                             .replace(it.span, format!("H2Q.dispatchEvent({id}{sep}{args_str})"));
                         return;
                     }
-                    "appendChild" | "removeChild" | "insertBefore" | "remove" | "querySelector"
-                    | "querySelectorAll" => {
+                    "appendChild"
+                    | "removeChild"
+                    | "insertBefore"
+                    | "replaceChild"
+                    | "remove"
+                    | "append"
+                    | "prepend"
+                    | "before"
+                    | "after"
+                    | "replaceWith"
+                    | "replaceChildren"
+                    | "cloneNode"
+                    | "insertAdjacentHTML"
+                    | "insertAdjacentElement"
+                    | "insertAdjacentText"
+                    | "querySelector"
+                    | "querySelectorAll"
+                    | "getElementsByClassName"
+                    | "getElementsByTagName"
+                    | "closest"
+                    | "matches"
+                    | "contains"
+                    | "scrollIntoView"
+                    | "scrollTo"
+                    | "scrollBy"
+                    | "click" => {
                         let args_str = self.render_call_args(&it.arguments);
                         self.editor
                             .replace(it.span, format!("H2Q.wrap({id}).{method}({args_str})"));
@@ -1177,6 +1246,7 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                     | "getAttribute"
                     | "removeAttribute"
                     | "hasAttribute"
+                    | "toggleAttribute"
             ) {
                 self.visit_expression(&member.object);
                 let obj_str = self.editor.extract_and_consume(member.object.span());
@@ -1191,6 +1261,34 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                     it.span,
                     format!("H2Q.{runtime_fn}({obj_str}{sep}{args_str})"),
                 );
+                return;
+            }
+
+            if matches!(
+                method,
+                "closest"
+                    | "matches"
+                    | "insertAdjacentHTML"
+                    | "insertAdjacentElement"
+                    | "insertAdjacentText"
+                    | "replaceChild"
+                    | "replaceWith"
+                    | "replaceChildren"
+                    | "cloneNode"
+                    | "scrollIntoView"
+                    | "appendChild"
+                    | "removeChild"
+                    | "insertBefore"
+                    | "querySelector"
+                    | "querySelectorAll"
+                    | "getElementsByClassName"
+                    | "getElementsByTagName"
+            ) {
+                self.visit_expression(&member.object);
+                let obj_str = self.editor.extract_and_consume(member.object.span());
+                let args_str = self.render_call_args(&it.arguments);
+                self.editor
+                    .replace(it.span, format!("H2Q.wrap({obj_str}).{method}({args_str})"));
                 return;
             }
         }

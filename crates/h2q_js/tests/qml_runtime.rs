@@ -2002,6 +2002,39 @@ Item {
 }
 
 /// Runs `script` against `main` (imports added) and returns qml6's output.
+fn run_page_allowing_unsupported(
+    resolver: &FakeResolver,
+    script: &str,
+    main: &str,
+) -> (String, JsOutput) {
+    let dir = TempQmlDir::new("controls");
+    let scripts = [ScriptInput {
+        source: script.to_string(),
+        name: "inline script #1".to_string(),
+        kind: ScriptKind::Classic,
+        line_offset: 1,
+    }];
+    let analysis = analyze(&scripts);
+    let out = rewrite(&scripts, &analysis, resolver);
+    assert!(
+        out.diagnostics
+            .iter()
+            .all(|d| d.severity == h2q_js::Severity::Unsupported),
+        "{:?}",
+        out.diagnostics
+    );
+    dir.write_file("h2q_runtime.js", RUNTIME_JS);
+    dir.write_file("page.js", &out.page_js);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        &format!(
+            "import QtQuick\nimport QtQuick.Controls.Basic\nimport \"page.js\" as Page\n\
+             import \"h2q_runtime.js\" as H2Q\n\n{main}\n"
+        ),
+    );
+    (run_qml6_offscreen(&main_qml, Duration::from_secs(3)), out)
+}
+
 fn run_page(resolver: &FakeResolver, script: &str, main: &str) -> (String, JsOutput) {
     let dir = TempQmlDir::new("controls");
     let scripts = [ScriptInput {
@@ -2466,6 +2499,554 @@ function verify() {
     );
     assert!(
         output.contains("H2Q_OK_REFLECTED seats|passengers||Go home|Updated title|120|80"),
+        "{output}"
+    );
+}
+
+#[test]
+fn qml6_anchor_href_resolves_against_document_base_and_preserves_raw_attribute() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default()
+        .with_id("abs", 1, "absLink", TargetKind::Text)
+        .with_id("norm", 2, "normLink", TargetKind::Text)
+        .with_id("rel", 3, "relLink", TargetKind::Text)
+        .with_id("rich", 4, "richLink", TargetKind::Text);
+
+    let (output, _) = run_page_allowing_unsupported(
+        &resolver,
+        r##"
+function verifyHref() {
+    const abs = document.getElementById("abs");
+    const norm = document.getElementById("norm");
+    const rel = document.getElementById("rel");
+    const rich = document.getElementById("rich");
+
+    abs.setAttribute("href", "https://example.com");
+    norm.setAttribute("href", "https://example.com/a/b/../c?q=1#top");
+    rel.setAttribute("href", "/docs/guide.html");
+
+    // Before location.href is set, relative URLs return the raw attribute because
+    // the runtime has no document base URL.
+    const relWithoutBase = rel.href;
+    const relRawBefore = rel.getAttribute("href");
+
+    // Once location.href provides a document base URL, relative URLs resolve against it.
+    location.href = "https://example.com/app/sub/index.html?v=1";
+    const relRootResolved = rel.href;
+
+    rel.href = "../about.html#team";
+    const relDotDotResolved = rel.href;
+    const relDotDotRaw = rel.getAttribute("href");
+
+    rel.href = "?page=2";
+    const relQueryResolved = rel.href;
+
+    rel.href = "#section";
+    const relHashResolved = rel.href;
+
+    rel.href = "mailto:info@example.com";
+    const mailtoHref = rel.href;
+
+    return [
+        abs.href,
+        abs.getAttribute("href"),
+        norm.href,
+        relWithoutBase,
+        relRawBefore,
+        relRootResolved,
+        relDotDotResolved,
+        relDotDotRaw,
+        relQueryResolved,
+        relHashResolved,
+        mailtoHref,
+        rich.getAttribute("href"),
+        rich.href
+    ].join("|");
+}
+"##,
+        r#"Item {
+    id: root
+    Text { id: absLink; objectName: "abs"; text: "Abs" }
+    Text { id: normLink; objectName: "norm"; text: "Norm" }
+    Text { id: relLink; objectName: "rel"; text: "Rel" }
+    Text { id: richLink; objectName: "rich"; text: "<a href=\"https://example.org\">Rich</a>" }
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        console.log("H2Q_OK_HREF", Page.verifyHref());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains(
+            "H2Q_OK_HREF https://example.com/|https://example.com|https://example.com/a/c?q=1#top|/docs/guide.html|/docs/guide.html|https://example.com/docs/guide.html|https://example.com/app/about.html#team|../about.html#team|https://example.com/app/sub/index.html?page=2|https://example.com/app/sub/index.html?v=1#section|mailto:info@example.com|https://example.org|https://example.org/"
+        ),
+        "{output}"
+    );
+}
+
+#[test]
+fn qml6_slider_and_spinbox_min_max_step_update_qml_from_to_stepsize_and_attributes() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default()
+        .with_id("rng", 1, "rngSlider", TargetKind::Range)
+        .with_id("num", 2, "numSpin", TargetKind::TextField);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verifyRangeAndSpin() {
+    const rng = document.getElementById("rng");
+    const num = document.getElementById("num");
+
+    rng.min = 10;
+    rng.max = 200;
+    rng.step = 5;
+    rng.value = 25;
+
+    num.min = "-50";
+    num.max = "150";
+    num.step = "10";
+
+    const dynRange = document.createElement("input");
+    dynRange.min = "20";
+    dynRange.max = "80";
+    dynRange.step = "4";
+    dynRange.type = "range";
+    dynRange.max = "90";
+
+    const dynNum = document.createElement("input");
+    dynNum.type = "number";
+    dynNum.setAttribute("min", "5");
+    dynNum.setAttribute("max", "55");
+    dynNum.setAttribute("step", "5");
+
+    return [
+        rng.min, rng.max, rng.step,
+        rng.getAttribute("min"), rng.getAttribute("max"), rng.getAttribute("step"),
+        num.min, num.max, num.step,
+        num.getAttribute("min"), num.getAttribute("max"), num.getAttribute("step"),
+        dynRange._item.from, dynRange._item.to, dynRange._item.stepSize,
+        dynNum._item.from, dynNum._item.to, dynNum._item.stepSize
+    ].join("|");
+}
+"##,
+        r#"Item {
+    id: root
+    Slider { id: rngSlider; objectName: "rng"; from: 0; to: 100; stepSize: 1; value: 50 }
+    SpinBox { id: numSpin; objectName: "num"; from: 0; to: 99; stepSize: 1; value: 10 }
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        const jsRes = Page.verifyRangeAndSpin();
+        console.log(
+            "H2Q_OK_MINMAXSTEP",
+            [jsRes, rngSlider.from, rngSlider.to, rngSlider.stepSize, numSpin.from, numSpin.to, numSpin.stepSize].join("|")
+        );
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains(
+            "H2Q_OK_MINMAXSTEP 10|200|5|10|200|5|-50|150|10|-50|150|10|20|90|4|5|55|5|10|200|5|-50|150|10"
+        ),
+        "{output}"
+    );
+}
+
+#[test]
+fn qml6_selectors_closest_matches_contains_and_combinators() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default()
+        .with_id("card", 1, "cardBox", TargetKind::Box)
+        .with_id("saveBtn", 2, "saveBtn", TargetKind::Button)
+        .with_id("cancelBtn", 3, "cancelBtn", TargetKind::Button);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verifySelectors() {
+    const card = document.getElementById("card");
+    const save = document.getElementById("saveBtn");
+    const cancel = document.getElementById("cancelBtn");
+
+    card.setAttribute("data-section", "billing");
+    save.setAttribute("data-action", "save");
+    cancel.setAttribute("data-action", "cancel");
+
+    const m1 = save.matches(".btn.primary");
+    const m2 = save.matches("button[data-action=\"save\"]");
+    const m3 = save.matches(".card .btn");
+    const m4 = save.matches(".card > .btn");
+    const m5 = save.matches(".nonexistent");
+
+    const cSelf = save.closest("button");
+    const cCard = save.closest(".card[data-section=\"billing\"]");
+    const cNone = save.closest(".missing");
+
+    const hasSave = card.contains(save);
+    const hasSelf = card.contains(card);
+    const revContains = save.contains(card);
+
+    const qsAttr = document.querySelector(".card button[data-action=\"cancel\"]");
+    const qsaList = document.querySelectorAll("#saveBtn, [data-action=\"cancel\"]");
+    const byCls = card.getElementsByClassName("btn primary");
+    const byTag = card.getElementsByTagName("button");
+
+    return [
+        m1, m2, m3, m4, m5,
+        cSelf ? cSelf.id : "null",
+        cCard ? cCard.id : "null",
+        cNone === null,
+        hasSave, hasSelf, revContains,
+        qsAttr ? qsAttr.id : "null",
+        qsaList.length,
+        byCls.length,
+        byTag.length
+    ].join("|");
+}
+"##,
+        r#"Item {
+    id: root
+    Rectangle {
+        id: cardBox
+        objectName: "card"
+        property string h2qTag: "div"
+        property string h2qClasses: "card panel"
+        Text { id: cardBoxText; text: "" }
+        Column {
+            Button {
+                id: saveBtn
+                objectName: "saveBtn"
+                property string h2qTag: "button"
+                property string h2qClasses: "btn primary"
+                text: "Save"
+            }
+            Button {
+                id: cancelBtn
+                objectName: "cancelBtn"
+                property string h2qTag: "button"
+                property string h2qClasses: "btn secondary"
+                text: "Cancel"
+            }
+        }
+    }
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        console.log("H2Q_OK_SELECTORS", Page.verifySelectors());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains(
+            "H2Q_OK_SELECTORS true|true|true|true|false|saveBtn|card|true|true|true|false|cancelBtn|2|1|2"
+        ),
+        "{output}"
+    );
+}
+
+#[test]
+fn qml6_dom_mutations_insert_adjacent_replace_append_prepend_before_after_clone() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("list", 1, "listBox", TargetKind::Box);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verifyMutations() {
+    const list = document.getElementById("list");
+
+    const mid = document.createElement("span");
+    mid.id = "mid";
+    mid.className = "item";
+    mid.dataset.idx = "2";
+    mid.textContent = "Middle";
+    list.appendChild(mid);
+
+    mid.insertAdjacentHTML("beforebegin", "<span id=\"first\" class=\"item\" data-idx=\"1\">First</span>");
+    mid.insertAdjacentHTML("afterend", "<span id=\"last\" class=\"item\" data-idx=\"3\">Last</span>");
+
+    const cloned = mid.cloneNode(true);
+    cloned.id = "cloned";
+    list.append(cloned);
+
+    const head = document.createElement("span");
+    head.id = "head";
+    head.textContent = "Head";
+    list.prepend(head);
+
+    const beforeMid = document.createElement("span");
+    beforeMid.id = "bmid";
+    mid.before(beforeMid);
+
+    const afterMid = document.createElement("span");
+    afterMid.id = "amid";
+    mid.after(afterMid);
+
+    const rep = document.createElement("span");
+    rep.id = "rep";
+    afterMid.replaceWith(rep);
+
+    const ids1 = list.children.map((c) => c.id).join(",");
+    const sibs = [
+        list.firstChild ? list.firstChild.id : "",
+        list.lastChild ? list.lastChild.id : "",
+        mid.previousSibling ? mid.previousSibling.id : "",
+        mid.nextSibling ? mid.nextSibling.id : ""
+    ].join(",");
+
+    const frag = document.createDocumentFragment();
+    const f1 = document.createElement("span");
+    f1.id = "f1";
+    const f2 = document.createElement("span");
+    f2.id = "f2";
+    frag.appendChild(f1);
+    frag.appendChild(f2);
+    list.replaceChildren(frag);
+    const ids2 = list.children.map((c) => c.id).join(",");
+
+    const f3 = document.createElement("span");
+    f3.id = "f3";
+    list.replaceChild(f3, f1);
+    const ids3 = list.children.map((c) => c.id).join(",");
+
+    return [ids1, sibs, cloned.dataset.idx, cloned.textContent, ids2, ids3].join("|");
+}
+"##,
+        r#"Item {
+    id: root
+    Rectangle {
+        id: listBox
+        objectName: "list"
+        implicitHeight: 20
+        Text { id: listBoxText; text: "" }
+    }
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        console.log("H2Q_OK_MUTATIONS", Page.verifyMutations());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains(
+            "H2Q_OK_MUTATIONS head,first,bmid,mid,rep,last,cloned|head,cloned,bmid,rep|2|Middle|f1,f2|f3,f2"
+        ),
+        "{output}"
+    );
+}
+
+#[test]
+fn qml6_focus_blur_scroll_computed_style_and_attribute_helpers() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default()
+        .with_id("field", 1, "fieldInput", TargetKind::TextField)
+        .with_id("box", 2, "boxRect", TargetKind::Box)
+        .with_id("sel", 3, "selCombo", TargetKind::ComboBox);
+
+    let (output, _) = run_page_allowing_unsupported(
+        &resolver,
+        r##"
+function verifyFocusScrollStyle() {
+    const field = document.getElementById("field");
+    const box = document.getElementById("box");
+    const sel = document.getElementById("sel");
+
+    const focusLog = [];
+    field.addEventListener("focus", () => focusLog.push("focus"));
+    field.addEventListener("blur", () => focusLog.push("blur"));
+    field.focus();
+    const activeId = document.activeElement ? document.activeElement.id : "";
+    field.blur();
+
+    field.readOnly = true;
+    field.placeholder = "Enter name";
+    const toggle1 = field.toggleAttribute("data-flag");
+    const toggle2 = field.toggleAttribute("data-flag");
+    const toggle3 = field.toggleAttribute("data-flag", true);
+
+    box.classList.add("alpha", "beta");
+    box.classList.remove("alpha");
+    const repOk = box.classList.replace("beta", "gamma");
+    const togForce = box.classList.toggle("gamma", true);
+
+    box.style.setProperty("--accent", "#ff5500");
+    const customVal = box.style.getPropertyValue("--accent");
+    box.style.removeProperty("--accent");
+    const removedVal = box.style.getPropertyValue("--accent");
+    box.style.cssText = "width: 140px; height: 60px; opacity: 0.75; border-radius: 8px";
+    const cs = getComputedStyle(box);
+
+    box.scrollIntoView();
+    window.scrollTo(15, 40);
+    window.scrollBy({ left: 5, top: 10 });
+    box.scrollTop = 25;
+
+    sel.selectedIndex = 1;
+    const rect = box.getBoundingClientRect();
+
+    return [
+        activeId,
+        field.readOnly,
+        field.placeholder,
+        toggle1, toggle2, toggle3,
+        box.className, repOk, togForce,
+        customVal, removedVal,
+        cs.width, cs.height, cs.opacity,
+        window.scrollX, window.scrollY, window.pageXOffset, window.pageYOffset,
+        box.scrollTop,
+        sel.selectedIndex, sel.value,
+        rect.width, rect.height, box.offsetWidth, box.clientHeight
+    ].join("|");
+}
+"##,
+        r#"Item {
+    id: root
+    width: 800
+    height: 600
+    focus: true
+    TextField { id: fieldInput; objectName: "field" }
+    Rectangle {
+        id: boxRect
+        objectName: "box"
+        width: 100
+        height: 50
+        Text { id: boxRectText; text: "Box" }
+    }
+    ComboBox {
+        id: selCombo
+        objectName: "sel"
+        model: ["One", "Two", "Three"]
+    }
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        console.log("H2Q_OK_FOCUS_SCROLL_STYLE", Page.verifyFocusScrollStyle());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains(
+            "H2Q_OK_FOCUS_SCROLL_STYLE field|true|Enter name|true|false|true|gamma|true|true|#ff5500||140px|60px|0.75|20|50|20|50|25|1|Two|140|60|140|60"
+        ),
+        "{output}"
+    );
+}
+
+#[test]
+fn qml6_browser_globals_timers_events_and_observers() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("btn", 1, "actBtn", TargetKind::Button);
+
+    let (output, _) = run_page_allowing_unsupported(
+        &resolver,
+        r##"
+function verifyGlobalsAndEvents(done) {
+    const btn = document.getElementById("btn");
+    const log = [];
+
+    // EventTarget + typed Event constructors + stopImmediatePropagation
+    const bus = new EventTarget();
+    bus.addEventListener("ping", (e) => {
+        log.push("bus:" + e.detail);
+        e.stopImmediatePropagation();
+    });
+    bus.addEventListener("ping", () => log.push("bus:second"));
+    bus.dispatchEvent(new CustomEvent("ping", { detail: 42 }));
+
+    btn.addEventListener("keydown", (e) => {
+        log.push("key:" + e.key + ":" + e.keyCode + ":" + e.ctrlKey);
+    });
+    btn.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", keyCode: 13, ctrlKey: true }));
+
+    btn.addEventListener("click", (e) => {
+        log.push("click:" + e.clientX + ":" + e.clientY + ":" + (e.currentTarget === btn || e.currentTarget._item === btn));
+        e.preventDefault();
+    });
+    const clickRes = btn.dispatchEvent(new MouseEvent("click", { clientX: 12, clientY: 34, cancelable: true }));
+    log.push("clickRes:" + clickRes);
+
+    // hashchange & popstate
+    window.addEventListener("hashchange", () => log.push("hash:" + location.hash));
+    window.addEventListener("popstate", (e) => log.push("pop:" + (e.state && e.state.p)));
+    location.hash = "tab1";
+    history.replaceState({ p: 7 }, "", "/step7");
+    history.pushState({ p: 8 }, "", "/step8");
+    history.back();
+
+    // Observer stubs
+    const mo = new MutationObserver(() => {});
+    const ro = new ResizeObserver(() => {});
+    const io = new IntersectionObserver(() => {});
+    mo.observe(btn);
+    ro.observe(btn);
+    io.observe(btn);
+    mo.disconnect();
+
+    // Globals
+    const cloned = structuredClone({ a: [1, 2] });
+    const b64 = btoa("hi");
+    const dec = atob(b64);
+    const mq = matchMedia("(min-width: 400px)");
+    const t0 = performance.now();
+    const vis = document.visibilityState + ":" + document.hidden + ":" + window.devicePixelRatio;
+
+    // setInterval + clearInterval + clipboard
+    let ticks = 0;
+    const cancelledId = setTimeout(() => { ticks += 100; }, 5);
+    clearTimeout(cancelledId);
+
+    navigator.clipboard.writeText("copied-text").then(() => navigator.clipboard.readText()).then((clip) => {
+        const iv = setInterval(() => {
+            ticks += 1;
+            if (ticks === 2) {
+                clearInterval(iv);
+                done([
+                    log.join(","),
+                    cloned.a.join("+"),
+                    dec,
+                    mq.matches,
+                    t0 >= 0,
+                    vis,
+                    clip,
+                    ticks
+                ].join("|"));
+            }
+        }, 5);
+    });
+}
+"##,
+        r#"Item {
+    id: root
+    width: 500
+    height: 400
+    Button { id: actBtn; objectName: "btn"; text: "Act" }
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        Page.verifyGlobalsAndEvents(function(res) {
+            console.log("H2Q_OK_GLOBALS_EVENTS", res);
+            Qt.quit();
+        });
+    }
+}"#,
+    );
+    assert!(
+        output.contains(
+            "H2Q_OK_GLOBALS_EVENTS bus:42,key:Enter:13:true,click:12:34:true,clickRes:false,hash:#tab1,pop:7|1+2|hi|true|true|visible:false:1|copied-text|2"
+        ),
         "{output}"
     );
 }

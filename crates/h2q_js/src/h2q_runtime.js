@@ -291,6 +291,10 @@ var _holder = null;
 var _startTime = Date.now();
 var _fallbackTitle = "";
 var _alertHook = null;
+var _windowScrollX = 0;
+var _windowScrollY = 0;
+var _activeElement = null;
+var _clipboardText = "";
 
 // Per-item sidecar storage keyed by raw QML QObject (or synthetic node).
 // QML QObjects reject ad-hoc JS property assignments, whereas ES6 Map keys
@@ -443,12 +447,54 @@ var performance = {
     }
 };
 
-function atob(encoded) {
-    return Qt.atob(String(encoded));
-}
+var _B64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 function btoa(raw) {
-    return Qt.btoa(String(raw));
+    var str = String(raw);
+    var out = "";
+    for (var i = 0; i < str.length; i += 3) {
+        var c1 = str.charCodeAt(i);
+        var has2 = i + 1 < str.length;
+        var has3 = i + 2 < str.length;
+        var c2 = has2 ? str.charCodeAt(i + 1) : 0;
+        var c3 = has3 ? str.charCodeAt(i + 2) : 0;
+        if (c1 > 255 || c2 > 255 || c3 > 255) {
+            throw new Error("InvalidCharacterError: btoa input out of Latin1 range");
+        }
+        var triplet = (c1 << 16) | (c2 << 8) | c3;
+        out += _B64_CHARS.charAt((triplet >> 18) & 63);
+        out += _B64_CHARS.charAt((triplet >> 12) & 63);
+        out += has2 ? _B64_CHARS.charAt((triplet >> 6) & 63) : "=";
+        out += has3 ? _B64_CHARS.charAt(triplet & 63) : "=";
+    }
+    return out;
+}
+
+function atob(encoded) {
+    var str = String(encoded).replace(/\s+/g, "");
+    if (str.length % 4 === 1) {
+        throw new Error("InvalidCharacterError: invalid base64 length");
+    }
+    var out = "";
+    var buf = 0;
+    var bits = 0;
+    for (var i = 0; i < str.length; ++i) {
+        var ch = str.charAt(i);
+        if (ch === "=") {
+            break;
+        }
+        var val = _B64_CHARS.indexOf(ch);
+        if (val === -1) {
+            throw new Error("InvalidCharacterError: invalid base64 character");
+        }
+        buf = (buf << 6) | val;
+        bits += 6;
+        if (bits >= 8) {
+            bits -= 8;
+            out += String.fromCharCode((buf >> bits) & 255);
+        }
+    }
+    return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -737,7 +783,133 @@ function unsupported(feature) {
     return undefined;
 }
 
-var location = {
+// Note on document base URL resolution for `a.href`:
+// `H2Q.init(rootItem)` receives only the root QML Item (`Main.qml` calls
+// `Page.__h2q_init(root)`), and the HTML-to-QML converter does not embed a
+// source document URL into `Main.qml` or `page.js`. Consequently,
+// `location.href` starts as `""`.
+// - When `rawHref` is an absolute URL (e.g. `https://example.com` or
+//   `https://example.com/a/b/../c`), `_resolveUrl` normalizes it per the
+//   WHATWG URL / DOM `HTMLAnchorElement.href` rules (ensuring a trailing `/`
+//   on bare origins and collapsing `.` / `..` path segments, which Qt 6.11's
+//   built-in `new URL()` does not do).
+// - When `rawHref` is a relative URL and a base URL is available via
+//   `location.href` (or `_root.baseUrl`), `_resolveUrl` resolves `rawHref`
+//   against that base URL.
+// - When `rawHref` is a relative URL and no base URL is known (`location.href === ""`),
+//   `_resolveUrl` returns the raw attribute value unchanged because the runtime
+//   has no document base URL to resolve against.
+function _normalizeUrlPath(path) {
+    var parts = String(path || "/").split("/");
+    var stack = [];
+    for (var i = 0; i < parts.length; ++i) {
+        var seg = parts[i];
+        if (seg === "" || seg === ".") {
+            continue;
+        }
+        if (seg === "..") {
+            if (stack.length > 0) {
+                stack.pop();
+            }
+        } else {
+            stack.push(seg);
+        }
+    }
+    var trailingSlash = path.length > 1 && path.charAt(path.length - 1) === "/" ||
+        path.slice(-2) === "/." || path.slice(-3) === "/..";
+    return "/" + stack.join("/") + (trailingSlash && stack.length > 0 ? "/" : "");
+}
+
+function _parseHierarchicalUrl(urlStr) {
+    var m = /^([a-zA-Z][a-zA-Z0-9+.-]*:)\/\/([^\/?#]*)([^?#]*)(\?[^#]*)?(#.*)?$/.exec(String(urlStr));
+    if (!m) {
+        return null;
+    }
+    var protocol = m[1].toLowerCase();
+    var host = m[2];
+    var portIdx = host.indexOf(":");
+    var hostname = portIdx === -1 ? host : host.slice(0, portIdx);
+    var port = portIdx === -1 ? "" : host.slice(portIdx + 1);
+    var rawPath = m[3] || "/";
+    var pathname = _normalizeUrlPath(rawPath);
+    var search = m[4] || "";
+    var hash = m[5] || "";
+    var origin = (protocol === "http:" || protocol === "https:") ? (protocol + "//" + host) : "null";
+    return {
+        protocol: protocol,
+        host: host,
+        hostname: hostname,
+        port: port,
+        pathname: pathname,
+        search: search,
+        hash: hash,
+        origin: origin,
+        href: protocol + "//" + host + pathname + search + hash
+    };
+}
+
+function _getDocumentBaseUrl() {
+    if (location && typeof location.href === "string" && location.href !== "") {
+        return location.href;
+    }
+    if (_root && typeof _root.baseUrl === "string" && _root.baseUrl !== "") {
+        return _root.baseUrl;
+    }
+    return "";
+}
+
+function _resolveUrl(rawHref) {
+    if (rawHref === null || rawHref === undefined || rawHref === "") {
+        return _getDocumentBaseUrl();
+    }
+    var str = String(rawHref).trim();
+    if (str === "") {
+        return _getDocumentBaseUrl();
+    }
+    var parsedAbs = _parseHierarchicalUrl(str);
+    if (parsedAbs) {
+        return parsedAbs.href;
+    }
+    if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(str)) {
+        return str;
+    }
+    var baseStr = _getDocumentBaseUrl();
+    var base = baseStr ? _parseHierarchicalUrl(baseStr) : null;
+    if (!base) {
+        // Runtime has no document base URL when converted statically unless
+        // `location.href` (or `root.baseUrl`) was populated; return the raw
+        // relative attribute unchanged.
+        return String(rawHref);
+    }
+    if (str.indexOf("//") === 0) {
+        var protoRel = _parseHierarchicalUrl(base.protocol + str);
+        return protoRel ? protoRel.href : (base.protocol + str);
+    }
+    if (str.charAt(0) === "#") {
+        return base.protocol + "//" + base.host + base.pathname + base.search + str;
+    }
+    if (str.charAt(0) === "?") {
+        var qHashIdx = str.indexOf("#");
+        var qPart = qHashIdx === -1 ? str : str.slice(0, qHashIdx);
+        var hPart = qHashIdx === -1 ? "" : str.slice(qHashIdx);
+        return base.protocol + "//" + base.host + base.pathname + qPart + hPart;
+    }
+    var relMatch = /^([^?#]*)(\?[^#]*)?(#.*)?$/.exec(str);
+    var relPath = relMatch ? relMatch[1] : str;
+    var relSearch = relMatch && relMatch[2] ? relMatch[2] : "";
+    var relHash = relMatch && relMatch[3] ? relMatch[3] : "";
+    var combinedPath;
+    if (relPath.charAt(0) === "/") {
+        combinedPath = _normalizeUrlPath(relPath);
+    } else {
+        var lastSlash = base.pathname.lastIndexOf("/");
+        var baseDir = lastSlash === -1 ? "/" : base.pathname.slice(0, lastSlash + 1);
+        combinedPath = _normalizeUrlPath(baseDir + relPath);
+    }
+    return base.protocol + "//" + base.host + combinedPath + relSearch + relHash;
+}
+
+var _locState = {
     href: "",
     protocol: "file:",
     host: "",
@@ -746,44 +918,156 @@ var location = {
     pathname: "/",
     search: "",
     hash: "",
-    origin: "null",
+    origin: "null"
+};
+
+function _updateLocationFromHref(newHref, fireHashChange) {
+    var oldHash = _locState.hash;
+    var s = String(newHref);
+    var parsed = _parseHierarchicalUrl(s);
+    if (parsed) {
+        _locState.href = parsed.href;
+        _locState.protocol = parsed.protocol;
+        _locState.host = parsed.host;
+        _locState.hostname = parsed.hostname;
+        _locState.port = parsed.port;
+        _locState.pathname = parsed.pathname;
+        _locState.search = parsed.search;
+        _locState.hash = parsed.hash;
+        _locState.origin = parsed.origin;
+    } else {
+        _locState.href = s;
+        var hashIdx = s.indexOf("#");
+        var qIdx = s.indexOf("?");
+        if (hashIdx !== -1) {
+            _locState.hash = s.slice(hashIdx);
+        } else {
+            _locState.hash = "";
+        }
+        if (qIdx !== -1 && (hashIdx === -1 || qIdx < hashIdx)) {
+            _locState.search = hashIdx === -1 ? s.slice(qIdx) : s.slice(qIdx, hashIdx);
+        } else {
+            _locState.search = "";
+        }
+        var pathEnd = qIdx !== -1 ? qIdx : (hashIdx !== -1 ? hashIdx : s.length);
+        var p = s.slice(0, pathEnd);
+        if (p) {
+            _locState.pathname = p.charAt(0) === "/" ? p : "/" + p;
+        }
+    }
+    if (fireHashChange && _locState.hash !== oldHash && _root) {
+        _dispatchDynamic(_root, "hashchange", null);
+    }
+}
+
+var location = {
+    get href() { return _locState.href; },
+    set href(v) { _updateLocationFromHref(v, true); },
+    get protocol() { return _locState.protocol; },
+    set protocol(v) { _locState.protocol = String(v); },
+    get host() { return _locState.host; },
+    set host(v) { _locState.host = String(v); },
+    get hostname() { return _locState.hostname; },
+    set hostname(v) { _locState.hostname = String(v); },
+    get port() { return _locState.port; },
+    set port(v) { _locState.port = String(v); },
+    get pathname() { return _locState.pathname; },
+    set pathname(v) { _locState.pathname = String(v); },
+    get search() { return _locState.search; },
+    set search(v) {
+        var s = String(v);
+        _locState.search = s === "" || s.charAt(0) === "?" ? s : "?" + s;
+    },
+    get hash() { return _locState.hash; },
+    set hash(v) {
+        var s = String(v);
+        var normalized = s === "" ? "" : (s.charAt(0) === "#" ? s : "#" + s);
+        var changed = _locState.hash !== normalized;
+        _locState.hash = normalized;
+        if (_locState.href) {
+            var baseHref = _locState.href.split("#")[0];
+            _locState.href = baseHref + normalized;
+        }
+        if (changed && _root) {
+            _dispatchDynamic(_root, "hashchange", null);
+        }
+    },
+    get origin() { return _locState.origin; },
     assign: function(url) {
-        this.href = String(url);
+        _updateLocationFromHref(url, true);
     },
     replace: function(url) {
-        this.href = String(url);
+        _updateLocationFromHref(url, true);
     },
     reload: function() {
         console.warn("H2Q: location.reload() is unsupported");
     },
     toString: function() {
-        return this.href;
+        return _locState.href;
     }
 };
 
+var _historyEntries = [{ state: null, url: "" }];
+var _historyIndex = 0;
+
 var history = {
-    length: 1,
-    state: null,
+    get length() { return _historyEntries.length; },
+    get state() { return _historyEntries[_historyIndex].state; },
     pushState: function(state, _unused, url) {
-        this.state = state;
+        var resolvedUrl = (url !== undefined && url !== null) ? _resolveUrl(String(url)) : _locState.href;
+        _historyEntries = _historyEntries.slice(0, _historyIndex + 1);
+        _historyEntries.push({ state: state, url: resolvedUrl });
+        _historyIndex = _historyEntries.length - 1;
         if (url !== undefined && url !== null) {
-            location.href = String(url);
+            _updateLocationFromHref(resolvedUrl, false);
         }
     },
     replaceState: function(state, _unused, url) {
-        this.state = state;
+        var resolvedUrl = (url !== undefined && url !== null) ? _resolveUrl(String(url)) : _locState.href;
+        _historyEntries[_historyIndex] = { state: state, url: resolvedUrl };
         if (url !== undefined && url !== null) {
-            location.href = String(url);
+            _updateLocationFromHref(resolvedUrl, false);
         }
     },
-    back: function() {},
-    forward: function() {},
-    go: function() {}
+    back: function() {
+        this.go(-1);
+    },
+    forward: function() {
+        this.go(1);
+    },
+    go: function(delta) {
+        var step = delta === undefined ? 0 : (Number(delta) || 0);
+        if (step === 0) {
+            return;
+        }
+        var nextIdx = _historyIndex + step;
+        if (nextIdx >= 0 && nextIdx < _historyEntries.length) {
+            _historyIndex = nextIdx;
+        }
+        var current = _historyEntries[_historyIndex];
+        if (current && current.url) {
+            _updateLocationFromHref(current.url, false);
+        }
+        if (_root) {
+            var popEv = Event("popstate", { bubbles: false, cancelable: false });
+            popEv.state = current ? current.state : null;
+            _dispatchDynamic(_root, "popstate", popEv);
+        }
+    }
 };
 
 var navigator = {
     userAgent: "html-2-qml/0.1.0",
-    onLine: true
+    onLine: true,
+    clipboard: {
+        writeText: function(text) {
+            _clipboardText = String(text === undefined ? "" : text);
+            return Promise.resolve();
+        },
+        readText: function() {
+            return Promise.resolve(_clipboardText);
+        }
+    }
 };
 Object.defineProperty(navigator, "language", {
     enumerable: true,
@@ -832,8 +1116,13 @@ function matchMedia(query) {
 // ---------------------------------------------------------------------------
 
 function _unwrap(item) {
-    if (item && typeof item === "object" && item.__h2qWrapper) {
-        return item._item;
+    if (item && typeof item === "object") {
+        if (item.__h2qWrapper) {
+            return item._item;
+        }
+        if ((item === window || item === document) && _root) {
+            return _root;
+        }
     }
     return item;
 }
@@ -1276,9 +1565,34 @@ function setStyle(item, prop, value) {
     if (!raw) {
         return;
     }
-    var name = String(prop);
+    var rawName = String(prop);
     var str = value === null || value === undefined ? "" : String(value);
-    _meta(raw).styles[name] = str;
+    var m = _meta(raw);
+    if (rawName === "cssText") {
+        m.styles = {};
+        var decls = str.split(";");
+        for (var i = 0; i < decls.length; ++i) {
+            var d = decls[i].trim();
+            if (!d) {
+                continue;
+            }
+            var colon = d.indexOf(":");
+            if (colon === -1) {
+                continue;
+            }
+            var k = d.slice(0, colon).trim();
+            var v = d.slice(colon + 1).trim();
+            if (k) {
+                setStyle(raw, k, v);
+            }
+        }
+        return;
+    }
+    var name = rawName.indexOf("--") === 0 ? rawName : _kebabToCamel(rawName);
+    m.styles[name] = str;
+    if (rawName !== name) {
+        m.styles[rawName] = str;
+    }
 
     if (_isPlainJsObject(raw)) {
         if (!raw.style) {
@@ -1353,17 +1667,130 @@ function setStyle(item, prop, value) {
     }
 }
 
+function _camelToKebab(propName) {
+    return String(propName).replace(/[A-Z]/g, function(ch) {
+        return "-" + ch.toLowerCase();
+    });
+}
+
 function getStyle(item, prop) {
     var m = _meta(item);
-    var name = String(prop);
-    if (Object.prototype.hasOwnProperty.call(m.styles, name)) {
-        return m.styles[name];
+    var rawName = String(prop);
+    if (rawName === "cssText") {
+        var keys = Object.keys(m.styles);
+        var parts = [];
+        var seen = {};
+        for (var i = 0; i < keys.length; ++i) {
+            var k = keys[i];
+            var kebab = k.indexOf("--") === 0 ? k : _camelToKebab(k);
+            if (!seen[kebab] && m.styles[k] !== "") {
+                seen[kebab] = true;
+                parts.push(kebab + ": " + m.styles[k]);
+            }
+        }
+        return parts.join("; ");
+    }
+    if (Object.prototype.hasOwnProperty.call(m.styles, rawName)) {
+        return m.styles[rawName];
+    }
+    var camel = rawName.indexOf("--") === 0 ? rawName : _kebabToCamel(rawName);
+    if (Object.prototype.hasOwnProperty.call(m.styles, camel)) {
+        return m.styles[camel];
     }
     var raw = _unwrap(item);
-    if (name === "display" && raw && typeof raw.visible === "boolean") {
+    if (camel === "display" && raw && typeof raw.visible === "boolean") {
         return raw.visible ? "" : "none";
     }
     return "";
+}
+
+function getComputedStyle(item) {
+    var raw = _unwrap(item);
+    function computeProp(prop) {
+        var p = String(prop);
+        var explicit = getStyle(raw, p);
+        if (explicit !== "") {
+            return explicit;
+        }
+        var camel = p.indexOf("--") === 0 ? p : _kebabToCamel(p);
+        if (!raw || typeof raw !== "object") {
+            return "";
+        }
+        if (camel === "display") {
+            return raw.visible === false ? "none" : "block";
+        }
+        if (camel === "visibility") {
+            return raw.opacity === 0 ? "hidden" : "visible";
+        }
+        if (camel === "opacity") {
+            return typeof raw.opacity === "number" ? String(raw.opacity) : "1";
+        }
+        if (camel === "width") {
+            return typeof raw.width === "number" ? raw.width + "px" : "0px";
+        }
+        if (camel === "height") {
+            return typeof raw.height === "number" ? raw.height + "px" : "0px";
+        }
+        if (camel === "color") {
+            var tc = typeof raw.text === "string" ? raw : _findTextChild(raw);
+            return tc && tc.color !== undefined ? String(tc.color) : "";
+        }
+        if (camel === "backgroundColor") {
+            if (raw.background && raw.background.color !== undefined) {
+                return String(raw.background.color);
+            }
+            if (raw.color !== undefined && typeof raw.text !== "string") {
+                return String(raw.color);
+            }
+            return "";
+        }
+        if (camel === "fontSize") {
+            var ft = raw.font !== undefined ? raw : _findTextChild(raw);
+            return ft && ft.font && typeof ft.font.pixelSize === "number" ? ft.font.pixelSize + "px" : "";
+        }
+        if (camel === "borderRadius") {
+            return typeof raw.radius === "number" ? raw.radius + "px" : "0px";
+        }
+        return "";
+    }
+    var base = {
+        getPropertyValue: function(prop) {
+            return computeProp(prop);
+        }
+    };
+    return new Proxy(base, {
+        get: function(target, prop) {
+            if (prop in target) {
+                return target[prop];
+            }
+            if (typeof prop === "string") {
+                return computeProp(prop);
+            }
+            return undefined;
+        }
+    });
+}
+
+function _syncNumericControlAttr(raw, name, val) {
+    if (!raw || typeof raw !== "object") {
+        return;
+    }
+    if (name === "min" && typeof raw.from === "number") {
+        var nMin = Number(val);
+        if (!isNaN(nMin)) {
+            raw.from = nMin;
+        }
+    } else if (name === "max" && typeof raw.to === "number") {
+        var nMax = Number(val);
+        if (!isNaN(nMax)) {
+            raw.to = nMax;
+        }
+    } else if (name === "step" && typeof raw.stepSize === "number") {
+        var nStep = Number(val);
+        if (!isNaN(nStep) && nStep > 0) {
+            raw.stepSize = nStep;
+        }
+    }
 }
 
 function setAttribute(item, attrName, attrValue) {
@@ -1388,6 +1815,8 @@ function setAttribute(item, attrName, attrValue) {
         raw.enabled = false;
     } else if (name === "hidden" && typeof raw.visible === "boolean") {
         raw.visible = false;
+    } else if (name === "readonly" && typeof raw.readOnly === "boolean") {
+        raw.readOnly = true;
     } else if (name === "value") {
         if (typeof raw.find === "function" && typeof raw.currentIndex === "number") {
             raw.currentIndex = raw.find(val);
@@ -1396,6 +1825,8 @@ function setAttribute(item, attrName, attrValue) {
         } else if (typeof raw.value === "number") {
             raw.value = Number(val) || 0;
         }
+    } else if (name === "min" || name === "max" || name === "step") {
+        _syncNumericControlAttr(raw, name, val);
     } else if (name === "src" && raw.source !== undefined) {
         raw.source = val;
     } else if (name === "placeholder" && typeof raw.placeholderText === "string") {
@@ -1425,6 +1856,21 @@ function getAttribute(item, attrName) {
     if (name === "class" && m.classes.length > 0) {
         return m.classes.join(" ");
     }
+    if (name === "href") {
+        var txt = typeof raw.text === "string" ? raw.text : "";
+        if (!txt) {
+            var tc = _findTextChild(raw);
+            if (tc && typeof tc.text === "string") {
+                txt = tc.text;
+            }
+        }
+        if (txt) {
+            var hrefMatch = /<a\b[^>]*?\bhref\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(txt);
+            if (hrefMatch) {
+                return hrefMatch[1] !== undefined ? hrefMatch[1] : hrefMatch[2];
+            }
+        }
+    }
     return null;
 }
 
@@ -1442,6 +1888,8 @@ function removeAttribute(item, attrName) {
         raw.enabled = true;
     } else if (name === "hidden" && typeof raw.visible === "boolean") {
         raw.visible = true;
+    } else if (name === "readonly" && typeof raw.readOnly === "boolean") {
+        raw.readOnly = false;
     } else if (name === "class") {
         setClassName(raw, "");
     }
@@ -1449,6 +1897,59 @@ function removeAttribute(item, attrName) {
 
 function hasAttribute(item, attrName) {
     return getAttribute(item, attrName) !== null;
+}
+
+function toggleAttribute(item, attrName, force) {
+    var name = String(attrName);
+    var has = hasAttribute(item, name);
+    var shouldHave = force !== undefined ? Boolean(force) : !has;
+    if (shouldHave) {
+        if (!has) {
+            setAttribute(item, name, "");
+        }
+        return true;
+    }
+    if (has) {
+        removeAttribute(item, name);
+    }
+    return false;
+}
+
+function focus(item) {
+    var raw = _unwrap(item);
+    if (!raw) {
+        return;
+    }
+    var prev = _activeElement;
+    _activeElement = raw;
+    var hadFocus = Boolean(raw.activeFocus);
+    if (typeof raw.forceActiveFocus === "function") {
+        raw.forceActiveFocus();
+    }
+    if (!hadFocus && !raw.activeFocus) {
+        if (prev && prev !== raw) {
+            _dispatchDynamic(prev, "blur", null);
+        }
+        _dispatchDynamic(raw, "focus", null);
+    }
+}
+
+function blur(item) {
+    var raw = _unwrap(item);
+    if (!raw) {
+        return;
+    }
+    var wasActive = _activeElement === raw || Boolean(raw.activeFocus);
+    if (_activeElement === raw) {
+        _activeElement = null;
+    }
+    var hadFocus = Boolean(raw.activeFocus);
+    if (typeof raw.focus === "boolean") {
+        raw.focus = false;
+    }
+    if (wasActive && !hadFocus) {
+        _dispatchDynamic(raw, "blur", null);
+    }
 }
 
 function getBoundingClientRect(item) {
@@ -1671,11 +2172,93 @@ function Event(type, opts) {
     var e = event(type, null, { detail: o.detail });
     e.bubbles = o.bubbles !== undefined ? Boolean(o.bubbles) : false;
     e.cancelable = o.cancelable !== undefined ? Boolean(o.cancelable) : false;
+    if (typeof o.key === "string") { e.key = o.key; }
+    if (typeof o.code === "string") { e.code = o.code; }
+    if (typeof o.keyCode === "number") { e.keyCode = o.keyCode; }
+    if (o.ctrlKey !== undefined) { e.ctrlKey = Boolean(o.ctrlKey); }
+    if (o.shiftKey !== undefined) { e.shiftKey = Boolean(o.shiftKey); }
+    if (o.altKey !== undefined) { e.altKey = Boolean(o.altKey); }
+    if (o.metaKey !== undefined) { e.metaKey = Boolean(o.metaKey); }
+    if (o.repeat !== undefined) { e.repeat = Boolean(o.repeat); }
+    if (typeof o.clientX === "number") { e.clientX = o.clientX; e.pageX = o.clientX; }
+    if (typeof o.clientY === "number") { e.clientY = o.clientY; e.pageY = o.clientY; }
+    if (typeof o.offsetX === "number") { e.offsetX = o.offsetX; }
+    if (typeof o.offsetY === "number") { e.offsetY = o.offsetY; }
+    if (typeof o.button === "number") { e.button = o.button; }
+    if (typeof o.buttons === "number") { e.buttons = o.buttons; }
+    if (typeof o.deltaX === "number") { e.deltaX = o.deltaX; }
+    if (typeof o.deltaY === "number") { e.deltaY = o.deltaY; }
+    if (typeof o.deltaMode === "number") { e.deltaMode = o.deltaMode; }
+    if (o.data !== undefined) { e.data = o.data; }
     return e;
 }
 
 function CustomEvent(type, opts) {
     return Event(type, opts);
+}
+
+function KeyboardEvent(type, opts) {
+    return Event(type, opts);
+}
+
+function MouseEvent(type, opts) {
+    return Event(type, opts);
+}
+
+function PointerEvent(type, opts) {
+    return Event(type, opts);
+}
+
+function FocusEvent(type, opts) {
+    return Event(type, opts);
+}
+
+function InputEvent(type, opts) {
+    return Event(type, opts);
+}
+
+function WheelEvent(type, opts) {
+    return Event(type, opts);
+}
+
+function EventTarget() {
+    var selfTarget = {
+        addEventListener: function(type, fn, opts) {
+            _addListener(selfTarget, type, fn, opts);
+        },
+        removeEventListener: function(type, fn) {
+            unlisten(selfTarget, type, fn);
+        },
+        dispatchEvent: function(ev) {
+            return dispatchEvent(selfTarget, ev);
+        }
+    };
+    return selfTarget;
+}
+
+function MutationObserver(_callback) {
+    return {
+        observe: function() {},
+        disconnect: function() {},
+        takeRecords: function() { return []; }
+    };
+}
+
+function ResizeObserver(_callback) {
+    return {
+        observe: function() {},
+        unobserve: function() {},
+        disconnect: function() {}
+    };
+}
+
+function IntersectionObserver(_callback) {
+    return {
+        observe: function() {},
+        unobserve: function() {},
+        disconnect: function() {},
+        takeRecords: function() { return []; }
+    };
 }
 
 function _dispatchDynamic(raw, type, qtEv) {
@@ -1729,6 +2312,10 @@ function _connectSignalOnce(raw, type) {
     }
     if (!raw || typeof raw !== "object") {
         return false;
+    }
+    if (_isPlainJsObject(raw)) {
+        m.connected[type] = true;
+        return true;
     }
 
     if (type === "click") {
@@ -1833,14 +2420,34 @@ function _connectSignalOnce(raw, type) {
         m.connected[type] = true;
         return true;
     } else if ((type === "focus" || type === "focusin" || type === "blur" || type === "focusout") &&
-               typeof raw.activeFocusChanged === "function") {
-        raw.activeFocusChanged.connect(function() {
-            if (raw.activeFocus && (type === "focus" || type === "focusin")) {
-                _dispatchDynamic(raw, type, null);
-            } else if (!raw.activeFocus && (type === "blur" || type === "focusout")) {
-                _dispatchDynamic(raw, type, null);
+               (typeof raw.activeFocusChanged === "function" || typeof raw.focusChanged === "function")) {
+        var lastFocused = Boolean(raw.activeFocus || raw.focus);
+        var onFocusChange = function() {
+            var nowFocused = Boolean(raw.activeFocus || raw.focus);
+            if (nowFocused === lastFocused) {
+                return;
             }
-        });
+            lastFocused = nowFocused;
+            if (nowFocused) {
+                _activeElement = raw;
+                if (type === "focus" || type === "focusin") {
+                    _dispatchDynamic(raw, type, null);
+                }
+            } else {
+                if (_activeElement === raw) {
+                    _activeElement = null;
+                }
+                if (type === "blur" || type === "focusout") {
+                    _dispatchDynamic(raw, type, null);
+                }
+            }
+        };
+        if (typeof raw.activeFocusChanged === "function") {
+            raw.activeFocusChanged.connect(onFocusChange);
+        }
+        if (typeof raw.focusChanged === "function") {
+            raw.focusChanged.connect(onFocusChange);
+        }
         m.connected[type] = true;
         return true;
     } else if ((type === "mouseenter" || type === "mouseover" || type === "mouseleave" || type === "mouseout") &&
@@ -1879,6 +2486,25 @@ function _connectSignalOnce(raw, type) {
         if (typeof raw.heightChanged === "function") {
             raw.heightChanged.connect(function() { _dispatchDynamic(raw, "resize", null); });
         }
+        m.connected[type] = true;
+        return true;
+    } else if (type === "keypress" && typeof raw.h2qKeyDown === "function") {
+        raw.h2qKeyDown.connect(function(qtEv) { _dispatchDynamic(raw, "keypress", qtEv); });
+        m.connected[type] = true;
+        return true;
+    } else if ((type === "mousedown" || type === "pointerdown" || type === "touchstart") && typeof raw.pressed === "function") {
+        raw.pressed.connect(function() { _dispatchDynamic(raw, type, null); });
+        m.connected[type] = true;
+        return true;
+    } else if ((type === "mouseup" || type === "pointerup" || type === "touchend") && typeof raw.released === "function") {
+        raw.released.connect(function() { _dispatchDynamic(raw, type, null); });
+        m.connected[type] = true;
+        return true;
+    } else if (type === "contextmenu" && typeof raw.pressAndHold === "function") {
+        raw.pressAndHold.connect(function() { _dispatchDynamic(raw, "contextmenu", null); });
+        m.connected[type] = true;
+        return true;
+    } else if (type === "hashchange" || type === "popstate" || type === "DOMContentLoaded" || type === "load" || type === "beforeunload" || type === "unload") {
         m.connected[type] = true;
         return true;
     }
@@ -2017,6 +2643,196 @@ function _inputSource(type) {
         + "background: Rectangle { color: \"white\"; border.color: \"#767676\"; radius: 2 } }";
 }
 
+function _coerceNode(nodeOrString) {
+    if (nodeOrString === null || nodeOrString === undefined) {
+        return null;
+    }
+    if (typeof nodeOrString === "object" || typeof nodeOrString === "function") {
+        return _unwrap(nodeOrString);
+    }
+    return _unwrap(document.createTextNode(String(nodeOrString)));
+}
+
+function _expandInsertRawNodes(nodes) {
+    var out = [];
+    for (var i = 0; i < nodes.length; ++i) {
+        var raw = _coerceNode(nodes[i]);
+        if (!raw) {
+            continue;
+        }
+        if (_meta(raw).isFragment) {
+            var fragKids = _rawElementChildren(raw);
+            for (var j = 0; j < fragKids.length; ++j) {
+                out.push(fragKids[j]);
+            }
+        } else {
+            out.push(raw);
+        }
+    }
+    return out;
+}
+
+function _insertRawNodesBefore(container, rawNodes, rawRef) {
+    if (!container || rawNodes.length === 0) {
+        return;
+    }
+    if (!rawRef || !container.children) {
+        for (var a = 0; a < rawNodes.length; ++a) {
+            if (rawNodes[a] && rawNodes[a].parent !== undefined) {
+                rawNodes[a].parent = null;
+                rawNodes[a].parent = container;
+            }
+        }
+        return;
+    }
+    var kids = [];
+    for (var i = 0; i < container.children.length; ++i) {
+        kids.push(container.children[i]);
+    }
+    var idx = kids.indexOf(rawRef);
+    if (idx === -1) {
+        for (var b = 0; b < rawNodes.length; ++b) {
+            if (rawNodes[b] && rawNodes[b].parent !== undefined) {
+                rawNodes[b].parent = null;
+                rawNodes[b].parent = container;
+            }
+        }
+        return;
+    }
+    var tail = [];
+    for (var t = idx; t < kids.length; ++t) {
+        if (rawNodes.indexOf(kids[t]) === -1) {
+            tail.push(kids[t]);
+        }
+    }
+    for (var j = 0; j < tail.length; ++j) {
+        tail[j].parent = null;
+    }
+    for (var m = 0; m < rawNodes.length; ++m) {
+        if (rawNodes[m] && rawNodes[m].parent !== undefined) {
+            rawNodes[m].parent = null;
+            rawNodes[m].parent = container;
+        }
+    }
+    for (var k = 0; k < tail.length; ++k) {
+        tail[k].parent = container;
+    }
+}
+
+function _unescapeHtmlText(str) {
+    return String(str)
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, "\"")
+        .replace(/&#39;/g, "'")
+        .replace(/&amp;/g, "&");
+}
+
+function _applyAttrsFromHtml(el, attrStr) {
+    if (!attrStr) {
+        return;
+    }
+    var re = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+    var match;
+    while ((match = re.exec(attrStr)) !== null) {
+        var name = match[1];
+        var val = match[2] !== undefined ? match[2] : (match[3] !== undefined ? match[3] : (match[4] !== undefined ? match[4] : ""));
+        val = _unescapeHtmlText(val);
+        var lower = name.toLowerCase();
+        if (lower === "id") {
+            el.id = val;
+        } else if (lower === "class") {
+            el.className = val;
+        } else if (lower === "style") {
+            el.style.cssText = val;
+        } else if (lower === "type") {
+            el.type = val;
+            el.setAttribute("type", val);
+        } else {
+            el.setAttribute(name, val);
+        }
+    }
+}
+
+function _parseHtmlFragmentNodes(html) {
+    var src = String(html === null || html === undefined ? "" : html);
+    var nodes = [];
+    var pos = 0;
+    var tagOpenRe = /<([a-zA-Z][a-zA-Z0-9-]*)(\s[^>]*)?\s*(\/?)>/g;
+    var voidTags = { area: true, base: true, br: true, col: true, embed: true, hr: true, img: true, input: true, link: true, meta: true, source: true, track: true, wbr: true };
+
+    while (pos < src.length) {
+        tagOpenRe.lastIndex = pos;
+        var m = tagOpenRe.exec(src);
+        if (!m) {
+            var trailing = src.slice(pos);
+            if (trailing.trim()) {
+                nodes.push(document.createTextNode(_unescapeHtmlText(trailing)));
+            }
+            break;
+        }
+        if (m.index > pos) {
+            var lead = src.slice(pos, m.index);
+            if (lead.trim()) {
+                nodes.push(document.createTextNode(_unescapeHtmlText(lead)));
+            }
+        }
+        var tag = m[1].toLowerCase();
+        var attrStr = m[2] || "";
+        var selfClosing = m[3] === "/" || Boolean(voidTags[tag]);
+        var el = document.createElement(tag);
+        _applyAttrsFromHtml(el, attrStr);
+
+        var afterOpen = tagOpenRe.lastIndex;
+        if (selfClosing) {
+            nodes.push(el);
+            pos = afterOpen;
+            continue;
+        }
+        // Find matching closing tag for `tag`
+        var depth = 1;
+        var scanPos = afterOpen;
+        var tokenRe = new RegExp("<(/?)" + tag + "\\b[^>]*>", "gi");
+        tokenRe.lastIndex = scanPos;
+        var tok;
+        var closeStart = -1;
+        var closeEnd = -1;
+        while ((tok = tokenRe.exec(src)) !== null) {
+            var fullTok = tok[0];
+            if (tok[1] === "/") {
+                depth -= 1;
+                if (depth === 0) {
+                    closeStart = tok.index;
+                    closeEnd = tokenRe.lastIndex;
+                    break;
+                }
+            } else if (fullTok.slice(-2) !== "/>" && !voidTags[tag]) {
+                depth += 1;
+            }
+        }
+        if (closeStart === -1) {
+            var rest = src.slice(afterOpen);
+            if (rest) {
+                el.textContent = _unescapeHtmlText(rest);
+            }
+            nodes.push(el);
+            break;
+        }
+        var inner = src.slice(afterOpen, closeStart);
+        if (/<[a-zA-Z]/.test(inner)) {
+            var childWrappers = _parseHtmlFragmentNodes(inner);
+            for (var c = 0; c < childWrappers.length; ++c) {
+                el.appendChild(childWrappers[c]);
+            }
+        } else if (inner) {
+            el.textContent = _unescapeHtmlText(inner);
+        }
+        nodes.push(el);
+        pos = closeEnd;
+    }
+    return nodes;
+}
+
 function wrap(rawItem) {
     if (!rawItem) {
         return null;
@@ -2029,8 +2845,29 @@ function wrap(rawItem) {
         return m.wrapper;
     }
 
-    var styleProxy = new Proxy({}, {
-        get: function(_t, prop) {
+    var styleMethods = {
+        setProperty: function(prop, val) {
+            setStyle(rawItem, prop, val);
+        },
+        getPropertyValue: function(prop) {
+            return getStyle(rawItem, prop);
+        },
+        removeProperty: function(prop) {
+            var old = getStyle(rawItem, prop);
+            setStyle(rawItem, prop, "");
+            var rawName = String(prop);
+            var camel = rawName.indexOf("--") === 0 ? rawName : _kebabToCamel(rawName);
+            delete _meta(rawItem).styles[rawName];
+            delete _meta(rawItem).styles[camel];
+            return old;
+        }
+    };
+
+    var styleProxy = new Proxy(styleMethods, {
+        get: function(target, prop) {
+            if (prop in target) {
+                return target[prop];
+            }
             return typeof prop === "string" ? getStyle(rawItem, prop) : undefined;
         },
         set: function(_t, prop, val) {
@@ -2045,13 +2882,14 @@ function wrap(rawItem) {
         __h2qWrapper: true,
         get _item() { return rawItem; },
         style: styleProxy,
-        get type() { return m.inputType || ""; },
+        get type() { return m.inputType || getAttribute(rawItem, "type") || ""; },
         // `createElement('input')` must return before the script says what
         // type it is, and a QML object cannot change type.
         set type(v) {
             var ty = String(v).toLowerCase();
             var from = m.inputType || "text";
             m.inputType = ty;
+            m.attrs.type = ty;
             if (m.createdTag !== "input" || _inputSource(ty) === _inputSource(from)) {
                 return;
             }
@@ -2062,6 +2900,13 @@ function wrap(rawItem) {
             _itemMeta.set(next, m);
             rawItem = next;
             old.destroy();
+            var attrNames = Object.keys(m.attrs);
+            for (var a = 0; a < attrNames.length; ++a) {
+                var ak = attrNames[a];
+                if (ak !== "type") {
+                    setAttribute(next, ak, m.attrs[ak]);
+                }
+            }
             var connected = Object.keys(m.connected);
             m.connected = {};
             for (var i = 0; i < connected.length; ++i) {
@@ -2179,15 +3024,48 @@ function wrap(rawItem) {
         },
         get title() { return getAttribute(rawItem, "title") || ""; },
         set title(v) { setAttribute(rawItem, "title", String(v)); },
-        get href() { return getAttribute(rawItem, "href") || ""; },
+        get href() {
+            var rawHref = getAttribute(rawItem, "href");
+            if (rawHref === null) {
+                return "";
+            }
+            return _resolveUrl(rawHref);
+        },
         set href(v) { setAttribute(rawItem, "href", String(v)); },
         get alt() { return getAttribute(rawItem, "alt") || ""; },
         set alt(v) { setAttribute(rawItem, "alt", String(v)); },
-        get min() { return getAttribute(rawItem, "min") || ""; },
+        get min() {
+            var attr = getAttribute(rawItem, "min");
+            if (attr !== null) {
+                return attr;
+            }
+            if (typeof rawItem.from === "number" && rawItem.from !== -2147483648) {
+                return String(rawItem.from);
+            }
+            return "";
+        },
         set min(v) { setAttribute(rawItem, "min", String(v)); },
-        get max() { return getAttribute(rawItem, "max") || ""; },
+        get max() {
+            var attr = getAttribute(rawItem, "max");
+            if (attr !== null) {
+                return attr;
+            }
+            if (typeof rawItem.to === "number" && rawItem.to !== 2147483647) {
+                return String(rawItem.to);
+            }
+            return "";
+        },
         set max(v) { setAttribute(rawItem, "max", String(v)); },
-        get step() { return getAttribute(rawItem, "step") || ""; },
+        get step() {
+            var attr = getAttribute(rawItem, "step");
+            if (attr !== null) {
+                return attr;
+            }
+            if (typeof rawItem.stepSize === "number" && rawItem.stepSize > 0) {
+                return String(rawItem.stepSize);
+            }
+            return "";
+        },
         set step(v) { setAttribute(rawItem, "step", String(v)); },
         get htmlFor() { return getAttribute(rawItem, "for") || ""; },
         set htmlFor(v) { setAttribute(rawItem, "for", String(v)); },
@@ -2227,6 +3105,44 @@ function wrap(rawItem) {
         get offsetHeight() { return typeof rawItem.height === "number" ? rawItem.height : 0; },
         get clientWidth() { return typeof rawItem.width === "number" ? rawItem.width : 0; },
         get clientHeight() { return typeof rawItem.height === "number" ? rawItem.height : 0; },
+        get scrollTop() {
+            if (typeof rawItem.contentY === "number") {
+                return rawItem.contentY;
+            }
+            return m.scrollTop || 0;
+        },
+        set scrollTop(v) {
+            var n = Number(v) || 0;
+            m.scrollTop = n;
+            if (typeof rawItem.contentY === "number") {
+                rawItem.contentY = n;
+            }
+        },
+        get scrollLeft() {
+            if (typeof rawItem.contentX === "number") {
+                return rawItem.contentX;
+            }
+            return m.scrollLeft || 0;
+        },
+        set scrollLeft(v) {
+            var n = Number(v) || 0;
+            m.scrollLeft = n;
+            if (typeof rawItem.contentX === "number") {
+                rawItem.contentX = n;
+            }
+        },
+        get scrollWidth() {
+            if (typeof rawItem.contentWidth === "number" && rawItem.contentWidth > 0) {
+                return rawItem.contentWidth;
+            }
+            return typeof rawItem.width === "number" ? rawItem.width : 0;
+        },
+        get scrollHeight() {
+            if (typeof rawItem.contentHeight === "number" && rawItem.contentHeight > 0) {
+                return rawItem.contentHeight;
+            }
+            return typeof rawItem.height === "number" ? rawItem.height : 0;
+        },
         get parentNode() {
             var p = _logicalParent(rawItem);
             return p ? wrap(p) : null;
@@ -2238,6 +3154,9 @@ function wrap(rawItem) {
         get children() {
             return _rawElementChildren(rawItem).map(wrap);
         },
+        get childNodes() {
+            return _rawElementChildren(rawItem).map(wrap);
+        },
         get childElementCount() {
             return _rawElementChildren(rawItem).length;
         },
@@ -2246,6 +3165,14 @@ function wrap(rawItem) {
             return kids.length > 0 ? wrap(kids[0]) : null;
         },
         get lastElementChild() {
+            var kids = _rawElementChildren(rawItem);
+            return kids.length > 0 ? wrap(kids[kids.length - 1]) : null;
+        },
+        get firstChild() {
+            var kids = _rawElementChildren(rawItem);
+            return kids.length > 0 ? wrap(kids[0]) : null;
+        },
+        get lastChild() {
             var kids = _rawElementChildren(rawItem);
             return kids.length > 0 ? wrap(kids[kids.length - 1]) : null;
         },
@@ -2267,29 +3194,75 @@ function wrap(rawItem) {
             var idx = kids.indexOf(rawItem);
             return idx > 0 ? wrap(kids[idx - 1]) : null;
         },
+        get nextSibling() {
+            return this.nextElementSibling;
+        },
+        get previousSibling() {
+            return this.previousElementSibling;
+        },
         setAttribute: function(k, v) { setAttribute(rawItem, k, v); },
         getAttribute: function(k) { return getAttribute(rawItem, k); },
         removeAttribute: function(k) { removeAttribute(rawItem, k); },
         hasAttribute: function(k) { return hasAttribute(rawItem, k); },
+        toggleAttribute: function(k, force) { return toggleAttribute(rawItem, k, force); },
         addEventListener: function(t, fn, opts) { listen(rawItem, t, fn, opts); },
         removeEventListener: function(t, fn) { unlisten(rawItem, t, fn); },
         dispatchEvent: function(ev) { return dispatchEvent(rawItem, ev); },
-        focus: function() {
-            if (typeof rawItem.forceActiveFocus === "function") {
-                rawItem.forceActiveFocus();
+        focus: function() { focus(rawItem); },
+        blur: function() { blur(rawItem); },
+        click: function() {
+            _dispatchDynamic(rawItem, "click", null);
+        },
+        scrollTo: function(xOrOpts, y) {
+            if (xOrOpts && typeof xOrOpts === "object") {
+                if (typeof xOrOpts.left === "number") { this.scrollLeft = xOrOpts.left; }
+                if (typeof xOrOpts.top === "number") { this.scrollTop = xOrOpts.top; }
+            } else {
+                if (typeof xOrOpts === "number") { this.scrollLeft = xOrOpts; }
+                if (typeof y === "number") { this.scrollTop = y; }
             }
         },
-        blur: function() {
-            if (typeof rawItem.focus === "boolean") {
-                rawItem.focus = false;
+        scrollBy: function(xOrOpts, y) {
+            if (xOrOpts && typeof xOrOpts === "object") {
+                if (typeof xOrOpts.left === "number") { this.scrollLeft = this.scrollLeft + xOrOpts.left; }
+                if (typeof xOrOpts.top === "number") { this.scrollTop = this.scrollTop + xOrOpts.top; }
+            } else {
+                if (typeof xOrOpts === "number") { this.scrollLeft = this.scrollLeft + xOrOpts; }
+                if (typeof y === "number") { this.scrollTop = this.scrollTop + y; }
             }
+        },
+        scrollIntoView: function() {
+            var rect = getBoundingClientRect(rawItem);
+            scrollTo(rect.left, rect.top);
         },
         getBoundingClientRect: function() { return getBoundingClientRect(rawItem); },
-        appendChild: function(child) {
-            var rawChild = _unwrap(child);
-            if (rawChild && rawChild.parent !== undefined) {
-                rawChild.parent = _appendTarget(rawItem);
+        matches: function(sel) {
+            return _matchesSelectorComplex(rawItem, String(sel));
+        },
+        closest: function(sel) {
+            var s = String(sel);
+            var cur = rawItem;
+            while (cur) {
+                if (_matchesSelectorComplex(cur, s)) {
+                    return wrap(cur);
+                }
+                cur = _logicalParent(cur);
             }
+            return null;
+        },
+        contains: function(other) {
+            var cur = _unwrap(other);
+            while (cur) {
+                if (cur === rawItem) {
+                    return true;
+                }
+                cur = _logicalParent(cur) || cur.parent || null;
+            }
+            return false;
+        },
+        appendChild: function(child) {
+            var rawNodes = _expandInsertRawNodes([child]);
+            _insertRawNodesBefore(_appendTarget(rawItem), rawNodes, null);
             return child;
         },
         removeChild: function(child) {
@@ -2305,34 +3278,150 @@ function wrap(rawItem) {
             }
         },
         insertBefore: function(newChild, refChild) {
-            var rawNew = _unwrap(newChild);
+            var rawNodes = _expandInsertRawNodes([newChild]);
             var rawRef = _unwrap(refChild);
-            var container = _appendTarget(rawItem);
-            if (!rawNew || rawNew.parent === undefined) {
-                return newChild;
-            }
-            if (!rawRef || !container.children) {
-                rawNew.parent = container;
-                return newChild;
-            }
-            var kids = [];
-            for (var i = 0; i < container.children.length; ++i) {
-                kids.push(container.children[i]);
-            }
-            var idx = kids.indexOf(rawRef);
-            if (idx === -1) {
-                rawNew.parent = container;
-                return newChild;
-            }
-            var tail = kids.slice(idx);
-            for (var j = 0; j < tail.length; ++j) {
-                tail[j].parent = null;
-            }
-            rawNew.parent = container;
-            for (var k = 0; k < tail.length; ++k) {
-                tail[k].parent = container;
-            }
+            _insertRawNodesBefore(_appendTarget(rawItem), rawNodes, rawRef);
             return newChild;
+        },
+        replaceChild: function(newChild, oldChild) {
+            var rawOld = _unwrap(oldChild);
+            if (!rawOld) {
+                return oldChild;
+            }
+            var rawNodes = _expandInsertRawNodes([newChild]);
+            _insertRawNodesBefore(_appendTarget(rawItem), rawNodes, rawOld);
+            if (rawOld.parent !== undefined) {
+                rawOld.parent = null;
+            }
+            return oldChild;
+        },
+        append: function() {
+            var rawNodes = _expandInsertRawNodes(arguments);
+            _insertRawNodesBefore(_appendTarget(rawItem), rawNodes, null);
+        },
+        prepend: function() {
+            var rawNodes = _expandInsertRawNodes(arguments);
+            var kids = _rawElementChildren(rawItem);
+            var first = kids.length > 0 ? kids[0] : null;
+            _insertRawNodesBefore(_appendTarget(rawItem), rawNodes, first);
+        },
+        before: function() {
+            var p = _logicalParent(rawItem);
+            if (!p) {
+                return;
+            }
+            var rawNodes = _expandInsertRawNodes(arguments);
+            _insertRawNodesBefore(_appendTarget(p), rawNodes, rawItem);
+        },
+        after: function() {
+            var p = _logicalParent(rawItem);
+            if (!p) {
+                return;
+            }
+            var kids = _rawElementChildren(p);
+            var idx = kids.indexOf(rawItem);
+            var nextRef = (idx !== -1 && idx + 1 < kids.length) ? kids[idx + 1] : null;
+            var rawNodes = _expandInsertRawNodes(arguments);
+            _insertRawNodesBefore(_appendTarget(p), rawNodes, nextRef);
+        },
+        replaceWith: function() {
+            var p = _logicalParent(rawItem);
+            if (!p) {
+                return;
+            }
+            var rawNodes = _expandInsertRawNodes(arguments);
+            _insertRawNodesBefore(_appendTarget(p), rawNodes, rawItem);
+            if (rawItem.parent !== undefined) {
+                rawItem.parent = null;
+            }
+        },
+        replaceChildren: function() {
+            var existing = _rawElementChildren(rawItem);
+            for (var i = 0; i < existing.length; ++i) {
+                if (existing[i].parent !== undefined) {
+                    existing[i].parent = null;
+                }
+            }
+            var rawNodes = _expandInsertRawNodes(arguments);
+            _insertRawNodesBefore(_appendTarget(rawItem), rawNodes, null);
+        },
+        cloneNode: function(deep) {
+            var tag = _inferTagName(rawItem).toLowerCase() || "div";
+            var clone = document.createElement(tag);
+            if (m.inputType) {
+                clone.type = m.inputType;
+            }
+            if (this.id) {
+                clone.id = this.id;
+            }
+            if (m.classes.length > 0) {
+                clone.className = m.classes.join(" ");
+            }
+            var attrKeys = Object.keys(m.attrs);
+            for (var a = 0; a < attrKeys.length; ++a) {
+                clone.setAttribute(attrKeys[a], m.attrs[attrKeys[a]]);
+            }
+            var dsKeys = Object.keys(m.dataset);
+            for (var d = 0; d < dsKeys.length; ++d) {
+                clone.dataset[dsKeys[d]] = m.dataset[dsKeys[d]];
+            }
+            var stKeys = Object.keys(m.styles);
+            for (var s = 0; s < stKeys.length; ++s) {
+                setStyle(clone, stKeys[s], m.styles[stKeys[s]]);
+            }
+            if (Boolean(deep)) {
+                var kids = _rawElementChildren(rawItem);
+                if (kids.length > 0) {
+                    for (var c = 0; c < kids.length; ++c) {
+                        clone.appendChild(wrap(kids[c]).cloneNode(true));
+                    }
+                } else {
+                    var txt = getText(rawItem);
+                    if (txt) {
+                        clone.textContent = txt;
+                    }
+                }
+            }
+            return clone;
+        },
+        insertAdjacentElement: function(position, element) {
+            var pos = String(position).toLowerCase();
+            var w = wrap(_unwrap(element));
+            if (!w) {
+                return null;
+            }
+            if (pos === "beforebegin") {
+                this.before(w);
+            } else if (pos === "afterbegin") {
+                this.prepend(w);
+            } else if (pos === "beforeend") {
+                this.append(w);
+            } else if (pos === "afterend") {
+                this.after(w);
+            } else {
+                return null;
+            }
+            return w;
+        },
+        insertAdjacentText: function(position, text) {
+            var tn = document.createTextNode(String(text === undefined ? "" : text));
+            this.insertAdjacentElement(position, tn);
+        },
+        insertAdjacentHTML: function(position, html) {
+            var pos = String(position).toLowerCase();
+            var parsed = _parseHtmlFragmentNodes(html);
+            if (parsed.length === 0) {
+                return;
+            }
+            if (pos === "beforebegin") {
+                this.before.apply(this, parsed);
+            } else if (pos === "afterbegin") {
+                this.prepend.apply(this, parsed);
+            } else if (pos === "beforeend") {
+                this.append.apply(this, parsed);
+            } else if (pos === "afterend") {
+                this.after.apply(this, parsed);
+            }
         },
         querySelector: function(sel) {
             var matches = _queryTree(rawItem, String(sel), true);
@@ -2340,6 +3429,16 @@ function wrap(rawItem) {
         },
         querySelectorAll: function(sel) {
             return _queryTree(rawItem, String(sel), false).map(wrap);
+        },
+        getElementsByClassName: function(classNames) {
+            var parts = String(classNames).trim().split(/\s+/).filter(Boolean);
+            if (parts.length === 0) {
+                return [];
+            }
+            return _queryTree(rawItem, "." + parts.join("."), false).map(wrap);
+        },
+        getElementsByTagName: function(tagName) {
+            return _queryTree(rawItem, String(tagName), false).map(wrap);
         }
     };
 
@@ -2369,38 +3468,228 @@ function _walkItems(node, visitor) {
     return false;
 }
 
+function _isInternalHelperNode(node) {
+    if (!node || typeof node !== "object") {
+        return true;
+    }
+    var m = _meta(node);
+    if (m.hostBox || m.isFragment) {
+        return true;
+    }
+    if (_isPlainTextItem(node) && !node.objectName && !m.createdTag
+        && node.parent && node.parent.color !== undefined) {
+        return true;
+    }
+    if ((typeof node.spacing === "number" || typeof node.columnSpacing === "number")
+        && !node.objectName && !m.createdTag && typeof node.h2qTag !== "string") {
+        return true;
+    }
+    return false;
+}
+
 function _matchesSimpleSelector(node, sel) {
     var s = sel.trim();
-    if (!s) {
+    if (!s || _isInternalHelperNode(node)) {
         return false;
     }
     if (s === "*") {
         return true;
     }
-    if (s.charAt(0) === "#") {
-        return typeof node.objectName === "string" && node.objectName === s.slice(1);
+    var attrFilters = [];
+    var withoutAttrs = s.replace(/\[\s*([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*(?:([~|^$*]?=)\s*(?:"([^"]*)"|'([^']*)'|([^\]]*?)))?\s*\]/g, function(_all, attrName, op, dq, sq, uq) {
+        var val = dq !== undefined ? dq : (sq !== undefined ? sq : (uq !== undefined ? uq.trim() : ""));
+        attrFilters.push({ name: attrName, op: op || null, val: val });
+        return "";
+    });
+    for (var a = 0; a < attrFilters.length; ++a) {
+        var af = attrFilters[a];
+        var actual = getAttribute(node, af.name);
+        if (af.op === null) {
+            if (actual === null) {
+                return false;
+            }
+        } else if (actual === null) {
+            return false;
+        } else if (af.op === "=" && actual !== af.val) {
+            return false;
+        } else if (af.op === "^=" && actual.indexOf(af.val) !== 0) {
+            return false;
+        } else if (af.op === "$=" && (af.val === "" || actual.slice(-af.val.length) !== af.val)) {
+            return false;
+        } else if (af.op === "*=" && (af.val === "" || actual.indexOf(af.val) === -1)) {
+            return false;
+        } else if (af.op === "~=" && actual.trim().split(/\s+/).indexOf(af.val) === -1) {
+            return false;
+        }
     }
-    if (s.charAt(0) === ".") {
-        var reqClasses = s.slice(1).split(".");
+
+    var rest = withoutAttrs.trim();
+    if (!rest) {
+        return attrFilters.length > 0;
+    }
+
+    var idFilter = null;
+    rest = rest.replace(/#([A-Za-z0-9_-]+)/g, function(_all, idVal) {
+        idFilter = idVal;
+        return "";
+    });
+    if (idFilter !== null) {
+        var nodeId = (typeof node.objectName === "string" && node.objectName !== "")
+            ? node.objectName
+            : (_meta(node).attrs.id || "");
+        if (nodeId !== idFilter) {
+            return false;
+        }
+    }
+
+    var classFilters = [];
+    rest = rest.replace(/\.([A-Za-z0-9_-]+)/g, function(_all, clsVal) {
+        classFilters.push(clsVal);
+        return "";
+    });
+    if (classFilters.length > 0) {
         var cl = classList(node);
-        for (var i = 0; i < reqClasses.length; ++i) {
-            if (reqClasses[i] && !cl.contains(reqClasses[i])) {
+        for (var i = 0; i < classFilters.length; ++i) {
+            if (!cl.contains(classFilters[i])) {
                 return false;
             }
         }
-        return true;
     }
-    var dotIdx = s.indexOf(".");
-    var tagPart = dotIdx === -1 ? s : s.slice(0, dotIdx);
-    var classPart = dotIdx === -1 ? "" : s.slice(dotIdx);
-    var nodeTag = typeof node.h2qTag === "string" ? node.h2qTag.toLowerCase() : "";
-    if (tagPart && nodeTag !== tagPart.toLowerCase()) {
-        return false;
-    }
-    if (classPart && !_matchesSimpleSelector(node, classPart)) {
-        return false;
+
+    var tagPart = rest.trim();
+    if (tagPart && tagPart !== "*") {
+        var nodeTag = (typeof node.h2qTag === "string" && node.h2qTag !== "")
+            ? node.h2qTag.toLowerCase()
+            : _inferTagName(node).toLowerCase();
+        if (nodeTag !== tagPart.toLowerCase()) {
+            return false;
+        }
     }
     return true;
+}
+
+function _splitSelectorList(selector) {
+    var list = [];
+    var cur = "";
+    var depth = 0;
+    var quote = null;
+    for (var i = 0; i < selector.length; ++i) {
+        var ch = selector.charAt(i);
+        if (quote) {
+            if (ch === quote) {
+                quote = null;
+            }
+            cur += ch;
+        } else if (ch === "\"" || ch === "'") {
+            quote = ch;
+            cur += ch;
+        } else if (ch === "[") {
+            depth += 1;
+            cur += ch;
+        } else if (ch === "]" && depth > 0) {
+            depth -= 1;
+            cur += ch;
+        } else if (ch === "," && depth === 0) {
+            if (cur.trim()) {
+                list.push(cur.trim());
+            }
+            cur = "";
+        } else {
+            cur += ch;
+        }
+    }
+    if (cur.trim()) {
+        list.push(cur.trim());
+    }
+    return list;
+}
+
+function _tokenizeCombinators(sel) {
+    var tokens = [];
+    var cur = "";
+    var depth = 0;
+    var quote = null;
+    var pendingComb = " ";
+    for (var i = 0; i < sel.length; ++i) {
+        var ch = sel.charAt(i);
+        if (quote) {
+            if (ch === quote) {
+                quote = null;
+            }
+            cur += ch;
+            continue;
+        }
+        if (ch === "\"" || ch === "'") {
+            quote = ch;
+            cur += ch;
+            continue;
+        }
+        if (ch === "[") {
+            depth += 1;
+            cur += ch;
+            continue;
+        }
+        if (ch === "]" && depth > 0) {
+            depth -= 1;
+            cur += ch;
+            continue;
+        }
+        if (depth === 0 && (ch === ">" || /\s/.test(ch))) {
+            if (cur.trim()) {
+                tokens.push({ comb: pendingComb, compound: cur.trim() });
+                cur = "";
+                pendingComb = ch === ">" ? ">" : " ";
+            } else if (ch === ">") {
+                pendingComb = ">";
+            }
+            continue;
+        }
+        cur += ch;
+    }
+    if (cur.trim()) {
+        tokens.push({ comb: pendingComb, compound: cur.trim() });
+    }
+    return tokens;
+}
+
+function _matchesChain(node, tokens, idx) {
+    if (!_matchesSimpleSelector(node, tokens[idx].compound)) {
+        return false;
+    }
+    if (idx === 0) {
+        return true;
+    }
+    var comb = tokens[idx].comb;
+    var p = _logicalParent(node);
+    if (comb === ">") {
+        return p ? _matchesChain(p, tokens, idx - 1) : false;
+    }
+    while (p) {
+        if (_matchesChain(p, tokens, idx - 1)) {
+            return true;
+        }
+        p = _logicalParent(p);
+    }
+    return false;
+}
+
+function _matchesSelectorComplex(node, selector) {
+    if (!node || !selector) {
+        return false;
+    }
+    var parts = _splitSelectorList(String(selector));
+    for (var i = 0; i < parts.length; ++i) {
+        var part = parts[i];
+        if (/[+~:]/.test(part.replace(/\[[^\]]*\]/g, ""))) {
+            console.warn("H2Q: complex runtime selector is unsupported:", part);
+            continue;
+        }
+        var tokens = _tokenizeCombinators(part);
+        if (tokens.length > 0 && _matchesChain(node, tokens, tokens.length - 1)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function _queryTree(startNode, selector, firstOnly) {
@@ -2410,12 +3699,11 @@ function _queryTree(startNode, selector, firstOnly) {
         return results;
     }
     var s = String(selector).trim();
-    if (/[>+~\[\]:]/.test(s) || /\s/.test(s)) {
-        console.warn("H2Q: complex runtime selector is unsupported:", s);
+    if (!s) {
         return results;
     }
     _walkItems(rootNode, function(node) {
-        if (node !== rootNode && _matchesSimpleSelector(node, s)) {
+        if (node !== rootNode && _matchesSelectorComplex(node, s)) {
             results.push(node);
             if (firstOnly) {
                 return true;
@@ -2426,18 +3714,72 @@ function _queryTree(startNode, selector, firstOnly) {
     return results;
 }
 
+function scrollTo(xOrOpts, y) {
+    if (xOrOpts && typeof xOrOpts === "object") {
+        if (typeof xOrOpts.left === "number") { _windowScrollX = xOrOpts.left; }
+        if (typeof xOrOpts.top === "number") { _windowScrollY = xOrOpts.top; }
+    } else {
+        if (typeof xOrOpts === "number") { _windowScrollX = xOrOpts; }
+        if (typeof y === "number") { _windowScrollY = y; }
+    }
+    if (_root && typeof _root.contentX === "number") {
+        _root.contentX = _windowScrollX;
+    }
+    if (_root && typeof _root.contentY === "number") {
+        _root.contentY = _windowScrollY;
+    }
+}
+
+function scrollBy(xOrOpts, y) {
+    if (xOrOpts && typeof xOrOpts === "object") {
+        var dx = typeof xOrOpts.left === "number" ? xOrOpts.left : 0;
+        var dy = typeof xOrOpts.top === "number" ? xOrOpts.top : 0;
+        scrollTo(_windowScrollX + dx, _windowScrollY + dy);
+    } else {
+        var nx = typeof xOrOpts === "number" ? xOrOpts : 0;
+        var ny = typeof y === "number" ? y : 0;
+        scrollTo(_windowScrollX + nx, _windowScrollY + ny);
+    }
+}
+
+var scroll = scrollTo;
+
 var document = {
     get title() { return getTitle(); },
     set title(v) { setTitle(v); },
     get body() { return _root ? wrap(_root.contentItem || _root) : null; },
     get documentElement() { return _root ? wrap(_root) : null; },
+    get head() { return _root ? wrap(_root) : null; },
     get hidden() { return false; },
+    get visibilityState() { return "visible"; },
+    get activeElement() {
+        if (_activeElement && (_activeElement.activeFocus || _activeElement.focus)) {
+            return wrap(_activeElement);
+        }
+        var focused = null;
+        if (_root) {
+            _walkItems(_root, function(node) {
+                if (node !== _root && (node.activeFocus || node.focus)) {
+                    focused = node;
+                }
+                return false;
+            });
+        }
+        if (focused) {
+            return wrap(focused);
+        }
+        if (_activeElement) {
+            return wrap(_activeElement);
+        }
+        return this.body;
+    },
     getElementById: function(id) {
         var targetId = String(id);
         var found = null;
         if (_root) {
             _walkItems(_root, function(node) {
-                if (typeof node.objectName === "string" && node.objectName === targetId) {
+                if ((typeof node.objectName === "string" && node.objectName === targetId)
+                    || _meta(node).attrs.id === targetId) {
                     found = node;
                     return true;
                 }
@@ -2474,9 +3816,9 @@ var document = {
             qmlSrc = "import QtQuick; import QtQuick.Layouts; RowLayout { Layout.fillWidth: true; spacing: 8 }";
         } else if (tag === "ul" || tag === "ol") {
             qmlSrc = "import QtQuick; import QtQuick.Layouts; ColumnLayout { Layout.fillWidth: true; spacing: 0 }";
-        } else if (tag === "span" || tag === "p" || tag === "label" || tag === "h1" || tag === "h2" || tag === "h3") {
+        } else if (tag === "span" || tag === "p" || tag === "label" || tag === "h1" || tag === "h2" || tag === "h3" || tag === "a") {
             qmlSrc = "import QtQuick; Text { color: \"black\"; font.pixelSize: 16 }";
-        } else if (tag === "div" || tag === "section" || tag === "article") {
+        } else if (tag === "div" || tag === "section" || tag === "article" || tag === "header" || tag === "footer" || tag === "main" || tag === "nav") {
             qmlSrc = "import QtQuick; Rectangle { color: \"transparent\" }";
         } else if (tag === "img") {
             qmlSrc = "import QtQuick; Image {}";
@@ -2494,6 +3836,7 @@ var document = {
         var created = Qt.createQmlObject("import QtQuick; Text {}", _qobjectParent(), "h2q_text");
         if (created) {
             created.text = String(text);
+            _meta(created).createdTag = "#text";
             if (created.parent !== undefined) {
                 created.parent = null;
             }
@@ -2502,8 +3845,11 @@ var document = {
     },
     createDocumentFragment: function() {
         var created = Qt.createQmlObject("import QtQuick; Item {}", _qobjectParent(), "h2q_frag");
-        if (created && created.parent !== undefined) {
-            created.parent = null;
+        if (created) {
+            _meta(created).isFragment = true;
+            if (created.parent !== undefined) {
+                created.parent = null;
+            }
         }
         return wrap(created);
     },
@@ -2516,6 +3862,9 @@ var document = {
         if (_root) {
             unlisten(_root, type, fn);
         }
+    },
+    dispatchEvent: function(ev) {
+        return _root ? dispatchEvent(_root, ev) : true;
     },
     write: function() {
         console.warn("H2Q: document.write() is unsupported");
@@ -2530,11 +3879,18 @@ var window = {
         return _root && typeof _root.height === "number" ? _root.height : 0;
     },
     get scrollX() {
-        return _root && typeof _root.contentX === "number" ? _root.contentX : 0;
+        return _root && typeof _root.contentX === "number" ? _root.contentX : _windowScrollX;
     },
     get scrollY() {
-        return _root && typeof _root.contentY === "number" ? _root.contentY : 0;
+        return _root && typeof _root.contentY === "number" ? _root.contentY : _windowScrollY;
     },
+    get pageXOffset() {
+        return this.scrollX;
+    },
+    get pageYOffset() {
+        return this.scrollY;
+    },
+    devicePixelRatio: 1,
     document: document,
     localStorage: localStorage,
     sessionStorage: sessionStorage,
@@ -2557,8 +3913,22 @@ var window = {
     atob: atob,
     btoa: btoa,
     matchMedia: matchMedia,
+    getComputedStyle: getComputedStyle,
+    scrollTo: scrollTo,
+    scrollBy: scrollBy,
+    scroll: scroll,
     Event: Event,
     CustomEvent: CustomEvent,
+    EventTarget: EventTarget,
+    KeyboardEvent: KeyboardEvent,
+    MouseEvent: MouseEvent,
+    PointerEvent: PointerEvent,
+    FocusEvent: FocusEvent,
+    InputEvent: InputEvent,
+    WheelEvent: WheelEvent,
+    MutationObserver: MutationObserver,
+    ResizeObserver: ResizeObserver,
+    IntersectionObserver: IntersectionObserver,
     close: function() {
         if (_root && typeof _root.close === "function") {
             _root.close();
@@ -2578,5 +3948,8 @@ var window = {
         if (_root) {
             unlisten(_root, type, fn);
         }
+    },
+    dispatchEvent: function(ev) {
+        return _root ? dispatchEvent(_root, ev) : true;
     }
 };
