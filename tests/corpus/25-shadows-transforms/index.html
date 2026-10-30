@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Shadows and transforms</title>
+<style>
+  body { margin: 24px; font: 16px/24px "Liberation Sans", sans-serif; color: #1b2231; background: #f1f5f9; }
+  .row { display: flex; gap: 32px; margin-bottom: 40px; }
+  .card { width: 160px; padding: 16px; background: #ffffff; border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15); }
+  .ring { box-shadow: 0 0 0 3px #a5b4fc, 0 12px 24px -6px rgba(15, 23, 42, 0.3); }
+  .inset { box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2); }
+  .stage { position: relative; height: 160px; background: #e2e8f0; border-radius: 8px; margin-bottom: 40px; }
+  .tilt { position: absolute; left: 40px; top: 40px; width: 120px; height: 60px; background: #f97316;
+          transform: rotate(-8deg); }
+  .grow { position: absolute; left: 240px; top: 40px; width: 100px; height: 60px; background: #22c55e;
+          transform: scale(1.25); transform-origin: left top; }
+  .centre { position: absolute; left: 50%; top: 20px; width: 140px; height: 40px; background: #3b82f6;
+            color: #ffffff; text-align: center; line-height: 40px; transform: translateX(-50%); }
+  .diamond { position: absolute; right: 80px; top: 50%; width: 48px; height: 48px; background: #a855f7;
+             transform: translate(-50%, -50%) rotate(45deg); }
+  .nudge { width: 200px; padding: 8px; background: #fde68a; transform: translate(12px, 6px); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="card">Soft shadow</div>
+    <div class="card ring">Ring and lift</div>
+    <div class="card inset">Inset shadow</div>
+  </div>
+  <div class="stage">
+    <div class="tilt"></div>
+    <div class="grow"></div>
+    <div class="centre">Centred</div>
+    <div class="diamond"></div>
+  </div>
+  <div class="nudge">Moved by a translate</div>
+</body>
+</html>
