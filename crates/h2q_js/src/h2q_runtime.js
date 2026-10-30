@@ -295,17 +295,136 @@ var _windowScrollX = 0;
 var _windowScrollY = 0;
 var _activeElement = null;
 var _clipboardText = "";
+var _explicitBaseUrl = "";
 
 // Per-item sidecar storage keyed by raw QML QObject (or synthetic node).
 // QML QObjects reject ad-hoc JS property assignments, whereas ES6 Map keys
 // preserve QObject identity across direct id references and tree walks.
 var _itemMeta = new Map();
 
-function init(rootItem) {
+function init(rootItem, baseUrl) {
     if (rootItem) {
         _root = rootItem;
     }
+    if (typeof baseUrl === "string" && baseUrl !== "") {
+        _explicitBaseUrl = baseUrl;
+        if (!_locState.href) {
+            _updateLocationFromHref(baseUrl, false);
+        }
+    } else if (_root && typeof _root.baseUrl === "string" && _root.baseUrl !== "") {
+        _explicitBaseUrl = _root.baseUrl;
+        if (!_locState.href) {
+            _updateLocationFromHref(_root.baseUrl, false);
+        }
+    }
     _startTime = Date.now();
+}
+
+function _isQObject(obj) {
+    if (!obj || typeof obj !== "object") {
+        return false;
+    }
+    if (obj.__h2qWrapper || obj.__h2qRaw) {
+        return true;
+    }
+    if (_itemMeta.has(obj)) {
+        return true;
+    }
+    if (typeof obj.objectName === "string" && typeof obj.destroy === "function") {
+        return true;
+    }
+    var s = "";
+    try {
+        s = Object.prototype.toString.call(obj);
+    } catch (_e) {
+        return false;
+    }
+    if (s !== "[object Object]" && s !== "[object Array]" && s !== "[object Function]"
+        && s !== "[object Error]" && s !== "[object RegExp]" && s !== "[object Date]"
+        && s !== "[object Map]" && s !== "[object Set]" && s !== "[object Promise]") {
+        return true;
+    }
+    return false;
+}
+
+function _isDomTarget(obj) {
+    if (!obj || typeof obj !== "object") {
+        return false;
+    }
+    if (obj === window || obj === document || obj === _root || obj.__h2qWrapper || obj.__h2qRaw || obj.__h2qEventTarget) {
+        return true;
+    }
+    return _isQObject(obj);
+}
+
+function _asNodeList(arr) {
+    Object.defineProperty(arr, "item", {
+        configurable: true,
+        writable: true,
+        enumerable: false,
+        value: function(idx) {
+            var n = Number(idx);
+            if (isNaN(n) || n < 0 || n >= arr.length) {
+                return null;
+            }
+            return arr[n] || null;
+        }
+    });
+    return arr;
+}
+
+function _asHTMLCollection(arr) {
+    var col = arr.slice();
+    Object.defineProperty(col, "forEach", {
+        configurable: true,
+        writable: true,
+        enumerable: false,
+        value: undefined
+    });
+    Object.defineProperty(col, "item", {
+        configurable: true,
+        writable: true,
+        enumerable: false,
+        value: function(idx) {
+            var n = Number(idx);
+            if (isNaN(n) || n < 0 || n >= col.length) {
+                return null;
+            }
+            return col[n] || null;
+        }
+    });
+    Object.defineProperty(col, "namedItem", {
+        configurable: true,
+        writable: true,
+        enumerable: false,
+        value: function(name) {
+            var key = String(name);
+            if (!key) {
+                return null;
+            }
+            for (var i = 0; i < col.length; ++i) {
+                var el = col[i];
+                if (el && (el.id === key || el.getAttribute("name") === key)) {
+                    return el;
+                }
+            }
+            return null;
+        }
+    });
+    for (var i = 0; i < col.length; ++i) {
+        var el = col[i];
+        if (el) {
+            var idKey = el.id;
+            if (idKey && !(idKey in col)) {
+                col[idKey] = el;
+            }
+            var nameKey = el.getAttribute("name");
+            if (nameKey && !(nameKey in col)) {
+                col[nameKey] = el;
+            }
+        }
+    }
+    return col;
 }
 
 function _qobjectParent() {
@@ -851,6 +970,9 @@ function _parseHierarchicalUrl(urlStr) {
 function _getDocumentBaseUrl() {
     if (location && typeof location.href === "string" && location.href !== "") {
         return location.href;
+    }
+    if (_explicitBaseUrl !== "") {
+        return _explicitBaseUrl;
     }
     if (_root && typeof _root.baseUrl === "string" && _root.baseUrl !== "") {
         return _root.baseUrl;
@@ -1400,7 +1522,7 @@ function _childContainer(raw) {
     if (m.flow) {
         return m.flow;
     }
-    if (raw.color !== undefined && raw.children) {
+    if ((raw.color !== undefined || raw.clip === true) && raw.children) {
         for (var i = 0; i < raw.children.length; ++i) {
             var ch = raw.children[i];
             if (ch && (typeof ch.spacing === "number" || typeof ch.columnSpacing === "number")
@@ -1444,7 +1566,7 @@ function _logicalParent(raw) {
     }
     if ((typeof p.spacing === "number" || typeof p.columnSpacing === "number")
         && !p.objectName && !pm.createdTag
-        && p.parent && p.parent.color !== undefined
+        && p.parent && (p.parent.color !== undefined || p.parent.clip === true)
         && typeof p.parent.spacing !== "number" && typeof p.parent.columnSpacing !== "number") {
         return p.parent;
     }
@@ -1794,6 +1916,9 @@ function _syncNumericControlAttr(raw, name, val) {
 }
 
 function setAttribute(item, attrName, attrValue) {
+    if (item && !_isDomTarget(item) && typeof item.setAttribute === "function") {
+        return item.setAttribute(attrName, attrValue);
+    }
     var raw = _unwrap(item);
     if (!raw) {
         return;
@@ -1829,12 +1954,16 @@ function setAttribute(item, attrName, attrValue) {
         _syncNumericControlAttr(raw, name, val);
     } else if (name === "src" && raw.source !== undefined) {
         raw.source = val;
+        m.lastSyncedSource = String(raw.source);
     } else if (name === "placeholder" && typeof raw.placeholderText === "string") {
         raw.placeholderText = val;
     }
 }
 
 function getAttribute(item, attrName) {
+    if (item && !_isDomTarget(item) && typeof item.getAttribute === "function") {
+        return item.getAttribute(attrName);
+    }
     var raw = _unwrap(item);
     if (!raw) {
         return null;
@@ -1847,6 +1976,10 @@ function getAttribute(item, attrName) {
             return String(m.dataset[camel]);
         }
     }
+    if (name === "src" && raw.source !== undefined && m.lastSyncedSource !== undefined && String(raw.source) !== m.lastSyncedSource) {
+        delete m.attrs.src;
+        m.lastSyncedSource = undefined;
+    }
     if (Object.prototype.hasOwnProperty.call(m.attrs, name)) {
         return m.attrs[name];
     }
@@ -1855,6 +1988,16 @@ function getAttribute(item, attrName) {
     }
     if (name === "class" && m.classes.length > 0) {
         return m.classes.join(" ");
+    }
+    if (name === "src" && raw.source !== undefined && String(raw.source) !== "") {
+        var rawSrcAttr = String(raw.source);
+        if (typeof Qt !== "undefined" && typeof Qt.resolvedUrl === "function") {
+            var qmlBaseDir = String(Qt.resolvedUrl("."));
+            if (qmlBaseDir && rawSrcAttr.indexOf(qmlBaseDir) === 0) {
+                rawSrcAttr = rawSrcAttr.slice(qmlBaseDir.length);
+            }
+        }
+        return rawSrcAttr;
     }
     if (name === "href") {
         var txt = typeof raw.text === "string" ? raw.text : "";
@@ -1875,6 +2018,9 @@ function getAttribute(item, attrName) {
 }
 
 function removeAttribute(item, attrName) {
+    if (item && !_isDomTarget(item) && typeof item.removeAttribute === "function") {
+        return item.removeAttribute(attrName);
+    }
     var raw = _unwrap(item);
     if (!raw) {
         return;
@@ -1896,10 +2042,16 @@ function removeAttribute(item, attrName) {
 }
 
 function hasAttribute(item, attrName) {
+    if (item && !_isDomTarget(item) && typeof item.hasAttribute === "function") {
+        return item.hasAttribute(attrName);
+    }
     return getAttribute(item, attrName) !== null;
 }
 
 function toggleAttribute(item, attrName, force) {
+    if (item && !_isDomTarget(item) && typeof item.toggleAttribute === "function") {
+        return item.toggleAttribute(attrName, force);
+    }
     var name = String(attrName);
     var has = hasAttribute(item, name);
     var shouldHave = force !== undefined ? Boolean(force) : !has;
@@ -1916,39 +2068,52 @@ function toggleAttribute(item, attrName, force) {
 }
 
 function focus(item) {
+    if (item && !_isDomTarget(item) && typeof item.focus === "function") {
+        return item.focus();
+    }
     var raw = _unwrap(item);
     if (!raw) {
         return;
     }
     var prev = _activeElement;
     _activeElement = raw;
-    var hadFocus = Boolean(raw.activeFocus);
+    var hadFocus = Boolean(raw.activeFocus || raw.focus);
     if (typeof raw.forceActiveFocus === "function") {
         raw.forceActiveFocus();
+    } else if (typeof raw.focus === "boolean") {
+        raw.focus = true;
     }
-    if (!hadFocus && !raw.activeFocus) {
+    var nowFocus = Boolean(raw.activeFocus || raw.focus);
+    if (!hadFocus && !nowFocus) {
         if (prev && prev !== raw) {
             _dispatchDynamic(prev, "blur", null);
+            _dispatchDynamic(prev, "focusout", null);
         }
         _dispatchDynamic(raw, "focus", null);
+        _dispatchDynamic(raw, "focusin", null);
     }
 }
 
 function blur(item) {
+    if (item && !_isDomTarget(item) && typeof item.blur === "function") {
+        return item.blur();
+    }
     var raw = _unwrap(item);
     if (!raw) {
         return;
     }
-    var wasActive = _activeElement === raw || Boolean(raw.activeFocus);
+    var wasActive = _activeElement === raw || Boolean(raw.activeFocus || raw.focus);
     if (_activeElement === raw) {
         _activeElement = null;
     }
-    var hadFocus = Boolean(raw.activeFocus);
+    var hadFocus = Boolean(raw.activeFocus || raw.focus);
     if (typeof raw.focus === "boolean") {
         raw.focus = false;
     }
-    if (wasActive && !hadFocus) {
+    var nowFocus = Boolean(raw.activeFocus || raw.focus);
+    if (wasActive && (!hadFocus || nowFocus)) {
         _dispatchDynamic(raw, "blur", null);
+        _dispatchDynamic(raw, "focusout", null);
     }
 }
 
@@ -2223,6 +2388,7 @@ function WheelEvent(type, opts) {
 
 function EventTarget() {
     var selfTarget = {
+        __h2qEventTarget: true,
         addEventListener: function(type, fn, opts) {
             _addListener(selfTarget, type, fn, opts);
         },
@@ -2477,8 +2643,13 @@ function _connectSignalOnce(raw, type) {
         wheelH.wheel.connect(function(wheelEv) { _dispatchDynamic(raw, "wheel", wheelEv); });
         m.connected[type] = true;
         return true;
-    } else if (type === "scroll" && typeof raw.contentYChanged === "function") {
-        raw.contentYChanged.connect(function() { _dispatchDynamic(raw, "scroll", null); });
+    } else if (type === "scroll") {
+        if (typeof raw.contentYChanged === "function") {
+            raw.contentYChanged.connect(function() { _dispatchDynamic(raw, "scroll", null); });
+        }
+        if (typeof raw.contentXChanged === "function") {
+            raw.contentXChanged.connect(function() { _dispatchDynamic(raw, "scroll", null); });
+        }
         m.connected[type] = true;
         return true;
     } else if (type === "resize" && typeof raw.widthChanged === "function") {
@@ -2513,6 +2684,9 @@ function _connectSignalOnce(raw, type) {
 }
 
 function listen(item, eventType, handler, options) {
+    if (item && !_isDomTarget(item) && typeof item.addEventListener === "function") {
+        return item.addEventListener(eventType, handler, options);
+    }
     if (_addListener(item, eventType, handler, options)
         && !_connectSignalOnce(_unwrap(item), String(eventType))) {
         console.warn("H2Q: dynamic listener for '" + eventType + "' cannot bind to a QML signal");
@@ -2556,6 +2730,9 @@ function connected(item, eventType) {
 }
 
 function unlisten(item, eventType, handler) {
+    if (item && !_isDomTarget(item) && typeof item.removeEventListener === "function") {
+        return item.removeEventListener(eventType, handler);
+    }
     if (!item || typeof handler !== "function") {
         return;
     }
@@ -2595,6 +2772,9 @@ function setOn(item, eventType, handler) {
 }
 
 function dispatchEvent(item, domEv) {
+    if (item && !_isDomTarget(item) && typeof item.dispatchEvent === "function") {
+        return item.dispatchEvent(domEv);
+    }
     if (!item || !domEv || !domEv.type) {
         return true;
     }
@@ -2840,7 +3020,125 @@ function wrap(rawItem) {
     if (rawItem.__h2qWrapper) {
         return rawItem;
     }
+    if ((rawItem === window || rawItem === document) && _root) {
+        rawItem = _root;
+    }
+    if (!_isQObject(rawItem)) {
+        return rawItem;
+    }
     var m = _meta(rawItem);
+
+    function _computeScrollDimension(axis) {
+        var isY = axis === "y";
+        var contentProp = isY ? "contentHeight" : "contentWidth";
+        var sizeProp = isY ? "height" : "width";
+        var implicitProp = isY ? "implicitHeight" : "implicitWidth";
+        if (typeof rawItem[contentProp] === "number" && rawItem[contentProp] > 0) {
+            return rawItem[contentProp];
+        }
+        var maxDim = Math.max(
+            typeof rawItem[sizeProp] === "number" ? rawItem[sizeProp] : 0,
+            typeof rawItem[implicitProp] === "number" ? rawItem[implicitProp] : 0
+        );
+        var container = _childContainer(rawItem);
+        if (container && container !== rawItem) {
+            if (typeof container[implicitProp] === "number" && container[implicitProp] > maxDim) {
+                maxDim = container[implicitProp];
+            }
+            if (typeof container[sizeProp] === "number" && container[sizeProp] > maxDim) {
+                maxDim = container[sizeProp];
+            }
+        }
+        var kids = _rawElementChildren(rawItem);
+        for (var i = 0; i < kids.length; ++i) {
+            var ch = kids[i];
+            var cm = _meta(ch);
+            var basePos = isY
+                ? (cm.baseY !== undefined ? cm.baseY : (typeof ch.y === "number" ? ch.y : 0))
+                : (cm.baseX !== undefined ? cm.baseX : (typeof ch.x === "number" ? ch.x : 0));
+            var chDim = typeof ch[sizeProp] === "number" && ch[sizeProp] > 0
+                ? ch[sizeProp]
+                : (typeof ch[implicitProp] === "number" ? ch[implicitProp] : 0);
+            if (basePos + chDim > maxDim) {
+                maxDim = basePos + chDim;
+            }
+        }
+        return maxDim;
+    }
+
+    function _applyScrollOffset(axis, rawVal) {
+        var isY = axis === "y";
+        var n = Number(rawVal) || 0;
+        var scrollDim = _computeScrollDimension(axis);
+        var clientDim = isY
+            ? (typeof rawItem.height === "number" ? rawItem.height : 0)
+            : (typeof rawItem.width === "number" ? rawItem.width : 0);
+        if (clientDim > 0 && scrollDim > clientDim) {
+            var maxScroll = Math.max(0, scrollDim - clientDim);
+            n = Math.max(0, Math.min(n, maxScroll));
+        } else {
+            n = Math.max(0, n);
+        }
+        var propName = isY ? "scrollTop" : "scrollLeft";
+        var prev = m[propName] || 0;
+        m[propName] = n;
+        var contentPosProp = isY ? "contentY" : "contentX";
+        if (typeof rawItem[contentPosProp] === "number") {
+            rawItem[contentPosProp] = n;
+        } else {
+            var container = _childContainer(rawItem);
+            if (container && container !== rawItem && container.anchors) {
+                var cm = _meta(container);
+                if (isY) {
+                    if (cm.baseTopMargin === undefined) {
+                        cm.baseTopMargin = typeof container.anchors.topMargin === "number"
+                            ? container.anchors.topMargin
+                            : 0;
+                    }
+                    container.anchors.topMargin = cm.baseTopMargin - n;
+                } else {
+                    if (cm.baseLeftMargin === undefined) {
+                        cm.baseLeftMargin = typeof container.anchors.leftMargin === "number"
+                            ? container.anchors.leftMargin
+                            : 0;
+                    }
+                    if (cm.baseRightMargin === undefined) {
+                        cm.baseRightMargin = typeof container.anchors.rightMargin === "number"
+                            ? container.anchors.rightMargin
+                            : 0;
+                    }
+                    container.anchors.leftMargin = cm.baseLeftMargin - n;
+                    if (container.anchors.right) {
+                        container.anchors.rightMargin = cm.baseRightMargin + n;
+                    }
+                }
+            } else {
+                var kids = _rawElementChildren(rawItem);
+                for (var i = 0; i < kids.length; ++i) {
+                    var ch = kids[i];
+                    var km = _meta(ch);
+                    if (isY) {
+                        if (km.baseY === undefined) {
+                            km.baseY = typeof ch.y === "number" ? ch.y : 0;
+                        }
+                        if (typeof ch.y === "number") {
+                            ch.y = km.baseY - n;
+                        }
+                    } else {
+                        if (km.baseX === undefined) {
+                            km.baseX = typeof ch.x === "number" ? ch.x : 0;
+                        }
+                        if (typeof ch.x === "number") {
+                            ch.x = km.baseX - n;
+                        }
+                    }
+                }
+            }
+        }
+        if (n !== prev) {
+            _dispatchDynamic(rawItem, "scroll", null);
+        }
+    }
     if (m.wrapper) {
         return m.wrapper;
     }
@@ -2997,11 +3295,15 @@ function wrap(rawItem) {
                 rawItem.visible = !v;
             }
         },
-        get src() { return rawItem.source !== undefined ? String(rawItem.source) : ""; },
-        set src(v) {
-            if (rawItem.source !== undefined) {
-                rawItem.source = v;
+        get src() {
+            var rawSrc = getAttribute(rawItem, "src");
+            if (!rawSrc) {
+                return "";
             }
+            return _resolveUrl(rawSrc);
+        },
+        set src(v) {
+            setAttribute(rawItem, "src", String(v));
         },
         get placeholder() { return typeof rawItem.placeholderText === "string" ? rawItem.placeholderText : ""; },
         set placeholder(v) {
@@ -3112,11 +3414,7 @@ function wrap(rawItem) {
             return m.scrollTop || 0;
         },
         set scrollTop(v) {
-            var n = Number(v) || 0;
-            m.scrollTop = n;
-            if (typeof rawItem.contentY === "number") {
-                rawItem.contentY = n;
-            }
+            _applyScrollOffset("y", v);
         },
         get scrollLeft() {
             if (typeof rawItem.contentX === "number") {
@@ -3125,23 +3423,13 @@ function wrap(rawItem) {
             return m.scrollLeft || 0;
         },
         set scrollLeft(v) {
-            var n = Number(v) || 0;
-            m.scrollLeft = n;
-            if (typeof rawItem.contentX === "number") {
-                rawItem.contentX = n;
-            }
+            _applyScrollOffset("x", v);
         },
         get scrollWidth() {
-            if (typeof rawItem.contentWidth === "number" && rawItem.contentWidth > 0) {
-                return rawItem.contentWidth;
-            }
-            return typeof rawItem.width === "number" ? rawItem.width : 0;
+            return _computeScrollDimension("x");
         },
         get scrollHeight() {
-            if (typeof rawItem.contentHeight === "number" && rawItem.contentHeight > 0) {
-                return rawItem.contentHeight;
-            }
-            return typeof rawItem.height === "number" ? rawItem.height : 0;
+            return _computeScrollDimension("y");
         },
         get parentNode() {
             var p = _logicalParent(rawItem);
@@ -3152,10 +3440,10 @@ function wrap(rawItem) {
             return p ? wrap(p) : null;
         },
         get children() {
-            return _rawElementChildren(rawItem).map(wrap);
+            return _asHTMLCollection(_rawElementChildren(rawItem).map(wrap));
         },
         get childNodes() {
-            return _rawElementChildren(rawItem).map(wrap);
+            return _asNodeList(_rawElementChildren(rawItem).map(wrap));
         },
         get childElementCount() {
             return _rawElementChildren(rawItem).length;
@@ -3428,17 +3716,17 @@ function wrap(rawItem) {
             return matches.length > 0 ? wrap(matches[0]) : null;
         },
         querySelectorAll: function(sel) {
-            return _queryTree(rawItem, String(sel), false).map(wrap);
+            return _asNodeList(_queryTree(rawItem, String(sel), false).map(wrap));
         },
         getElementsByClassName: function(classNames) {
             var parts = String(classNames).trim().split(/\s+/).filter(Boolean);
             if (parts.length === 0) {
-                return [];
+                return _asHTMLCollection([]);
             }
-            return _queryTree(rawItem, "." + parts.join("."), false).map(wrap);
+            return _asHTMLCollection(_queryTree(rawItem, "." + parts.join("."), false).map(wrap));
         },
         getElementsByTagName: function(tagName) {
-            return _queryTree(rawItem, String(tagName), false).map(wrap);
+            return _asHTMLCollection(_queryTree(rawItem, String(tagName), false).map(wrap));
         }
     };
 
@@ -3477,7 +3765,7 @@ function _isInternalHelperNode(node) {
         return true;
     }
     if (_isPlainTextItem(node) && !node.objectName && !m.createdTag
-        && node.parent && node.parent.color !== undefined) {
+        && node.parent && (node.parent.color !== undefined || node.parent.clip === true)) {
         return true;
     }
     if ((typeof node.spacing === "number" || typeof node.columnSpacing === "number")
@@ -3793,17 +4081,17 @@ var document = {
         return matches.length > 0 ? wrap(matches[0]) : null;
     },
     querySelectorAll: function(selector) {
-        return _queryTree(_root, selector, false).map(wrap);
+        return _asNodeList(_queryTree(_root, selector, false).map(wrap));
     },
     getElementsByClassName: function(classNames) {
         var parts = String(classNames).trim().split(/\s+/).filter(Boolean);
         if (parts.length === 0) {
-            return [];
+            return _asHTMLCollection([]);
         }
-        return _queryTree(_root, "." + parts.join("."), false).map(wrap);
+        return _asHTMLCollection(_queryTree(_root, "." + parts.join("."), false).map(wrap));
     },
     getElementsByTagName: function(tagName) {
-        return _queryTree(_root, String(tagName), false).map(wrap);
+        return _asHTMLCollection(_queryTree(_root, String(tagName), false).map(wrap));
     },
     createElement: function(tagName) {
         var tag = String(tagName).toLowerCase();

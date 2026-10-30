@@ -2418,3 +2418,89 @@ function testExtended(dynEl) {
     assert!(js.contains("H2Q.window.pageYOffset"), "{js}");
     assert!(js.contains("H2Q.window.devicePixelRatio"), "{js}");
 }
+
+#[test]
+fn preserves_user_object_and_class_methods_without_dom_hijacking() {
+    let resolver = FakeResolver::default();
+    let script = classic(
+        "user_objects.js",
+        r#"
+class CustomModel {
+    matches(q) { return "cls-matches:" + q; }
+    closest(q) { return "cls-closest:" + q; }
+    cloneNode(deep) { return "cls-clone:" + Boolean(deep); }
+    toggleAttribute(k, f) { return "cls-toggle:" + k + ":" + Boolean(f); }
+    addEventListener(t, fn) { return "cls-listen:" + t + ":" + fn(); }
+}
+
+function testUserObjects(dynObj) {
+    const model = new CustomModel();
+    const plain = {
+        textContent: "initial",
+        matches(q) { return "obj-matches:" + q; },
+        closest(q) { return "obj-closest:" + q; },
+        cloneNode(deep) { return "obj-clone:" + Boolean(deep); },
+        toggleAttribute(k) { return "obj-toggle:" + k; },
+        addEventListener(t, fn) { return "obj-listen:" + t + ":" + fn(); }
+    };
+    plain.textContent = "updated";
+    const r1 = model.matches("a");
+    const r2 = model.closest("b");
+    const r3 = model.cloneNode(true);
+    const r4 = model.toggleAttribute("flag", true);
+    const r5 = model.addEventListener("ping", () => "ok");
+    const r6 = plain.matches("c");
+    const r7 = plain.closest("d");
+    const r8 = plain.cloneNode(false);
+    const r9 = plain.toggleAttribute("flag");
+    const r10 = plain.addEventListener("pong", () => "done");
+    const d1 = dynObj.matches("x");
+    const d2 = dynObj.toggleAttribute("y", false);
+    const d3 = dynObj.addEventListener("z", () => "dyn");
+    return [plain.textContent, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, d1, d2, d3];
+}
+"#,
+    );
+
+    let out = run_rewrite(&[script], &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    let js = &out.page_js;
+    // Known non-DOM bindings (`model` from `new CustomModel()`, `plain` from `{ ... }`)
+    // are not wrapped in `H2Q.wrap(...)` or rewritten to `H2Q.listen` / `H2Q.toggleAttribute`.
+    assert!(js.contains("plain.textContent = \"updated\";"), "{js}");
+    assert!(js.contains("const r1 = model.matches(\"a\");"), "{js}");
+    assert!(js.contains("const r2 = model.closest(\"b\");"), "{js}");
+    assert!(js.contains("const r3 = model.cloneNode(true);"), "{js}");
+    assert!(
+        js.contains("const r4 = model.toggleAttribute(\"flag\", true);"),
+        "{js}"
+    );
+    assert!(
+        js.contains("const r5 = model.addEventListener(\"ping\", () => \"ok\");"),
+        "{js}"
+    );
+    assert!(js.contains("const r6 = plain.matches(\"c\");"), "{js}");
+    assert!(js.contains("const r7 = plain.closest(\"d\");"), "{js}");
+    assert!(js.contains("const r8 = plain.cloneNode(false);"), "{js}");
+    assert!(
+        js.contains("const r9 = plain.toggleAttribute(\"flag\");"),
+        "{js}"
+    );
+    assert!(
+        js.contains("const r10 = plain.addEventListener(\"pong\", () => \"done\");"),
+        "{js}"
+    );
+    // Unknown parameter `dynObj` goes through H2Q helpers (which delegate at runtime for non-DOM objects).
+    assert!(
+        js.contains("const d1 = H2Q.wrap(dynObj).matches(\"x\");"),
+        "{js}"
+    );
+    assert!(
+        js.contains("const d2 = H2Q.toggleAttribute(dynObj, \"y\", false);"),
+        "{js}"
+    );
+    assert!(
+        js.contains("const d3 = H2Q.listen(dynObj, \"z\", () => \"dyn\");"),
+        "{js}"
+    );
+}

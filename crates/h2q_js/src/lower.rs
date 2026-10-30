@@ -20,7 +20,8 @@ use crate::edit::SpanEditor;
 use crate::parse::{async_body_has_unlowerable_constructs, collect_binding_identifiers};
 use crate::resolve::{
     ScriptQueryBindings, extract_dom_query_from_call, extract_string_literal, is_global_document,
-    is_global_ident, is_global_window, known_dom_event_from_on_prop, unwrap_parens,
+    is_global_ident, is_global_window, is_statically_non_dom_expr, known_dom_event_from_on_prop,
+    unwrap_parens,
 };
 use crate::{DomQuery, DomResolver, EventBinding, QmlTarget, TargetKind};
 
@@ -300,6 +301,17 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
         None
     }
 
+    pub(crate) fn is_known_non_dom_expr(&self, expr: &Expression<'_>) -> bool {
+        let e = unwrap_parens(expr);
+        if matches!(e, Expression::ThisExpression(_))
+            && self.class_depth > 0
+            && self.this_stack.last().is_some_and(Option::is_none)
+        {
+            return true;
+        }
+        is_statically_non_dom_expr(e, self.scoping, &self.bindings.non_dom_symbols)
+    }
+
     /// Rewrites a function/callback expression while binding `this` inside a direct
     /// non-arrow `FunctionExpression` to `this_target`.
     pub(crate) fn rewrite_listener_callback_expr(
@@ -411,7 +423,6 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
             "checked" => format!("{id}.checked"),
             "disabled" => self.format_negated_flag(format!("{id}.enabled")),
             "hidden" => self.format_negated_flag(format!("{id}.visible")),
-            "src" => format!("{id}.source"),
             "placeholder" => format!("{id}.placeholderText"),
             "readOnly" => format!("{id}.readOnly"),
             "offsetWidth" | "clientWidth" => format!("{id}.width"),
@@ -461,14 +472,16 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
                     .replace(full_span, format!("{slot} = {rhs_str}"));
                 return true;
             }
-            self.visit_expression(member_obj);
-            let obj_str = self.editor.extract_and_consume(member_obj.span());
-            let rhs_str = self.rewrite_listener_callback_expr(right, None);
-            self.editor.replace(
-                full_span,
-                format!("H2Q.setOn({obj_str}, {ev:?}, {rhs_str})"),
-            );
-            return true;
+            if !self.is_known_non_dom_expr(member_obj) {
+                self.visit_expression(member_obj);
+                let obj_str = self.editor.extract_and_consume(member_obj.span());
+                let rhs_str = self.rewrite_listener_callback_expr(right, None);
+                self.editor.replace(
+                    full_span,
+                    format!("H2Q.setOn({obj_str}, {ev:?}, {rhs_str})"),
+                );
+                return true;
+            }
         }
 
         // 2. `document.title <op> rhs`
@@ -584,7 +597,9 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
         }
 
         // 5. Unknown receiver DOM-only property write (`x.textContent <op> v`, `x.innerHTML <op> v`)
-        if matches!(prop, "textContent" | "innerText" | "innerHTML") {
+        if matches!(prop, "textContent" | "innerText" | "innerHTML")
+            && !self.is_known_non_dom_expr(member_obj)
+        {
             let simple_receiver = matches!(unwrap_parens(member_obj), Expression::Identifier(_));
             self.visit_expression(member_obj);
             let obj_str = self.editor.extract_and_consume(member_obj.span());
@@ -872,7 +887,8 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
         if matches!(
             prop,
             "textContent" | "innerText" | "innerHTML" | "classList" | "dataset"
-        ) {
+        ) && !self.is_known_non_dom_expr(&it.object)
+        {
             self.visit_expression(&it.object);
             let obj_str = self.editor.extract_and_consume(it.object.span());
             let rep = match prop {
@@ -1128,13 +1144,38 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                 match method {
                     "focus" => {
                         let _ = self.render_call_args(&it.arguments);
-                        self.editor
-                            .replace(it.span, format!("{id}.forceActiveFocus()"));
+                        let has_focus_listeners = self
+                            .shared
+                            .dynamic_listener_events
+                            .contains(&(id.clone(), "focus".to_string()))
+                            || self
+                                .shared
+                                .dynamic_listener_events
+                                .contains(&(id.clone(), "focusin".to_string()));
+                        let rep = if has_focus_listeners {
+                            format!("H2Q.focus({id})")
+                        } else {
+                            format!("{id}.forceActiveFocus()")
+                        };
+                        self.editor.replace(it.span, rep);
                         return;
                     }
                     "blur" => {
                         let _ = self.render_call_args(&it.arguments);
-                        self.editor.replace(it.span, format!("{id}.focus = false"));
+                        let has_blur_listeners = self
+                            .shared
+                            .dynamic_listener_events
+                            .contains(&(id.clone(), "blur".to_string()))
+                            || self
+                                .shared
+                                .dynamic_listener_events
+                                .contains(&(id.clone(), "focusout".to_string()));
+                        let rep = if has_blur_listeners {
+                            format!("H2Q.blur({id})")
+                        } else {
+                            format!("{id}.focus = false")
+                        };
+                        self.editor.replace(it.span, rep);
                         return;
                     }
                     "getBoundingClientRect" => {
@@ -1237,17 +1278,19 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             }
 
             // 6. Unknown receiver DOM-only method calls
-            if matches!(
-                method,
-                "addEventListener"
-                    | "removeEventListener"
-                    | "dispatchEvent"
-                    | "setAttribute"
-                    | "getAttribute"
-                    | "removeAttribute"
-                    | "hasAttribute"
-                    | "toggleAttribute"
-            ) {
+            if !self.is_known_non_dom_expr(&member.object)
+                && matches!(
+                    method,
+                    "addEventListener"
+                        | "removeEventListener"
+                        | "dispatchEvent"
+                        | "setAttribute"
+                        | "getAttribute"
+                        | "removeAttribute"
+                        | "hasAttribute"
+                        | "toggleAttribute"
+                )
+            {
                 self.visit_expression(&member.object);
                 let obj_str = self.editor.extract_and_consume(member.object.span());
                 let args_str = self.render_call_args(&it.arguments);
@@ -1264,26 +1307,28 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                 return;
             }
 
-            if matches!(
-                method,
-                "closest"
-                    | "matches"
-                    | "insertAdjacentHTML"
-                    | "insertAdjacentElement"
-                    | "insertAdjacentText"
-                    | "replaceChild"
-                    | "replaceWith"
-                    | "replaceChildren"
-                    | "cloneNode"
-                    | "scrollIntoView"
-                    | "appendChild"
-                    | "removeChild"
-                    | "insertBefore"
-                    | "querySelector"
-                    | "querySelectorAll"
-                    | "getElementsByClassName"
-                    | "getElementsByTagName"
-            ) {
+            if !self.is_known_non_dom_expr(&member.object)
+                && matches!(
+                    method,
+                    "closest"
+                        | "matches"
+                        | "insertAdjacentHTML"
+                        | "insertAdjacentElement"
+                        | "insertAdjacentText"
+                        | "replaceChild"
+                        | "replaceWith"
+                        | "replaceChildren"
+                        | "cloneNode"
+                        | "scrollIntoView"
+                        | "appendChild"
+                        | "removeChild"
+                        | "insertBefore"
+                        | "querySelector"
+                        | "querySelectorAll"
+                        | "getElementsByClassName"
+                        | "getElementsByTagName"
+                )
+            {
                 self.visit_expression(&member.object);
                 let obj_str = self.editor.extract_and_consume(member.object.span());
                 let args_str = self.render_call_args(&it.arguments);

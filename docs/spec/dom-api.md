@@ -26,11 +26,11 @@ Rewriting uses **Static Resolution First, Runtime Fallback Second**:
 | :--- | :--- | :--- | :--- |
 | `document.getElementById(id)` | Elided or replaced with `<qml_id>` | `H2Q.document.getElementById(id)` (searches QML `children` tree by `objectName == id`) | Supported & tested |
 | `document.querySelector(sel)` | Elided or replaced with `<qml_id>` | `H2Q.document.querySelector(sel)` (supports compound `tag#id.cls[attr]`, `A B`, `A > B`, comma lists) | Supported & tested |
-| `document.querySelectorAll(sel)` | `[<qml_id_1>, <qml_id_2>, ...].map(H2Q.wrap)` | `H2Q.document.querySelectorAll(sel)` | Supported & tested |
-| `document.getElementsByClassName(cls)` | Static list if known, else runtime | `H2Q.document.getElementsByClassName(cls)` | Supported & tested |
-| `document.getElementsByTagName(tag)` | Static list if known, else runtime | `H2Q.document.getElementsByTagName(tag)` | Supported & tested |
-| `el.querySelector(sel)` / `el.querySelectorAll(sel)` | `H2Q.wrap(<id>).querySelector(sel)` / `querySelectorAll(sel)` | `H2Q.wrap(el).querySelector(sel)` / `querySelectorAll(sel)` | Supported & tested |
-| `el.getElementsByClassName(cls)` / `el.getElementsByTagName(tag)` | `H2Q.wrap(<id>).getElementsByClassName(cls)` / `getElementsByTagName(tag)` | `H2Q.wrap(el).getElementsByClassName(cls)` / `getElementsByTagName(tag)` | Supported & tested |
+| `document.querySelectorAll(sel)` | `[<qml_id_1>, <qml_id_2>, ...].map(H2Q.wrap)` | `H2Q.document.querySelectorAll(sel)` (`NodeList` with `.item()`, `.forEach()`, `.entries()`, `.keys()`, `.values()`) | Supported & tested |
+| `document.getElementsByClassName(cls)` | Static list if known, else runtime | `H2Q.document.getElementsByClassName(cls)` (`HTMLCollection` with `.item()`, `.namedItem()`, `forEach === undefined`) | Supported & tested |
+| `document.getElementsByTagName(tag)` | Static list if known, else runtime | `H2Q.document.getElementsByTagName(tag)` (`HTMLCollection` with `.item()`, `.namedItem()`, `forEach === undefined`) | Supported & tested |
+| `el.querySelector(sel)` / `el.querySelectorAll(sel)` | `H2Q.wrap(<id>).querySelector(sel)` / `querySelectorAll(sel)` | `H2Q.wrap(el).querySelector(sel)` / `querySelectorAll(sel)` (`NodeList`) | Supported & tested |
+| `el.getElementsByClassName(cls)` / `el.getElementsByTagName(tag)` | `H2Q.wrap(<id>).getElementsByClassName(cls)` / `getElementsByTagName(tag)` | `H2Q.wrap(el).getElementsByClassName(cls)` / `getElementsByTagName(tag)` (`HTMLCollection`) | Supported & tested |
 | `el.matches(sel)` | `H2Q.wrap(<id>).matches(sel)` | `H2Q.wrap(el).matches(sel)` | Supported & tested |
 | `el.closest(sel)` | `H2Q.wrap(<id>).closest(sel)` | `H2Q.wrap(el).closest(sel)` (walks self then ancestors via `_logicalParent`) | Supported & tested |
 | `el.contains(other)` | `H2Q.wrap(<id>).contains(other)` | `H2Q.wrap(el).contains(other)` (true if `other === el` or descendant) | Supported & tested |
@@ -70,13 +70,13 @@ Mapping depends on the `TargetKind` of the resolved `QmlTarget`:
 
 ### 3.2 Reflected Properties, `a.href` Resolution, and Control Range Syncing
 
-- **`a.href` and Document Base URL Resolution**:
-  - `a.getAttribute("href")` returns the raw attribute string (and extracts `href="..."` from `<a href="...">` inside QML `Text.text` when `h2q_convert` emits rich text).
-  - `a.href` resolves the attribute against the document base URL (`H2Q.location.href` or `root.baseUrl`):
+- **`a.href`, `img.src`, and Document Base URL Resolution (`H2Q.init(rootItem, baseUrl?)`)**:
+  - `H2Q.init(rootItem, baseUrl?)` accepts an optional `baseUrl` parameter (or reads `rootItem.baseUrl` if present) and initializes `H2Q.location` when not already set.
+  - `a.getAttribute("href")` and `img.getAttribute("src")` return the raw attribute string (and extract `href="..."` from `<a href="...">` inside QML `Text.text` when `h2q_convert` emits rich text).
+  - `a.href` and `img.src` resolve the attribute against the document base URL (`H2Q.location.href`, the `baseUrl` passed to `H2Q.init(root, baseUrl)`, or `root.baseUrl`):
     - Absolute URLs (`https://example.com`, `https://example.com/a/b/../c?q=1#h`) are normalized per URL rules (bare origins receive a trailing `/`, and `.` / `..` path segments are collapsed, working around Qt 6.11 V4's non-normalizing `new URL()`).
     - Non-hierarchical schemes (`mailto:`, `tel:`, `javascript:`, `data:`, `blob:`) are returned verbatim.
-    - When `location.href` (or `root.baseUrl`) is set to an `http:`/`https:`/`file:` URL, relative URLs (`/path`, `sub/page.html`, `../up`, `?query`, `#hash`) resolve against that base URL.
-    - **Why relative URLs return the raw attribute by default**: `h2q_convert` generates standalone QML (`Main.qml` + `page.js`) and calls `H2Q.init(root)` without passing a document origin URL (`location.href` defaults to `""`). When no base URL is known at runtime, `a.href` returns the raw relative attribute unchanged rather than inventing a synthetic origin.
+    - When `H2Q.init(root, baseUrl)`, `location.href`, or `root.baseUrl` provides an `http:`/`https:`/`file:` base URL, relative URLs (`/path`, `sub/page.html`, `../up`, `?query`, `#hash`) on both `a.href` and `img.src` resolve against that base URL.
 - **Range (`Slider`) and Number (`SpinBox`) `min` / `max` / `step` Syncing**:
   - Setting `el.min`, `el.max`, `el.step` or calling `el.setAttribute("min" | "max" | "step", v)` on a `Slider` (`<input type="range">`) or `SpinBox` (`<input type="number">`) updates the QML control's `from`, `to`, and `stepSize` properties in addition to storing the string attribute.
   - If an `<input>` created via `document.createElement("input")` has `min`/`max`/`step` set before `input.type = "range"` or `input.type = "number"`, those attributes are re-applied to the newly created `Slider` or `SpinBox` (`from`/`to`/`stepSize`).
@@ -89,8 +89,8 @@ Mapping depends on the `TargetKind` of the resolved `QmlTarget`:
 | `el.offsetHeight` / `el.clientHeight` | `<id>.height` | Read-only number |
 | `el.offsetLeft` | `<id>.x` | Read-only number |
 | `el.offsetTop` | `<id>.y` | Read-only number |
-| `el.scrollWidth` / `el.scrollHeight` | `H2Q.wrap(<id>).scrollWidth` / `scrollHeight` | Uses `contentWidth`/`contentHeight` or `implicitWidth`/`implicitHeight` or `width`/`height` |
-| `el.scrollTop` / `el.scrollLeft` | `H2Q.wrap(<id>).scrollTop` / `scrollLeft` | Reads/writes `contentY`/`contentX` on `Flickable`, or per-element scroll state |
+| `el.scrollWidth` / `el.scrollHeight` | `H2Q.wrap(<id>).scrollWidth` / `scrollHeight` | Computes scrollable content extent across `Flickable`, `h2q_convert` clipped overflow containers (`clip: true` + inner layout `implicitWidth`/`implicitHeight`), and child bounds |
+| `el.scrollTop` / `el.scrollLeft` | `H2Q.wrap(<id>).scrollTop` / `scrollLeft` | Clamps to `[0, scrollDim - clientDim]`, updates `Flickable` `contentY`/`contentX` or `h2q_convert` clipped inner layout `anchors.topMargin`/`leftMargin` (or direct child positions), and dispatches `scroll` |
 | `el.getBoundingClientRect()` | `H2Q.getRect(<id>)` | Returns `{ x, y, left, top, width, height, right, bottom }` using `mapToItem(root, 0, 0)` |
 
 ### 3.4 `classList`, `className`, `dataset`, and Attributes
@@ -152,7 +152,7 @@ Mapping depends on the `TargetKind` of the resolved `QmlTarget`:
 | Browser API | Lowering / Runtime Support |
 | :--- | :--- |
 | `el.parentElement` / `el.parentNode` | `H2Q.wrap(el).parentElement` (unwraps internal layout containers like `ColumnLayout`/`RowLayout`/`GridLayout` to the logical parent element) |
-| `el.children` / `el.childNodes` | `H2Q.wrap(el).children` / `childNodes` (array of wrapped child elements, skipping internal `<id>Text` label children on `Box` items) |
+| `el.children` / `el.childNodes` | `H2Q.wrap(el).children` (`HTMLCollection` with `.item(i)`, `.namedItem(name)`, named/id properties, `forEach === undefined`) / `childNodes` (`NodeList` with `.item(i)`, `.forEach()`, `.entries()`, `.keys()`, `.values()`), skipping internal `<id>Text` label children on `Box` items |
 | `el.childElementCount` | `H2Q.wrap(el).childElementCount` |
 | `el.firstElementChild` / `el.lastElementChild` | `H2Q.wrap(el).firstElementChild` / `lastElementChild` |
 | `el.firstChild` / `el.lastChild` | `H2Q.wrap(el).firstChild` / `lastChild` |
@@ -184,7 +184,7 @@ Mapping depends on the `TargetKind` of the resolved `QmlTarget`:
 | `el.click()` | `H2Q.wrap(<id>).click()` | Dispatches cancelable bubbling `click` event on `el` |
 | `window.scrollTo(x, y \| opts)` / `window.scroll(x, y \| opts)` | `H2Q.scrollTo(x, y)` | Updates `window.scrollX`/`scrollY` (`pageXOffset`/`pageYOffset`), syncs root `Flickable` (`contentX`/`contentY`) if present, and dispatches `scroll` |
 | `window.scrollBy(dx, dy \| opts)` | `H2Q.scrollBy(dx, dy)` | Adds `(dx, dy)` to current window scroll position |
-| `el.scrollTo(x, y \| opts)` / `el.scrollBy(dx, dy \| opts)` | `H2Q.wrap(<id>).scrollTo(...)` / `scrollBy(...)` | Updates element `scrollLeft`/`scrollTop` (and `contentX`/`contentY` if `Flickable`) |
+| `el.scrollTo(x, y \| opts)` / `el.scrollBy(dx, dy \| opts)` | `H2Q.wrap(<id>).scrollTo(...)` / `scrollBy(...)` | Updates element `scrollLeft`/`scrollTop` across `Flickable` (`contentX`/`contentY`) and `h2q_convert` clipped overflow containers (`anchors.leftMargin`/`topMargin`), clamping to `[0, scrollDim - clientDim]` and dispatching `scroll` |
 | `el.scrollIntoView(arg?)` | `H2Q.wrap(<id>).scrollIntoView(arg)` | Scrolls window to element's mapped `(x, y)` coordinates |
 
 ---

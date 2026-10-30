@@ -2796,7 +2796,7 @@ function verifyMutations() {
     rep.id = "rep";
     afterMid.replaceWith(rep);
 
-    const ids1 = list.children.map((c) => c.id).join(",");
+    const ids1 = Array.from(list.children).map((c) => c.id).join(",");
     const sibs = [
         list.firstChild ? list.firstChild.id : "",
         list.lastChild ? list.lastChild.id : "",
@@ -2812,12 +2812,12 @@ function verifyMutations() {
     frag.appendChild(f1);
     frag.appendChild(f2);
     list.replaceChildren(frag);
-    const ids2 = list.children.map((c) => c.id).join(",");
+    const ids2 = Array.from(list.children).map((c) => c.id).join(",");
 
     const f3 = document.createElement("span");
     f3.id = "f3";
     list.replaceChild(f3, f1);
-    const ids3 = list.children.map((c) => c.id).join(",");
+    const ids3 = Array.from(list.children).map((c) => c.id).join(",");
 
     return [ids1, sibs, cloned.dataset.idx, cloned.textContent, ids2, ids3].join("|");
 }
@@ -2897,6 +2897,7 @@ function verifyFocusScrollStyle() {
     const rect = box.getBoundingClientRect();
 
     return [
+        focusLog.join(","),
         activeId,
         field.readOnly,
         field.placeholder,
@@ -2938,7 +2939,7 @@ function verifyFocusScrollStyle() {
     );
     assert!(
         output.contains(
-            "H2Q_OK_FOCUS_SCROLL_STYLE field|true|Enter name|true|false|true|gamma|true|true|#ff5500||140px|60px|0.75|20|50|20|50|25|1|Two|140|60|140|60"
+            "H2Q_OK_FOCUS_SCROLL_STYLE focus,blur|field|true|Enter name|true|false|true|gamma|true|true|#ff5500||140px|60px|0.75|20|50|20|50|25|1|Two|140|60|140|60"
         ),
         "{output}"
     );
@@ -3046,6 +3047,344 @@ function verifyGlobalsAndEvents(done) {
     assert!(
         output.contains(
             "H2Q_OK_GLOBALS_EVENTS bus:42,key:Enter:13:true,click:12:34:true,clickRes:false,hash:#tab1,pop:7|1+2|hi|true|true|visible:false:1|copied-text|2"
+        ),
+        "{output}"
+    );
+}
+
+#[test]
+fn qml6_user_object_and_class_methods_are_not_hijacked_by_h2q() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default();
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+class CustomWidget {
+    constructor(label) {
+        this.label = label;
+        this.events = [];
+        this.flags = {};
+    }
+    matches(q) { return this.label + ":matches:" + q; }
+    closest(q) { return this.label + ":closest:" + q; }
+    cloneNode(deep) { return this.label + ":clone:" + Boolean(deep); }
+    toggleAttribute(k, force) {
+        const next = force !== undefined ? Boolean(force) : !this.flags[k];
+        this.flags[k] = next;
+        return this.label + ":toggle:" + k + ":" + next;
+    }
+    addEventListener(type, fn) {
+        this.events.push(type + ":" + fn());
+        return this.label + ":listen:" + type;
+    }
+}
+
+function invokeThroughUnknownReceiver(obj) {
+    return [
+        obj.matches(".item"),
+        obj.closest("#root"),
+        obj.cloneNode(true),
+        obj.toggleAttribute("active", true),
+        obj.addEventListener("custom", () => "fired")
+    ].join(",");
+}
+
+function verifyUserObjects() {
+    const inst = new CustomWidget("cls");
+    const directRes = [
+        inst.matches("a"),
+        inst.closest("b"),
+        inst.cloneNode(false),
+        inst.toggleAttribute("pin"),
+        inst.addEventListener("ready", () => "go")
+    ].join(",");
+
+    const plain = {
+        matches: (q) => "plain:matches:" + q,
+        closest: (q) => "plain:closest:" + q,
+        cloneNode: (d) => "plain:clone:" + Boolean(d),
+        toggleAttribute: (k, f) => "plain:toggle:" + k + ":" + Boolean(f),
+        addEventListener: (t, fn) => "plain:listen:" + t + ":" + fn()
+    };
+
+    const dynCls = invokeThroughUnknownReceiver(inst);
+    const dynPlain = invokeThroughUnknownReceiver(plain);
+    return [directRes, dynCls, dynPlain, inst.events.join("+")].join("|");
+}
+"##,
+        r#"Item {
+    id: root
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        console.log("H2Q_OK_USER_OBJECTS", Page.verifyUserObjects());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains(
+            "H2Q_OK_USER_OBJECTS cls:matches:a,cls:closest:b,cls:clone:false,cls:toggle:pin:true,cls:listen:ready|cls:matches:.item,cls:closest:#root,cls:clone:true,cls:toggle:active:true,cls:listen:custom|plain:matches:.item,plain:closest:#root,plain:clone:true,plain:toggle:active:true,plain:listen:custom:fired|ready:go+custom:fired"
+        ),
+        "{output}"
+    );
+}
+
+#[test]
+fn qml6_overflow_scroll_container_scrolltop_scrollleft_scrollto_scrollby() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default()
+        .with_id("scroller", 1, "scrollBox", TargetKind::Box)
+        .with_id("plainScroller", 2, "plainScrollItem", TargetKind::Box);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verifyElementScroll() {
+    const scroller = document.getElementById("scroller");
+    const plain = document.getElementById("plainScroller");
+    let scrollEvents = 0;
+    scroller.addEventListener("scroll", () => { scrollEvents += 1; });
+
+    const sh = scroller.scrollHeight;
+    const sw = scroller.scrollWidth;
+    const ch = scroller.clientHeight;
+    const cw = scroller.clientWidth;
+
+    scroller.scrollTop = 35;
+    const top1 = scroller.scrollTop;
+
+    scroller.scrollBy({ left: 25, top: 20 });
+    const top2 = scroller.scrollTop;
+    const left2 = scroller.scrollLeft;
+
+    // Clamping past max scroll (scrollHeight 160 - clientHeight 60 = 100, scrollWidth 220 - clientWidth 100 = 120)
+    scroller.scrollTo(500, 500);
+    const clampedTop = scroller.scrollTop;
+    const clampedLeft = scroller.scrollLeft;
+
+    // Plain clipped Item wrapper (emitted by h2q_convert when overflow: auto has no background)
+    plain.scrollTo({ top: 30 });
+    const plainTop = plain.scrollTop;
+    const plainKidsCount = plain.children.length;
+
+    return [
+        sh, sw, ch, cw,
+        top1, top2, left2,
+        clampedTop, clampedLeft,
+        scrollEvents,
+        plainTop, plainKidsCount
+    ].join("|");
+}
+"##,
+        r#"import QtQuick
+import QtQuick.Layouts
+
+Item {
+    id: root
+    Rectangle {
+        id: scrollBox
+        objectName: "scroller"
+        width: 100
+        height: 60
+        implicitHeight: scrollInner.implicitHeight
+        clip: true
+        ColumnLayout {
+            id: scrollInner
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            implicitWidth: 220
+            implicitHeight: 160
+            spacing: 0
+            Text { text: "Row 1"; Layout.preferredWidth: 220; Layout.preferredHeight: 80 }
+            Text { text: "Row 2"; Layout.preferredHeight: 80 }
+        }
+    }
+    Item {
+        id: plainScrollItem
+        objectName: "plainScroller"
+        width: 100
+        height: 50
+        implicitHeight: plainInner.implicitHeight
+        clip: true
+        ColumnLayout {
+            id: plainInner
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            implicitHeight: 120
+            spacing: 0
+            Rectangle { objectName: "c1"; implicitHeight: 60; Text { text: "A" } }
+            Rectangle { objectName: "c2"; implicitHeight: 60; Text { text: "B" } }
+        }
+    }
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        console.log("H2Q_OK_EL_SCROLL", Page.verifyElementScroll(), scrollInner.anchors.topMargin, scrollInner.anchors.leftMargin, plainInner.anchors.topMargin);
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains("H2Q_OK_EL_SCROLL 160|220|60|100|35|55|25|100|120|5|30|2 -100 -120 -30"),
+        "{output}"
+    );
+}
+
+#[test]
+fn qml6_init_base_url_resolves_relative_anchor_href_and_img_src() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default()
+        .with_id("navLink", 1, "navLinkText", TargetKind::Text)
+        .with_id("heroImg", 2, "heroImage", TargetKind::Image);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verifyBaseUrlResolution() {
+    const link = document.getElementById("navLink");
+    const img = document.getElementById("heroImg");
+
+    const hrefProp = link.href;
+    const hrefAttr = link.getAttribute("href");
+
+    img.setAttribute("src", "../assets/logo.png");
+    const srcProp1 = img.src;
+    const srcAttr1 = img.getAttribute("src");
+
+    img.src = "icons/check.svg";
+    const srcProp2 = img.src;
+    const srcAttr2 = img.getAttribute("src");
+
+    return [hrefProp, hrefAttr, srcProp1, srcAttr1, srcProp2, srcAttr2].join("|");
+}
+"##,
+        r#"Item {
+    id: root
+    Text {
+        id: navLinkText
+        objectName: "navLink"
+        property string h2qTag: "a"
+        textFormat: Text.RichText
+        text: "<a href=\"docs/guide.html\">Guide</a>"
+    }
+    Image {
+        id: heroImage
+        objectName: "heroImg"
+    }
+    Component.onCompleted: {
+        H2Q.init(root, "https://example.org/app/sub/index.html");
+        if (Page.__h2q_init) Page.__h2q_init(root);
+        console.log("H2Q_OK_BASE_URL", Page.verifyBaseUrlResolution());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains(
+            "H2Q_OK_BASE_URL https://example.org/app/sub/docs/guide.html|docs/guide.html|https://example.org/app/assets/logo.png|../assets/logo.png|https://example.org/app/sub/icons/check.svg|icons/check.svg"
+        ),
+        "{output}"
+    );
+}
+
+#[test]
+fn qml6_html_collection_vs_node_list_methods_and_named_item() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default()
+        .with_id("box", 1, "boxRect", TargetKind::Box)
+        .with_id("firstItem", 2, "firstBtn", TargetKind::Button)
+        .with_id("secondItem", 3, "secondBtn", TargetKind::Button);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verifyCollections() {
+    const box = document.getElementById("box");
+    const second = document.getElementById("secondItem");
+    second.setAttribute("name", "namedSecond");
+
+    const childrenCol = box.children;
+    const byClassCol = box.getElementsByClassName("act");
+    const byTagCol = box.getElementsByTagName("button");
+    const qsaList = box.querySelectorAll(".act");
+    const childNodesList = box.childNodes;
+
+    const htmlCollectionHasNoForEach =
+        childrenCol.forEach === undefined &&
+        byClassCol.forEach === undefined &&
+        byTagCol.forEach === undefined;
+
+    const nodeListHasForEach =
+        typeof qsaList.forEach === "function" &&
+        typeof childNodesList.forEach === "function" &&
+        typeof qsaList.item === "function" &&
+        typeof childNodesList.item === "function";
+
+    const item0 = childrenCol.item(0) ? childrenCol.item(0).id : "null";
+    const itemOob = childrenCol.item(99) === null;
+    const namedById = childrenCol.namedItem("firstItem") ? childrenCol.namedItem("firstItem").id : "null";
+    const namedByName = byTagCol.namedItem("namedSecond") ? byTagCol.namedItem("namedSecond").id : "null";
+    const propById = childrenCol.firstItem ? childrenCol.firstItem.id : "null";
+
+    const qsaIds = [];
+    qsaList.forEach((el) => qsaIds.push(el.id));
+    const qsaItem1 = qsaList.item(1) ? qsaList.item(1).id : "null";
+
+    return [
+        htmlCollectionHasNoForEach,
+        nodeListHasForEach,
+        item0,
+        itemOob,
+        namedById,
+        namedByName,
+        propById,
+        qsaIds.join(","),
+        qsaItem1
+    ].join("|");
+}
+"##,
+        r#"Item {
+    id: root
+    Rectangle {
+        id: boxRect
+        objectName: "box"
+        Text { id: boxRectText; text: "" }
+        Column {
+            Button {
+                id: firstBtn
+                objectName: "firstItem"
+                property string h2qTag: "button"
+                property string h2qClasses: "act primary"
+                text: "First"
+            }
+            Button {
+                id: secondBtn
+                objectName: "secondItem"
+                property string h2qTag: "button"
+                property string h2qClasses: "act secondary"
+                text: "Second"
+            }
+        }
+    }
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        console.log("H2Q_OK_COLLECTIONS", Page.verifyCollections());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains(
+            "H2Q_OK_COLLECTIONS true|true|firstItem|true|firstItem|secondItem|firstItem|firstItem,secondItem|secondItem"
         ),
         "{output}"
     );
