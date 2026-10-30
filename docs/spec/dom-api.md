@@ -1,294 +1,295 @@
-# JavaScript, DOM and events mapping
+# DOM & Web API Mapping to QML (`h2q_js`)
 
-**Spec:** `docs/spec/dom-api.md`
-**Target:** Qt 6.11 with QtQuick, QtQuick.Controls (Basic), QtQuick.Layouts and QtQuick.Shapes. `QtQuick.Dialogs` (`MessageDialog`) and `QtQuick.LocalStorage` are imported only when a page uses `alert`/`confirm` or `localStorage`.
-**Out of scope:** QtWebEngine, WebView, and `Text.RichText` used as a whole-page shortcut.
+This specification defines the subset of Browser DOM, Event, and Web APIs supported by `html-2-qml` when rewriting JavaScript (`crates/h2q_js/src/lower.rs`) for execution in Qt 6.11 QML/V4 (`crates/h2q_js/src/h2q_runtime.js`), how each construct is lowered or shimmed, and what is unsupported and why.
 
-**Support levels**
+---
 
-| Level | Meaning |
-|---|---|
-| Full | Same observable behavior as the browser |
-| Approx | Visible result close but not identical |
-| Emulated | Needs generated helper code in `dom.js` |
-| Ignored | No visual effect, safe to drop |
-| Unsupported | Converter emits a warning |
+## 1. Architecture Overview
 
-**JS engine baseline.** The QML engine (checked against Qt 6.11 with `qml6`) is roughly ES2017 plus `?.` and `??`. It has `Promise`, generators, arrow functions, classes, template literals, `Map`/`Set`/`Proxy`, `XMLHttpRequest`, `URL`, `URLSearchParams`, typed arrays and ES modules (`.mjs`). It lacks `async`/`await`, object spread/rest, class fields, optional `catch` binding, `??=`/`||=`/`&&=`, BigInt, regex named groups, lookbehind and the `s` flag, `Intl`, `fetch`, `setTimeout`/`setInterval`, `queueMicrotask`, `structuredClone`, `performance`, `window`/`document`/`globalThis` and the DOM `Event` classes. Missing syntax is lowered in §5; missing library functions are polyfilled in `dom.js` (§3).
+JavaScript in HTML documents is transformed into two QML-compatible artifacts:
+1. **`page.js`**: A `.pragma library` (or QML-imported script) containing the rewritten user code, top-level declarations, generated event handler functions (`__h2q_on_<event>_<id>`), and an initialization entry point (`__h2q_init(rootItem)`).
+2. **`h2q_runtime.js` (`H2Q`)**: A `.pragma library` runtime helper providing:
+   - Timer polyfills (`setTimeout`, `setInterval`, `requestAnimationFrame`) backed by dynamically instantiated `QtQuick.Timer` objects.
+   - `localStorage` (backed by `QtQuick.LocalStorage` SQLite with in-memory fallback) and `sessionStorage` (in-memory `Map`).
+   - `fetch()` polyfill backed by QML's built-in `XMLHttpRequest`.
+   - Dynamic DOM tree walk, CSS selector matching (`tag`, `#id`, `.class1.class2`, `[attr]`, `[attr=val]`, `[attr^=val]`, `[attr$=val]`, `[attr*=val]`, `[attr~=val]`, `[attr|=val]`, descendant `A B`, child `A > B`, and comma-separated selector lists), `classList`, `dataset`, `style`, `getComputedStyle`, dynamic `addEventListener` / `removeEventListener` / `dispatchEvent`, `EventTarget`, typed `Event` constructors, and `Element` wrapper (`H2Q.wrap(item)`).
 
-## Conventions
+Rewriting uses **Static Resolution First, Runtime Fallback Second**:
+- If a DOM query (`document.getElementById('save-btn')`) can be statically resolved to a unique `QmlTarget` at compile time, property accesses and event registrations on that reference are rewritten directly to the QML item `id` (`save_btn.text`, `save_btn.visible`, etc.) or `H2Q.wrap(save_btn)` for structural/DOM-specific operations.
+- If a query is dynamic (`document.getElementById(dynamicId)`), returns multiple elements (`querySelectorAll`), or cannot be statically resolved, it falls back to `H2Q.document.*` and `H2Q.wrap(item)` at runtime.
 
-- Every element with an `id` becomes a QML object whose `id` is the sanitized HTML id. Characters outside `[A-Za-z0-9_]` become `_`. An id gets an `el_` prefix when it starts with a digit or an uppercase letter (QML rejects both), or is a QML/JS reserved word or one of our own names (`root`, `Dom`, `parent`, `model`, `index`). Elements without an `id` that a script targets statically get a generated id (`<class-or-tag>_<n>`).
-- Generated helpers live in `dom.js`, imported per file as `import "dom.js" as Dom`. Use a plain (non-`.pragma library`) file so it can see the importing file's ids. Every importing file gets its own copy, so state shared across files (timer table, event bus, `sessionStorage`) is stored on the root object, not in module variables. `dom.js` cannot declare QML objects; `Timer`, `FrameAnimation` and dialogs are instantiated from helper components via `Component.createObject`.
-- Top-level script statements that are not declarations are collected, in document order, into the single `Component.onCompleted` of the root object. Declarations are emitted into the root object body (§5).
-- Signal handlers use the Qt 6 arrow form with explicit parameters, for example `onTapped: (eventPoint, button) => ...`. Injected, undeclared handler parameters are deprecated.
+---
 
-## Section 1: Statically resolvable DOM access
+## 2. Document Query & Creation APIs
 
-The converter rewrites these at compile time to direct ids and properties.
+| Browser API | Static Lowering (when selector is literal & unique) | Runtime Fallback (`h2q_runtime.js`) | Status |
+| :--- | :--- | :--- | :--- |
+| `document.getElementById(id)` | Elided or replaced with `<qml_id>` | `H2Q.document.getElementById(id)` (searches QML `children` tree by `objectName == id`) | Supported & tested |
+| `document.querySelector(sel)` | Elided or replaced with `<qml_id>` | `H2Q.document.querySelector(sel)` (supports compound `tag#id.cls[attr]`, `A B`, `A > B`, comma lists) | Supported & tested |
+| `document.querySelectorAll(sel)` | `[<qml_id_1>, <qml_id_2>, ...].map(H2Q.wrap)` | `H2Q.document.querySelectorAll(sel)` | Supported & tested |
+| `document.getElementsByClassName(cls)` | Static list if known, else runtime | `H2Q.document.getElementsByClassName(cls)` | Supported & tested |
+| `document.getElementsByTagName(tag)` | Static list if known, else runtime | `H2Q.document.getElementsByTagName(tag)` | Supported & tested |
+| `el.querySelector(sel)` / `el.querySelectorAll(sel)` | `H2Q.wrap(<id>).querySelector(sel)` / `querySelectorAll(sel)` | `H2Q.wrap(el).querySelector(sel)` / `querySelectorAll(sel)` | Supported & tested |
+| `el.getElementsByClassName(cls)` / `el.getElementsByTagName(tag)` | `H2Q.wrap(<id>).getElementsByClassName(cls)` / `getElementsByTagName(tag)` | `H2Q.wrap(el).getElementsByClassName(cls)` / `getElementsByTagName(tag)` | Supported & tested |
+| `el.matches(sel)` | `H2Q.wrap(<id>).matches(sel)` | `H2Q.wrap(el).matches(sel)` | Supported & tested |
+| `el.closest(sel)` | `H2Q.wrap(<id>).closest(sel)` | `H2Q.wrap(el).closest(sel)` (walks self then ancestors via `_logicalParent`) | Supported & tested |
+| `el.contains(other)` | `H2Q.wrap(<id>).contains(other)` | `H2Q.wrap(el).contains(other)` (true if `other === el` or descendant) | Supported & tested |
+| `document.body` / `document.documentElement` | Root content `QmlTarget` (`root` or `body`) | `H2Q.document.body` / `H2Q.document.documentElement` (`H2Q.wrap(root)`) | Supported & tested |
+| `document.head` | `H2Q.document.head` | Synthetic `<head>` element wrapper | Supported & tested |
+| `document.title` (get / set) | `H2Q.getTitle()` / `H2Q.setTitle(val)` | Reads/writes `root.title` if `Window`, else internal title string | Supported & tested |
+| `document.activeElement` | `H2Q.document.activeElement` | Focused QML item (`activeFocus` or `focus`) wrapped in `H2Q.wrap`, defaulting to `document.body` | Supported & tested |
+| `document.hidden` / `document.visibilityState` | `H2Q.document.hidden` / `H2Q.document.visibilityState` | `false` / `"visible"` (unless root window is hidden) | Supported & tested |
+| `document.createElement(tag)` | `H2Q.document.createElement(tag)` | Dynamically creates QML item via `Qt.createQmlObject` wrapped in `H2Q.wrap` | Supported & tested |
+| `document.createTextNode(text)` | `H2Q.document.createTextNode(text)` | Dynamically creates QML `Text` item wrapped in `H2Q.wrap` | Supported & tested |
+| `document.createDocumentFragment()` | `H2Q.document.createDocumentFragment()` | Lightweight fragment container (`nodeType === 11`); children splice into parent on insertion | Supported & tested |
 
-| JS pattern | QML rewrite | Condition for static rewrite | Support |
-|---|---|---|---|
-| `document.getElementById('x')` | `x` | `id="x"` occurs once and the element is not created at runtime | Full |
-| `document.querySelector('#x')` | `x` | Same as `getElementById`; simple id selector only | Full |
-| `document.querySelector('.c')` | `c_0` (one match) | Exactly one element has class `c` | Full |
-| `document.querySelectorAll('.c')` | `[c_0, c_1]` | Matches are known at compile time | Full |
-| `document.querySelector('tag')` | first matching id | Tag is unique, or the first in document order is intended | Approx |
-| Combinators, pseudo-classes, attribute selectors | none | Not resolvable at compile time | Emulated (§2) |
-| Any property access on a receiver of unknown type (function parameter, array element) | `Dom.wrap(item).<prop>` | Receiver is not statically an element | Emulated (§2) |
-| `el.textContent = s` | `el.text = s` | `el` maps to `Text`, `Label`, `Button`, `TextField`, `TextArea`, `CheckBox` or `RadioButton` | Full |
-| `el.textContent = s` on a container | generated child `Text { text: s }` | `el` is a plain `Rectangle` or `Item` | Approx |
-| `el.innerText = s` | `el.text = s` | Same as `textContent` on text items; `\n` renders as a line break | Full |
-| `el.value` (read/write) | `el.text` (`TextField`, `TextArea`), `el.value` (`Slider`, `SpinBox`), `el.currentValue` (`ComboBox` with `valueRole`) | `el` is an `<input>`, `<select>` or `<textarea>` mapped by type | Full |
-| `select.selectedIndex` | `el.currentIndex` | `el` is a `ComboBox` | Full |
-| `el.checked` | `el.checked` | `CheckBox`, `Switch` or `RadioButton` | Full |
-| `el.checked` on a radio group | same, exclusive via `ButtonGroup` (attached `ButtonGroup.group`) | All radios share `name` and the group is generated | Full |
-| `el.disabled = b` | `el.enabled = !b` | Always | Full |
-| `el.hidden = b` | `el.visible = !b` | Always; invisible items are skipped by `Layout` items too | Full |
-| `el.style.<prop> = v` | target per the table below | Property is in the CSS-to-QML table | Approx |
-| `el.style.cssText = s` | none | Not statically parseable | Unsupported |
-| `el.classList.add/remove/toggle/contains(c)`, `el.className = s` | one `bool` property per toggled class on the element (`property bool cls_open`), with the `.c` rule compiled into conditional bindings (`color: cls_open ? "#f00" : "#fff"`) | Class is known at compile time. `states` are used only when the classes are mutually exclusive, because an item has one active state. | Emulated |
-| `el.setAttribute(n, v)` / `getAttribute(n)` | mapped property (see below) | `n` is in the attribute map | Full |
-| `el.setAttribute(n, v)` / `getAttribute(n)` | `el.attrs[n]` (`property var attrs`, reassigned on write so bindings update) | `n` not in the map | Emulated |
-| `el.addEventListener('click', f)` | `TapHandler { onTapped: ... }`, or `onClicked` on a Controls button (`Connections { target: btn }` when it is declared elsewhere) | Event is in §4 | Full |
-| `el.onclick = f` | same as `addEventListener`; a later assignment replaces the earlier one | Event is in §4 | Full |
-| `el.focus()` | `el.forceActiveFocus()` | Element is a Controls item or has `tabindex`; HTML ignores `focus()` on other elements | Full |
-| `el.blur()` | `el.focus = false` (clears `activeFocus`; the window's content item takes over) | Always | Full |
+Every convert-emitted QML element carries `objectName: "<html-id>"` (when an HTML `id` is present), `property string h2qTag: "<tag>"`, and `property string h2qClasses: "<space-separated-classes>"` when scripts use runtime queries or class mutations.
 
-**CSS-to-QML property map for `el.style.<prop>`**
+---
 
-| `style.` property | QML target | Support |
-|---|---|---|
-| `backgroundColor` | `Rectangle.color` (or `background.color` on a Controls item) | Full |
-| `color` | `Text.color` | Full |
-| `fontSize` | `font.pixelSize` | Full |
-| `width`, `height` (px) | `width`, `height` | Full |
-| `width`, `height` (%) | binding on the parent, e.g. `width: parent.width * 0.5` | Approx |
-| `opacity` | `opacity` | Full |
-| `display` = `none` | `visible = false` | Full |
-| `visibility` = `hidden` | `opacity = 0; enabled = false` (keeps its layout slot) | Approx |
-| `transform` (translate) | `transform: Translate { x: ...; y: ... }` (`Item.transform` is a list) | Approx |
+## 3. Element Properties & Attributes
 
-**Attribute map for `setAttribute` and `getAttribute`**
+### 3.1 Text & Value Properties
 
-| Attribute | QML target | Support |
-|---|---|---|
-| `aria-label` | `Accessible.name` | Full |
-| `role` | `Accessible.role` | Approx |
-| `disabled` | `enabled` (inverted) | Full |
-| `hidden` | `visible` (inverted) | Full |
-| `value` | value property of the control | Full |
-| `data-*` | `dataset` (§2) | Emulated |
+Mapping depends on the `TargetKind` of the resolved `QmlTarget`:
 
-## Section 2: Runtime DOM shim
+| DOM Property | `TargetKind::Text` / `Button` | `TargetKind::Box` (`Rectangle` / `Item`) | `TargetKind::TextField` / `TextArea` | `TargetKind::CheckBox` / `RadioButton` | `TargetKind::Select` (`ComboBox`) | `TargetKind::Range` (`Slider` / `SpinBox`) / `Progress` |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `el.textContent` / `el.innerText` | `<id>.text` | `<id>Text.text` (or `H2Q.getText(<id>)` / `H2Q.setText(<id>, v)`) | `<id>.text` | `<id>.text` | `<id>.currentText` | N/A |
+| `el.innerHTML` (read) | `<id>.text` | `H2Q.getInnerHTML(<id>)` | `<id>.text` | `<id>.text` | `<id>.currentText` | N/A |
+| `el.innerHTML = html` | `H2Q.setInnerHTML(<id>, html)` | `H2Q.setInnerHTML(<id>, html)` (parses simple tags or sets RichText) | N/A | N/A | N/A | N/A |
+| `el.value` (read) | `H2Q.wrap(<id>).value` | `H2Q.wrap(<id>).value` | `<id>.text` | `<id>.value` (via `H2Q.wrap`, defaults to `"on"`) | `<id>.currentText` | `String(<id>.value)` for `Range` (`Slider`/`SpinBox`); `<id>.value` for `Progress` |
+| `el.value = v` | `H2Q.wrap(<id>).value = v` | `H2Q.wrap(<id>).value = v` | `<id>.text = String(v)` | `H2Q.wrap(<id>).value = v` | `H2Q.selectByValue(<id>, v)` | `<id>.value = Number(v)` |
+| `el.checked` | N/A | N/A | N/A | `<id>.checked` | N/A | N/A |
+| `el.disabled` | `!<id>.enabled` | `!<id>.enabled` | `!<id>.enabled` | `!<id>.enabled` | `!<id>.enabled` | `!<id>.enabled` |
+| `el.hidden` | `!<id>.visible` | `!<id>.visible` | `!<id>.visible` | `!<id>.visible` | `!<id>.visible` | `!<id>.visible` |
+| `el.placeholder` | N/A | N/A | `<id>.placeholderText` | N/A | N/A | N/A |
+| `el.readOnly` | N/A | N/A | `<id>.readOnly` | N/A | N/A | N/A |
+| `el.selectedIndex` | N/A | N/A | N/A | N/A | `<id>.currentIndex` | N/A |
+| `el.min` / `el.max` / `el.step` | `H2Q.wrap(<id>).min` / `max` / `step` | `H2Q.wrap(<id>).min` / `max` / `step` | `H2Q.wrap(<id>).min` / `max` / `step` | N/A | N/A | Updates both `m.attrs` (`min`/`max`/`step`) and QML `<id>.from` / `<id>.to` / `<id>.stepSize` on `Slider` and `SpinBox` |
 
-Used when a target cannot be resolved statically. `dom.js` provides a minimal `Element` wrapper `{ _item, attrs, _data }` over QML items.
+### 3.2 Reflected Properties, `a.href` Resolution, and Control Range Syncing
 
-**Creation.** `document.createElement(tag)` looks up a precompiled component for the tag (`Elements/Div.qml`, `Elements/Span.qml`, and so on), created with `Qt.createComponent`, and instantiates it with `Component.createObject(null, props)`. The node has no parent until `appendChild`/`insertBefore` sets one, as in the DOM. `Qt.createQmlObject` is a fallback for tags with no precompiled component, since it parses at runtime and needs a parent.
+- **`a.href` and Document Base URL Resolution**:
+  - `a.getAttribute("href")` returns the raw attribute string (and extracts `href="..."` from `<a href="...">` inside QML `Text.text` when `h2q_convert` emits rich text).
+  - `a.href` resolves the attribute against the document base URL (`H2Q.location.href` or `root.baseUrl`):
+    - Absolute URLs (`https://example.com`, `https://example.com/a/b/../c?q=1#h`) are normalized per URL rules (bare origins receive a trailing `/`, and `.` / `..` path segments are collapsed, working around Qt 6.11 V4's non-normalizing `new URL()`).
+    - Non-hierarchical schemes (`mailto:`, `tel:`, `javascript:`, `data:`, `blob:`) are returned verbatim.
+    - When `location.href` (or `root.baseUrl`) is set to an `http:`/`https:`/`file:` URL, relative URLs (`/path`, `sub/page.html`, `../up`, `?query`, `#hash`) resolve against that base URL.
+    - **Why relative URLs return the raw attribute by default**: `h2q_convert` generates standalone QML (`Main.qml` + `page.js`) and calls `H2Q.init(root)` without passing a document origin URL (`location.href` defaults to `""`). When no base URL is known at runtime, `a.href` returns the raw relative attribute unchanged rather than inventing a synthetic origin.
+- **Range (`Slider`) and Number (`SpinBox`) `min` / `max` / `step` Syncing**:
+  - Setting `el.min`, `el.max`, `el.step` or calling `el.setAttribute("min" | "max" | "step", v)` on a `Slider` (`<input type="range">`) or `SpinBox` (`<input type="number">`) updates the QML control's `from`, `to`, and `stepSize` properties in addition to storing the string attribute.
+  - If an `<input>` created via `document.createElement("input")` has `min`/`max`/`step` set before `input.type = "range"` or `input.type = "number"`, those attributes are re-applied to the newly created `Slider` or `SpinBox` (`from`/`to`/`stepSize`).
 
-**Child order.** `appendChild` sets `child.parent`, and a `Layout` places reparented items in child order. `Item.stackBefore` is not exposed to QML, so `insertBefore` detaches `ref` and every later sibling and re-attaches them after the new node. Containers that the converter can see are filled from a JS array in a loop (render-list pattern) are generated as a `Repeater` over a `ListModel` (`append`, `insert`, `remove`) instead, with a `Loader` delegate picked by tag.
+### 3.3 Geometry & Layout Read Properties
 
-| Shim API | QML mechanism | Support |
-|---|---|---|
-| `document.createElement(tag)` | `Component.createObject(null, props)` from a per-tag component | Emulated |
-| `document.createElement(unknownTag)` | `Qt.createQmlObject` fallback | Emulated |
-| `parent.appendChild(child)` | Set `child.parent`; for a `Repeater`-backed container, `model.append` | Emulated (layout differs: Approx) |
-| `parent.removeChild(child)`, `el.remove()` | `child.parent = null`; the node stays alive and can be re-attached | Emulated |
-| `parent.insertBefore(new, ref)` | Re-attach `new`, `ref` and later siblings in order; `model.insert` for `Repeater` containers | Emulated |
-| `parent.replaceChild(new, old)` | Detach `old`, insert `new` at the same position | Emulated |
-| `el.innerHTML = s` | Minimal parser in `dom.js` for elements and text; existing children are detached and `destroy()`ed | Emulated (subset) |
-| `el.innerHTML = s` with `<script>`, `<style>` or `on*` attributes | none | Unsupported |
-| `el.innerHTML` (read) | Serialize the shim tree | Emulated |
-| `document.querySelectorAll(sel)` (runtime) | Walk the shim tree; supports tag, `#id`, `.class`, `tag.class` | Emulated |
-| Complex selectors at runtime | none | Unsupported |
-| `el.dataset.k` | `_data.k`; `data-foo-bar` is `dataset.fooBar` (kebab-case to camelCase) | Emulated |
-| `el.children` | `item.children` (Items only) with helper items such as `background` filtered out | Emulated (read-only) |
-| `el.parentNode`, `nextSibling` | Parent wrapper; sibling by index | Emulated |
-| `el.cloneNode(deep)` | Recreate from tag, attrs and properties | Approx |
-| `el.getBoundingClientRect()` | `mapToItem(null, 0, 0)` (null maps to the scene root) plus `width`/`height` | Approx |
-| `el.offsetWidth`, `offsetHeight` | `width`, `height` | Approx |
-| `el.scrollTop` | `Flickable.contentY` (only inside a `Flickable`) | Approx |
-| `document.write` | none | Unsupported |
-| `MutationObserver` | none | Unsupported |
+| DOM Property / Method | QML Lowering | Notes |
+| :--- | :--- | :--- |
+| `el.offsetWidth` / `el.clientWidth` | `<id>.width` | Read-only number |
+| `el.offsetHeight` / `el.clientHeight` | `<id>.height` | Read-only number |
+| `el.offsetLeft` | `<id>.x` | Read-only number |
+| `el.offsetTop` | `<id>.y` | Read-only number |
+| `el.scrollWidth` / `el.scrollHeight` | `H2Q.wrap(<id>).scrollWidth` / `scrollHeight` | Uses `contentWidth`/`contentHeight` or `implicitWidth`/`implicitHeight` or `width`/`height` |
+| `el.scrollTop` / `el.scrollLeft` | `H2Q.wrap(<id>).scrollTop` / `scrollLeft` | Reads/writes `contentY`/`contentX` on `Flickable`, or per-element scroll state |
+| `el.getBoundingClientRect()` | `H2Q.getRect(<id>)` | Returns `{ x, y, left, top, width, height, right, bottom }` using `mapToItem(root, 0, 0)` |
 
-## Section 3: Browser globals
+### 3.4 `classList`, `className`, `dataset`, and Attributes
 
-| Global / API | QML mapping | Support |
-|---|---|---|
-| `window` | Rewritten to the root object id | Full |
-| `window.innerWidth`, `innerHeight` | `root.width`, `root.height` | Full |
-| `window.scrollY` | `Flickable.contentY` | Approx |
-| `window.close()` | `root.close()` when the root is a `Window`, else `Qt.quit()` | Full |
-| `window.open(url)` | `Qt.openUrlExternally(url)` | Approx |
-| `document.title` (read/write) | `Window.title` | Full |
-| `document.body`, `documentElement` | Root item | Approx |
-| `document.hidden` | `root.visibility === Window.Hidden \|\| root.visibility === Window.Minimized` | Approx |
-| `console.log/info/debug/warn/error/assert/count/time/timeEnd/trace` | Same QML `console` methods | Full |
-| `console.table`, `group`, `groupEnd`, `dir`, `timeLog`, `countReset` | Not defined in QML; mapped to `console.log` or a helper | Emulated |
-| `setTimeout(f, ms)` | `Timer { interval: ms; repeat: false; running: true; onTriggered: f() }` (not defined in the engine) | Full |
-| `setInterval(f, ms)` | `Timer { repeat: true }` | Full |
-| `clearTimeout`, `clearInterval` | `running = false` and destroy (ids held in a map) | Full |
-| `setTimeout(f, 0)` | `Qt.callLater(f)` only when `f` is not scheduled twice per turn; `callLater` coalesces repeated calls of the same function. Otherwise `Timer { interval: 0 }` | Approx |
-| `requestAnimationFrame(cb)` | One shared `FrameAnimation` in the helper; each `onTriggered` drains the queued callbacks with a millisecond timestamp (`Date.now()` minus start) and stops when the queue is empty. Callbacks run once, unlike a raw `FrameAnimation`. | Approx |
-| `cancelAnimationFrame(id)` | Remove the callback from the queue | Full |
-| `performance.now()` | `Date.now()` minus application start | Emulated |
-| `fetch(url, opts)` | `XMLHttpRequest` wrapped in a Promise | Emulated |
-| `XMLHttpRequest` (text GET/POST) | QML engine `XMLHttpRequest` | Full |
-| `XMLHttpRequest` with `responseType` `blob` | none (no `Blob` type) | Unsupported |
-| `localStorage` | `QtQuick.LocalStorage` (`openDatabaseSync`, `db.transaction` with `tx.executeSql`) behind `getItem`/`setItem`/`removeItem` wrappers | Emulated (synchronous, strings only) |
-| `sessionStorage` | In-memory object on the root (lost on exit) | Emulated |
-| `location.href` | `Qt.resolvedUrl(...)` of the source | Approx |
-| `location.reload()` | none | Unsupported |
-| `history.pushState`, `back()` | `StackView` push/pop when the app uses `StackView` | Emulated |
-| `history.pushState` without `StackView` | none | Unsupported |
-| `navigator.language` | `Qt.locale().name` with `_` replaced by `-` (`en_US` to `en-US`) | Approx |
-| `navigator.platform` | `Qt.platform.os` | Approx |
-| `navigator.userAgent` | Constant `html-2-qml/<version>` | Emulated |
-| `alert(msg)` | `MessageDialog { buttons: MessageDialog.Ok; text: msg }` from QtQuick.Dialogs | Emulated (non-blocking) |
-| `confirm(msg)` (sync return) | none; the call cannot block | Unsupported |
-| `confirm(msg, cb)` (callback form) | `MessageDialog` with `MessageDialog.Ok \| MessageDialog.Cancel`; `onAccepted`/`onRejected` call `cb` | Emulated |
-| `prompt(msg)` (sync return) | none | Unsupported |
-| `prompt(msg, cb)` (callback form) | Controls `Dialog { modal: true; standardButtons: Dialog.Ok \| Dialog.Cancel }` with a `TextField` | Emulated |
-| `JSON.parse`, `JSON.stringify` | QML JS engine | Full |
-| `Math.*` | QML JS engine | Full |
-| `Date` | QML JS engine; local time zone from the system | Full |
-| `Date.prototype.toLocaleString/DateString/TimeString` with `(locale, options)` | `date.toLocaleString(Qt.locale(tag), format)` with the options object translated to a Qt format string; the engine's own `toLocale*` takes a Qt format, not an options object, and its no-argument output is the long format | Approx |
-| `Intl.NumberFormat`, `Intl.DateTimeFormat` (basic) | `Intl` is not defined; helper over `Number.toLocaleString(Qt.locale(tag), 'f', n)` and `Qt.formatDateTime` | Emulated (subset) |
-| Other `Intl.*` | none | Unsupported |
-| `Promise` (`then`, `catch`, `all`, `race`, `resolve`, `reject`) | QML JS engine | Full |
-| `Promise.prototype.finally`, `Promise.allSettled`, `Promise.any` | Not defined in the engine; polyfilled in `dom.js` | Emulated |
-| `async` / `await` | Lowered by oxc to generator plus Promise driver; the engine has generators and `Promise` but not the syntax | Emulated |
-| `Array.prototype.flat/flatMap/at`, `Object.fromEntries`, `String.prototype.replaceAll/trimStart/trimEnd` | Not defined in the engine; polyfilled in `dom.js` | Emulated |
-| `queueMicrotask(f)`, `structuredClone(v)` | `Promise.resolve().then(f)`; JSON round trip (no Map/Set/Date fidelity) | Emulated / Approx |
-| `atob`, `btoa` | `Qt.atob`, `Qt.btoa` | Full |
-| `matchMedia(q)` | Evaluates `min-width`/`max-width` against `root.width`; change listeners through `Connections` | Emulated |
-| `Event`, `CustomEvent`, `EventTarget` | Plain objects with `type` and `detail`, dispatched through the shim | Emulated |
-| `ResizeObserver` | `onWidthChanged`/`onHeightChanged` | Emulated |
-| `IntersectionObserver` | none | Unsupported |
-| `import` / `export` in inline code | none | Unsupported |
-| `import` of a local `.js` file that does not touch the DOM | Emitted as `.mjs`; `import "x.mjs" as X` (QML supports ES modules in `.mjs` files) | Approx |
-| `import` of a file that touches the DOM, or of a bare/URL specifier | none; modules cannot see the importing file's ids | Unsupported |
+| Browser API | Lowering | Notes |
+| :--- | :--- | :--- |
+| `el.className` (get / set) | `H2Q.getClassName(<id>)` / `H2Q.setClassName(<id>, v)` | Reads/updates `h2qClasses` string and triggers style state re-evaluation |
+| `el.classList.add(...c)` | `H2Q.classListAdd(<id>, ...c)` | Mutates `h2qClasses` and applies any class-bound properties |
+| `el.classList.remove(...c)` | `H2Q.classListRemove(<id>, ...c)` | Mutates `h2qClasses` |
+| `el.classList.toggle(c, force?)` | `H2Q.classListToggle(<id>, c, force)` | Returns boolean |
+| `el.classList.contains(c)` | `H2Q.classListContains(<id>, c)` | Returns boolean |
+| `el.classList.replace(oldC, newC)` | `H2Q.wrap(<id>).classList.replace(oldC, newC)` | Replaces `oldC` with `newC` and returns boolean |
+| `el.dataset.<camelKey>` (get / set) | `H2Q.getDataset(<id>, "<camelKey>")` / `H2Q.setDataset(<id>, "<camelKey>", v)` | Backed by per-item metadata table initialized from HTML `data-*` attributes |
+| `el.getAttribute(name)` | `H2Q.getAttribute(<id>, name)` | Special-cases `id`, `class`, `disabled`, `hidden`, `value`, `href`, `src`, `min`, `max`, `step`, `data-*`, plus arbitrary attributes |
+| `el.setAttribute(name, val)` | `H2Q.setAttribute(<id>, name, val)` | Updates backing property (`from`/`to`/`stepSize`, `enabled`, `visible`, etc.) + attribute table |
+| `el.removeAttribute(name)` | `H2Q.removeAttribute(<id>, name)` | Clears attribute and resets reflected boolean properties (`disabled`, `hidden`, `checked`, `readOnly`) |
+| `el.hasAttribute(name)` | `H2Q.hasAttribute(<id>, name)` | Returns boolean |
+| `el.toggleAttribute(name, force?)` | `H2Q.toggleAttribute(<id>, name, force)` | Toggles attribute presence and returns boolean |
 
-## Section 4: Events
+---
 
-**Handler choice.** Prefer pointer handlers (`TapHandler`, `HoverHandler`, `WheelHandler`, `DragHandler`) over `MouseArea`. Handlers on an item also see events over its children and do not block handlers on ancestors, which is closest to DOM bubbling. A `MouseArea` that accepts a press hides it from items below it.
+## 4. Inline Style (`el.style.<prop>`), `style.cssText`, and `getComputedStyle`
 
-**DOM event to QML handler**
+### 4.1 Static Property Lowering (when `el` is a resolved `QmlTarget`)
 
-| DOM event | QML handler | Support |
-|---|---|---|
-| `click` | `TapHandler.onTapped` (left button), `MouseArea.onClicked`, `Button.onClicked` | Full |
-| `dblclick` | `TapHandler.onDoubleTapped`, `MouseArea.onDoubleClicked` | Full |
-| `contextmenu` | `TapHandler { acceptedButtons: Qt.RightButton }`; `onLongPressed` on touch | Approx |
-| `mousedown`, `mouseup` | `TapHandler.onPressedChanged` (`pressed` true or false) or `MouseArea.onPressed`/`onReleased` | Full |
-| `mousemove` | `HoverHandler.onPointChanged` or `MouseArea.onPositionChanged` (needs `hoverEnabled: true` to fire without a pressed button) | Full |
-| `mouseenter`, `pointerenter` | `HoverHandler.onHoveredChanged` (`hovered` true) or `MouseArea.onEntered` | Full |
-| `mouseleave`, `pointerleave` | `HoverHandler.onHoveredChanged` (`hovered` false) or `MouseArea.onExited` | Full |
-| `mouseover`, `mouseout` | Same as enter and leave | Approx (no bubbling between handlers) |
-| `wheel` | `WheelHandler.onWheel` or `MouseArea.onWheel` | Approx (`deltaY = -angleDelta.y`, scaled from 120 per notch to about 100 px; `pixelDelta` is used when non-zero. Qt's sign is opposite to the DOM's.) |
-| `pointerdown`, `pointermove`, `pointerup`, `pointercancel` | `PointHandler`, `TapHandler` | Approx |
-| `touchstart`, `touchmove`, `touchend`, `touchcancel` | `MultiPointTouchArea.onPressed`, `onUpdated`, `onReleased`, `onCanceled` (each receives the list of touch points) | Approx |
-| `keydown` | `Keys.onPressed` (attached, on a focused item) | Full |
-| `keyup` | `Keys.onReleased` | Full |
-| `keypress` | `Keys.onPressed` filtered on non-empty `event.text` | Emulated |
-| `input` on `TextField` | `TextField.onTextEdited` (user input only) | Full |
-| `input` on `TextArea` | `TextArea.onTextChanged`, skipping writes made by the shim (`TextArea` has no `textEdited`) | Emulated |
-| `input` on sliders | `Slider.onMoved` | Approx |
-| `change` on text inputs | `TextField.onEditingFinished`, `TextArea.onEditingFinished` | Approx |
-| `change` on checkboxes | `CheckBox.onToggled` | Full |
-| `change` on selects | `ComboBox.onActivated` | Full |
-| `submit` | `TextField.onAccepted`, dispatched to the form wrapper | Emulated |
-| `focus`, `focusin` | `Item.onActiveFocusChanged` (`activeFocus` true) | Full (focus); Approx (focusin, no bubbling) |
-| `blur`, `focusout` | `Item.onActiveFocusChanged` (`activeFocus` false) | Full (blur); Approx (focusout) |
-| `scroll` | `Flickable.onContentYChanged`, `onContentXChanged` | Full on `Flickable`; Approx elsewhere |
-| `resize` | `Window.onWidthChanged`, `onHeightChanged` | Full |
-| `load` (document) | End of the root `Component.onCompleted`, after the top-level statements | Approx |
-| `load` (image) | `Image.onStatusChanged` with `Image.Ready` | Full |
-| `error` (image) | `Image.onStatusChanged` with `Image.Error` | Full |
-| `DOMContentLoaded` | End of the root `Component.onCompleted`, after the top-level statements | Full |
-| `animationend` | `Animation.onFinished` (since Qt 5.12) | Approx |
-| `transitionend` | `Transition.onRunningChanged` (read-only `running`) with `running` false, or `onFinished` of the animation inside a `Behavior` | Approx |
-| `dragstart`, `drag` | `DragHandler.onActiveChanged`, `onTranslationChanged` | Approx |
-| `dragenter`, `dragover`, `dragleave`, `drop` | `DropArea.onEntered`, `onPositionChanged`, `onExited`, `onDropped` | Approx |
-| `beforeunload` | `Window.onClosing` (`close.accepted = false` cancels) | Approx |
-| `unload`, `pagehide` | `Connections { target: Qt.application; function onAboutToQuit() }` | Approx |
-| `visibilitychange` | `Window.onVisibilityChanged`; hidden when `visibility` is `Window.Hidden` or `Window.Minimized` | Approx |
-| `popstate`, `hashchange` | Emulated through the `history` shim | Emulated |
-| Custom `dispatchEvent` | Shim event bus | Emulated |
+| `el.style.<prop>` | QML Property on `<id>` | Conversion Helper |
+| :--- | :--- | :--- |
+| `display` | `<id>.visible` | `val !== "none"` (reads as `<id>.visible ? "block" : "none"`) |
+| `visibility` | `<id>.visible` | `val !== "hidden"` |
+| `opacity` | `<id>.opacity` | `H2Q.cssNumber(val, 1)` |
+| `backgroundColor` / `background` | `<id>.color` (on `Rectangle`) | `H2Q.cssColor(val)` |
+| `color` | `<id>.color` (on `Text`) or `<id>Text.color` (on `Box`) | `H2Q.cssColor(val)` |
+| `width` / `height` | `<id>.width` / `<id>.height` | `H2Q.cssPx(val)` (strips `"px"` suffix, parses float) |
+| `minWidth` / `minHeight` / `maxWidth` / `maxHeight` | `<id>.Layout.minimumWidth` / etc. | `H2Q.cssPx(val)` |
+| `left` / `top` | `<id>.x` / `<id>.y` | `H2Q.cssPx(val)` |
+| `fontSize` | `<id>.font.pixelSize` | `H2Q.cssPx(val)` |
+| `fontWeight` | `<id>.font.weight` / `<id>.font.bold` | `val === "bold" \|\| Number(val) >= 600` |
+| `fontStyle` | `<id>.font.italic` | `val === "italic"` |
+| `textAlign` | `<id>.horizontalAlignment` | `H2Q.cssTextAlign(val)` (`Text.AlignLeft`, `Text.AlignHCenter`, `Text.AlignRight`) |
+| `borderRadius` | `<id>.radius` (on `Rectangle`) | `H2Q.cssPx(val)` |
+| `borderColor` | `<id>.border.color` (on `Rectangle`) | `H2Q.cssColor(val)` |
+| `borderWidth` | `<id>.border.width` (on `Rectangle`) | `H2Q.cssPx(val)` |
+| `zIndex` | `<id>.z` | `H2Q.cssNumber(val, 0)` |
 
-**Event object fields**
+### 4.2 Style Helper Methods, `cssText`, and `getComputedStyle`
 
-| Field | Emulation | Support |
-|---|---|---|
-| `type` | String literal from the rewrite | Full |
-| `target` | Item id from the static rewrite; wrapper for shim-dispatched events | Approx |
-| `currentTarget` | Item the listener is registered on | Full |
-| `key` | `event.text` for printable keys; otherwise `KeyEvent.key` mapped through a generated `Qt.Key` to DOM name table | Full |
-| `code` | `KeyEvent.key` mapped through a table to a US-layout physical key name (`KeyA`, `Enter`). `nativeScanCode` is platform-specific and is not used. | Approx |
-| `keyCode` | Legacy mapping table | Emulated |
-| `repeat` | `KeyEvent.isAutoRepeat` | Full |
-| `altKey`, `ctrlKey`, `shiftKey`, `metaKey` | Bit tests on `modifiers` (`Qt.AltModifier`, `Qt.ControlModifier`, `Qt.ShiftModifier`, `Qt.MetaModifier`) | Emulated |
-| `button` | `Qt.LeftButton` to 0, `Qt.MiddleButton` to 1, `Qt.RightButton` to 2 | Emulated |
-| `buttons` | `MouseEvent.buttons` unchanged; the left (1), right (2) and middle (4) bits match the DOM | Full |
-| `offsetX`, `offsetY` | `mouse.x`, `mouse.y` (`MouseArea`); `eventPoint.position` (handlers) | Full |
-| `clientX`, `clientY` | `item.mapToItem(null, x, y)` (null maps to the scene root), or `eventPoint.scenePosition` in handlers | Full |
-| `pageX`, `pageY` | Same as `clientX` (no page scroll) | Approx |
-| `deltaX`, `deltaY`, `deltaMode` | From `WheelEvent.angleDelta`/`pixelDelta` (see `wheel`); `deltaMode` is 0 (pixels) | Approx |
-| `timeStamp` | Milliseconds since application start (same clock as `performance.now()`) | Approx |
-| `preventDefault()` | Key events: `accepted = true`; `Keys` handlers run before the item (`Keys.priority` default `BeforeItem`), so the item does not process the key. This also stops propagation to parent items. Other events: no-op. | Approx |
-| `stopPropagation()` | Key events: `accepted = true`. Pointer events: a flag on the shim event that the generated ancestor handlers check before running their listeners. | Approx |
-| `stopImmediatePropagation()` | All listeners of one element are called by one generated dispatcher in registration order; the flag stops the loop | Emulated |
-| `bubbles`, `cancelable`, `defaultPrevented` | Constants or derived from `accepted` | Emulated |
+| Browser API | Lowering | Notes |
+| :--- | :--- | :--- |
+| `el.style.setProperty(name, val)` | `H2Q.wrap(<id>).style.setProperty(name, val)` | Supports both standard CSS properties (`background-color`, `width`, etc.) and CSS custom properties (`--*`) |
+| `el.style.getPropertyValue(name)` | `H2Q.wrap(<id>).style.getPropertyValue(name)` | Reads custom properties (`--*`) or mapped inline style values |
+| `el.style.removeProperty(name)` | `H2Q.wrap(<id>).style.removeProperty(name)` | Removes custom or inline property and returns previous value |
+| `el.style.cssText` (get / set) | `H2Q.wrap(<id>).style.cssText` | Parses `"prop: val; ..."` declarations and applies each via `setStyle` / `setProperty` (emits `Unsupported` static diagnostic because arbitrary CSS declarations cannot be statically bound in QML) |
+| `window.getComputedStyle(el)` / `getComputedStyle(el)` | `H2Q.getComputedStyle(el)` | Returns live-like style view with `getPropertyValue(name)` and camelCase properties (`display`, `visibility`, `opacity`, `width`, `height`, `color`, `backgroundColor`, `borderRadius`, `borderWidth`, `fontSize`) |
 
-## Section 5: Rewrite rules for the oxc pass
+---
 
-Rules run in the order listed. Each rule emits a diagnostic when it changes the output.
+## 5. DOM Tree Traversal & Mutation
 
-| # | Rule | Before | After | Support |
-|---|---|---|---|---|
-| 1 | Collect top-level declarations | `let n = 0; function bump() {}` | Symbol table entries for `n` (state) and `bump` (function) | Full |
-| 2 | Hoist top-level functions | `function bump() { ... }` | `function bump() { ... }` in the root object body | Full |
-| 3 | Promote mutated top-level state to properties | `let count = 0;` (written in a handler) | `property int count: 0`. The type is `int`, `real`, `string` or `bool` only when every assignment has that type, otherwise `var`. | Full |
-| 4 | Keep read-only top-level constants as readonly | `const MAX = 10;` | `readonly property int _MAX: 10` (non-literal initializers use `readonly property var`) | Full |
-| 5 | Rewrite DOM access to ids (§1) | `document.getElementById('n').textContent = count` | `n.text = count` | Full |
-| 6 | Rewrite `window` references | `window.innerWidth` | `root.width` | Full |
-| 7 | Wrap DOMContentLoaded and load listeners | `document.addEventListener('DOMContentLoaded', init);` | Call `init()` at the end of the root `Component.onCompleted`, after the top-level statements | Full |
-| 8 | Convert `addEventListener` and `on*` assignments to handlers | `btn.addEventListener('click', bump);` | `Button { id: btn; onClicked: bump() }` | Full |
-| 9 | Convert inline `on*` attributes | `<button onclick="bump(this)">` | `onClicked: bump(btn)` | Full |
-| 10 | Replace `this` in handlers | `function () { this.text = 'x'; }` | `this` replaced by the target id (`btn.text = 'x'`); arrow functions keep their lexical `this` | Approx |
-| 11 | Pass event objects through the shim | `e => console.log(e.clientX)` | `onTapped: (eventPoint, button) => _h_click_1(Dom.event("click", eventPoint, button))` | Emulated |
-| 12 | Lower known class toggles to class properties | `box.classList.toggle('open')` | `box.cls_open = !box.cls_open` | Emulated |
-| 13 | Static timers when called once at top level and never cleared | `setTimeout(tick, 500);` | `Timer { interval: 500; running: true; onTriggered: tick() }` | Full |
-| 14 | Dynamic timers otherwise | `id = setInterval(f, 100);` | `id = Dom.setInterval(f, 100)` (likewise `Dom.setTimeout`) | Emulated |
-| 15 | Flag constructs that bypass the static rewrite | `eval(s)`, `new Function(s)`, `document.write(x)` | Compile warning. `eval` and `new Function` do run in the engine, but their strings are not rewritten, so DOM access inside them fails. `document.write` is not supported. | Approx (eval); Unsupported (write) |
-| 16 | Handle module syntax | `export function f() {}` | Inline scripts: `export` removed, `import` flagged. Local DOM-free modules: emitted as `.mjs` (§3). | Ignored (export); Unsupported (import of DOM-touching or bare modules) |
-| 17 | Rename identifiers that collide with QML names or that QML forbids | `let state = 1;`, `let Count = 0;` | `property int state_: 1`, `property int _Count: 0` (property, function and id names cannot start with an uppercase letter, and `state`, `width`, `data`, `children` and so on shadow `Item` members) | Full |
-| 18 | Lower syntax the engine lacks | `({ ...a, b })`, `x ??= 1`, `try {} catch {}`, class fields | `Object.assign({}, a, { b })`, `x = x ?? 1`, `catch (_e) {}`, constructor assignments. `?.` and `??` pass through unchanged. Regex named groups, lookbehind, the `s` flag, BigInt and `for await` cannot be lowered and are flagged. | Approx |
-| 19 | Lower `async`/`await` | `async function f() { await g(); }` | Generator plus Promise driver | Approx |
+| Browser API | Lowering / Runtime Support |
+| :--- | :--- |
+| `el.parentElement` / `el.parentNode` | `H2Q.wrap(el).parentElement` (unwraps internal layout containers like `ColumnLayout`/`RowLayout`/`GridLayout` to the logical parent element) |
+| `el.children` / `el.childNodes` | `H2Q.wrap(el).children` / `childNodes` (array of wrapped child elements, skipping internal `<id>Text` label children on `Box` items) |
+| `el.childElementCount` | `H2Q.wrap(el).childElementCount` |
+| `el.firstElementChild` / `el.lastElementChild` | `H2Q.wrap(el).firstElementChild` / `lastElementChild` |
+| `el.firstChild` / `el.lastChild` | `H2Q.wrap(el).firstChild` / `lastChild` |
+| `el.nextElementSibling` / `el.previousElementSibling` | `H2Q.wrap(el).nextElementSibling` / `previousElementSibling` |
+| `el.nextSibling` / `el.previousSibling` | `H2Q.wrap(el).nextSibling` / `previousSibling` |
+| `parent.appendChild(child)` | `H2Q.wrap(parent).appendChild(child)` (supports `DocumentFragment`) |
+| `parent.removeChild(child)` | `H2Q.wrap(parent).removeChild(child)` |
+| `parent.insertBefore(newNode, refNode)` | `H2Q.wrap(parent).insertBefore(newNode, refNode)` |
+| `parent.replaceChild(newChild, oldChild)` | `H2Q.wrap(parent).replaceChild(newChild, oldChild)` |
+| `parent.append(...nodesOrStrings)` | `H2Q.wrap(parent).append(...)` (converts string arguments to text nodes) |
+| `parent.prepend(...nodesOrStrings)` | `H2Q.wrap(parent).prepend(...)` |
+| `el.before(...nodesOrStrings)` / `el.after(...nodesOrStrings)` | `H2Q.wrap(el).before(...)` / `after(...)` |
+| `el.replaceWith(...nodesOrStrings)` | `H2Q.wrap(el).replaceWith(...)` |
+| `parent.replaceChildren(...nodesOrStrings)` | `H2Q.wrap(parent).replaceChildren(...)` |
+| `el.insertAdjacentHTML(pos, html)` | `H2Q.wrap(el).insertAdjacentHTML(pos, html)` (`"beforebegin"`, `"afterbegin"`, `"beforeend"`, `"afterend"`) |
+| `el.insertAdjacentElement(pos, targetEl)` | `H2Q.wrap(el).insertAdjacentElement(pos, targetEl)` |
+| `el.insertAdjacentText(pos, text)` | `H2Q.wrap(el).insertAdjacentText(pos, text)` |
+| `el.remove()` | `H2Q.wrap(el).remove()` (`item.parent = null; item.visible = false; item.destroy()`) |
+| `el.cloneNode(deep?)` | `H2Q.wrap(el).cloneNode(deep)` (clones tag, classes, attributes, text/value, and optionally children) |
 
-## Review notes
+---
 
-- Verified against the 6.11 `.qmltypes` and probed with `qml6`: `FrameAnimation` (`triggered`, `elapsedTime`), `Animation.finished` (revision 2.12), `Transition.running`, `Window.closing`/`visibilityChanged`/`close()`, `Accessible.name`, `MessageDialog` (`buttons`, `text`, `accepted`/`rejected` from `QQuickAbstractDialog`), `TapHandler.tapped(eventPoint, button)`, `DropArea` signals, `MultiPointTouchArea` signals. All `(verify)` markers are resolved.
-- Rewrote the JS-engine claims after probing: `async`/`await`, object spread, class fields, `??=`, BigInt, `Intl`, `Promise.finally/allSettled/any`, `flat`, `at`, `fromEntries`, `replaceAll`, regex named groups/lookbehind/`s` flag are missing. `?.` and `??` work, so rule 18 no longer lowers them.
-- `setTimeout`, `setInterval`, `fetch`, `queueMicrotask`, `structuredClone`, `performance` and `window`/`document` are undefined in the engine; the globals table now says so.
-- `console.table/group/groupEnd/dir/timeLog/countReset` are undefined; `assert`, `count`, `time`, `timeEnd` and `trace` are native (`time`/`timeEnd` were wrongly listed as emulated).
-- `requestAnimationFrame` is one-shot, so the single shared `FrameAnimation` queue replaces a raw `FrameAnimation` that would fire every frame. `elapsedTime` is not in DOM milliseconds, so the timestamp comes from `Date.now()`.
-- `setTimeout(f, 0)` via `Qt.callLater` is Approx because `callLater` coalesces repeated calls of the same function (probed).
-- Id sanitizing now also prefixes ids that start with an uppercase letter; rule 17 and the `const` rule do the same for property and function names (QML rejects uppercase-initial ids and property names at load time, although `qmllint` accepts them).
-- `classList` no longer maps to `state`: states are exclusive, so independent classes became per-class `bool` properties with conditional bindings.
-- `insertBefore`: `Item.stackBefore` is not callable from QML (probed), so the shim re-attaches `ref` and later siblings; verified that a `Layout` follows the reparenting order. `removeChild` no longer destroys the node, since the DOM allows re-attaching it.
-- Dropped the always-`Repeater` plan for dynamic children; imperative `createObject` is the default and `Repeater`/`ListModel` is for recognized render-list loops. `createElement` creates a parentless object because the parent is unknown at that point.
-- `dom.js` cannot declare QML objects and each importing file gets its own copy, so shared state lives on the root.
-- `el.focus()` condition was wrong (`focus: true` is irrelevant); `blur()` verified to clear `activeFocus`, so it is Full. `mapToItem(null, ...)` verified.
-- `select.value` maps to `currentValue` (with `valueRole`) rather than `currentIndex`; added `selectedIndex`.
-- `%` sizes map to a parent-relative binding, not `Layout.fillWidth`/`anchors.fill`; added `visibility: hidden`.
-- Wheel: Qt's `angleDelta.y` sign is opposite to DOM `deltaY`; the old "angleDelta / 120" mapping was wrong. Added `deltaX`/`deltaY`/`deltaMode` fields.
-- `code` no longer derives from `nativeScanCode` (platform-specific); `buttons` needs no translation (bit values match), while `button` does; `key` uses `event.text` for printable keys; added `repeat`.
-- `preventDefault`/`stopPropagation`/`stopImmediatePropagation` rewritten: `Keys` handlers run before the item, so `accepted = true` is a real preventDefault; multiple listeners per element are one dispatcher, so `stopImmediatePropagation` is emulable (it was wrongly "one handler per signal").
-- Event table: `dragenter/dragover/dragleave` split to `onEntered/onPositionChanged/onExited`; `TextArea` has no `textEdited`; touch events are Approx; added `unload` (`Qt.application.aboutToQuit`), `touchcancel`, `mousemove` via `HoverHandler.onPointChanged`.
-- `DOMContentLoaded`/`load` run at the end of the root `Component.onCompleted` (Qt does not guarantee `onCompleted` order across objects); top-level statements are collected there.
-- Rule 11 used the undeclared name `point`; `TapHandler.tapped` provides `(eventPoint, button)`, and undeclared injected handler parameters are deprecated in Qt 6, so the arrow form is mandatory.
-- Rule 13 now requires a single top-level call (a `Timer` declared statically cannot restart per call); rule 15: `eval`/`new Function` run in the engine, they just bypass the rewrite.
-- ES modules: `.mjs` imports work in QML (probed); the old `.import` directive claim for ES `import` in `.js` files was wrong.
-- `navigator.language` needs `_` to `-`; `Date.toLocaleString` takes a Qt format, not an options object; `atob`/`btoa` map to `Qt.atob`/`Qt.btoa`; `localStorage` uses `db.transaction`.
-- `alert`/`confirm` need `import QtQuick.Dialogs`; `prompt` uses a Controls `Dialog`.
+## 6. Focus, Blur, and Scrolling APIs
+
+| Browser API | Static Lowering (on resolved `QmlTarget`) | Runtime Support (`h2q_runtime.js`) |
+| :--- | :--- | :--- |
+| `el.focus()` | `<id>.forceActiveFocus()` | `H2Q.focus(el)` (sets `focus = true`, calls `forceActiveFocus()`, updates `document.activeElement`, dispatches `focus` if not already focused) |
+| `el.blur()` | `<id>.focus = false` | `H2Q.blur(el)` (sets `focus = false`, clears `document.activeElement`, dispatches `blur`) |
+| `el.click()` | `H2Q.wrap(<id>).click()` | Dispatches cancelable bubbling `click` event on `el` |
+| `window.scrollTo(x, y \| opts)` / `window.scroll(x, y \| opts)` | `H2Q.scrollTo(x, y)` | Updates `window.scrollX`/`scrollY` (`pageXOffset`/`pageYOffset`), syncs root `Flickable` (`contentX`/`contentY`) if present, and dispatches `scroll` |
+| `window.scrollBy(dx, dy \| opts)` | `H2Q.scrollBy(dx, dy)` | Adds `(dx, dy)` to current window scroll position |
+| `el.scrollTo(x, y \| opts)` / `el.scrollBy(dx, dy \| opts)` | `H2Q.wrap(<id>).scrollTo(...)` / `scrollBy(...)` | Updates element `scrollLeft`/`scrollTop` (and `contentX`/`contentY` if `Flickable`) |
+| `el.scrollIntoView(arg?)` | `H2Q.wrap(<id>).scrollIntoView(arg)` | Scrolls window to element's mapped `(x, y)` coordinates |
+
+---
+
+## 7. Event Mapping
+
+### 7.1 Supported Events & QML Signal Bindings
+
+| DOM Event | `TargetKind` | QML Signal / Handler | Synthetic `event` Object Properties |
+| :--- | :--- | :--- | :--- |
+| `click` / `dblclick` | `Button` / `CheckBox` / `RadioButton` | `onClicked` / `clicked` | `{ type, target, currentTarget, button: 0, clientX, clientY, preventDefault(), stopPropagation(), stopImmediatePropagation(), defaultPrevented }` |
+| `click` / `dblclick` | `Box` / `Text` / `Image` | Injected `MouseArea { anchors.fill: parent; onClicked / onDoubleClicked }` | `{ type, target, currentTarget, clientX: mouse.x, clientY: mouse.y, button: mouse.button, ... }` |
+| `mousedown` / `mouseup` / `pointerdown` / `pointerup` / `touchstart` / `touchend` | `Button` / `MouseArea` | `pressed` / `released` | `{ type, target, currentTarget, ... }` |
+| `contextmenu` | `MouseArea` | `canceled` / programmatic dispatch | `{ type: "contextmenu", target, currentTarget, ... }` |
+| `input` | `TextField` / `TextArea` | `onTextEdited` / `textChanged` | `{ type: "input", target, currentTarget, data: <id>.text, ... }` |
+| `input` / `change` | `Range` (`Slider` / `SpinBox`) | `onMoved` / `onValueModified` / `valueChanged` | `{ type, target, currentTarget, ... }` |
+| `change` | `TextField` | `onEditingFinished` | `{ type: "change", target, currentTarget, ... }` |
+| `change` | `CheckBox` / `RadioButton` | `onToggled` | `{ type: "change", target, currentTarget, ... }` |
+| `change` | `Select` (`ComboBox`) | `onActivated` | `{ type: "change", target, currentTarget, ... }` |
+| `submit` | `Box` (`<form>`) | Triggered when a submit `Button` inside the form is clicked or `Enter` is pressed in a form `TextField` | `{ type: "submit", target, currentTarget, preventDefault(), defaultPrevented }` |
+| `keydown` / `keyup` / `keypress` | Any `Item` | `Keys.onPressed` / `Keys.onReleased` (`focus: true` enabled on target) | `{ type, key: H2Q.keyName(event.key, event.text), code: H2Q.keyCode(event.key), keyCode: H2Q.domKeyCode(event.key), ctrlKey, shiftKey, altKey, metaKey, repeat: event.isAutoRepeat, preventDefault() (sets event.accepted = true) }` |
+| `focus` / `blur` / `focusin` / `focusout` | Any `Item` | `activeFocusChanged` and `focusChanged` (deduplicated per focus state transition) | `{ type, target, currentTarget }` |
+| `mouseenter` / `mouseleave` / `mouseover` / `mouseout` | Any `Item` | `hoveredChanged` or `MouseArea { hoverEnabled: true; onEntered; onExited }` | `{ type, target, currentTarget }` |
+| `DOMContentLoaded` / `load` | `document` / `window` | Executed at the end of `__h2q_init(root)` inside `Component.onCompleted` | `{ type: "DOMContentLoaded" \| "load", target: H2Q.document }` |
+| `resize` | `window` | `root.widthChanged` / `root.heightChanged` | `{ type: "resize", target: H2Q.window }` |
+| `scroll` | `window` / `el` | Dispatched on `scrollTo` / `scrollBy` / `scrollIntoView` | `{ type: "scroll", target }` |
+| `hashchange` | `window` | Dispatched when `location.hash` changes | `{ type: "hashchange", target: H2Q.window }` |
+| `popstate` | `window` | Dispatched on `history.back()` / `forward()` / `go()` | `{ type: "popstate", state, target: H2Q.window }` |
+| `visibilitychange` | `document` | Dispatched if visibility state changes | `{ type: "visibilitychange", target: H2Q.document }` |
+
+### 7.2 Event Constructors & `EventTarget`
+
+- `new Event(type, opts?)` and `new CustomEvent(type, opts?)` (with `detail`, `bubbles`, `cancelable`, `preventDefault()`, `stopPropagation()`, `stopImmediatePropagation()`, `defaultPrevented`).
+- Typed event constructors: `new KeyboardEvent(type, opts?)`, `new MouseEvent(type, opts?)`, `new PointerEvent(type, opts?)`, `new FocusEvent(type, opts?)`, `new InputEvent(type, opts?)`, `new WheelEvent(type, opts?)`.
+- `new EventTarget()`: standalone event target supporting `addEventListener`, `removeEventListener`, and `dispatchEvent`.
+
+### 7.3 Static vs. Dynamic Event Registration
+
+1. **Inline HTML attributes** (`<button onclick="doWork(event)">`):
+   - Extracted during HTML analysis (`extract_inline_handlers`).
+   - Lowered into a generated function `function __h2q_attr_onclick_<id>(event) { doWork(event); }` in `page.js` and emitted as an `EventBinding`.
+2. **`el.addEventListener(type, fn, opts?)` on a statically resolved `QmlTarget`**:
+   - If the target has a single static listener and does not use `removeEventListener`, `dispatchEvent`, `{ once: true }`, or mixed `on<event>` + `addEventListener`, it takes the static fast path (`__h2q_on_<type>_<id>_<n>`).
+   - Otherwise, all listeners on `(target, type)` are unified onto `H2Q.listen` / `H2Q.unlisten` / `H2Q.setOn` / `H2Q.dispatchEvent` with a single QML forwarding handler.
+3. **`el.on<event> = fn`**:
+   - Lowered to a reassignable handler slot or `H2Q.setOn(<id>, "<event>", fn)` when unified with `addEventListener`.
+
+---
+
+## 8. Timers, Storage, Network, Observers & Browser Globals
+
+| Browser Global / API | Lowering in `page.js` | Implementation in `h2q_runtime.js` | Status |
+| :--- | :--- | :--- | :--- |
+| `setTimeout(fn, ms, ...args)` | `H2Q.setTimeout(fn, ms, ...args)` | Creates one-shot `QtQuick.Timer`, returns integer timer ID | Supported & tested |
+| `clearTimeout(id)` | `H2Q.clearTimeout(id)` | Stops and destroys timer `id` | Supported & tested |
+| `setInterval(fn, ms, ...args)` | `H2Q.setInterval(fn, ms, ...args)` | Creates repeating `QtQuick.Timer`, returns integer timer ID | Supported & tested |
+| `clearInterval(id)` | `H2Q.clearInterval(id)` | Stops and destroys timer `id` | Supported & tested |
+| `requestAnimationFrame(fn)` | `H2Q.requestAnimationFrame(fn)` | 16 ms one-shot `QtQuick.Timer` passing `H2Q.performance.now()` timestamp | Supported & tested |
+| `cancelAnimationFrame(id)` | `H2Q.cancelAnimationFrame(id)` | Calls `clearTimeout(id)` | Supported & tested |
+| `queueMicrotask(fn)` | `Promise.resolve().then(fn)` | Native V4 `Promise` microtask queue | Supported & tested |
+| `performance.now()` | `H2Q.performance.now()` | `Date.now() - _startTime` | Supported & tested |
+| `localStorage` | `H2Q.localStorage` | `getItem`, `setItem`, `removeItem`, `clear`, `key`, `length` backed by `QtQuick.LocalStorage` SQLite (with in-memory fallback) | Supported & tested |
+| `sessionStorage` | `H2Q.sessionStorage` | Same API backed by in-memory object | Supported & tested |
+| `fetch(url, opts?)` | `H2Q.fetch(url, opts)` | `Promise` wrapping QML `XMLHttpRequest`; supports `.ok`, `.status`, `.statusText`, `.headers.get()`, `.text()`, `.json()` | Supported & tested |
+| `alert(msg)` | `H2Q.alert(msg)` | Logs `[alert] <msg>` via `console.warn` and invokes optional alert hook | Supported & tested |
+| `confirm(msg)` / `prompt(msg, def?)` | `H2Q.confirm(msg)` / `H2Q.prompt(msg, def)` | Logs unsupported warning and returns `false` / `null` (emits `Unsupported` diagnostic) | Stubbed & tested |
+| `atob(s)` / `btoa(s)` | `H2Q.atob(s)` / `H2Q.btoa(s)` | Standard Web API Latin1 Base64 encode/decode | Supported & tested |
+| `structuredClone(val)` | `H2Q.structuredClone(val)` | Recursive structural clone preserving arrays/dates/plain objects | Supported & tested |
+| `window.innerWidth` / `window.innerHeight` | `H2Q.window.innerWidth` / `H2Q.window.innerHeight` | Reads `root.width` / `root.height` (fallback `1280` / `800`) | Supported & tested |
+| `window.scrollX` / `scrollY` / `pageXOffset` / `pageYOffset` | `H2Q.window.scrollX` / `scrollY` / `pageXOffset` / `pageYOffset` | Tracks window scroll offset | Supported & tested |
+| `window.devicePixelRatio` | `H2Q.window.devicePixelRatio` | `Qt.styleHints.mousePressAndHoldInterval ? 1 : 1` (defaults to `1`) | Supported & tested |
+| `window.getComputedStyle(el)` | `H2Q.getComputedStyle(el)` | Computed style view for `el` | Supported & tested |
+| `window.matchMedia(query)` | `H2Q.matchMedia(query)` | Evaluates `(min-width)`, `(max-width)`, `(min-height)`, `(max-height)`, and `(prefers-color-scheme: dark)` against `root` | Supported & tested |
+| `location` (`href`, `origin`, `protocol`, `host`, `hostname`, `port`, `pathname`, `search`, `hash`, `assign`, `replace`, `reload`) | `H2Q.location` | Parses assigned URLs, serves as document base URL for `a.href`, and dispatches `hashchange` on `window` when `hash` changes (emits `Unsupported` static diagnostic because QML has no multi-page navigation) | Shimmed & tested |
+| `history` (`state`, `length`, `pushState`, `replaceState`, `back`, `forward`, `go`) | `H2Q.history` | In-memory session history stack; updates `location` and dispatches `popstate` on `back()`/`forward()`/`go()` (emits `Unsupported` static diagnostic) | Shimmed & tested |
+| `navigator` (`userAgent`, `language`, `languages`, `onLine`, `platform`, `clipboard.writeText`, `clipboard.readText`) | `H2Q.navigator` | In-memory async `Promise` clipboard + environment metadata (emits `Unsupported` static diagnostic) | Shimmed & tested |
+| `MutationObserver` / `ResizeObserver` / `IntersectionObserver` | `H2Q.MutationObserver` / `H2Q.ResizeObserver` / `H2Q.IntersectionObserver` | Safe no-op observer constructors with `observe()`, `unobserve()`, `disconnect()`, `takeRecords()` so scripts constructing observers do not throw `ReferenceError` (emits `Unsupported` static diagnostic) | Stubbed & tested |
+| `console.log` / `warn` / `error` / `info` / `debug` | Unchanged (native in QML) | `console.table` lowered to `H2Q.consoleTable` | Supported & tested |
+
+---
+
+## 9. JavaScript Language Lowering for Qt 6.11 V4
+
+Qt 6.11's V4 engine supports ES2015–ES2020 core syntax (`let`, `const`, arrow functions, template literals, destructuring declarations, `for..of`, `Map`, `Set`, `Symbol`, `Promise`, optional chaining `?.`, nullish coalescing `??`) but lacks or has quirks with several newer constructs. `h2q_js` automatically lowers the following syntax into V4-safe ES6:
+
+1. **Object Spread (`{ ...a, x: 1 }`)** → `Object.assign({}, a, { x: 1 })`.
+2. **Object Rest Destructuring (`const { a, ...rest } = obj`)** → `const __h2q_tmp = obj, a = __h2q_tmp.a, rest = H2Q.objectRest(__h2q_tmp, ["a"])`.
+3. **Logical Assignment Operators (`a &&= b`, `a ||= b`, `a ??= b`)** → `a && (a = b)`, `a || (a = b)`, `(a !== null && a !== undefined) ? a : (a = b)`.
+4. **Optional Catch Binding (`try { ... } catch { ... }`)** → `try { ... } catch (__h2q_err) { ... }`.
+5. **ES6 `class` Declarations with Public Instance/Static Fields** → Lowered by moving field initializers into the `constructor` (or after the class for `static` fields). Private `#fields` emit an `Unsupported` diagnostic.
+6. **`async function` / `await` (simple linear & try/catch forms)** → Lowered to `.then()` chains where possible; complex control flow (`await` inside loops) emits an `Unsupported` diagnostic.
+7. **ES Modules (`<script type="module">`, `import`, `export`)** → Local module scripts are topologically ordered and bundled into `page.js` with per-module hygienic symbol renaming (`__h2q_m<N>_<name>`); external URL `import`s emit an `Unsupported` diagnostic.
+
+---
+
+## 10. Unsupported APIs & Why
+
+The following browser APIs are not supported in QML and emit `Diagnostic` entries (`Severity::Unsupported` or `Severity::Warning`) during `analyze()` / `rewrite()`:
+
+- **Multi-window navigation & blocking modal dialogs (`window.open`, `window.close`, `window.print`, synchronous `confirm()`, `prompt()`)**: Qt Quick runs in a single off-screen or embedded QML scene without browser tab management or synchronous event-loop-blocking modal text prompts (`confirm` returns `false`, `prompt` returns `null`).
+- **Dynamic code evaluation (`eval`, `new Function`)**: Disallowed for static analysis predictability and QML `.pragma library` scope isolation.
+- **Background threads & network sockets (`Worker`, `SharedWorker`, `ServiceWorker`, `WebSocket`, `EventSource`, `BroadcastChannel`)**: Qt Quick's V4 JS environment does not expose Web Workers, Service Workers, or browser `WebSocket` constructors without additional C++ plugin modules.
+- **Browser storage & binary databases (`IndexedDB`, `caches`, `cookie`)**: QML provides `QtQuick.LocalStorage` (used by `H2Q.localStorage`), not IndexedDB or HTTP cookie jars.
+- **Web Components & Shadow DOM (`customElements`, `attachShadow`, `ShadowRoot`, `HTMLTemplateElement.content`)**: QML uses its own component system (`Component` / `Qt.createQmlObject`) rather than HTML Shadow DOM encapsulation.
+- **Rich text selection ranges (`document.createRange`, `window.getSelection`, `Range`, `Selection`)**: QML `Text` and `TextField` do not expose DOM `Node`/character offset `Range` trees.
+- **2D/WebGL Canvas & Media (`canvas.getContext`, `Audio`, `Video`, `WebGLRenderingContext`, `OffscreenCanvas`)**: `h2q_convert` maps `<canvas>` to a placeholder QML `Rectangle` rather than a full HTML5 `CanvasRenderingContext2D` / WebGL surface.
+- **Live layout/mutation observer callbacks (`MutationObserver`, `ResizeObserver`, `IntersectionObserver`)**: Constructor stubs are provided in `H2Q` so page scripts do not throw `ReferenceError` on `.observe()` / `.disconnect()`, and `analyze()` emits an `Unsupported` diagnostic because arbitrary DOM mutation records and intersection thresholds are not synthesized automatically.
+- **Unsupported JS runtime intrinsics (`BigInt`, `WeakRef`, `FinalizationRegistry`, `Proxy`, private `#fields`)**: Not supported by Qt 6.11's V4 JavaScript engine.
