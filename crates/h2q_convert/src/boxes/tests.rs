@@ -38,6 +38,9 @@ fn print_box(doc: &Document, b: &LayoutBox<'_>, depth: usize, out: &mut String) 
         BoxKind::Replaced => "replaced",
     };
     out.push_str(&format!("{}{kind} {name}", "  ".repeat(depth)));
+    if let Some(marker) = &b.marker {
+        out.push_str(&format!(" {:?}", marker.kind));
+    }
     match &b.content {
         Content::Empty => out.push('\n'),
         Content::Inline(items) => {
@@ -164,7 +167,101 @@ fn layout_kinds_are_kept() {
 fn list_items_get_markers() {
     assert_eq!(
         outline("<ul><li>a</li></ul><ol start=3><li>b</li><li>c</li></ol>"),
-        "block <html>\n  block <body>\n    block <ul>\n      block <li> [\"• a\"]\n    block <ol>\n      block <li> [\"3. b\"]\n      block <li> [\"4. c\"]\n"
+        "block <html>\n  block <body>\n    block <ul>\n      block <li> Disc [\"a\"]\n    block <ol>\n      block <li> Text(\"3. \") [\"b\"]\n      block <li> Text(\"4. \") [\"c\"]\n"
+    );
+}
+
+/// The `li` lines of `outline(html)`, without their indentation.
+fn items(html: &str) -> Vec<String> {
+    outline(html)
+        .lines()
+        .map(str::trim)
+        .filter(|l| l.starts_with("block <li>"))
+        .map(|l| l.trim_start_matches("block <li> ").to_owned())
+        .collect()
+}
+
+#[test]
+fn inside_markers_are_inline_content() {
+    assert_eq!(
+        items("<style>ul,ol{list-style-position:inside}</style><ul><li>a</ul><ol><li>b</ol>"),
+        ["[\"•\\u{2003}a\"]", "[\"1. b\"]"]
+    );
+}
+
+#[test]
+fn ordinals_follow_start_reversed_and_value() {
+    assert_eq!(
+        items("<ol reversed><li>a<li>b<li>c</ol>"),
+        [
+            "Text(\"3. \") [\"a\"]",
+            "Text(\"2. \") [\"b\"]",
+            "Text(\"1. \") [\"c\"]"
+        ]
+    );
+    assert_eq!(
+        items("<ol start=10 reversed><li>a<li>b</ol>"),
+        ["Text(\"10. \") [\"a\"]", "Text(\"9. \") [\"b\"]"]
+    );
+    assert_eq!(
+        items("<ol><li>a<li value=7>b<li>c</ol>"),
+        [
+            "Text(\"1. \") [\"a\"]",
+            "Text(\"7. \") [\"b\"]",
+            "Text(\"8. \") [\"c\"]"
+        ]
+    );
+}
+
+#[test]
+fn hidden_and_non_list_item_siblings_do_not_count() {
+    assert_eq!(
+        items("<ol><li hidden>a<li>b<li style='display:block'>c<li>d</ol>"),
+        ["Text(\"1. \") [\"b\"]", "[\"c\"]", "Text(\"2. \") [\"d\"]"].map(str::to_owned)
+    );
+}
+
+#[test]
+fn marker_text_for_each_list_style_type() {
+    let first = |ty: &str| {
+        items(&format!(
+            "<ol start=4 style='list-style-type:{ty}'><li>x</ol>"
+        ))
+        .remove(0)
+    };
+    assert_eq!(first("decimal-leading-zero"), "Text(\"04. \") [\"x\"]");
+    assert_eq!(first("lower-alpha"), "Text(\"d. \") [\"x\"]");
+    assert_eq!(first("upper-alpha"), "Text(\"D. \") [\"x\"]");
+    assert_eq!(first("lower-roman"), "Text(\"iv. \") [\"x\"]");
+    assert_eq!(first("upper-roman"), "Text(\"IV. \") [\"x\"]");
+    assert_eq!(first("circle"), "Circle [\"x\"]");
+    assert_eq!(first("square"), "Square [\"x\"]");
+    assert_eq!(first("none"), "[\"x\"]");
+}
+
+#[test]
+fn stray_table_parts_get_anonymous_table_boxes() {
+    assert_eq!(
+        outline(
+            "<style>.c{display:table-cell}.r{display:table-row}.t{display:table}</style>\
+             <body><div class=c>a</div> <div class=c>b</div><p>d</p></body>"
+        ),
+        "block <html>\n  block <body>\n    table anon\n      table anon\n        table <div> [\"a\"]\n        table <div> [\"b\"]\n    block <p> [\"d\"]\n"
+    );
+    assert_eq!(
+        outline(
+            "<style>.r{display:table-row}.t{display:table}</style>\
+             <body><div class=t>x<div class=r>y</div>  </div></body>"
+        ),
+        "block <html>\n  block <body>\n    table <div>\n      table anon\n        table anon [\"x\"]\n      table <div>\n        table anon [\"y\"]\n"
+    );
+}
+
+#[test]
+fn whitespace_between_table_parts_generates_nothing() {
+    assert_eq!(
+        outline("<table> <colgroup> <col> </colgroup> <tr> <td>a</td> </tr> </table>"),
+        "block <html>\n  block <body>\n    table <table>\n      table <colgroup>\n        table <col>\n      table <tbody>\n        table <tr>\n          table <td> [\"a\"]\n"
     );
 }
 
@@ -206,4 +303,16 @@ fn anonymous_box_inherits_text_style() {
         anon.style.margin.top,
         h2q_css::LengthAuto::Length(h2q_css::Length::px(0.0))
     );
+}
+
+#[test]
+fn an_inline_block_alone_in_its_parent_keeps_its_box() {
+    let tree = outline("<div><a style=\"display:inline-block\" href=\"#\">x</a> </div>");
+    assert!(tree.contains("block <a>"), "{tree}");
+}
+
+#[test]
+fn an_inline_block_beside_text_stays_in_the_line() {
+    let tree = outline("<div>before <a style=\"display:inline-block\" href=\"#\">x</a></div>");
+    assert!(!tree.contains("block <a>"), "{tree}");
 }

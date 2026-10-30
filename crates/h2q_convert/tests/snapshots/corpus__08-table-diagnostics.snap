@@ -2,7 +2,4 @@
 source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-info[css]: <style>#1:58: unknown property `border-collapse`
-info[css]: <style>#1:63: unknown property `caption-side`
 info[css]: <style>#1:94: unknown property `font-variant-numeric`
-warning[css]: index.html:129: `display: table` on <table class="data-table"> is laid out as block flow (not implemented yet)

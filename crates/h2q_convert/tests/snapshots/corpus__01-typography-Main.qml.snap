@@ -598,53 +598,107 @@ ApplicationWindow {
                                 anchors.leftMargin: 24
 
                                 // <li>
-                                Text {
-                                    text: "• Set body text between 16 and 18 pixels."
-                                    textFormat: Text.PlainText
-                                    color: "#1d1f23"
-                                    font.family: "serif"
-                                    font.pixelSize: 17
-                                    lineHeight: 27.2
-                                    lineHeightMode: Text.FixedHeight
-                                    transform: Translate {
-                                        y: 3.83
-                                    }
-                                    wrapMode: Text.WordWrap
+                                Item {
+                                    implicitWidth: liText.implicitWidth
+                                    implicitHeight: liText.implicitHeight
                                     Layout.fillWidth: true
+
+                                    Text {
+                                        id: liText
+                                        text: "Set body text between 16 and 18 pixels."
+                                        textFormat: Text.PlainText
+                                        color: "#1d1f23"
+                                        font.family: "serif"
+                                        font.pixelSize: 17
+                                        lineHeight: 27.2
+                                        lineHeightMode: Text.FixedHeight
+                                        transform: Translate {
+                                            y: 3.83
+                                        }
+                                        wrapMode: Text.WordWrap
+                                        anchors.left: parent.left
+                                        anchors.right: parent.right
+                                        anchors.top: parent.top
+                                    }
+
+                                    Rectangle {
+                                        x: -17
+                                        y: 12
+                                        width: 5
+                                        height: 5
+                                        color: "#1d1f23"
+                                        radius: 2.5
+                                    }
                                 }
 
                                 // <li>
-                                Text {
-                                    text: "• Keep measure between 45 and 75 characters."
-                                    textFormat: Text.PlainText
-                                    color: "#1d1f23"
-                                    font.family: "serif"
-                                    font.pixelSize: 17
-                                    lineHeight: 27.2
-                                    lineHeightMode: Text.FixedHeight
-                                    transform: Translate {
-                                        y: 3.83
-                                    }
-                                    wrapMode: Text.WordWrap
+                                Item {
+                                    implicitWidth: liText2.implicitWidth
+                                    implicitHeight: liText2.implicitHeight
                                     Layout.fillWidth: true
                                     Layout.topMargin: 4
+
+                                    Text {
+                                        id: liText2
+                                        text: "Keep measure between 45 and 75 characters."
+                                        textFormat: Text.PlainText
+                                        color: "#1d1f23"
+                                        font.family: "serif"
+                                        font.pixelSize: 17
+                                        lineHeight: 27.2
+                                        lineHeightMode: Text.FixedHeight
+                                        transform: Translate {
+                                            y: 3.83
+                                        }
+                                        wrapMode: Text.WordWrap
+                                        anchors.left: parent.left
+                                        anchors.right: parent.right
+                                        anchors.top: parent.top
+                                    }
+
+                                    Rectangle {
+                                        x: -17
+                                        y: 12
+                                        width: 5
+                                        height: 5
+                                        color: "#1d1f23"
+                                        radius: 2.5
+                                    }
                                 }
 
                                 // <li>
-                                Text {
-                                    text: "• Use one typeface family per role."
-                                    textFormat: Text.PlainText
-                                    color: "#1d1f23"
-                                    font.family: "serif"
-                                    font.pixelSize: 17
-                                    lineHeight: 27.2
-                                    lineHeightMode: Text.FixedHeight
-                                    transform: Translate {
-                                        y: 3.83
-                                    }
-                                    wrapMode: Text.WordWrap
+                                Item {
+                                    implicitWidth: liText3.implicitWidth
+                                    implicitHeight: liText3.implicitHeight
                                     Layout.fillWidth: true
                                     Layout.topMargin: 4
+
+                                    Text {
+                                        id: liText3
+                                        text: "Use one typeface family per role."
+                                        textFormat: Text.PlainText
+                                        color: "#1d1f23"
+                                        font.family: "serif"
+                                        font.pixelSize: 17
+                                        lineHeight: 27.2
+                                        lineHeightMode: Text.FixedHeight
+                                        transform: Translate {
+                                            y: 3.83
+                                        }
+                                        wrapMode: Text.WordWrap
+                                        anchors.left: parent.left
+                                        anchors.right: parent.right
+                                        anchors.top: parent.top
+                                    }
+
+                                    Rectangle {
+                                        x: -17
+                                        y: 12
+                                        width: 5
+                                        height: 5
+                                        color: "#1d1f23"
+                                        radius: 2.5
+                                    }
                                 }
                             }
                         }

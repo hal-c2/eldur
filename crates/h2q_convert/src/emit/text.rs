@@ -17,7 +17,7 @@ use crate::boxes::{Inline, Span, describe, node_line};
 
 /// Ascent + descent of the common fallback fonts (Liberation, DejaVu) as a
 /// fraction of the font size; used to centre glyphs in the line box.
-const CONTENT_AREA: f32 = 1.15;
+pub(super) const CONTENT_AREA: f32 = 1.15;
 
 /// What StyledText needs to know about the enclosing inline box.
 #[derive(Clone)]

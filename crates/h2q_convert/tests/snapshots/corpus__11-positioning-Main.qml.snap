@@ -192,30 +192,6 @@ ApplicationWindow {
                                         anchors.rightMargin: 24
                                         anchors.topMargin: 24
 
-                                        // <span class="badge">
-                                        Rectangle {
-                                            color: "#e74c3c"
-                                            implicitWidth: badgeText.implicitWidth
-                                            implicitHeight: badgeText.implicitHeight
-                                            Layout.preferredWidth: 26
-                                            Layout.preferredHeight: 26
-
-                                            Text {
-                                                id: badgeText
-                                                text: "3"
-                                                textFormat: Text.PlainText
-                                                color: "#ffffff"
-                                                font.family: "sans-serif"
-                                                font.pixelSize: 13
-                                                font.weight: 700
-                                                wrapMode: Text.WordWrap
-                                                anchors.left: parent.left
-                                                anchors.right: parent.right
-                                                anchors.top: parent.top
-                                                anchors.bottom: parent.bottom
-                                            }
-                                        }
-
                                         // <h2>
                                         Text {
                                             text: "Team update"
@@ -246,37 +222,46 @@ ApplicationWindow {
                                         }
 
                                         // <div class="tooltip-wrap">
-                                        ColumnLayout {
-                                            spacing: 0
-                                            Layout.fillWidth: true
-                                            Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                        Item {
+                                            implicitWidth: tooltipWrapContent.implicitWidth
+                                            implicitHeight: tooltipWrapContent.implicitHeight
                                             Layout.topMargin: 64
 
-                                            // <button class="btn">
-                                            Button {
-                                                id: buttonControl
-                                                text: "Follow"
-                                                palette.buttonText: "#ffffff"
-                                                font.family: "sans-serif"
-                                                font.pixelSize: 16
-                                                font.weight: 600
-                                                background: Rectangle {
-                                                    color: "#3b6fe0"
-                                                    radius: 8
+                                            ColumnLayout {
+                                                id: tooltipWrapContent
+                                                spacing: 0
+                                                anchors.left: parent.left
+                                                anchors.right: parent.right
+                                                anchors.top: parent.top
+
+                                                // <button class="btn">
+                                                Button {
+                                                    id: buttonControl
+                                                    text: "Follow"
+                                                    palette.buttonText: "#ffffff"
+                                                    font.family: "sans-serif"
+                                                    font.pixelSize: 16
+                                                    font.weight: 600
+                                                    background: Rectangle {
+                                                        color: "#3b6fe0"
+                                                        radius: 8
+                                                    }
+                                                    topPadding: 10
+                                                    rightPadding: 18
+                                                    bottomPadding: 10
+                                                    leftPadding: 18
+                                                    Layout.alignment: Qt.AlignHCenter
                                                 }
-                                                topPadding: 10
-                                                rightPadding: 18
-                                                bottomPadding: 10
-                                                leftPadding: 18
                                             }
 
-                                            // <div class="tooltip">
                                             Rectangle {
                                                 color: "#1f2937"
                                                 radius: 6
                                                 implicitWidth: tooltipContent.implicitWidth + 20
                                                 implicitHeight: tooltipContent.implicitHeight + 12
-                                                Layout.fillWidth: true
+                                                x: parent.width * 0.5
+                                                anchors.bottom: parent.bottom
+                                                anchors.bottomMargin: parent.height + 12
 
                                                 ColumnLayout {
                                                     id: tooltipContent
@@ -297,48 +282,75 @@ ApplicationWindow {
                                                         wrapMode: Text.NoWrap
                                                         Layout.fillWidth: true
                                                     }
+                                                }
+
+                                                Rectangle {
+                                                    color: "#00000000"
+                                                    implicitWidth: 12
+                                                    implicitHeight: 12
+                                                    x: parent.width * 0.5 + -6
+                                                    y: parent.height
 
                                                     Rectangle {
+                                                        anchors.left: parent.left
+                                                        anchors.right: parent.right
+                                                        anchors.top: parent.top
+                                                        height: 6
+                                                        color: "#1f2937"
+                                                    }
+
+                                                    Rectangle {
+                                                        anchors.top: parent.top
+                                                        anchors.bottom: parent.bottom
+                                                        anchors.right: parent.right
+                                                        width: 6
                                                         color: "#00000000"
-                                                        implicitWidth: 12
-                                                        implicitHeight: 12
-                                                        Layout.fillWidth: true
-                                                        Layout.leftMargin: 0
+                                                    }
 
-                                                        Rectangle {
-                                                            anchors.left: parent.left
-                                                            anchors.right: parent.right
-                                                            anchors.top: parent.top
-                                                            height: 6
-                                                            color: "#1f2937"
-                                                        }
+                                                    Rectangle {
+                                                        anchors.left: parent.left
+                                                        anchors.right: parent.right
+                                                        anchors.bottom: parent.bottom
+                                                        height: 6
+                                                        color: "#00000000"
+                                                    }
 
-                                                        Rectangle {
-                                                            anchors.top: parent.top
-                                                            anchors.bottom: parent.bottom
-                                                            anchors.right: parent.right
-                                                            width: 6
-                                                            color: "#00000000"
-                                                        }
-
-                                                        Rectangle {
-                                                            anchors.left: parent.left
-                                                            anchors.right: parent.right
-                                                            anchors.bottom: parent.bottom
-                                                            height: 6
-                                                            color: "#00000000"
-                                                        }
-
-                                                        Rectangle {
-                                                            anchors.top: parent.top
-                                                            anchors.bottom: parent.bottom
-                                                            anchors.left: parent.left
-                                                            width: 6
-                                                            color: "#00000000"
-                                                        }
+                                                    Rectangle {
+                                                        anchors.top: parent.top
+                                                        anchors.bottom: parent.bottom
+                                                        anchors.left: parent.left
+                                                        width: 6
+                                                        color: "#00000000"
                                                     }
                                                 }
                                             }
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        color: "#e74c3c"
+                                        radius: 13
+                                        implicitWidth: badgeText.implicitWidth
+                                        implicitHeight: badgeText.implicitHeight
+                                        width: 26
+                                        height: 26
+                                        anchors.right: parent.right
+                                        anchors.rightMargin: -8
+                                        y: -8
+
+                                        Text {
+                                            id: badgeText
+                                            text: "3"
+                                            textFormat: Text.PlainText
+                                            color: "#ffffff"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 13
+                                            font.weight: 700
+                                            wrapMode: Text.WordWrap
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
                                         }
                                     }
                                 }
@@ -346,8 +358,8 @@ ApplicationWindow {
                                 // <figure class="media">
                                 Item {
                                     clip: true
-                                    implicitWidth: mediaContent.implicitWidth
-                                    implicitHeight: mediaContent.implicitHeight
+                                    implicitWidth: 0
+                                    implicitHeight: 0
                                     Layout.fillWidth: true
                                     Layout.preferredWidth: 320
                                     Layout.maximumWidth: 320
@@ -355,52 +367,50 @@ ApplicationWindow {
                                     Layout.alignment: Qt.AlignTop
                                     Layout.leftMargin: 48
 
-                                    ColumnLayout {
-                                        id: mediaContent
-                                        spacing: 0
+                                    Rectangle {
+                                        color: "#99ffffff"
+                                        radius: 40
+                                        implicitWidth: 0
+                                        implicitHeight: 0
+                                        width: 80
+                                        height: 80
+                                        x: parent.width * 0.5 + -40
+                                        y: 48
+                                    }
+
+                                    Rectangle {
+                                        color: "#73000000"
+                                        implicitWidth: mediaCaptionText.implicitWidth + 28
+                                        implicitHeight: mediaCaptionText.implicitHeight + 20
                                         anchors.left: parent.left
                                         anchors.right: parent.right
-                                        anchors.top: parent.top
+                                        anchors.leftMargin: 0
+                                        anchors.rightMargin: 0
+                                        anchors.bottom: parent.bottom
+                                        anchors.bottomMargin: 0
 
-                                        Rectangle {
-                                            color: "#99ffffff"
-                                            implicitWidth: 0
-                                            implicitHeight: 0
-                                            Layout.preferredWidth: 80
-                                            Layout.leftMargin: 0
-                                            Layout.preferredHeight: 80
-                                        }
-
-                                        // <figcaption class="media__caption">
-                                        Rectangle {
-                                            color: "#73000000"
-                                            implicitWidth: mediaCaptionText.implicitWidth + 28
-                                            implicitHeight: mediaCaptionText.implicitHeight + 20
-                                            Layout.fillWidth: true
-
-                                            Text {
-                                                id: mediaCaptionText
-                                                text: "Studio at dusk"
-                                                textFormat: Text.PlainText
-                                                color: "#ffffff"
-                                                font.family: "sans-serif"
-                                                font.pixelSize: 14
-                                                wrapMode: Text.WordWrap
-                                                anchors.left: parent.left
-                                                anchors.right: parent.right
-                                                anchors.top: parent.top
-                                                anchors.leftMargin: 14
-                                                anchors.rightMargin: 14
-                                                anchors.topMargin: 10
-                                            }
+                                        Text {
+                                            id: mediaCaptionText
+                                            text: "Studio at dusk"
+                                            textFormat: Text.PlainText
+                                            color: "#ffffff"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 14
+                                            wrapMode: Text.WordWrap
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.leftMargin: 14
+                                            anchors.rightMargin: 14
+                                            anchors.topMargin: 10
                                         }
                                     }
                                 }
 
                                 // <div class="stack">
                                 Item {
-                                    implicitWidth: stackContent.implicitWidth
-                                    implicitHeight: stackContent.implicitHeight
+                                    implicitWidth: 0
+                                    implicitHeight: 0
                                     Layout.fillWidth: true
                                     Layout.preferredWidth: 240
                                     Layout.maximumWidth: 240
@@ -408,65 +418,61 @@ ApplicationWindow {
                                     Layout.alignment: Qt.AlignTop
                                     Layout.leftMargin: 48
 
-                                    ColumnLayout {
-                                        id: stackContent
-                                        spacing: 0
-                                        anchors.left: parent.left
-                                        anchors.right: parent.right
-                                        anchors.top: parent.top
+                                    Rectangle {
+                                        color: "#43aa8b"
+                                        radius: 10
+                                        implicitWidth: layerText.implicitWidth + 24
+                                        implicitHeight: layerText.implicitHeight + 24
+                                        z: 2
+                                        width: 180
+                                        height: 120
+                                        x: 60
+                                        y: 50
 
-                                        // <div class="layer layer--front">
-                                        Rectangle {
-                                            color: "#43aa8b"
-                                            radius: 10
-                                            implicitWidth: layerText.implicitWidth + 24
-                                            implicitHeight: layerText.implicitHeight + 24
-                                            Layout.preferredWidth: 180
-                                            Layout.preferredHeight: 120
-
-                                            Text {
-                                                id: layerText
-                                                text: "Front layer"
-                                                textFormat: Text.PlainText
-                                                color: "#ffffff"
-                                                font.family: "sans-serif"
-                                                font.pixelSize: 15
-                                                font.weight: 600
-                                                wrapMode: Text.WordWrap
-                                                anchors.left: parent.left
-                                                anchors.right: parent.right
-                                                anchors.top: parent.top
-                                                anchors.leftMargin: 12
-                                                anchors.rightMargin: 12
-                                                anchors.topMargin: 12
-                                            }
+                                        Text {
+                                            id: layerText
+                                            text: "Front layer"
+                                            textFormat: Text.PlainText
+                                            color: "#ffffff"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 15
+                                            font.weight: 600
+                                            wrapMode: Text.WordWrap
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.leftMargin: 12
+                                            anchors.rightMargin: 12
+                                            anchors.topMargin: 12
                                         }
+                                    }
 
-                                        // <div class="layer layer--back">
-                                        Rectangle {
-                                            color: "#f9c74f"
-                                            radius: 10
-                                            implicitWidth: layerText2.implicitWidth + 24
-                                            implicitHeight: layerText2.implicitHeight + 24
-                                            Layout.preferredWidth: 180
-                                            Layout.preferredHeight: 120
+                                    Rectangle {
+                                        color: "#f9c74f"
+                                        radius: 10
+                                        implicitWidth: layerText2.implicitWidth + 24
+                                        implicitHeight: layerText2.implicitHeight + 24
+                                        z: 1
+                                        width: 180
+                                        height: 120
+                                        x: 0
+                                        y: 0
 
-                                            Text {
-                                                id: layerText2
-                                                text: "Back layer"
-                                                textFormat: Text.PlainText
-                                                color: "#1f2937"
-                                                font.family: "sans-serif"
-                                                font.pixelSize: 15
-                                                font.weight: 600
-                                                wrapMode: Text.WordWrap
-                                                anchors.left: parent.left
-                                                anchors.right: parent.right
-                                                anchors.top: parent.top
-                                                anchors.leftMargin: 12
-                                                anchors.rightMargin: 12
-                                                anchors.topMargin: 12
-                                            }
+                                        Text {
+                                            id: layerText2
+                                            text: "Back layer"
+                                            textFormat: Text.PlainText
+                                            color: "#1f2937"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 15
+                                            font.weight: 600
+                                            wrapMode: Text.WordWrap
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.leftMargin: 12
+                                            anchors.rightMargin: 12
+                                            anchors.topMargin: 12
                                         }
                                     }
                                 }

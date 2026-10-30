@@ -61,9 +61,10 @@ use self::{
     },
     length::{UnitContext, parse_integer_cvs, parse_length_auto_cvs, parse_length_cvs},
     text::{
-        compose_white_space, decompose_white_space, parse_content, parse_cursor, parse_direction,
-        parse_list_style_image, parse_list_style_position, parse_list_style_type,
-        parse_overflow_wrap, parse_pointer_events, parse_spacing, parse_text_align,
+        compose_white_space, decompose_white_space, parse_border_collapse, parse_border_spacing,
+        parse_caption_side, parse_content, parse_cursor, parse_direction, parse_list_style_image,
+        parse_list_style_position, parse_list_style_type, parse_overflow_wrap,
+        parse_pointer_events, parse_spacing, parse_table_layout, parse_text_align,
         parse_text_decoration_color, parse_text_decoration_line, parse_text_decoration_style,
         parse_text_indent, parse_text_overflow, parse_text_shadow, parse_text_transform,
         parse_text_wrap_mode, parse_user_select, parse_vertical_align, parse_visibility,
@@ -240,6 +241,10 @@ pub(crate) enum Longhand {
     ListStylePosition,
     ListStyleImage,
     Content,
+    BorderCollapse,
+    BorderSpacing,
+    CaptionSide,
+    TableLayout,
 
     // Transitions & animations sub-properties
     TransitionDuration,
@@ -488,6 +493,10 @@ pub(crate) fn kind(name: &str) -> PropertyKind {
         "list-style-position" => PropertyKind::Longhand(Longhand::ListStylePosition),
         "list-style-image" => PropertyKind::Longhand(Longhand::ListStyleImage),
         "content" => PropertyKind::Longhand(Longhand::Content),
+        "border-collapse" => PropertyKind::Longhand(Longhand::BorderCollapse),
+        "border-spacing" => PropertyKind::Longhand(Longhand::BorderSpacing),
+        "caption-side" => PropertyKind::Longhand(Longhand::CaptionSide),
+        "table-layout" => PropertyKind::Longhand(Longhand::TableLayout),
 
         // Longhands: Transitions & animations
         "transition-property" | "-webkit-transition-property" => {
@@ -713,6 +722,9 @@ pub(crate) fn is_inherited(l: Longhand) -> bool {
             | Longhand::ListStyleType
             | Longhand::ListStylePosition
             | Longhand::ListStyleImage
+            | Longhand::BorderCollapse
+            | Longhand::BorderSpacing
+            | Longhand::CaptionSide
     )
 }
 
@@ -1240,6 +1252,18 @@ pub(crate) fn compute(
         Longhand::Content => {
             style.content = parse_content(cvs)?;
         }
+        Longhand::BorderCollapse => {
+            style.border_collapse = parse_border_collapse(cvs)?;
+        }
+        Longhand::BorderSpacing => {
+            style.border_spacing = parse_border_spacing(cvs, &uctx_no_pct)?;
+        }
+        Longhand::CaptionSide => {
+            style.caption_side = parse_caption_side(cvs)?;
+        }
+        Longhand::TableLayout => {
+            style.table_layout = parse_table_layout(cvs)?;
+        }
 
         // Transitions
         Longhand::TransitionProperty => {
@@ -1583,6 +1607,10 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
         Longhand::ListStylePosition => dst.list_style_inside = src.list_style_inside,
         Longhand::ListStyleImage => dst.list_style_image.clone_from(&src.list_style_image),
         Longhand::Content => dst.content.clone_from(&src.content),
+        Longhand::BorderCollapse => dst.border_collapse = src.border_collapse,
+        Longhand::BorderSpacing => dst.border_spacing = src.border_spacing,
+        Longhand::CaptionSide => dst.caption_side = src.caption_side,
+        Longhand::TableLayout => dst.table_layout = src.table_layout,
 
         Longhand::TransitionProperty => {
             if src.transitions.is_empty() {

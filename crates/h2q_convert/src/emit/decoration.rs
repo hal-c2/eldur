@@ -2,7 +2,7 @@
 //! painted) around the box's content, which is anchored inside it, inset
 //! by padding + border.
 
-use h2q_css::{BorderSide, BorderStyle, ComputedStyle, Overflow, Sides};
+use h2q_css::{BorderSide, BorderStyle, BoxSizing, ComputedStyle, Overflow, Sides, Size};
 use h2q_qml::{Object, Value};
 
 use super::Emitter;
@@ -187,12 +187,35 @@ impl Emitter<'_, '_> {
         if let Some((mut inner, _)) = inner {
             inner.set("anchors.left", Value::expr("parent.left"));
             inner.set("anchors.right", Value::expr("parent.right"));
-            inner.set("anchors.top", Value::expr("parent.top"));
+            // A cell's content sits where `vertical-align` says within the row
+            // (CSS 2.1 §17.5.4); `baseline` is the top but for fonts that
+            // differ across the row.
+            let cell_align =
+                (style.display == h2q_css::Display::TableCell).then_some(style.vertical_align);
             let mut margins = vec![
                 ("anchors.leftMargin", insets.left),
                 ("anchors.rightMargin", insets.right),
-                ("anchors.topMargin", insets.top),
             ];
+            match cell_align {
+                Some(h2q_css::VerticalAlign::Middle) => {
+                    inner.set(
+                        "anchors.verticalCenter",
+                        Value::expr("parent.verticalCenter"),
+                    );
+                    margins.push((
+                        "anchors.verticalCenterOffset",
+                        (insets.top - insets.bottom) / 2.0,
+                    ));
+                }
+                Some(h2q_css::VerticalAlign::Bottom) => {
+                    inner.set("anchors.bottom", Value::expr("parent.bottom"));
+                    margins.push(("anchors.bottomMargin", insets.bottom));
+                }
+                _ => {
+                    inner.set("anchors.top", Value::expr("parent.top"));
+                    margins.push(("anchors.topMargin", insets.top));
+                }
+            }
             if fill_height {
                 inner.set("anchors.bottom", Value::expr("parent.bottom"));
                 margins.push(("anchors.bottomMargin", insets.bottom));
@@ -215,11 +238,15 @@ impl Emitter<'_, '_> {
             ("bottomRightRadius", &r.bottom_right),
             ("bottomLeftRadius", &r.bottom_left),
         ];
+        // A percentage is of the box, known here when the box is sized. Qt has
+        // one radius per corner, so an uneven box uses its shorter side.
+        let side = self.definite_side(style, line);
         let mut px = Vec::new();
         for (name, c) in corners {
-            match c.as_px() {
-                Some(v) => px.push((name, v)),
-                None => {
+            match (c.as_px(), side) {
+                (Some(v), _) => px.push((name, v)),
+                (None, Some(side)) => px.push((name, c.px + c.percent / 100.0 * side)),
+                (None, None) => {
                     self.diags.info(
                         "css",
                         line,
@@ -238,6 +265,22 @@ impl Emitter<'_, '_> {
                 wrapper.set(name, number(v));
             }
         }
+    }
+
+    /// The shorter side of a box whose width and height are lengths.
+    fn definite_side(&mut self, style: &ComputedStyle, line: Option<u32>) -> Option<f32> {
+        let (Size::Length(w), Size::Length(h)) = (&style.width, &style.height) else {
+            return None;
+        };
+        let (w, h) = (w.as_px()?, h.as_px()?);
+        let (extra_w, extra_h) = match style.box_sizing {
+            BoxSizing::ContentBox => {
+                let insets = self.insets(style, line);
+                (insets.horizontal(), insets.vertical())
+            }
+            BoxSizing::BorderBox => (0.0, 0.0),
+        };
+        Some((w + extra_w).min(h + extra_h))
     }
 
     /// Non-uniform borders: one thin `Rectangle` per visible side (corner

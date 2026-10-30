@@ -6,7 +6,9 @@
 //! bottom edge are handed up to the parent's own margins, and empty boxes
 //! that collapse through are dropped.
 
-use h2q_css::{BoxSizing, ComputedStyle, Display, Length, LengthAuto, Size, TextDecorationLine};
+use h2q_css::{
+    BoxSizing, ComputedStyle, Display, Length, LengthAuto, Size, TextAlign, TextDecorationLine,
+};
 use h2q_qml::{Member, Object, Value};
 
 use super::Emitter;
@@ -149,7 +151,24 @@ impl Emitter<'_, '_> {
         // An `inline-flex`/`inline-grid` laid out as a block keeps its
         // shrink-to-fit width.
         let shrink = b.kind == crate::boxes::BoxKind::Replaced
-            || matches!(style.display, Display::InlineFlex | Display::InlineGrid);
+            || matches!(
+                style.display,
+                Display::InlineFlex
+                    | Display::InlineGrid
+                    | Display::InlineTable
+                    | Display::InlineBlock
+            );
+        // An inline-level box's place in its line comes from `text-align`,
+        // which it inherited from its parent.
+        let alignment = alignment.or(match (style.display, style.text_align) {
+            (Display::InlineBlock | Display::InlineTable, TextAlign::Center) => {
+                Some("Qt.AlignHCenter")
+            }
+            (Display::InlineBlock | Display::InlineTable, TextAlign::Right | TextAlign::End) => {
+                Some("Qt.AlignRight")
+            }
+            _ => None,
+        });
         match &style.width {
             Size::Length(w) => {
                 obj.set("Layout.preferredWidth", size_value(w, extra_w));
@@ -166,7 +185,7 @@ impl Emitter<'_, '_> {
                 obj.set("Layout.fillWidth", true);
                 // A fill item with a maximum width is centred by the
                 // alignment (measured), as auto margins do in CSS.
-                if matches!(style.max_width, Size::Length(_))
+                if (matches!(style.max_width, Size::Length(_)) || style.display == Display::Table)
                     && let Some(a) = alignment
                 {
                     obj.set("Layout.alignment", Value::expr(a));
@@ -175,7 +194,7 @@ impl Emitter<'_, '_> {
         }
         if let Size::Length(max) = &style.max_width {
             obj.set("Layout.maximumWidth", size_value(max, extra_w));
-        } else if is_layout(&obj.type_name) {
+        } else if is_layout(&obj.type_name) && obj.get("Layout.maximumWidth").is_none() {
             // A layout's maximum width defaults to its children's largest;
             // a block without `max-width` still spans its container.
             obj.set(

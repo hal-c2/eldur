@@ -733,7 +733,6 @@ fn pseudo_elements_keyframes_and_font_faces() {
         /* Unsupported pseudo-elements deduplicated per pseudo-element */
         p::selection { color: white; }
         span::selection { color: yellow; }
-        li::marker { color: red; }
 
         @keyframes pulse {
             from, 100% { margin-top: 0px; animation-timing-function: linear; }
@@ -754,8 +753,8 @@ fn pseudo_elements_keyframes_and_font_faces() {
         "ui.css",
         Some("https://example.test/assets/css/ui.css"),
     );
-    // 2 unsupported diagnostics: `::selection` (deduplicated) and `::marker`.
-    assert_eq!(diags.len(), 2, "diags: {diags:?}");
+    // 1 unsupported diagnostic: `::selection` (deduplicated).
+    assert_eq!(diags.len(), 1, "diags: {diags:?}");
     assert!(diags.iter().all(|d| d.severity == Severity::Unsupported));
 
     let map = compute_styles(&doc, &[sheet], &Viewport::default());

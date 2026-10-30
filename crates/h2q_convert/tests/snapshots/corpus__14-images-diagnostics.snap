@@ -4,7 +4,6 @@ expression: "diagnostics.join(\"\\n\")"
 ---
 warning[html]: index.html:208: <img class="logo"> is not converted yet; an empty placeholder keeps its space
 warning[html]: index.html:217: <img class="hero-img"> is not converted yet; an empty placeholder keeps its space
-warning[css]: index.html:218: `position: absolute` on <div class="hero-caption"> is laid out in normal flow (not implemented yet)
 warning[html]: index.html:226: <img class="avatar"> is not converted yet; an empty placeholder keeps its space
 warning[html]: index.html:235: <img> is not converted yet; an empty placeholder keeps its space
 warning[html]: index.html:246: <img class="thumb"> is not converted yet; an empty placeholder keeps its space

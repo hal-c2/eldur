@@ -737,8 +737,8 @@ ApplicationWindow {
                             spacing: 0
                             Layout.fillWidth: true
                             Layout.maximumWidth: Math.ceil(implicitWidth)
-                            Layout.fillHeight: true
-                            Layout.maximumHeight: Number.POSITIVE_INFINITY
+                            Layout.fillHeight: false
+                            Layout.alignment: Qt.AlignTop
 
                             // <span class="stat-value">
                             Text {
@@ -788,8 +788,8 @@ ApplicationWindow {
                             spacing: 0
                             Layout.fillWidth: true
                             Layout.maximumWidth: Math.ceil(implicitWidth)
-                            Layout.fillHeight: true
-                            Layout.maximumHeight: Number.POSITIVE_INFINITY
+                            Layout.fillHeight: false
+                            Layout.alignment: Qt.AlignTop
                             Layout.leftMargin: 16
 
                             // <span class="stat-value">
@@ -840,8 +840,8 @@ ApplicationWindow {
                             spacing: 0
                             Layout.fillWidth: true
                             Layout.maximumWidth: Math.ceil(implicitWidth)
-                            Layout.fillHeight: true
-                            Layout.maximumHeight: Number.POSITIVE_INFINITY
+                            Layout.fillHeight: false
+                            Layout.alignment: Qt.AlignTop
                             Layout.leftMargin: 16
 
                             // <span class="stat-value">

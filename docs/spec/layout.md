@@ -684,7 +684,7 @@ Rectangle {
 
 ## 8. Tables
 
-**Decision:** `GridLayout` for normal tables. `TableView` for data tables with more than about 200 rows, accepting that spans are unsupported there.
+**Decision:** `GridLayout` with explicit `Layout.row`/`column`/`rowSpan`/`columnSpan`. `TableView` is not emitted: it has no spans. `GridLayout` cannot size a table by itself (stretch factors are not proportional, fractional rows are rounded up one by one, and preferred sizes bound to its own `implicitWidth` re-polish without end), so column widths and row heights come from `table*` functions emitted once on the root, only on pages with tables. Each cell declares `tableSlot` and `minContentWidth` for them.
 
 **HTML/CSS**
 ```html
@@ -698,37 +698,45 @@ th { font-weight: bold; background: #eee; }
 td, th { padding: 4px 8px; border: 1px solid #ccc; }
 ```
 
-**QML output** (with a converter-generated `TableCell` component)
+**QML output**
 ```qml
 GridLayout {
+    id: tableGrid
     columns: 2
     columnSpacing: 0
     rowSpacing: 0
+    readonly property var columnSpecs: [null, null]
+    readonly property var columnWidths: root.tableColumnWidths(this, columnSpecs, false)
+    readonly property var rowHeights: root.tableRowHeights(this, [0, 0])
 
-    TableCell { text: "Name"; header: true; Layout.fillWidth: true }
-    TableCell { text: "Qty";  header: true; Layout.fillWidth: true }
-    TableCell {
-        text: "Total: 3"
-        Layout.columnSpan: 2
-        Layout.fillWidth: true
+    Rectangle {
+        readonly property var tableSlot: [0, 0, 1, 1]
+        readonly property real minContentWidth: tableFont.advanceWidth("Name") + 16
+        Layout.row: 0
+        Layout.column: 0
+        Layout.preferredWidth: tableGrid.columnWidths[0]
+        Layout.preferredHeight: tableGrid.rowHeights[0]
+        // Text, anchored by `vertical-align`
     }
 }
 ```
-`TableCell` is a generated component with a `Rectangle` border (1px, `#ccc`), inner padding, and bold text when `header` is true. Borders are per cell, so shared borders double in width. Emulate `border-collapse: collapse` by drawing only the right and bottom edges per cell and the left and top edges on the first column and row.
 
 | Feature | Support | Notes |
 |---|---|---|
-| Row and column structure | Full | `GridLayout` columns. |
-| `colspan` / `rowspan` | Full | `Layout.columnSpan`, `Layout.rowSpan`; emit explicit `Layout.row`/`Layout.column`. |
-| Auto column widths (content-based) | Approx | GridLayout uses implicit widths; CSS table auto layout uses min/max content and can differ. |
-| `table-layout: fixed` | Full | Fixed `Layout.preferredWidth` per column. |
-| `border-collapse: collapse` | Approx | Draw edges once. |
-| `border-spacing` | Full | `columnSpacing`, `rowSpacing`. |
-| `thead`/`tbody`/`tfoot` | Approx | Rows are emitted `thead`, `tbody`, then `tfoot` (CSS renders `tfoot` last regardless of source order). No repeating headers. |
-| `caption` | Full | `Text` above the grid. |
-| `th` default bold/center | Full | Generated style. |
-| Large data tables (`TableView`) | Approx | Rows virtualized. |
-| `colspan`/`rowspan` in TableView | Unsupported | Warn. Covered cells are dropped. |
+| Anonymous table boxes (CSS 2.1 §17.2.1) | Full | Stray cells and rows get their missing parents; whitespace between parts makes nothing. |
+| `colspan` / `rowspan` | Full | HTML forming algorithm; a rowspan stops at its row group's end, `rowspan=0` runs to it. |
+| Auto column widths | Approx | Specified or max-content, at least min-content; extra space in proportion to max-content, as measured in Chromium. Min-content is the longest word, measured with `FontMetrics`. |
+| `table-layout: fixed` | Emulated | `<col>` widths and the first row; the rest shared equally. |
+| `<col>` / `<colgroup>` widths | Full | `span` and the `width` attribute included. A `width` on a spanning cell is ignored, with a diagnostic. |
+| `border-collapse: collapse` | Approx | CSS 2.1 §17.6.2.1 picks each edge; a cell draws its half. A spanning cell's side uses the widest segment along it, so differing segments are not reproduced. Border styles other than solid draw solid. |
+| `border-collapse: separate`, `border-spacing` | Full | `columnSpacing`, `rowSpacing`, and insets for the outer edges. |
+| `thead`/`tbody`/`tfoot` | Full | First `thead` first, `tfoot` last, in any source order. |
+| `caption`, `caption-side` | Full | An outer `ColumnLayout` holding captions and the table. |
+| Row, group and column backgrounds | Emulated | Items cannot overlap in a `GridLayout`, so each cell paints them, flattened source-over. Background images on rows and groups are reported. |
+| `vertical-align` in cells | Approx | `top`, `middle`, `bottom`; `baseline` is the top. |
+| Scripts targeting rows or groups | Unsupported | They have no QML object. Warn. |
+| `visibility: collapse`, row `opacity` | Unsupported | Reported. |
+| `empty-cells`, presentational attributes (`cellspacing`, `bgcolor`, …) | Unsupported | Not read. |
 | Sticky `th` | Approx | See §5.4. |
 
 **Pitfalls**

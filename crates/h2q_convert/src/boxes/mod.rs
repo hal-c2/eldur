@@ -10,6 +10,7 @@
 //! their emitters can be added without touching the builder; until then the
 //! emitter lays them out as block flow and says so.
 
+mod table;
 mod whitespace;
 
 #[cfg(test)]
@@ -45,6 +46,27 @@ pub(crate) struct LayoutBox<'a> {
     pub style: Cow<'a, ComputedStyle>,
     pub kind: BoxKind,
     pub content: Content<'a>,
+    /// The `outside` marker of a list item; an `inside` one is inline
+    /// content.
+    pub marker: Option<Marker<'a>>,
+}
+
+/// An `outside` list marker, drawn in the margin area of the list item.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct Marker<'a> {
+    pub kind: MarkerKind,
+    /// `::marker` if it has rules, otherwise the list item's own style.
+    pub style: &'a ComputedStyle,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum MarkerKind {
+    Disc,
+    Circle,
+    Square,
+    /// `1. `, `iv. `: the trailing space is part of the marker string.
+    Text(String),
+    Image(String),
 }
 
 #[cfg(test)]
@@ -153,26 +175,57 @@ impl<'a> Builder<'a, '_> {
                 style: Cow::Borrowed(style),
                 kind,
                 content: Content::Empty,
+                marker: None,
             };
         }
         let mut children = Vec::new();
-        if style.display == Display::ListItem {
-            let marker = self.list_marker(node, style);
-            if !marker.is_empty() {
-                // An `outside` marker sits in the padding area in CSS; put
-                // inline it shifts the first line but keeps the bullet.
-                children.push(Child::Inline(whitespace::Raw::Text {
-                    text: marker,
+        let mut marker = None;
+        if style.display == Display::ListItem
+            && let Some(kind) = self.list_marker(node, style)
+        {
+            let marker_style = self.styles.computed(node).and_then(|s| s.marker.as_deref());
+            if style.list_style_inside {
+                // Chromium leaves about 1em after an inside bullet (measured:
+                // text 22px from the edge at 16px): an em space, which white
+                // space processing leaves alone.
+                let text = match kind {
+                    MarkerKind::Disc => "\u{2022}\u{2003}".to_owned(),
+                    MarkerKind::Circle => "\u{25e6}\u{2003}".to_owned(),
+                    MarkerKind::Square => "\u{25aa}\u{2003}".to_owned(),
+                    MarkerKind::Text(t) => t,
+                    MarkerKind::Image(_) => String::new(),
+                };
+                let raw = whitespace::Raw::Text {
+                    text,
                     white_space: h2q_css::WhiteSpace::Pre,
+                };
+                children.push(Child::Inline(match marker_style {
+                    Some(style) => whitespace::Raw::Span {
+                        node: None,
+                        style,
+                        children: vec![raw],
+                    },
+                    None => raw,
                 }));
+            } else {
+                marker = Some(Marker {
+                    kind,
+                    style: marker_style.unwrap_or(style),
+                });
             }
         }
         self.children_of(node, &mut children);
+        let content = if is_table_container(style.display) {
+            table::internal_content(style.display, children, style)
+        } else {
+            group(table::wrap_orphans(children, style), style)
+        };
         LayoutBox {
             node: Some(node),
             style: Cow::Borrowed(style),
             kind,
-            content: group(children, style),
+            content,
+            marker,
         }
     }
 
@@ -298,6 +351,7 @@ impl<'a> Builder<'a, '_> {
                 style: Cow::Borrowed(style),
                 kind: kind_of(style.display),
                 content,
+                marker: None,
             })));
         } else {
             out.push(Child::Inline(whitespace::Raw::Span {
@@ -388,6 +442,11 @@ impl<'a> Builder<'a, '_> {
             );
             return Level::Block(kind_of(style.display));
         }
+        // Alone in its parent there is no line to sit in, so the box can be
+        // kept: a block that shrinks to fit looks the same.
+        if style.display == Display::InlineBlock && self.is_only_content(node) {
+            return Level::Block(BoxKind::Block);
+        }
         if atomic {
             self.diags.info(
                 "css",
@@ -400,6 +459,24 @@ impl<'a> Builder<'a, '_> {
             );
         }
         Level::Inline
+    }
+
+    /// Whether `node` has no sibling that generates anything but whitespace.
+    fn is_only_content(&self, node: NodeId) -> bool {
+        let Some(parent) = self.doc.parent(node) else {
+            return false;
+        };
+        self.doc.children(parent).all(|sibling| {
+            sibling == node
+                || match &self.doc.node(sibling).data {
+                    NodeData::Text(t) => t.chars().all(|c| c.is_ascii_whitespace()),
+                    NodeData::Element(_) => self
+                        .styles
+                        .computed(sibling)
+                        .is_none_or(|s| s.style.display == Display::None),
+                    _ => true,
+                }
+        })
     }
 
     /// Whether an in-flow descendant of `node` (through inline and
@@ -421,42 +498,83 @@ impl<'a> Builder<'a, '_> {
         })
     }
 
-    fn list_marker(&self, node: NodeId, style: &ComputedStyle) -> String {
-        if style.list_style_image.is_some() {
-            return String::new();
+    /// The marker of a list item, unless `list-style` says there is none.
+    fn list_marker(&mut self, node: NodeId, style: &ComputedStyle) -> Option<MarkerKind> {
+        if let Some(url) = &style.list_style_image {
+            // No asset pipeline yet: only a self-contained image can load.
+            if url.starts_with("data:") {
+                return Some(MarkerKind::Image(url.clone()));
+            }
+            self.diags.warning(
+                "css",
+                node_line(self.doc, node),
+                format!(
+                    "`list-style-image: url({url})` on {} is not converted; using `list-style-type`",
+                    describe(self.doc, node)
+                ),
+            );
         }
-        let ordinal = || {
-            let parent = self.doc.parent_element(node);
-            let start = parent
-                .and_then(|p| self.doc.element(p))
-                .filter(|p| p.local_name() == "ol")
-                .and_then(|p| p.attr("start"))
+        let text = |s: String| Some(MarkerKind::Text(format!("{s}. ")));
+        match style.list_style_type {
+            ListStyleType::None => None,
+            ListStyleType::Disc => Some(MarkerKind::Disc),
+            ListStyleType::Circle => Some(MarkerKind::Circle),
+            ListStyleType::Square => Some(MarkerKind::Square),
+            ListStyleType::Decimal => text(self.ordinal(node).to_string()),
+            ListStyleType::DecimalLeadingZero => {
+                let n = self.ordinal(node);
+                let sign = if n < 0 { "-" } else { "" };
+                text(format!("{sign}{:02}", n.abs()))
+            }
+            ListStyleType::LowerAlpha => text(alpha(self.ordinal(node)).to_lowercase()),
+            ListStyleType::UpperAlpha => text(alpha(self.ordinal(node))),
+            ListStyleType::LowerRoman => text(roman(self.ordinal(node)).to_lowercase()),
+            ListStyleType::UpperRoman => text(roman(self.ordinal(node))),
+        }
+    }
+
+    /// The ordinal value of a list item (HTML §4.4.8): `start` and
+    /// `reversed` on the `<ol>`, `value` on the item; only boxes that are
+    /// list items count.
+    fn ordinal(&self, node: NodeId) -> i64 {
+        let attr_int = |n: NodeId, name: &str| {
+            self.doc
+                .element(n)
+                .and_then(|e| e.attr(name))
                 .and_then(|s| s.trim().parse::<i64>().ok())
-                .unwrap_or(1);
-            let before = self
-                .doc
-                .prev_siblings(node)
-                .filter(|&s| {
-                    self.styles
-                        .style(s)
-                        .is_some_and(|st| st.display == Display::ListItem)
-                })
-                .count();
-            start + i64::try_from(before).unwrap_or(0)
         };
-        let marker = match style.list_style_type {
-            ListStyleType::None => return String::new(),
-            ListStyleType::Disc => "\u{2022}".to_owned(),
-            ListStyleType::Circle => "\u{25e6}".to_owned(),
-            ListStyleType::Square => "\u{25aa}".to_owned(),
-            ListStyleType::Decimal => format!("{}.", ordinal()),
-            ListStyleType::DecimalLeadingZero => format!("{:02}.", ordinal()),
-            ListStyleType::LowerAlpha => format!("{}.", alpha(ordinal()).to_lowercase()),
-            ListStyleType::UpperAlpha => format!("{}.", alpha(ordinal())),
-            ListStyleType::LowerRoman => format!("{}.", roman(ordinal()).to_lowercase()),
-            ListStyleType::UpperRoman => format!("{}.", roman(ordinal())),
+        let Some(parent) = self.doc.parent_element(node) else {
+            return 1;
         };
-        format!("{marker} ")
+        let items: Vec<NodeId> = self
+            .doc
+            .element_children(parent)
+            .filter(|&c| {
+                self.styles
+                    .style(c)
+                    .is_some_and(|s| s.display == Display::ListItem)
+            })
+            .collect();
+        let parent_element = self.doc.element(parent);
+        let is_ol = parent_element.is_some_and(|e| e.local_name() == "ol");
+        let reversed = is_ol && parent_element.is_some_and(|e| e.attr("reversed").is_some());
+        let start = is_ol.then(|| attr_int(parent, "start")).flatten();
+        let step = if reversed { -1 } else { 1 };
+        let mut n = start.unwrap_or(if reversed {
+            i64::try_from(items.len()).unwrap_or(0)
+        } else {
+            1
+        });
+        for item in items {
+            if let Some(value) = attr_int(item, "value") {
+                n = value;
+            }
+            if item == node {
+                return n;
+            }
+            n += step;
+        }
+        n
     }
 }
 
@@ -482,6 +600,7 @@ fn group<'a>(children: Vec<Child<'a>>, parent: &'a ComputedStyle) -> Content<'a>
                 style: Cow::Owned(anonymous_style(parent)),
                 kind: BoxKind::Block,
                 content: Content::Inline(items),
+                marker: None,
             });
         }
     };
@@ -536,6 +655,9 @@ pub(crate) fn anonymous_style(parent: &ComputedStyle) -> ComputedStyle {
         list_style_inside: parent.list_style_inside,
         list_style_image: parent.list_style_image.clone(),
         user_select_none: parent.user_select_none,
+        border_collapse: parent.border_collapse,
+        border_spacing: parent.border_spacing,
+        caption_side: parent.caption_side,
         custom_properties: parent.custom_properties.clone(),
         ..ComputedStyle::default()
     }
@@ -553,6 +675,21 @@ pub(crate) fn is_block_level(display: Display) -> bool {
             | Display::InlineTable
             | Display::Contents
             | Display::None
+    )
+}
+
+/// Displays whose children are table-internal boxes, not block flow.
+fn is_table_container(display: Display) -> bool {
+    matches!(
+        display,
+        Display::Table
+            | Display::InlineTable
+            | Display::TableRowGroup
+            | Display::TableHeaderGroup
+            | Display::TableFooterGroup
+            | Display::TableRow
+            | Display::TableColumnGroup
+            | Display::TableColumn
     )
 }
 
