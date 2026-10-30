@@ -12,17 +12,33 @@
  *
  * `--click selector` clicks the first match before measuring and prints
  * {click, scrollX, scrollY} after it: what following a link does.
+ *
+ * `--run '<json>'` (or `--run @steps.json`) takes the same `run` step list as
+ * computed.mjs, executed before measuring (after --click):
+ *   --run '[{"eval":"document.body.append(document.createElement(\"p\"))"}]'
+ * Steps: eval, click, hover, focus, type [sel, text], wait ms.
+ * `--after ms` waits that long after the steps, before measuring.
  */
 
+import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { loadPlaywright } from "./playwright.mjs";
+import { runSteps } from "./run_steps.mjs";
 
 const args = process.argv.slice(2);
 let html = null;
 let file = null;
 let click = null;
+let run = null;
+let after = 0;
+while (args[0] === "--run" || args[0] === "--after") {
+  const flag = args.shift();
+  const v = args.shift();
+  if (flag === "--after") after = Number(v);
+  else run = JSON.parse(v.startsWith("@") ? fs.readFileSync(v.slice(1), "utf8") : v);
+}
 if (args[0] === "--click") {
   args.shift();
   click = args.shift();
@@ -35,7 +51,7 @@ if (args[0] === "--html") {
 }
 if ((html === null && !file) || args.length === 0) {
   console.error(
-    "usage: geometry.mjs [--click selector] (page.html | --html '<markup>') selector...",
+    "usage: geometry.mjs [--run json] [--after ms] [--click selector] (page.html | --html '<markup>') selector...",
   );
   process.exit(2);
 }
@@ -60,6 +76,8 @@ try {
     const scroll = await page.evaluate(() => ({ scrollX: window.scrollX, scrollY: window.scrollY }));
     console.log(JSON.stringify({ click, ...scroll }));
   }
+  if (run) await runSteps(page, run);
+  if (after) await page.waitForTimeout(after);
   for (const select of args) {
     const rects = await page.$$eval(select, (els) =>
       els.map((e) => {
