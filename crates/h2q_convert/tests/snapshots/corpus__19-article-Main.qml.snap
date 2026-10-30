@@ -523,14 +523,6 @@ ApplicationWindow {
                                         anchors.top: parent.top
                                         anchors.leftMargin: 44
 
-                                        Rectangle {
-                                            color: "#1f1d1a"
-                                            implicitWidth: 0
-                                            implicitHeight: 0
-                                            Layout.preferredWidth: 28
-                                            Layout.preferredHeight: 28
-                                        }
-
                                         Text {
                                             text: "Listed every file, environment variable and tool version that a build reads, and removed the ones nobody could justify."
                                             textFormat: Text.PlainText
@@ -545,6 +537,17 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
                                         }
+                                    }
+
+                                    Rectangle {
+                                        color: "#1f1d1a"
+                                        radius: 14
+                                        implicitWidth: 0
+                                        implicitHeight: 0
+                                        width: 28
+                                        height: 28
+                                        x: 0
+                                        y: 2
                                     }
                                 }
 
@@ -563,14 +566,6 @@ ApplicationWindow {
                                         anchors.top: parent.top
                                         anchors.leftMargin: 44
 
-                                        Rectangle {
-                                            color: "#1f1d1a"
-                                            implicitWidth: 0
-                                            implicitHeight: 0
-                                            Layout.preferredWidth: 28
-                                            Layout.preferredHeight: 28
-                                        }
-
                                         Text {
                                             text: "Hashed those inputs and used the hash as the only cache key, with no timestamps involved."
                                             textFormat: Text.PlainText
@@ -585,6 +580,17 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
                                         }
+                                    }
+
+                                    Rectangle {
+                                        color: "#1f1d1a"
+                                        radius: 14
+                                        implicitWidth: 0
+                                        implicitHeight: 0
+                                        width: 28
+                                        height: 28
+                                        x: 0
+                                        y: 2
                                     }
                                 }
 
@@ -603,14 +609,6 @@ ApplicationWindow {
                                         anchors.top: parent.top
                                         anchors.leftMargin: 44
 
-                                        Rectangle {
-                                            color: "#1f1d1a"
-                                            implicitWidth: 0
-                                            implicitHeight: 0
-                                            Layout.preferredWidth: 28
-                                            Layout.preferredHeight: 28
-                                        }
-
                                         Text {
                                             text: "Ran each build twice on separate machines and failed the pipeline if the outputs differed."
                                             textFormat: Text.PlainText
@@ -625,6 +623,17 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
                                         }
+                                    }
+
+                                    Rectangle {
+                                        color: "#1f1d1a"
+                                        radius: 14
+                                        implicitWidth: 0
+                                        implicitHeight: 0
+                                        width: 28
+                                        height: 28
+                                        x: 0
+                                        y: 2
                                     }
                                 }
 
@@ -643,14 +652,6 @@ ApplicationWindow {
                                         anchors.top: parent.top
                                         anchors.leftMargin: 44
 
-                                        Rectangle {
-                                            color: "#1f1d1a"
-                                            implicitWidth: 0
-                                            implicitHeight: 0
-                                            Layout.preferredWidth: 28
-                                            Layout.preferredHeight: 28
-                                        }
-
                                         Text {
                                             text: "Moved the per-team hooks into the repository as declared steps, so they show up in review like any other change."
                                             textFormat: Text.PlainText
@@ -665,6 +666,17 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
                                         }
+                                    }
+
+                                    Rectangle {
+                                        color: "#1f1d1a"
+                                        radius: 14
+                                        implicitWidth: 0
+                                        implicitHeight: 0
+                                        width: 28
+                                        height: 28
+                                        x: 0
+                                        y: 2
                                     }
                                 }
                             }
@@ -743,8 +755,9 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.fillHeight: true
                                         Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                        Layout.fillHeight: false
+                                        Layout.alignment: Qt.AlignTop
 
                                         // <h3>
                                         Text {
@@ -787,8 +800,9 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.fillHeight: true
                                         Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                        Layout.fillHeight: false
+                                        Layout.alignment: Qt.AlignTop
 
                                         // <h3>
                                         Text {
@@ -831,8 +845,9 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.fillHeight: true
                                         Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                        Layout.fillHeight: false
+                                        Layout.alignment: Qt.AlignTop
 
                                         // <h3>
                                         Text {

@@ -989,6 +989,20 @@ impl Emitter<'_, '_> {
                         obj.set(&format!("Layout.fill{dim}"), false);
                     }
                 }
+                // Stretching block flow would spread its children apart; a CSS
+                // block's stay at the top and only its unpainted end moves.
+                (None, None)
+                    if !horizontal
+                        && obj.type_name == "ColumnLayout"
+                        && b.kind == crate::boxes::BoxKind::Block
+                        && plan.content_sized(start, span) =>
+                {
+                    for (k, v) in props.into_iter().filter(|(k, _)| !k.contains("fill")) {
+                        obj.set(&k, v);
+                    }
+                    obj.set("Layout.fillHeight", false);
+                    flags.push("Qt.AlignTop");
+                }
                 (None, None) => {
                     for (k, v) in props {
                         obj.set(&k, v);

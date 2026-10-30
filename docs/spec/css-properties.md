@@ -242,17 +242,17 @@ Generated animation uses only QtQuick types (`Behavior`, `Transition`, `Sequenti
 
 | Property | Values handled | QML target | Unit conversion | Support | Notes |
 |---|---|---|---|---|---|
-| list-style-type: disc, circle, square | keywords | `Repeater` with bullet `Text` or `Rectangle` per item | — | Emulated | |
-| list-style-type: decimal, roman, alpha | keywords | `Repeater` with counter `Text` | — | Emulated | |
+| list-style-type: disc, circle, square | keywords | A `Rectangle` hanging left of the item (inside: a bullet character in its text) | — | Emulated | |
+| list-style-type: decimal, roman, alpha | keywords | A `Text` hanging left of the item (inside: part of its text) | — | Emulated | |
 | list-style-type: none | — | Nothing | — | Ignored | |
-| list-style-position: inside, outside | keywords | Bullet offset by the item's left margin | px ×1 | Emulated | |
-| list-style-image | url() | `Image` as the bullet | — | Emulated | |
+| list-style-position: inside, outside | keywords | Marker hanging off the border box, or in the text | px ×1 | Emulated | |
+| list-style-image | url() | `Image` as the bullet; `data:` URLs only, others fall back to the type with a warning | — | Emulated | |
 | list-style (shorthand) | — | Expanded into the longhands above | — | Emulated | |
 | border-collapse: separate | — | Normal `GridLayout` cells | — | Full | |
 | border-collapse: collapse | — | `GridLayout` with zero spacing and shared borders | — | Emulated | |
 | border-spacing | px | `GridLayout.rowSpacing`, `GridLayout.columnSpacing` | px ×1 | Full | |
-| table-layout: auto | — | `GridLayout` with implicit column widths | — | Approx | |
-| table-layout: fixed | — | Fixed `Layout.preferredWidth` on the first row's cells | px ×1 | Emulated | |
+| table-layout: auto | — | `GridLayout` with widths from the `table*` solver (layout.md §8) | — | Approx | |
+| table-layout: fixed | — | `<col>` and first-row widths through the same solver | px ×1 | Emulated | |
 | caption-side: top, bottom | keywords | Caption placed first or last in a `ColumnLayout` | — | Emulated | |
 | colspan, rowspan (HTML attributes) | integer | `Layout.columnSpan`, `Layout.rowSpan` | — | Full | |
 | vertical-align (table cells) | top, middle, bottom | `Layout.alignment` (`Qt.AlignTop` / `Qt.AlignVCenter` / `Qt.AlignBottom`) on the cell | — | Full | |

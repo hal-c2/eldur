@@ -660,3 +660,158 @@ fn dense_is_reported() {
     ));
     assert!(diags.iter().any(|d| d.contains("dense")), "{diags:?}");
 }
+
+#[test]
+fn block_flow_in_a_stretched_grid_row_stays_at_the_top() {
+    // Stretching a ColumnLayout spreads its children apart; a CSS block's
+    // children stay where they are and the block's end is simply lower.
+    let (qml, _) = convert(&page(
+        "#g{display:grid;grid-template-columns:1fr 1fr} #t{height:300px}",
+        "<div id=g><div id=t></div><div><p>a</p><p>b</p></div></div>",
+    ));
+    let column = qml
+        .split("ColumnLayout {")
+        .find(|part| part.contains("text: \"a\"") && part.contains("Layout.preferredWidth"))
+        .expect("the second grid item");
+    assert!(column.contains("Layout.fillHeight: false"), "{qml}");
+    assert!(column.contains("Qt.AlignTop"), "{qml}");
+}
+
+#[test]
+fn percentage_radius_of_a_sized_box_is_resolved() {
+    let (qml, _) = convert(&page(
+        "#d{width:6px;height:6px;border-radius:50%;background:red}",
+        "<div id=d></div>",
+    ));
+    assert!(qml.contains("radius: 3"), "{qml}");
+}
+
+#[test]
+fn absolute_child_of_a_positioned_box_is_an_overlay() {
+    let (qml, diags) = convert(&page(
+        "#p{position:relative;padding-left:16px} \
+         #p::before{content:\"\";position:absolute;left:0;top:10px;width:6px;height:6px;background:red}",
+        "<div id=p>text</div>",
+    ));
+    assert!(qml.contains("y: 10"), "{qml}");
+    assert!(qml.contains("width: 6"), "{qml}");
+    assert!(!diags.iter().any(|d| d.contains("position")), "{diags:?}");
+}
+
+#[test]
+fn outside_marker_hangs_outside_the_layout() {
+    let (qml, _) = convert(&page(
+        "ul{margin:0;padding:0 0 0 40px;font-size:16px;line-height:24px}",
+        "<ul><li>a</li></ul>",
+    ));
+    assert!(
+        qml.contains("x: -16"),
+        "gap 11 + size 5 left of the box\n{qml}"
+    );
+    assert!(qml.contains("radius: 2.5"), "{qml}");
+    let (qml, _) = convert(&page(
+        "",
+        "<ol style=\"list-style-type:lower-alpha\"><li value=3>a</li></ol>",
+    ));
+    assert!(qml.contains("text: \"c. \""), "{qml}");
+    assert!(qml.contains("anchors.right: parent.left"), "{qml}");
+}
+
+#[test]
+fn table_is_a_grid_with_explicit_cells() {
+    let (qml, _) = convert(&page(
+        "td{padding:2px}",
+        "<table><tr><td rowspan=2>a</td><td colspan=2>b</td></tr><tr><td>c</td><td>d</td></tr></table>",
+    ));
+    assert!(qml.contains("GridLayout {"), "{qml}");
+    assert!(qml.contains("columns: 3"), "{qml}");
+    assert!(qml.contains("Layout.rowSpan: 2"), "{qml}");
+    assert!(qml.contains("Layout.columnSpan: 2"), "{qml}");
+    assert!(qml.contains("function tableColumnWidths("), "{qml}");
+}
+
+#[test]
+fn pages_without_tables_get_no_solver() {
+    let (qml, _) = convert(&page("", "<p>a</p>"));
+    assert!(!qml.contains("tableColumnWidths"), "{qml}");
+}
+
+#[test]
+fn collapsed_table_loses_its_padding_and_separated_one_gets_spacing() {
+    let (collapsed, _) = convert(&page(
+        "table{border-collapse:collapse;padding:30px}",
+        "<table><tr><td>a</td></tr></table>",
+    ));
+    assert!(!collapsed.contains("anchors.topMargin: 30"), "{collapsed}");
+    let (separate, _) = convert(&page(
+        "table{border-collapse:separate;border-spacing:3px 5px}",
+        "<table><tr><td>a</td><td>b</td></tr></table>",
+    ));
+    assert!(separate.contains("columnSpacing: 3"), "{separate}");
+    assert!(separate.contains("rowSpacing: 5"), "{separate}");
+    assert!(separate.contains("anchors.leftMargin: 3"), "{separate}");
+    assert!(separate.contains("anchors.topMargin: 5"), "{separate}");
+}
+
+#[test]
+fn cell_vertical_align_picks_the_anchor() {
+    let (qml, _) = convert(&page(
+        "td{vertical-align:bottom}",
+        "<table><tr><td>a</td></tr></table>",
+    ));
+    assert!(qml.contains("anchors.bottom: parent.bottom"), "{qml}");
+    let (qml, _) = convert(&page(
+        "td{vertical-align:middle}",
+        "<table><tr><td>a</td></tr></table>",
+    ));
+    assert!(
+        qml.contains("anchors.verticalCenter: parent.verticalCenter"),
+        "{qml}"
+    );
+}
+
+#[test]
+fn caption_side_orders_the_caption_and_rows_flatten_backgrounds() {
+    let (qml, _) = convert(&page(
+        "caption{caption-side:bottom} tr{background:#ff0000}",
+        "<table><caption>cap</caption><tr><td>a</td></tr></table>",
+    ));
+    let (cell, caption) = (qml.find("text: \"a\""), qml.find("text: \"cap\""));
+    assert!(cell < caption, "{qml}");
+    assert!(qml.contains("color: \"#ff0000\""), "{qml}");
+}
+
+#[test]
+fn block_flow_in_a_stretched_flex_row_stays_at_the_top() {
+    let (qml, _) = convert(&page(
+        "#r{display:flex} #t{height:300px}",
+        "<div id=r><div id=t></div><div><p>a</p><p>b</p></div></div>",
+    ));
+    let column = qml
+        .split("ColumnLayout {")
+        .find(|part| part.contains("text: \"a\"") && part.contains("Qt.AlignTop"))
+        .unwrap_or_else(|| panic!("the column is not top-aligned\n{qml}"));
+    assert!(column.contains("Layout.fillHeight: false"), "{qml}");
+}
+
+#[test]
+fn sized_table_with_a_caption_keeps_its_width() {
+    let (qml, _) = convert(&page(
+        "table{width:480px}",
+        "<table><caption>c</caption><tr><td>a</td></tr></table>",
+    ));
+    let stack = qml
+        .split("ColumnLayout {")
+        .find(|part| part.contains("Layout.preferredWidth: 480"))
+        .unwrap_or_else(|| panic!("no sized stack\n{qml}"));
+    assert!(stack.contains("Layout.fillWidth: false"), "{qml}");
+}
+
+#[test]
+fn overlay_keeps_its_z_index() {
+    let (qml, _) = convert(&page(
+        "#p{position:relative} .a{position:absolute;top:0;left:0;z-index:2}",
+        "<div id=p><div class=a>x</div></div>",
+    ));
+    assert!(qml.contains("z: 2"), "{qml}");
+}

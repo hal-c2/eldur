@@ -1,8 +1,7 @@
 //! Step 5: the QML tree. Each box picks its QML form (`docs/spec/layout.md`).
 //!
 //! [`Emitter::block`] dispatches on [`BoxKind`]; each layout kind has its
-//! own submodule. Table containers have no emitter yet and are laid out as
-//! block flow, with a diagnostic.
+//! own submodule.
 
 mod controls;
 mod decoration;
@@ -10,6 +9,8 @@ mod flex;
 mod flow;
 mod grid;
 mod ids;
+mod lists;
+mod table;
 mod text;
 pub(crate) mod units;
 
@@ -63,6 +64,11 @@ pub(crate) struct Emitter<'a, 'd> {
     /// §2.11.2); it is not painted again.
     canvas_node: Option<NodeId>,
     root_node: Option<NodeId>,
+    /// The page has a table, so the root needs the table solver.
+    has_table: bool,
+    /// The box being emitted is an overlay of its positioned parent, so its
+    /// `position` is handled.
+    positioned_child: bool,
 }
 
 impl<'a, 'd> Emitter<'a, 'd> {
@@ -91,6 +97,8 @@ impl<'a, 'd> Emitter<'a, 'd> {
             tapped_labels: HashSet::new(),
             canvas_node: None,
             root_node: None,
+            has_table: false,
+            positioned_child: false,
         }
     }
 
@@ -215,6 +223,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
         for group in self.radio_groups.values() {
             root.push_child(Object::new("ButtonGroup").with_id(group.clone()));
         }
+        if self.has_table {
+            Self::table_solver(&mut root);
+        }
         self.finish_resets(&mut root);
         self.report_inline_labels();
         root
@@ -250,7 +261,15 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 }
                 return self.replaced(b, line);
             }
-            BoxKind::Table => self.unsupported_layout(b, line),
+            BoxKind::Table => match style.display {
+                Display::Table | Display::InlineTable => {
+                    self.has_table = true;
+                    self.positioned_child = false;
+                    return self.table(b, inherited, line);
+                }
+                Display::TableCell | Display::TableCaption => {}
+                _ => self.unsupported_layout(b, line),
+            },
         }
         self.out_of_flow(b, line);
         if let Some(node) = b.node
@@ -275,15 +294,16 @@ impl<'a, 'd> Emitter<'a, 'd> {
 
         let mut escaped_top = MarginSet::default();
         let mut escaped_bottom = MarginSet::default();
+        let (in_flow, overlays) = self.split_positioned(b);
         let mut inner = match &b.content {
-            Content::Blocks(children) if b.kind == BoxKind::Flex => {
-                Some((self.flex(b, children, decoration, line), "Content"))
+            Content::Blocks(_) if b.kind == BoxKind::Flex => {
+                Some((self.flex(b, &in_flow, decoration, line), "Content"))
             }
-            Content::Blocks(children) if b.kind == BoxKind::Grid => {
-                Some((self.grid(b, children, decoration, line), "Content"))
+            Content::Blocks(_) if b.kind == BoxKind::Grid => {
+                Some((self.grid(b, &in_flow, decoration, line), "Content"))
             }
-            Content::Blocks(children) => {
-                let column = self.column(children, decoration, top_open, bottom_open);
+            Content::Blocks(_) => {
+                let column = self.column(&in_flow, decoration, top_open, bottom_open);
                 escaped_top = column.escaped_top;
                 escaped_bottom = column.escaped_bottom;
                 column.obj.map(|o| (o, "Content"))
@@ -291,12 +311,12 @@ impl<'a, 'd> Emitter<'a, 'd> {
             Content::Inline(items) => Some((self.text(style, decoration, items, line), "Text")),
             Content::Empty => None,
         };
-        if inner.is_none() && wanted {
-            // Scripts write text into it.
+        if inner.is_none() && (wanted || b.marker.is_some()) {
+            // Scripts write text into it; a marker still has its line.
             inner = Some((self.text(style, decoration, &[], line), "Text"));
         }
 
-        if inner.is_none() && top_open && bottom_open && !wanted {
+        if inner.is_none() && top_open && bottom_open && !wanted && overlays.is_empty() {
             let mut top = MarginSet::of(mt);
             // With no item, every child margin is in `escaped_top`.
             top.join(escaped_top);
@@ -333,7 +353,10 @@ impl<'a, 'd> Emitter<'a, 'd> {
         let needs_wrapper = deco.needed()
             || inner.is_none()
             || (has_height(style) && inner.is_some())
-            || (inner_has_id && outer_id.is_some());
+            || (inner_has_id && outer_id.is_some())
+            || b.marker.is_some()
+            || !overlays.is_empty()
+            || style.display == Display::TableCell;
         let (mut obj, kind) = if needs_wrapper {
             let inner = inner.map(|(mut obj, suffix)| {
                 let id = match (&obj.id, &outer_id) {
@@ -350,7 +373,15 @@ impl<'a, 'd> Emitter<'a, 'd> {
             // `height`, `min-height` or a stretching parent) among their
             // items, so they fill it; block flow keeps its content height.
             let fill = matches!(b.kind, BoxKind::Flex | BoxKind::Grid);
-            let wrapper = self.wrap(style, &deco, paint_background, inner, fill, line);
+            let mut wrapper = self.wrap(style, &deco, paint_background, inner, fill, line);
+            if let Some(marker) = &b.marker {
+                let marker = self.marker(b, marker);
+                wrapper.push_child(marker);
+            }
+            for overlay in overlays {
+                let overlay = self.overlay(style, overlay);
+                wrapper.push_child(overlay);
+            }
             (wrapper, TargetKind::Box)
         } else {
             let (obj, suffix) = inner.unwrap_or((Object::new("Item"), "Content"));
@@ -480,9 +511,11 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 ),
             );
         }
+        let positioned = std::mem::take(&mut self.positioned_child);
         match style.position {
             Position::Static => {}
             Position::Relative if is_unmoved(style) => {}
+            Position::Absolute if positioned => {}
             p => self.diags.warning(
                 "css",
                 line,
@@ -540,7 +573,6 @@ fn is_unmoved(style: &ComputedStyle) -> bool {
         })
 }
 
-/// A readable base for a generated id: the first class, else the tag.
 /// The first child `<legend>` of a `<fieldset>` and the boxes after it. A
 /// legend later in the fieldset is not "the" legend, so it stays a block.
 fn fieldset_parts<'b, 'l>(
@@ -561,6 +593,7 @@ fn fieldset_parts<'b, 'l>(
     is(first.node, "legend").then_some((first, rest))
 }
 
+/// A readable base for a generated id: the first class, else the tag.
 fn hint(doc: &Document, b: &LayoutBox<'_>) -> String {
     let element = b.node.and_then(|n| doc.element(n));
     element

@@ -148,26 +148,34 @@ ApplicationWindow {
                 }
 
                 // <section class="hero">
-                ColumnLayout {
-                    spacing: 0
+                Item {
+                    implicitWidth: heroContent.implicitWidth
+                    implicitHeight: heroContent.implicitHeight
                     Layout.fillWidth: true
-                    Layout.maximumWidth: Number.POSITIVE_INFINITY
 
-                    // <img class="hero-img">
-                    Item {
-                        implicitHeight: 320
-                        Layout.preferredWidth: parent.width
-                        Layout.preferredHeight: 320
+                    ColumnLayout {
+                        id: heroContent
+                        spacing: 0
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+
+                        // <img class="hero-img">
+                        Item {
+                            implicitHeight: 320
+                            Layout.preferredWidth: parent.width
+                            Layout.preferredHeight: 320
+                        }
                     }
 
-                    // <div class="hero-caption">
                     Rectangle {
                         color: "#b80f1423"
                         radius: 8
                         implicitWidth: heroCaptionContent.implicitWidth + 40
                         implicitHeight: heroCaptionContent.implicitHeight + 32
-                        Layout.fillWidth: true
-                        Layout.maximumWidth: 480
+                        x: 32
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: 24
 
                         ColumnLayout {
                             id: heroCaptionContent
