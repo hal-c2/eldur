@@ -6,9 +6,12 @@
 //! of [`Node`]s addressed by [`NodeId`]. Everything downstream (CSS matching,
 //! conversion) works on the arena: cheap `Copy` ids, no `RefCell`.
 
+mod mutate;
 mod sink;
 
 use std::fmt;
+
+pub use mutate::DomError;
 
 pub use html5ever::{LocalName, Namespace, QualName, ns};
 
