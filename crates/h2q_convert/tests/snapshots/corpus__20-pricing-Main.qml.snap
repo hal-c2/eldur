@@ -575,12 +575,19 @@ ApplicationWindow {
 
                             // <article class="plan featured">
                             Rectangle {
+                                id: planBox
                                 color: "#ffffff"
                                 radius: 20
                                 implicitWidth: planContent2.implicitWidth + 68
                                 implicitHeight: planContent2.implicitHeight + 76
                                 border.width: 2
                                 border.color: "#2563eb"
+                                transform: Scale {
+                                    xScale: 1.05
+                                    yScale: 1.05
+                                    origin.x: planBox.width * 0.5
+                                    origin.y: planBox.height * 0.5
+                                }
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 0
                                 Layout.fillHeight: true
@@ -992,10 +999,14 @@ ApplicationWindow {
                                 }
 
                                 Rectangle {
+                                    id: badgeBox
                                     color: "#2563eb"
                                     radius: 999
                                     implicitWidth: badgeText.implicitWidth + 28
                                     implicitHeight: badgeText.implicitHeight + 12
+                                    transform: Translate {
+                                        x: badgeBox.width * -0.5
+                                    }
                                     x: parent.width * 0.5 + 2
                                     y: -12
 

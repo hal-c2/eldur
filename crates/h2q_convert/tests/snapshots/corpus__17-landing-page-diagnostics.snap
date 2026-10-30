@@ -11,7 +11,6 @@ info[qml]: index.html:445: unequal `fr` columns on <div class="container hero-gr
 info[css]: index.html:463: percentage height on <div class="meter-fill m-72"> is treated as `auto`
 info[css]: index.html:465: percentage height on <div class="meter-fill m-45"> is treated as `auto`
 info[css]: index.html:467: percentage height on <div class="meter-fill m-88"> is treated as `auto`
-warning[css]: index.html: `transform` on a generated box is not converted yet
 info[qml]: index.html:509: <span class="author-role">: font size 15.2px inside 16px text is approximated with <small>
 info[qml]: index.html:531: unequal `fr` columns on <div class="footer-grid"> are split into 5 equal sub-columns; items are off by a fraction of the gap
 info[qml]: index.html:539: <a> is underlined: StyledText always underlines links

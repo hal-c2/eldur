@@ -1031,12 +1031,24 @@ ApplicationWindow {
                                                     }
 
                                                     Rectangle {
+                                                        id: blockBox
                                                         color: "#00000000"
                                                         radius: 6
                                                         implicitWidth: 6
                                                         implicitHeight: 6
                                                         border.width: 3
                                                         border.color: "#ffffff"
+                                                        transform: [
+                                                            Rotation {
+                                                                angle: 45
+                                                                origin.x: blockBox.width * 0.5
+                                                                origin.y: blockBox.height * 0.5
+                                                            },
+                                                            Translate {
+                                                                x: blockBox.width * -0.5
+                                                                y: blockBox.height * -0.5
+                                                            }
+                                                        ]
                                                         width: 20
                                                         height: 20
                                                         x: parent.width * 0.5
@@ -1140,12 +1152,24 @@ ApplicationWindow {
                                                     }
 
                                                     Rectangle {
+                                                        id: blockBox2
                                                         color: "#00000000"
                                                         radius: 6
                                                         implicitWidth: 6
                                                         implicitHeight: 6
                                                         border.width: 3
                                                         border.color: "#ffffff"
+                                                        transform: [
+                                                            Rotation {
+                                                                angle: 45
+                                                                origin.x: blockBox2.width * 0.5
+                                                                origin.y: blockBox2.height * 0.5
+                                                            },
+                                                            Translate {
+                                                                x: blockBox2.width * -0.5
+                                                                y: blockBox2.height * -0.5
+                                                            }
+                                                        ]
                                                         width: 20
                                                         height: 20
                                                         x: parent.width * 0.5
@@ -1249,12 +1273,24 @@ ApplicationWindow {
                                                     }
 
                                                     Rectangle {
+                                                        id: blockBox3
                                                         color: "#00000000"
                                                         radius: 6
                                                         implicitWidth: 6
                                                         implicitHeight: 6
                                                         border.width: 3
                                                         border.color: "#ffffff"
+                                                        transform: [
+                                                            Rotation {
+                                                                angle: 45
+                                                                origin.x: blockBox3.width * 0.5
+                                                                origin.y: blockBox3.height * 0.5
+                                                            },
+                                                            Translate {
+                                                                x: blockBox3.width * -0.5
+                                                                y: blockBox3.height * -0.5
+                                                            }
+                                                        ]
                                                         width: 20
                                                         height: 20
                                                         x: parent.width * 0.5

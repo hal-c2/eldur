@@ -14,6 +14,7 @@ mod inline;
 mod lists;
 mod table;
 mod text;
+mod transform;
 pub(crate) mod units;
 
 #[cfg(test)]
@@ -420,6 +421,12 @@ impl<'a, 'd> Emitter<'a, 'd> {
             }
         }
         self.label_tap(&mut obj, b.node);
+        if !style.transform.is_empty() {
+            let what = b
+                .node
+                .map_or_else(|| "a generated box".to_owned(), |n| describe(self.doc, n));
+            self.transform(&mut obj, style, &hint(self.doc, b), &what, line);
+        }
         self.visibility(&mut obj, style);
         Emitted {
             obj,
@@ -534,13 +541,6 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     what()
                 ),
             ),
-        }
-        if !style.transform.is_empty() {
-            self.diags.warning(
-                "css",
-                line,
-                format!("`transform` on {} is not converted yet", what()),
-            );
         }
     }
 

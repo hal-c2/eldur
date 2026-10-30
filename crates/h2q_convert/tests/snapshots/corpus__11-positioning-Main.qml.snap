@@ -284,10 +284,14 @@ ApplicationWindow {
                                                     }
 
                                                     Rectangle {
+                                                        id: tooltipBox
                                                         color: "#1f2937"
                                                         radius: 6
                                                         implicitWidth: tooltipContent.implicitWidth + 20
                                                         implicitHeight: tooltipContent.implicitHeight + 12
+                                                        transform: Translate {
+                                                            x: tooltipBox.width * -0.5
+                                                        }
                                                         x: parent.width * 0.5
                                                         anchors.bottom: parent.bottom
                                                         anchors.bottomMargin: parent.height + 12

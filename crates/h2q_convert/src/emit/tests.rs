@@ -918,3 +918,49 @@ fn a_clipping_box_keeps_its_shadow_outside_the_clip() {
         "{outer}"
     );
 }
+
+#[test]
+fn transforms_apply_in_css_order_around_the_origin() {
+    let (qml, diags) = convert(&page(
+        ".t{width:100px;height:50px;background:#eee;\
+         transform:translate(-50%, 10px) rotate(45deg) scale(2)}",
+        "<div class=t></div>",
+    ));
+    let obj = object_after(&qml, "<div class=\"t\">");
+    // QML applies the first transform of the list first, CSS the last.
+    let scale = obj.find("Scale {").expect("scale");
+    let rotation = obj.find("Rotation {").expect("rotation");
+    let translate = obj.find("Translate {").expect("translate");
+    assert!(scale < rotation && rotation < translate, "{obj}");
+    assert!(obj.contains("angle: 45"), "{obj}");
+    assert!(obj.contains("xScale: 2"), "{obj}");
+    // Percentages are of the box's own size, as is the default origin.
+    assert!(obj.contains("x: tBox.width * -0.5"), "{obj}");
+    assert!(obj.contains("origin.x: tBox.width * 0.5"), "{obj}");
+    assert!(obj.contains("origin.y: tBox.height * 0.5"), "{obj}");
+    assert!(!diags.iter().any(|d| d.contains("transform")), "{diags:?}");
+}
+
+#[test]
+fn transform_origin_in_px_is_a_number() {
+    let (qml, _) = convert(&page(
+        ".t{width:100px;height:50px;background:#eee;transform:rotate(10deg);\
+         transform-origin:0 0}",
+        "<div class=t></div>",
+    ));
+    let obj = object_after(&qml, "<div class=\"t\">");
+    assert!(obj.contains("angle: 10"), "{obj}");
+    assert!(!obj.contains("origin.x"), "{obj}");
+}
+
+#[test]
+fn a_transformed_text_keeps_its_baseline_shift_first() {
+    let (qml, _) = convert(&page(
+        "p{font:16px/24px sans-serif;transform:translateX(10px)}",
+        "<p>x</p>",
+    ));
+    let text = object_after(&qml, "<p>");
+    let nudge = text.find("y: 2.8").expect("nudge");
+    let moved = text.find("x: 10").expect("translate");
+    assert!(nudge < moved, "{text}");
+}
