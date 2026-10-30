@@ -40,10 +40,10 @@ Rewriting uses **Static Resolution First, Runtime Fallback Second**:
 | `document.activeElement` | `H2Q.document.activeElement` | Focused QML item (`activeFocus` or `focus`) wrapped in `H2Q.wrap`, defaulting to `document.body` | Supported & tested |
 | `document.hidden` / `document.visibilityState` | `H2Q.document.hidden` / `H2Q.document.visibilityState` | `false` / `"visible"` (unless root window is hidden) | Supported & tested |
 | `document.createElement(tag)` | `H2Q.document.createElement(tag)` | Dynamically creates QML item via `Qt.createQmlObject` wrapped in `H2Q.wrap` | Supported & tested |
-| `document.createTextNode(text)` | `H2Q.document.createTextNode(text)` | Dynamically creates QML `Text` item wrapped in `H2Q.wrap` | Supported & tested |
+| `document.createTextNode(text)` | `H2Q.document.createTextNode(text)` | Dynamically creates QML `Text` item wrapped in `H2Q.wrap` | Implemented (untested) |
 | `document.createDocumentFragment()` | `H2Q.document.createDocumentFragment()` | Lightweight fragment container (`nodeType === 11`); children splice into parent on insertion | Supported & tested |
 
-Every convert-emitted QML element carries `objectName: "<html-id>"` (when an HTML `id` is present), `property string h2qTag: "<tag>"`, and `property string h2qClasses: "<space-separated-classes>"` when scripts use runtime queries or class mutations.
+Runtime selector matching inspects `objectName` for `#id`, `h2qTag` (with QML type-name inference fallback for common controls) for tag selectors, and `h2qClasses` / `cls_<name>` booleans for class selectors. Note: `h2q_convert` does not yet emit `h2qTag`, `h2qClasses`, or `baseUrl` on converted pages (see [Section 11](#11-coverage)); until the converter emits those properties, runtime selectors on converted pages cannot match a converted element's classes or tag (e.g., `btn.matches(".x")` on a converted `<button class="x">` returns `false`).
 
 ---
 
@@ -71,12 +71,13 @@ Mapping depends on the `TargetKind` of the resolved `QmlTarget`:
 ### 3.2 Reflected Properties, `a.href` Resolution, and Control Range Syncing
 
 - **`a.href`, `img.src`, and Document Base URL Resolution (`H2Q.init(rootItem, baseUrl?)`)**:
-  - `H2Q.init(rootItem, baseUrl?)` accepts an optional `baseUrl` parameter (or reads `rootItem.baseUrl` if present) and initializes `H2Q.location` when not already set.
+  - `H2Q.init(rootItem, baseUrl?)` accepts an optional `baseUrl` parameter (or reads `rootItem.baseUrl` if present) and initializes `H2Q.location`.
   - `a.getAttribute("href")` and `img.getAttribute("src")` return the raw attribute string (and extract `href="..."` from `<a href="...">` inside QML `Text.text` when `h2q_convert` emits rich text).
-  - `a.href` and `img.src` resolve the attribute against the document base URL (`H2Q.location.href`, the `baseUrl` passed to `H2Q.init(root, baseUrl)`, or `root.baseUrl`):
+  - `a.href` and `img.src` resolve the attribute against the document base URL configured via `H2Q.init(root, baseUrl)` or `root.baseUrl`:
     - Absolute URLs (`https://example.com`, `https://example.com/a/b/../c?q=1#h`) are normalized per URL rules (bare origins receive a trailing `/`, and `.` / `..` path segments are collapsed, working around Qt 6.11 V4's non-normalizing `new URL()`).
     - Non-hierarchical schemes (`mailto:`, `tel:`, `javascript:`, `data:`, `blob:`) are returned verbatim.
-    - When `H2Q.init(root, baseUrl)`, `location.href`, or `root.baseUrl` provides an `http:`/`https:`/`file:` base URL, relative URLs (`/path`, `sub/page.html`, `../up`, `?query`, `#hash`) on both `a.href` and `img.src` resolve against that base URL.
+    - When `H2Q.init(root, baseUrl)` or `root.baseUrl` provides an `http:`/`https:`/`file:` base URL, relative URLs (`/path`, `sub/page.html`, `../up`, `?query`, `#hash`) on both `a.href` and `img.src` resolve against that base URL; if no base URL is configured, the raw attribute value is returned unchanged.
+    - Assigning `location.href` (or calling `location.assign` / `location.replace`) with a non-hash URL logs a runtime warning (`console.warn`) and does **not** navigate or set the document base URL.
 - **Range (`Slider`) and Number (`SpinBox`) `min` / `max` / `step` Syncing**:
   - Setting `el.min`, `el.max`, `el.step` or calling `el.setAttribute("min" | "max" | "step", v)` on a `Slider` (`<input type="range">`) or `SpinBox` (`<input type="number">`) updates the QML control's `from`, `to`, and `stepSize` properties in addition to storing the string attribute.
   - If an `<input>` created via `document.createElement("input")` has `min`/`max`/`step` set before `input.type = "range"` or `input.type = "number"`, those attributes are re-applied to the newly created `Slider` or `SpinBox` (`from`/`to`/`stepSize`).
@@ -293,3 +294,36 @@ The following browser APIs are not supported in QML and emit `Diagnostic` entrie
 - **2D/WebGL Canvas & Media (`canvas.getContext`, `Audio`, `Video`, `WebGLRenderingContext`, `OffscreenCanvas`)**: `h2q_convert` maps `<canvas>` to a placeholder QML `Rectangle` rather than a full HTML5 `CanvasRenderingContext2D` / WebGL surface.
 - **Live layout/mutation observer callbacks (`MutationObserver`, `ResizeObserver`, `IntersectionObserver`)**: Constructor stubs are provided in `H2Q` so page scripts do not throw `ReferenceError` on `.observe()` / `.disconnect()`, and `analyze()` emits an `Unsupported` diagnostic because arbitrary DOM mutation records and intersection thresholds are not synthesized automatically.
 - **Unsupported JS runtime intrinsics (`BigInt`, `WeakRef`, `FinalizationRegistry`, `Proxy`, private `#fields`)**: Not supported by Qt 6.11's V4 JavaScript engine.
+
+---
+
+## 11. Coverage
+
+An item counts as tested only when a test checks its result. Across the **142** DOM & Web API table items in Sections 2–8 (and **149** total items including the **7** Section 9 language-lowering items):
+
+- **Asserted by a `qml6` runtime test** (`crates/h2q_js/tests/qml_runtime.rs`): **106** DOM/Web API items (**113** including all 7 Section 9 lowering items)
+- **Asserted only by a rewrite test** (`crates/h2q_js/tests/rewrite_tests.rs`): **10** items
+- **Not asserted at all**: **26** items
+
+| Section | Total Items | `qml6` Runtime Test | Rewrite Test Only | Not Asserted |
+| :--- | ---: | ---: | ---: | ---: |
+| 2. Document Query & Creation APIs | 18 | 15 | 1 | 2 |
+| 3.1 Text & Value Properties | 12 | 12 | 0 | 0 |
+| 3.3 Geometry & Layout Read Properties | 7 | 5 | 0 | 2 |
+| 3.4 `classList`, `className`, `dataset`, and Attributes | 12 | 10 | 0 | 2 |
+| 4.1 Static Inline Style Properties | 16 | 4 | 1 | 11 |
+| 4.2 Style Helpers, `cssText`, and `getComputedStyle` | 5 | 5 | 0 | 0 |
+| 5. DOM Tree Traversal & Mutation | 21 | 17 | 2 | 2 |
+| 6. Focus, Blur, and Scrolling APIs | 7 | 6 | 1 | 0 |
+| 7.1 Supported Events & QML Signal Bindings | 19 | 12 | 1 | 6 |
+| 8. Timers, Storage, Network, Observers & Browser Globals | 25 | 20 | 4 | 1 |
+| **Subtotal (Sections 2–8 DOM & Web APIs)** | **142** | **106** | **10** | **26** |
+| 9. JS Language Lowering for Qt 6.11 V4 | 7 | 7 | 0 | 0 |
+| **Total (Sections 2–9)** | **149** | **113** | **10** | **26** |
+
+- **10 items asserted only by a rewrite test**: `document.body` / `document.documentElement`, `el.style.backgroundColor` / `background`, `el.insertAdjacentElement`, `el.insertAdjacentText`, `el.click()`, `mouseenter`/`mouseleave`/`mouseover`/`mouseout`, `cancelAnimationFrame`, `fetch`, `alert`, `confirm` / `prompt`.
+- **26 items not asserted at all**: `document.head`, `document.createTextNode`, `el.offsetLeft`, `el.offsetTop`, `el.removeAttribute`, `el.hasAttribute`, `el.style.visibility`, `el.style.minWidth`/`minHeight`/`maxWidth`/`maxHeight`, `el.style.left`/`top`, `el.style.fontSize`, `el.style.fontWeight`, `el.style.fontStyle`, `el.style.textAlign`, `el.style.borderRadius`, `el.style.borderColor`, `el.style.borderWidth`, `el.style.zIndex`, `parent.removeChild`, `parent.insertBefore`, `mousedown`/`mouseup`/`pointerdown`/`pointerup`/`touchstart`/`touchend`, `contextmenu`, `change` on `TextField`, `submit`, `resize`, `visibilitychange`, `queueMicrotask`.
+
+### Converter Metadata Gap (`h2q_convert`)
+
+`h2q_convert` does not yet emit `h2qTag`, `h2qClasses`, or `baseUrl` on converted QML pages. Because runtime selector matching relies on `h2qTag` and `h2qClasses` when static selector resolution is unavailable, calling `btn.matches(".x")` (or dynamic `querySelector(".x")`, `closest(".x")`, `getElementsByClassName("x")` / `getElementsByTagName("button")`) on a converted `<button class="x">` returns `false` (or no matches) until the converter emits `h2qTag` and `h2qClasses`. Likewise, relative `a.href` and `img.src` values on converted pages only resolve against a document base once `h2q_convert` passes `baseUrl` to `H2Q.init(root, baseUrl)` or emits `property string baseUrl` on the root item.
