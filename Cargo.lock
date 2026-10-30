@@ -429,6 +429,7 @@ dependencies = [
  "csscolorparser",
  "h2q_dom",
  "insta",
+ "serde_json",
  "swc_atoms",
  "swc_common",
  "swc_css_ast",

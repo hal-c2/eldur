@@ -4,7 +4,8 @@
 //! [`Selector`] values so matching against [`h2q_dom::Document`] never touches
 //! parser AST types.
 
-use std::collections::HashMap;
+use std::cell::RefCell;
+use std::collections::{BTreeSet, HashMap};
 use std::ops::Add;
 
 use h2q_dom::{Document, Element, NodeData, NodeId, ns};
@@ -219,8 +220,96 @@ pub(crate) struct ConvertedSelectorList {
 /// Evaluation context passed during selector matching.
 pub(crate) struct MatchContext<'a> {
     pub(crate) doc: &'a Document,
-    /// When computing a `StateVariant`, the single `(element, state)` condition assumed active.
-    pub(crate) active_state: Option<(NodeId, PseudoState)>,
+    /// Classes and states assumed to hold or not, over the document's own
+    /// state; `None` is the page as loaded (no hover/focus/active).
+    pub(crate) dynamic: Option<&'a DynamicFacts>,
+}
+
+/// A class or pseudo-state of one element whose value is assumed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum DynamicFact {
+    Class(String),
+    State(PseudoState),
+}
+
+#[derive(Debug, Clone)]
+struct DynamicEntry {
+    fact: DynamicFact,
+    /// `None`: the document's own value, but reads are still recorded.
+    holds: Option<bool>,
+    /// Caller's id for the fact, recorded in `DynamicFacts::touched` when read.
+    tag: usize,
+}
+
+/// Facts assumed during matching: the set of active states and per-node
+/// class overrides (added and removed) of `conditional_styles`, or the single
+/// state of a `StateVariant`. A state not listed does not hold, except that
+/// `:checked` and `:disabled` fall back to the document.
+#[derive(Debug, Default)]
+pub(crate) struct DynamicFacts {
+    by_node: HashMap<NodeId, Vec<DynamicEntry>>,
+    /// Tags of the facts the matcher has read, when recording.
+    touched: Option<RefCell<BTreeSet<usize>>>,
+}
+
+impl DynamicFacts {
+    pub(crate) fn single_state(node: NodeId, state: PseudoState) -> Self {
+        let mut facts = Self::default();
+        facts.set(node, DynamicFact::State(state), Some(true), 0);
+        facts
+    }
+
+    pub(crate) fn recording() -> Self {
+        Self {
+            by_node: HashMap::new(),
+            touched: Some(RefCell::new(BTreeSet::new())),
+        }
+    }
+
+    pub(crate) fn set(&mut self, node: NodeId, fact: DynamicFact, holds: Option<bool>, tag: usize) {
+        let entries = self.by_node.entry(node).or_default();
+        if let Some(e) = entries.iter_mut().find(|e| e.fact == fact) {
+            e.holds = holds;
+            e.tag = tag;
+        } else {
+            entries.push(DynamicEntry { fact, holds, tag });
+        }
+    }
+
+    pub(crate) fn take_touched(&self) -> BTreeSet<usize> {
+        self.touched
+            .as_ref()
+            .map(|t| std::mem::take(&mut *t.borrow_mut()))
+            .unwrap_or_default()
+    }
+
+    fn lookup(&self, node: NodeId, pred: impl Fn(&DynamicFact) -> bool) -> Option<bool> {
+        let entry = self.by_node.get(&node)?.iter().find(|e| pred(&e.fact))?;
+        if let Some(t) = &self.touched {
+            t.borrow_mut().insert(entry.tag);
+        }
+        entry.holds
+    }
+
+    fn class(&self, node: NodeId, class: &str) -> Option<bool> {
+        self.lookup(node, |f| matches!(f, DynamicFact::Class(c) if c == class))
+    }
+
+    fn state(&self, node: NodeId, state: PseudoState) -> Option<bool> {
+        self.lookup(node, |f| *f == DynamicFact::State(state))
+    }
+}
+
+impl MatchContext<'_> {
+    fn has_class(&self, node: NodeId, elem: &Element, class: &str) -> bool {
+        self.dynamic
+            .and_then(|d| d.class(node, class))
+            .unwrap_or_else(|| elem.has_class(class))
+    }
+
+    fn state(&self, node: NodeId, state: PseudoState) -> Option<bool> {
+        self.dynamic.and_then(|d| d.state(node, state))
+    }
 }
 
 impl Selector {
@@ -508,6 +597,33 @@ fn has_multi_element_dynamic_pseudos(sel: &Selector) -> bool {
     dynamic_positions > 1
 }
 
+/// Calls `visit` on every compound of `sel`, including those nested in
+/// `:is()`, `:where()`, `:not()`, `:has()` and `:nth-*(… of …)`.
+pub(crate) fn visit_compounds(sel: &Selector, visit: &mut impl FnMut(&CompoundSelector)) {
+    for c in &sel.compounds {
+        visit(c);
+        for pc in &c.pseudos {
+            match pc {
+                PseudoClass::Is(list)
+                | PseudoClass::Where(list)
+                | PseudoClass::Not(list)
+                | PseudoClass::NthChild(_, Some(list))
+                | PseudoClass::NthLastChild(_, Some(list)) => {
+                    for inner in list {
+                        visit_compounds(inner, visit);
+                    }
+                }
+                PseudoClass::Has(rels) => {
+                    for rel in rels {
+                        visit_compounds(&rel.selector, visit);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Fast Rule Indexing & 64-bit Ancestor Bloom Filter
 // ---------------------------------------------------------------------------
@@ -541,6 +657,11 @@ pub(crate) fn element_self_bloom(elem: &Element) -> u64 {
         mask |= bloom_bits(3, cls.as_bytes());
     }
     mask
+}
+
+/// Bloom bits of `class` as an ancestor's class.
+pub(crate) fn class_bloom(class: &str) -> u64 {
+    bloom_bits(3, class.as_bytes())
 }
 
 fn compound_required_bloom(c: &CompoundSelector) -> u64 {
@@ -697,6 +818,34 @@ impl<T> RuleIndex<T> {
         }
 
         scan(&self.universal);
+    }
+
+    /// [`Self::for_each_candidate`], plus the class buckets of `extra_classes`
+    /// that `elem`'s `class` attribute lacks: classes a condition may add.
+    pub(crate) fn for_each_candidate_with<F>(
+        &self,
+        elem: &Element,
+        ancestor_bloom: u64,
+        extra_classes: &[String],
+        mut visit: F,
+    ) where
+        F: FnMut(&Selector, &T),
+    {
+        self.for_each_candidate(elem, ancestor_bloom, &mut visit);
+        for (i, cls) in extra_classes.iter().enumerate() {
+            if elem.has_class(cls) || extra_classes[..i].contains(cls) {
+                continue;
+            }
+            if let Some(bucket) = self.by_class.get(cls) {
+                for entry in bucket {
+                    if (entry.required_ancestor_mask & ancestor_bloom)
+                        == entry.required_ancestor_mask
+                    {
+                        visit(&entry.selector, &entry.payload);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1710,7 +1859,7 @@ fn matches_compound(
     }
 
     for cls in &c.classes {
-        if !elem.has_class(cls) {
+        if !ctx.has_class(node, elem, cls) {
             return false;
         }
     }
@@ -1999,11 +2148,23 @@ fn matches_pseudo_class(
         PseudoClass::Has(rels) => rels.iter().any(|rel| matches_relative_from(rel, node, ctx)),
         PseudoClass::AnyLink => is_hyperlink(elem),
         PseudoClass::Link => {
-            is_hyperlink(elem) && ctx.active_state != Some((node, PseudoState::Visited))
+            is_hyperlink(elem) && ctx.state(node, PseudoState::Visited) != Some(true)
         }
-        PseudoClass::Checked => is_checked(elem),
-        PseudoClass::Disabled => is_form_control(elem) && is_disabled_control(doc, node, elem),
-        PseudoClass::Enabled => is_form_control(elem) && !is_disabled_control(doc, node, elem),
+        PseudoClass::Checked => ctx
+            .state(node, PseudoState::Checked)
+            .unwrap_or_else(|| is_checked(elem)),
+        PseudoClass::Disabled => {
+            is_form_control(elem)
+                && ctx
+                    .state(node, PseudoState::Disabled)
+                    .unwrap_or_else(|| is_disabled_control(doc, node, elem))
+        }
+        PseudoClass::Enabled => {
+            is_form_control(elem)
+                && !ctx
+                    .state(node, PseudoState::Disabled)
+                    .unwrap_or_else(|| is_disabled_control(doc, node, elem))
+        }
         PseudoClass::Required => is_required_candidate(elem) && elem.has_attr("required"),
         PseudoClass::Optional => is_required_candidate(elem) && !elem.has_attr("required"),
         PseudoClass::ReadWrite => is_read_write(doc, node, elem),
@@ -2015,9 +2176,9 @@ fn matches_pseudo_class(
         PseudoClass::Dir(expected) => expected.is_some_and(|d| element_direction(doc, node) == d),
         PseudoClass::Dynamic(target_state) => match *target_state {
             PseudoState::Visited => {
-                is_hyperlink(elem) && ctx.active_state == Some((node, PseudoState::Visited))
+                is_hyperlink(elem) && ctx.state(node, PseudoState::Visited) == Some(true)
             }
-            other => ctx.active_state == Some((node, other)),
+            other => ctx.state(node, other) == Some(true),
         },
         PseudoClass::Never => false,
     }
@@ -2449,10 +2610,7 @@ mod tests {
     fn matched_ids(doc: &Document, selector_css: &str) -> Vec<String> {
         let list = parse_selector_list_str(selector_css);
         assert!(!list.invalid, "selector should be valid: {selector_css}");
-        let ctx = MatchContext {
-            doc,
-            active_state: None,
-        };
+        let ctx = MatchContext { doc, dynamic: None };
         let mut out = Vec::new();
         for node in doc.descendants(doc.root()) {
             let Some(el) = doc.element(node) else {
@@ -2743,7 +2901,7 @@ mod tests {
         let target_el = doc.element(target).expect("target is element");
         let ctx = MatchContext {
             doc: &doc,
-            active_state: None,
+            dynamic: None,
         };
         let mut hits = Vec::new();
         index.for_each_candidate(target_el, blooms[target.index()], |sel, &id| {
