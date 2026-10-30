@@ -150,6 +150,10 @@ const PROBED_CSS_PROPERTIES: &[&str] = &[
     "transition",
     "animation",
     "content",
+    "border-collapse",
+    "border-spacing",
+    "caption-side",
+    "table-layout",
 ];
 
 fn statically_known_longhands() -> &'static [Longhand] {
@@ -964,13 +968,15 @@ impl<'a> CascadeEngine<'a> {
                 before: None,
                 after: None,
                 placeholder: None,
+                marker: None,
             };
         }
 
-        // Pseudo-elements (`::before`, `::after`, `::placeholder`).
+        // Pseudo-elements (`::before`, `::after`, `::placeholder`, `::marker`).
         let mut before_decls: Vec<(CascadeKey, &DeclValue)> = Vec::new();
         let mut after_decls: Vec<(CascadeKey, &DeclValue)> = Vec::new();
         let mut placeholder_decls: Vec<(CascadeKey, &DeclValue)> = Vec::new();
+        let mut marker_decls: Vec<(CascadeKey, &DeclValue)> = Vec::new();
         let supports_placeholder =
             elem.is_html() && matches!(elem.local_name(), "input" | "textarea");
 
@@ -984,6 +990,7 @@ impl<'a> CascadeEngine<'a> {
                         PseudoElement::Before => &mut before_decls,
                         PseudoElement::After => &mut after_decls,
                         PseudoElement::Placeholder => &mut placeholder_decls,
+                        PseudoElement::Marker => &mut marker_decls,
                     };
                     for (offset, decl) in rule.declarations.iter().enumerate() {
                         let key = CascadeKey {
@@ -1049,6 +1056,20 @@ impl<'a> CascadeEngine<'a> {
             (ps.display != Display::None).then(|| Box::new(ps))
         };
 
+        let marker = if marker_decls.is_empty() || style.display != Display::ListItem {
+            None
+        } else {
+            let mut fs = *root_font_size;
+            Some(Box::new(self.resolve_declarations_to_style(
+                &marker_decls,
+                false,
+                Some(&style),
+                pseudo_enclosing,
+                &mut fs,
+                None,
+            )))
+        };
+
         // Ensure `style.content` on regular elements doesn't leak onto non-pseudo elements
         // unless set directly, keeping `style` intact as computed.
         let _ = &mut style;
@@ -1058,6 +1079,7 @@ impl<'a> CascadeEngine<'a> {
             before,
             after,
             placeholder,
+            marker,
         }
     }
 

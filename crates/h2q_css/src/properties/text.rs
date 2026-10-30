@@ -5,9 +5,10 @@
 use swc_css_ast::ComponentValue;
 
 use crate::{
-    BorderStyle, ComputedStyle, ContentItem, Cursor as CssCursor, Direction, Length, ListStyleType,
-    PointerEvents, Rgba, Shadow, TextAlign, TextDecorationLine, TextOverflow, TextTransform,
-    VerticalAlign, Visibility, WhiteSpace, WordBreak,
+    BorderCollapse, BorderStyle, CaptionSide, ComputedStyle, ContentItem, Cursor as CssCursor,
+    Direction, Length, ListStyleType, PointerEvents, Rgba, Shadow, TableLayout, TextAlign,
+    TextDecorationLine, TextOverflow, TextTransform, VerticalAlign, Visibility, WhiteSpace,
+    WordBreak,
 };
 
 use super::{
@@ -16,7 +17,8 @@ use super::{
     color::{eat_color, parse_color_cvs},
     cursor::{Cursor, split_comma_separated},
     length::{
-        UnitContext, eat_length, eat_number_or_calc, length_to_px, parse_length_cvs, parse_px_cvs,
+        UnitContext, eat_length, eat_number_or_calc, eat_px, length_to_px, parse_length_cvs,
+        parse_px_cvs,
     },
 };
 
@@ -323,6 +325,57 @@ pub(crate) fn parse_pointer_events(cvs: &[ComponentValue]) -> Result<PointerEven
         "auto" | "visiblepainted" | "visiblefill" | "visiblestroke" | "visible" | "painted"
         | "fill" | "stroke" | "all" => Ok(PointerEvents::Auto),
         _ => Err(format!("invalid pointer-events '{id}'")),
+    }
+}
+
+pub(crate) fn parse_border_collapse(cvs: &[ComponentValue]) -> Result<BorderCollapse, String> {
+    let mut cur = Cursor::new(cvs);
+    let id = cur
+        .eat_ident()
+        .ok_or_else(|| "expected border-collapse keyword".to_owned())?;
+    cur.expect_eof()?;
+    match id.to_ascii_lowercase().as_str() {
+        "separate" => Ok(BorderCollapse::Separate),
+        "collapse" => Ok(BorderCollapse::Collapse),
+        _ => Err(format!("invalid border-collapse '{id}'")),
+    }
+}
+
+/// One length applies to both axes; two are horizontal, then vertical.
+pub(crate) fn parse_border_spacing(
+    cvs: &[ComponentValue],
+    uctx: &UnitContext,
+) -> Result<(f32, f32), String> {
+    let mut cur = Cursor::new(cvs);
+    let h = eat_px(&mut cur, uctx, true)?.ok_or_else(|| "expected a <length>".to_owned())?;
+    let v = eat_px(&mut cur, uctx, true)?.unwrap_or(h);
+    cur.expect_eof()?;
+    Ok((h, v))
+}
+
+pub(crate) fn parse_caption_side(cvs: &[ComponentValue]) -> Result<CaptionSide, String> {
+    let mut cur = Cursor::new(cvs);
+    let id = cur
+        .eat_ident()
+        .ok_or_else(|| "expected caption-side keyword".to_owned())?;
+    cur.expect_eof()?;
+    match id.to_ascii_lowercase().as_str() {
+        "top" => Ok(CaptionSide::Top),
+        "bottom" => Ok(CaptionSide::Bottom),
+        _ => Err(format!("invalid caption-side '{id}'")),
+    }
+}
+
+pub(crate) fn parse_table_layout(cvs: &[ComponentValue]) -> Result<TableLayout, String> {
+    let mut cur = Cursor::new(cvs);
+    let id = cur
+        .eat_ident()
+        .ok_or_else(|| "expected table-layout keyword".to_owned())?;
+    cur.expect_eof()?;
+    match id.to_ascii_lowercase().as_str() {
+        "auto" => Ok(TableLayout::Auto),
+        "fixed" => Ok(TableLayout::Fixed),
+        _ => Err(format!("invalid table-layout '{id}'")),
     }
 }
 

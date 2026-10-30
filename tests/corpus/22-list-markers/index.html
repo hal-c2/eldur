@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>List markers</title>
+  <style>
+    body { margin: 24px; font: 16px/24px sans-serif; color: #1b2231; background: #ffffff; }
+    .row { display: flex; gap: 32px; }
+    ul, ol { margin: 0 0 16px; padding-left: 40px; }
+    .circle { list-style-type: circle; }
+    .square { list-style-type: square; }
+    .inside { list-style-position: inside; padding-left: 0; }
+    .zero { list-style-type: decimal-leading-zero; }
+    .big { font-size: 24px; line-height: 36px; }
+    .coloured li::marker { color: #c0392b; }
+    .padded li { padding: 6px 0 6px 4px; }
+  </style>
+</head>
+<body>
+  <div class="row">
+    <div>
+      <ul><li>disc</li><li>disc</li></ul>
+      <ul class="circle"><li>circle</li></ul>
+      <ul class="square"><li>square</li></ul>
+      <ul class="big"><li>large</li></ul>
+    </div>
+    <div>
+      <ol start="5"><li>five</li><li>six</li></ol>
+      <ol reversed><li>three</li><li>two</li><li>one</li></ol>
+      <ol><li value="10">ten</li><li>eleven</li></ol>
+      <ol class="zero"><li>one</li><li>two</li></ol>
+    </div>
+    <div>
+      <ul class="inside"><li>inside bullet</li></ul>
+      <ol class="inside"><li>inside number</li></ol>
+      <ol class="coloured"><li>coloured</li></ol>
+      <ul class="padded"><li>padded</li></ul>
+      <ol><li style="display: none">hidden</li><li>after hidden</li></ol>
+    </div>
+  </div>
+</body>
+</html>

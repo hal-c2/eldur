@@ -4,7 +4,6 @@ expression: "diagnostics.join(\"\\n\")"
 ---
 warning[css]: index.html:139: background images and gradients are not converted yet
 info[css]: index.html:144: border style `dashed` is drawn solid
-info[css]: index.html:149: percentage `border-radius` uses its px part only
 info[css]: index.html:149: border style `dotted` is drawn solid
 info[css]: index.html:154: border style `double` is drawn solid
 warning[css]: index.html:159: `box-shadow` is not converted yet

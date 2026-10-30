@@ -15,5 +15,3 @@ info[qml]: index.html:273: <code>: inline background is not converted
 info[qml]: index.html:273: <code>: inline padding and borders are not converted
 warning[css]: index.html:284: background images and gradients are not converted yet
 info[qml]: index.html:289: <strong>: font family `sans-serif` inside `serif` text is not converted
-warning[css]: index.html: `position: absolute` on a generated box is laid out in normal flow (not implemented yet)
-info[css]: index.html: percentage `border-radius` uses its px part only

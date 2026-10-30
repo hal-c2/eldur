@@ -29,12 +29,14 @@ impl Add for Specificity {
     }
 }
 
-/// Supported CSS pseudo-elements (`::before`, `::after`, `::placeholder`).
+/// Supported CSS pseudo-elements (`::before`, `::after`, `::placeholder`,
+/// `::marker`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub(crate) enum PseudoElement {
     Before,
     After,
     Placeholder,
+    Marker,
 }
 
 /// Combinator between adjacent compound selectors.
@@ -1178,11 +1180,11 @@ fn convert_pseudo_element(pe: &ast::PseudoElementSelector) -> Result<PseudoEleme
         "before" => Ok(PseudoElement::Before),
         "after" => Ok(PseudoElement::After),
         "placeholder" => Ok(PseudoElement::Placeholder),
+        "marker" => Ok(PseudoElement::Marker),
         _ if name_lower.starts_with('-') => Err(ConvertError::UnsupportedPseudoElement(format!(
             "::{name_lower}"
         ))),
-        "marker"
-        | "selection"
+        "selection"
         | "first-line"
         | "first-letter"
         | "backdrop"
@@ -2701,7 +2703,7 @@ mod tests {
     #[test]
     fn pseudo_elements_dynamic_rejection_and_rule_index() {
         let res = parse_selector_list_str(
-            "a::before, b:after, input::placeholder, li::marker, ::-webkit-scrollbar",
+            "a::before, b:after, input::placeholder, li::selection, ::-webkit-scrollbar",
         );
         assert!(!res.invalid);
         assert_eq!(res.selectors.len(), 3);
@@ -2713,7 +2715,7 @@ mod tests {
         );
         assert_eq!(
             res.unsupported_pseudo_elements,
-            vec!["::marker".to_owned(), "::-webkit-scrollbar".to_owned()]
+            vec!["::selection".to_owned(), "::-webkit-scrollbar".to_owned()]
         );
 
         let multi_dyn = parse_selector_list_str(".a:hover .b:focus, .ok:hover .child");

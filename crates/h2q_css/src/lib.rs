@@ -154,9 +154,11 @@ pub struct ElementStyle {
     /// `::before` / `::after`, only when their `content` is not `none`.
     pub before: Option<Box<ComputedStyle>>,
     pub after: Option<Box<ComputedStyle>>,
-    /// `::marker` content for list items is derived by the converter from
-    /// `list_style_*`; `::placeholder` styles inputs' placeholder text.
+    /// `::placeholder` styles inputs' placeholder text.
     pub placeholder: Option<Box<ComputedStyle>>,
+    /// `::marker` rules of a `list-item`, when there are any. The marker's
+    /// content is derived by the converter from `list_style_*`.
+    pub marker: Option<Box<ComputedStyle>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

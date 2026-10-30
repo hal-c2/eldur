@@ -207,26 +207,41 @@ ApplicationWindow {
                                     }
 
                                     // <li>
-                                    Text {
-                                        text: "<a href=\"#\"><small>Sign up</small></a>"
-                                        textFormat: Text.StyledText
-                                        color: "#1a1f2b"
-                                        font.family: "sans-serif"
-                                        font.pixelSize: 16
-                                        lineHeight: 24
-                                        lineHeightMode: Text.FixedHeight
-                                        transform: Translate {
-                                            y: 2.8
-                                        }
-                                        wrapMode: Text.WordWrap
-                                        linkColor: "#3d4659"
+                                    ColumnLayout {
+                                        spacing: 0
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Math.ceil(implicitWidth)
+                                        Layout.fillHeight: false
                                         Layout.alignment: Qt.AlignVCenter
                                         Layout.leftMargin: 28
 
-                                        onLinkActivated: (link) => {
-                                            Qt.openUrlExternally(link)
+                                        // <a class="btn btn-primary nav-cta">
+                                        Rectangle {
+                                            color: "#0b5cad"
+                                            radius: 8
+                                            implicitWidth: btnText.implicitWidth + 34
+                                            implicitHeight: btnText.implicitHeight + 18
+                                            border.width: 1
+                                            border.color: "#0b5cad"
+
+                                            Text {
+                                                id: btnText
+                                                text: "Sign up"
+                                                textFormat: Text.PlainText
+                                                color: "#3d4659"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 15
+                                                font.weight: 500
+                                                lineHeight: 18
+                                                lineHeightMode: Text.FixedHeight
+                                                wrapMode: Text.WordWrap
+                                                anchors.left: parent.left
+                                                anchors.right: parent.right
+                                                anchors.top: parent.top
+                                                anchors.leftMargin: 17
+                                                anchors.rightMargin: 17
+                                                anchors.topMargin: 9
+                                            }
                                         }
                                     }
 
@@ -381,8 +396,8 @@ ApplicationWindow {
                                 Rectangle {
                                     color: "#0b5cad"
                                     radius: 8
-                                    implicitWidth: btnText.implicitWidth + 58
-                                    implicitHeight: btnText.implicitHeight + 30
+                                    implicitWidth: btnText2.implicitWidth + 58
+                                    implicitHeight: btnText2.implicitHeight + 30
                                     border.width: 1
                                     border.color: "#0b5cad"
                                     Layout.fillWidth: true
@@ -390,7 +405,7 @@ ApplicationWindow {
                                     Layout.alignment: Qt.AlignVCenter
 
                                     Text {
-                                        id: btnText
+                                        id: btnText2
                                         text: "Start free trial"
                                         textFormat: Text.PlainText
                                         color: "#ffffff"
@@ -414,8 +429,8 @@ ApplicationWindow {
                                 Rectangle {
                                     color: "#ffffff"
                                     radius: 8
-                                    implicitWidth: btnText2.implicitWidth + 58
-                                    implicitHeight: btnText2.implicitHeight + 30
+                                    implicitWidth: btnText3.implicitWidth + 58
+                                    implicitHeight: btnText3.implicitHeight + 30
                                     border.width: 1
                                     border.color: "#0b5cad"
                                     Layout.fillWidth: true
@@ -424,7 +439,7 @@ ApplicationWindow {
                                     Layout.leftMargin: 12
 
                                     Text {
-                                        id: btnText2
+                                        id: btnText3
                                         text: "Watch the demo"
                                         textFormat: Text.PlainText
                                         color: "#0b5cad"

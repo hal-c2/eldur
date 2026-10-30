@@ -2,7 +2,6 @@
 source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-info[css]: index.html:179: `display: inline-block` on <a class="btn btn-primary nav-cta"> is laid out as inline text
 info[qml]: index.html:175: <a> is underlined: StyledText always underlines links
 info[qml]: index.html:175: <a>: font size 15px inside 16px text is approximated with <small>
 info[qml]: index.html:176: <a> is underlined: StyledText always underlines links
@@ -11,9 +10,5 @@ info[qml]: index.html:177: <a> is underlined: StyledText always underlines links
 info[qml]: index.html:177: <a>: font size 15px inside 16px text is approximated with <small>
 info[qml]: index.html:178: <a> is underlined: StyledText always underlines links
 info[qml]: index.html:178: <a>: font size 15px inside 16px text is approximated with <small>
-info[qml]: index.html:179: <a class="btn btn-primary nav-cta"> is underlined: StyledText always underlines links
-info[qml]: index.html:179: <a class="btn btn-primary nav-cta">: font size 15px inside 16px text is approximated with <small>
-info[qml]: index.html:179: <a class="btn btn-primary nav-cta">: inline background is not converted
-info[qml]: index.html:179: <a class="btn btn-primary nav-cta">: inline padding and borders are not converted
 warning[css]: index.html:185: background images and gradients are not converted yet
 info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

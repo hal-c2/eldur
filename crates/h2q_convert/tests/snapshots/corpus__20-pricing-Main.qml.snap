@@ -586,37 +586,6 @@ ApplicationWindow {
                                     anchors.topMargin: 42
                                     anchors.bottomMargin: 34
 
-                                    // <span class="badge">
-                                    Rectangle {
-                                        color: "#2563eb"
-                                        radius: 999
-                                        implicitWidth: badgeText.implicitWidth + 28
-                                        implicitHeight: badgeText.implicitHeight + 12
-                                        Layout.fillWidth: true
-
-                                        Text {
-                                            id: badgeText
-                                            text: "Most popular"
-                                            textFormat: Text.PlainText
-                                            color: "#ffffff"
-                                            font.family: "sans-serif"
-                                            font.pixelSize: 13
-                                            font.weight: 700
-                                            lineHeight: 20.48
-                                            lineHeightMode: Text.FixedHeight
-                                            transform: Translate {
-                                                y: 2.88
-                                            }
-                                            wrapMode: Text.NoWrap
-                                            anchors.left: parent.left
-                                            anchors.right: parent.right
-                                            anchors.top: parent.top
-                                            anchors.leftMargin: 14
-                                            anchors.rightMargin: 14
-                                            anchors.topMargin: 6
-                                        }
-                                    }
-
                                     // <h2 class="plan-name">
                                     Text {
                                         text: "Growth"
@@ -999,6 +968,37 @@ ApplicationWindow {
                                         Layout.preferredHeight: 50
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
+                                    }
+                                }
+
+                                Rectangle {
+                                    color: "#2563eb"
+                                    radius: 999
+                                    implicitWidth: badgeText.implicitWidth + 28
+                                    implicitHeight: badgeText.implicitHeight + 12
+                                    x: parent.width * 0.5 + 2
+                                    y: -12
+
+                                    Text {
+                                        id: badgeText
+                                        text: "Most popular"
+                                        textFormat: Text.PlainText
+                                        color: "#ffffff"
+                                        font.family: "sans-serif"
+                                        font.pixelSize: 13
+                                        font.weight: 700
+                                        lineHeight: 20.48
+                                        lineHeightMode: Text.FixedHeight
+                                        transform: Translate {
+                                            y: 2.88
+                                        }
+                                        wrapMode: Text.NoWrap
+                                        anchors.left: parent.left
+                                        anchors.right: parent.right
+                                        anchors.top: parent.top
+                                        anchors.leftMargin: 14
+                                        anchors.rightMargin: 14
+                                        anchors.topMargin: 6
                                     }
                                 }
                             }

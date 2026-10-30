@@ -25,7 +25,7 @@ use h2q_qml::{Member, Object, Value};
 use super::Emitter;
 use super::flow::{is_layout, is_viewport_relative, size_value};
 use super::units::{fmt_number, length_expr, number, px_part, round};
-use crate::boxes::{LayoutBox, describe, node_line};
+use crate::boxes::{BoxKind, LayoutBox, describe, node_line};
 
 /// Where `justify-content` puts the free space, in visual order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -436,6 +436,14 @@ impl Emitter<'_, '_> {
         };
         let max_cross = limit(max_cross, !row, cross_extra);
         match (placement, cross_definite) {
+            // Stretching block flow would spread its children apart; a CSS
+            // block's stay at the top and only its unpainted end moves.
+            (Cross::Stretch, None)
+                if row && obj.type_name == "ColumnLayout" && b.kind == BoxKind::Block =>
+            {
+                obj.set("Layout.fillHeight", false);
+                obj.set("Layout.alignment", Value::expr("Qt.AlignTop"));
+            }
             (Cross::Stretch, None) => {
                 obj.set(&format!("Layout.fill{cross_name}"), true);
                 match max_cross {

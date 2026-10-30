@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Table model</title>
+  <style>
+    body { margin: 24px; font: 14px/20px sans-serif; color: #1b2231; background: #ffffff; }
+    h2 { margin: 16px 0 8px; font-size: 16px; line-height: 24px; }
+    td, th { padding: 4px 8px; }
+    .collapse { border-collapse: collapse; }
+    .collapse td, .collapse th { border: 1px solid #8a94a6; }
+    .collapse .thick { border: 3px solid #c0392b; }
+    .spaced { border-collapse: separate; border-spacing: 6px 10px; border: 2px solid #2d6cdf; padding: 4px; }
+    .spaced td { background: #e6ecf7; }
+    .fixed { table-layout: fixed; width: 480px; border-collapse: collapse; }
+    .fixed td { border: 1px solid #8a94a6; }
+    .bottom caption { caption-side: bottom; padding-top: 6px; color: #5a6478; }
+    .stripe { background: #f3e9d2; }
+    .tall td { height: 60px; border: 1px solid #8a94a6; }
+    .top { vertical-align: top; }
+    .middle { vertical-align: middle; }
+    .low { vertical-align: bottom; }
+  </style>
+</head>
+<body>
+  <h2>Spans and collapsed borders</h2>
+  <table class="collapse">
+    <tr><th rowspan="2">Region</th><th colspan="2">Sales</th></tr>
+    <tr><th>Units</th><th>Value</th></tr>
+    <tr><td>North</td><td class="thick">12</td><td>480</td></tr>
+    <tr><td colspan="2">Subtotal</td><td>480</td></tr>
+  </table>
+
+  <h2>Separated borders</h2>
+  <table class="spaced">
+    <tr><td>one</td><td>two</td></tr>
+    <tr><td>three</td><td>four</td></tr>
+  </table>
+
+  <h2>Fixed layout, columns, caption below</h2>
+  <table class="fixed bottom">
+    <caption>Column widths come from col elements.</caption>
+    <colgroup><col style="width: 120px"><col class="stripe"></colgroup>
+    <tbody>
+      <tr><td>a</td><td>b</td><td>c</td></tr>
+    </tbody>
+    <tfoot><tr><td>foot</td><td>foot</td><td>foot</td></tr></tfoot>
+    <thead><tr><td>head</td><td>head</td><td>head</td></tr></thead>
+  </table>
+
+  <h2>Vertical alignment</h2>
+  <table class="collapse tall">
+    <tr><td class="top">top</td><td class="middle">middle</td><td class="low">bottom</td></tr>
+  </table>
+</body>
+</html>

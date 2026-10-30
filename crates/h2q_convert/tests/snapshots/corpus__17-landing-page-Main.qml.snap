@@ -482,6 +482,7 @@ ApplicationWindow {
                                                 // <span class="dot">
                                                 Rectangle {
                                                     color: "#80ffffff"
+                                                    radius: 5
                                                     implicitWidth: 0
                                                     implicitHeight: 0
                                                     Layout.fillWidth: true
@@ -494,6 +495,7 @@ ApplicationWindow {
                                                 // <span class="dot">
                                                 Rectangle {
                                                     color: "#80ffffff"
+                                                    radius: 5
                                                     implicitWidth: 0
                                                     implicitHeight: 0
                                                     Layout.fillWidth: true
@@ -507,6 +509,7 @@ ApplicationWindow {
                                                 // <span class="dot">
                                                 Rectangle {
                                                     color: "#80ffffff"
+                                                    radius: 5
                                                     implicitWidth: 0
                                                     implicitHeight: 0
                                                     Layout.fillWidth: true
@@ -933,28 +936,22 @@ ApplicationWindow {
 
                                                 // <div class="feature-icon">
                                                 Item {
-                                                    implicitWidth: featureIconContent.implicitWidth
-                                                    implicitHeight: featureIconContent.implicitHeight
+                                                    implicitWidth: 0
+                                                    implicitHeight: 0
                                                     Layout.preferredWidth: 56
                                                     Layout.preferredHeight: 56
 
-                                                    ColumnLayout {
-                                                        id: featureIconContent
-                                                        spacing: 0
-                                                        anchors.left: parent.left
-                                                        anchors.right: parent.right
-                                                        anchors.top: parent.top
-
-                                                        Rectangle {
-                                                            color: "#00000000"
-                                                            radius: 6
-                                                            implicitWidth: 6
-                                                            implicitHeight: 6
-                                                            border.width: 3
-                                                            border.color: "#ffffff"
-                                                            Layout.preferredWidth: 20
-                                                            Layout.preferredHeight: 20
-                                                        }
+                                                    Rectangle {
+                                                        color: "#00000000"
+                                                        radius: 6
+                                                        implicitWidth: 6
+                                                        implicitHeight: 6
+                                                        border.width: 3
+                                                        border.color: "#ffffff"
+                                                        width: 20
+                                                        height: 20
+                                                        x: parent.width * 0.5
+                                                        y: parent.height * 0.5
                                                     }
                                                 }
 
@@ -1017,28 +1014,22 @@ ApplicationWindow {
 
                                                 // <div class="feature-icon warm">
                                                 Item {
-                                                    implicitWidth: featureIconContent2.implicitWidth
-                                                    implicitHeight: featureIconContent2.implicitHeight
+                                                    implicitWidth: 0
+                                                    implicitHeight: 0
                                                     Layout.preferredWidth: 56
                                                     Layout.preferredHeight: 56
 
-                                                    ColumnLayout {
-                                                        id: featureIconContent2
-                                                        spacing: 0
-                                                        anchors.left: parent.left
-                                                        anchors.right: parent.right
-                                                        anchors.top: parent.top
-
-                                                        Rectangle {
-                                                            color: "#00000000"
-                                                            radius: 6
-                                                            implicitWidth: 6
-                                                            implicitHeight: 6
-                                                            border.width: 3
-                                                            border.color: "#ffffff"
-                                                            Layout.preferredWidth: 20
-                                                            Layout.preferredHeight: 20
-                                                        }
+                                                    Rectangle {
+                                                        color: "#00000000"
+                                                        radius: 6
+                                                        implicitWidth: 6
+                                                        implicitHeight: 6
+                                                        border.width: 3
+                                                        border.color: "#ffffff"
+                                                        width: 20
+                                                        height: 20
+                                                        x: parent.width * 0.5
+                                                        y: parent.height * 0.5
                                                     }
                                                 }
 
@@ -1101,28 +1092,22 @@ ApplicationWindow {
 
                                                 // <div class="feature-icon cool">
                                                 Item {
-                                                    implicitWidth: featureIconContent3.implicitWidth
-                                                    implicitHeight: featureIconContent3.implicitHeight
+                                                    implicitWidth: 0
+                                                    implicitHeight: 0
                                                     Layout.preferredWidth: 56
                                                     Layout.preferredHeight: 56
 
-                                                    ColumnLayout {
-                                                        id: featureIconContent3
-                                                        spacing: 0
-                                                        anchors.left: parent.left
-                                                        anchors.right: parent.right
-                                                        anchors.top: parent.top
-
-                                                        Rectangle {
-                                                            color: "#00000000"
-                                                            radius: 6
-                                                            implicitWidth: 6
-                                                            implicitHeight: 6
-                                                            border.width: 3
-                                                            border.color: "#ffffff"
-                                                            Layout.preferredWidth: 20
-                                                            Layout.preferredHeight: 20
-                                                        }
+                                                    Rectangle {
+                                                        color: "#00000000"
+                                                        radius: 6
+                                                        implicitWidth: 6
+                                                        implicitHeight: 6
+                                                        border.width: 3
+                                                        border.color: "#ffffff"
+                                                        width: 20
+                                                        height: 20
+                                                        x: parent.width * 0.5
+                                                        y: parent.height * 0.5
                                                     }
                                                 }
 
@@ -1239,6 +1224,7 @@ ApplicationWindow {
                                             // <span class="avatar">
                                             Rectangle {
                                                 color: "#c7c2f5"
+                                                radius: 24
                                                 implicitWidth: avatarText.implicitWidth
                                                 implicitHeight: avatarText.implicitHeight
                                                 Layout.fillWidth: true
@@ -1517,8 +1503,9 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.fillHeight: true
                                         Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                        Layout.fillHeight: false
+                                        Layout.alignment: Qt.AlignTop
 
                                         // <p class="footer-brand">
                                         Text {
@@ -1564,8 +1551,9 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.fillHeight: true
                                         Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                        Layout.fillHeight: false
+                                        Layout.alignment: Qt.AlignTop
 
                                         // <h4>
                                         Text {
@@ -1693,8 +1681,9 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.fillHeight: true
                                         Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                        Layout.fillHeight: false
+                                        Layout.alignment: Qt.AlignTop
 
                                         // <h4>
                                         Text {
@@ -1822,8 +1811,9 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.fillHeight: true
                                         Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                        Layout.fillHeight: false
+                                        Layout.alignment: Qt.AlignTop
 
                                         // <h4>
                                         Text {

@@ -103,8 +103,9 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 0
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                Layout.fillHeight: true
                                 Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                Layout.fillHeight: false
+                                Layout.alignment: Qt.AlignTop
 
                                 // <section class="card">
                                 Rectangle {
@@ -160,13 +161,248 @@ ApplicationWindow {
                                                 anchors.leftMargin: 24
 
                                                 // <li>
-                                                ColumnLayout {
-                                                    spacing: 0
+                                                Item {
+                                                    implicitWidth: liContent4.implicitWidth
+                                                    implicitHeight: liContent4.implicitHeight
                                                     Layout.fillWidth: true
-                                                    Layout.maximumWidth: Number.POSITIVE_INFINITY
+
+                                                    ColumnLayout {
+                                                        id: liContent4
+                                                        spacing: 0
+                                                        anchors.left: parent.left
+                                                        anchors.right: parent.right
+                                                        anchors.top: parent.top
+
+                                                        Text {
+                                                            text: "Plan the release"
+                                                            textFormat: Text.PlainText
+                                                            color: "#1d2233"
+                                                            font.family: "sans-serif"
+                                                            font.pixelSize: 16
+                                                            lineHeight: 24
+                                                            lineHeightMode: Text.FixedHeight
+                                                            transform: Translate {
+                                                                y: 2.8
+                                                            }
+                                                            wrapMode: Text.WordWrap
+                                                            Layout.fillWidth: true
+                                                        }
+
+                                                        // <ol class="list-roman">
+                                                        Item {
+                                                            implicitWidth: listRomanContent.implicitWidth + 24
+                                                            implicitHeight: listRomanContent.implicitHeight
+                                                            Layout.fillWidth: true
+                                                            Layout.topMargin: 6
+
+                                                            ColumnLayout {
+                                                                id: listRomanContent
+                                                                spacing: 0
+                                                                anchors.left: parent.left
+                                                                anchors.right: parent.right
+                                                                anchors.top: parent.top
+                                                                anchors.leftMargin: 24
+
+                                                                // <li>
+                                                                Item {
+                                                                    implicitWidth: liContent3.implicitWidth
+                                                                    implicitHeight: liContent3.implicitHeight
+                                                                    Layout.fillWidth: true
+
+                                                                    ColumnLayout {
+                                                                        id: liContent3
+                                                                        spacing: 0
+                                                                        anchors.left: parent.left
+                                                                        anchors.right: parent.right
+                                                                        anchors.top: parent.top
+
+                                                                        Text {
+                                                                            text: "Freeze the feature set"
+                                                                            textFormat: Text.PlainText
+                                                                            color: "#1d2233"
+                                                                            font.family: "sans-serif"
+                                                                            font.pixelSize: 16
+                                                                            lineHeight: 24
+                                                                            lineHeightMode: Text.FixedHeight
+                                                                            transform: Translate {
+                                                                                y: 2.8
+                                                                            }
+                                                                            wrapMode: Text.WordWrap
+                                                                            Layout.fillWidth: true
+                                                                        }
+
+                                                                        // <ul class="list-none">
+                                                                        ColumnLayout {
+                                                                            spacing: 0
+                                                                            Layout.fillWidth: true
+                                                                            Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                                                            Layout.topMargin: 6
+
+                                                                            // <li>
+                                                                            Item {
+                                                                                implicitWidth: liContent.implicitWidth + 16
+                                                                                implicitHeight: liContent.implicitHeight
+                                                                                Layout.fillWidth: true
+
+                                                                                ColumnLayout {
+                                                                                    id: liContent
+                                                                                    spacing: 0
+                                                                                    anchors.left: parent.left
+                                                                                    anchors.right: parent.right
+                                                                                    anchors.top: parent.top
+                                                                                    anchors.leftMargin: 16
+
+                                                                                    Text {
+                                                                                        text: "Review open issues"
+                                                                                        textFormat: Text.PlainText
+                                                                                        color: "#5f6880"
+                                                                                        font.family: "sans-serif"
+                                                                                        font.pixelSize: 16
+                                                                                        lineHeight: 24
+                                                                                        lineHeightMode: Text.FixedHeight
+                                                                                        transform: Translate {
+                                                                                            y: 2.8
+                                                                                        }
+                                                                                        wrapMode: Text.WordWrap
+                                                                                        Layout.fillWidth: true
+                                                                                    }
+                                                                                }
+
+                                                                                Rectangle {
+                                                                                    color: "#3550d6"
+                                                                                    radius: 3
+                                                                                    implicitWidth: 0
+                                                                                    implicitHeight: 0
+                                                                                    width: 6
+                                                                                    height: 6
+                                                                                    x: 0
+                                                                                    y: 9.6
+                                                                                }
+                                                                            }
+
+                                                                            // <li>
+                                                                            Item {
+                                                                                implicitWidth: liContent2.implicitWidth + 16
+                                                                                implicitHeight: liContent2.implicitHeight
+                                                                                Layout.fillWidth: true
+
+                                                                                ColumnLayout {
+                                                                                    id: liContent2
+                                                                                    spacing: 0
+                                                                                    anchors.left: parent.left
+                                                                                    anchors.right: parent.right
+                                                                                    anchors.top: parent.top
+                                                                                    anchors.leftMargin: 16
+
+                                                                                    Text {
+                                                                                        text: "Tag the milestone"
+                                                                                        textFormat: Text.PlainText
+                                                                                        color: "#5f6880"
+                                                                                        font.family: "sans-serif"
+                                                                                        font.pixelSize: 16
+                                                                                        lineHeight: 24
+                                                                                        lineHeightMode: Text.FixedHeight
+                                                                                        transform: Translate {
+                                                                                            y: 2.8
+                                                                                        }
+                                                                                        wrapMode: Text.WordWrap
+                                                                                        Layout.fillWidth: true
+                                                                                    }
+                                                                                }
+
+                                                                                Rectangle {
+                                                                                    color: "#3550d6"
+                                                                                    radius: 3
+                                                                                    implicitWidth: 0
+                                                                                    implicitHeight: 0
+                                                                                    width: 6
+                                                                                    height: 6
+                                                                                    x: 0
+                                                                                    y: 9.6
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+
+                                                                    Text {
+                                                                        text: "i. "
+                                                                        textFormat: Text.PlainText
+                                                                        color: "#1d2233"
+                                                                        font.family: "sans-serif"
+                                                                        font.pixelSize: 16
+                                                                        lineHeight: 24
+                                                                        lineHeightMode: Text.FixedHeight
+                                                                        transform: Translate {
+                                                                            y: 2.8
+                                                                        }
+                                                                        wrapMode: Text.NoWrap
+                                                                        anchors.right: parent.left
+                                                                    }
+                                                                }
+
+                                                                // <li>
+                                                                Item {
+                                                                    implicitWidth: liText.implicitWidth
+                                                                    implicitHeight: liText.implicitHeight
+                                                                    Layout.fillWidth: true
+                                                                    Layout.topMargin: 6
+
+                                                                    Text {
+                                                                        id: liText
+                                                                        text: "Write release notes"
+                                                                        textFormat: Text.PlainText
+                                                                        color: "#1d2233"
+                                                                        font.family: "sans-serif"
+                                                                        font.pixelSize: 16
+                                                                        lineHeight: 24
+                                                                        lineHeightMode: Text.FixedHeight
+                                                                        transform: Translate {
+                                                                            y: 2.8
+                                                                        }
+                                                                        wrapMode: Text.WordWrap
+                                                                        anchors.left: parent.left
+                                                                        anchors.right: parent.right
+                                                                        anchors.top: parent.top
+                                                                    }
+
+                                                                    Text {
+                                                                        text: "ii. "
+                                                                        textFormat: Text.PlainText
+                                                                        color: "#1d2233"
+                                                                        font.family: "sans-serif"
+                                                                        font.pixelSize: 16
+                                                                        lineHeight: 24
+                                                                        lineHeightMode: Text.FixedHeight
+                                                                        transform: Translate {
+                                                                            y: 2.8
+                                                                        }
+                                                                        wrapMode: Text.NoWrap
+                                                                        anchors.right: parent.left
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+
+                                                    Rectangle {
+                                                        x: -16
+                                                        y: 10
+                                                        width: 5
+                                                        height: 5
+                                                        color: "#1d2233"
+                                                    }
+                                                }
+
+                                                // <li>
+                                                Item {
+                                                    implicitWidth: liText2.implicitWidth
+                                                    implicitHeight: liText2.implicitHeight
+                                                    Layout.fillWidth: true
+                                                    Layout.topMargin: 8
 
                                                     Text {
-                                                        text: "▪ Plan the release"
+                                                        id: liText2
+                                                        text: "Build and sign the packages"
                                                         textFormat: Text.PlainText
                                                         color: "#1d2233"
                                                         font.family: "sans-serif"
@@ -177,184 +413,52 @@ ApplicationWindow {
                                                             y: 2.8
                                                         }
                                                         wrapMode: Text.WordWrap
-                                                        Layout.fillWidth: true
+                                                        anchors.left: parent.left
+                                                        anchors.right: parent.right
+                                                        anchors.top: parent.top
                                                     }
 
-                                                    // <ol class="list-roman">
-                                                    Item {
-                                                        implicitWidth: listRomanContent.implicitWidth + 24
-                                                        implicitHeight: listRomanContent.implicitHeight
-                                                        Layout.fillWidth: true
-                                                        Layout.topMargin: 6
+                                                    Rectangle {
+                                                        x: -16
+                                                        y: 10
+                                                        width: 5
+                                                        height: 5
+                                                        color: "#1d2233"
+                                                    }
+                                                }
 
-                                                        ColumnLayout {
-                                                            id: listRomanContent
-                                                            spacing: 0
-                                                            anchors.left: parent.left
-                                                            anchors.right: parent.right
-                                                            anchors.top: parent.top
-                                                            anchors.leftMargin: 24
+                                                // <li>
+                                                Item {
+                                                    implicitWidth: liText3.implicitWidth
+                                                    implicitHeight: liText3.implicitHeight
+                                                    Layout.fillWidth: true
+                                                    Layout.topMargin: 8
 
-                                                            // <li>
-                                                            ColumnLayout {
-                                                                spacing: 0
-                                                                Layout.fillWidth: true
-                                                                Layout.maximumWidth: Number.POSITIVE_INFINITY
-
-                                                                Text {
-                                                                    text: "i. Freeze the feature set"
-                                                                    textFormat: Text.PlainText
-                                                                    color: "#1d2233"
-                                                                    font.family: "sans-serif"
-                                                                    font.pixelSize: 16
-                                                                    lineHeight: 24
-                                                                    lineHeightMode: Text.FixedHeight
-                                                                    transform: Translate {
-                                                                        y: 2.8
-                                                                    }
-                                                                    wrapMode: Text.WordWrap
-                                                                    Layout.fillWidth: true
-                                                                }
-
-                                                                // <ul class="list-none">
-                                                                ColumnLayout {
-                                                                    spacing: 0
-                                                                    Layout.fillWidth: true
-                                                                    Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                                                    Layout.topMargin: 6
-
-                                                                    // <li>
-                                                                    Item {
-                                                                        implicitWidth: liContent.implicitWidth + 16
-                                                                        implicitHeight: liContent.implicitHeight
-                                                                        Layout.fillWidth: true
-
-                                                                        ColumnLayout {
-                                                                            id: liContent
-                                                                            spacing: 0
-                                                                            anchors.left: parent.left
-                                                                            anchors.right: parent.right
-                                                                            anchors.top: parent.top
-                                                                            anchors.leftMargin: 16
-
-                                                                            Rectangle {
-                                                                                color: "#3550d6"
-                                                                                implicitWidth: 0
-                                                                                implicitHeight: 0
-                                                                                Layout.preferredWidth: 6
-                                                                                Layout.preferredHeight: 6
-                                                                            }
-
-                                                                            Text {
-                                                                                text: "Review open issues"
-                                                                                textFormat: Text.PlainText
-                                                                                color: "#5f6880"
-                                                                                font.family: "sans-serif"
-                                                                                font.pixelSize: 16
-                                                                                lineHeight: 24
-                                                                                lineHeightMode: Text.FixedHeight
-                                                                                transform: Translate {
-                                                                                    y: 2.8
-                                                                                }
-                                                                                wrapMode: Text.WordWrap
-                                                                                Layout.fillWidth: true
-                                                                            }
-                                                                        }
-                                                                    }
-
-                                                                    // <li>
-                                                                    Item {
-                                                                        implicitWidth: liContent2.implicitWidth + 16
-                                                                        implicitHeight: liContent2.implicitHeight
-                                                                        Layout.fillWidth: true
-
-                                                                        ColumnLayout {
-                                                                            id: liContent2
-                                                                            spacing: 0
-                                                                            anchors.left: parent.left
-                                                                            anchors.right: parent.right
-                                                                            anchors.top: parent.top
-                                                                            anchors.leftMargin: 16
-
-                                                                            Rectangle {
-                                                                                color: "#3550d6"
-                                                                                implicitWidth: 0
-                                                                                implicitHeight: 0
-                                                                                Layout.preferredWidth: 6
-                                                                                Layout.preferredHeight: 6
-                                                                            }
-
-                                                                            Text {
-                                                                                text: "Tag the milestone"
-                                                                                textFormat: Text.PlainText
-                                                                                color: "#5f6880"
-                                                                                font.family: "sans-serif"
-                                                                                font.pixelSize: 16
-                                                                                lineHeight: 24
-                                                                                lineHeightMode: Text.FixedHeight
-                                                                                transform: Translate {
-                                                                                    y: 2.8
-                                                                                }
-                                                                                wrapMode: Text.WordWrap
-                                                                                Layout.fillWidth: true
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-
-                                                            // <li>
-                                                            Text {
-                                                                text: "ii. Write release notes"
-                                                                textFormat: Text.PlainText
-                                                                color: "#1d2233"
-                                                                font.family: "sans-serif"
-                                                                font.pixelSize: 16
-                                                                lineHeight: 24
-                                                                lineHeightMode: Text.FixedHeight
-                                                                transform: Translate {
-                                                                    y: 2.8
-                                                                }
-                                                                wrapMode: Text.WordWrap
-                                                                Layout.fillWidth: true
-                                                                Layout.topMargin: 6
-                                                            }
+                                                    Text {
+                                                        id: liText3
+                                                        text: "Publish to the stores"
+                                                        textFormat: Text.PlainText
+                                                        color: "#1d2233"
+                                                        font.family: "sans-serif"
+                                                        font.pixelSize: 16
+                                                        lineHeight: 24
+                                                        lineHeightMode: Text.FixedHeight
+                                                        transform: Translate {
+                                                            y: 2.8
                                                         }
+                                                        wrapMode: Text.WordWrap
+                                                        anchors.left: parent.left
+                                                        anchors.right: parent.right
+                                                        anchors.top: parent.top
                                                     }
-                                                }
 
-                                                // <li>
-                                                Text {
-                                                    text: "▪ Build and sign the packages"
-                                                    textFormat: Text.PlainText
-                                                    color: "#1d2233"
-                                                    font.family: "sans-serif"
-                                                    font.pixelSize: 16
-                                                    lineHeight: 24
-                                                    lineHeightMode: Text.FixedHeight
-                                                    transform: Translate {
-                                                        y: 2.8
+                                                    Rectangle {
+                                                        x: -16
+                                                        y: 10
+                                                        width: 5
+                                                        height: 5
+                                                        color: "#1d2233"
                                                     }
-                                                    wrapMode: Text.WordWrap
-                                                    Layout.fillWidth: true
-                                                    Layout.topMargin: 8
-                                                }
-
-                                                // <li>
-                                                Text {
-                                                    text: "▪ Publish to the stores"
-                                                    textFormat: Text.PlainText
-                                                    color: "#1d2233"
-                                                    font.family: "sans-serif"
-                                                    font.pixelSize: 16
-                                                    lineHeight: 24
-                                                    lineHeightMode: Text.FixedHeight
-                                                    transform: Translate {
-                                                        y: 2.8
-                                                    }
-                                                    wrapMode: Text.WordWrap
-                                                    Layout.fillWidth: true
-                                                    Layout.topMargin: 8
                                                 }
                                             }
                                         }
@@ -416,70 +520,166 @@ ApplicationWindow {
                                                 anchors.leftMargin: 24
 
                                                 // <li>
-                                                Text {
-                                                    text: "A. Design sign-off"
-                                                    textFormat: Text.PlainText
-                                                    color: "#1d2233"
-                                                    font.family: "sans-serif"
-                                                    font.pixelSize: 16
-                                                    lineHeight: 24
-                                                    lineHeightMode: Text.FixedHeight
-                                                    transform: Translate {
-                                                        y: 2.8
-                                                    }
-                                                    wrapMode: Text.WordWrap
+                                                Item {
+                                                    implicitWidth: liText4.implicitWidth
+                                                    implicitHeight: liText4.implicitHeight
                                                     Layout.fillWidth: true
+
+                                                    Text {
+                                                        id: liText4
+                                                        text: "Design sign-off"
+                                                        textFormat: Text.PlainText
+                                                        color: "#1d2233"
+                                                        font.family: "sans-serif"
+                                                        font.pixelSize: 16
+                                                        lineHeight: 24
+                                                        lineHeightMode: Text.FixedHeight
+                                                        transform: Translate {
+                                                            y: 2.8
+                                                        }
+                                                        wrapMode: Text.WordWrap
+                                                        anchors.left: parent.left
+                                                        anchors.right: parent.right
+                                                        anchors.top: parent.top
+                                                    }
+
+                                                    Text {
+                                                        text: "A. "
+                                                        textFormat: Text.PlainText
+                                                        color: "#1d2233"
+                                                        font.family: "sans-serif"
+                                                        font.pixelSize: 16
+                                                        lineHeight: 24
+                                                        lineHeightMode: Text.FixedHeight
+                                                        transform: Translate {
+                                                            y: 2.8
+                                                        }
+                                                        wrapMode: Text.NoWrap
+                                                        anchors.right: parent.left
+                                                    }
                                                 }
 
                                                 // <li>
-                                                Text {
-                                                    text: "B. Security review"
-                                                    textFormat: Text.PlainText
-                                                    color: "#1d2233"
-                                                    font.family: "sans-serif"
-                                                    font.pixelSize: 16
-                                                    lineHeight: 24
-                                                    lineHeightMode: Text.FixedHeight
-                                                    transform: Translate {
-                                                        y: 2.8
-                                                    }
-                                                    wrapMode: Text.WordWrap
+                                                Item {
+                                                    implicitWidth: liText5.implicitWidth
+                                                    implicitHeight: liText5.implicitHeight
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 6
+
+                                                    Text {
+                                                        id: liText5
+                                                        text: "Security review"
+                                                        textFormat: Text.PlainText
+                                                        color: "#1d2233"
+                                                        font.family: "sans-serif"
+                                                        font.pixelSize: 16
+                                                        lineHeight: 24
+                                                        lineHeightMode: Text.FixedHeight
+                                                        transform: Translate {
+                                                            y: 2.8
+                                                        }
+                                                        wrapMode: Text.WordWrap
+                                                        anchors.left: parent.left
+                                                        anchors.right: parent.right
+                                                        anchors.top: parent.top
+                                                    }
+
+                                                    Text {
+                                                        text: "B. "
+                                                        textFormat: Text.PlainText
+                                                        color: "#1d2233"
+                                                        font.family: "sans-serif"
+                                                        font.pixelSize: 16
+                                                        lineHeight: 24
+                                                        lineHeightMode: Text.FixedHeight
+                                                        transform: Translate {
+                                                            y: 2.8
+                                                        }
+                                                        wrapMode: Text.NoWrap
+                                                        anchors.right: parent.left
+                                                    }
                                                 }
 
                                                 // <li>
-                                                Text {
-                                                    text: "C. Accessibility pass"
-                                                    textFormat: Text.PlainText
-                                                    color: "#1d2233"
-                                                    font.family: "sans-serif"
-                                                    font.pixelSize: 16
-                                                    lineHeight: 24
-                                                    lineHeightMode: Text.FixedHeight
-                                                    transform: Translate {
-                                                        y: 2.8
-                                                    }
-                                                    wrapMode: Text.WordWrap
+                                                Item {
+                                                    implicitWidth: liText6.implicitWidth
+                                                    implicitHeight: liText6.implicitHeight
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 6
+
+                                                    Text {
+                                                        id: liText6
+                                                        text: "Accessibility pass"
+                                                        textFormat: Text.PlainText
+                                                        color: "#1d2233"
+                                                        font.family: "sans-serif"
+                                                        font.pixelSize: 16
+                                                        lineHeight: 24
+                                                        lineHeightMode: Text.FixedHeight
+                                                        transform: Translate {
+                                                            y: 2.8
+                                                        }
+                                                        wrapMode: Text.WordWrap
+                                                        anchors.left: parent.left
+                                                        anchors.right: parent.right
+                                                        anchors.top: parent.top
+                                                    }
+
+                                                    Text {
+                                                        text: "C. "
+                                                        textFormat: Text.PlainText
+                                                        color: "#1d2233"
+                                                        font.family: "sans-serif"
+                                                        font.pixelSize: 16
+                                                        lineHeight: 24
+                                                        lineHeightMode: Text.FixedHeight
+                                                        transform: Translate {
+                                                            y: 2.8
+                                                        }
+                                                        wrapMode: Text.NoWrap
+                                                        anchors.right: parent.left
+                                                    }
                                                 }
 
                                                 // <li>
-                                                Text {
-                                                    text: "D. Localization check"
-                                                    textFormat: Text.PlainText
-                                                    color: "#1d2233"
-                                                    font.family: "sans-serif"
-                                                    font.pixelSize: 16
-                                                    lineHeight: 24
-                                                    lineHeightMode: Text.FixedHeight
-                                                    transform: Translate {
-                                                        y: 2.8
-                                                    }
-                                                    wrapMode: Text.WordWrap
+                                                Item {
+                                                    implicitWidth: liText7.implicitWidth
+                                                    implicitHeight: liText7.implicitHeight
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 6
+
+                                                    Text {
+                                                        id: liText7
+                                                        text: "Localization check"
+                                                        textFormat: Text.PlainText
+                                                        color: "#1d2233"
+                                                        font.family: "sans-serif"
+                                                        font.pixelSize: 16
+                                                        lineHeight: 24
+                                                        lineHeightMode: Text.FixedHeight
+                                                        transform: Translate {
+                                                            y: 2.8
+                                                        }
+                                                        wrapMode: Text.WordWrap
+                                                        anchors.left: parent.left
+                                                        anchors.right: parent.right
+                                                        anchors.top: parent.top
+                                                    }
+
+                                                    Text {
+                                                        text: "D. "
+                                                        textFormat: Text.PlainText
+                                                        color: "#1d2233"
+                                                        font.family: "sans-serif"
+                                                        font.pixelSize: 16
+                                                        lineHeight: 24
+                                                        lineHeightMode: Text.FixedHeight
+                                                        transform: Translate {
+                                                            y: 2.8
+                                                        }
+                                                        wrapMode: Text.NoWrap
+                                                        anchors.right: parent.left
+                                                    }
                                                 }
                                             }
                                         }
@@ -493,8 +693,9 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 0
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                Layout.fillHeight: true
                                 Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                Layout.fillHeight: false
+                                Layout.alignment: Qt.AlignTop
 
                                 // <section class="card">
                                 Rectangle {
@@ -742,149 +943,254 @@ ApplicationWindow {
                                             Layout.topMargin: 12
 
                                             // <li>
-                                            Text {
-                                                text: "<a href=\"#\"><b><small>Performance</small></b></a>"
-                                                textFormat: Text.StyledText
-                                                color: "#1d2233"
-                                                font.family: "sans-serif"
-                                                font.pixelSize: 16
-                                                lineHeight: 24
-                                                lineHeightMode: Text.FixedHeight
-                                                transform: Translate {
-                                                    y: 2.8
-                                                }
-                                                wrapMode: Text.WordWrap
-                                                linkColor: "#2a3ea6"
+                                            ColumnLayout {
+                                                spacing: 0
                                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                // <a>
+                                                Rectangle {
+                                                    color: "#e6ebff"
+                                                    radius: 999
+                                                    implicitWidth: aText.implicitWidth + 28
+                                                    implicitHeight: aText.implicitHeight + 12
+
+                                                    Text {
+                                                        id: aText
+                                                        text: "Performance"
+                                                        textFormat: Text.PlainText
+                                                        color: "#2a3ea6"
+                                                        font.family: "sans-serif"
+                                                        font.pixelSize: 14
+                                                        font.weight: 600
+                                                        lineHeight: 21
+                                                        lineHeightMode: Text.FixedHeight
+                                                        transform: Translate {
+                                                            y: 2.45
+                                                        }
+                                                        wrapMode: Text.WordWrap
+                                                        anchors.left: parent.left
+                                                        anchors.right: parent.right
+                                                        anchors.top: parent.top
+                                                        anchors.leftMargin: 14
+                                                        anchors.rightMargin: 14
+                                                        anchors.topMargin: 6
+                                                    }
                                                 }
                                             }
 
                                             // <li>
-                                            Text {
-                                                text: "<a href=\"#\"><b><small>Accessibility</small></b></a>"
-                                                textFormat: Text.StyledText
-                                                color: "#1d2233"
-                                                font.family: "sans-serif"
-                                                font.pixelSize: 16
-                                                lineHeight: 24
-                                                lineHeightMode: Text.FixedHeight
-                                                transform: Translate {
-                                                    y: 2.8
-                                                }
-                                                wrapMode: Text.WordWrap
-                                                linkColor: "#2a3ea6"
+                                            ColumnLayout {
+                                                spacing: 0
                                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                // <a>
+                                                Rectangle {
+                                                    color: "#e6ebff"
+                                                    radius: 999
+                                                    implicitWidth: aText2.implicitWidth + 28
+                                                    implicitHeight: aText2.implicitHeight + 12
+
+                                                    Text {
+                                                        id: aText2
+                                                        text: "Accessibility"
+                                                        textFormat: Text.PlainText
+                                                        color: "#2a3ea6"
+                                                        font.family: "sans-serif"
+                                                        font.pixelSize: 14
+                                                        font.weight: 600
+                                                        lineHeight: 21
+                                                        lineHeightMode: Text.FixedHeight
+                                                        transform: Translate {
+                                                            y: 2.45
+                                                        }
+                                                        wrapMode: Text.WordWrap
+                                                        anchors.left: parent.left
+                                                        anchors.right: parent.right
+                                                        anchors.top: parent.top
+                                                        anchors.leftMargin: 14
+                                                        anchors.rightMargin: 14
+                                                        anchors.topMargin: 6
+                                                    }
                                                 }
                                             }
 
                                             // <li>
-                                            Text {
-                                                text: "<a href=\"#\"><b><small>Localization</small></b></a>"
-                                                textFormat: Text.StyledText
-                                                color: "#1d2233"
-                                                font.family: "sans-serif"
-                                                font.pixelSize: 16
-                                                lineHeight: 24
-                                                lineHeightMode: Text.FixedHeight
-                                                transform: Translate {
-                                                    y: 2.8
-                                                }
-                                                wrapMode: Text.WordWrap
-                                                linkColor: "#2a3ea6"
+                                            ColumnLayout {
+                                                spacing: 0
                                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                // <a>
+                                                Rectangle {
+                                                    color: "#e6ebff"
+                                                    radius: 999
+                                                    implicitWidth: aText3.implicitWidth + 28
+                                                    implicitHeight: aText3.implicitHeight + 12
+
+                                                    Text {
+                                                        id: aText3
+                                                        text: "Localization"
+                                                        textFormat: Text.PlainText
+                                                        color: "#2a3ea6"
+                                                        font.family: "sans-serif"
+                                                        font.pixelSize: 14
+                                                        font.weight: 600
+                                                        lineHeight: 21
+                                                        lineHeightMode: Text.FixedHeight
+                                                        transform: Translate {
+                                                            y: 2.45
+                                                        }
+                                                        wrapMode: Text.WordWrap
+                                                        anchors.left: parent.left
+                                                        anchors.right: parent.right
+                                                        anchors.top: parent.top
+                                                        anchors.leftMargin: 14
+                                                        anchors.rightMargin: 14
+                                                        anchors.topMargin: 6
+                                                    }
                                                 }
                                             }
 
                                             // <li>
-                                            Text {
-                                                text: "<a href=\"#\"><b><small>Security</small></b></a>"
-                                                textFormat: Text.StyledText
-                                                color: "#1d2233"
-                                                font.family: "sans-serif"
-                                                font.pixelSize: 16
-                                                lineHeight: 24
-                                                lineHeightMode: Text.FixedHeight
-                                                transform: Translate {
-                                                    y: 2.8
-                                                }
-                                                wrapMode: Text.WordWrap
-                                                linkColor: "#2a3ea6"
+                                            ColumnLayout {
+                                                spacing: 0
                                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                // <a>
+                                                Rectangle {
+                                                    color: "#e6ebff"
+                                                    radius: 999
+                                                    implicitWidth: aText4.implicitWidth + 28
+                                                    implicitHeight: aText4.implicitHeight + 12
+
+                                                    Text {
+                                                        id: aText4
+                                                        text: "Security"
+                                                        textFormat: Text.PlainText
+                                                        color: "#2a3ea6"
+                                                        font.family: "sans-serif"
+                                                        font.pixelSize: 14
+                                                        font.weight: 600
+                                                        lineHeight: 21
+                                                        lineHeightMode: Text.FixedHeight
+                                                        transform: Translate {
+                                                            y: 2.45
+                                                        }
+                                                        wrapMode: Text.WordWrap
+                                                        anchors.left: parent.left
+                                                        anchors.right: parent.right
+                                                        anchors.top: parent.top
+                                                        anchors.leftMargin: 14
+                                                        anchors.rightMargin: 14
+                                                        anchors.topMargin: 6
+                                                    }
                                                 }
                                             }
 
                                             // <li>
-                                            Text {
-                                                text: "<a href=\"#\"><b><small>Release notes</small></b></a>"
-                                                textFormat: Text.StyledText
-                                                color: "#1d2233"
-                                                font.family: "sans-serif"
-                                                font.pixelSize: 16
-                                                lineHeight: 24
-                                                lineHeightMode: Text.FixedHeight
-                                                transform: Translate {
-                                                    y: 2.8
-                                                }
-                                                wrapMode: Text.WordWrap
-                                                linkColor: "#2a3ea6"
+                                            ColumnLayout {
+                                                spacing: 0
                                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                // <a>
+                                                Rectangle {
+                                                    color: "#e6ebff"
+                                                    radius: 999
+                                                    implicitWidth: aText5.implicitWidth + 28
+                                                    implicitHeight: aText5.implicitHeight + 12
+
+                                                    Text {
+                                                        id: aText5
+                                                        text: "Release notes"
+                                                        textFormat: Text.PlainText
+                                                        color: "#2a3ea6"
+                                                        font.family: "sans-serif"
+                                                        font.pixelSize: 14
+                                                        font.weight: 600
+                                                        lineHeight: 21
+                                                        lineHeightMode: Text.FixedHeight
+                                                        transform: Translate {
+                                                            y: 2.45
+                                                        }
+                                                        wrapMode: Text.WordWrap
+                                                        anchors.left: parent.left
+                                                        anchors.right: parent.right
+                                                        anchors.top: parent.top
+                                                        anchors.leftMargin: 14
+                                                        anchors.rightMargin: 14
+                                                        anchors.topMargin: 6
+                                                    }
                                                 }
                                             }
 
                                             // <li>
-                                            Text {
-                                                text: "<a href=\"#\"><b><small>Rollback</small></b></a>"
-                                                textFormat: Text.StyledText
-                                                color: "#1d2233"
-                                                font.family: "sans-serif"
-                                                font.pixelSize: 16
-                                                lineHeight: 24
-                                                lineHeightMode: Text.FixedHeight
-                                                transform: Translate {
-                                                    y: 2.8
-                                                }
-                                                wrapMode: Text.WordWrap
-                                                linkColor: "#2a3ea6"
+                                            ColumnLayout {
+                                                spacing: 0
                                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                // <a>
+                                                Rectangle {
+                                                    color: "#e6ebff"
+                                                    radius: 999
+                                                    implicitWidth: aText6.implicitWidth + 28
+                                                    implicitHeight: aText6.implicitHeight + 12
+
+                                                    Text {
+                                                        id: aText6
+                                                        text: "Rollback"
+                                                        textFormat: Text.PlainText
+                                                        color: "#2a3ea6"
+                                                        font.family: "sans-serif"
+                                                        font.pixelSize: 14
+                                                        font.weight: 600
+                                                        lineHeight: 21
+                                                        lineHeightMode: Text.FixedHeight
+                                                        transform: Translate {
+                                                            y: 2.45
+                                                        }
+                                                        wrapMode: Text.WordWrap
+                                                        anchors.left: parent.left
+                                                        anchors.right: parent.right
+                                                        anchors.top: parent.top
+                                                        anchors.leftMargin: 14
+                                                        anchors.rightMargin: 14
+                                                        anchors.topMargin: 6
+                                                    }
                                                 }
                                             }
 
                                             // <li>
-                                            Text {
-                                                text: "<a href=\"#\"><b><small>Telemetry</small></b></a>"
-                                                textFormat: Text.StyledText
-                                                color: "#1d2233"
-                                                font.family: "sans-serif"
-                                                font.pixelSize: 16
-                                                lineHeight: 24
-                                                lineHeightMode: Text.FixedHeight
-                                                transform: Translate {
-                                                    y: 2.8
-                                                }
-                                                wrapMode: Text.WordWrap
-                                                linkColor: "#2a3ea6"
+                                            ColumnLayout {
+                                                spacing: 0
                                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                // <a>
+                                                Rectangle {
+                                                    color: "#e6ebff"
+                                                    radius: 999
+                                                    implicitWidth: aText7.implicitWidth + 28
+                                                    implicitHeight: aText7.implicitHeight + 12
+
+                                                    Text {
+                                                        id: aText7
+                                                        text: "Telemetry"
+                                                        textFormat: Text.PlainText
+                                                        color: "#2a3ea6"
+                                                        font.family: "sans-serif"
+                                                        font.pixelSize: 14
+                                                        font.weight: 600
+                                                        lineHeight: 21
+                                                        lineHeightMode: Text.FixedHeight
+                                                        transform: Translate {
+                                                            y: 2.45
+                                                        }
+                                                        wrapMode: Text.WordWrap
+                                                        anchors.left: parent.left
+                                                        anchors.right: parent.right
+                                                        anchors.top: parent.top
+                                                        anchors.leftMargin: 14
+                                                        anchors.rightMargin: 14
+                                                        anchors.topMargin: 6
+                                                    }
                                                 }
                                             }
                                         }
