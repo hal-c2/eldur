@@ -636,15 +636,16 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                 },
                 _ => None,
             };
-            if let Some(id) = bind_id
-                && let Some(sym_id) = id.symbol_id.get()
-                && let Some(new_name) = self.symbol_renames.get(&sym_id).cloned()
-            {
+            if let Some(id) = bind_id {
+                self.visit_binding_identifier(id);
+                let rewritten = self.editor.extract_and_consume(id.span);
+                if rewritten != id.name.as_str() {
+                    self.editor
+                        .replace(id.span, format!("{}: {rewritten}", id.name));
+                }
                 if let BindingPattern::AssignmentPattern(assign) = &it.value {
                     self.visit_expression(&assign.right);
                 }
-                self.editor
-                    .replace(id.span, format!("{}: {new_name}", id.name));
                 return;
             }
         }
@@ -654,12 +655,13 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
     fn visit_object_property(&mut self, it: &ObjectProperty<'a>) {
         if it.shorthand
             && let Expression::Identifier(id) = &it.value
-            && let Some(rid) = id.reference_id.get()
-            && let Some(sym_id) = self.scoping.get_reference(rid).symbol_id()
-            && let Some(new_name) = self.symbol_renames.get(&sym_id)
         {
-            self.editor
-                .replace(it.span, format!("{}: {new_name}", id.name));
+            self.visit_identifier_reference(id);
+            let rewritten = self.editor.extract_and_consume(id.span);
+            if rewritten != id.name.as_str() {
+                self.editor
+                    .replace(it.span, format!("{}: {rewritten}", id.name));
+            }
             return;
         }
         walk::walk_object_property(self, it);
@@ -669,18 +671,15 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
         &mut self,
         it: &AssignmentTargetPropertyIdentifier<'a>,
     ) {
-        if let Some(rid) = it.binding.reference_id.get()
-            && let Some(sym_id) = self.scoping.get_reference(rid).symbol_id()
-            && let Some(new_name) = self.symbol_renames.get(&sym_id).cloned()
-        {
-            if let Some(init) = &it.init {
-                self.visit_expression(init);
-            }
+        self.visit_identifier_reference(&it.binding);
+        let rewritten = self.editor.extract_and_consume(it.binding.span);
+        if rewritten != it.binding.name.as_str() {
             self.editor
-                .replace(it.binding.span, format!("{}: {new_name}", it.binding.name));
-            return;
+                .replace(it.binding.span, format!("{}: {rewritten}", it.binding.name));
         }
-        walk::walk_assignment_target_property_identifier(self, it);
+        if let Some(init) = &it.init {
+            self.visit_expression(init);
+        }
     }
 
     fn visit_identifier_reference(&mut self, it: &IdentifierReference<'a>) {

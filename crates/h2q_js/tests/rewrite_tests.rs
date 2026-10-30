@@ -2011,3 +2011,117 @@ function trigger() {
         out.page_js
     );
 }
+
+#[test]
+fn preserves_shorthand_property_keys_for_elided_dom_bindings_and_module_renames() {
+    let resolver = FakeResolver::default()
+        .with_id("save-btn", 1, "save_btn", TargetKind::Button)
+        .with_id("hdr", 2, "main_hdr", TargetKind::Text);
+
+    let s1 = classic(
+        "s1.js",
+        r#"
+const btn = document.getElementById("save-btn");
+const hdr = document.getElementById("hdr");
+const count = 5;
+const state = { btn, count, explicit: btn };
+const { picked = btn, count: renamedCount = 0, ...restTop } = { count: 7, keep: 9 };
+let assigned;
+let plainAssign;
+({ assigned = btn, plainAssign } = { plainAssign: 11 });
+
+function buildSnapshot(extra) {
+    const { localPick = hdr, plainLocal, ...restLocal } = extra;
+    let fnAssigned;
+    ({ fnAssigned = btn } = extra);
+    return { btn, hdr, count, localPick, plainLocal, fnAssigned, explicitHdr: hdr, ...restLocal };
+}
+"#,
+    );
+
+    let m1 = module_script(
+        "m1.js",
+        r#"
+export const shared = 10;
+"#,
+    );
+
+    let m2 = module_script(
+        "m2.js",
+        r#"
+const btn = document.getElementById("save-btn");
+const shared = 20;
+const plainMod = 30;
+const { modPick = btn, shared: modShared = 0, ...modRest } = { extraMod: 1 };
+export const modState = { btn, shared, plainMod, explicitBtn: btn };
+export function readMod(src) {
+    const { shared: aliased = btn, fallback = btn, ...restMod } = src;
+    return { btn, shared, aliased, fallback, restMod, modPick, modShared, modRest };
+}
+let modTarget = 0;
+({ modTarget = btn } = {});
+"#,
+    );
+
+    let out = run_rewrite(&[s1, m1, m2], &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+
+    // 1. Elided DOM binding shorthand in classic top-level and function scope preserves `btn: save_btn` and `hdr: main_hdr`
+    assert!(
+        out.page_js
+            .contains("state = { btn: save_btn, count, explicit: save_btn };"),
+        "expected classic top-level shorthand `{{ btn }}` to preserve key `btn: save_btn` and leave `count` / `explicit: save_btn` intact:\n{}",
+        out.page_js
+    );
+    assert!(
+        !out.page_js.contains("{ save_btn") && !out.page_js.contains(", save_btn,"),
+        "elided DOM shorthand must not collapse `{{ btn }}` into `{{ save_btn }}`:\n{}",
+        out.page_js
+    );
+    assert!(
+        out.page_js.contains(
+            "Object.assign({ btn: save_btn, hdr: main_hdr, count, localPick, plainLocal, fnAssigned, explicitHdr: main_hdr }, restLocal)"
+        ),
+        "expected function-scope object literal with spread to preserve shorthand keys for `btn` and `hdr` while keeping ordinary shorthand unchanged:\n{}",
+        out.page_js
+    );
+
+    // 2. Shorthand binding declarations + rest + defaults with elided DOM bindings
+    assert!(
+        out.page_js.contains("({ picked = save_btn, count: renamedCount = 0 } = __h2q_obj_0); restTop = H2Q.objectRest(__h2q_obj_0, [\"picked\", \"count\"]);"),
+        "expected top-level destructuring with default and object rest to preserve shorthand key `picked = save_btn`:\n{}",
+        out.page_js
+    );
+    assert!(
+        out.page_js.contains("{ localPick = main_hdr, plainLocal } = __h2q_obj_1, restLocal = H2Q.objectRest(__h2q_obj_1, [\"localPick\", \"plainLocal\"])"),
+        "expected function-local destructuring with default and object rest to preserve `localPick = main_hdr` and `plainLocal`:\n{}",
+        out.page_js
+    );
+
+    // 3. Shorthand destructuring assignment with default referencing elided DOM binding
+    assert!(
+        out.page_js
+            .contains("({ assigned = save_btn, plainAssign } = { plainAssign: 11 });")
+            && out.page_js.contains("({ fnAssigned = save_btn } = extra);"),
+        "expected shorthand destructuring assignments to preserve key and rewrite default to `save_btn`:\n{}",
+        out.page_js
+    );
+
+    // 4. Module symbol_renames alongside elided DOM bindings in m2.js
+    assert!(
+        out.page_js.contains("modState = { btn: save_btn, shared: __h2q_m2_shared, plainMod: __h2q_m2_plainMod, explicitBtn: save_btn };"),
+        "expected module object literal to preserve keys for both elided DOM `btn: save_btn` and renamed module symbols:\n{}",
+        out.page_js
+    );
+    assert!(
+        out.page_js.contains("({ modPick: __h2q_m2_modPick = save_btn, shared: __h2q_m2_modShared = 0 } = __h2q_obj_2); __h2q_m2_modRest = H2Q.objectRest(__h2q_obj_2, [\"modPick\", \"shared\"]);") && out.page_js.contains("return { btn: save_btn, shared: __h2q_m2_shared, aliased, fallback, restMod, modPick: __h2q_m2_modPick, modShared: __h2q_m2_modShared, modRest: __h2q_m2_modRest };"),
+        "expected module function return object to preserve `btn: save_btn` and `shared: __h2q_m2_shared` while keeping local shorthand unchanged:\n{}",
+        out.page_js
+    );
+    assert!(
+        out.page_js
+            .contains("({ modTarget: __h2q_m2_modTarget = save_btn } = {});"),
+        "expected module destructuring assignment to preserve `modTarget: __h2q_m2_modTarget = save_btn`:\n{}",
+        out.page_js
+    );
+}

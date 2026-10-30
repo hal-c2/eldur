@@ -1757,3 +1757,157 @@ Item {
         out.page_js
     );
 }
+
+#[test]
+fn qml6_executes_shorthand_property_key_preservation_across_literals_bindings_and_destructuring() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 runtime test: qml6 not on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("shorthand_keys");
+    let resolver = FakeResolver::default()
+        .with_id("save-btn", 1, "save_btn", TargetKind::Button)
+        .with_id("status", 2, "status_txt", TargetKind::Text);
+
+    let s_classic = ScriptInput {
+        name: "app.js".to_string(),
+        kind: ScriptKind::Classic,
+        line_offset: 1,
+        source: r#"
+const btn = document.getElementById("save-btn");
+const statusEl = document.getElementById("status");
+const count = 5;
+const state = { btn, count, explicit: btn };
+const { picked = btn, count: cVal = 0, ...restTop } = { count: 9, extra: "ok" };
+let assigned;
+let kept;
+({ assigned = btn, kept } = { kept: "keptVal" });
+
+function checkClassic(input) {
+    const { localBtn = btn, tag, ...restLocal } = input;
+    let localAssigned;
+    ({ localAssigned = statusEl } = input);
+    const snap = { btn, statusEl, count, tag, explicitStatus: statusEl, ...restLocal };
+    return [
+        state.btn === btn,
+        typeof state.save_btn === "undefined",
+        state.count === 5,
+        state.explicit === btn,
+        picked === btn,
+        cVal === 9,
+        restTop.extra === "ok",
+        typeof restTop.count === "undefined",
+        assigned === btn,
+        kept === "keptVal",
+        localBtn === btn,
+        localAssigned === statusEl,
+        snap.btn === btn,
+        snap.statusEl === statusEl,
+        typeof snap.save_btn === "undefined",
+        typeof snap.status_txt === "undefined",
+        snap.count === 5,
+        snap.tag === "t1",
+        snap.explicitStatus === statusEl,
+        snap.more === 42
+    ].every(Boolean);
+}
+"#
+        .to_string(),
+    };
+
+    let m1 = ScriptInput {
+        name: "m1.js".to_string(),
+        kind: ScriptKind::Module,
+        line_offset: 1,
+        source: r#"
+export const shared = "m1";
+"#
+        .to_string(),
+    };
+
+    let m2 = ScriptInput {
+        name: "m2.js".to_string(),
+        kind: ScriptKind::Module,
+        line_offset: 1,
+        source: r#"
+const btn = document.getElementById("save-btn");
+const shared = "m2";
+const { shared: modShared = "fallback", modPick = btn, ...modRest } = { keepMod: 77 };
+let modAssign;
+({ modAssign = btn } = {});
+const modObj = { btn, shared, modPick, modAssign };
+
+export function verifyMod() {
+    const expectedBtn = document.getElementById("save-btn");
+    return [
+        modObj.btn === expectedBtn,
+        typeof modObj.save_btn === "undefined",
+        modObj.shared === "m2",
+        modObj.modPick === expectedBtn,
+        modObj.modAssign === expectedBtn,
+        modShared === "fallback",
+        modRest.keepMod === 77
+    ].every(Boolean);
+}
+"#
+        .to_string(),
+    };
+
+    let scripts = [s_classic, m1, m2];
+    let analysis = analyze(&scripts);
+    let out = rewrite(&scripts, &analysis, &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+
+    let runtime_path = dir.write_file("h2q_runtime.js", RUNTIME_JS);
+    let page_path = dir.write_file("page.js", &out.page_js);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import QtQuick.Controls.Basic
+import "page.js" as Page
+import "h2q_runtime.js" as H2Q
+
+Item {
+    id: root
+    width: 200
+    height: 100
+
+    Button { id: save_btn; text: "Save" }
+    Text { id: status_txt; text: "Ready" }
+
+    Component.onCompleted: {
+        Page.__h2q_init(root);
+        var okClassic = Page.checkClassic({ tag: "t1", more: 42 });
+        var okMod = Page.verifyMod();
+        console.log("H2Q_OK_SHORTHAND_KEYS", okClassic + ":" + okMod);
+        Qt.quit();
+    }
+}
+"#,
+    );
+
+    if has_binary("qmllint") {
+        for path in [&runtime_path, &page_path, &main_qml] {
+            let lint = Command::new("qmllint")
+                .arg(path)
+                .output()
+                .expect("failed to run qmllint");
+            assert!(
+                lint.status.success(),
+                "qmllint failed on {}: {}{}\npage.js:\n{}",
+                path.display(),
+                String::from_utf8_lossy(&lint.stdout),
+                String::from_utf8_lossy(&lint.stderr),
+                out.page_js
+            );
+        }
+    }
+
+    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    assert!(
+        output.contains("H2Q_OK_SHORTHAND_KEYS true:true"),
+        "unexpected qml6 shorthand property key output:\n{output}\npage.js:\n{}",
+        out.page_js
+    );
+}
