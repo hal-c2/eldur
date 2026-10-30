@@ -296,6 +296,8 @@ pub struct BorderSide {
     pub width: f32,
     pub style: BorderStyle,
     pub color: Rgba,
+    /// Explicit `<color>` when set (`None` = initial `currentColor`).
+    pub explicit_color: Option<Rgba>,
 }
 
 /// Top, right, bottom, left (CSS shorthand order).

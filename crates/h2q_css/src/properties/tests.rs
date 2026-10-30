@@ -786,3 +786,21 @@ fn flex_unitless_zero_basis() {
     assert_eq!(s.flex_shrink, 0.0);
     assert_eq!(s.flex_basis, Size::Length(Length::px(0.0)));
 }
+
+#[test]
+fn border_color_transparent_vs_unset() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+
+    let mut s1 = ComputedStyle::default();
+    compute(&mut s1, Longhand::Color, "red", &ctx).expect("color: red");
+    compute(&mut s1, Longhand::BorderTopColor, "transparent", &ctx)
+        .expect("border-top-color: transparent");
+    compute(&mut s1, Longhand::BorderTopStyle, "solid", &ctx).expect("border-top-style: solid");
+    assert_eq!(s1.border.top.color, Rgba::TRANSPARENT);
+
+    let mut s2 = ComputedStyle::default();
+    compute(&mut s2, Longhand::Color, "red", &ctx).expect("color: red");
+    compute(&mut s2, Longhand::BorderTopStyle, "solid", &ctx).expect("border-top-style: solid");
+    assert_eq!(s2.border.top.color, Rgba::new(255, 0, 0, 255));
+}

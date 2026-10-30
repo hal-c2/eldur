@@ -463,3 +463,8 @@ fn system_color(ident: &str) -> Option<Rgba> {
         _ => None,
     }
 }
+
+pub(crate) fn is_current_color_cvs(cvs: &[ComponentValue]) -> bool {
+    let mut cur = Cursor::new(cvs);
+    cur.eat_ident_eq("currentcolor") && cur.is_eof()
+}
