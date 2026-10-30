@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use oxc_allocator::Allocator;
 use oxc_ast::ast::{
@@ -184,6 +184,15 @@ impl GlobalDeclTracker {
             self.decls.insert(name, kind);
         }
         Ok(())
+    }
+}
+
+pub(crate) fn collect_hoisted_var_names(stmt: &Statement<'_>, out: &mut HashSet<String>) {
+    let mut decls = Vec::new();
+    let mut collector = HoistedVarCollector { out: &mut decls };
+    collector.visit_statement(stmt);
+    for (name, _, _) in decls {
+        out.insert(name);
     }
 }
 

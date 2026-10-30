@@ -59,7 +59,7 @@ pub(crate) fn analyze(scripts: &[ScriptInput]) -> Analysis {
         .iter()
         .map(|(i, inp, p)| (*i, *inp, p))
         .collect();
-    let cross_script = build_cross_script_query_map(scripts, &valid_refs);
+    let cross_script = build_cross_script_query_map(&valid_refs);
 
     let mut seen_queries: HashSet<DomQuery> = HashSet::new();
     let mut seen_listened: HashSet<(DomQuery, String)> = HashSet::new();
@@ -67,8 +67,7 @@ pub(crate) fn analyze(scripts: &[ScriptInput]) -> Analysis {
 
     for (_, input, parsed) in &valid_scripts {
         let scoping = &parsed.scoping;
-        let bindings =
-            ScriptQueryBindings::build(input, &parsed.program, scoping, scripts, &cross_script);
+        let bindings = ScriptQueryBindings::build(input, &parsed.program, scoping, &cross_script);
         let mut visitor = AnalysisVisitor {
             scoping,
             bindings: &bindings,

@@ -1,10 +1,8 @@
-use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 
 use oxc_ast::ast::{
-    BindingPattern, CallExpression, Declaration, Expression, ForOfStatement, ForStatementLeft,
-    IdentifierReference, ImportDeclaration, ImportDeclarationSpecifier, Program, Statement,
-    VariableDeclarator,
+    BindingPattern, CallExpression, Expression, ForOfStatement, ForStatementLeft,
+    IdentifierReference, Program, Statement, VariableDeclarator,
 };
 use oxc_ast_visit::{Visit, walk};
 use oxc_semantic::{IsGlobalReference, Scoping, SymbolId};
@@ -274,19 +272,11 @@ fn normalize_rel_path(importer_name: &str, specifier: &str) -> String {
     parts.join("/")
 }
 
-#[derive(Default)]
-pub(crate) struct CrossScriptQueries {
-    pub classic_globals: HashMap<String, DomQuery>,
-    pub module_exports: HashMap<(usize, String), DomQuery>,
-}
-
 /// Collects top-level variables in classic scripts that are bound once across
-/// the entire page to a static [`DomQuery`] and never mutated or redeclared,
-/// as well as exported [`DomQuery`] bindings across ES modules.
+/// the entire page to a static [`DomQuery`] and never mutated or redeclared.
 pub(crate) fn build_cross_script_query_map(
-    all_scripts: &[ScriptInput],
     scripts: &[(usize, &ScriptInput, &ParsedScript<'_>)],
-) -> CrossScriptQueries {
+) -> HashMap<String, DomQuery> {
     let mut mutated_globals: HashSet<String> = HashSet::new();
     let mut decl_counts: HashMap<String, usize> = HashMap::new();
 
@@ -313,7 +303,7 @@ pub(crate) fn build_cross_script_query_map(
         }
     }
 
-    let mut classic_globals = HashMap::new();
+    let mut result = HashMap::new();
     for (_, input, parsed) in scripts {
         if !matches!(input.kind, ScriptKind::Classic) {
             continue;
@@ -341,163 +331,12 @@ pub(crate) fn build_cross_script_query_map(
                 if let Some(init) = &decl.init
                     && let Some(query) = extract_dom_query(init, scoping)
                 {
-                    classic_globals.insert(name.to_string(), query);
+                    result.insert(name.to_string(), query);
                 }
             }
         }
     }
-
-    // Propagate module-exported DOM queries across `export`, `import`, and re-export chains.
-    let mut module_exports: HashMap<(usize, String), DomQuery> = HashMap::new();
-    let empty_cross = CrossScriptQueries {
-        classic_globals: classic_globals.clone(),
-        module_exports: HashMap::new(),
-    };
-    for _ in 0..8 {
-        let mut progressed = false;
-        let current_cross = CrossScriptQueries {
-            classic_globals: empty_cross.classic_globals.clone(),
-            module_exports: module_exports.clone(),
-        };
-        for &(mod_idx, input, parsed) in scripts {
-            if !matches!(input.kind, ScriptKind::Module) {
-                continue;
-            }
-            let scoping = &parsed.scoping;
-            let mut collector = BindingCollector {
-                scoping,
-                is_global_scope_shared: false,
-                importer_name: &input.name,
-                all_scripts,
-                cross_script: &current_cross,
-                direct: HashMap::new(),
-                aliases: Vec::new(),
-                collection_items: HashMap::new(),
-            };
-            collector.visit_program(&parsed.program);
-            for _ in 0..8 {
-                let mut inner_progressed = false;
-                for &(dst, src) in &collector.aliases {
-                    if !collector.direct.contains_key(&dst)
-                        && let Some(q) = collector.direct.get(&src).cloned()
-                    {
-                        collector.direct.insert(dst, q);
-                        inner_progressed = true;
-                    }
-                }
-                if !inner_progressed {
-                    break;
-                }
-            }
-
-            let mut local_by_name: HashMap<&str, DomQuery> = HashMap::new();
-            for (&sym_id, q) in &collector.direct {
-                if scoping.symbol_scope_id(sym_id) == scoping.root_scope_id() {
-                    local_by_name.insert(scoping.symbol_name(sym_id), q.clone());
-                }
-            }
-
-            for stmt in &parsed.program.body {
-                match stmt {
-                    Statement::ExportDeclaration(exp) => {
-                        if let Declaration::VariableDeclaration(vd) = &exp.declaration {
-                            for decl in &vd.declarations {
-                                if let BindingPattern::BindingIdentifier(bind_id) = &decl.id
-                                    && let Some(sym_id) = bind_id.symbol_id.get()
-                                    && let Some(q) = collector.direct.get(&sym_id)
-                                {
-                                    let key = (mod_idx, bind_id.name.to_string());
-                                    if let Entry::Vacant(e) = module_exports.entry(key) {
-                                        e.insert(q.clone());
-                                        progressed = true;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Statement::ExportNamedDeclaration(exp) => {
-                        for spec in &exp.specifiers {
-                            let local = spec.local.name().as_str();
-                            let exported = spec.exported.name().to_string();
-                            if let Some(q) = local_by_name.get(local) {
-                                let key = (mod_idx, exported);
-                                if let Entry::Vacant(e) = module_exports.entry(key) {
-                                    e.insert(q.clone());
-                                    progressed = true;
-                                }
-                            }
-                        }
-                    }
-                    Statement::ExportDefaultDeclaration(exp) => {
-                        if let Some(expr) = exp.declaration.as_expression() {
-                            let q_opt = extract_dom_query(expr, scoping).or_else(|| {
-                                if let Expression::Identifier(id) = unwrap_parens(expr) {
-                                    local_by_name.get(id.name.as_str()).cloned()
-                                } else {
-                                    None
-                                }
-                            });
-                            if let Some(q) = q_opt {
-                                let key = (mod_idx, "default".to_string());
-                                if let Entry::Vacant(e) = module_exports.entry(key) {
-                                    e.insert(q);
-                                    progressed = true;
-                                }
-                            }
-                        }
-                    }
-                    Statement::ExportFromDeclaration(exp) => {
-                        if let Some(dep_idx) = resolve_module_specifier(
-                            &input.name,
-                            exp.source.value.as_str(),
-                            all_scripts,
-                        ) {
-                            for spec in &exp.specifiers {
-                                let imported = spec.local.name().to_string();
-                                let exported = spec.exported.name().to_string();
-                                if let Some(q) = module_exports.get(&(dep_idx, imported)).cloned() {
-                                    let key = (mod_idx, exported);
-                                    if let Entry::Vacant(e) = module_exports.entry(key) {
-                                        e.insert(q);
-                                        progressed = true;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Statement::ExportAllDeclaration(exp) if exp.exported.is_none() => {
-                        if let Some(dep_idx) = resolve_module_specifier(
-                            &input.name,
-                            exp.source.value.as_str(),
-                            all_scripts,
-                        ) {
-                            let inherited: Vec<(String, DomQuery)> = module_exports
-                                .iter()
-                                .filter(|((idx, k), _)| *idx == dep_idx && k != "default")
-                                .map(|((_, k), q)| (k.clone(), q.clone()))
-                                .collect();
-                            for (k, q) in inherited {
-                                let key = (mod_idx, k);
-                                if let Entry::Vacant(e) = module_exports.entry(key) {
-                                    e.insert(q);
-                                    progressed = true;
-                                }
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        }
-        if !progressed {
-            break;
-        }
-    }
-
-    CrossScriptQueries {
-        classic_globals,
-        module_exports,
-    }
+    result
 }
 
 /// Per-script resolution table mapping single-assignment `SymbolId`s (both
@@ -510,7 +349,7 @@ pub(crate) struct ScriptQueryBindings<'a> {
     /// Loop / `.forEach` element parameters over a `SelectorAll` query
     /// (used by `analyze` to record writes and listeners on collection items).
     pub collection_item_queries: HashMap<SymbolId, DomQuery>,
-    cross_script: &'a CrossScriptQueries,
+    cross_script: &'a HashMap<String, DomQuery>,
 }
 
 impl<'a> ScriptQueryBindings<'a> {
@@ -518,8 +357,7 @@ impl<'a> ScriptQueryBindings<'a> {
         input: &ScriptInput,
         program: &Program<'_>,
         scoping: &'a Scoping,
-        all_scripts: &[ScriptInput],
-        cross_script: &'a CrossScriptQueries,
+        cross_script: &'a HashMap<String, DomQuery>,
     ) -> Self {
         let is_global_scope_shared = matches!(
             input.kind,
@@ -528,8 +366,6 @@ impl<'a> ScriptQueryBindings<'a> {
         let mut collector = BindingCollector {
             scoping,
             is_global_scope_shared,
-            importer_name: &input.name,
-            all_scripts,
             cross_script,
             direct: HashMap::new(),
             aliases: Vec::new(),
@@ -619,11 +455,7 @@ impl<'a> ScriptQueryBindings<'a> {
             return None;
         }
         if self.is_global_scope_shared {
-            return self
-                .cross_script
-                .classic_globals
-                .get(ident.name.as_str())
-                .cloned();
+            return self.cross_script.get(ident.name.as_str()).cloned();
         }
         None
     }
@@ -632,53 +464,13 @@ impl<'a> ScriptQueryBindings<'a> {
 struct BindingCollector<'a> {
     scoping: &'a Scoping,
     is_global_scope_shared: bool,
-    importer_name: &'a str,
-    all_scripts: &'a [ScriptInput],
-    cross_script: &'a CrossScriptQueries,
+    cross_script: &'a HashMap<String, DomQuery>,
     direct: HashMap<SymbolId, DomQuery>,
     aliases: Vec<(SymbolId, SymbolId)>,
     collection_items: HashMap<SymbolId, DomQuery>,
 }
 
 impl<'a> Visit<'a> for BindingCollector<'_> {
-    fn visit_import_declaration(&mut self, it: &ImportDeclaration<'a>) {
-        if let Some(dep_idx) = resolve_module_specifier(
-            self.importer_name,
-            it.source.value.as_str(),
-            self.all_scripts,
-        ) && let Some(specs) = &it.specifiers
-        {
-            for spec in specs {
-                match spec {
-                    ImportDeclarationSpecifier::ImportSpecifier(named) => {
-                        if let Some(sym_id) = named.local.symbol_id.get()
-                            && !self.scoping.symbol_is_mutated(sym_id)
-                            && let Some(q) = self
-                                .cross_script
-                                .module_exports
-                                .get(&(dep_idx, named.imported.name().to_string()))
-                        {
-                            self.direct.insert(sym_id, q.clone());
-                        }
-                    }
-                    ImportDeclarationSpecifier::ImportDefaultSpecifier(def) => {
-                        if let Some(sym_id) = def.local.symbol_id.get()
-                            && !self.scoping.symbol_is_mutated(sym_id)
-                            && let Some(q) = self
-                                .cross_script
-                                .module_exports
-                                .get(&(dep_idx, "default".to_string()))
-                        {
-                            self.direct.insert(sym_id, q.clone());
-                        }
-                    }
-                    ImportDeclarationSpecifier::ImportNamespaceSpecifier(_) => {}
-                }
-            }
-        }
-        walk::walk_import_declaration(self, it);
-    }
-
     fn visit_variable_declarator(&mut self, it: &VariableDeclarator<'a>) {
         if let BindingPattern::BindingIdentifier(bind_id) = &it.id
             && let Some(sym_id) = bind_id.symbol_id.get()
@@ -698,7 +490,7 @@ impl<'a> Visit<'a> for BindingCollector<'_> {
                         self.aliases.push((sym_id, rhs_sym));
                     }
                 } else if self.is_global_scope_shared
-                    && let Some(q) = self.cross_script.classic_globals.get(rhs_id.name.as_str())
+                    && let Some(q) = self.cross_script.get(rhs_id.name.as_str())
                 {
                     self.direct.insert(sym_id, q.clone());
                 }
@@ -712,7 +504,7 @@ struct CollectionLoopCollector<'a> {
     scoping: &'a Scoping,
     is_global_scope_shared: bool,
     direct: &'a HashMap<SymbolId, DomQuery>,
-    cross_script: &'a CrossScriptQueries,
+    cross_script: &'a HashMap<String, DomQuery>,
     collection_items: HashMap<SymbolId, DomQuery>,
 }
 
@@ -733,7 +525,7 @@ impl CollectionLoopCollector<'_> {
             }
             if self.is_global_scope_shared
                 && let Some(q @ DomQuery::SelectorAll(_)) =
-                    self.cross_script.classic_globals.get(ident.name.as_str())
+                    self.cross_script.get(ident.name.as_str())
             {
                 return Some(q.clone());
             }
