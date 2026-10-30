@@ -335,36 +335,24 @@ ApplicationWindow {
                                             }
 
                                             // <button class="card-button">
-                                            Rectangle {
-                                                color: "#3550d6"
-                                                radius: 8
-                                                implicitWidth: cardButtonText.implicitWidth + 32
-                                                implicitHeight: cardButtonText.implicitHeight + 24
+                                            Button {
+                                                id: buttonControl
+                                                text: "Add to cart"
+                                                palette.buttonText: "#ffffff"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 15
+                                                font.weight: 600
+                                                background: Rectangle {
+                                                    color: "#3550d6"
+                                                    radius: 8
+                                                }
+                                                topPadding: 12
+                                                rightPadding: 16
+                                                bottomPadding: 12
+                                                leftPadding: 16
+                                                implicitHeight: 46.5
                                                 Layout.preferredWidth: parent.width
                                                 Layout.alignment: Qt.AlignLeft
-
-                                                Text {
-                                                    id: cardButtonText
-                                                    text: "Add to cart"
-                                                    textFormat: Text.PlainText
-                                                    color: "#ffffff"
-                                                    font.family: "sans-serif"
-                                                    font.pixelSize: 15
-                                                    font.weight: 600
-                                                    lineHeight: 22.5
-                                                    lineHeightMode: Text.FixedHeight
-                                                    transform: Translate {
-                                                        y: 2.63
-                                                    }
-                                                    horizontalAlignment: Text.AlignHCenter
-                                                    wrapMode: Text.WordWrap
-                                                    anchors.left: parent.left
-                                                    anchors.right: parent.right
-                                                    anchors.top: parent.top
-                                                    anchors.leftMargin: 16
-                                                    anchors.rightMargin: 16
-                                                    anchors.topMargin: 12
-                                                }
                                             }
                                         }
                                     }
@@ -473,36 +461,24 @@ ApplicationWindow {
                                             }
 
                                             // <button class="card-button">
-                                            Rectangle {
-                                                color: "#3550d6"
-                                                radius: 8
-                                                implicitWidth: cardButtonText2.implicitWidth + 32
-                                                implicitHeight: cardButtonText2.implicitHeight + 24
+                                            Button {
+                                                id: buttonControl2
+                                                text: "Add to cart"
+                                                palette.buttonText: "#ffffff"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 15
+                                                font.weight: 600
+                                                background: Rectangle {
+                                                    color: "#3550d6"
+                                                    radius: 8
+                                                }
+                                                topPadding: 12
+                                                rightPadding: 16
+                                                bottomPadding: 12
+                                                leftPadding: 16
+                                                implicitHeight: 46.5
                                                 Layout.preferredWidth: parent.width
                                                 Layout.alignment: Qt.AlignLeft
-
-                                                Text {
-                                                    id: cardButtonText2
-                                                    text: "Add to cart"
-                                                    textFormat: Text.PlainText
-                                                    color: "#ffffff"
-                                                    font.family: "sans-serif"
-                                                    font.pixelSize: 15
-                                                    font.weight: 600
-                                                    lineHeight: 22.5
-                                                    lineHeightMode: Text.FixedHeight
-                                                    transform: Translate {
-                                                        y: 2.63
-                                                    }
-                                                    horizontalAlignment: Text.AlignHCenter
-                                                    wrapMode: Text.WordWrap
-                                                    anchors.left: parent.left
-                                                    anchors.right: parent.right
-                                                    anchors.top: parent.top
-                                                    anchors.leftMargin: 16
-                                                    anchors.rightMargin: 16
-                                                    anchors.topMargin: 12
-                                                }
                                             }
                                         }
                                     }
@@ -611,36 +587,24 @@ ApplicationWindow {
                                             }
 
                                             // <button class="card-button">
-                                            Rectangle {
-                                                color: "#3550d6"
-                                                radius: 8
-                                                implicitWidth: cardButtonText3.implicitWidth + 32
-                                                implicitHeight: cardButtonText3.implicitHeight + 24
+                                            Button {
+                                                id: buttonControl3
+                                                text: "Add to cart"
+                                                palette.buttonText: "#ffffff"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 15
+                                                font.weight: 600
+                                                background: Rectangle {
+                                                    color: "#3550d6"
+                                                    radius: 8
+                                                }
+                                                topPadding: 12
+                                                rightPadding: 16
+                                                bottomPadding: 12
+                                                leftPadding: 16
+                                                implicitHeight: 46.5
                                                 Layout.preferredWidth: parent.width
                                                 Layout.alignment: Qt.AlignLeft
-
-                                                Text {
-                                                    id: cardButtonText3
-                                                    text: "Add to cart"
-                                                    textFormat: Text.PlainText
-                                                    color: "#ffffff"
-                                                    font.family: "sans-serif"
-                                                    font.pixelSize: 15
-                                                    font.weight: 600
-                                                    lineHeight: 22.5
-                                                    lineHeightMode: Text.FixedHeight
-                                                    transform: Translate {
-                                                        y: 2.63
-                                                    }
-                                                    horizontalAlignment: Text.AlignHCenter
-                                                    wrapMode: Text.WordWrap
-                                                    anchors.left: parent.left
-                                                    anchors.right: parent.right
-                                                    anchors.top: parent.top
-                                                    anchors.leftMargin: 16
-                                                    anchors.rightMargin: 16
-                                                    anchors.topMargin: 12
-                                                }
                                             }
                                         }
                                     }
@@ -749,36 +713,24 @@ ApplicationWindow {
                                             }
 
                                             // <button class="card-button">
-                                            Rectangle {
-                                                color: "#3550d6"
-                                                radius: 8
-                                                implicitWidth: cardButtonText4.implicitWidth + 32
-                                                implicitHeight: cardButtonText4.implicitHeight + 24
+                                            Button {
+                                                id: buttonControl4
+                                                text: "Add to cart"
+                                                palette.buttonText: "#ffffff"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 15
+                                                font.weight: 600
+                                                background: Rectangle {
+                                                    color: "#3550d6"
+                                                    radius: 8
+                                                }
+                                                topPadding: 12
+                                                rightPadding: 16
+                                                bottomPadding: 12
+                                                leftPadding: 16
+                                                implicitHeight: 46.5
                                                 Layout.preferredWidth: parent.width
                                                 Layout.alignment: Qt.AlignLeft
-
-                                                Text {
-                                                    id: cardButtonText4
-                                                    text: "Add to cart"
-                                                    textFormat: Text.PlainText
-                                                    color: "#ffffff"
-                                                    font.family: "sans-serif"
-                                                    font.pixelSize: 15
-                                                    font.weight: 600
-                                                    lineHeight: 22.5
-                                                    lineHeightMode: Text.FixedHeight
-                                                    transform: Translate {
-                                                        y: 2.63
-                                                    }
-                                                    horizontalAlignment: Text.AlignHCenter
-                                                    wrapMode: Text.WordWrap
-                                                    anchors.left: parent.left
-                                                    anchors.right: parent.right
-                                                    anchors.top: parent.top
-                                                    anchors.leftMargin: 16
-                                                    anchors.rightMargin: 16
-                                                    anchors.topMargin: 12
-                                                }
                                             }
                                         }
                                     }
@@ -887,36 +839,24 @@ ApplicationWindow {
                                             }
 
                                             // <button class="card-button">
-                                            Rectangle {
-                                                color: "#3550d6"
-                                                radius: 8
-                                                implicitWidth: cardButtonText5.implicitWidth + 32
-                                                implicitHeight: cardButtonText5.implicitHeight + 24
+                                            Button {
+                                                id: buttonControl5
+                                                text: "Add to cart"
+                                                palette.buttonText: "#ffffff"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 15
+                                                font.weight: 600
+                                                background: Rectangle {
+                                                    color: "#3550d6"
+                                                    radius: 8
+                                                }
+                                                topPadding: 12
+                                                rightPadding: 16
+                                                bottomPadding: 12
+                                                leftPadding: 16
+                                                implicitHeight: 46.5
                                                 Layout.preferredWidth: parent.width
                                                 Layout.alignment: Qt.AlignLeft
-
-                                                Text {
-                                                    id: cardButtonText5
-                                                    text: "Add to cart"
-                                                    textFormat: Text.PlainText
-                                                    color: "#ffffff"
-                                                    font.family: "sans-serif"
-                                                    font.pixelSize: 15
-                                                    font.weight: 600
-                                                    lineHeight: 22.5
-                                                    lineHeightMode: Text.FixedHeight
-                                                    transform: Translate {
-                                                        y: 2.63
-                                                    }
-                                                    horizontalAlignment: Text.AlignHCenter
-                                                    wrapMode: Text.WordWrap
-                                                    anchors.left: parent.left
-                                                    anchors.right: parent.right
-                                                    anchors.top: parent.top
-                                                    anchors.leftMargin: 16
-                                                    anchors.rightMargin: 16
-                                                    anchors.topMargin: 12
-                                                }
                                             }
                                         }
                                     }
@@ -1025,36 +965,24 @@ ApplicationWindow {
                                             }
 
                                             // <button class="card-button">
-                                            Rectangle {
-                                                color: "#3550d6"
-                                                radius: 8
-                                                implicitWidth: cardButtonText6.implicitWidth + 32
-                                                implicitHeight: cardButtonText6.implicitHeight + 24
+                                            Button {
+                                                id: buttonControl6
+                                                text: "Add to cart"
+                                                palette.buttonText: "#ffffff"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 15
+                                                font.weight: 600
+                                                background: Rectangle {
+                                                    color: "#3550d6"
+                                                    radius: 8
+                                                }
+                                                topPadding: 12
+                                                rightPadding: 16
+                                                bottomPadding: 12
+                                                leftPadding: 16
+                                                implicitHeight: 46.5
                                                 Layout.preferredWidth: parent.width
                                                 Layout.alignment: Qt.AlignLeft
-
-                                                Text {
-                                                    id: cardButtonText6
-                                                    text: "Add to cart"
-                                                    textFormat: Text.PlainText
-                                                    color: "#ffffff"
-                                                    font.family: "sans-serif"
-                                                    font.pixelSize: 15
-                                                    font.weight: 600
-                                                    lineHeight: 22.5
-                                                    lineHeightMode: Text.FixedHeight
-                                                    transform: Translate {
-                                                        y: 2.63
-                                                    }
-                                                    horizontalAlignment: Text.AlignHCenter
-                                                    wrapMode: Text.WordWrap
-                                                    anchors.left: parent.left
-                                                    anchors.right: parent.right
-                                                    anchors.top: parent.top
-                                                    anchors.leftMargin: 16
-                                                    anchors.rightMargin: 16
-                                                    anchors.topMargin: 12
-                                                }
                                             }
                                         }
                                     }

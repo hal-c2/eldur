@@ -3,9 +3,7 @@ source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
 info[css]: index.html:231: <div class="billing-toggle"> contains block-level boxes; laid out as a block
-info[qml]: index.html:233: <span class="save">: font size 12px inside 15.2px text is approximated with <small>
-info[qml]: index.html:233: <span class="save">: inline background is not converted
-info[qml]: index.html:233: <span class="save">: inline padding and borders are not converted
+info[html]: index.html:233: <button class="toggle-btn"> has element children; the Button shows only their text
 warning[css]: index.html:251: `transform` on <article class="plan featured"> is not converted yet
 warning[css]: index.html:251: `box-shadow` is not converted yet
 warning[css]: index.html:252: `position: absolute` on <span class="badge"> is laid out in normal flow (not implemented yet)

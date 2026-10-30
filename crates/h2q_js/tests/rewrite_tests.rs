@@ -158,12 +158,12 @@ function syncForm() {
     notesArea.placeholderText = "Enter notes";
     notesArea.readOnly = !agreeCheck.checked;
     optRadio.checked = true;
-    const prevRole = roleCombo.currentText;
-    ((__v) => (roleCombo.currentIndex = roleCombo.find(__v), __v))("Admin");
+    const prevRole = roleCombo.currentValue;
+    ((__v) => (roleCombo.currentIndex = roleCombo.indexOfValue(__v), __v))("Admin");
     roleCombo.currentIndex = 1;
     volSlider.value = 75;
     volSlider.value++;
-    loadBar.value = volSlider.value;
+    loadBar.value = Number(volSlider.value);
     avatarImg.source = "icon.png";
     !(saveBtn.enabled = false);
     !(saveBtn.visible = true);
@@ -1137,10 +1137,10 @@ function updateDom(suffix, extraClass, htmlChunk, fallbackRole, node, state) {
     !(saveBtn.enabled = !((!saveBtn.enabled) | (true)));
     !(saveBtn.visible = !((!saveBtn.visible) & (false)));
 
-    roleCombo.currentText || ((__v) => (roleCombo.currentIndex = roleCombo.find(__v), __v))(fallbackRole);
-    roleCombo.currentText && ((__v) => (roleCombo.currentIndex = roleCombo.find(__v), __v))("Admin");
-    roleCombo.currentText ?? ((__v) => (roleCombo.currentIndex = roleCombo.find(__v), __v))("Viewer");
-    ((__v) => (roleCombo.currentIndex = roleCombo.find(__v), __v))(roleCombo.currentText + (suffix));
+    roleCombo.currentValue || ((__v) => (roleCombo.currentIndex = roleCombo.indexOfValue(__v), __v))(fallbackRole);
+    roleCombo.currentValue && ((__v) => (roleCombo.currentIndex = roleCombo.indexOfValue(__v), __v))("Admin");
+    roleCombo.currentValue ?? ((__v) => (roleCombo.currentIndex = roleCombo.indexOfValue(__v), __v))("Viewer");
+    ((__v) => (roleCombo.currentIndex = roleCombo.indexOfValue(__v), __v))(roleCombo.currentValue + (suffix));
 
     ((__v) => (H2Q.setClassName(cardBox, __v), __v))(H2Q.getClassName(cardBox) + (extraClass));
     H2Q.getClassName(cardBox) || ((__v) => (H2Q.setClassName(cardBox, __v), __v))("card-default");
@@ -1220,7 +1220,7 @@ function captureAssigned(rhs, pickNode) {
     const a = (H2Q.getTitle() || ((__v) => (H2Q.setTitle(__v), __v))("default"));
     const b = (((__v) => (H2Q.setTitle(__v), __v))(H2Q.getTitle() + (rhs())));
     const c = (!saveBtn.visible && !(saveBtn.visible = true));
-    const d = (roleCombo.currentText || ((__v) => (roleCombo.currentIndex = roleCombo.find(__v), __v))(rhs()));
+    const d = (roleCombo.currentValue || ((__v) => (roleCombo.currentIndex = roleCombo.indexOfValue(__v), __v))(rhs()));
     const e = (((__v) => (cardBox.visible = __v !== "none", __v))("none"));
     const f = (((__o, __v) => (H2Q.setText(__o, __v), __v))(pickNode(0), rhs()));
     const g = (((__o) => ((__v) => (H2Q.setText(__o, __v), __v))(H2Q.getText(__o) + (rhs())))(pickNode(1)));

@@ -42,6 +42,7 @@ pub(crate) struct SharedRewriteState {
     /// Tracks which `(qml_id, event)` pairs already have a forwarding `EventBinding`
     /// registered for `H2Q.listen` / `H2Q.dispatchEvent`.
     pub dynamic_listener_slots: HashSet<(String, String)>,
+    pub redispatching_slots: Vec<String>,
     /// Top-level identifiers already claimed so generated helper names never collide.
     pub used_names: HashSet<String>,
 }
@@ -104,9 +105,14 @@ impl SharedRewriteState {
         self.bindings.push(EventBinding {
             target: target.clone(),
             event: event.to_string(),
-            function: fn_name,
+            function: fn_name.clone(),
         });
+        self.redispatching_slots.push(fn_name);
     }
+}
+
+fn is_empty_string_literal(expr: &Expression<'_>) -> bool {
+    matches!(unwrap_parens(expr), Expression::StringLiteral(s) if s.value.is_empty())
 }
 
 pub(crate) fn sanitize_ident(raw: &str) -> String {
@@ -394,8 +400,11 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
             }
             "innerHTML" => Some(format!("H2Q.getInnerHTML({id})")),
             "value" => match target.kind {
-                TargetKind::ComboBox => Some(format!("{id}.currentText")),
-                TargetKind::Range | TargetKind::Progress => Some(format!("{id}.value")),
+                TargetKind::ComboBox => Some(format!("{id}.currentValue")),
+                TargetKind::Range
+                | TargetKind::Progress
+                | TargetKind::CheckBox
+                | TargetKind::RadioButton => Some(format!("{id}.value")),
                 _ => Some(format!("{id}.text")),
             },
             "selectedIndex" => Some(format!("{id}.currentIndex")),
@@ -503,6 +512,15 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
             let rhs_str = self.editor.extract_and_consume(right.span());
             let id = &target.qml_id;
             let replacement = match prop {
+                // The idiom for removing a box's children, and writing an
+                // already empty `Text` would not tell the runtime.
+                "textContent" | "innerText"
+                    if target.kind == TargetKind::Box
+                        && op == AssignmentOperator::Assign
+                        && is_empty_string_literal(right) =>
+                {
+                    format!("H2Q.setText({id}, \"\")")
+                }
                 "textContent" | "innerText" => {
                     let lhs = if target.kind == TargetKind::Box {
                         format!("{id}Text.text")
@@ -519,10 +537,20 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
                 }
                 "value" => match target.kind {
                     TargetKind::ComboBox => {
-                        let read_expr = format!("{id}.currentText");
+                        let read_expr = format!("{id}.currentValue");
                         format_setter_call_assignment(&read_expr, op, &rhs_str, |val| {
-                            format!("{id}.currentIndex = {id}.find({val})")
+                            format!("{id}.currentIndex = {id}.indexOfValue({val})")
                         })
+                    }
+                    TargetKind::CheckBox | TargetKind::RadioButton => {
+                        format_assignment(&format!("{id}.value"), op, &rhs_str)
+                    }
+                    // DOM values are strings; QML refuses one for a number.
+                    TargetKind::Range | TargetKind::Progress
+                        if op == AssignmentOperator::Assign
+                            && rhs_str.trim().parse::<f64>().is_err() =>
+                    {
+                        format!("{id}.value = Number({rhs_str})")
                     }
                     TargetKind::Range | TargetKind::Progress => {
                         format_assignment(&format!("{id}.value"), op, &rhs_str)
@@ -1096,8 +1124,17 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                                 self.visit_argument(extra);
                                 call_args.push(self.editor.extract_and_consume(extra.span()));
                             }
-                            self.editor
-                                .replace(it.span, format!("H2Q.listen({})", call_args.join(", ")));
+                            // The slot above delivers these; the runtime has
+                            // no way to connect to them itself.
+                            let listen = if matches!(ev.as_str(), "keydown" | "keyup" | "submit") {
+                                "listenBound"
+                            } else {
+                                "listen"
+                            };
+                            self.editor.replace(
+                                it.span,
+                                format!("H2Q.{listen}({})", call_args.join(", ")),
+                            );
                             return;
                         }
                         let args_str = self.render_call_args(&it.arguments);

@@ -68,9 +68,10 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     };
     let tree = boxes::build_keeping(&doc, &styles, Some(wanted), &mut diags);
     let body_style = doc.body().and_then(|b| styles.style(b));
-    let mut emitter = Emitter::new(&doc, options, &mut diags, wanted);
+    let mut emitter = Emitter::new(&doc, &styles, options, &mut diags, wanted);
     let mut root = emitter.document(tree.as_ref(), body_style);
     let targets = std::mem::take(&mut emitter.targets);
+    let forms = std::mem::take(&mut emitter.forms);
     drop(emitter);
 
     if options.state_variants && !styles.variants.is_empty() {
@@ -99,7 +100,7 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         for d in &js.diagnostics {
             diags.push(js_diagnostic(d));
         }
-        scripts::wire(&mut root, &js, &mut diags);
+        scripts::wire(&mut root, &js, &forms, &scripts, &mut diags);
         if let Some(init) = &js.init_function {
             root.members.push(Member::Handler {
                 name: "Component.onCompleted".to_owned(),

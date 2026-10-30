@@ -484,8 +484,26 @@ ApplicationWindow {
                                                     Layout.leftMargin: 16
 
                                                     // <input>
-                                                    Item {
-                                                        implicitWidth: 280
+                                                    TextField {
+                                                        id: inputControl
+                                                        color: "#1c2331"
+                                                        font.family: "sans-serif"
+                                                        font.pixelSize: 15
+                                                        verticalAlignment: TextInput.AlignVCenter
+                                                        background: Rectangle {
+                                                            color: "#ffffff"
+                                                            radius: 6
+                                                            border.width: 1
+                                                            border.color: "#c8d0de"
+                                                        }
+                                                        topPadding: 9
+                                                        rightPadding: 13
+                                                        bottomPadding: 9
+                                                        leftPadding: 13
+                                                        implicitHeight: 40.5
+                                                        implicitWidth: 191
+                                                        placeholderText: "Search projects"
+                                                        placeholderTextColor: "#8a93a6"
                                                         Layout.preferredWidth: 280
                                                     }
                                                 }

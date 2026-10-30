@@ -252,14 +252,22 @@ ApplicationWindow {
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.topMargin: 64
 
-                                            Text {
-                                                text: "<b><font color=\"#ffffff\">Follow</font></b>"
-                                                textFormat: Text.StyledText
-                                                color: "#1f2937"
+                                            // <button class="btn">
+                                            Button {
+                                                id: buttonControl
+                                                text: "Follow"
+                                                palette.buttonText: "#ffffff"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
-                                                wrapMode: Text.WordWrap
-                                                Layout.fillWidth: true
+                                                font.weight: 600
+                                                background: Rectangle {
+                                                    color: "#3b6fe0"
+                                                    radius: 8
+                                                }
+                                                topPadding: 10
+                                                rightPadding: 18
+                                                bottomPadding: 10
+                                                leftPadding: 18
                                             }
 
                                             // <div class="tooltip">

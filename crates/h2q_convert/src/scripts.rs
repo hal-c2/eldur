@@ -12,7 +12,7 @@ use h2q_qml::{Member, Object};
 use crate::Resources;
 use crate::boxes::{describe, node_line};
 use crate::diag::Diagnostics;
-use crate::emit::Target;
+use crate::emit::{Form, Target};
 
 /// The scripts of a page and what they refer to.
 pub(crate) struct Scripts {
@@ -29,6 +29,12 @@ pub(crate) struct Scripts {
 impl Scripts {
     pub(crate) fn is_empty(&self) -> bool {
         self.inputs.is_empty()
+    }
+
+    /// The node of a key: `keys` holds handler-attribute elements, `wanted`
+    /// everything scripts can reach.
+    fn keys_to_node(&self, key: ElementKey) -> Option<NodeId> {
+        self.wanted.iter().copied().find(|&n| key_of(n) == key)
     }
 }
 
@@ -155,183 +161,18 @@ fn resolve(doc: &Document, query: &DomQuery, diags: &mut Diagnostics) -> Vec<Nod
         DomQuery::Selector(s) => (s, true),
         DomQuery::SelectorAll(s) => (s, false),
     };
-    let Some(list) = parse_selector_list(text) else {
+    let Some(mut found) = h2q_css::query_selector_all(doc, text) else {
         diags.warning(
             "js",
             None,
-            format!("selector `{text}` is too complex to resolve at conversion time"),
+            format!("selector `{text}` does not parse; a browser would throw here"),
         );
         return Vec::new();
     };
-    let mut found = Vec::new();
-    for node in doc.descendants(doc.root()) {
-        if doc.element(node).is_some() && list.iter().any(|s| matches(doc, node, s)) {
-            found.push(node);
-            if first_only {
-                break;
-            }
-        }
+    if first_only {
+        found.truncate(1);
     }
     found
-}
-
-/// A compound selector: type and/or `#id`, `.class`, `[attr]`, `[attr=v]`.
-#[derive(Debug, Default, PartialEq)]
-struct Compound {
-    tag: Option<String>,
-    id: Option<String>,
-    classes: Vec<String>,
-    attrs: Vec<(String, Option<String>)>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-enum Combinator {
-    Descendant,
-    Child,
-}
-
-/// Rightmost compound first, each with the combinator to its left.
-type Complex = Vec<(Compound, Option<Combinator>)>;
-
-/// Only the selectors that are resolvable without the cascade crate's
-/// matcher (which is private): anything with pseudo-classes, sibling
-/// combinators or attribute operators other than `=` is `None`.
-fn parse_selector_list(text: &str) -> Option<Vec<Complex>> {
-    text.split(',').map(parse_complex).collect()
-}
-
-fn parse_complex(text: &str) -> Option<Complex> {
-    let mut parts: Vec<(Compound, Option<Combinator>)> = Vec::new();
-    let mut chars = text.trim().chars().peekable();
-    let mut pending: Option<Combinator> = None;
-    loop {
-        let mut saw_space = false;
-        while chars.peek().is_some_and(|c| c.is_whitespace()) {
-            chars.next();
-            saw_space = true;
-        }
-        match chars.peek() {
-            None => break,
-            Some('>') => {
-                chars.next();
-                pending = Some(Combinator::Child);
-                continue;
-            }
-            Some('+' | '~' | ':' | '|') => return None,
-            Some(_) => {}
-        }
-        if !parts.is_empty() && pending.is_none() && saw_space {
-            pending = Some(Combinator::Descendant);
-        }
-        let compound = parse_compound(&mut chars)?;
-        if !parts.is_empty() && pending.is_none() {
-            return None;
-        }
-        parts.push((compound, pending.take()));
-    }
-    if parts.is_empty() || pending.is_some() {
-        return None;
-    }
-    // Each compound keeps the combinator to its left; matching runs from
-    // the rightmost compound.
-    parts.reverse();
-    Some(parts)
-}
-
-fn ident(chars: &mut std::iter::Peekable<std::str::Chars<'_>>) -> Option<String> {
-    let mut s = String::new();
-    while let Some(&c) = chars.peek() {
-        if c.is_alphanumeric() || c == '-' || c == '_' || !c.is_ascii() {
-            s.push(c);
-            chars.next();
-        } else {
-            break;
-        }
-    }
-    (!s.is_empty()).then_some(s)
-}
-
-fn parse_compound(chars: &mut std::iter::Peekable<std::str::Chars<'_>>) -> Option<Compound> {
-    let mut c = Compound::default();
-    let mut any = false;
-    if chars.peek() == Some(&'*') {
-        chars.next();
-        any = true;
-    } else if let Some(tag) = ident(chars) {
-        c.tag = Some(tag.to_ascii_lowercase());
-        any = true;
-    }
-    loop {
-        match chars.peek() {
-            Some('#') => {
-                chars.next();
-                c.id = Some(ident(chars)?);
-            }
-            Some('.') => {
-                chars.next();
-                c.classes.push(ident(chars)?);
-            }
-            Some('[') => {
-                chars.next();
-                let body: String = chars.by_ref().take_while(|&ch| ch != ']').collect();
-                let (name, value) = match body.split_once('=') {
-                    Some((n, v)) => {
-                        if n.ends_with(['~', '|', '^', '$', '*']) {
-                            return None;
-                        }
-                        let v = v.trim().trim_matches(['"', '\'']).to_owned();
-                        (n.trim().to_ascii_lowercase(), Some(v))
-                    }
-                    None => (body.trim().to_ascii_lowercase(), None),
-                };
-                if name.is_empty() {
-                    return None;
-                }
-                c.attrs.push((name, value));
-            }
-            _ => break,
-        }
-        any = true;
-    }
-    any.then_some(c)
-}
-
-fn matches_compound(doc: &Document, node: NodeId, c: &Compound) -> bool {
-    let Some(e) = doc.element(node) else {
-        return false;
-    };
-    c.tag.as_deref().is_none_or(|t| e.local_name() == t)
-        && c.id.as_deref().is_none_or(|id| e.id() == Some(id))
-        && c.classes.iter().all(|cl| e.has_class(cl))
-        && c.attrs.iter().all(|(name, value)| match value {
-            None => e.has_attr(name),
-            Some(v) => e.attr(name) == Some(v.as_str()),
-        })
-}
-
-fn matches(doc: &Document, node: NodeId, complex: &[(Compound, Option<Combinator>)]) -> bool {
-    let Some(((compound, combinator), rest)) = complex.split_first() else {
-        return true;
-    };
-    if !matches_compound(doc, node, compound) {
-        return false;
-    }
-    match combinator {
-        None => rest.is_empty(),
-        Some(Combinator::Child) => doc
-            .parent_element(node)
-            .is_some_and(|p| matches(doc, p, rest)),
-        Some(Combinator::Descendant) => {
-            let mut ancestor = doc.parent_element(node);
-            while let Some(a) = ancestor {
-                if matches(doc, a, rest) {
-                    return true;
-                }
-                ancestor = doc.parent_element(a);
-            }
-            false
-        }
-    }
 }
 
 /// Maps queries to the ids the emitter gave their elements.
@@ -395,45 +236,162 @@ pub(crate) fn report_missing(
 }
 
 /// Adds the signal handlers of `js.bindings` to the objects they target.
-pub(crate) fn wire(root: &mut Object, js: &JsOutput, diags: &mut Diagnostics) {
+pub(crate) fn wire(
+    root: &mut Object,
+    js: &JsOutput,
+    forms: &BTreeMap<NodeId, Form>,
+    scripts: &Scripts,
+    diags: &mut Diagnostics,
+) {
     for binding in &js.bindings {
         let id = &binding.target.qml_id;
-        let handler = match binding.event.as_str() {
-            "click" => {
+        let call = |event: &str, arg: &str| {
+            let fire = format!(
+                "Page.{}(H2Q.event({event:?}, {id}, {arg}));",
+                binding.function
+            );
+            if js.redispatching_slots.contains(&binding.function) {
+                format!("if (!H2Q.connected({id}, {event:?})) {{ {fire} }}")
+            } else {
+                fire
+            }
+        };
+        let event = binding.event.as_str();
+        if event == "submit" {
+            let form = scripts
+                .keys_to_node(binding.target.key)
+                .and_then(|n| forms.get(&n));
+            let submitters = form.map_or(0, |f| f.accepting.len() + f.submitters.len());
+            if submitters == 0 {
+                diags.warning(
+                    "js",
+                    None,
+                    format!("`submit` listeners on `{id}` have no field or button to fire them"),
+                );
+            }
+            if let Some(form) = form {
+                for (ids, signal) in [
+                    (&form.accepting, "onAccepted"),
+                    (&form.submitters, "onClicked"),
+                ] {
+                    for submitter in ids {
+                        if let Some(obj) = find_mut(root, submitter) {
+                            add_handler(obj, signal, &[], vec![call("submit", "null")]);
+                        }
+                    }
+                }
+            }
+            continue;
+        }
+        let Some(obj) = find_mut(root, id) else {
+            diags.error(
+                "qml",
+                None,
+                format!("event binding targets `{id}`, which is not in Main.qml"),
+            );
+            continue;
+        };
+        let handler = signal_for(&obj.type_name, event);
+        match (event, handler) {
+            ("click", None) => {
                 let mut tap = Object::new("TapHandler");
                 tap.members.push(Member::Handler {
                     name: "onTapped".to_owned(),
                     params: vec!["eventPoint".to_owned(), "button".to_owned()],
-                    body: vec![format!(
-                        "Page.{}(H2Q.event(\"click\", {id}, eventPoint));",
-                        binding.function
-                    )],
+                    body: vec![call("click", "eventPoint")],
                 });
-                tap
+                obj.push_child(tap);
             }
-            other => {
-                diags.warning(
-                    "js",
-                    None,
-                    format!("`{other}` listeners on `{id}` are not wired to QML yet"),
+            ("keydown" | "keyup", _) => {
+                let name = if event == "keydown" {
+                    "Keys.onPressed"
+                } else {
+                    "Keys.onReleased"
+                };
+                // Qt accepts a key event with a handler unless told not to,
+                // and an accepted key never reaches the field's own editing.
+                add_handler(
+                    obj,
+                    name,
+                    &["event"],
+                    vec![
+                        format!("const dom = H2Q.event({event:?}, {id}, event);"),
+                        format!("Page.{}(dom);", binding.function),
+                        "event.accepted = dom.defaultPrevented;".to_owned(),
+                    ],
                 );
-                continue;
             }
-        };
-        match find_mut(root, id) {
-            Some(obj) => {
-                obj.push_child(handler);
+            ("focus" | "focusin" | "blur" | "focusout", _) => {
+                let test = if matches!(event, "focus" | "focusin") {
+                    "activeFocus"
+                } else {
+                    "!activeFocus"
+                };
+                add_handler(
+                    obj,
+                    "onActiveFocusChanged",
+                    &[],
+                    vec![format!("if ({test}) {{ {} }}", call(event, "null"))],
+                );
             }
-            None => diags.error(
-                "qml",
+            (_, Some(signal)) => {
+                let mut body = call(event, "null");
+                // TextArea has no "edited by the user" signal.
+                if signal == "onTextChanged" {
+                    body = format!("if (activeFocus) {{ {body} }}");
+                }
+                if signal == "onPressedChanged" {
+                    body = format!("if (!pressed) {{ {body} }}");
+                }
+                add_handler(obj, signal, &[], vec![body]);
+            }
+            (other, None) => diags.warning(
+                "js",
                 None,
-                format!("event binding targets `{id}`, which is not in Main.qml"),
+                format!("`{other}` listeners on `{id}` are not wired to QML yet"),
             ),
         }
     }
 }
 
-fn find_mut<'o>(obj: &'o mut Object, id: &str) -> Option<&'o mut Object> {
+/// The signal of a Qt Quick Control that is the DOM's `event` (dom-api.md §4).
+fn signal_for(type_name: &str, event: &str) -> Option<&'static str> {
+    Some(match (type_name, event) {
+        ("Button" | "CheckBox" | "RadioButton", "click") => "onClicked",
+        ("TextField", "input") => "onTextEdited",
+        ("TextArea", "input") => "onTextChanged",
+        ("TextField" | "TextArea", "change") => "onEditingFinished",
+        ("CheckBox" | "RadioButton", "input" | "change") => "onToggled",
+        ("ComboBox", "input" | "change") => "onActivated",
+        ("Slider", "input") => "onMoved",
+        ("Slider", "change") => "onPressedChanged",
+        ("SpinBox", "input" | "change") => "onValueModified",
+        _ => return None,
+    })
+}
+
+/// Appends to `name`'s handler: QML allows one per signal.
+pub(crate) fn add_handler(obj: &mut Object, name: &str, params: &[&str], body: Vec<String>) {
+    for member in &mut obj.members {
+        if let Member::Handler {
+            name: existing,
+            body: lines,
+            ..
+        } = member
+            && existing == name
+        {
+            lines.extend(body);
+            return;
+        }
+    }
+    obj.members.push(Member::Handler {
+        name: name.to_owned(),
+        params: params.iter().map(|p| (*p).to_owned()).collect(),
+        body,
+    });
+}
+
+pub(crate) fn find_mut<'o>(obj: &'o mut Object, id: &str) -> Option<&'o mut Object> {
     if obj.id.as_deref() == Some(id) {
         return Some(obj);
     }
@@ -481,9 +439,28 @@ mod tests {
     }
 
     #[test]
-    fn complex_selectors_are_not_guessed() {
-        let html = "<ul><li>1</li><li>2</li></ul>";
-        assert!(select(html, "li:first-child").is_empty());
-        assert!(select(html, "li + li").is_empty());
+    fn sibling_combinators_and_pseudo_classes_resolve() {
+        let html = "<ul><li>1</li><li>2</li><li>3</li></ul>";
+        assert_eq!(select(html, "li:first-child").len(), 1);
+        assert_eq!(select(html, "li + li").len(), 2);
+        assert_eq!(select(html, "li ~ li:last-child").len(), 1);
+        assert_eq!(select(html, "li:not(:first-child)").len(), 2);
+    }
+
+    #[test]
+    fn first_only_query_takes_the_first_match() {
+        let doc = Document::parse("<p>1</p><p>2</p>");
+        let mut diags = Diagnostics::new("t");
+        let found = resolve(&doc, &DomQuery::Selector("p".to_owned()), &mut diags);
+        assert_eq!(found.len(), 1);
+    }
+
+    #[test]
+    fn invalid_selectors_are_reported_and_match_nothing() {
+        let doc = Document::parse("<p>1</p>");
+        let mut diags = Diagnostics::new("t");
+        let found = resolve(&doc, &DomQuery::SelectorAll("p[".to_owned()), &mut diags);
+        assert!(found.is_empty());
+        assert_eq!(diags.into_vec().len(), 1);
     }
 }

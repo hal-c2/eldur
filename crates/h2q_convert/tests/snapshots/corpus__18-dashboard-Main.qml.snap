@@ -515,9 +515,25 @@ ApplicationWindow {
                                         Layout.alignment: Qt.AlignVCenter
 
                                         // <input class="search">
-                                        Item {
-                                            implicitWidth: 240
-                                            implicitHeight: 36
+                                        TextField {
+                                            id: inputControl
+                                            color: "#111827"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 14
+                                            verticalAlignment: TextInput.AlignVCenter
+                                            background: Rectangle {
+                                                color: "#f3f4f6"
+                                                radius: 8
+                                                border.width: 1
+                                                border.color: "#e5e7eb"
+                                            }
+                                            topPadding: 1
+                                            rightPadding: 13
+                                            bottomPadding: 1
+                                            leftPadding: 13
+                                            implicitWidth: 180
+                                            placeholderText: "Search orders"
+                                            placeholderTextColor: "#757575"
                                             Layout.fillWidth: true
                                             Layout.preferredWidth: 240
                                             Layout.maximumWidth: 240
@@ -1323,8 +1339,24 @@ ApplicationWindow {
                                                     }
 
                                                     // <progress>
-                                                    Item {
-                                                        implicitHeight: 12
+                                                    ProgressBar {
+                                                        id: progressControl
+                                                        from: 0
+                                                        to: 100
+                                                        value: 68
+                                                        implicitHeight: 16
+                                                        background: Rectangle {
+                                                            color: "#efefef"
+                                                            radius: 3
+                                                        }
+                                                        contentItem: Item {
+                                                            Rectangle {
+                                                                width: progressControl.visualPosition * parent.width
+                                                                height: parent.height
+                                                                radius: 3
+                                                                color: "#0075ff"
+                                                            }
+                                                        }
                                                         Layout.preferredWidth: parent.width
                                                         Layout.preferredHeight: 12
                                                         Layout.topMargin: 8

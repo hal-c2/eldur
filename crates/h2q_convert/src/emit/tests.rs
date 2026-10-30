@@ -152,6 +152,20 @@ fn flex_start_ends_with_a_spacer_and_items_shrink_to_fit() {
 }
 
 #[test]
+fn min_width_beats_a_shrink_to_fit_cap() {
+    let (qml, _) = convert(&page(
+        ".bar{display:flex}.bar span{min-width:64px}",
+        r#"<div class="bar"><span>a</span></div>"#,
+    ));
+    let bar = object_after(&qml, r#"<div class="bar">"#);
+    assert!(
+        bar.contains("Layout.maximumWidth: Math.max(Math.ceil(implicitWidth), 64)"),
+        "{bar}"
+    );
+    assert!(bar.contains("Layout.minimumWidth: 64"), "{bar}");
+}
+
+#[test]
 fn growing_items_fill_without_spacers() {
     let (qml, diags) = convert(&page(
         ".row{display:flex;gap:12px;justify-content:center} .a{flex:1} .b{flex:1}",

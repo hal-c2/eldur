@@ -1022,6 +1022,55 @@ function dataset(item) {
     return _meta(item).dataset;
 }
 
+// The item appended children go in. A box's inner layout, when it has one.
+// An empty box has only the `Text` for its `textContent`, and the column
+// made here takes its place in the box's height.
+function _appendTarget(raw) {
+    if (raw.contentItem) {
+        return raw.contentItem;
+    }
+    if (typeof raw.spacing === "number") {
+        return raw;
+    }
+    var m = _meta(raw);
+    if (m.flow) {
+        return m.flow;
+    }
+    for (var i = 0; raw.children && i < raw.children.length; ++i) {
+        if (typeof raw.children[i].spacing === "number") {
+            return raw.children[i];
+        }
+    }
+    var text = _findTextChild(raw);
+    if (!text) {
+        return raw;
+    }
+    var flow = Qt.createQmlObject("import QtQuick; import QtQuick.Layouts; ColumnLayout { spacing: 0 }", raw, "h2q_flow");
+    var extra = raw.implicitHeight - text.implicitHeight;
+    flow.x = Qt.binding(function() { return text.x; });
+    flow.y = Qt.binding(function() { return text.y + (text.text === "" ? 0 : text.height); });
+    flow.width = Qt.binding(function() { return text.width; });
+    text.visible = Qt.binding(function() { return text.text !== ""; });
+    raw.implicitHeight = Qt.binding(function() {
+        return extra + (text.text === "" ? 0 : text.implicitHeight) + flow.implicitHeight;
+    });
+    // `textContent = x` replaces every child.
+    text.textChanged.connect(function() { _clearAppended(raw); });
+    m.flow = flow;
+    return flow;
+}
+
+function _clearAppended(raw) {
+    var flow = _meta(raw).flow;
+    while (flow && flow.children.length > 0) {
+        // `destroy` waits for the event loop, so a handler of a child being
+        // removed can run to its end.
+        var child = flow.children[0];
+        child.parent = null;
+        child.destroy();
+    }
+}
+
 function _findTextChild(raw) {
     if (!raw || !raw.children) {
         return null;
@@ -1067,6 +1116,7 @@ function setText(item, value) {
         raw.text = str;
         return;
     }
+    _clearAppended(raw);
     var textChild = _findTextChild(raw);
     if (textChild) {
         textChild.text = str;
@@ -1445,10 +1495,12 @@ function event(type, targetItem, qtEvent) {
         deltaY = dy === 0 ? 0 : dy;
     }
 
+    // Listeners read `event.target.value`, which only the wrapper has.
+    var domTarget = rawTarget && typeof rawTarget.mapToItem === "function" ? wrap(rawTarget) : targetItem;
     var domEvent = {
         type: String(type),
-        target: targetItem || null,
-        currentTarget: targetItem || null,
+        target: domTarget || null,
+        currentTarget: domTarget || null,
         key: keyInfo.key,
         code: keyInfo.code,
         keyCode: keyInfo.keyCode,
@@ -1607,12 +1659,36 @@ function _connectSignalOnce(raw, type) {
             m.connected[type] = true;
             return true;
         }
+        var inputSignal = raw.toggled || raw.activated || raw.valueModified;
+        if (typeof inputSignal === "function") {
+            inputSignal.connect(function() { _dispatchDynamic(raw, "input", null); });
+            m.connected[type] = true;
+            return true;
+        }
         if (typeof raw.textChanged === "function") {
             raw.textChanged.connect(function() { _dispatchDynamic(raw, "input", null); });
             m.connected[type] = true;
             return true;
         }
+    } else if (type === "keydown" || type === "keyup") {
+        // `Keys` cannot be attached from here; only the runtime's own
+        // controls declare these. Others get their handler from the converter.
+        var keySignal = type === "keydown" ? raw.h2qKeyDown : raw.h2qKeyUp;
+        if (typeof keySignal === "function") {
+            keySignal.connect(function(qtEv) { _dispatchDynamic(raw, type, qtEv); });
+            m.connected[type] = true;
+            return true;
+        }
     } else if (type === "change") {
+        if (typeof raw.moved === "function" && typeof raw.pressedChanged === "function") {
+            raw.pressedChanged.connect(function() {
+                if (!raw.pressed) {
+                    _dispatchDynamic(raw, "change", null);
+                }
+            });
+            m.connected[type] = true;
+            return true;
+        }
         if (typeof raw.toggled === "function") {
             raw.toggled.connect(function() { _dispatchDynamic(raw, "change", null); });
             m.connected[type] = true;
@@ -1692,8 +1768,21 @@ function _connectSignalOnce(raw, type) {
 }
 
 function listen(item, eventType, handler, options) {
+    if (_addListener(item, eventType, handler, options)
+        && !_connectSignalOnce(_unwrap(item), String(eventType))) {
+        console.warn("H2Q: dynamic listener for '" + eventType + "' cannot bind to a QML signal");
+    }
+}
+
+// For events QML handlers already deliver (keys, a form's submit): the
+// generated handler calls `dispatchEvent`, there is nothing to connect.
+function listenBound(item, eventType, handler, options) {
+    _addListener(item, eventType, handler, options);
+}
+
+function _addListener(item, eventType, handler, options) {
     if (!item || typeof handler !== "function") {
-        return;
+        return false;
     }
     var raw = _unwrap(item);
     var type = String(eventType);
@@ -1712,9 +1801,13 @@ function listen(item, eventType, handler, options) {
             }
         }
     }
-    if (!_connectSignalOnce(raw, type)) {
-        console.warn("H2Q: dynamic listener for '" + type + "' cannot bind to a QML signal");
-    }
+    return true;
+}
+
+// A listener on a known element can get both a connection and the generated
+// QML handler; the handler asks this first, so one action fires once.
+function connected(item, eventType) {
+    return Boolean(_meta(item).connected[String(eventType)]);
 }
 
 function unlisten(item, eventType, handler) {
@@ -1767,6 +1860,44 @@ function dispatchEvent(item, domEv) {
 // 9. Minimal Element wrapper and H2Q.document tree lookup
 // ---------------------------------------------------------------------------
 
+var _NATIVE_IMPORTS = "import QtQuick; import QtQuick.Controls.Basic; ";
+
+// Keys handlers accept the key unless told otherwise, and an accepted key
+// never reaches the field; `preventDefault` accepts it.
+var _KEY_SIGNALS = "signal h2qKeyDown(var event); signal h2qKeyUp(var event); "
+    + "Keys.onPressed: (event) => { event.accepted = false; h2qKeyDown(event); } "
+    + "Keys.onReleased: (event) => { event.accepted = false; h2qKeyUp(event); } ";
+
+// Created elements have no computed style, since CSS is applied at
+// conversion; these are a browser's unstyled controls, whatever the system
+// palette is.
+function _inputSource(type) {
+    if (type === "checkbox" || type === "radio") {
+        var isRadio = type === "radio";
+        return _NATIVE_IMPORTS + (isRadio ? "RadioButton" : "CheckBox") + " { id: control; " + _KEY_SIGNALS
+            + "property string value: \"on\"; padding: 0; spacing: 0; implicitWidth: 13; implicitHeight: 13; "
+            + "contentItem: Item {} "
+            + "indicator: Rectangle { width: control.width; height: control.height; "
+            + (isRadio ? "radius: width / 2; color: \"white\"; " : "radius: 2; color: control.checked ? \"#0075ff\" : \"white\"; ")
+            + "border.color: control.checked ? \"#0075ff\" : \"#767676\"; "
+            + (isRadio
+                ? "Rectangle { anchors.centerIn: parent; width: parent.width * 0.6; height: width; radius: width / 2; color: \"#0075ff\"; visible: control.checked } "
+                : "Text { anchors.centerIn: parent; text: \"\\u2713\"; color: \"white\"; font.pixelSize: Math.max(1, control.height - 2); visible: control.checked } ")
+            + "} }";
+    }
+    if (type === "range") {
+        return _NATIVE_IMPORTS + "Slider { from: 0; to: 100; value: 50; stepSize: 1; snapMode: Slider.SnapAlways; " + _KEY_SIGNALS + "}";
+    }
+    if (type === "number") {
+        return _NATIVE_IMPORTS + "SpinBox { editable: true; from: -2147483648; to: 2147483647; " + _KEY_SIGNALS + "}";
+    }
+    if (type === "submit" || type === "button" || type === "reset") {
+        return _NATIVE_IMPORTS + "Button { " + _KEY_SIGNALS + "palette.buttonText: \"black\"; background: Rectangle { color: \"#efefef\"; border.color: \"#767676\"; radius: 3 } }";
+    }
+    return _NATIVE_IMPORTS + "TextField { " + _KEY_SIGNALS + "color: \"black\"; "
+        + "background: Rectangle { color: \"white\"; border.color: \"#767676\"; radius: 2 } }";
+}
+
 function wrap(rawItem) {
     if (!rawItem) {
         return null;
@@ -1793,8 +1924,31 @@ function wrap(rawItem) {
 
     var wrapper = {
         __h2qWrapper: true,
-        _item: rawItem,
+        get _item() { return rawItem; },
         style: styleProxy,
+        get type() { return m.inputType || ""; },
+        // `createElement('input')` must return before the script says what
+        // type it is, and a QML object cannot change type.
+        set type(v) {
+            var ty = String(v).toLowerCase();
+            var from = m.inputType || "text";
+            m.inputType = ty;
+            if (m.createdTag !== "input" || _inputSource(ty) === _inputSource(from)) {
+                return;
+            }
+            var next = Qt.createQmlObject(_inputSource(ty), _qobjectParent(), "h2q_el_input");
+            next.parent = rawItem.parent;
+            var old = rawItem;
+            _itemMeta.delete(old);
+            _itemMeta.set(next, m);
+            rawItem = next;
+            old.destroy();
+            var connected = Object.keys(m.connected);
+            m.connected = {};
+            for (var i = 0; i < connected.length; ++i) {
+                _connectSignalOnce(next, connected[i]);
+            }
+        },
         get id() {
             return typeof rawItem.objectName === "string" ? rawItem.objectName : "";
         },
@@ -1811,7 +1965,12 @@ function wrap(rawItem) {
         set innerHTML(v) { setInnerHTML(rawItem, v); },
         get value() {
             if (typeof rawItem.currentText === "string") {
-                return rawItem.currentText;
+                var current = rawItem.currentValue;
+                return current !== undefined && current !== null ? String(current) : rawItem.currentText;
+            }
+            // Before `text`: a checkbox's `text` is not its form value.
+            if (typeof rawItem.checked === "boolean" && typeof rawItem.value === "string") {
+                return rawItem.value;
             }
             if (typeof rawItem.text === "string") {
                 return rawItem.text;
@@ -1823,7 +1982,10 @@ function wrap(rawItem) {
         },
         set value(v) {
             if (typeof rawItem.find === "function" && typeof rawItem.currentIndex === "number") {
-                rawItem.currentIndex = rawItem.find(String(v));
+                var byValue = rawItem.indexOfValue(String(v));
+                rawItem.currentIndex = byValue !== -1 ? byValue : rawItem.find(String(v));
+            } else if (typeof rawItem.checked === "boolean" && typeof rawItem.value === "string") {
+                rawItem.value = String(v);
             } else if (typeof rawItem.text === "string") {
                 rawItem.text = String(v);
             } else if (typeof rawItem.value === "number") {
@@ -1874,6 +2036,12 @@ function wrap(rawItem) {
                     out.push(wrap(rawItem.children[i]));
                 }
             }
+            if (m.flow) {
+                out = [];
+                for (var j = 0; j < m.flow.children.length; ++j) {
+                    out.push(wrap(m.flow.children[j]));
+                }
+            }
             return out;
         },
         setAttribute: function(k, v) { setAttribute(rawItem, k, v); },
@@ -1897,8 +2065,7 @@ function wrap(rawItem) {
         appendChild: function(child) {
             var rawChild = _unwrap(child);
             if (rawChild && rawChild.parent !== undefined) {
-                var container = rawItem.contentItem || rawItem;
-                rawChild.parent = container;
+                rawChild.parent = _appendTarget(rawItem);
             }
             return child;
         },
@@ -2076,18 +2243,25 @@ var document = {
     createElement: function(tagName) {
         var tag = String(tagName).toLowerCase();
         var qmlSrc = "import QtQuick; Item {}";
-        if (tag === "span" || tag === "p" || tag === "label" || tag === "h1" || tag === "h2" || tag === "h3") {
-            qmlSrc = "import QtQuick; Text {}";
+        if (tag === "input") {
+            qmlSrc = _inputSource("text");
+        } else if (tag === "textarea") {
+            qmlSrc = _NATIVE_IMPORTS + "TextArea { color: \"black\"; background: Rectangle { color: \"white\"; border.color: \"#767676\" } }";
+        } else if (tag === "li") {
+            qmlSrc = "import QtQuick; import QtQuick.Layouts; RowLayout { Layout.fillWidth: true; spacing: 8 }";
+        } else if (tag === "ul" || tag === "ol") {
+            qmlSrc = "import QtQuick; import QtQuick.Layouts; ColumnLayout { Layout.fillWidth: true; spacing: 0 }";
+        } else if (tag === "span" || tag === "p" || tag === "label" || tag === "h1" || tag === "h2" || tag === "h3") {
+            qmlSrc = "import QtQuick; Text { color: \"black\"; font.pixelSize: 16 }";
         } else if (tag === "div" || tag === "section" || tag === "article") {
             qmlSrc = "import QtQuick; Rectangle { color: \"transparent\" }";
         } else if (tag === "img") {
             qmlSrc = "import QtQuick; Image {}";
         } else if (tag === "button") {
-            qmlSrc = "import QtQuick.Controls.Basic; Button {}";
-        } else if (tag === "input") {
-            qmlSrc = "import QtQuick.Controls.Basic; TextField {}";
+            qmlSrc = _NATIVE_IMPORTS + "Button { palette.buttonText: \"black\"; background: Rectangle { color: \"#efefef\"; border.color: \"#767676\"; radius: 3 } }";
         }
         var created = Qt.createQmlObject(qmlSrc, _qobjectParent(), "h2q_el_" + tag);
+        _meta(created).createdTag = tag;
         if (created && created.parent !== undefined) {
             created.parent = null;
         }
