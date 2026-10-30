@@ -345,6 +345,187 @@ ApplicationWindow {
                                     color: "#1a000000"
                                     radius: 12
                                 }
+
+                                Shape {
+                                    id: boxInset
+                                    anchors.fill: parent
+
+                                    ShapePath {
+                                        strokeWidth: -1
+                                        fillColor: "#083b6fe0"
+                                        fillRule: ShapePath.OddEvenFill
+
+                                        PathRectangle {
+                                            width: boxInset.width
+                                            height: boxInset.height
+                                            radius: 12
+                                        }
+
+                                        PathRectangle {
+                                            width: boxInset.width
+                                            height: Math.max(0, boxInset.height - 2)
+                                            topLeftRadius: 12
+                                            topRightRadius: 12
+                                            bottomRightRadius: 10
+                                            bottomLeftRadius: 10
+                                        }
+                                    }
+
+                                    ShapePath {
+                                        strokeWidth: -1
+                                        fillColor: "#093b6fe0"
+                                        fillRule: ShapePath.OddEvenFill
+
+                                        PathRectangle {
+                                            width: boxInset.width
+                                            height: boxInset.height
+                                            radius: 12
+                                        }
+
+                                        PathRectangle {
+                                            width: boxInset.width
+                                            height: Math.max(0, boxInset.height - 4)
+                                            topLeftRadius: 12
+                                            topRightRadius: 12
+                                            bottomRightRadius: 8
+                                            bottomLeftRadius: 8
+                                        }
+                                    }
+
+                                    ShapePath {
+                                        strokeWidth: -1
+                                        fillColor: "#0a3b6fe0"
+                                        fillRule: ShapePath.OddEvenFill
+
+                                        PathRectangle {
+                                            width: boxInset.width
+                                            height: boxInset.height
+                                            radius: 12
+                                        }
+
+                                        PathRectangle {
+                                            width: boxInset.width
+                                            height: Math.max(0, boxInset.height - 6)
+                                            radius: 12
+                                        }
+                                    }
+
+                                    ShapePath {
+                                        strokeWidth: -1
+                                        fillColor: "#093b6fe0"
+                                        fillRule: ShapePath.OddEvenFill
+
+                                        PathRectangle {
+                                            width: boxInset.width
+                                            height: boxInset.height
+                                            radius: 12
+                                        }
+
+                                        PathRectangle {
+                                            x: 2
+                                            width: Math.max(0, boxInset.width - 4)
+                                            height: Math.max(0, boxInset.height - 8)
+                                            radius: 10
+                                        }
+                                    }
+
+                                    ShapePath {
+                                        strokeWidth: -1
+                                        fillColor: "#073b6fe0"
+                                        fillRule: ShapePath.OddEvenFill
+
+                                        PathRectangle {
+                                            width: boxInset.width
+                                            height: boxInset.height
+                                            radius: 12
+                                        }
+
+                                        PathRectangle {
+                                            x: 4
+                                            width: Math.max(0, boxInset.width - 8)
+                                            height: Math.max(0, boxInset.height - 10)
+                                            radius: 8
+                                        }
+                                    }
+
+                                    ShapePath {
+                                        strokeWidth: -1
+                                        fillColor: "#053b6fe0"
+                                        fillRule: ShapePath.OddEvenFill
+
+                                        PathRectangle {
+                                            width: boxInset.width
+                                            height: boxInset.height
+                                            radius: 12
+                                        }
+
+                                        PathRectangle {
+                                            x: 6
+                                            width: Math.max(0, boxInset.width - 12)
+                                            height: Math.max(0, boxInset.height - 12)
+                                            radius: 6
+                                        }
+                                    }
+
+                                    ShapePath {
+                                        strokeWidth: -1
+                                        fillColor: "#043b6fe0"
+                                        fillRule: ShapePath.OddEvenFill
+
+                                        PathRectangle {
+                                            width: boxInset.width
+                                            height: boxInset.height
+                                            radius: 12
+                                        }
+
+                                        PathRectangle {
+                                            x: 8
+                                            y: 2
+                                            width: Math.max(0, boxInset.width - 16)
+                                            height: Math.max(0, boxInset.height - 16)
+                                            radius: 4
+                                        }
+                                    }
+
+                                    ShapePath {
+                                        strokeWidth: -1
+                                        fillColor: "#023b6fe0"
+                                        fillRule: ShapePath.OddEvenFill
+
+                                        PathRectangle {
+                                            width: boxInset.width
+                                            height: boxInset.height
+                                            radius: 12
+                                        }
+
+                                        PathRectangle {
+                                            x: 10
+                                            y: 4
+                                            width: Math.max(0, boxInset.width - 20)
+                                            height: Math.max(0, boxInset.height - 20)
+                                            radius: 2
+                                        }
+                                    }
+
+                                    ShapePath {
+                                        strokeWidth: -1
+                                        fillColor: "#023b6fe0"
+                                        fillRule: ShapePath.OddEvenFill
+
+                                        PathRectangle {
+                                            width: boxInset.width
+                                            height: boxInset.height
+                                            radius: 12
+                                        }
+
+                                        PathRectangle {
+                                            x: 12
+                                            y: 6
+                                            width: Math.max(0, boxInset.width - 24)
+                                            height: Math.max(0, boxInset.height - 24)
+                                        }
+                                    }
+                                }
                             }
 
                             // <p class="caption">

@@ -53,13 +53,20 @@ pub(crate) struct Decoration {
     pub gradients: bool,
     /// Outer `box-shadow`s to draw behind the box.
     pub shadows: bool,
+    /// Inset `box-shadow`s to draw inside the padding box.
+    pub inset_shadows: bool,
     /// Base for the ids of generated parts (gradient shapes).
     pub hint: String,
 }
 
 impl Decoration {
     pub(crate) fn needed(&self) -> bool {
-        self.paints || self.gradients || self.shadows || self.clips || !self.insets.is_zero()
+        self.paints
+            || self.gradients
+            || self.shadows
+            || self.inset_shadows
+            || self.clips
+            || !self.insets.is_zero()
     }
 }
 
@@ -107,10 +114,7 @@ impl Emitter<'_, '_> {
         // The canvas propagation only takes the colour; gradients stay on
         // the box, which is close for the body of a page.
         let gradients = style.background_layers.iter().any(|l| l.image.is_some());
-        if style.box_shadow.iter().any(|s| s.inset) {
-            self.diags
-                .info("css", line, "inset `box-shadow` is not drawn".to_owned());
-        }
+        let inset_shadows = style.box_shadow.iter().any(|s| s.inset);
         let shadows = style.box_shadow.iter().any(|s| !s.inset);
         if matches!(style.overflow_x, Overflow::Auto | Overflow::Scroll)
             || matches!(style.overflow_y, Overflow::Auto | Overflow::Scroll)
@@ -127,6 +131,7 @@ impl Emitter<'_, '_> {
             clips,
             gradients,
             shadows,
+            inset_shadows,
             hint: "box".to_owned(),
         }
     }
@@ -140,6 +145,30 @@ impl Emitter<'_, '_> {
         deco: &Decoration,
         paint_background: bool,
         inner: Option<(Object, String)>,
+        fill_height: bool,
+        line: Option<u32>,
+    ) -> Object {
+        self.wrap_with(
+            style,
+            deco,
+            paint_background,
+            inner,
+            Vec::new(),
+            fill_height,
+            line,
+        )
+    }
+
+    /// [`Self::wrap`], with `extra` children (markers, overlays) after the
+    /// content, inside the clipping item.
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn wrap_with(
+        &mut self,
+        style: &ComputedStyle,
+        deco: &Decoration,
+        paint_background: bool,
+        inner: Option<(Object, String)>,
+        extra: Vec<Object>,
         fill_height: bool,
         line: Option<u32>,
     ) -> Object {
@@ -183,6 +212,10 @@ impl Emitter<'_, '_> {
         };
         let painted = !gradients.is_empty();
         for shape in gradients {
+            wrapper.push_child(shape);
+        }
+        if deco.inset_shadows {
+            let shape = self.inset_shadows(style, &deco.hint, line);
             wrapper.push_child(shape);
         }
         let borders: Vec<&BorderSide> = sides(style).to_vec();
@@ -256,6 +289,12 @@ impl Emitter<'_, '_> {
             }
             wrapper.push_child(inner);
         }
+        for child in extra {
+            wrapper.push_child(child);
+        }
+        if deco.clips {
+            self.clip_edges(&mut wrapper, style, &deco.hint, line);
+        }
         if deco.shadows && deco.clips {
             // `overflow` clips the content, not the box's own shadow, and a
             // QML clip takes children with it: the shadow goes on an item
@@ -277,6 +316,78 @@ impl Emitter<'_, '_> {
             return outer;
         }
         wrapper
+    }
+
+    /// What QML's square `clip` cannot do for `overflow`: round the clip
+    /// with the box's corners, and keep the content inside the border
+    /// (CSS clips to the padding box). No masking renders under the
+    /// software backend (`MultiEffect` masks and `ShapePath.fillItem` draw
+    /// nothing there), so the corners outside the rounded rect are painted
+    /// over in the colour behind the box, and the border is drawn again on
+    /// top. Over anything but a plain colour the clip stays square.
+    fn clip_edges(
+        &mut self,
+        wrapper: &mut Object,
+        style: &ComputedStyle,
+        hint: &str,
+        line: Option<u32>,
+    ) {
+        let r = &style.border_radius;
+        let rounded = [&r.top_left, &r.top_right, &r.bottom_right, &r.bottom_left]
+            .iter()
+            .any(|c| !c.is_zero());
+        let above = wrapper
+            .children()
+            .filter_map(|c| match c.get("z") {
+                Some(Value::Number(z)) => Some(*z + 1.0),
+                _ => None,
+            })
+            .fold(0.0_f64, f64::max);
+        if rounded {
+            match self.backdrop {
+                Some(backdrop) => {
+                    self.imports.insert("QtQuick.Shapes");
+                    let id = self.ids.claim(&format!("{hint} corners"));
+                    let mut path = Object::new("ShapePath");
+                    path.set("strokeWidth", Value::Number(-1.0));
+                    path.set("fillColor", color(backdrop));
+                    path.set("fillRule", Value::expr("ShapePath.OddEvenFill"));
+                    let mut outer = Object::new("PathRectangle");
+                    outer.set("width", Value::expr(format!("{id}.width")));
+                    outer.set("height", Value::expr(format!("{id}.height")));
+                    let mut inner = outer.clone();
+                    self.radius(&mut inner, style, line);
+                    path.push_child(outer);
+                    path.push_child(inner);
+                    let mut shape = Object::new("Shape").with_id(id);
+                    shape.set("anchors.fill", Value::expr("parent"));
+                    if above > 0.0 {
+                        shape.set("z", above);
+                    }
+                    shape.push_child(path);
+                    wrapper.push_child(shape);
+                }
+                None => self.diags.info(
+                    "css",
+                    line,
+                    "rounded `overflow` clip is square: what is behind the box is not a plain colour"
+                        .to_owned(),
+                ),
+            }
+        }
+        let borders = sides(style);
+        if borders.iter().all(|s| *s == borders[0]) && is_visible(borders[0]) {
+            let mut outline = Object::new("Rectangle");
+            outline.set("anchors.fill", Value::expr("parent"));
+            outline.set("color", Value::string("transparent"));
+            self.radius(&mut outline, style, line);
+            outline.set("border.width", number(borders[0].width));
+            outline.set("border.color", color(borders[0].color));
+            if above > 0.0 {
+                outline.set("z", above);
+            }
+            wrapper.push_child(outline);
+        }
     }
 
     /// Outer shadows as `RectangularShadow`s below the box (negative `z`
@@ -318,40 +429,34 @@ impl Emitter<'_, '_> {
         style: &ComputedStyle,
         line: Option<u32>,
     ) {
+        let px = self.corner_radii(style, line);
+        set_radii(wrapper, px);
+    }
+
+    /// The outer radius of each corner in px: top left, top right, bottom
+    /// right, bottom left.
+    pub(super) fn corner_radii(&mut self, style: &ComputedStyle, line: Option<u32>) -> [f32; 4] {
         let r = &style.border_radius;
-        let corners = [
-            ("topLeftRadius", &r.top_left),
-            ("topRightRadius", &r.top_right),
-            ("bottomRightRadius", &r.bottom_right),
-            ("bottomLeftRadius", &r.bottom_left),
-        ];
+        let corners = [&r.top_left, &r.top_right, &r.bottom_right, &r.bottom_left];
         // A percentage is of the box, known here when the box is sized. Qt has
         // one radius per corner, so an uneven box uses its shorter side.
         let side = self.definite_side(style, line);
-        let mut px = Vec::new();
-        for (name, c) in corners {
-            match (c.as_px(), side) {
-                (Some(v), _) => px.push((name, v)),
-                (None, Some(side)) => px.push((name, c.px + c.percent / 100.0 * side)),
+        let mut px = [0.0; 4];
+        for (out, c) in px.iter_mut().zip(corners) {
+            *out = match (c.as_px(), side) {
+                (Some(v), _) => v,
+                (None, Some(side)) => c.px + c.percent / 100.0 * side,
                 (None, None) => {
                     self.diags.info(
                         "css",
                         line,
                         "percentage `border-radius` uses its px part only".to_owned(),
                     );
-                    px.push((name, c.px));
+                    c.px
                 }
-            }
+            };
         }
-        if px.iter().all(|(_, v)| *v == px[0].1) {
-            if px[0].1 > 0.0 {
-                wrapper.set("radius", number(px[0].1));
-            }
-        } else {
-            for (name, v) in px {
-                wrapper.set(name, number(v));
-            }
-        }
+        px
     }
 
     /// The shorter side of a box whose width and height are lengths.
@@ -405,6 +510,25 @@ impl Emitter<'_, '_> {
                 line,
                 "rounded corners with uneven borders: the borders are drawn square".to_owned(),
             );
+        }
+    }
+}
+
+/// `radius`, or one radius per corner when they differ.
+pub(super) fn set_radii(obj: &mut Object, px: [f32; 4]) {
+    let names = [
+        "topLeftRadius",
+        "topRightRadius",
+        "bottomRightRadius",
+        "bottomLeftRadius",
+    ];
+    if px.iter().all(|v| *v == px[0]) {
+        if px[0] > 0.0 {
+            obj.set("radius", number(px[0]));
+        }
+    } else {
+        for (name, v) in names.into_iter().zip(px) {
+            obj.set(name, number(v));
         }
     }
 }

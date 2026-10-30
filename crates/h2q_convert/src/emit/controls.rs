@@ -209,9 +209,9 @@ fn with_native_box(style: &ComputedStyle, control: Control) -> Option<ComputedSt
     }
     let (v, h, background) = match control {
         Control::Button { .. } => (1.0, 6.0, TRACK),
-        Control::Text | Control::TextArea | Control::Number | Control::Select => {
-            (1.0, 2.0, Rgba::WHITE)
-        }
+        Control::Text | Control::TextArea | Control::Number => (1.0, 2.0, Rgba::WHITE),
+        // A select's own text box carries its vertical room.
+        Control::Select => (0.0, 2.0, Rgba::WHITE),
         _ => return None,
     };
     let mut native = style.clone();
@@ -401,12 +401,15 @@ impl Emitter<'_, '_> {
         // position; everything above belongs to the TextArea itself.
         let wanted = self.wanted.contains(&node);
         let mut outer = if control == Control::TextArea && !wanted {
-            self.scrolling(obj, style)
+            self.scrolling(obj, node, style)
         } else {
             obj
         };
         if outer.id.is_none() {
             outer.id = Some(id.clone());
+        }
+        if let Some(html_id) = element.and_then(|e| e.id()) {
+            self.fragment_target(html_id, &id);
         }
         if wanted {
             if let Some(html_id) = element.and_then(|e| e.id()) {
@@ -639,18 +642,11 @@ impl Emitter<'_, '_> {
         )
     }
 
-    fn scrolling(&mut self, area: Object, style: &ComputedStyle) -> Object {
-        let node = self
-            .control_ids
-            .iter()
-            .find(|(_, id)| Some(id.as_str()) == area.id.as_deref())
-            .map(|(n, _)| *n);
+    fn scrolling(&mut self, area: Object, node: NodeId, style: &ComputedStyle) -> Object {
         let mut view = Object::new("ScrollView");
-        if let Some(node) = node {
-            let (w, h) = self.text_area_size(node, style, None);
-            view.set("implicitWidth", number(w));
-            view.set("implicitHeight", number(h));
-        }
+        let (w, h) = self.text_area_size(node, style, None);
+        view.set("implicitWidth", number(w));
+        view.set("implicitHeight", number(h));
         view.push_child(area);
         view
     }
@@ -1027,7 +1023,12 @@ impl Emitter<'_, '_> {
         );
         set_font(&mut obj, style);
         let vertical = self.apply_box(&mut obj, style, line);
-        self.line_height_implicit(&mut obj, style, vertical);
+        // A browser's select ignores line-height: its text box is the
+        // font's rounded ascent and descent plus a pixel above and below
+        // (Liberation Sans: 0.905 and 0.212 of the size).
+        let fs = style.font_size;
+        let text = (0.905 * fs).round() + (0.212 * fs).round() + 2.0;
+        obj.set("implicitHeight", Value::Number(round(text + vertical)));
         let insets = self.insets(style, line);
         obj.set("rightPadding", number(insets.right + ARROW_ROOM));
         // The Basic style's contentItem is a read-only TextField with its own
@@ -1175,7 +1176,10 @@ impl Emitter<'_, '_> {
             .element(node)
             .and_then(|e| e.id())
             .map(str::to_owned);
-        let id = self.ids.claim(html_id.as_deref().unwrap_or("fieldset"));
+        let id = match html_id.as_deref() {
+            Some(html_id) => self.claim_html_id(html_id),
+            None => self.ids.claim("fieldset"),
+        };
         let mut obj = Object::new("GroupBox").with_id(id.clone());
         let deco = self.decoration(style, true, line);
         let insets = deco.insets;
@@ -1431,6 +1435,45 @@ mod tests {
         assert!(q.contains("ScrollView {"), "{q}");
         assert!(q.contains("TextArea {"), "{q}");
         assert!(q.contains("text: \"hi\""), "{q}");
+    }
+
+    #[test]
+    fn select_height_ignores_line_height() {
+        // Chromium: a select's text box is round(ascent) + round(descent)
+        // + 2 whatever its line-height: 39, 35 and 21 here.
+        for (css, height) in [
+            (
+                "font:15px/1.4 sans-serif;padding:9px 12px;border:1px solid #ccc",
+                39,
+            ),
+            (
+                "font:30px/1.4 sans-serif;padding:0;border:0;background:#fff",
+                35,
+            ),
+            ("font:15px sans-serif", 21),
+        ] {
+            let (q, _) = qml(&format!(
+                "<select style='{css}'><option>A</option></select>"
+            ));
+            let combo = q.split("ComboBox {").nth(1).unwrap_or_default();
+            let combo = combo.split("contentItem").next().unwrap_or_default();
+            assert!(
+                combo.contains(&format!("implicitHeight: {height}\n")),
+                "{css}\n{q}"
+            );
+        }
+    }
+
+    #[test]
+    fn textarea_is_as_tall_as_its_rows() {
+        // Chromium: 83px, 3 rows of 21px plus 9px padding and a 1px border
+        // each side; `min-height: 76px` does not bind.
+        let (q, _) = qml("<style>textarea{font:15px/1.4 sans-serif;padding:9px 12px;\
+             border:1px solid #ccc;box-sizing:border-box;width:100%;min-height:76px}</style>\
+             <textarea rows=3></textarea>");
+        let view = q.split("ScrollView {").nth(1).unwrap_or_default();
+        let view = view.split("TextArea {").next().unwrap_or_default();
+        assert!(view.contains("implicitHeight: 83"), "{q}");
     }
 
     #[test]

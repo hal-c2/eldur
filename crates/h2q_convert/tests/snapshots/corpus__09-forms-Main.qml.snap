@@ -377,7 +377,7 @@ ApplicationWindow {
                                         rightPadding: 31
                                         bottomPadding: 10
                                         leftPadding: 13
-                                        implicitHeight: 41
+                                        implicitHeight: 39
                                         contentItem: Text {
                                             text: team.displayText
                                             font: team.font
@@ -437,6 +437,8 @@ ApplicationWindow {
                                     // <textarea id="bio" class="input">
                                     ScrollView {
                                         id: bio
+                                        implicitWidth: 191
+                                        implicitHeight: 83
                                         Layout.minimumHeight: 76
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft

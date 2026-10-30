@@ -571,6 +571,49 @@ fn font_and_typography_parsing() {
 // ---------------------------------------------------------------------------
 
 #[test]
+fn a_gradient_to_a_corner_keeps_the_corner() {
+    // The angle of `to top right` depends on the box's aspect ratio, which
+    // the style does not know.
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    for (value, right, bottom) in [
+        ("to top right", true, false),
+        ("to right top", true, false),
+        ("to bottom left", false, true),
+        ("to left top", false, false),
+        ("to bottom right", true, true),
+    ] {
+        let mut s = ComputedStyle::default();
+        apply_decl(
+            &mut s,
+            "background-image",
+            &format!("repeating-linear-gradient({value}, red, blue 20%)"),
+            &ctx,
+        )
+        .expect("background-image");
+        assert_eq!(
+            s.background_layers[0].image,
+            Some(Image::LinearGradientToCorner {
+                right,
+                bottom,
+                stops: vec![
+                    ColorStop {
+                        color: Rgba::new(255, 0, 0, 255),
+                        position: None,
+                    },
+                    ColorStop {
+                        color: Rgba::new(0, 0, 255, 255),
+                        position: Some(LengthPercentage::percent(20.0)),
+                    },
+                ],
+                repeating: true,
+            }),
+            "{value}"
+        );
+    }
+}
+
+#[test]
 fn backgrounds_gradients_shadows_and_filters() {
     let vp = Viewport::default();
     let ctx = default_ctx(&vp);

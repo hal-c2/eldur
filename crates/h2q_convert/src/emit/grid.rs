@@ -17,7 +17,7 @@ use h2q_qml::{Member, Object, Value};
 
 use super::Emitter;
 use super::flow::{has_height, is_layout, is_viewport_relative, size_value};
-use super::units::{length_expr, number};
+use super::units::{fmt_number, length_expr, number, round};
 use crate::boxes::{LayoutBox, describe, node_line};
 
 /// One axis of an item's position before auto-placement: a 0-based start
@@ -387,7 +387,8 @@ const MAX_SUBTRACKS: usize = 12;
 /// proportional (measured 2:1 → 4:1 with a preferred size of 1), fill items
 /// with proportional preferred sizes do not shrink proportionally, and
 /// preferred sizes bound to the grid's width re-polish the layout without
-/// end. Equal fill sub-tracks are exact apart from the gaps.
+/// end. Equal fill sub-tracks are exact; [`GapSplit`] keeps the gaps
+/// between tracks.
 pub(crate) fn subdivide(tracks: &[TrackSize]) -> Option<Vec<usize>> {
     let all_px_fr = tracks.iter().all(|t| match t {
         TrackSize::Fixed(Value::Number(_)) => true,
@@ -738,11 +739,42 @@ impl Emitter<'_, '_> {
             Some("parent.width"),
         );
         let mut placement = placement;
+        let mut gap_split = None;
         let col_tracks = match subdivide(&col_tracks) {
             Some(counts) => {
                 let mut offsets = vec![0];
                 for c in &counts {
                     offsets.push(offsets.last().copied().unwrap_or(0) + c);
+                }
+                let frs: Vec<f32> = col_tracks
+                    .iter()
+                    .filter_map(|t| match t {
+                        TrackSize::Fr { fr, .. } => Some(*fr),
+                        _ => None,
+                    })
+                    .collect();
+                let all_fr = frs.len() == col_tracks.len();
+                if all_fr && column_gap > 0.0 {
+                    gap_split = Some(GapSplit::new(&offsets, column_gap));
+                }
+                let total: f32 = frs.iter().sum();
+                let k = offsets.last().copied().unwrap_or(0) as f32;
+                let exact = frs
+                    .iter()
+                    .zip(&counts)
+                    .all(|(f, c)| (f / total - *c as f32 / k).abs() < 1e-4);
+                if all_fr && !exact {
+                    let ratio = |v: Vec<String>| v.join(":");
+                    self.diags.info(
+                        "qml",
+                        line,
+                        format!(
+                            "`fr` columns {} on {} are split into equal sub-columns as {}",
+                            ratio(frs.iter().map(|f| fmt_number(round(*f))).collect()),
+                            self.what(b),
+                            ratio(counts.iter().map(usize::to_string).collect()),
+                        ),
+                    );
                 }
                 for p in &mut placement.items {
                     let end = offsets[p.col + p.col_span];
@@ -750,16 +782,18 @@ impl Emitter<'_, '_> {
                     p.col_span = end - p.col;
                 }
                 placement.cols = offsets.last().copied().unwrap_or(0);
-                self.diags.info(
-                    "qml",
-                    line,
-                    format!(
-                        "unequal `fr` columns on {} are split into {} equal sub-columns; \
-                         items are off by a fraction of the gap",
-                        self.what(b),
-                        placement.cols
-                    ),
-                );
+                if gap_split.is_none() {
+                    self.diags.info(
+                        "qml",
+                        line,
+                        format!(
+                            "unequal `fr` columns on {} are split into {} equal sub-columns; \
+                             items are off by a fraction of the gap",
+                            self.what(b),
+                            placement.cols
+                        ),
+                    );
+                }
                 col_tracks
                     .into_iter()
                     .zip(counts)
@@ -789,6 +823,7 @@ impl Emitter<'_, '_> {
                 ),
             );
         }
+        let column_gap = if gap_split.is_some() { 0.0 } else { column_gap };
         let cols = AxisPlan::new(col_tracks, column_gap, true, true);
         let rows = AxisPlan::new(row_tracks, row_gap, definite_height, false);
         let unequal_stretch = cols.unequal_fr() || rows.unequal_fr();
@@ -872,6 +907,14 @@ impl Emitter<'_, '_> {
             if gap_margins && p.row > 0 {
                 add_margin(&mut obj, "Layout.topMargin", row_gap);
             }
+            if let Some(split) = &gap_split {
+                let (left, right) = split.margins(p.col, p.col + p.col_span);
+                for (name, px) in [("Layout.leftMargin", left), ("Layout.rightMargin", right)] {
+                    if px != 0.0 {
+                        add_margin(&mut obj, name, px);
+                    }
+                }
+            }
             if self.options.source_comments
                 && let Some(node) = child.node
             {
@@ -895,6 +938,10 @@ impl Emitter<'_, '_> {
             }
             if gap_margins && r > 0 && r < placement.rows {
                 add_margin(&mut ph, "Layout.topMargin", row_gap);
+            }
+            if let Some(split) = &gap_split {
+                // Only its share matters: it keeps the sub-columns equal.
+                add_margin(&mut ph, "Layout.rightMargin", split.share());
             }
             grid.push_child(ph);
         }
@@ -1174,6 +1221,53 @@ fn auto_row_px(style: &ComputedStyle) -> Option<f32> {
     match style.grid_auto_rows.as_slice() {
         [Track::Length(l)] => l.as_px(),
         _ => None,
+    }
+}
+
+/// The column gap of `fr` tracks split into equal sub-columns, moved from
+/// `columnSpacing` (which would put it between the sub-columns of a track
+/// too) into the items' margins.
+///
+/// With no spacing, sub-column `j` of `k` spans `[jW/k, (j+1)W/k)`; CSS
+/// puts track `t` at `t·g + (W − G)·o_t/k`, where `o_t` is its first
+/// sub-column and `G` all the gaps. The difference is the item's left
+/// margin, and its right margin likewise at its end. Every sub-column
+/// then carries `G/k` of margin, so Qt still shares the width equally.
+struct GapSplit {
+    /// The track each sub-column line starts, if any.
+    track_at: Vec<Option<usize>>,
+    sub_columns: usize,
+    gap: f32,
+    total_gap: f32,
+}
+
+impl GapSplit {
+    fn new(offsets: &[usize], gap: f32) -> Self {
+        let sub_columns = offsets.last().copied().unwrap_or(0);
+        let mut track_at = vec![None; sub_columns + 1];
+        for (t, o) in offsets.iter().enumerate() {
+            track_at[*o] = Some(t);
+        }
+        Self {
+            track_at,
+            sub_columns,
+            gap,
+            total_gap: gap * offsets.len().saturating_sub(2) as f32,
+        }
+    }
+
+    /// The margin each sub-column carries.
+    fn share(&self) -> f32 {
+        self.total_gap / self.sub_columns as f32
+    }
+
+    /// Left and right margins of an item in sub-columns `start..end`,
+    /// which start and end on track lines.
+    fn margins(&self, start: usize, end: usize) -> (f32, f32) {
+        let before = |line: usize| self.share() * line as f32;
+        let left = self.track_at[start].map_or(0.0, |t| t as f32 * self.gap - before(start));
+        let right = self.track_at[end].map_or(0.0, |t| before(end) - (t as f32 - 1.0) * self.gap);
+        (left, right)
     }
 }
 

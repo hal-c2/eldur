@@ -7,12 +7,13 @@
 //! that collapse through are dropped.
 
 use h2q_css::{
-    BoxSizing, ComputedStyle, Display, Length, LengthAuto, Size, TextAlign, TextDecorationLine,
+    BoxSizing, ComputedStyle, Display, Float, Length, LengthAuto, Size, TextAlign,
+    TextDecorationLine, Visibility,
 };
 use h2q_qml::{Member, Object, Value};
 
 use super::Emitter;
-use super::units::{length_expr, number, px_part};
+use super::units::{fmt_number, length_expr, number, px_part, round};
 use crate::boxes::{LayoutBox, describe};
 
 /// A set of adjoining margins: the largest positive and the most negative
@@ -78,20 +79,80 @@ impl Emitter<'_, '_> {
         let mut pending = MarginSet::default();
         let mut escaped_top = None;
         let mut last: Option<usize> = None;
-        for child in children {
+        // The last item was a hidden box a script can show (`display:
+        // none`, kept invisible): its id and the margins before it, which
+        // reach past it while it is hidden.
+        let mut hidden: Option<(String, MarginSet)> = None;
+        // The item before the hidden one, which keeps its bottom margin
+        // while the hidden one ends the column.
+        let mut before_hidden: Option<usize> = None;
+        let mut rest = children;
+        while let Some(child) = rest.first() {
+            let run = float_run(rest);
+            if run > 1 {
+                let floats = &rest[..run];
+                rest = &rest[run..];
+                let mut obj = self.float_row(floats, decoration);
+                if let Some(next) = rest.first() {
+                    let line = next.node.and_then(|n| crate::boxes::node_line(self.doc, n));
+                    self.diags.warning(
+                        "css",
+                        line,
+                        format!(
+                            "{} is placed below the floats before it, not beside them",
+                            next.node
+                                .map_or_else(|| "a box".to_owned(), |n| describe(self.doc, n))
+                        ),
+                    );
+                }
+                // Margins do not collapse with a float's.
+                if last.is_none() && top_open && pending == MarginSet::default() {
+                    escaped_top = Some(pending);
+                } else {
+                    self.set_margin(&mut obj, "Layout.topMargin", pending.value());
+                }
+                layout.push_child(obj);
+                last = Some(layout.members.len() - 1);
+                pending = MarginSet::default();
+                hidden = None;
+                continue;
+            }
+            rest = &rest[1..];
             let emitted = self.block(child, decoration);
             if emitted.collapse_through {
                 pending.join(emitted.top);
                 pending.join(emitted.bottom);
                 continue;
             }
-            pending.join(emitted.top);
+            let collapsed = child.style.visibility == Visibility::Collapse;
             let mut obj = emitted.obj;
             self.flow_item(&mut obj, child);
-            if last.is_none() && top_open {
-                escaped_top = Some(pending);
-            } else {
-                self.set_margin(&mut obj, "Layout.topMargin", pending.value());
+            let mut skipped = None;
+            match hidden.take() {
+                // Shown, it separates its neighbours' margins; hidden, the
+                // margins before it collapse with this item's.
+                Some((id, mut before)) if !collapsed => {
+                    pending.join(emitted.top);
+                    before.join(emitted.top);
+                    self.set_hidden_margin(&mut obj, &id, pending, before);
+                    before_hidden = None;
+                }
+                previous => {
+                    let before = previous.map(|(_, b)| b);
+                    if collapsed && obj.id.is_some() && before.is_none() {
+                        skipped = Some(pending);
+                        before_hidden = last;
+                    }
+                    pending.join(emitted.top);
+                    if last.is_none() && top_open {
+                        escaped_top = Some(pending);
+                    } else {
+                        self.set_margin(&mut obj, "Layout.topMargin", pending.value());
+                    }
+                }
+            }
+            if let (Some(before), Some(id)) = (skipped, &obj.id) {
+                hidden = Some((id.clone(), before));
             }
             if self.options.source_comments
                 && let Some(node) = child.node
@@ -112,10 +173,25 @@ impl Emitter<'_, '_> {
             };
         };
         let escaped_bottom = if bottom_open {
-            pending
+            // The page as loaded: a hidden last box passes on the margins
+            // before it.
+            hidden.map_or(pending, |(_, before)| before)
         } else {
             if let Some(Member::Child(obj)) = layout.members.get_mut(last) {
                 self.set_margin(obj, "Layout.bottomMargin", pending.value());
+            }
+            if let Some((id, before)) = &hidden
+                && let Some(i) = before_hidden
+                && let Some(Member::Child(obj)) = layout.members.get_mut(i)
+                && before.value() > 0.0
+            {
+                obj.set(
+                    "Layout.bottomMargin",
+                    Value::expr(format!(
+                        "{id}.visible ? 0 : {}",
+                        fmt_number(round(before.value()))
+                    )),
+                );
             }
             MarginSet::default()
         };
@@ -124,6 +200,103 @@ impl Emitter<'_, '_> {
             escaped_top: escaped_top.unwrap_or_default(),
             escaped_bottom,
         }
+    }
+
+    /// A run of floats to one side as a `Flow`: each takes its margin box
+    /// along the line, and one that does not fit starts a new line below
+    /// (which is where CSS puts it when the floats are as tall).
+    fn float_row(&mut self, floats: &[LayoutBox<'_>], decoration: TextDecorationLine) -> Object {
+        let id = self.ids.claim("floats");
+        let mut row = Object::new("Flow").with_id(id.clone());
+        row.set("Layout.fillWidth", true);
+        if floats[0].style.float == Float::Right {
+            row.set("layoutDirection", Value::expr("Qt.RightToLeft"));
+        }
+        let base = format!("{id}.width");
+        for b in floats {
+            self.in_float_run = true;
+            let mut obj = self.block(b, decoration).obj;
+            self.in_float_run = false;
+            let style = &*b.style;
+            let line = b.node.and_then(|n| crate::boxes::node_line(self.doc, n));
+            let insets = self.insets(style, line);
+            let (extra_w, extra_h) = match style.box_sizing {
+                BoxSizing::ContentBox => (insets.horizontal(), insets.vertical()),
+                BoxSizing::BorderBox => (0.0, 0.0),
+            };
+            // `auto` margins of a float are zero; percentages are of the
+            // containing block's width.
+            let margin = |m: &LengthAuto| match m {
+                LengthAuto::Length(l) => match l.as_px() {
+                    Some(px) => fmt_number(round(px)),
+                    None => format!("({})", length_expr(l, &base)),
+                },
+                LengthAuto::Auto => "0".to_owned(),
+            };
+            let m = &style.margin;
+            let (mt, mr, mb, ml) = (
+                margin(&m.top),
+                margin(&m.right),
+                margin(&m.bottom),
+                margin(&m.left),
+            );
+            let child_id = match &obj.id {
+                Some(child_id) => child_id.clone(),
+                None => {
+                    let child_id = self.ids.claim(&format!("{} box", super::hint(self.doc, b)));
+                    obj.id = Some(child_id.clone());
+                    child_id
+                }
+            };
+            match &style.width {
+                Size::Length(w) => {
+                    let w = length_expr(w, &base);
+                    obj.set(
+                        "width",
+                        Value::expr(if extra_w == 0.0 {
+                            w
+                        } else {
+                            format!("{w} + {}", fmt_number(round(extra_w)))
+                        }),
+                    );
+                }
+                // Shrink-to-fit, within the line.
+                _ => {
+                    obj.set(
+                        "width",
+                        Value::expr(format!("Math.min(implicitWidth, {base} - {ml} - {mr})")),
+                    );
+                }
+            }
+            if let Size::Length(h) = &style.height
+                && let Some(px) = h.as_px()
+            {
+                obj.set("height", number(px + extra_h));
+            }
+            if ml != "0" {
+                obj.set("x", Value::expr(ml.clone()));
+            }
+            if mt != "0" {
+                obj.set("y", Value::expr(mt.clone()));
+            }
+            let mut cell = Object::new("Item");
+            cell.set(
+                "width",
+                Value::expr(format!("{child_id}.width + {ml} + {mr}").replace(" + 0", "")),
+            );
+            cell.set(
+                "height",
+                Value::expr(format!("{child_id}.height + {mt} + {mb}").replace(" + 0", "")),
+            );
+            if self.options.source_comments
+                && let Some(node) = b.node
+            {
+                row.members.push(Member::Comment(describe(self.doc, node)));
+            }
+            cell.push_child(obj);
+            row.push_child(cell);
+        }
+        row
     }
 
     /// `Layout.*` sizing of a block-level box in a `ColumnLayout`.
@@ -143,9 +316,13 @@ impl Emitter<'_, '_> {
         };
         let auto_left = style.margin.left == LengthAuto::Auto;
         let auto_right = style.margin.right == LengthAuto::Auto;
-        let alignment = match (auto_left, auto_right) {
-            (true, true) => Some("Qt.AlignHCenter"),
-            (true, false) => Some("Qt.AlignRight"),
+        // Floats stack as blocks here, so one that does not share its line
+        // is placed right; `auto` margins of a float are zero.
+        let alignment = match (style.float, auto_left, auto_right) {
+            (Float::Right, ..) => Some("Qt.AlignRight"),
+            (Float::Left, ..) => None,
+            (_, true, true) => Some("Qt.AlignHCenter"),
+            (_, true, false) => Some("Qt.AlignRight"),
             _ => None,
         };
         // An `inline-flex`/`inline-grid` laid out as a block keeps its
@@ -169,6 +346,11 @@ impl Emitter<'_, '_> {
             }
             _ => None,
         });
+        // A Qt Layout fills its cell by default, which would override a
+        // width the box has of its own.
+        if is_layout(&obj.type_name) && matches!(style.width, Size::Length(_)) {
+            obj.set("Layout.fillWidth", false);
+        }
         match &style.width {
             Size::Length(w) => {
                 obj.set("Layout.preferredWidth", size_value(w, extra_w));
@@ -221,6 +403,16 @@ impl Emitter<'_, '_> {
             Size::Length(h) if h.as_px().is_some() || is_viewport_relative(h) => {
                 obj.set("Layout.preferredHeight", size_value(h, extra_h));
             }
+            Size::Length(Length::Linear(l))
+                if let Some(base) = self.percent_height_base
+                    && l.vw == 0.0
+                    && l.vh == 0.0 =>
+            {
+                obj.set(
+                    "Layout.preferredHeight",
+                    number(l.px + l.percent / 100.0 * base + extra_h),
+                );
+            }
             Size::Length(_) => {
                 self.diags.info(
                     "css",
@@ -244,6 +436,30 @@ impl Emitter<'_, '_> {
             && let Some(px) = max.as_px()
         {
             obj.set("Layout.maximumHeight", number(px + extra_h));
+        }
+    }
+
+    /// `Layout.topMargin` of the item after a hidden box `id`: `shown`
+    /// while that is visible, else `hidden`.
+    fn set_hidden_margin(
+        &mut self,
+        obj: &mut Object,
+        id: &str,
+        shown: MarginSet,
+        hidden: MarginSet,
+    ) {
+        let (shown, hidden) = (shown.value().max(0.0), hidden.value().max(0.0));
+        if shown == hidden {
+            self.set_margin(obj, "Layout.topMargin", shown);
+        } else {
+            obj.set(
+                "Layout.topMargin",
+                Value::expr(format!(
+                    "{id}.visible ? {} : {}",
+                    fmt_number(round(shown)),
+                    fmt_number(round(hidden))
+                )),
+            );
         }
     }
 
@@ -281,6 +497,20 @@ impl Emitter<'_, '_> {
 }
 
 /// Whether a box's `height` (or `min-height`) keeps its margins apart.
+/// How many boxes from the first float to the same side in a row; 0 when
+/// the first is not a float.
+fn float_run(boxes: &[LayoutBox<'_>]) -> usize {
+    let side = |b: &LayoutBox<'_>| match b.style.float {
+        Float::None => None,
+        _ if b.style.display == Display::None => None,
+        side => Some(side),
+    };
+    let Some(first) = boxes.first().and_then(side) else {
+        return 0;
+    };
+    boxes.iter().take_while(|b| side(b) == Some(first)).count()
+}
+
 pub(crate) fn has_height(style: &ComputedStyle) -> bool {
     let definite = |s: &Size| matches!(s, Size::Length(l) if l.as_px() != Some(0.0));
     definite(&style.height) || definite(&style.min_height)

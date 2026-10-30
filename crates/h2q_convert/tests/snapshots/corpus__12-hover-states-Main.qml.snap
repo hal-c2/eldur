@@ -17,6 +17,25 @@ ApplicationWindow {
     width: 1280
     height: 800
 
+    function scrollToFragment(link) {
+        let name = link.slice(1);
+        const targets = Object.create(null);
+        if (!(name in targets)) {
+            try {
+                name = decodeURIComponent(name);
+            } catch (e) {
+                name = null;
+            }
+        }
+        const target = name === null ? undefined : targets[name];
+        if (target) {
+            const y = target.mapToItem(flickable.contentItem, 0, 0).y;
+            flickable.contentY = Math.max(0, Math.min(y, flickable.contentHeight - flickable.height));
+        } else if (name !== null && (name === "" || name.toLowerCase() === "top")) {
+            flickable.contentY = 0;
+        }
+    }
+
     Flickable {
         id: flickable
         anchors.fill: parent
@@ -477,7 +496,7 @@ ApplicationWindow {
 
                             // <p>
                             Text {
-                                text: "<a href=\"#\"><b>Read the documentation</b></a>"
+                                text: "<b><font color=\"#3b6fe0\">Read the documentation</font></b>"
                                 textFormat: Text.StyledText
                                 color: "#1f2937"
                                 font.family: "sans-serif"
@@ -488,18 +507,21 @@ ApplicationWindow {
                                     y: 2.63
                                 }
                                 wrapMode: Text.WordWrap
-                                linkColor: "#3b6fe0"
                                 Layout.fillWidth: true
                                 Layout.topMargin: 15
 
-                                onLinkActivated: (link) => {
-                                    Qt.openUrlExternally(link)
+                                TapHandler {
+                                    onTapped: root.scrollToFragment("#")
+                                }
+
+                                HoverHandler {
+                                    cursorShape: Qt.PointingHandCursor
                                 }
                             }
 
                             // <p>
                             Text {
-                                text: "<a href=\"#\"><b>View the changelog</b></a>"
+                                text: "<b><font color=\"#3b6fe0\">View the changelog</font></b>"
                                 textFormat: Text.StyledText
                                 color: "#1f2937"
                                 font.family: "sans-serif"
@@ -510,18 +532,21 @@ ApplicationWindow {
                                     y: 2.63
                                 }
                                 wrapMode: Text.WordWrap
-                                linkColor: "#3b6fe0"
                                 Layout.fillWidth: true
                                 Layout.topMargin: 15
 
-                                onLinkActivated: (link) => {
-                                    Qt.openUrlExternally(link)
+                                TapHandler {
+                                    onTapped: root.scrollToFragment("#")
+                                }
+
+                                HoverHandler {
+                                    cursorShape: Qt.PointingHandCursor
                                 }
                             }
 
                             // <p>
                             Text {
-                                text: "<a href=\"#\"><b>Contact support</b></a>"
+                                text: "<b><font color=\"#3b6fe0\">Contact support</font></b>"
                                 textFormat: Text.StyledText
                                 color: "#1f2937"
                                 font.family: "sans-serif"
@@ -532,13 +557,16 @@ ApplicationWindow {
                                     y: 2.63
                                 }
                                 wrapMode: Text.WordWrap
-                                linkColor: "#3b6fe0"
                                 Layout.fillWidth: true
                                 Layout.topMargin: 15
                                 Layout.bottomMargin: 15
 
-                                onLinkActivated: (link) => {
-                                    Qt.openUrlExternally(link)
+                                TapHandler {
+                                    onTapped: root.scrollToFragment("#")
+                                }
+
+                                HoverHandler {
+                                    cursorShape: Qt.PointingHandCursor
                                 }
                             }
                         }

@@ -17,6 +17,28 @@ ApplicationWindow {
     width: 1280
     height: 800
 
+    function scrollToFragment(link) {
+        let name = link.slice(1);
+        const targets = Object.assign(Object.create(null), {
+            "customers": customers,
+            "features": features
+        });
+        if (!(name in targets)) {
+            try {
+                name = decodeURIComponent(name);
+            } catch (e) {
+                name = null;
+            }
+        }
+        const target = name === null ? undefined : targets[name];
+        if (target) {
+            const y = target.mapToItem(flickable.contentItem, 0, 0).y;
+            flickable.contentY = Math.max(0, Math.min(y, flickable.contentHeight - flickable.height));
+        } else if (name !== null && (name === "" || name.toLowerCase() === "top")) {
+            flickable.contentY = 0;
+        }
+    }
+
     Flickable {
         id: flickable
         anchors.fill: parent
@@ -118,7 +140,7 @@ ApplicationWindow {
 
                                         // <li>
                                         Text {
-                                            text: "<a href=\"#features\">Features</a>"
+                                            text: "<font color=\"#5c6378\">Features</font>"
                                             textFormat: Text.StyledText
                                             color: "#1d2233"
                                             font.family: "sans-serif"
@@ -129,19 +151,22 @@ ApplicationWindow {
                                                 y: 3.6
                                             }
                                             wrapMode: Text.WordWrap
-                                            linkColor: "#5c6378"
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                             Layout.fillHeight: true
 
-                                            onLinkActivated: (link) => {
-                                                Qt.openUrlExternally(link)
+                                            TapHandler {
+                                                onTapped: root.scrollToFragment("#features")
+                                            }
+
+                                            HoverHandler {
+                                                cursorShape: Qt.PointingHandCursor
                                             }
                                         }
 
                                         // <li>
                                         Text {
-                                            text: "<a href=\"#pricing\">Pricing</a>"
+                                            text: "<font color=\"#5c6378\">Pricing</font>"
                                             textFormat: Text.StyledText
                                             color: "#1d2233"
                                             font.family: "sans-serif"
@@ -152,20 +177,23 @@ ApplicationWindow {
                                                 y: 3.6
                                             }
                                             wrapMode: Text.WordWrap
-                                            linkColor: "#5c6378"
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                             Layout.fillHeight: true
                                             Layout.leftMargin: 32
 
-                                            onLinkActivated: (link) => {
-                                                Qt.openUrlExternally(link)
+                                            TapHandler {
+                                                onTapped: root.scrollToFragment("#pricing")
+                                            }
+
+                                            HoverHandler {
+                                                cursorShape: Qt.PointingHandCursor
                                             }
                                         }
 
                                         // <li>
                                         Text {
-                                            text: "<a href=\"#customers\">Customers</a>"
+                                            text: "<font color=\"#5c6378\">Customers</font>"
                                             textFormat: Text.StyledText
                                             color: "#1d2233"
                                             font.family: "sans-serif"
@@ -176,20 +204,23 @@ ApplicationWindow {
                                                 y: 3.6
                                             }
                                             wrapMode: Text.WordWrap
-                                            linkColor: "#5c6378"
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                             Layout.fillHeight: true
                                             Layout.leftMargin: 32
 
-                                            onLinkActivated: (link) => {
-                                                Qt.openUrlExternally(link)
+                                            TapHandler {
+                                                onTapped: root.scrollToFragment("#customers")
+                                            }
+
+                                            HoverHandler {
+                                                cursorShape: Qt.PointingHandCursor
                                             }
                                         }
 
                                         // <li>
                                         Text {
-                                            text: "<a href=\"#docs\">Docs</a>"
+                                            text: "<font color=\"#5c6378\">Docs</font>"
                                             textFormat: Text.StyledText
                                             color: "#1d2233"
                                             font.family: "sans-serif"
@@ -200,14 +231,17 @@ ApplicationWindow {
                                                 y: 3.6
                                             }
                                             wrapMode: Text.WordWrap
-                                            linkColor: "#5c6378"
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                             Layout.fillHeight: true
                                             Layout.leftMargin: 32
 
-                                            onLinkActivated: (link) => {
-                                                Qt.openUrlExternally(link)
+                                            TapHandler {
+                                                onTapped: root.scrollToFragment("#docs")
+                                            }
+
+                                            HoverHandler {
+                                                cursorShape: Qt.PointingHandCursor
                                             }
                                         }
 
@@ -248,6 +282,8 @@ ApplicationWindow {
                                             y: 3.42
                                         }
                                         wrapMode: Text.WordWrap
+                                        horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
                                         anchors.left: parent.left
                                         anchors.right: parent.right
                                         anchors.top: parent.top
@@ -329,7 +365,7 @@ ApplicationWindow {
                                 GridLayout {
                                     id: containerContent2
                                     columns: 9
-                                    columnSpacing: 48
+                                    columnSpacing: 0
                                     rowSpacing: 0
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -350,6 +386,7 @@ ApplicationWindow {
                                         Layout.maximumHeight: Number.POSITIVE_INFINITY
                                         Layout.fillHeight: false
                                         Layout.alignment: Qt.AlignVCenter
+                                        Layout.rightMargin: 26.67
 
                                         Flow {
                                             id: blockFlow
@@ -390,6 +427,12 @@ ApplicationWindow {
 
                                         // <h1>
                                         Text {
+                                            readonly property FontMetrics metrics: FontMetrics {
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 68
+                                                font.weight: 700
+                                            }
+
                                             text: "Ship faster with less overhead"
                                             textFormat: Text.PlainText
                                             color: "#ffffff"
@@ -402,6 +445,7 @@ ApplicationWindow {
                                             transform: Translate {
                                                 y: -3.4
                                             }
+                                            bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
                                             Layout.topMargin: 24
@@ -457,6 +501,8 @@ ApplicationWindow {
                                                         y: 3.6
                                                     }
                                                     wrapMode: Text.WordWrap
+                                                    horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter
+                                                    verticalAlignment: Text.AlignVCenter
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.top: parent.top
@@ -493,6 +539,8 @@ ApplicationWindow {
                                                         y: 3.6
                                                     }
                                                     wrapMode: Text.WordWrap
+                                                    horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter
+                                                    verticalAlignment: Text.AlignVCenter
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.top: parent.top
@@ -520,6 +568,7 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
                                         Layout.alignment: Qt.AlignVCenter
+                                        Layout.leftMargin: 21.33
 
                                         ColumnLayout {
                                             id: heroPanelContent
@@ -657,6 +706,7 @@ ApplicationWindow {
                                                         implicitWidth: 0
                                                         implicitHeight: 0
                                                         Layout.preferredWidth: parent.width * 0.72
+                                                        Layout.preferredHeight: 8
                                                     }
                                                 }
                                             }
@@ -735,6 +785,7 @@ ApplicationWindow {
                                                         implicitWidth: 0
                                                         implicitHeight: 0
                                                         Layout.preferredWidth: parent.width * 0.45
+                                                        Layout.preferredHeight: 8
                                                     }
                                                 }
                                             }
@@ -813,6 +864,7 @@ ApplicationWindow {
                                                         implicitWidth: 0
                                                         implicitHeight: 0
                                                         Layout.preferredWidth: parent.width * 0.88
+                                                        Layout.preferredHeight: 8
                                                     }
                                                 }
                                             }
@@ -824,6 +876,7 @@ ApplicationWindow {
                                         Layout.column: 0
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 5.33
                                     }
 
                                     Item {
@@ -831,6 +884,7 @@ ApplicationWindow {
                                         Layout.column: 1
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 5.33
                                     }
 
                                     Item {
@@ -838,6 +892,7 @@ ApplicationWindow {
                                         Layout.column: 2
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 5.33
                                     }
 
                                     Item {
@@ -845,6 +900,7 @@ ApplicationWindow {
                                         Layout.column: 3
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 5.33
                                     }
 
                                     Item {
@@ -852,6 +908,7 @@ ApplicationWindow {
                                         Layout.column: 4
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 5.33
                                     }
 
                                     Item {
@@ -859,6 +916,7 @@ ApplicationWindow {
                                         Layout.column: 5
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 5.33
                                     }
 
                                     Item {
@@ -866,6 +924,7 @@ ApplicationWindow {
                                         Layout.column: 6
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 5.33
                                     }
 
                                     Item {
@@ -873,6 +932,7 @@ ApplicationWindow {
                                         Layout.column: 7
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 5.33
                                     }
 
                                     Item {
@@ -880,6 +940,7 @@ ApplicationWindow {
                                         Layout.column: 8
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 5.33
                                     }
                                 }
                             }
@@ -1435,6 +1496,7 @@ ApplicationWindow {
                                                     }
                                                     horizontalAlignment: Text.AlignHCenter
                                                     wrapMode: Text.WordWrap
+                                                    verticalAlignment: Text.AlignVCenter
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.top: parent.top
@@ -1623,6 +1685,8 @@ ApplicationWindow {
                                                         y: 3.6
                                                     }
                                                     wrapMode: Text.WordWrap
+                                                    horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter
+                                                    verticalAlignment: Text.AlignVCenter
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.top: parent.top
@@ -1676,7 +1740,7 @@ ApplicationWindow {
                                 // <div class="footer-grid">
                                 GridLayout {
                                     columns: 5
-                                    columnSpacing: 40
+                                    columnSpacing: 0
                                     rowSpacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
@@ -1693,6 +1757,7 @@ ApplicationWindow {
                                         Layout.maximumHeight: Number.POSITIVE_INFINITY
                                         Layout.fillHeight: false
                                         Layout.alignment: Qt.AlignTop
+                                        Layout.rightMargin: 48
 
                                         // <p class="footer-brand">
                                         Text {
@@ -1741,6 +1806,8 @@ ApplicationWindow {
                                         Layout.maximumHeight: Number.POSITIVE_INFINITY
                                         Layout.fillHeight: false
                                         Layout.alignment: Qt.AlignTop
+                                        Layout.leftMargin: -8
+                                        Layout.rightMargin: 32
 
                                         // <h4>
                                         Text {
@@ -1772,8 +1839,8 @@ ApplicationWindow {
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#features\">Features</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Features"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -1783,19 +1850,22 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#features")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#pricing\">Pricing</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Pricing"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -1805,19 +1875,22 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#pricing")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#changelog\">Changelog</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Changelog"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -1827,19 +1900,22 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#changelog")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#security\">Security</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Security"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -1849,12 +1925,15 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#security")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
                                         }
@@ -1871,6 +1950,8 @@ ApplicationWindow {
                                         Layout.maximumHeight: Number.POSITIVE_INFINITY
                                         Layout.fillHeight: false
                                         Layout.alignment: Qt.AlignTop
+                                        Layout.leftMargin: 8
+                                        Layout.rightMargin: 16
 
                                         // <h4>
                                         Text {
@@ -1902,8 +1983,8 @@ ApplicationWindow {
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#about\">About</a>"
-                                                textFormat: Text.StyledText
+                                                text: "About"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -1913,19 +1994,22 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#about")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#careers\">Careers</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Careers"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -1935,19 +2019,22 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#careers")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#blog\">Blog</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Blog"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -1957,19 +2044,22 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#blog")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#press\">Press</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Press"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -1979,12 +2069,15 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#press")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
                                         }
@@ -2001,6 +2094,7 @@ ApplicationWindow {
                                         Layout.maximumHeight: Number.POSITIVE_INFINITY
                                         Layout.fillHeight: false
                                         Layout.alignment: Qt.AlignTop
+                                        Layout.leftMargin: 24
 
                                         // <h4>
                                         Text {
@@ -2032,8 +2126,8 @@ ApplicationWindow {
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#docs\">Docs</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Docs"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -2043,19 +2137,22 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#docs")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#guides\">Guides</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Guides"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -2065,19 +2162,22 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#guides")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#status\">Status</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Status"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -2087,19 +2187,22 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#status")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#community\">Community</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Community"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -2109,12 +2212,15 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#community")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
                                         }
@@ -2125,6 +2231,7 @@ ApplicationWindow {
                                         Layout.column: 0
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 24
                                     }
 
                                     Item {
@@ -2132,6 +2239,7 @@ ApplicationWindow {
                                         Layout.column: 1
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
+                                        Layout.rightMargin: 24
                                     }
                                 }
 

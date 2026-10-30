@@ -533,6 +533,14 @@ pub enum Image {
         stops: Vec<ColorStop>,
         repeating: bool,
     },
+    /// `linear-gradient(to <corner>, …)`: its angle depends on the box's
+    /// aspect ratio (the 50% line joins the other two corners).
+    LinearGradientToCorner {
+        right: bool,
+        bottom: bool,
+        stops: Vec<ColorStop>,
+        repeating: bool,
+    },
     ConicGradient {
         from_deg: f32,
         center_x: LengthPercentage,
