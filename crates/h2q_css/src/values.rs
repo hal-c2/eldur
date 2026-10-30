@@ -768,6 +768,9 @@ pub struct ComputedStyle {
     pub opacity: f32,
     pub overflow_x: Overflow,
     pub overflow_y: Overflow,
+    pub translate: Option<TransformFn>,
+    pub rotate: Option<TransformFn>,
+    pub scale: Option<TransformFn>,
     pub transform: Vec<TransformFn>,
     /// Percentages of the border box; default 50% 50%.
     pub transform_origin: (LengthPercentage, LengthPercentage),
@@ -878,6 +881,9 @@ impl Default for ComputedStyle {
             opacity: 1.0,
             overflow_x: Overflow::Visible,
             overflow_y: Overflow::Visible,
+            translate: None,
+            rotate: None,
+            scale: None,
             transform: Vec::new(),
             transform_origin: (
                 LengthPercentage::percent(50.0),

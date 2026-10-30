@@ -895,3 +895,38 @@ fn copy_sub_properties_preserves_siblings() {
     assert_eq!(anim.animations[0].name, "fade");
     assert_eq!(anim.animations[0].duration_ms, 0.0);
 }
+
+#[test]
+fn transform_replaces_and_keeps_individual_transforms_independent() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+
+    let mut s1 = ComputedStyle::default();
+    compute(&mut s1, Longhand::Transform, "skewX(15deg)", &ctx).expect("skewX");
+    compute(&mut s1, Longhand::Transform, "none", &ctx).expect("transform: none");
+    assert!(s1.transform.is_empty());
+
+    let mut s2 = ComputedStyle::default();
+    compute(&mut s2, Longhand::Transform, "skewX(15deg)", &ctx).expect("skewX");
+    compute(&mut s2, Longhand::Transform, "rotate(30deg)", &ctx).expect("rotate(30deg)");
+    assert_eq!(s2.transform, vec![TransformFn::Rotate(30.0)]);
+
+    let mut s3 = ComputedStyle::default();
+    compute(&mut s3, Longhand::Transform, "translate(5px)", &ctx).expect("transform translate");
+    compute(&mut s3, Longhand::Translate, "10px", &ctx).expect("individual translate");
+    assert_eq!(
+        s3.transform,
+        vec![
+            TransformFn::Translate(LengthPercentage::px(10.0), LengthPercentage::ZERO),
+            TransformFn::Translate(LengthPercentage::px(5.0), LengthPercentage::ZERO),
+        ]
+    );
+
+    let mut s4 = ComputedStyle::default();
+    compute(&mut s4, Longhand::Rotate, "10deg", &ctx).expect("individual rotate");
+    compute(&mut s4, Longhand::Transform, "rotate(20deg)", &ctx).expect("transform rotate");
+    assert_eq!(
+        s4.transform,
+        vec![TransformFn::Rotate(10.0), TransformFn::Rotate(20.0)]
+    );
+}

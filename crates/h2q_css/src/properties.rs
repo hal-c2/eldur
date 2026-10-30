@@ -1114,23 +1114,25 @@ pub(crate) fn compute(
         // Transforms (`translate`, `rotate`, `scale` run at priority 6 before `transform` at 7)
         Longhand::Translate => {
             let tr = parse_individual_translate(cvs, &uctx_pct)?;
-            upsert_individual_transform(
-                &mut style.transform,
-                IndividualTransformKind::Translate,
-                tr,
-            );
+            let tail = transform_list_tail(style).to_vec();
+            style.translate = tr;
+            rebuild_transforms(style, tail);
         }
         Longhand::Rotate => {
             let rot = parse_individual_rotate(cvs)?;
-            upsert_individual_transform(&mut style.transform, IndividualTransformKind::Rotate, rot);
+            let tail = transform_list_tail(style).to_vec();
+            style.rotate = rot;
+            rebuild_transforms(style, tail);
         }
         Longhand::Scale => {
             let sc = parse_individual_scale(cvs)?;
-            upsert_individual_transform(&mut style.transform, IndividualTransformKind::Scale, sc);
+            let tail = transform_list_tail(style).to_vec();
+            style.scale = sc;
+            rebuild_transforms(style, tail);
         }
         Longhand::Transform => {
             let fns = parse_transform_list(cvs, &uctx_pct)?;
-            style.transform.extend(fns);
+            rebuild_transforms(style, fns);
         }
         Longhand::TransformOrigin => {
             style.transform_origin = parse_transform_origin(cvs, &uctx_pct)?;
@@ -1485,31 +1487,23 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
         Longhand::Filter => dst.filter.clone_from(&src.filter),
 
         Longhand::Translate => {
-            let tr = src
-                .transform
-                .iter()
-                .find(|tf| matches_individual_kind(tf, IndividualTransformKind::Translate))
-                .cloned();
-            upsert_individual_transform(&mut dst.transform, IndividualTransformKind::Translate, tr);
+            let tail = transform_list_tail(dst).to_vec();
+            dst.translate.clone_from(&src.translate);
+            rebuild_transforms(dst, tail);
         }
         Longhand::Rotate => {
-            let rot = src
-                .transform
-                .iter()
-                .find(|tf| matches_individual_kind(tf, IndividualTransformKind::Rotate))
-                .cloned();
-            upsert_individual_transform(&mut dst.transform, IndividualTransformKind::Rotate, rot);
+            let tail = transform_list_tail(dst).to_vec();
+            dst.rotate.clone_from(&src.rotate);
+            rebuild_transforms(dst, tail);
         }
         Longhand::Scale => {
-            let sc = src
-                .transform
-                .iter()
-                .find(|tf| matches_individual_kind(tf, IndividualTransformKind::Scale))
-                .cloned();
-            upsert_individual_transform(&mut dst.transform, IndividualTransformKind::Scale, sc);
+            let tail = transform_list_tail(dst).to_vec();
+            dst.scale.clone_from(&src.scale);
+            rebuild_transforms(dst, tail);
         }
         Longhand::Transform => {
-            dst.transform.clone_from(&src.transform);
+            let tail = transform_list_tail(src).to_vec();
+            rebuild_transforms(dst, tail);
         }
         Longhand::TransformOrigin => dst.transform_origin = src.transform_origin,
 
@@ -1635,55 +1629,30 @@ fn parse_line_clamp(cvs: &[swc_css_ast::ComponentValue]) -> Result<Option<u32>, 
     Ok(Some(n as u32))
 }
 
-#[derive(Clone, Copy)]
-enum IndividualTransformKind {
-    Translate,
-    Rotate,
-    Scale,
+fn individual_transform_count(style: &ComputedStyle) -> usize {
+    usize::from(style.translate.is_some())
+        + usize::from(style.rotate.is_some())
+        + usize::from(style.scale.is_some())
 }
 
-fn matches_individual_kind(tf: &TransformFn, k: IndividualTransformKind) -> bool {
-    match (k, tf) {
-        (IndividualTransformKind::Translate, TransformFn::Translate(..)) => true,
-        (IndividualTransformKind::Rotate, TransformFn::Rotate(_)) => true,
-        (IndividualTransformKind::Rotate, TransformFn::Unsupported(s)) => s.starts_with("rotate("),
-        (IndividualTransformKind::Scale, TransformFn::Scale(..)) => true,
-        _ => false,
-    }
+fn transform_list_tail(style: &ComputedStyle) -> &[TransformFn] {
+    let prefix = individual_transform_count(style).min(style.transform.len());
+    &style.transform[prefix..]
 }
 
-/// Inserts, replaces, or removes an individual transform (`translate`, `rotate`, `scale`)
-/// while maintaining the CSS Transforms 2 order (`translate`, then `rotate`, then `scale`,
-/// then `transform`).
-fn upsert_individual_transform(
-    list: &mut Vec<TransformFn>,
-    k: IndividualTransformKind,
-    new_fn: Option<TransformFn>,
-) {
-    if let Some(pos) = list.iter().position(|tf| matches_individual_kind(tf, k)) {
-        match new_fn {
-            Some(tf) => list[pos] = tf,
-            None => {
-                list.remove(pos);
-            }
-        }
-        return;
+/// Rebuilds `style.transform` in CSS Transforms 2 order (`translate`, `rotate`,
+/// `scale`, then the `transform` list `tail`).
+fn rebuild_transforms(style: &mut ComputedStyle, tail: Vec<TransformFn>) {
+    let mut out = Vec::with_capacity(individual_transform_count(style) + tail.len());
+    if let Some(tr) = &style.translate {
+        out.push(tr.clone());
     }
-    let Some(tf) = new_fn else {
-        return;
-    };
-    let insert_idx = match k {
-        IndividualTransformKind::Translate => 0,
-        IndividualTransformKind::Rotate => usize::from(list.first().is_some_and(|first| {
-            matches_individual_kind(first, IndividualTransformKind::Translate)
-        })),
-        IndividualTransformKind::Scale => list
-            .iter()
-            .take_while(|item| {
-                matches_individual_kind(item, IndividualTransformKind::Translate)
-                    || matches_individual_kind(item, IndividualTransformKind::Rotate)
-            })
-            .count(),
-    };
-    list.insert(insert_idx, tf);
+    if let Some(rot) = &style.rotate {
+        out.push(rot.clone());
+    }
+    if let Some(sc) = &style.scale {
+        out.push(sc.clone());
+    }
+    out.extend(tail);
+    style.transform = out;
 }
