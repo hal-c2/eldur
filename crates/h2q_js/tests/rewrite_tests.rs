@@ -2270,3 +2270,237 @@ function inspectDom() {
     assert!(js.contains("--spinBox.value;"), "{js}");
     assert!(js.contains("String(spinBox.value)]"), "{js}");
 }
+
+#[test]
+fn rewrites_extended_dom_methods_style_helpers_and_browser_globals() {
+    let resolver = FakeResolver::default()
+        .with_id("card", 1, "cardBox", TargetKind::Box)
+        .with_id("btn", 2, "actBtn", TargetKind::Button);
+
+    let script = classic(
+        "extended_dom.js",
+        r##"
+function testExtended(dynEl) {
+    const card = document.getElementById("card");
+    const btn = document.getElementById("btn");
+
+    card.toggleAttribute("data-open");
+    dynEl.toggleAttribute("data-open", true);
+
+    card.style.setProperty("--gap", "8px");
+    const gap = card.style.getPropertyValue("--gap");
+    card.style.removeProperty("--gap");
+    const cs = getComputedStyle(card);
+
+    const m = btn.matches(".primary");
+    const c = btn.closest("#card");
+    const has = card.contains(btn);
+    const byCls = card.getElementsByClassName("item");
+    const byTag = card.getElementsByTagName("button");
+
+    card.insertAdjacentHTML("beforeend", "<span>hi</span>");
+    card.insertAdjacentText("afterbegin", "lead");
+    card.insertAdjacentElement("beforebegin", btn);
+    card.append(btn);
+    card.prepend(btn);
+    card.before(btn);
+    card.after(btn);
+    card.replaceWith(btn);
+    card.replaceChildren(btn);
+    card.replaceChild(btn, dynEl);
+    const cloned = card.cloneNode(true);
+    card.scrollIntoView();
+    card.scrollTo(0, 10);
+    card.scrollBy(0, 5);
+    btn.click();
+
+    const dynClosest = dynEl.closest(".card");
+    const dynMatches = dynEl.matches("div");
+    dynEl.insertAdjacentHTML("afterend", "<p>ok</p>");
+
+    scrollTo(10, 20);
+    scrollBy(1, 2);
+    window.scrollTo(30, 40);
+    window.scrollBy(3, 4);
+    const bus = new EventTarget();
+    const kev = new KeyboardEvent("keydown", { key: "a" });
+    const mev = new MouseEvent("click", { clientX: 5 });
+    return [gap, cs, m, c, has, byCls, byTag, cloned, dynClosest, dynMatches, bus, kev, mev, pageXOffset, pageYOffset, devicePixelRatio];
+}
+"##,
+    );
+
+    let out = run_rewrite(&[script], &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    let js = &out.page_js;
+    assert!(
+        js.contains("H2Q.toggleAttribute(cardBox, \"data-open\");"),
+        "{js}"
+    );
+    assert!(
+        js.contains("H2Q.toggleAttribute(dynEl, \"data-open\", true);"),
+        "{js}"
+    );
+    assert!(
+        js.contains("H2Q.wrap(cardBox).style.setProperty(\"--gap\", \"8px\");"),
+        "{js}"
+    );
+    assert!(
+        js.contains("H2Q.wrap(cardBox).style.getPropertyValue(\"--gap\");"),
+        "{js}"
+    );
+    assert!(
+        js.contains("H2Q.wrap(cardBox).style.removeProperty(\"--gap\");"),
+        "{js}"
+    );
+    assert!(js.contains("H2Q.getComputedStyle(cardBox);"), "{js}");
+    assert!(
+        js.contains("H2Q.wrap(actBtn).matches(\".primary\");"),
+        "{js}"
+    );
+    assert!(js.contains("H2Q.wrap(actBtn).closest(\"#card\");"), "{js}");
+    assert!(js.contains("H2Q.wrap(cardBox).contains(actBtn);"), "{js}");
+    assert!(
+        js.contains("H2Q.wrap(cardBox).getElementsByClassName(\"item\");"),
+        "{js}"
+    );
+    assert!(
+        js.contains("H2Q.wrap(cardBox).getElementsByTagName(\"button\");"),
+        "{js}"
+    );
+    assert!(
+        js.contains("H2Q.wrap(cardBox).insertAdjacentHTML(\"beforeend\", \"<span>hi</span>\");"),
+        "{js}"
+    );
+    assert!(
+        js.contains("H2Q.wrap(cardBox).insertAdjacentText(\"afterbegin\", \"lead\");"),
+        "{js}"
+    );
+    assert!(
+        js.contains("H2Q.wrap(cardBox).insertAdjacentElement(\"beforebegin\", actBtn);"),
+        "{js}"
+    );
+    assert!(js.contains("H2Q.wrap(cardBox).append(actBtn);"), "{js}");
+    assert!(js.contains("H2Q.wrap(cardBox).prepend(actBtn);"), "{js}");
+    assert!(js.contains("H2Q.wrap(cardBox).before(actBtn);"), "{js}");
+    assert!(js.contains("H2Q.wrap(cardBox).after(actBtn);"), "{js}");
+    assert!(
+        js.contains("H2Q.wrap(cardBox).replaceWith(actBtn);"),
+        "{js}"
+    );
+    assert!(
+        js.contains("H2Q.wrap(cardBox).replaceChildren(actBtn);"),
+        "{js}"
+    );
+    assert!(
+        js.contains("H2Q.wrap(cardBox).replaceChild(actBtn, dynEl);"),
+        "{js}"
+    );
+    assert!(js.contains("H2Q.wrap(cardBox).cloneNode(true);"), "{js}");
+    assert!(js.contains("H2Q.wrap(cardBox).scrollIntoView();"), "{js}");
+    assert!(js.contains("H2Q.wrap(cardBox).scrollTo(0, 10);"), "{js}");
+    assert!(js.contains("H2Q.wrap(cardBox).scrollBy(0, 5);"), "{js}");
+    assert!(js.contains("H2Q.wrap(actBtn).click();"), "{js}");
+    assert!(js.contains("H2Q.wrap(dynEl).closest(\".card\");"), "{js}");
+    assert!(js.contains("H2Q.wrap(dynEl).matches(\"div\");"), "{js}");
+    assert!(
+        js.contains("H2Q.wrap(dynEl).insertAdjacentHTML(\"afterend\", \"<p>ok</p>\");"),
+        "{js}"
+    );
+    assert!(js.contains("H2Q.scrollTo(10, 20);"), "{js}");
+    assert!(js.contains("H2Q.scrollBy(1, 2);"), "{js}");
+    assert!(js.contains("H2Q.scrollTo(30, 40);"), "{js}");
+    assert!(js.contains("H2Q.scrollBy(3, 4);"), "{js}");
+    assert!(js.contains("new H2Q.EventTarget()"), "{js}");
+    assert!(js.contains("new H2Q.KeyboardEvent("), "{js}");
+    assert!(js.contains("new H2Q.MouseEvent("), "{js}");
+    assert!(js.contains("H2Q.window.pageXOffset"), "{js}");
+    assert!(js.contains("H2Q.window.pageYOffset"), "{js}");
+    assert!(js.contains("H2Q.window.devicePixelRatio"), "{js}");
+}
+
+#[test]
+fn preserves_user_object_and_class_methods_without_dom_hijacking() {
+    let resolver = FakeResolver::default();
+    let script = classic(
+        "user_objects.js",
+        r#"
+class CustomModel {
+    matches(q) { return "cls-matches:" + q; }
+    closest(q) { return "cls-closest:" + q; }
+    cloneNode(deep) { return "cls-clone:" + Boolean(deep); }
+    toggleAttribute(k, f) { return "cls-toggle:" + k + ":" + Boolean(f); }
+    addEventListener(t, fn) { return "cls-listen:" + t + ":" + fn(); }
+}
+
+function testUserObjects(dynObj) {
+    const model = new CustomModel();
+    const plain = {
+        textContent: "initial",
+        matches(q) { return "obj-matches:" + q; },
+        closest(q) { return "obj-closest:" + q; },
+        cloneNode(deep) { return "obj-clone:" + Boolean(deep); },
+        toggleAttribute(k) { return "obj-toggle:" + k; },
+        addEventListener(t, fn) { return "obj-listen:" + t + ":" + fn(); }
+    };
+    plain.textContent = "updated";
+    const r1 = model.matches("a");
+    const r2 = model.closest("b");
+    const r3 = model.cloneNode(true);
+    const r4 = model.toggleAttribute("flag", true);
+    const r5 = model.addEventListener("ping", () => "ok");
+    const r6 = plain.matches("c");
+    const r7 = plain.closest("d");
+    const r8 = plain.cloneNode(false);
+    const r9 = plain.toggleAttribute("flag");
+    const r10 = plain.addEventListener("pong", () => "done");
+    const d1 = dynObj.matches("x");
+    const d2 = dynObj.toggleAttribute("y", false);
+    const d3 = dynObj.addEventListener("z", () => "dyn");
+    return [plain.textContent, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, d1, d2, d3];
+}
+"#,
+    );
+
+    let out = run_rewrite(&[script], &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    let js = &out.page_js;
+    // Known non-DOM bindings (`model` from `new CustomModel()`, `plain` from `{ ... }`)
+    // are not wrapped in `H2Q.wrap(...)` or rewritten to `H2Q.listen` / `H2Q.toggleAttribute`.
+    assert!(js.contains("plain.textContent = \"updated\";"), "{js}");
+    assert!(js.contains("const r1 = model.matches(\"a\");"), "{js}");
+    assert!(js.contains("const r2 = model.closest(\"b\");"), "{js}");
+    assert!(js.contains("const r3 = model.cloneNode(true);"), "{js}");
+    assert!(
+        js.contains("const r4 = model.toggleAttribute(\"flag\", true);"),
+        "{js}"
+    );
+    assert!(
+        js.contains("const r5 = model.addEventListener(\"ping\", () => \"ok\");"),
+        "{js}"
+    );
+    assert!(js.contains("const r6 = plain.matches(\"c\");"), "{js}");
+    assert!(js.contains("const r7 = plain.closest(\"d\");"), "{js}");
+    assert!(js.contains("const r8 = plain.cloneNode(false);"), "{js}");
+    assert!(
+        js.contains("const r9 = plain.toggleAttribute(\"flag\");"),
+        "{js}"
+    );
+    assert!(
+        js.contains("const r10 = plain.addEventListener(\"pong\", () => \"done\");"),
+        "{js}"
+    );
+    // Unknown parameter `dynObj` goes through H2Q helpers (which delegate at runtime for non-DOM objects).
+    assert!(
+        js.contains("const d1 = H2Q.wrap(dynObj).matches(\"x\");"),
+        "{js}"
+    );
+    assert!(
+        js.contains("const d2 = H2Q.toggleAttribute(dynObj, \"y\", false);"),
+        "{js}"
+    );
+    assert!(
+        js.contains("const d3 = H2Q.listen(dynObj, \"z\", () => \"dyn\");"),
+        "{js}"
+    );
+}

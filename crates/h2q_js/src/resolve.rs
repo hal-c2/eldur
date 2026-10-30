@@ -1,11 +1,12 @@
 use std::collections::{HashMap, HashSet};
 
 use oxc_ast::ast::{
-    BindingPattern, CallExpression, Expression, ForOfStatement, ForStatementLeft,
+    BindingPattern, CallExpression, Class, Expression, ForOfStatement, ForStatementLeft, Function,
     IdentifierReference, Program, Statement, VariableDeclarator,
 };
 use oxc_ast_visit::{Visit, walk};
 use oxc_semantic::{IsGlobalReference, Scoping, SymbolId};
+use oxc_syntax::scope::ScopeFlags;
 
 use crate::parse::ParsedScript;
 use crate::{DomQuery, ScriptInput, ScriptKind};
@@ -15,6 +16,40 @@ pub(crate) fn unwrap_parens<'a, 'b>(mut expr: &'b Expression<'a>) -> &'b Express
         expr = &p.expression;
     }
     expr
+}
+
+/// Returns `true` when `expr` is statically guaranteed NOT to evaluate to a DOM
+/// `Element` / `Document` / `Window` / QML `QObject` (e.g. object literals,
+/// array literals, `new ...` expressions, functions, classes, primitive literals,
+/// or unmutated bindings initialized from such expressions).
+pub(crate) fn is_statically_non_dom_expr(
+    expr: &Expression<'_>,
+    scoping: &Scoping,
+    non_dom_symbols: &HashSet<SymbolId>,
+) -> bool {
+    match unwrap_parens(expr) {
+        Expression::ObjectExpression(_)
+        | Expression::ArrayExpression(_)
+        | Expression::NewExpression(_)
+        | Expression::ArrowFunctionExpression(_)
+        | Expression::FunctionExpression(_)
+        | Expression::ClassExpression(_)
+        | Expression::StringLiteral(_)
+        | Expression::NumericLiteral(_)
+        | Expression::BooleanLiteral(_)
+        | Expression::BigIntLiteral(_)
+        | Expression::RegExpLiteral(_)
+        | Expression::TemplateLiteral(_)
+        | Expression::UnaryExpression(_)
+        | Expression::BinaryExpression(_)
+        | Expression::UpdateExpression(_) => true,
+        Expression::Identifier(ident) => ident
+            .reference_id
+            .get()
+            .and_then(|rid| scoping.get_reference(rid).symbol_id())
+            .is_some_and(|sym_id| non_dom_symbols.contains(&sym_id)),
+        _ => false,
+    }
 }
 
 pub(crate) fn extract_string_literal(expr: &Expression<'_>) -> Option<String> {
@@ -349,6 +384,10 @@ pub(crate) struct ScriptQueryBindings<'a> {
     /// Loop / `.forEach` element parameters over a `SelectorAll` query
     /// (used by `analyze` to record writes and listeners on collection items).
     pub collection_item_queries: HashMap<SymbolId, DomQuery>,
+    /// Unmutated local/module/script symbols initialized to expressions that
+    /// statically cannot be DOM nodes (object literals, arrays, `new ...`, functions,
+    /// classes, primitive literals).
+    pub non_dom_symbols: HashSet<SymbolId>,
     cross_script: &'a HashMap<String, DomQuery>,
 }
 
@@ -370,6 +409,7 @@ impl<'a> ScriptQueryBindings<'a> {
             direct: HashMap::new(),
             aliases: Vec::new(),
             collection_items: HashMap::new(),
+            non_dom_symbols: HashSet::new(),
         };
         collector.visit_program(program);
 
@@ -381,6 +421,10 @@ impl<'a> ScriptQueryBindings<'a> {
                     && let Some(q) = collector.direct.get(&src).cloned()
                 {
                     collector.direct.insert(dst, q);
+                    progressed = true;
+                }
+                if collector.non_dom_symbols.contains(&src) && collector.non_dom_symbols.insert(dst)
+                {
                     progressed = true;
                 }
             }
@@ -408,6 +452,7 @@ impl<'a> ScriptQueryBindings<'a> {
             is_global_scope_shared,
             symbol_queries: collector.direct,
             collection_item_queries: collection_items,
+            non_dom_symbols: collector.non_dom_symbols,
             cross_script,
         }
     }
@@ -468,9 +513,32 @@ struct BindingCollector<'a> {
     direct: HashMap<SymbolId, DomQuery>,
     aliases: Vec<(SymbolId, SymbolId)>,
     collection_items: HashMap<SymbolId, DomQuery>,
+    non_dom_symbols: HashSet<SymbolId>,
 }
 
 impl<'a> Visit<'a> for BindingCollector<'_> {
+    fn visit_function(&mut self, it: &Function<'a>, flags: ScopeFlags) {
+        if let Some(id) = &it.id
+            && let Some(sym_id) = id.symbol_id.get()
+            && !self.scoping.symbol_is_mutated(sym_id)
+            && self.scoping.symbol_redeclarations(sym_id).is_empty()
+        {
+            self.non_dom_symbols.insert(sym_id);
+        }
+        walk::walk_function(self, it, flags);
+    }
+
+    fn visit_class(&mut self, it: &Class<'a>) {
+        if let Some(id) = &it.id
+            && let Some(sym_id) = id.symbol_id.get()
+            && !self.scoping.symbol_is_mutated(sym_id)
+            && self.scoping.symbol_redeclarations(sym_id).is_empty()
+        {
+            self.non_dom_symbols.insert(sym_id);
+        }
+        walk::walk_class(self, it);
+    }
+
     fn visit_variable_declarator(&mut self, it: &VariableDeclarator<'a>) {
         if let BindingPattern::BindingIdentifier(bind_id) = &it.id
             && let Some(sym_id) = bind_id.symbol_id.get()
@@ -494,6 +562,8 @@ impl<'a> Visit<'a> for BindingCollector<'_> {
                 {
                     self.direct.insert(sym_id, q.clone());
                 }
+            } else if is_statically_non_dom_expr(init, self.scoping, &self.non_dom_symbols) {
+                self.non_dom_symbols.insert(sym_id);
             }
         }
         walk::walk_variable_declarator(self, it);

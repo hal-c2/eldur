@@ -1771,9 +1771,6 @@ fn prescan_on_prop_assignments(
             shared.dynamic_listener_events.insert(key);
         }
     }
-    for key in dynamic_listener_ops {
-        shared.dynamic_listener_events.insert(key);
-    }
 }
 
 fn resolve_target_for_prescan(
@@ -1920,6 +1917,22 @@ impl<'a> Visit<'a> for OnPropScanner<'_, '_> {
                 }
                 "dispatchEvent" => {
                     self.targets_with_dispatch.insert(target.qml_id);
+                }
+                "focus" => {
+                    self.dynamic_listener_ops
+                        .insert((target.qml_id.clone(), "focus".to_string()));
+                    self.dynamic_listener_ops
+                        .insert((target.qml_id, "focusin".to_string()));
+                }
+                "blur" => {
+                    self.dynamic_listener_ops
+                        .insert((target.qml_id.clone(), "blur".to_string()));
+                    self.dynamic_listener_ops
+                        .insert((target.qml_id, "focusout".to_string()));
+                }
+                "click" => {
+                    self.dynamic_listener_ops
+                        .insert((target.qml_id, "click".to_string()));
                 }
                 _ => {}
             }
