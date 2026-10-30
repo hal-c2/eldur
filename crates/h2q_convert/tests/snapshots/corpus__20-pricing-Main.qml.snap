@@ -121,75 +121,86 @@ ApplicationWindow {
                                 Layout.topMargin: 16
                             }
 
-                            // <div class="billing-toggle">
-                            Rectangle {
-                                color: "#ffffff"
-                                radius: 999
-                                implicitWidth: billingToggleContent.implicitWidth + 10
-                                implicitHeight: billingToggleContent.implicitHeight + 10
-                                border.width: 1
-                                border.color: "#e2e8f0"
-                                Layout.alignment: Qt.AlignHCenter
-                                Layout.topMargin: 36
+                            Flow {
+                                id: blockFlow
+                                leftPadding: { const used = Array.from(children).reduce((sum, item) => sum + item.width, 0); return Math.max(0, Math.floor((width - used) / 2)); }
+                                Layout.fillWidth: true
 
-                                RowLayout {
-                                    id: billingToggleContent
-                                    spacing: 0
-                                    anchors.left: parent.left
-                                    anchors.right: parent.right
-                                    anchors.top: parent.top
-                                    anchors.bottom: parent.bottom
-                                    anchors.leftMargin: 5
-                                    anchors.rightMargin: 5
-                                    anchors.topMargin: 5
-                                    anchors.bottomMargin: 5
+                                Item {
+                                    width: billingToggleBox.width
+                                    height: billingToggleBox.height + 92
 
-                                    // <button class="toggle-btn active">
-                                    Button {
-                                        id: buttonControl
-                                        text: "Monthly"
-                                        palette.buttonText: "#ffffff"
-                                        font.family: "sans-serif"
-                                        font.pixelSize: 15
-                                        font.weight: 600
-                                        background: Rectangle {
-                                            color: "#0f172a"
-                                            radius: 999
+                                    Rectangle {
+                                        id: billingToggleBox
+                                        color: "#ffffff"
+                                        radius: 999
+                                        implicitWidth: billingToggleContent.implicitWidth + 10
+                                        implicitHeight: billingToggleContent.implicitHeight + 10
+                                        border.width: 1
+                                        border.color: "#e2e8f0"
+                                        width: Math.min(implicitWidth, blockFlow.width)
+                                        y: 36
+
+                                        RowLayout {
+                                            id: billingToggleContent
+                                            spacing: 0
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
+                                            anchors.leftMargin: 5
+                                            anchors.rightMargin: 5
+                                            anchors.topMargin: 5
+                                            anchors.bottomMargin: 5
+
+                                            // <button class="toggle-btn active">
+                                            Button {
+                                                id: buttonControl
+                                                text: "Monthly"
+                                                palette.buttonText: "#ffffff"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 15
+                                                font.weight: 600
+                                                background: Rectangle {
+                                                    color: "#0f172a"
+                                                    radius: 999
+                                                }
+                                                topPadding: 0
+                                                rightPadding: 22
+                                                bottomPadding: 0
+                                                leftPadding: 22
+                                                implicitHeight: 24.32
+                                                Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.preferredHeight: 40
+                                                Layout.alignment: Qt.AlignTop
+                                            }
+
+                                            // <button class="toggle-btn">
+                                            Button {
+                                                id: buttonControl2
+                                                text: "Yearly Save 20%"
+                                                palette.buttonText: "#64748b"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 15
+                                                font.weight: 600
+                                                background: Item {}
+                                                topPadding: 0
+                                                rightPadding: 22
+                                                bottomPadding: 0
+                                                leftPadding: 22
+                                                implicitHeight: 24.32
+                                                Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.preferredHeight: 40
+                                                Layout.alignment: Qt.AlignTop
+                                                Layout.leftMargin: 4
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
+                                            }
                                         }
-                                        topPadding: 0
-                                        rightPadding: 22
-                                        bottomPadding: 0
-                                        leftPadding: 22
-                                        implicitHeight: 24.32
-                                        Layout.fillWidth: true
-                                        Layout.maximumWidth: Math.ceil(implicitWidth)
-                                        Layout.preferredHeight: 40
-                                        Layout.alignment: Qt.AlignTop
-                                    }
-
-                                    // <button class="toggle-btn">
-                                    Button {
-                                        id: buttonControl2
-                                        text: "Yearly Save 20%"
-                                        palette.buttonText: "#64748b"
-                                        font.family: "sans-serif"
-                                        font.pixelSize: 15
-                                        font.weight: 600
-                                        background: Item {}
-                                        topPadding: 0
-                                        rightPadding: 22
-                                        bottomPadding: 0
-                                        leftPadding: 22
-                                        implicitHeight: 24.32
-                                        Layout.fillWidth: true
-                                        Layout.maximumWidth: Math.ceil(implicitWidth)
-                                        Layout.preferredHeight: 40
-                                        Layout.alignment: Qt.AlignTop
-                                        Layout.leftMargin: 4
-                                    }
-
-                                    Item {
-                                        Layout.fillWidth: true
                                     }
                                 }
                             }
@@ -200,7 +211,6 @@ ApplicationWindow {
                             spacing: 28
                             Layout.fillWidth: true
                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                            Layout.topMargin: 56
 
                             // <article class="plan">
                             Rectangle {

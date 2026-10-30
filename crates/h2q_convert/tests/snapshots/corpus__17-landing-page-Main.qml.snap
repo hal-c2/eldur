@@ -351,19 +351,41 @@ ApplicationWindow {
                                         Layout.fillHeight: false
                                         Layout.alignment: Qt.AlignVCenter
 
-                                        Text {
-                                            text: "<b><small>New: workflow automation</small></b>"
-                                            textFormat: Text.StyledText
-                                            color: "#ffffff"
-                                            font.family: "sans-serif"
-                                            font.pixelSize: 16
-                                            lineHeight: 25.6
-                                            lineHeightMode: Text.FixedHeight
-                                            transform: Translate {
-                                                y: 3.6
-                                            }
-                                            wrapMode: Text.WordWrap
+                                        Flow {
+                                            id: blockFlow
                                             Layout.fillWidth: true
+
+                                            Rectangle {
+                                                color: "#2effffff"
+                                                radius: 999
+                                                implicitWidth: eyebrowText.implicitWidth + 28
+                                                implicitHeight: eyebrowText.implicitHeight + 12
+                                                width: Math.min(implicitWidth, blockFlow.width)
+
+                                                Text {
+                                                    id: eyebrowText
+                                                    text: "New: workflow automation"
+                                                    textFormat: Text.PlainText
+                                                    color: "#ffffff"
+                                                    font.family: "sans-serif"
+                                                    font.pixelSize: 14
+                                                    font.weight: 600
+                                                    font.letterSpacing: 0.56
+                                                    font.capitalization: Font.AllUppercase
+                                                    lineHeight: 22.4
+                                                    lineHeightMode: Text.FixedHeight
+                                                    transform: Translate {
+                                                        y: 3.15
+                                                    }
+                                                    wrapMode: Text.WordWrap
+                                                    anchors.left: parent.left
+                                                    anchors.right: parent.right
+                                                    anchors.top: parent.top
+                                                    anchors.leftMargin: 14
+                                                    anchors.rightMargin: 14
+                                                    anchors.topMargin: 6
+                                                }
+                                            }
                                         }
 
                                         // <h1>

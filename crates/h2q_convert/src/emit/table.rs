@@ -1344,6 +1344,7 @@ fn plain_text(items: &[Inline<'_>], out: &mut String) {
             Inline::Text(t) => out.push_str(t),
             Inline::LineBreak => out.push(' '),
             Inline::Span(span) => plain_text(&span.children, out),
+            Inline::Atomic(_) => out.push(' '),
         }
     }
 }

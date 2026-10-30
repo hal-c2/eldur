@@ -39,7 +39,7 @@ pub(crate) enum BoxKind {
     Replaced,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct LayoutBox<'a> {
     /// The element; `None` for anonymous boxes and `::before`/`::after`.
     pub node: Option<NodeId>,
@@ -76,7 +76,7 @@ impl LayoutBox<'_> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) enum Content<'a> {
     /// Block-level children only.
     Blocks(Vec<LayoutBox<'a>>),
@@ -93,6 +93,9 @@ pub(crate) enum Inline<'a> {
     /// `<br>`, or a preserved newline.
     LineBreak,
     Span(Span<'a>),
+    /// An atomic inline-level box (`inline-block`, `inline-flex`, …): a
+    /// box of its own that sits in the line like one big glyph.
+    Atomic(Box<LayoutBox<'a>>),
 }
 
 /// An inline box (`<a>`, `<strong>`, `::before`, …).
@@ -145,6 +148,8 @@ enum Level {
     Contents,
     Block(BoxKind),
     Inline,
+    /// An atomic inline-level box of this kind.
+    Atomic(BoxKind),
     LineBreak,
 }
 
@@ -294,6 +299,10 @@ impl<'a> Builder<'a, '_> {
                     children,
                 }));
             }
+            Level::Atomic(kind) => {
+                let atomic = self.block_box(node, style, kind);
+                out.push(Child::Inline(whitespace::Raw::Atomic(Box::new(atomic))));
+            }
             Level::LineBreak => out.push(Child::Inline(whitespace::Raw::LineBreak)),
         }
     }
@@ -431,6 +440,14 @@ impl<'a> Builder<'a, '_> {
             style.display,
             Display::InlineBlock | Display::InlineFlex | Display::InlineGrid | Display::InlineTable
         );
+        if atomic {
+            // Alone in its parent there is no line to sit in, so a block
+            // that shrinks to fit looks the same and lays out more simply.
+            if self.is_only_content(node) {
+                return Level::Block(kind_of(style.display));
+            }
+            return Level::Atomic(kind_of(style.display));
+        }
         if self.has_block_descendant(node) {
             self.diags.info(
                 "css",
@@ -441,22 +458,6 @@ impl<'a> Builder<'a, '_> {
                 ),
             );
             return Level::Block(kind_of(style.display));
-        }
-        // Alone in its parent there is no line to sit in, so the box can be
-        // kept: a block that shrinks to fit looks the same.
-        if style.display == Display::InlineBlock && self.is_only_content(node) {
-            return Level::Block(BoxKind::Block);
-        }
-        if atomic {
-            self.diags.info(
-                "css",
-                node_line(self.doc, node),
-                format!(
-                    "`display: {}` on {} is laid out as inline text",
-                    display_name(style.display),
-                    describe(self.doc, node)
-                ),
-            );
         }
         Level::Inline
     }
@@ -494,7 +495,9 @@ impl<'a> Builder<'a, '_> {
                 || is_block_level(style.display)
                 || style.float != Float::None
                 || matches!(style.position, Position::Absolute | Position::Fixed)
-                || self.has_block_descendant(child)
+                // An atomic inline's blocks are inside its own box.
+                || (matches!(style.display, Display::Inline | Display::Contents)
+                    && self.has_block_descendant(child))
         })
     }
 

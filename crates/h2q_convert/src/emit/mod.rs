@@ -10,6 +10,7 @@ mod flex;
 mod flow;
 mod grid;
 mod ids;
+mod inline;
 mod lists;
 mod table;
 mod text;
@@ -312,6 +313,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 escaped_top = column.escaped_top;
                 escaped_bottom = column.escaped_bottom;
                 column.obj.map(|o| (o, "Content"))
+            }
+            Content::Inline(items) if inline::has_atomic(items) => {
+                Some((self.inline_flow(b, decoration, items, line), "Content"))
             }
             Content::Inline(items) => Some((self.text(style, decoration, items, line), "Text")),
             Content::Empty => None,

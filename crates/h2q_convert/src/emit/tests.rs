@@ -824,3 +824,40 @@ fn overlay_keeps_its_max_width() {
     ));
     assert!(qml.contains("width: Math.min(implicitWidth, 480)"), "{qml}");
 }
+
+#[test]
+fn a_line_with_an_inline_block_is_a_flow_of_words_and_boxes() {
+    let (qml, diags) = convert(&page(
+        "p{font:16px/24px sans-serif} .b{display:inline-block;padding:2px 8px;background:#eee;\
+         font-size:12px;line-height:16px}",
+        "<p>Notes for <b>bold</b>er <span class=b>NEW</span> items</p>",
+    ));
+    let flow = object_after(&qml, "<p>");
+    assert_eq!(flow.lines().nth(1).map(str::trim), Some("Flow {"), "{flow}");
+    // Words keep their spans and the space after them.
+    assert!(flow.contains("text: \"Notes\u{a0}\""), "{flow}");
+    assert!(flow.contains("text: \"<b>bold</b>er\u{a0}\""), "{flow}");
+    assert!(flow.contains("text: \"items\""), "{flow}");
+    // The badge keeps its box and moves down to the text's baseline:
+    // (24 - 18.4) / 2 + 14.48 = 17.28 against 2 + (16 - 13.8) / 2 + 10.86.
+    assert!(flow.contains("color: \"#eeeeee\""), "{flow}");
+    assert!(flow.contains("y: 3.32"), "{flow}");
+    assert!(
+        !diags.iter().any(|d| d.contains("inline text")),
+        "{diags:?}"
+    );
+}
+
+#[test]
+fn atomic_inlines_keep_their_margins_and_centre_in_the_line() {
+    let (qml, _) = convert(&page(
+        ".c{text-align:center} .t{display:inline-block;margin:0 8px 8px 0;padding:4px}",
+        "<div class=c><span class=t>a</span> <span class=t>b</span></div>",
+    ));
+    let flow = object_after(&qml, "<div class=\"c\">");
+    assert!(flow.contains("leftPadding: {"), "{flow}");
+    assert!(flow.contains("width: tBox.width + 8"), "{flow}");
+    assert!(flow.contains("height: tBox.height + 8"), "{flow}");
+    // The space between the boxes is a word of its own.
+    assert!(flow.contains("text: \"\u{a0}\""), "{flow}");
+}
