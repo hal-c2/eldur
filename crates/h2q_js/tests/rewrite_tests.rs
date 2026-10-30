@@ -159,14 +159,14 @@ function syncForm() {
     notesArea.readOnly = !agreeCheck.checked;
     optRadio.checked = true;
     const prevRole = roleCombo.currentText;
-    roleCombo.currentIndex = roleCombo.find("Admin");
+    ((__v) => (roleCombo.currentIndex = roleCombo.find(__v), __v))("Admin");
     roleCombo.currentIndex = 1;
     volSlider.value = 75;
     volSlider.value++;
     loadBar.value = volSlider.value;
     avatarImg.source = "icon.png";
-    saveBtn.enabled = false;
-    saveBtn.visible = true;
+    !(saveBtn.enabled = false);
+    !(saveBtn.visible = true);
     const isOff = ((!saveBtn.enabled)).toString();
     nameInput.forceActiveFocus();
     notesArea.focus = false;
@@ -221,10 +221,10 @@ let chips;
 
 function __h2q_init(rootItem) {
     H2Q.init(rootItem || (typeof root !== "undefined" ? root : null));
-    panel.visible = false;
-    panel.visible = true;
-    H2Q.setStyle(panel, "color", "#ff0000");
-    H2Q.setStyle(panel, "backgroundColor", "navy");
+    ((__v) => (panel.visible = __v !== "none", __v))("none");
+    ((__v) => (panel.visible = __v !== "none", __v))("flex");
+    ((__v) => (H2Q.setStyle(panel, "color", __v), __v))("#ff0000");
+    ((__v) => (H2Q.setStyle(panel, "backgroundColor", __v), __v))("navy");
     col = H2Q.getStyle(panel, "color");
     disp = (panel.visible ? "" : "none");
     H2Q.classList(panel).add("open");
@@ -233,7 +233,7 @@ function __h2q_init(rootItem) {
     delete H2Q.dataset(panel).oldKey;
     H2Q.setAttribute(panel, "aria-expanded", "true");
     expanded = H2Q.getAttribute(panel, "aria-expanded");
-    H2Q.setInnerHTML(panel, "<b>Hello</b>");
+    ((__v) => (H2Q.setInnerHTML(panel, __v), __v))("<b>Hello</b>");
     chips = [chip0, chip1];
 }
 "###);
@@ -302,8 +302,8 @@ function updateDynamic(id, node) {
 function updateDynamic(id, node) {
     const el = H2Q.document.getElementById(id);
     const missing = H2Q.document.getElementById("missing");
-    H2Q.setText(node, "updated");
-    H2Q.setInnerHTML(node, H2Q.getInnerHTML(node) + ("!"));
+    ((__v) => (H2Q.setText(node, __v), __v))("updated");
+    ((__v) => (H2Q.setInnerHTML(node, __v), __v))(H2Q.getInnerHTML(node) + ("!"));
     H2Q.listen(node, "click", onHit);
     return [el, missing, H2Q.getText(node), H2Q.classList(node), H2Q.dataset(node)];
 }
@@ -499,7 +499,7 @@ function __h2q_on_click_onceBtn(event) {
     }
     __h2q_once_0 = true;
     (() => {
-        goBtn.enabled = true;
+        !(goBtn.enabled = true);
     })(event);
 }
 
@@ -579,7 +579,7 @@ function isolated(document, window, setTimeout, localStorage, fetch, hdr) {
     setTimeout(() => {}, 10);
     localStorage.setItem("k", "v");
     fetch("/api");
-    H2Q.setText(hdr, "local");
+    ((__v) => (H2Q.setText(hdr, __v), __v))("local");
     return [document.title, window.innerWidth];
 }
 function realAccess() {
@@ -625,7 +625,7 @@ function runGlobals() {
     H2Q.cancelAnimationFrame(raf);
     H2Q.localStorage.setItem("a", "1");
     H2Q.sessionStorage.setItem("b", "2");
-    H2Q.setTitle("Dashboard");
+    ((__v) => (H2Q.setTitle(__v), __v))("Dashboard");
     const t = H2Q.getTitle();
     const size = [H2Q.window.innerWidth, H2Q.window.innerHeight];
     H2Q.consoleTable([{ t }]);
@@ -708,7 +708,7 @@ function loadGreeting(raw) {
     const merged = Object.assign({}, raw, { extra: true });
     const __h2q_obj_0 = merged, { extra } = __h2q_obj_0, rest = H2Q.objectRest(__h2q_obj_0, ["extra"]);
     let status = rest.status;
-    status = status ?? "ok";
+    status ?? (status = "ok");
     try {
         JSON.parse(status);
     } catch (__h2q_err) {
@@ -1123,60 +1123,109 @@ function updateDom(suffix, extraClass, htmlChunk, fallbackRole, node, state) {
 
 function updateDom(suffix, extraClass, htmlChunk, fallbackRole, node, state) {
 
-    H2Q.setTitle(H2Q.getTitle() + (suffix));
-    H2Q.getTitle() || H2Q.setTitle("Untitled");
-    H2Q.getTitle() && H2Q.setTitle("Prefixed: " + suffix);
-    H2Q.getTitle() ?? H2Q.setTitle("DefaultTitle");
+    ((__v) => (H2Q.setTitle(__v), __v))(H2Q.getTitle() + (suffix));
+    H2Q.getTitle() || ((__v) => (H2Q.setTitle(__v), __v))("Untitled");
+    H2Q.getTitle() && ((__v) => (H2Q.setTitle(__v), __v))("Prefixed: " + suffix);
+    H2Q.getTitle() ?? ((__v) => (H2Q.setTitle(__v), __v))("DefaultTitle");
 
-    !saveBtn.enabled || (saveBtn.enabled = false);
-    !saveBtn.enabled && (saveBtn.enabled = true);
-    (!saveBtn.enabled) ?? (saveBtn.enabled = false);
-    !saveBtn.visible && (saveBtn.visible = true);
-    !saveBtn.visible || (saveBtn.visible = false);
-    (!saveBtn.visible) ?? (saveBtn.visible = true);
-    saveBtn.enabled = !((!saveBtn.enabled) | (true));
-    saveBtn.visible = !((!saveBtn.visible) & (false));
+    !saveBtn.enabled || !(saveBtn.enabled = false);
+    !saveBtn.enabled && !(saveBtn.enabled = true);
+    (!saveBtn.enabled) ?? !(saveBtn.enabled = false);
+    !saveBtn.visible && !(saveBtn.visible = true);
+    !saveBtn.visible || !(saveBtn.visible = false);
+    (!saveBtn.visible) ?? !(saveBtn.visible = true);
+    !(saveBtn.enabled = !((!saveBtn.enabled) | (true)));
+    !(saveBtn.visible = !((!saveBtn.visible) & (false)));
 
-    roleCombo.currentText || (roleCombo.currentIndex = roleCombo.find(fallbackRole));
-    roleCombo.currentText && (roleCombo.currentIndex = roleCombo.find("Admin"));
-    roleCombo.currentText ?? (roleCombo.currentIndex = roleCombo.find("Viewer"));
-    roleCombo.currentIndex = roleCombo.find(roleCombo.currentText + (suffix));
+    roleCombo.currentText || ((__v) => (roleCombo.currentIndex = roleCombo.find(__v), __v))(fallbackRole);
+    roleCombo.currentText && ((__v) => (roleCombo.currentIndex = roleCombo.find(__v), __v))("Admin");
+    roleCombo.currentText ?? ((__v) => (roleCombo.currentIndex = roleCombo.find(__v), __v))("Viewer");
+    ((__v) => (roleCombo.currentIndex = roleCombo.find(__v), __v))(roleCombo.currentText + (suffix));
 
-    H2Q.setClassName(cardBox, H2Q.getClassName(cardBox) + (extraClass));
-    H2Q.getClassName(cardBox) || H2Q.setClassName(cardBox, "card-default");
-    H2Q.getClassName(cardBox) && H2Q.setClassName(cardBox, "card-active");
-    H2Q.getClassName(cardBox) ?? H2Q.setClassName(cardBox, "card-fallback");
+    ((__v) => (H2Q.setClassName(cardBox, __v), __v))(H2Q.getClassName(cardBox) + (extraClass));
+    H2Q.getClassName(cardBox) || ((__v) => (H2Q.setClassName(cardBox, __v), __v))("card-default");
+    H2Q.getClassName(cardBox) && ((__v) => (H2Q.setClassName(cardBox, __v), __v))("card-active");
+    H2Q.getClassName(cardBox) ?? ((__v) => (H2Q.setClassName(cardBox, __v), __v))("card-fallback");
 
-    H2Q.setInnerHTML(cardBox, H2Q.getInnerHTML(cardBox) + (htmlChunk));
-    H2Q.getInnerHTML(cardBox) || H2Q.setInnerHTML(cardBox, "<b>empty</b>");
-    H2Q.getInnerHTML(cardBox) && H2Q.setInnerHTML(cardBox, "<i>ready</i>");
-    H2Q.getInnerHTML(cardBox) ?? H2Q.setInnerHTML(cardBox, "<u>init</u>");
+    ((__v) => (H2Q.setInnerHTML(cardBox, __v), __v))(H2Q.getInnerHTML(cardBox) + (htmlChunk));
+    H2Q.getInnerHTML(cardBox) || ((__v) => (H2Q.setInnerHTML(cardBox, __v), __v))("<b>empty</b>");
+    H2Q.getInnerHTML(cardBox) && ((__v) => (H2Q.setInnerHTML(cardBox, __v), __v))("<i>ready</i>");
+    H2Q.getInnerHTML(cardBox) ?? ((__v) => (H2Q.setInnerHTML(cardBox, __v), __v))("<u>init</u>");
 
     titleLabel.text += suffix;
-    titleLabel.text = titleLabel.text || "N/A";
+    titleLabel.text || (titleLabel.text = "N/A");
     cardBoxText.text += suffix;
     nameInput.text += suffix;
-    nameInput.text = nameInput.text || "anon";
-    nameInput.placeholderText = nameInput.placeholderText ?? "Enter name";
+    nameInput.text || (nameInput.text = "anon");
+    nameInput.placeholderText ?? (nameInput.placeholderText = "Enter name");
     volSlider.value -= 5;
-    agreeCheck.checked = agreeCheck.checked && true;
-    avatarImg.source = avatarImg.source || "qrc:/fallback.png";
+    agreeCheck.checked && (agreeCheck.checked = true);
+    avatarImg.source || (avatarImg.source = "qrc:/fallback.png");
 
-    H2Q.setStyle(cardBox, "color", H2Q.getStyle(cardBox, "color") + ("00"));
-    H2Q.getStyle(cardBox, "color") || H2Q.setStyle(cardBox, "color", "#112233");
-    H2Q.getStyle(cardBox, "color") && H2Q.setStyle(cardBox, "color", "#445566");
-    H2Q.getStyle(cardBox, "color") ?? H2Q.setStyle(cardBox, "color", "#778899");
-    (cardBox.visible ? "" : "none") || (cardBox.visible = false);
-    (cardBox.visible ? "" : "none") && (cardBox.visible = true);
+    ((__v) => (H2Q.setStyle(cardBox, "color", __v), __v))(H2Q.getStyle(cardBox, "color") + ("00"));
+    H2Q.getStyle(cardBox, "color") || ((__v) => (H2Q.setStyle(cardBox, "color", __v), __v))("#112233");
+    H2Q.getStyle(cardBox, "color") && ((__v) => (H2Q.setStyle(cardBox, "color", __v), __v))("#445566");
+    H2Q.getStyle(cardBox, "color") ?? ((__v) => (H2Q.setStyle(cardBox, "color", __v), __v))("#778899");
+    (cardBox.visible ? "" : "none") || ((__v) => (cardBox.visible = __v !== "none", __v))("none");
+    (cardBox.visible ? "" : "none") && ((__v) => (cardBox.visible = __v !== "none", __v))("flex");
 
-    H2Q.setInnerHTML(node, H2Q.getInnerHTML(node) + (htmlChunk));
-    H2Q.getInnerHTML(node) || H2Q.setInnerHTML(node, "<span>node</span>");
-    H2Q.getText(node) || H2Q.setText(node, "plain");
+    ((__v) => (H2Q.setInnerHTML(node, __v), __v))(H2Q.getInnerHTML(node) + (htmlChunk));
+    H2Q.getInnerHTML(node) || ((__v) => (H2Q.setInnerHTML(node, __v), __v))("<span>node</span>");
+    H2Q.getText(node) || ((__v) => (H2Q.setText(node, __v), __v))("plain");
 
     state.count += 1;
-    state.label = state.label || "default";
-    state.active = state.active && false;
-    state.meta = state.meta ?? "none";
+    state.label || (state.label = "default");
+    state.active && (state.active = false);
+    state.meta ?? (state.meta = "none");
+}
+"###);
+}
+
+#[test]
+fn rewrites_assignment_expressions_and_dynamic_receivers_with_dom_values() {
+    let resolver = FakeResolver::default()
+        .with_id("save", 1, "saveBtn", TargetKind::Button)
+        .with_id("role", 2, "roleCombo", TargetKind::ComboBox)
+        .with_id("card", 3, "cardBox", TargetKind::Box);
+
+    let script = classic(
+        "assign_exprs.js",
+        r#"
+function captureAssigned(rhs, pickNode) {
+    const save = document.getElementById("save");
+    const role = document.getElementById("role");
+    const card = document.getElementById("card");
+
+    const a = (document.title ||= "default");
+    const b = (document.title += rhs());
+    const c = (save.hidden &&= false);
+    const d = (role.value ||= rhs());
+    const e = (card.style.display = "none");
+    const f = (pickNode(0).textContent = rhs());
+    const g = (pickNode(1).textContent += rhs());
+    const h = (pickNode(2).innerHTML ||= rhs());
+    return [a, b, c, d, e, f, g, h];
+}
+"#,
+    );
+
+    let out = run_rewrite(&[script], &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    assert_eq!(out.init_function, None);
+    insta::assert_snapshot!(out.page_js, @r###"
+.import "h2q_runtime.js" as H2Q
+
+function captureAssigned(rhs, pickNode) {
+
+    const a = (H2Q.getTitle() || ((__v) => (H2Q.setTitle(__v), __v))("default"));
+    const b = (((__v) => (H2Q.setTitle(__v), __v))(H2Q.getTitle() + (rhs())));
+    const c = (!saveBtn.visible && !(saveBtn.visible = true));
+    const d = (roleCombo.currentText || ((__v) => (roleCombo.currentIndex = roleCombo.find(__v), __v))(rhs()));
+    const e = (((__v) => (cardBox.visible = __v !== "none", __v))("none"));
+    const f = (((__o, __v) => (H2Q.setText(__o, __v), __v))(pickNode(0), rhs()));
+    const g = (((__o) => ((__v) => (H2Q.setText(__o, __v), __v))(H2Q.getText(__o) + (rhs())))(pickNode(1)));
+    const h = (((__o) => H2Q.getInnerHTML(__o) || ((__v) => (H2Q.setInnerHTML(__o, __v), __v))(rhs()))(pickNode(2)));
+    return [a, b, c, d, e, f, g, h];
 }
 "###);
 }

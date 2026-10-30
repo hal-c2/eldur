@@ -889,3 +889,186 @@ Item {
         out.page_js
     );
 }
+
+#[test]
+fn qml6_assignment_expressions_return_dom_values_and_evaluate_operands_once() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 assignment-expression return value test: qml6 not on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("assign_expr_values");
+    let resolver = FakeResolver::default()
+        .with_id("saveBtn", 1, "saveBtn", TargetKind::Button)
+        .with_id("roleCombo", 2, "roleCombo", TargetKind::ComboBox)
+        .with_id("cardBox", 3, "cardBox", TargetKind::Box)
+        .with_id("htmlLabel", 4, "htmlLabel", TargetKind::Text)
+        .with_id("nameInput", 5, "nameInput", TargetKind::TextField);
+
+    let script = ScriptInput {
+        name: "assign_expr_values.js".to_string(),
+        kind: ScriptKind::Classic,
+        line_offset: 1,
+        source: r##"
+let rhsCalls = 0;
+let order = [];
+
+function rhs(val) {
+    rhsCalls += 1;
+    return val;
+}
+
+function pickNode(tag, node) {
+    order.push("recv:" + tag);
+    return node;
+}
+
+function taggedRhs(tag, val) {
+    order.push("rhs:" + tag);
+    rhsCalls += 1;
+    return val;
+}
+
+const save = document.getElementById("saveBtn");
+const role = document.getElementById("roleCombo");
+const card = document.getElementById("cardBox");
+const htmlEl = document.getElementById("htmlLabel");
+const nameEl = document.getElementById("nameInput");
+document.title = "";
+
+function runExprChecks() {
+    // 1. document.title assignment expressions (logical, compound, simple)
+    const t1 = (document.title ||= rhs("default")); // call 1 -> "default"
+    const t2 = (document.title ||= rhs("ignored")); // short-circuit -> "default"
+    const t3 = (document.title += rhs(":v2")); // call 2 -> "default:v2"
+    const t4 = (document.title = rhs("Fresh")); // call 3 -> "Fresh"
+
+    // 2. hidden and disabled assignment expressions return DOM bool, not inverted QML bool
+    // Initially saveBtn.enabled = true (disabled = false), saveBtn.visible = false (hidden = true)
+    const h1 = (save.hidden &&= rhs(false)); // call 4 -> false
+    const h2 = (save.hidden &&= rhs(true)); // short-circuit -> false
+    const d1 = (save.disabled = rhs(true)); // call 5 -> true
+    const d2 = (save.disabled ||= rhs(false)); // short-circuit -> true
+    const d3 = (save.disabled &&= rhs(false)); // call 6 -> false
+    const d4 = (save.disabled |= rhs(true)); // call 7 -> true
+
+    // 3. ComboBox value assignment expressions return DOM text, not currentIndex
+    const r1 = (role.value ||= rhs("Editor")); // call 8 -> "Editor"
+    const r2 = (role.value ||= rhs("Admin")); // short-circuit -> "Editor"
+    const r3 = (role.value = rhs("Admin")); // call 9 -> "Admin"
+    const r4 = (role.value = ""); // reset to "" -> ""
+    const r5 = (role.value += rhs("Viewer")); // call 10 -> "Viewer"
+
+    // 4. className, innerHTML, style.<prop>, style.display, textContent/value
+    const c1 = (card.className = rhs("card")); // call 11 -> "card"
+    const c2 = (card.className += rhs(" active")); // call 12 -> "card active"
+    const c3 = (card.className ||= rhs("skip")); // short-circuit -> "card active"
+
+    const m1 = (htmlEl.innerHTML = rhs("<b>A</b>")); // call 13 -> "<b>A</b>"
+    const m2 = (htmlEl.innerHTML += rhs("<i>B</i>")); // call 14 -> "<b>A</b><i>B</i>"
+    const m3 = (htmlEl.innerHTML ||= rhs("skip")); // short-circuit -> "<b>A</b><i>B</i>"
+
+    const s1 = (card.style.color = rhs("#111")); // call 15 -> "#111"
+    const s2 = (card.style.color += rhs("222")); // call 16 -> "#111222"
+    const s3 = (card.style.color ||= rhs("#999")); // short-circuit -> "#111222"
+
+    const disp1 = (card.style.display = rhs("none")); // call 17 -> "none"
+    const disp2 = (card.style.display ||= rhs("flex")); // short-circuit ("none" is truthy) -> "none"
+    const disp3 = (card.style.display &&= rhs("flex")); // call 18 -> "flex"
+
+    const v1 = (nameEl.value ||= rhs("Ada")); // call 19 -> "Ada"
+    const v2 = (nameEl.value ||= rhs("Skip")); // short-circuit -> "Ada"
+    const v3 = (nameEl.value += rhs("!")); // call 20 -> "Ada!"
+
+    // 5. Dynamic receiver with side effects + normal JS evaluation order (receiver before RHS, once each)
+    const dynNode = document.getElementById("dynLabel");
+    const dyn1 = (pickNode("1", dynNode).textContent = taggedRhs("1", "Alpha")); // call 21 -> "Alpha"
+    const dyn2 = (pickNode("2", dynNode).textContent += taggedRhs("2", "+Beta")); // call 22 -> "Alpha+Beta"
+    const dyn3 = (pickNode("3", dynNode).textContent ||= taggedRhs("3", "Skip")); // short-circuit -> "Alpha+Beta"
+    const dyn4 = (pickNode("4", dynNode).innerHTML = taggedRhs("4", "<em>Z</em>")); // call 23 -> "<em>Z</em>"
+    const dyn5 = (pickNode("5", dynNode).innerHTML += taggedRhs("5", "!")); // call 24 -> "<em>Z</em>!"
+
+    return [
+        t1, t2, t3, t4,
+        h1, h2, d1, d2, d3, d4,
+        r1, r2, r3, r4, r5, roleCombo.currentIndex,
+        c1, c2, c3,
+        m1, m2, m3,
+        s1, s2, s3,
+        disp1, disp2, disp3, cardBox.visible,
+        v1, v2, v3,
+        dyn1, dyn2, dyn3, dyn4, dyn5,
+        order.join(","),
+        rhsCalls
+    ].join("|");
+}
+"##
+        .to_string(),
+    };
+
+    let scripts = [script];
+    let analysis = analyze(&scripts);
+    let out = rewrite(&scripts, &analysis, &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+
+    let runtime_path = dir.write_file("h2q_runtime.js", RUNTIME_JS);
+    let page_path = dir.write_file("page.js", &out.page_js);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import QtQuick.Controls.Basic
+import "page.js" as Page
+
+Item {
+    id: root
+    width: 400
+    height: 300
+    property string title: ""
+
+    Button { id: saveBtn; enabled: true; visible: false }
+    ComboBox { id: roleCombo; model: ["", "Viewer", "Editor", "Admin"]; currentIndex: 0 }
+    Rectangle {
+        id: cardBox
+        property bool cls_card: false
+        property bool cls_active: false
+        Text { id: cardBoxText; text: "" }
+    }
+    Text { id: htmlLabel; text: "" }
+    TextField { id: nameInput; text: "" }
+    Text { id: dynLabelItem; objectName: "dynLabel"; text: "" }
+
+    Component.onCompleted: {
+        Page.__h2q_init(root);
+        var res = Page.runExprChecks();
+        console.log("H2Q_OK_ASSIGN_EXPR", res);
+        Qt.quit();
+    }
+}
+"#,
+    );
+
+    if has_binary("qmllint") {
+        for path in [&runtime_path, &page_path, &main_qml] {
+            let lint = Command::new("qmllint")
+                .arg(path)
+                .output()
+                .expect("failed to run qmllint");
+            assert!(
+                lint.status.success(),
+                "qmllint failed on {}: {}{}",
+                path.display(),
+                String::from_utf8_lossy(&lint.stdout),
+                String::from_utf8_lossy(&lint.stderr)
+            );
+        }
+    }
+
+    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    assert!(
+        output.contains(
+            "H2Q_OK_ASSIGN_EXPR default|default|default:v2|Fresh|false|false|true|true|false|true|Editor|Editor|Admin||Viewer|1|card|card active|card active|<b>A</b>|<b>A</b><i>B</i>|<b>A</b><i>B</i>|#111|#111222|#111222|none|none|flex|true|Ada|Ada|Ada!|Alpha|Alpha+Beta|Alpha+Beta|<em>Z</em>|<em>Z</em>!|recv:1,rhs:1,recv:2,rhs:2,recv:3,recv:4,rhs:4,recv:5,rhs:5|24"
+        ),
+        "unexpected qml6 assignment-expression output:\n{output}\npage.js:\n{}",
+        out.page_js
+    );
+}

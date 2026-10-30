@@ -451,25 +451,10 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
             let rhs_str = self.editor.extract_and_consume(right.span());
             let id = &target.qml_id;
             let replacement = if prop == "display" {
-                let write_assign = if let Some(lit) = extract_string_literal(right) {
-                    let vis = if lit.trim().eq_ignore_ascii_case("none") {
-                        "false"
-                    } else {
-                        "true"
-                    };
-                    format!("{id}.visible = {vis}")
-                } else {
-                    format!("{id}.visible = ({rhs_str}) !== \"none\"")
-                };
-                if let Some(logic) = logical_binary_op(op) {
-                    format!("({id}.visible ? \"\" : \"none\") {logic} ({write_assign})")
-                } else if let Some(bin_op) = compound_binary_op(op) {
-                    format!(
-                        "{id}.visible = (({id}.visible ? \"\" : \"none\") {bin_op} ({rhs_str})) !== \"none\""
-                    )
-                } else {
-                    write_assign
-                }
+                let read_expr = format!("({id}.visible ? \"\" : \"none\")");
+                format_setter_call_assignment(&read_expr, op, &rhs_str, |val| {
+                    format!("{id}.visible = {val} !== \"none\"")
+                })
             } else {
                 let read_expr = format!("H2Q.getStyle({id}, {prop:?})");
                 format_setter_call_assignment(&read_expr, op, &rhs_str, |val| {
@@ -492,7 +477,7 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
                     } else {
                         format!("{id}.text")
                     };
-                    format_assignment(&lhs, op, right, &rhs_str)
+                    format_assignment(&lhs, op, &rhs_str)
                 }
                 "innerHTML" => {
                     let read_expr = format!("H2Q.getInnerHTML({id})");
@@ -502,45 +487,34 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
                 }
                 "value" => match target.kind {
                     TargetKind::ComboBox => {
-                        if let Some(logic) = logical_binary_op(op) {
-                            format!(
-                                "{id}.currentText {logic} ({id}.currentIndex = {id}.find({rhs_str}))"
-                            )
-                        } else if let Some(bin_op) = compound_binary_op(op) {
-                            format!(
-                                "{id}.currentIndex = {id}.find({id}.currentText {bin_op} ({rhs_str}))"
-                            )
-                        } else {
-                            format!("{id}.currentIndex = {id}.find({rhs_str})")
-                        }
+                        let read_expr = format!("{id}.currentText");
+                        format_setter_call_assignment(&read_expr, op, &rhs_str, |val| {
+                            format!("{id}.currentIndex = {id}.find({val})")
+                        })
                     }
                     TargetKind::Range | TargetKind::Progress => {
-                        format_assignment(&format!("{id}.value"), op, right, &rhs_str)
+                        format_assignment(&format!("{id}.value"), op, &rhs_str)
                     }
-                    _ => format_assignment(&format!("{id}.text"), op, right, &rhs_str),
+                    _ => format_assignment(&format!("{id}.text"), op, &rhs_str),
                 },
-                "selectedIndex" => {
-                    format_assignment(&format!("{id}.currentIndex"), op, right, &rhs_str)
-                }
-                "checked" => format_assignment(&format!("{id}.checked"), op, right, &rhs_str),
+                "selectedIndex" => format_assignment(&format!("{id}.currentIndex"), op, &rhs_str),
+                "checked" => format_assignment(&format!("{id}.checked"), op, &rhs_str),
                 "disabled" => {
                     format_inverted_bool_assignment(&format!("{id}.enabled"), op, right, &rhs_str)
                 }
                 "hidden" => {
                     format_inverted_bool_assignment(&format!("{id}.visible"), op, right, &rhs_str)
                 }
-                "src" => format_assignment(&format!("{id}.source"), op, right, &rhs_str),
-                "placeholder" => {
-                    format_assignment(&format!("{id}.placeholderText"), op, right, &rhs_str)
-                }
-                "readOnly" => format_assignment(&format!("{id}.readOnly"), op, right, &rhs_str),
+                "src" => format_assignment(&format!("{id}.source"), op, &rhs_str),
+                "placeholder" => format_assignment(&format!("{id}.placeholderText"), op, &rhs_str),
+                "readOnly" => format_assignment(&format!("{id}.readOnly"), op, &rhs_str),
                 "className" => {
                     let read_expr = format!("H2Q.getClassName({id})");
                     format_setter_call_assignment(&read_expr, op, &rhs_str, |val| {
                         format!("H2Q.setClassName({id}, {val})")
                     })
                 }
-                _ => format_assignment(&format!("{id}.{prop}"), op, right, &rhs_str),
+                _ => format_assignment(&format!("{id}.{prop}"), op, &rhs_str),
             };
             self.editor.replace(full_span, replacement);
             return true;
@@ -548,20 +522,29 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
 
         // 5. Unknown receiver DOM-only property write (`x.textContent <op> v`, `x.innerHTML <op> v`)
         if matches!(prop, "textContent" | "innerText" | "innerHTML") {
+            let simple_receiver = matches!(unwrap_parens(member_obj), Expression::Identifier(_));
             self.visit_expression(member_obj);
             let obj_str = self.editor.extract_and_consume(member_obj.span());
             self.visit_expression(right);
             let rhs_str = self.editor.extract_and_consume(right.span());
-            let replacement = if prop == "innerHTML" {
-                let read_expr = format!("H2Q.getInnerHTML({obj_str})");
-                format_setter_call_assignment(&read_expr, op, &rhs_str, |val| {
-                    format!("H2Q.setInnerHTML({obj_str}, {val})")
-                })
+            let (getter, setter) = if prop == "innerHTML" {
+                ("H2Q.getInnerHTML", "H2Q.setInnerHTML")
             } else {
-                let read_expr = format!("H2Q.getText({obj_str})");
+                ("H2Q.getText", "H2Q.setText")
+            };
+            let replacement = if simple_receiver {
+                let read_expr = format!("{getter}({obj_str})");
                 format_setter_call_assignment(&read_expr, op, &rhs_str, |val| {
-                    format!("H2Q.setText({obj_str}, {val})")
+                    format!("{setter}({obj_str}, {val})")
                 })
+            } else if op == AssignmentOperator::Assign {
+                format!("((__o, __v) => ({setter}(__o, __v), __v))({obj_str}, {rhs_str})")
+            } else {
+                let read_expr = format!("{getter}(__o)");
+                let inner = format_setter_call_assignment(&read_expr, op, &rhs_str, |val| {
+                    format!("{setter}(__o, {val})")
+                });
+                format!("((__o) => {inner})({obj_str})")
             };
             self.editor.replace(full_span, replacement);
             return true;
@@ -808,7 +791,7 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             let lhs_str = self.editor.extract_and_consume(it.left.span());
             self.visit_expression(&it.right);
             let rhs_str = self.editor.extract_and_consume(it.right.span());
-            let rep = format_assignment(&lhs_str, it.operator, &it.right, &rhs_str);
+            let rep = format_assignment(&lhs_str, it.operator, &rhs_str);
             self.editor.replace(it.span, rep);
             return;
         }
@@ -1488,14 +1471,18 @@ fn format_setter_call_assignment<F>(
 where
     F: Fn(&str) -> String,
 {
+    let write_iife = |val_expr: &str| {
+        let write_stmt = make_call("__v");
+        format!("((__v) => ({write_stmt}, __v))({val_expr})")
+    };
     if let Some(logic) = logical_binary_op(op) {
-        let write_call = make_call(rhs_str);
-        format!("{read_expr} {logic} {write_call}")
+        let write_expr = write_iife(rhs_str);
+        format!("{read_expr} {logic} {write_expr}")
     } else if let Some(bin_op) = compound_binary_op(op) {
         let combined = format!("{read_expr} {bin_op} ({rhs_str})");
-        make_call(&combined)
+        write_iife(&combined)
     } else {
-        make_call(rhs_str)
+        write_iife(rhs_str)
     }
 }
 
@@ -1512,27 +1499,17 @@ fn format_inverted_bool_assignment(
         } else {
             format!("!{qml_lhs}")
         };
-        format!("{read_expr} {logic} ({qml_lhs} = {inv})")
+        format!("{read_expr} {logic} !({qml_lhs} = {inv})")
     } else if let Some(bin_op) = compound_binary_op(op) {
-        format!("{qml_lhs} = !((!{qml_lhs}) {bin_op} ({rhs_str}))")
+        format!("!({qml_lhs} = !((!{qml_lhs}) {bin_op} ({rhs_str})))")
     } else {
-        format!("{qml_lhs} = {inv}")
+        format!("!({qml_lhs} = {inv})")
     }
 }
 
-fn format_assignment(
-    lhs: &str,
-    op: AssignmentOperator,
-    right_ast: &Expression<'_>,
-    rhs_str: &str,
-) -> String {
+fn format_assignment(lhs: &str, op: AssignmentOperator, rhs_str: &str) -> String {
     if let Some(logic) = logical_binary_op(op) {
-        let wrapped_rhs = if is_atomic_or_call_expr(right_ast) {
-            rhs_str.to_string()
-        } else {
-            format!("({rhs_str})")
-        };
-        format!("{lhs} = {lhs} {logic} {wrapped_rhs}")
+        format!("{lhs} {logic} ({lhs} = {rhs_str})")
     } else {
         format!("{lhs} {} {rhs_str}", op.as_str())
     }
