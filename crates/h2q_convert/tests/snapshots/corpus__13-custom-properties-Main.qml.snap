@@ -289,6 +289,7 @@ ApplicationWindow {
                     columns: 3
                     columnSpacing: 16
                     rowSpacing: 16
+                    Layout.fillWidth: false
                     Layout.preferredWidth: Math.max(0, parent.width - 32)
                     Layout.alignment: Qt.AlignHCenter
                     Layout.maximumWidth: Number.POSITIVE_INFINITY

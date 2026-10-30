@@ -1172,3 +1172,16 @@ fn a_right_float_sits_at_the_right_edge() {
         "{l:?}"
     );
 }
+
+#[test]
+fn a_layout_with_a_width_does_not_fill_its_column() {
+    // Chromium, in a 600px box: .g is 568px wide at x 16. A Qt Layout
+    // fills by default, so it has to be told not to.
+    let (qml, _) = convert(&page(
+        ".c{width:600px} .g{display:grid;grid-template-columns:1fr 1fr;\
+         width:calc(100% - 32px);margin:0 auto}",
+        "<div class=c><main class=g><p>a</p><p>b</p></main></div>",
+    ));
+    let g = own_lines(object_after(&qml, "<main class=\"g\">"));
+    assert!(g.contains(&"Layout.fillWidth: false"), "{g:?}");
+}

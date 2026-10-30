@@ -218,6 +218,11 @@ impl Emitter<'_, '_> {
             }
             _ => None,
         });
+        // A Qt Layout fills its cell by default, which would override a
+        // width the box has of its own.
+        if is_layout(&obj.type_name) && matches!(style.width, Size::Length(_)) {
+            obj.set("Layout.fillWidth", false);
+        }
         match &style.width {
             Size::Length(w) => {
                 obj.set("Layout.preferredWidth", size_value(w, extra_w));
