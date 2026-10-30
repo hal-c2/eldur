@@ -1,0 +1,45 @@
+---
+source: crates/h2q_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[css]: index.html:225: `display: inline-block` on <a> is laid out as inline text
+info[css]: index.html:226: `display: inline-block` on <a> is laid out as inline text
+info[css]: index.html:227: `display: inline-block` on <a> is laid out as inline text
+info[css]: index.html:228: `display: inline-block` on <a> is laid out as inline text
+info[css]: index.html:229: `display: inline-block` on <a> is laid out as inline text
+info[css]: index.html:230: `display: inline-block` on <a> is laid out as inline text
+info[css]: index.html:231: `display: inline-block` on <a> is laid out as inline text
+warning[css]: index.html:172: `display: grid` on <div class="layout"> is laid out as block flow (not implemented yet)
+warning[css]: index.html: `position: absolute` on a generated box is laid out in normal flow (not implemented yet)
+info[css]: index.html: percentage `border-radius` uses its px part only
+warning[css]: index.html:207: `display: grid` on <dl class="faq"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:224: `display: flex` on <ul class="tags"> is laid out as block flow (not implemented yet)
+info[qml]: index.html:225: <a> is underlined: StyledText always underlines links
+info[qml]: index.html:225: <a>: font size 14px inside 16px text is approximated with <small>
+info[qml]: index.html:225: <a>: inline background is not converted
+info[qml]: index.html:225: <a>: inline padding and borders are not converted
+info[qml]: index.html:226: <a> is underlined: StyledText always underlines links
+info[qml]: index.html:226: <a>: font size 14px inside 16px text is approximated with <small>
+info[qml]: index.html:226: <a>: inline background is not converted
+info[qml]: index.html:226: <a>: inline padding and borders are not converted
+info[qml]: index.html:227: <a> is underlined: StyledText always underlines links
+info[qml]: index.html:227: <a>: font size 14px inside 16px text is approximated with <small>
+info[qml]: index.html:227: <a>: inline background is not converted
+info[qml]: index.html:227: <a>: inline padding and borders are not converted
+info[qml]: index.html:228: <a> is underlined: StyledText always underlines links
+info[qml]: index.html:228: <a>: font size 14px inside 16px text is approximated with <small>
+info[qml]: index.html:228: <a>: inline background is not converted
+info[qml]: index.html:228: <a>: inline padding and borders are not converted
+info[qml]: index.html:229: <a> is underlined: StyledText always underlines links
+info[qml]: index.html:229: <a>: font size 14px inside 16px text is approximated with <small>
+info[qml]: index.html:229: <a>: inline background is not converted
+info[qml]: index.html:229: <a>: inline padding and borders are not converted
+info[qml]: index.html:230: <a> is underlined: StyledText always underlines links
+info[qml]: index.html:230: <a>: font size 14px inside 16px text is approximated with <small>
+info[qml]: index.html:230: <a>: inline background is not converted
+info[qml]: index.html:230: <a>: inline padding and borders are not converted
+info[qml]: index.html:231: <a> is underlined: StyledText always underlines links
+info[qml]: index.html:231: <a>: font size 14px inside 16px text is approximated with <small>
+info[qml]: index.html:231: <a>: inline background is not converted
+info[qml]: index.html:231: <a>: inline padding and borders are not converted
+info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

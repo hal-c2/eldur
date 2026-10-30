@@ -158,3 +158,27 @@ fn colors_use_argb() {
     assert_eq!(Color::rgba(1, 2, 3, 255).to_qml_string(), "#010203");
     assert_eq!(Color::rgba(1, 2, 3, 0).to_qml_string(), "#00010203");
 }
+
+#[test]
+fn comments_stay_next_to_the_child_they_annotate() {
+    let mut root = Object::new("Item").prop("width", 10.0);
+    root.members.push(Member::Comment("<h1>".into()));
+    root.push_child(Object::new("Text").prop("text", "a"));
+    root.members.push(Member::Comment("<p>".into()));
+    root.push_child(Object::new("Text").prop("text", "b"));
+    insta::assert_snapshot!(Document::new(root).to_qml(), @r#"
+    Item {
+        width: 10
+
+        // <h1>
+        Text {
+            text: "a"
+        }
+
+        // <p>
+        Text {
+            text: "b"
+        }
+    }
+    "#);
+}

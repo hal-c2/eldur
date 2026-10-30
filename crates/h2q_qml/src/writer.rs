@@ -138,18 +138,28 @@ fn write_object(out: &mut String, obj: &Object, level: usize) {
     let mut members: Vec<&Member> = obj.members.iter().collect();
     members.sort_by_key(|m| rank(m)); // stable: keeps given order per kind
     let mut prev_rank = None;
+    let mut after_comment = false;
     for m in members {
         let r = rank(m);
         // A blank line between kinds, and before every child object, as
-        // hand-written QML does.
+        // hand-written QML does; a comment takes the blank line of the
+        // child it annotates.
         let blank = match prev_rank {
             None => obj.id.is_some() && r >= 3,
-            Some(p) => p != r || matches!(m, Member::Child(_) | Member::Function { .. }),
+            Some(_) if after_comment => false,
+            Some(p) => {
+                p != r
+                    || matches!(
+                        m,
+                        Member::Child(_) | Member::Function { .. } | Member::Comment(_)
+                    )
+            }
         };
         if blank {
             out.push('\n');
         }
         prev_rank = Some(r);
+        after_comment = matches!(m, Member::Comment(_));
         write_member(out, m, level + 1);
     }
     indent(out, level);

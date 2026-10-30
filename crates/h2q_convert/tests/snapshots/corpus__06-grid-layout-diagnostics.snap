@@ -1,0 +1,20 @@
+---
+source: crates/h2q_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+warning[css]: index.html:209: `display: grid` on <div class="app"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:210: `display: flex` on <header class="site-header"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:213: background images and gradients are not converted yet
+warning[css]: index.html:231: `display: grid` on <section class="tiles"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:232: `display: flex` on <article class="tile tile--wide"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:232: background images and gradients are not converted yet
+warning[css]: index.html:238: `display: flex` on <article class="tile tile--tall"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:240: `display: flex` on <div class="bars"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:250: `display: flex` on <article class="tile"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:256: `display: flex` on <article class="tile"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:262: `display: flex` on <article class="tile"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:268: `display: flex` on <article class="tile"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:274: `display: flex` on <article class="tile"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:282: `display: flex` on <footer class="site-footer"> is laid out as block flow (not implemented yet)
+info[css]: index.html:209: percentage height on <div class="app"> is treated as `auto`
+info[css]: index.html:208: percentage height on <body> is treated as `auto`

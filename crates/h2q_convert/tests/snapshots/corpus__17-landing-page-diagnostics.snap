@@ -1,0 +1,61 @@
+---
+source: crates/h2q_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[css]: index.html:447: `display: inline-block` on <span class="eyebrow"> is laid out as inline text
+warning[css]: index.html:428: `position: sticky` on <header class="navbar"> is laid out in normal flow (not implemented yet)
+warning[css]: index.html:429: `display: flex` on <div class="container navbar-inner"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:432: `display: flex` on <ul class="nav-links"> is laid out as block flow (not implemented yet)
+info[qml]: index.html:433: <a> is underlined: StyledText always underlines links
+info[qml]: index.html:434: <a> is underlined: StyledText always underlines links
+info[qml]: index.html:435: <a> is underlined: StyledText always underlines links
+info[qml]: index.html:436: <a> is underlined: StyledText always underlines links
+warning[css]: index.html:439: `display: flex` on <a class="btn btn-small"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:444: background images and gradients are not converted yet
+warning[css]: index.html:445: `display: grid` on <div class="container hero-grid"> is laid out as block flow (not implemented yet)
+info[qml]: index.html:447: <span class="eyebrow">: font size 14px inside 16px text is approximated with <small>
+info[qml]: index.html:447: <span class="eyebrow">: inline background is not converted
+info[qml]: index.html:447: <span class="eyebrow">: inline padding and borders are not converted
+warning[css]: index.html:450: `display: flex` on <div class="cta-row"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:451: `display: flex` on <a class="btn btn-primary"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:452: `display: flex` on <a class="btn btn-ghost"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:457: `display: flex` on <div class="panel-head"> is laid out as block flow (not implemented yet)
+info[css]: index.html:458: percentage `border-radius` uses its px part only
+info[css]: index.html:459: percentage `border-radius` uses its px part only
+info[css]: index.html:460: percentage `border-radius` uses its px part only
+warning[css]: index.html:462: `display: flex` on <div class="panel-row"> is laid out as block flow (not implemented yet)
+info[css]: index.html:463: percentage height on <div class="meter-fill m-72"> is treated as `auto`
+warning[css]: index.html:464: `display: flex` on <div class="panel-row"> is laid out as block flow (not implemented yet)
+info[css]: index.html:465: percentage height on <div class="meter-fill m-45"> is treated as `auto`
+warning[css]: index.html:466: `display: flex` on <div class="panel-row"> is laid out as block flow (not implemented yet)
+info[css]: index.html:467: percentage height on <div class="meter-fill m-88"> is treated as `auto`
+warning[css]: index.html:479: `display: grid` on <div class="features-grid"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:481: background images and gradients are not converted yet
+warning[css]: index.html: `position: absolute` on a generated box is laid out in normal flow (not implemented yet)
+warning[css]: index.html: `transform` on a generated box is not converted yet
+warning[css]: index.html:487: background images and gradients are not converted yet
+warning[css]: index.html:493: background images and gradients are not converted yet
+warning[css]: index.html:505: `display: flex` on <figcaption class="quote-author"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:506: `display: grid` on <span class="avatar"> is laid out as block flow (not implemented yet)
+info[css]: index.html:506: percentage `border-radius` uses its px part only
+info[qml]: index.html:509: <span class="author-role">: font size 15.2px inside 16px text is approximated with <small>
+warning[css]: index.html:518: `display: flex` on <div class="cta-band"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:523: `display: flex` on <a class="btn btn-accent"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:531: `display: grid` on <div class="footer-grid"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:538: `display: grid` on <ul> is laid out as block flow (not implemented yet)
+info[qml]: index.html:539: <a> is underlined: StyledText always underlines links
+info[qml]: index.html:540: <a> is underlined: StyledText always underlines links
+info[qml]: index.html:541: <a> is underlined: StyledText always underlines links
+info[qml]: index.html:542: <a> is underlined: StyledText always underlines links
+warning[css]: index.html:547: `display: grid` on <ul> is laid out as block flow (not implemented yet)
+info[qml]: index.html:548: <a> is underlined: StyledText always underlines links
+info[qml]: index.html:549: <a> is underlined: StyledText always underlines links
+info[qml]: index.html:550: <a> is underlined: StyledText always underlines links
+info[qml]: index.html:551: <a> is underlined: StyledText always underlines links
+warning[css]: index.html:556: `display: grid` on <ul> is laid out as block flow (not implemented yet)
+info[qml]: index.html:557: <a> is underlined: StyledText always underlines links
+info[qml]: index.html:558: <a> is underlined: StyledText always underlines links
+info[qml]: index.html:559: <a> is underlined: StyledText always underlines links
+info[qml]: index.html:560: <a> is underlined: StyledText always underlines links
+warning[css]: index.html:564: `display: flex` on <div class="footer-bottom"> is laid out as block flow (not implemented yet)
+info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

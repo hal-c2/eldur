@@ -1,0 +1,22 @@
+---
+source: crates/h2q_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[html]: index.html:236: inline <input> is laid out as a block (no inline replaced elements yet)
+warning[css]: index.html:214: `display: flex` on <div class="app"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:215: `display: flex` on <aside class="sidebar"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:217: `display: flex` on <nav class="menu"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:218: `box-shadow` is not converted yet
+warning[css]: index.html:225: `display: flex` on <nav class="menu"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:232: `display: flex` on <main class="main"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:233: `display: flex` on <header class="main-header"> is laid out as block flow (not implemented yet)
+warning[html]: index.html:236: <input> is not converted yet; an empty placeholder keeps its space
+warning[css]: index.html:240: `display: flex` on <div class="content"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:241: `display: flex` on <div class="stats"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:258: `display: flex` on <div class="row"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:262: `display: flex` on <div class="row"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:266: `display: flex` on <div class="row"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:273: `display: flex` on <footer class="footer"> is laid out as block flow (not implemented yet)
+info[css]: index.html:214: percentage height on <div class="app"> is treated as `auto`
+info[css]: index.html:213: percentage height on <body> is treated as `auto`
+info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

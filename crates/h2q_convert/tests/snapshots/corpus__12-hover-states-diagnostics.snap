@@ -1,0 +1,19 @@
+---
+source: crates/h2q_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+warning[css]: index.html:200: `display: flex` on <div class="button-row"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:210: `display: grid` on <div class="cards"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:211: `box-shadow` is not converted yet
+warning[css]: index.html:215: `box-shadow` is not converted yet
+warning[css]: index.html:219: `box-shadow` is not converted yet
+warning[css]: index.html:226: `display: grid` on <section class="section columns"> is laid out as block flow (not implemented yet)
+info[qml]: index.html:229: <a class="link"> is underlined: StyledText always underlines links
+info[qml]: index.html:230: <a class="link"> is underlined: StyledText always underlines links
+info[qml]: index.html:231: <a class="link"> is underlined: StyledText always underlines links
+warning[css]: index.html:236: `box-shadow` is not converted yet
+warning[css]: index.html:237: `display: flex` on <li class="item"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:238: `display: flex` on <li class="item"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:239: `display: flex` on <li class="item"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:240: `display: flex` on <li class="item"> is laid out as block flow (not implemented yet)
+info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

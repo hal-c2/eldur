@@ -1,0 +1,22 @@
+---
+source: crates/h2q_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+warning[css]: index.html:137: `display: grid` on <div class="gallery"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:138: `display: flex` on <div class="cell"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:139: background images and gradients are not converted yet
+warning[css]: index.html:143: `display: flex` on <div class="cell"> is laid out as block flow (not implemented yet)
+info[css]: index.html:144: border style `dashed` is drawn solid
+warning[css]: index.html:148: `display: flex` on <div class="cell"> is laid out as block flow (not implemented yet)
+info[css]: index.html:149: percentage `border-radius` uses its px part only
+info[css]: index.html:149: border style `dotted` is drawn solid
+warning[css]: index.html:153: `display: flex` on <div class="cell"> is laid out as block flow (not implemented yet)
+info[css]: index.html:154: border style `double` is drawn solid
+warning[css]: index.html:158: `display: flex` on <div class="cell"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:159: `box-shadow` is not converted yet
+warning[css]: index.html:163: `display: flex` on <div class="cell"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:164: background images and gradients are not converted yet
+warning[css]: index.html:168: `display: flex` on <div class="cell"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:169: background images and gradients are not converted yet
+warning[css]: index.html:173: `display: flex` on <div class="cell"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:174: background images and gradients are not converted yet
