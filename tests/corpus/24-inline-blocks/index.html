@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Inline blocks</title>
+  <style>
+    body { margin: 24px; font: 16px/24px "Liberation Sans", sans-serif; color: #1b2231; background: #ffffff; }
+    section { margin-bottom: 24px; }
+    #mixed { max-width: 480px; margin: 0; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; background: #e0e7ff; color: #3730a3; font-size: 12px; line-height: 16px; font-weight: 700; }
+    .narrow { width: 320px; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; }
+    .tag { display: inline-block; margin: 0 8px 8px 0; padding: 4px 10px; border-radius: 4px; background: #f1f5f9; border: 1px solid #94a3b8; font-size: 14px; line-height: 20px; }
+    .centered { text-align: center; padding: 16px; background: #f8fafc; }
+    .button { display: inline-block; padding: 10px 20px; border-radius: 6px; background: #2563eb; color: #ffffff; font-weight: 700; text-decoration: none; }
+    .ghost { background: transparent; color: #2563eb; border: 2px solid #2563eb; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; background: #dcfce7; color: #166534; font-size: 14px; line-height: 20px; }
+    .dot { width: 8px; height: 8px; border-radius: 4px; background: #16a34a; }
+    .stat { display: inline-block; width: 140px; margin-right: 16px; padding: 12px; border-radius: 8px; background: #fef3c7; vertical-align: top; }
+    .stat div { font-size: 28px; line-height: 32px; font-weight: 700; }
+    .stat span { font-size: 13px; line-height: 18px; color: #92400e; }
+  </style>
+</head>
+<body>
+  <section>
+    <p id="mixed">Release notes for <span class="badge">NEW</span> features and <span class="badge">BETA</span> previews, with a badge in the middle of a sentence that is long enough to wrap onto a second line in the page.</p>
+  </section>
+
+  <section class="narrow">
+    <span class="tag">layout</span>
+    <span class="tag">flexbox</span>
+    <span class="tag">grid</span>
+    <span class="tag">typography</span>
+    <span class="tag">colour</span>
+    <span class="tag">motion</span>
+  </section>
+
+  <section class="centered">
+    <a class="button" href="#start">Get started</a>
+    <a class="button ghost" href="#docs">Read the docs</a>
+  </section>
+
+  <section>
+    Status: <span class="chip"><span class="dot"></span>Online</span> since Monday.
+  </section>
+
+  <section>
+    <div class="stat"><div>42</div><span>open issues</span></div><div class="stat"><div>7</div><span>releases</span></div>
+  </section>
+</body>
+</html>
