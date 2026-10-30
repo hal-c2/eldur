@@ -291,8 +291,6 @@ var _holder = null;
 var _startTime = Date.now();
 var _fallbackTitle = "";
 var _alertHook = null;
-var _windowScrollX = 0;
-var _windowScrollY = 0;
 var _activeElement = null;
 var _clipboardText = "";
 var _explicitBaseUrl = "";
@@ -3073,12 +3071,10 @@ function wrap(rawItem) {
         var clientDim = isY
             ? (typeof rawItem.height === "number" ? rawItem.height : 0)
             : (typeof rawItem.width === "number" ? rawItem.width : 0);
-        if (clientDim > 0 && scrollDim > clientDim) {
-            var maxScroll = Math.max(0, scrollDim - clientDim);
-            n = Math.max(0, Math.min(n, maxScroll));
-        } else {
-            n = Math.max(0, n);
-        }
+        var maxScroll = (clientDim > 0 && scrollDim > clientDim)
+            ? Math.max(0, scrollDim - clientDim)
+            : 0;
+        n = Math.max(0, Math.min(n, maxScroll));
         var propName = isY ? "scrollTop" : "scrollLeft";
         var prev = m[propName] || 0;
         m[propName] = n;
@@ -3519,9 +3515,53 @@ function wrap(rawItem) {
                 if (typeof y === "number") { this.scrollTop = this.scrollTop + y; }
             }
         },
-        scrollIntoView: function() {
+        scrollIntoView: function(arg) {
+            var scroller = _findRootScroller();
+            if (!scroller) {
+                return;
+            }
             var rect = getBoundingClientRect(rawItem);
-            scrollTo(rect.left, rect.top);
+            var curX = window.scrollX;
+            var curY = window.scrollY;
+            var vw = (typeof scroller.width === "number" && scroller.width > 0) ? scroller.width : window.innerWidth;
+            var vh = (typeof scroller.height === "number" && scroller.height > 0) ? scroller.height : window.innerHeight;
+            var block = "start";
+            var inline = "nearest";
+            if (arg === false) {
+                block = "end";
+            } else if (arg && typeof arg === "object") {
+                if (typeof arg.block === "string") { block = arg.block; }
+                if (typeof arg.inline === "string") { inline = arg.inline; }
+            }
+            var nextX = curX;
+            if (inline === "start") {
+                nextX = curX + rect.left;
+            } else if (inline === "end") {
+                nextX = curX + rect.right - vw;
+            } else if (inline === "center") {
+                nextX = curX + rect.left - (vw - rect.width) / 2;
+            } else {
+                if (rect.left < 0) {
+                    nextX = curX + rect.left;
+                } else if (vw > 0 && rect.right > vw) {
+                    nextX = curX + rect.right - vw;
+                }
+            }
+            var nextY = curY;
+            if (block === "end") {
+                nextY = curY + rect.bottom - vh;
+            } else if (block === "center") {
+                nextY = curY + rect.top - (vh - rect.height) / 2;
+            } else if (block === "nearest") {
+                if (rect.top < 0) {
+                    nextY = curY + rect.top;
+                } else if (vh > 0 && rect.bottom > vh) {
+                    nextY = curY + rect.bottom - vh;
+                }
+            } else {
+                nextY = curY + rect.top;
+            }
+            scrollTo(nextX, nextY);
         },
         getBoundingClientRect: function() { return getBoundingClientRect(rawItem); },
         matches: function(sel) {
@@ -4002,31 +4042,102 @@ function _queryTree(startNode, selector, firstOnly) {
     return results;
 }
 
+function _findRootScroller() {
+    if (!_root) {
+        return null;
+    }
+    if (typeof _root.contentX === "number" && typeof _root.contentY === "number") {
+        return _root;
+    }
+    var containers = [_root];
+    if (_root.contentItem && _root.contentItem !== _root) {
+        containers.push(_root.contentItem);
+    }
+    for (var c = 0; c < containers.length; ++c) {
+        var kids = containers[c].children;
+        if (!kids) {
+            continue;
+        }
+        for (var i = 0; i < kids.length; ++i) {
+            var ch = kids[i];
+            if (ch && typeof ch.contentX === "number" && typeof ch.contentY === "number") {
+                return ch;
+            }
+        }
+    }
+    return null;
+}
+
+function _scrollerMaxExtent(scroller, axis) {
+    if (!scroller) {
+        return 0;
+    }
+    var isY = axis === "y";
+    var viewProp = isY ? "height" : "width";
+    var contentProp = isY ? "contentHeight" : "contentWidth";
+    var viewDim = (typeof scroller[viewProp] === "number" && scroller[viewProp] > 0)
+        ? scroller[viewProp]
+        : (_root && typeof _root[viewProp] === "number" ? _root[viewProp] : 0);
+    var contentDim = typeof scroller[contentProp] === "number" ? scroller[contentProp] : 0;
+    if (scroller.contentItem && scroller.contentItem.children) {
+        var cKids = scroller.contentItem.children;
+        for (var i = 0; i < cKids.length; ++i) {
+            var ck = cKids[i];
+            if (!ck) { continue; }
+            var impProp = isY ? "implicitHeight" : "implicitWidth";
+            var d = (typeof ck[viewProp] === "number" && ck[viewProp] > 0)
+                ? ck[viewProp]
+                : (typeof ck[impProp] === "number" ? ck[impProp] : 0);
+            if (d > contentDim) {
+                contentDim = d;
+            }
+        }
+    }
+    return (viewDim > 0 && contentDim > viewDim) ? Math.max(0, contentDim - viewDim) : 0;
+}
+
 function scrollTo(xOrOpts, y) {
+    var scroller = _findRootScroller();
+    if (!scroller) {
+        return;
+    }
+    var curX = typeof scroller.contentX === "number" ? scroller.contentX : 0;
+    var curY = typeof scroller.contentY === "number" ? scroller.contentY : 0;
+    var nextX = curX;
+    var nextY = curY;
     if (xOrOpts && typeof xOrOpts === "object") {
-        if (typeof xOrOpts.left === "number") { _windowScrollX = xOrOpts.left; }
-        if (typeof xOrOpts.top === "number") { _windowScrollY = xOrOpts.top; }
+        if (typeof xOrOpts.left === "number" && !isNaN(xOrOpts.left)) { nextX = xOrOpts.left; }
+        if (typeof xOrOpts.top === "number" && !isNaN(xOrOpts.top)) { nextY = xOrOpts.top; }
     } else {
-        if (typeof xOrOpts === "number") { _windowScrollX = xOrOpts; }
-        if (typeof y === "number") { _windowScrollY = y; }
+        if (typeof xOrOpts === "number" && !isNaN(xOrOpts)) { nextX = xOrOpts; }
+        if (typeof y === "number" && !isNaN(y)) { nextY = y; }
     }
-    if (_root && typeof _root.contentX === "number") {
-        _root.contentX = _windowScrollX;
-    }
-    if (_root && typeof _root.contentY === "number") {
-        _root.contentY = _windowScrollY;
+    var maxX = _scrollerMaxExtent(scroller, "x");
+    var maxY = _scrollerMaxExtent(scroller, "y");
+    var clampedX = Math.max(0, Math.min(nextX, maxX));
+    var clampedY = Math.max(0, Math.min(nextY, maxY));
+    scroller.contentX = clampedX;
+    scroller.contentY = clampedY;
+    if ((clampedX !== curX || clampedY !== curY) && _root) {
+        _dispatchDynamic(_root, "scroll", null);
     }
 }
 
 function scrollBy(xOrOpts, y) {
+    var scroller = _findRootScroller();
+    if (!scroller) {
+        return;
+    }
+    var curX = typeof scroller.contentX === "number" ? scroller.contentX : 0;
+    var curY = typeof scroller.contentY === "number" ? scroller.contentY : 0;
     if (xOrOpts && typeof xOrOpts === "object") {
-        var dx = typeof xOrOpts.left === "number" ? xOrOpts.left : 0;
-        var dy = typeof xOrOpts.top === "number" ? xOrOpts.top : 0;
-        scrollTo(_windowScrollX + dx, _windowScrollY + dy);
+        var dx = typeof xOrOpts.left === "number" && !isNaN(xOrOpts.left) ? xOrOpts.left : 0;
+        var dy = typeof xOrOpts.top === "number" && !isNaN(xOrOpts.top) ? xOrOpts.top : 0;
+        scrollTo(curX + dx, curY + dy);
     } else {
-        var nx = typeof xOrOpts === "number" ? xOrOpts : 0;
-        var ny = typeof y === "number" ? y : 0;
-        scrollTo(_windowScrollX + nx, _windowScrollY + ny);
+        var nx = typeof xOrOpts === "number" && !isNaN(xOrOpts) ? xOrOpts : 0;
+        var ny = typeof y === "number" && !isNaN(y) ? y : 0;
+        scrollTo(curX + nx, curY + ny);
     }
 }
 
@@ -4167,10 +4278,12 @@ var window = {
         return _root && typeof _root.height === "number" ? _root.height : 0;
     },
     get scrollX() {
-        return _root && typeof _root.contentX === "number" ? _root.contentX : _windowScrollX;
+        var scroller = _findRootScroller();
+        return scroller && typeof scroller.contentX === "number" ? scroller.contentX : 0;
     },
     get scrollY() {
-        return _root && typeof _root.contentY === "number" ? _root.contentY : _windowScrollY;
+        var scroller = _findRootScroller();
+        return scroller && typeof scroller.contentY === "number" ? scroller.contentY : 0;
     },
     get pageXOffset() {
         return this.scrollX;

@@ -2939,7 +2939,7 @@ function verifyFocusScrollStyle() {
     );
     assert!(
         output.contains(
-            "H2Q_OK_FOCUS_SCROLL_STYLE focus,blur|field|true|Enter name|true|false|true|gamma|true|true|#ff5500||140px|60px|0.75|20|50|20|50|25|1|Two|140|60|140|60"
+            "H2Q_OK_FOCUS_SCROLL_STYLE focus,blur|field|true|Enter name|true|false|true|gamma|true|true|#ff5500||140px|60px|0.75|0|0|0|0|0|1|Two|140|60|140|60"
         ),
         "{output}"
     );
@@ -3386,6 +3386,78 @@ function verifyCollections() {
         output.contains(
             "H2Q_OK_COLLECTIONS true|true|firstItem|true|firstItem|secondItem|firstItem|firstItem,secondItem|secondItem"
         ),
+        "{output}"
+    );
+}
+
+#[test]
+fn qml6_window_scroll_drives_root_flickable_with_chromium_clamping() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("target", 1, "targetBox", TargetKind::Box);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verifyWindowScroll() {
+    let scrollEvents = 0;
+    window.addEventListener("scroll", () => { scrollEvents += 1; });
+
+    window.scrollTo(15, 40);
+    const s1 = window.scrollX + "," + window.scrollY;
+
+    window.scrollBy({ left: 5, top: 10 });
+    const s2 = [window.scrollX, window.scrollY, window.pageXOffset, window.pageYOffset].join(",");
+
+    window.scrollTo(5000, 5000);
+    const sMax = window.scrollX + "," + window.scrollY;
+
+    window.scrollTo(-50, -50);
+    const sMin = window.scrollX + "," + window.scrollY;
+
+    document.getElementById("target").scrollIntoView();
+    const sInto = window.scrollX + "," + window.scrollY;
+
+    return [s1, s2, sMax, sMin, sInto, scrollEvents].join("|");
+}
+"##,
+        r#"import QtQuick
+
+Item {
+    id: root
+    width: 800
+    height: 600
+    Flickable {
+        id: flickable
+        anchors.fill: parent
+        contentWidth: page.implicitWidth
+        contentHeight: page.implicitHeight
+        boundsBehavior: Flickable.StopAtBounds
+        Item {
+            id: page
+            implicitWidth: 1200
+            implicitHeight: 1500
+            Rectangle {
+                id: targetBox
+                objectName: "target"
+                x: 120
+                y: 340
+                width: 100
+                height: 50
+                Text { id: targetBoxText; text: "Target" }
+            }
+        }
+    }
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        console.log("H2Q_OK_WIN_SCROLL", Page.verifyWindowScroll(), flickable.contentX, flickable.contentY);
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains("H2Q_OK_WIN_SCROLL 15,40|20,50,20,50|400,900|0,0|0,340|5 0 340"),
         "{output}"
     );
 }
