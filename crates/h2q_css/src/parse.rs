@@ -1117,6 +1117,11 @@ fn eval_supports_in_parens_kleene(source_text: &str, p: &ast::SupportsInParens) 
 fn eval_supports_declaration(decl: &ast::Declaration) -> bool {
     let prop_name = declaration_property_name(&decl.name);
     let raw_val = serialize_component_values(&decl.value);
+    if !has_valid_var_functions_in_cvs(&decl.value)
+        || (contains_var_function(&raw_val) && !has_valid_var_syntax(&raw_val))
+    {
+        return false;
+    }
     match properties::kind(&prop_name) {
         PropertyKind::Custom => true,
         PropertyKind::Longhand(_) | PropertyKind::Shorthand => {
@@ -1222,6 +1227,11 @@ fn parse_keyframes_rule(
             }
             let prop_name = declaration_property_name(&decl.name);
             let val_str = serialize_component_values(&decl.value);
+            if !has_valid_var_functions_in_cvs(&decl.value)
+                || (contains_var_function(&val_str) && !has_valid_var_syntax(&val_str))
+            {
+                continue;
+            }
             if prop_name == "animation-timing-function" {
                 if let Some(parsed_easing) = parse_easing_value(&val_str) {
                     easing = Some(parsed_easing);
@@ -1499,7 +1509,9 @@ fn process_declaration(ctx: &mut ParseCtx<'_>, decl: &ast::Declaration, out: &mu
         }
         PropertyKind::Custom => {
             let raw_val = serialize_component_values(&decl.value);
-            if contains_var_function(&raw_val) && !has_valid_var_syntax(&raw_val) {
+            if !has_valid_var_functions_in_cvs(&decl.value)
+                || (contains_var_function(&raw_val) && !has_valid_var_syntax(&raw_val))
+            {
                 ctx.report(
                     Severity::Invalid,
                     Some(line),
@@ -1537,6 +1549,15 @@ fn process_declaration(ctx: &mut ParseCtx<'_>, decl: &ast::Declaration, out: &mu
                         important,
                     });
                 }
+                return;
+            }
+
+            if !has_valid_var_functions_in_cvs(&decl.value) {
+                ctx.report(
+                    Severity::Invalid,
+                    Some(line),
+                    format!("invalid value `{raw_val}` for property `{prop_name}`"),
+                );
                 return;
             }
 
@@ -1580,6 +1601,72 @@ fn process_declaration(ctx: &mut ParseCtx<'_>, decl: &ast::Declaration, out: &mu
                 }
             }
         }
+    }
+}
+
+/// Validates any `var(...)` function nodes directly in the AST component value list.
+fn has_valid_var_functions_in_cvs(cvs: &[ast::ComponentValue]) -> bool {
+    cvs.iter().all(has_valid_var_functions_in_cv)
+}
+
+fn has_valid_var_functions_in_cv(cv: &ast::ComponentValue) -> bool {
+    match cv {
+        ast::ComponentValue::Function(func) => {
+            if func.name.as_str().eq_ignore_ascii_case("var") && !is_valid_ast_var_function(func) {
+                return false;
+            }
+            has_valid_var_functions_in_cvs(&func.value)
+        }
+        ast::ComponentValue::SimpleBlock(sb) => has_valid_var_functions_in_cvs(&sb.value),
+        ast::ComponentValue::ListOfComponentValues(locv) => {
+            has_valid_var_functions_in_cvs(&locv.children)
+        }
+        _ => true,
+    }
+}
+
+/// Per CSS Custom Properties 1 §3: `var() = var( <custom-property-name> [, <declaration-value>? ]? )`.
+/// In the AST, the tokens before the first `,` delimiter (ignoring whitespace) must be a single
+/// valid `<dashed-ident>` (`--*`).
+fn is_valid_ast_var_function(func: &ast::Function) -> bool {
+    let mut before_comma = Vec::new();
+    for cv in &func.value {
+        if is_whitespace_cv(cv) {
+            continue;
+        }
+        let is_comma = matches!(
+            cv,
+            ast::ComponentValue::Delimiter(d) if d.value == ast::DelimiterValue::Comma
+        ) || matches!(
+            cv,
+            ast::ComponentValue::PreservedToken(ts) if matches!(ts.token, ast::Token::Comma)
+        );
+        if is_comma {
+            break;
+        }
+        before_comma.push(cv);
+    }
+
+    if before_comma.len() != 1 {
+        return false;
+    }
+
+    match before_comma[0] {
+        ast::ComponentValue::DashedIdent(di) => {
+            let s = di.value.as_str();
+            let full = if s.starts_with("--") {
+                s.to_owned()
+            } else {
+                format!("--{s}")
+            };
+            is_valid_custom_prop_ident(&full)
+        }
+        ast::ComponentValue::Ident(id) => is_valid_custom_prop_ident(id.value.as_str()),
+        ast::ComponentValue::PreservedToken(ts) => match &ts.token {
+            ast::Token::Ident { value, .. } => is_valid_custom_prop_ident(value.as_str()),
+            _ => false,
+        },
+        _ => false,
     }
 }
 
@@ -1737,15 +1824,7 @@ pub(crate) fn parse_var_call_bounds(s: &str, args_start: usize) -> Option<(&str,
 }
 
 fn is_valid_custom_prop_ident(name: &str) -> bool {
-    name.len() >= 3
-        && name.starts_with("--")
-        && !name.bytes().any(|b| {
-            b.is_ascii_whitespace()
-                || matches!(
-                    b,
-                    b'(' | b')' | b'[' | b']' | b'{' | b'}' | b';' | b':' | b',' | b'"' | b'\''
-                )
-        })
+    name.len() >= 3 && name.starts_with("--") && name[2..].bytes().all(is_css_ident_byte)
 }
 
 fn is_css_ident_byte(b: u8) -> bool {

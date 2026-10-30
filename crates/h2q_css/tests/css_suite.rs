@@ -1712,3 +1712,282 @@ fn keyframe_style_font_size_updates_em_dependent_properties() {
     assert_eq!(map.style(em_box).expect("base after").font_size, 16.0);
     assert_eq!(map.style(em_box).expect("base after").margin.top, px(32.0));
 }
+
+#[test]
+fn var_syntax_rejects_non_ident_first_arg_and_malformed_nested_calls() {
+    let doc = Document::parse(
+        r#"<!doctype html><html><body>
+            <div id="plus"></div>
+            <div id="slash"></div>
+            <div id="nested-bad-ident"></div>
+            <div id="nested-empty-name"></div>
+            <div id="custom-prop-bad"></div>
+            <div id="nested-valid"></div>
+        </body></html>"#,
+    );
+
+    let css = r#"
+        :root {
+            --fallback-ten: 10px;
+            /* Custom property with invalid var() first arg must be rejected at parse time */
+            --custom-bad: 18px;
+            --custom-bad: var(--a+b, 99px);
+        }
+        #plus {
+            margin-top: 25px;
+            margin-top: var(--a+b, 10px);
+        }
+        #slash {
+            margin-top: 25px;
+            margin-top: var(--a/b, 10px);
+        }
+        #nested-bad-ident {
+            margin-top: 25px;
+            margin-top: var(--missing, var(--x+y, 10px));
+        }
+        #nested-empty-name {
+            margin-top: 25px;
+            margin-top: var(--missing, var(--, 10px));
+        }
+        #custom-prop-bad {
+            margin-top: var(--custom-bad, 40px);
+        }
+        #nested-valid {
+            margin-top: var(--missing, var(--also-missing, var(--fallback-ten, 99px)));
+        }
+        @supports (margin-top: var(--a+b, 10px)) or (margin-top: var(--a/b, 10px)) or (margin-top: var(--ok, var(--bad/name, 10px))) {
+            #nested-valid { margin-top: 999px; }
+        }
+    "#;
+
+    let (sheet, diags) = parse_author(css);
+    // 5 invalid `var()` declarations in rules (all rejected at parse time with Severity::Invalid).
+    assert_eq!(
+        diags.len(),
+        5,
+        "expected 5 invalid var() diagnostics, got: {diags:?}"
+    );
+    assert!(diags.iter().all(|d| d.severity == Severity::Invalid));
+
+    let map = compute_styles(&doc, &[sheet], &Viewport::default());
+
+    // Invalid var() calls must be dropped at parse time so the preceding 25px declaration wins
+    // (must NOT silently substitute their 10px fallback!).
+    for id in ["plus", "slash", "nested-bad-ident", "nested-empty-name"] {
+        let node = doc.element_by_id(id).expect(id);
+        assert_eq!(
+            map.style(node).expect(id).margin.top,
+            px(25.0),
+            "invalid var() on #{id} must not override prior declaration with fallback"
+        );
+    }
+
+    // `--custom-bad: var(--a+b, 99px)` was rejected at parse time, preserving `--custom-bad: 18px`.
+    let custom_bad = doc
+        .element_by_id("custom-prop-bad")
+        .expect("custom-prop-bad");
+    assert_eq!(
+        map.style(custom_bad).expect("custom-prop-bad").margin.top,
+        px(18.0)
+    );
+
+    // Valid nested fallbacks continue to work and `@supports` rejected the invalid `var()` conditions.
+    let nested_valid = doc.element_by_id("nested-valid").expect("nested-valid");
+    assert_eq!(
+        map.style(nested_valid).expect("nested-valid").margin.top,
+        px(10.0)
+    );
+}
+
+#[test]
+fn css_wide_keywords_on_custom_properties_direct_vs_substituted() {
+    let doc = Document::parse(
+        r#"<!doctype html>
+        <html>
+          <body id="parent" style="margin-top: 30px; color: rgb(10, 20, 30)">
+            <div id="child-direct-inherit"></div>
+            <div id="child-missing-inherit"></div>
+            <div id="child-direct-initial"></div>
+            <div id="child-direct-unset"></div>
+            <div id="child-direct-revert"></div>
+            <div id="child-direct-revert-layer"></div>
+            <div id="child-substituted-keywords"></div>
+            <h1 id="h1-substituted-revert" style="font-size: 12px">Heading</h1>
+            <div id="child-substituted-revert-layer" class="layered-box"></div>
+          </body>
+        </html>"#,
+    );
+
+    let css = r#"
+        #parent {
+            --b: 44px;
+            --init-prop: 55px;
+            --unset-prop: 66px;
+            --rev-prop: 77px;
+            --b-fb: 99px;
+        }
+
+        /* 1. Direct `--b: inherit; --a: var(--b); margin-top: var(--a)`:
+              `--b` is a custom property, so `--b: inherit` inherits parent's `--b` (`44px`),
+              `--a` resolves to `44px`, and `margin-top` becomes `44px`. */
+        #child-direct-inherit {
+            --b: 99px;
+            --b: inherit;
+            --a: var(--b);
+            margin-top: var(--a);
+        }
+
+        /* 2. Direct `--b-missing: inherit; --a-missing: var(--b-missing); margin-top: var(--a-missing)`:
+              When `--b-missing` is not defined on parent, `--b-missing: inherit` inherits the initial
+              (guaranteed-invalid) value, NOT the literal token `"inherit"`. Thus `--a-missing` is also
+              guaranteed-invalid, and `margin-top: var(--a-missing)` is invalid at computed-value time
+              (`unset` -> `0px`, NOT `30px` from `margin-top: inherit`!). */
+        #child-missing-inherit {
+            margin-top: 12px;
+            --b-missing: inherit;
+            --a-missing: var(--b-missing);
+            margin-top: var(--a-missing);
+        }
+
+        /* 3. Direct `initial`, `unset`, `revert`, `revert-layer` on custom properties: */
+        #child-direct-initial {
+            --init-prop: initial;
+            --a: var(--init-prop, 19px);
+            margin-top: var(--a);
+        }
+        #child-direct-unset {
+            --unset-prop: 99px;
+            --unset-prop: unset;
+            --a: var(--unset-prop);
+            margin-top: var(--a);
+        }
+        #child-direct-revert {
+            --rev-prop: 99px;
+            --rev-prop: revert;
+            --a: var(--rev-prop);
+            margin-top: var(--a);
+        }
+        @layer base {
+            #child-direct-revert-layer { --layer-prop: 23px; }
+        }
+        @layer over {
+            #child-direct-revert-layer {
+                --layer-prop: 88px;
+                --layer-prop: revert-layer;
+                --a: var(--layer-prop);
+                margin-top: var(--a);
+            }
+        }
+
+        /* 4. Substituted CSS-wide keyword tokens via `var()` fallback:
+              `--b-fb: var(--missing, inherit); --a-fb: var(--b-fb); margin-top: var(--a-fb)`. */
+        #child-substituted-keywords {
+            margin-top: 15px;
+            color: rgb(200, 0, 0);
+            --b-fb: var(--missing, inherit);
+            --a-fb: var(--b-fb);
+            margin-top: var(--a-fb);
+            color: var(--missing, initial);
+        }
+        h1#h1-substituted-revert {
+            font-size: var(--missing, revert) !important;
+        }
+        @layer first {
+            .layered-box { margin-top: 21px; }
+        }
+        @layer second {
+            #child-substituted-revert-layer {
+                margin-top: 88px;
+                margin-top: var(--missing, revert-layer);
+            }
+        }
+    "#;
+
+    let (sheet, diags) = parse_author(css);
+    assert!(diags.is_empty(), "unexpected parse diags: {diags:?}");
+    let map = compute_styles(&doc, &[sheet], &Viewport::default());
+
+    let direct_inh = doc
+        .element_by_id("child-direct-inherit")
+        .expect("direct-inh");
+    assert_eq!(
+        map.style(direct_inh).expect("direct-inh").margin.top,
+        px(44.0)
+    );
+
+    let missing_inh = doc
+        .element_by_id("child-missing-inherit")
+        .expect("missing-inh");
+    assert_eq!(
+        map.style(missing_inh).expect("missing-inh").margin.top,
+        px(0.0)
+    );
+
+    let direct_init = doc
+        .element_by_id("child-direct-initial")
+        .expect("direct-init");
+    assert_eq!(
+        map.style(direct_init).expect("direct-init").margin.top,
+        px(19.0)
+    );
+
+    let direct_unset = doc
+        .element_by_id("child-direct-unset")
+        .expect("direct-unset");
+    assert_eq!(
+        map.style(direct_unset).expect("direct-unset").margin.top,
+        px(66.0)
+    );
+
+    let direct_rev = doc
+        .element_by_id("child-direct-revert")
+        .expect("direct-rev");
+    assert_eq!(
+        map.style(direct_rev).expect("direct-rev").margin.top,
+        px(77.0)
+    );
+
+    let direct_rev_layer = doc
+        .element_by_id("child-direct-revert-layer")
+        .expect("direct-rev-layer");
+    assert_eq!(
+        map.style(direct_rev_layer)
+            .expect("direct-rev-layer")
+            .margin
+            .top,
+        px(23.0)
+    );
+
+    let sub_kw = doc
+        .element_by_id("child-substituted-keywords")
+        .expect("sub-kw");
+    let sub_kw_style = map.style(sub_kw).expect("sub-kw");
+    assert_eq!(
+        sub_kw_style
+            .custom_properties
+            .get("--b-fb")
+            .map(String::as_str),
+        Some("inherit")
+    );
+    assert_eq!(sub_kw_style.margin.top, px(30.0));
+    assert_eq!(sub_kw_style.color, Rgba::BLACK);
+
+    let h1_rev = doc
+        .element_by_id("h1-substituted-revert")
+        .expect("h1-substituted-revert");
+    assert_eq!(
+        map.style(h1_rev).expect("h1-substituted-revert").font_size,
+        32.0
+    );
+
+    let sub_rev_layer = doc
+        .element_by_id("child-substituted-revert-layer")
+        .expect("child-substituted-revert-layer");
+    assert_eq!(
+        map.style(sub_rev_layer)
+            .expect("child-substituted-revert-layer")
+            .margin
+            .top,
+        px(21.0)
+    );
+}
