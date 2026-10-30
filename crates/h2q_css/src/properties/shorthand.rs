@@ -29,7 +29,8 @@ use super::{
         parse_font_variant_caps, parse_font_weight, parse_line_height,
     },
     grid::{
-        eat_track_size, parse_grid_line, parse_grid_template_areas, parse_grid_template_tracks,
+        eat_track_size, parse_grid_auto_tracks, parse_grid_line, parse_grid_template_areas,
+        parse_grid_template_tracks,
     },
     length::{UnitContext, eat_length, eat_time_ms, parse_length_cvs, parse_number_cvs},
     text::{
@@ -1407,10 +1408,67 @@ fn expand_grid_template(cvs: &[ComponentValue]) -> Result<Vec<(Longhand, String)
     ])
 }
 
+fn eat_grid_auto_flow_prefix(cvs: &[ComponentValue]) -> Option<(bool, &[ComponentValue])> {
+    let mut cur = Cursor::new(cvs);
+    if cur.eat_ident_eq("auto-flow") {
+        let dense = cur.eat_ident_eq("dense");
+        Some((dense, &cvs[cur.save()..]))
+    } else if cur.eat_ident_eq("dense") && cur.eat_ident_eq("auto-flow") {
+        Some((true, &cvs[cur.save()..]))
+    } else {
+        None
+    }
+}
+
 fn expand_grid(cvs: &[ComponentValue]) -> Result<Vec<(Longhand, String)>, String> {
-    let mut out = expand_grid_template(cvs).map_err(|_| {
-        "unsupported or invalid 'grid' shorthand (only template forms are supported)".to_owned()
-    })?;
+    let parts = split_slash_separated(cvs)?;
+    if parts.len() == 2 {
+        let left_flow = eat_grid_auto_flow_prefix(parts[0]);
+        let right_flow = eat_grid_auto_flow_prefix(parts[1]);
+        if left_flow.is_some() && right_flow.is_some() {
+            return Err("'grid' shorthand cannot have 'auto-flow' on both sides of '/'".to_owned());
+        }
+        let uctx = dummy_uctx(true);
+        if let Some((dense, rest)) = left_flow {
+            let auto_rows = if Cursor::new(rest).is_eof() {
+                "auto".to_owned()
+            } else {
+                let _ = parse_grid_auto_tracks(rest, &uctx)?;
+                serialize_cvs(rest)
+            };
+            let _ = parse_grid_template_tracks(parts[1], &uctx)?;
+            let flow = if dense { "row dense" } else { "row" };
+            return Ok(vec![
+                (Longhand::GridTemplateRows, "none".to_owned()),
+                (Longhand::GridTemplateColumns, serialize_cvs(parts[1])),
+                (Longhand::GridTemplateAreas, "none".to_owned()),
+                (Longhand::GridAutoFlow, flow.to_owned()),
+                (Longhand::GridAutoRows, auto_rows),
+                (Longhand::GridAutoColumns, "auto".to_owned()),
+            ]);
+        }
+        if let Some((dense, rest)) = right_flow {
+            let _ = parse_grid_template_tracks(parts[0], &uctx)?;
+            let auto_cols = if Cursor::new(rest).is_eof() {
+                "auto".to_owned()
+            } else {
+                let _ = parse_grid_auto_tracks(rest, &uctx)?;
+                serialize_cvs(rest)
+            };
+            let flow = if dense { "column dense" } else { "column" };
+            return Ok(vec![
+                (Longhand::GridTemplateRows, serialize_cvs(parts[0])),
+                (Longhand::GridTemplateColumns, "none".to_owned()),
+                (Longhand::GridTemplateAreas, "none".to_owned()),
+                (Longhand::GridAutoFlow, flow.to_owned()),
+                (Longhand::GridAutoRows, "auto".to_owned()),
+                (Longhand::GridAutoColumns, auto_cols),
+            ]);
+        }
+    }
+
+    let mut out = expand_grid_template(cvs)
+        .map_err(|_| "unsupported or invalid 'grid' shorthand".to_owned())?;
     out.push((Longhand::GridAutoFlow, "row".to_owned()));
     out.push((Longhand::GridAutoRows, "auto".to_owned()));
     out.push((Longhand::GridAutoColumns, "auto".to_owned()));

@@ -631,15 +631,60 @@ pub(crate) fn eat_length(
     Ok(None)
 }
 
-fn calc_node_into_length(node: CalcNode, non_negative: bool) -> Length {
+fn lp_is_non_negative(lp: &LengthPercentage) -> bool {
+    lp.px >= 0.0 && lp.percent >= 0.0 && lp.vw >= 0.0 && lp.vh >= 0.0
+}
+
+/// Returns `true` when every leaf/factor in `node` is non-negative, so the
+/// expression is guaranteed `>= 0` under a non-negative percentage/viewport basis
+/// and does not need a redundant `max(0px, ...)` wrapper.
+fn calc_node_is_non_negative(node: &CalcNode) -> bool {
     match node {
-        CalcNode::Leaf(mut lp) => {
-            if non_negative && lp.percent == 0.0 && lp.vw == 0.0 && lp.vh == 0.0 && lp.px < 0.0 {
-                lp.px = 0.0;
-            }
-            Length::Linear(lp)
+        CalcNode::Leaf(lp) => lp_is_non_negative(lp),
+        CalcNode::Min(items) | CalcNode::Max(items) | CalcNode::Sum(items) => {
+            items.iter().all(calc_node_is_non_negative)
         }
-        other => Length::Calc(other),
+        CalcNode::Clamp(lo, val, hi) => {
+            calc_node_is_non_negative(lo)
+                && calc_node_is_non_negative(val)
+                && calc_node_is_non_negative(hi)
+        }
+        CalcNode::Product(inner, k) => *k >= 0.0 && calc_node_is_non_negative(inner),
+    }
+}
+
+fn calc_node_into_length(node: CalcNode, non_negative: bool) -> Length {
+    if !non_negative {
+        return match node {
+            CalcNode::Leaf(lp) => Length::Linear(lp),
+            other => Length::Calc(other),
+        };
+    }
+    match node {
+        // Percentages/vw/vh have a non-negative basis here, so a leaf with all
+        // components <= 0 is known to be <= 0 at parse time and clamps to 0.
+        CalcNode::Leaf(lp) => {
+            if lp.px <= 0.0 && lp.percent <= 0.0 && lp.vw <= 0.0 && lp.vh <= 0.0 {
+                Length::Linear(LengthPercentage::ZERO)
+            } else if lp_is_non_negative(&lp) {
+                Length::Linear(lp)
+            } else {
+                Length::Calc(CalcNode::Max(vec![
+                    CalcNode::Leaf(LengthPercentage::ZERO),
+                    CalcNode::Leaf(lp),
+                ]))
+            }
+        }
+        other => {
+            if calc_node_is_non_negative(&other) {
+                Length::Calc(other)
+            } else {
+                Length::Calc(CalcNode::Max(vec![
+                    CalcNode::Leaf(LengthPercentage::ZERO),
+                    other,
+                ]))
+            }
+        }
     }
 }
 

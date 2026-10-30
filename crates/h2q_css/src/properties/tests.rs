@@ -1011,3 +1011,116 @@ fn border_radius_rejects_multiple_slashes() {
 
     assert!(apply_decl(&mut s, "border-radius", "10px / 20px / 30px", &ctx).is_err());
 }
+
+#[test]
+fn negative_calc_in_non_negative_properties() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    let mut s = ComputedStyle::default();
+
+    compute(&mut s, Longhand::PaddingTop, "calc(10% - 30%)", &ctx)
+        .expect("padding-top negative percentage calc");
+    assert_eq!(s.padding.top, Length::Linear(LengthPercentage::ZERO));
+
+    compute(&mut s, Longhand::BorderTopLeftRadius, "calc(-20%)", &ctx)
+        .expect("border-top-left-radius negative percentage calc");
+    assert_eq!(s.border_radius.top_left, LengthPercentage::ZERO);
+    assert_eq!(s.border_radius_calc.top_left, None);
+
+    compute(&mut s, Longhand::PaddingTop, "calc(10px - 5%)", &ctx)
+        .expect("padding-top mixed-sign calc");
+    assert_eq!(
+        s.padding.top,
+        Length::Calc(CalcNode::Max(vec![
+            CalcNode::Leaf(LengthPercentage::ZERO),
+            CalcNode::Leaf(LengthPercentage {
+                px: 10.0,
+                percent: -5.0,
+                vw: 0.0,
+                vh: 0.0,
+            }),
+        ]))
+    );
+
+    compute(&mut s, Longhand::PaddingTop, "calc(20px + 5%)", &ctx)
+        .expect("padding-top positive calc");
+    assert_eq!(
+        s.padding.top,
+        Length::Linear(LengthPercentage {
+            px: 20.0,
+            percent: 5.0,
+            vw: 0.0,
+            vh: 0.0,
+        })
+    );
+
+    compute(&mut s, Longhand::MarginTop, "calc(10% - 30%)", &ctx)
+        .expect("margin-top negative percentage calc");
+    assert_eq!(
+        s.margin.top,
+        LengthAuto::Length(Length::Linear(LengthPercentage::percent(-20.0)))
+    );
+}
+
+#[test]
+fn grid_shorthand_auto_flow_forms() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+
+    let pairs = expand("grid", "auto-flow 100px / 1fr 2fr").expect("expand grid auto-flow row");
+    assert!(pairs.contains(&(Longhand::GridAutoFlow, "row".to_owned())));
+    assert!(pairs.contains(&(Longhand::GridAutoRows, "100px".to_owned())));
+    assert!(pairs.contains(&(Longhand::GridAutoColumns, "auto".to_owned())));
+    assert!(pairs.contains(&(Longhand::GridTemplateColumns, "1fr 2fr".to_owned())));
+    assert!(pairs.contains(&(Longhand::GridTemplateRows, "none".to_owned())));
+    assert!(pairs.contains(&(Longhand::GridTemplateAreas, "none".to_owned())));
+
+    let mut s = ComputedStyle::default();
+    apply_decl(&mut s, "grid", "auto-flow 100px / 1fr 2fr", &ctx)
+        .expect("apply grid auto-flow 100px / 1fr 2fr");
+    assert!(!s.grid_auto_flow_column);
+    assert_eq!(s.grid_auto_rows, vec![Track::Length(Length::px(100.0))]);
+    assert_eq!(s.grid_auto_columns, vec![Track::Auto]);
+    assert_eq!(
+        s.grid_template_columns,
+        vec![Track::Fr(1.0), Track::Fr(2.0)]
+    );
+    assert!(s.grid_template_rows.is_empty());
+    assert!(s.grid_template_areas.is_empty());
+
+    let pairs = expand("grid", "100px 1fr / auto-flow dense 50px")
+        .expect("expand grid auto-flow column dense");
+    assert!(pairs.contains(&(Longhand::GridAutoFlow, "column dense".to_owned())));
+    assert!(pairs.contains(&(Longhand::GridAutoColumns, "50px".to_owned())));
+    assert!(pairs.contains(&(Longhand::GridAutoRows, "auto".to_owned())));
+    assert!(pairs.contains(&(Longhand::GridTemplateRows, "100px 1fr".to_owned())));
+    assert!(pairs.contains(&(Longhand::GridTemplateColumns, "none".to_owned())));
+    assert!(pairs.contains(&(Longhand::GridTemplateAreas, "none".to_owned())));
+
+    apply_decl(&mut s, "grid", "100px 1fr / auto-flow dense 50px", &ctx)
+        .expect("apply grid 100px 1fr / auto-flow dense 50px");
+    assert!(s.grid_auto_flow_column);
+    assert_eq!(s.grid_auto_columns, vec![Track::Length(Length::px(50.0))]);
+    assert_eq!(s.grid_auto_rows, vec![Track::Auto]);
+    assert_eq!(
+        s.grid_template_rows,
+        vec![Track::Length(Length::px(100.0)), Track::Fr(1.0)]
+    );
+    assert!(s.grid_template_columns.is_empty());
+
+    let pairs = expand("grid", "dense auto-flow / 1fr").expect("expand grid dense auto-flow");
+    assert!(pairs.contains(&(Longhand::GridAutoFlow, "row dense".to_owned())));
+    assert!(pairs.contains(&(Longhand::GridAutoRows, "auto".to_owned())));
+    assert!(pairs.contains(&(Longhand::GridAutoColumns, "auto".to_owned())));
+    assert!(pairs.contains(&(Longhand::GridTemplateColumns, "1fr".to_owned())));
+    assert!(pairs.contains(&(Longhand::GridTemplateRows, "none".to_owned())));
+
+    apply_decl(&mut s, "grid", "dense auto-flow / 1fr", &ctx)
+        .expect("apply grid dense auto-flow / 1fr");
+    assert!(!s.grid_auto_flow_column);
+    assert_eq!(s.grid_auto_rows, vec![Track::Auto]);
+    assert_eq!(s.grid_template_columns, vec![Track::Fr(1.0)]);
+    assert!(s.grid_template_rows.is_empty());
+
+    assert!(apply_decl(&mut s, "grid", "auto-flow / auto-flow", &ctx).is_err());
+}
