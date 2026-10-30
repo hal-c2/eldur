@@ -723,6 +723,7 @@ ApplicationWindow {
                         Layout.preferredWidth: 0
                         Layout.maximumWidth: 820
                         Layout.fillHeight: true
+                        Layout.horizontalStretchFactor: 1000000
 
                         ColumnLayout {
                             id: contentContent
@@ -1816,6 +1817,11 @@ ApplicationWindow {
                                 }
                             }
                         }
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.horizontalStretchFactor: 1
                     }
                 }
             }
