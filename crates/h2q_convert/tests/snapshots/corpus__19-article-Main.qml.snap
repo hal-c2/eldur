@@ -327,17 +327,15 @@ ApplicationWindow {
 
                             // <p>
                             Text {
-                                text: "The first rewrite moved us from a set of hand-written scripts to a single orchestrator. It worked for a while. Then the scripts came back in the form of <small>pre-build.sh</small> hooks, one for each team, each with its own idea of what a clean checkout means."
-                                textFormat: Text.StyledText
+                                text: "<div style=\"line-height:33.25px\">The first rewrite moved us from a set of hand-written scripts to a single orchestrator. It worked for a while. Then the scripts came back in the form of <span style=\"font-size:16px;font-family:'monospace';background-color:#f0ebe0\"><span style=\"letter-spacing:6px\">&#8288;</span>pre-build.sh<span style=\"letter-spacing:6px\">&#8288;</span></span> hooks, one for each team, each with its own idea of what a clean checkout means.</div>"
+                                textFormat: Text.RichText
                                 color: "#1f1d1a"
                                 font.family: "serif"
                                 font.pixelSize: 19
-                                lineHeight: 33.25
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 5.7
-                                }
                                 wrapMode: Text.WordWrap
+                                transform: Translate {
+                                    y: -5.7
+                                }
                                 Layout.fillWidth: true
                             }
 
@@ -543,17 +541,15 @@ ApplicationWindow {
 
                                     // <p>
                                     Text {
-                                        text: "<b><font color=\"#2f5558\">Note.</font></b> Declared inputs are not the same as fast builds. The speedup came from the cache finally being trustworthy, which let us stop disabling it on CI."
-                                        textFormat: Text.StyledText
+                                        text: "<div style=\"line-height:31.59px\"><b><font color=\"#2f5558\"><span style=\"font-family:'sans-serif'\">Note.</span></font></b> Declared inputs are not the same as fast builds. The speedup came from the cache finally being trustworthy, which let us stop disabling it on CI.</div>"
+                                        textFormat: Text.RichText
                                         color: "#1f1d1a"
                                         font.family: "serif"
                                         font.pixelSize: 18
-                                        lineHeight: 31.59
-                                        lineHeightMode: Text.FixedHeight
-                                        transform: Translate {
-                                            y: 5.41
-                                        }
                                         wrapMode: Text.WordWrap
+                                        transform: Translate {
+                                            y: -5.41
+                                        }
                                         Layout.fillWidth: true
                                     }
                                 }
@@ -617,12 +613,34 @@ ApplicationWindow {
                                     Rectangle {
                                         color: "#1f1d1a"
                                         radius: 14
-                                        implicitWidth: 0
-                                        implicitHeight: 0
+                                        implicitWidth: blockText.implicitWidth
+                                        implicitHeight: blockText.implicitHeight
                                         width: 28
                                         height: 28
                                         x: 0
                                         y: 2
+
+                                        Text {
+                                            id: blockText
+                                            text: "1"
+                                            textFormat: Text.PlainText
+                                            color: "#fbf9f4"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 14
+                                            font.weight: 700
+                                            lineHeight: 23.8
+                                            lineHeightMode: Text.FixedHeight
+                                            transform: Translate {
+                                                y: 4.08
+                                            }
+                                            wrapMode: Text.WordWrap
+                                            horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
+                                        }
                                     }
                                 }
 
@@ -660,12 +678,34 @@ ApplicationWindow {
                                     Rectangle {
                                         color: "#1f1d1a"
                                         radius: 14
-                                        implicitWidth: 0
-                                        implicitHeight: 0
+                                        implicitWidth: blockText2.implicitWidth
+                                        implicitHeight: blockText2.implicitHeight
                                         width: 28
                                         height: 28
                                         x: 0
                                         y: 2
+
+                                        Text {
+                                            id: blockText2
+                                            text: "2"
+                                            textFormat: Text.PlainText
+                                            color: "#fbf9f4"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 14
+                                            font.weight: 700
+                                            lineHeight: 23.8
+                                            lineHeightMode: Text.FixedHeight
+                                            transform: Translate {
+                                                y: 4.08
+                                            }
+                                            wrapMode: Text.WordWrap
+                                            horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
+                                        }
                                     }
                                 }
 
@@ -703,12 +743,34 @@ ApplicationWindow {
                                     Rectangle {
                                         color: "#1f1d1a"
                                         radius: 14
-                                        implicitWidth: 0
-                                        implicitHeight: 0
+                                        implicitWidth: blockText3.implicitWidth
+                                        implicitHeight: blockText3.implicitHeight
                                         width: 28
                                         height: 28
                                         x: 0
                                         y: 2
+
+                                        Text {
+                                            id: blockText3
+                                            text: "3"
+                                            textFormat: Text.PlainText
+                                            color: "#fbf9f4"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 14
+                                            font.weight: 700
+                                            lineHeight: 23.8
+                                            lineHeightMode: Text.FixedHeight
+                                            transform: Translate {
+                                                y: 4.08
+                                            }
+                                            wrapMode: Text.WordWrap
+                                            horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
+                                        }
                                     }
                                 }
 
@@ -746,12 +808,34 @@ ApplicationWindow {
                                     Rectangle {
                                         color: "#1f1d1a"
                                         radius: 14
-                                        implicitWidth: 0
-                                        implicitHeight: 0
+                                        implicitWidth: blockText4.implicitWidth
+                                        implicitHeight: blockText4.implicitHeight
                                         width: 28
                                         height: 28
                                         x: 0
                                         y: 2
+
+                                        Text {
+                                            id: blockText4
+                                            text: "4"
+                                            textFormat: Text.PlainText
+                                            color: "#fbf9f4"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 14
+                                            font.weight: 700
+                                            lineHeight: 23.8
+                                            lineHeightMode: Text.FixedHeight
+                                            transform: Translate {
+                                                y: 4.08
+                                            }
+                                            wrapMode: Text.WordWrap
+                                            horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
+                                        }
                                     }
                                 }
                             }

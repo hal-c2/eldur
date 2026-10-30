@@ -235,17 +235,15 @@ ApplicationWindow {
 
                         // <p>
                         Text {
-                            text: "A modular scale gives headings a consistent relationship to body text. Here the steps are expressed in <small>rem</small> so that they follow the user's preferred base size."
-                            textFormat: Text.StyledText
+                            text: "<div style=\"line-height:27.2px\">A modular scale gives headings a consistent relationship to body text. Here the steps are expressed in <span style=\"font-size:15px;font-family:'monospace';background-color:#f1efe8\"><span style=\"letter-spacing:5.35px\">&#8288;</span>rem<span style=\"letter-spacing:5.35px\">&#8288;</span></span> so that they follow the user's preferred base size.</div>"
+                            textFormat: Text.RichText
                             color: "#1d1f23"
                             font.family: "serif"
                             font.pixelSize: 17
-                            lineHeight: 27.2
-                            lineHeightMode: Text.FixedHeight
-                            transform: Translate {
-                                y: 3.83
-                            }
                             wrapMode: Text.WordWrap
+                            transform: Translate {
+                                y: -3.83
+                            }
                             Layout.fillWidth: true
                             Layout.topMargin: 11
                         }
@@ -395,17 +393,15 @@ ApplicationWindow {
 
                         // <p>
                         Text {
-                            text: "Emphasis should be used sparingly. Highlighted passages help a reader find their place during revision, but they are not a substitute for structure. Water is H<small>2</small>O, and the area of a circle is πr<small>2</small>. Footnotes are often set in <font color=\"#5b616e\"><small>smaller type, typically around 13 pixels</small></font>, so that they do not compete with the main text."
-                            textFormat: Text.StyledText
+                            text: "<div style=\"line-height:27.2px\">Emphasis should be used sparingly. <span style=\"background-color:#fff1a8\"><span style=\"letter-spacing:3.4px\">&#8288;</span>Highlighted passages<span style=\"letter-spacing:3.4px\">&#8288;</span></span> help a reader find their place during revision, but they are not a substitute for structure. Water is H<span style=\"font-size:13px\">2</span>O, and the area of a circle is πr<span style=\"font-size:13px\">2</span>. Footnotes are often set in <font color=\"#5b616e\"><span style=\"font-size:13px\">smaller type, typically around 13 pixels</span></font>, so that they do not compete with the main text.</div>"
+                            textFormat: Text.RichText
                             color: "#1d1f23"
                             font.family: "serif"
                             font.pixelSize: 17
-                            lineHeight: 27.2
-                            lineHeightMode: Text.FixedHeight
-                            transform: Translate {
-                                y: 3.83
-                            }
                             wrapMode: Text.WordWrap
+                            transform: Translate {
+                                y: -3.83
+                            }
                             Layout.fillWidth: true
                             Layout.topMargin: 14
                         }
@@ -545,17 +541,15 @@ ApplicationWindow {
 
                         // <p>
                         Text {
-                            text: "Inline identifiers such as <small>line-height</small> or <small>max-width</small> sit on the baseline. Longer examples belong in a block:"
-                            textFormat: Text.StyledText
+                            text: "<div style=\"line-height:27.2px\">Inline identifiers such as <span style=\"font-size:15px;font-family:'monospace';background-color:#f1efe8\"><span style=\"letter-spacing:5.35px\">&#8288;</span>line-height<span style=\"letter-spacing:5.35px\">&#8288;</span></span> or <span style=\"font-size:15px;font-family:'monospace';background-color:#f1efe8\"><span style=\"letter-spacing:5.35px\">&#8288;</span>max-width<span style=\"letter-spacing:5.35px\">&#8288;</span></span> sit on the baseline. Longer examples belong in a block:</div>"
+                            textFormat: Text.RichText
                             color: "#1d1f23"
                             font.family: "serif"
                             font.pixelSize: 17
-                            lineHeight: 27.2
-                            lineHeightMode: Text.FixedHeight
-                            transform: Translate {
-                                y: 3.83
-                            }
                             wrapMode: Text.WordWrap
+                            transform: Translate {
+                                y: -3.83
+                            }
                             Layout.fillWidth: true
                             Layout.topMargin: 14
                         }

@@ -2,9 +2,9 @@
 source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-warning[html]: index.html:208: <img class="logo"> is not converted yet; an empty placeholder keeps its space
-warning[html]: index.html:217: <img class="hero-img"> is not converted yet; an empty placeholder keeps its space
-warning[html]: index.html:226: <img class="avatar"> is not converted yet; an empty placeholder keeps its space
-warning[html]: index.html:235: <img> is not converted yet; an empty placeholder keeps its space
-warning[html]: index.html:246: <img class="thumb"> is not converted yet; an empty placeholder keeps its space
+warning[html]: index.html:208: image `logo.svg` was not found; an empty placeholder keeps its space
+warning[html]: index.html:217: image `photo.jpg` was not found; an empty placeholder keeps its space
+warning[html]: index.html:226: image `avatar.png` was not found; an empty placeholder keeps its space
+warning[html]: index.html:235: image `photo.jpg` was not found; an empty placeholder keeps its space
+warning[html]: index.html:246: image `photo.jpg` was not found; an empty placeholder keeps its space
 info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

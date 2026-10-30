@@ -705,7 +705,8 @@ ApplicationWindow {
                                                         radius: 999
                                                         implicitWidth: 0
                                                         implicitHeight: 0
-                                                        Layout.preferredWidth: parent.width * 0.72
+                                                        Layout.fillWidth: true
+                                                        Layout.maximumWidth: parent.width * 0.72
                                                         Layout.preferredHeight: 8
                                                     }
                                                 }
@@ -784,7 +785,8 @@ ApplicationWindow {
                                                         radius: 999
                                                         implicitWidth: 0
                                                         implicitHeight: 0
-                                                        Layout.preferredWidth: parent.width * 0.45
+                                                        Layout.fillWidth: true
+                                                        Layout.maximumWidth: parent.width * 0.45
                                                         Layout.preferredHeight: 8
                                                     }
                                                 }
@@ -863,7 +865,8 @@ ApplicationWindow {
                                                         radius: 999
                                                         implicitWidth: 0
                                                         implicitHeight: 0
-                                                        Layout.preferredWidth: parent.width * 0.88
+                                                        Layout.fillWidth: true
+                                                        Layout.maximumWidth: parent.width * 0.88
                                                         Layout.preferredHeight: 8
                                                     }
                                                 }

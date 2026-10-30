@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>A winter at the harbour · Field Notes</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: serif;
+      font-size: 18px;
+      line-height: 1.6;
+      color: #2e2a26;
+      background: #fffdf8;
+    }
+
+    .masthead {
+      padding: 20px 0;
+      border-bottom: 3px double #d8cfc0;
+      text-align: center;
+    }
+
+    .masthead a {
+      color: #2e2a26;
+      font-family: sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+
+    article {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 38px;
+      line-height: 1.2;
+    }
+
+    .meta {
+      margin: 0 0 28px;
+      color: #8a7f70;
+      font-family: sans-serif;
+      font-size: 14px;
+    }
+
+    p {
+      margin: 0 0 1em;
+    }
+
+    .intro::first-letter {
+      float: left;
+      margin: 4px 8px 0 0;
+      color: #c9533b;
+      font-size: 64px;
+      font-weight: 700;
+      line-height: 0.85;
+    }
+
+    .photo {
+      float: right;
+      width: 280px;
+      margin: 4px 0 12px 24px;
+      border-radius: 4px;
+    }
+
+    .toc {
+      clear: both;
+      margin: 24px 0;
+      padding: 16px 24px;
+      background: #f4efe6;
+      border-radius: 6px;
+    }
+
+    .toc h2 {
+      margin: 0 0 8px;
+      font-family: sans-serif;
+      font-size: 15px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .toc ol {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: section;
+    }
+
+    .toc li {
+      counter-increment: section;
+    }
+
+    .toc li::before {
+      content: counter(section) ". ";
+      color: #c9533b;
+      font-weight: 700;
+    }
+
+    .toc ol ol {
+      padding-left: 24px;
+      counter-reset: sub;
+    }
+
+    .toc ol ol li {
+      counter-increment: sub;
+    }
+
+    .toc ol ol li::before {
+      content: counter(section) "." counter(sub, lower-alpha) " ";
+    }
+
+    blockquote {
+      margin: 24px 0;
+      padding: 4px 0 4px 20px;
+      border-left: 4px solid #c9533b;
+      color: #5b5248;
+      font-size: 21px;
+      font-style: italic;
+    }
+
+    figure {
+      margin: 24px 0;
+    }
+
+    figure img {
+      display: block;
+      width: 100%;
+    }
+
+    figcaption {
+      margin-top: 8px;
+      color: #8a7f70;
+      font-family: sans-serif;
+      font-size: 14px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header class="masthead"><a href="#">Field Notes</a></header>
+
+  <article>
+    <h1>A winter at the harbour</h1>
+    <p class="meta">By Sólveig Ragnarsdóttir · 14 February 2026 · 6 min read</p>
+
+    <img class="photo" src="harbour.svg" alt="The harbour with two hills and a red boat">
+
+    <p class="intro">When the ferries stop running in November, the harbour becomes a different town. The cafés close their terraces, the fishing boats come in early, and the few of us who stay learn each other's routines. I went there to write a book and ended up keeping a diary of the weather instead.</p>
+
+    <p>The mornings are dark until ten. I would walk to the end of the breakwater with a thermos and watch the light come up behind the hills, first grey, then a thin band of orange that never quite made it to yellow. Most days the wind decided everything: whether the boats went out, whether the shop got its delivery, whether anyone bothered to talk.</p>
+
+    <p>By January I knew which gulls belonged to which roof.</p>
+
+    <nav class="toc">
+      <h2>In this post</h2>
+      <ol>
+        <li>The dark months
+          <ol>
+            <li>Weather as a calendar</li>
+            <li>The last ferry</li>
+          </ol>
+        </li>
+        <li>Learning the town</li>
+        <li>What I wrote instead</li>
+      </ol>
+    </nav>
+
+    <blockquote>Nobody here asks what you do. They ask whether you have enough firewood.</blockquote>
+
+    <p>That question turned out to be the most useful thing anyone told me all winter. It is a question about planning, about honesty, and about whether you have thought further ahead than tomorrow.</p>
+
+    <figure>
+      <img src="chart.svg" alt="Bar chart of daylight hours rising from January to June">
+      <figcaption>Hours of daylight each month, January to June.</figcaption>
+    </figure>
+
+    <p>In March the first ferry came back. I watched it round the point and felt, for the first time, a little sorry.</p>
+  </article>
+</body>
+</html>

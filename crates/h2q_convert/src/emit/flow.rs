@@ -7,7 +7,7 @@
 //! that collapse through are dropped.
 
 use h2q_css::{
-    BoxSizing, ComputedStyle, Display, Float, Length, LengthAuto, Size, TextAlign,
+    BoxSizing, Clear, ComputedStyle, Display, Float, Length, LengthAuto, Size, TextAlign,
     TextDecorationLine, Visibility,
 };
 use h2q_qml::{Member, Object, Value};
@@ -89,11 +89,38 @@ impl Emitter<'_, '_> {
         let mut rest = children;
         while let Some(child) = rest.first() {
             let run = float_run(rest);
+            let wrapped = rest.get(run..).map_or(0, |after| {
+                let side = child.style.float;
+                after
+                    .iter()
+                    .take_while(|b| float_run(std::slice::from_ref(b)) == 0 && !clears(b, side))
+                    .count()
+            });
+            if run > 0 && wrapped > 0 {
+                let floats = &rest[..run];
+                let around = &rest[run..run + wrapped];
+                rest = &rest[run + wrapped..];
+                let (mut obj, bottom) = self.float_group(floats, around, decoration);
+                // Margins do not collapse with a float's.
+                if last.is_none() && top_open && pending == MarginSet::default() {
+                    escaped_top = Some(pending);
+                } else {
+                    self.set_margin(&mut obj, "Layout.topMargin", pending.value());
+                }
+                layout.push_child(obj);
+                last = Some(layout.members.len() - 1);
+                pending = bottom;
+                hidden = None;
+                continue;
+            }
             if run > 1 {
                 let floats = &rest[..run];
                 rest = &rest[run..];
                 let mut obj = self.float_row(floats, decoration);
-                if let Some(next) = rest.first() {
+                if let Some(next) = rest
+                    .first()
+                    .filter(|b| float_run(std::slice::from_ref(b)) > 0)
+                {
                     let line = next.node.and_then(|n| crate::boxes::node_line(self.doc, n));
                     self.diags.warning(
                         "css",
@@ -200,6 +227,125 @@ impl Emitter<'_, '_> {
             escaped_top: escaped_top.unwrap_or_default(),
             escaped_bottom,
         }
+    }
+
+    /// Floats and the blocks after them that wrap around them: the floats'
+    /// row over a column of the blocks, where each line of a paragraph
+    /// beside the floats' margin box is shortened by it (CSS 2.2 §9.5).
+    /// Blocks themselves are not narrowed: only their lines move. Returns
+    /// the group and the margins escaping through its bottom.
+    fn float_group(
+        &mut self,
+        floats: &[LayoutBox<'_>],
+        around: &[LayoutBox<'_>],
+        decoration: TextDecorationLine,
+    ) -> (Object, MarginSet) {
+        let left = floats[0].style.float == Float::Left;
+        let mut row = self.float_row(floats, decoration);
+        let row_id = row.id.clone().expect("a float row has an id");
+        row.members
+            .retain(|m| !matches!(m, Member::Property { name, .. } if name == "Layout.fillWidth"));
+        for edge in ["left", "right", "top"] {
+            row.set(
+                &format!("anchors.{edge}"),
+                Value::expr(format!("parent.{edge}")),
+            );
+        }
+        let column = self.column(around, decoration, false, true);
+        let mut group = Object::new("Item");
+        group.set("Layout.fillWidth", true);
+        let Some(mut col) = column.obj else {
+            group.set(
+                "implicitHeight",
+                Value::expr(format!("{row_id}.implicitHeight")),
+            );
+            group.push_child(row);
+            return (group, column.escaped_bottom);
+        };
+        let col_id = self.ids.claim("wrapped");
+        col.id = Some(col_id.clone());
+        for edge in ["left", "right", "top"] {
+            col.set(
+                &format!("anchors.{edge}"),
+                Value::expr(format!("parent.{edge}")),
+            );
+        }
+        let rect = format!("{row_id}.childrenRect");
+        let cut = if left {
+            format!("{rect}.x + {rect}.width - x")
+        } else {
+            format!("x + width - {rect}.x")
+        };
+        let mut texts = Vec::new();
+        for text in col.children_mut().filter(|c| c.type_name == "Text") {
+            let id = match &text.id {
+                Some(id) => id.clone(),
+                None => {
+                    let id = self.ids.claim("wrapped text");
+                    text.id = Some(id.clone());
+                    id
+                }
+            };
+            texts.push(id);
+            // A fixed line height spaces lines evenly from the top; Qt's
+            // own `line.y` is offset within it.
+            let mut body = vec![
+                "const fixed = lineHeightMode === Text.FixedHeight;".to_owned(),
+                "const top = y + (fixed ? line.number * lineHeight : line.y);".to_owned(),
+                "const bottom = top + (fixed ? lineHeight : line.height);".to_owned(),
+                format!("if (top < {rect}.y + {rect}.height && bottom > {rect}.y) {{"),
+                format!("    const cut = {cut};"),
+                "    if (cut > 0) {".to_owned(),
+                "        line.width -= cut;".to_owned(),
+            ];
+            if left {
+                body.push("        line.x += cut;".to_owned());
+            }
+            body.extend(["    }".to_owned(), "}".to_owned()]);
+            text.members.push(Member::Handler {
+                name: "onLineLaidOut".to_owned(),
+                params: vec!["line".to_owned()],
+                body,
+            });
+            // Lines are laid out for the place the text had then. Later:
+            // the handler above reads geometry whose change would relayout
+            // the text under it.
+            text.members.push(Member::Handler {
+                name: "onYChanged".to_owned(),
+                params: Vec::new(),
+                body: vec!["Qt.callLater(forceLayout)".to_owned()],
+            });
+        }
+        if !texts.is_empty() {
+            row.members.push(Member::Handler {
+                name: "onChildrenRectChanged".to_owned(),
+                params: Vec::new(),
+                body: texts
+                    .iter()
+                    .map(|t| format!("Qt.callLater({t}.forceLayout);"))
+                    .collect(),
+            });
+        }
+        // Not the wrapped text's: its unwrapped width only settles after the
+        // first polish, and an ancestor its layout has not sized yet takes
+        // it as its width for a frame, where an SVG rendered at that width
+        // exceeds Qt's image allocation limit. A shrink-to-fit container
+        // therefore sizes this group to its floats.
+        group.set(
+            "implicitWidth",
+            Value::expr(format!("{row_id}.implicitWidth")),
+        );
+        group.set(
+            "implicitHeight",
+            Value::expr(format!(
+                "Math.max({col_id}.implicitHeight, {row_id}.implicitHeight)"
+            )),
+        );
+        // Floats are painted over the blocks' backgrounds (CSS 2.2
+        // Appendix E); the lines beside them do not reach them.
+        group.push_child(col);
+        group.push_child(row);
+        (group, column.escaped_bottom)
     }
 
     /// A run of floats to one side as a `Flow`: each takes its margin box
@@ -351,7 +497,22 @@ impl Emitter<'_, '_> {
         if is_layout(&obj.type_name) && matches!(style.width, Size::Length(_)) {
             obj.set("Layout.fillWidth", false);
         }
+        // A preferred width bound to the column's width feeds the column's
+        // implicit width back into itself, which can widen the whole page,
+        // and a control that does not fill cannot be narrower than its
+        // implicit width: an item fills up to its percentage instead. A
+        // Layout's own width does not depend on its column's.
+        let fill_percent = super::image::is_percent_width(style) && !is_layout(&obj.type_name);
         match &style.width {
+            Size::Length(w) if fill_percent => {
+                obj.set("Layout.fillWidth", true);
+                if *w != Length::Linear(h2q_css::LengthPercentage::percent(100.0)) {
+                    obj.set("Layout.maximumWidth", size_value(w, extra_w));
+                }
+                if let Some(a) = alignment {
+                    obj.set("Layout.alignment", Value::expr(a));
+                }
+            }
             Size::Length(w) => {
                 obj.set("Layout.preferredWidth", size_value(w, extra_w));
                 if let Some(a) = alignment {
@@ -398,6 +559,17 @@ impl Emitter<'_, '_> {
             {
                 obj.set(name, length_value_nonneg(l));
             }
+        }
+        // A filling item is no wider than its cell, but a percentage of the
+        // content box overflows by the padding and border, as in CSS; it
+        // overflows on the right, so an item placed right keeps its edge.
+        if fill_percent
+            && extra_w > 0.0
+            && alignment.is_none()
+            && let LengthAuto::Length(l) = &style.margin.right
+            && let Some(right) = l.as_px()
+        {
+            obj.set("Layout.rightMargin", number(right.max(0.0) - extra_w));
         }
         match &style.height {
             Size::Length(h) if h.as_px().is_some() || is_viewport_relative(h) => {
@@ -497,6 +669,16 @@ impl Emitter<'_, '_> {
 }
 
 /// Whether a box's `height` (or `min-height`) keeps its margins apart.
+/// Whether `b` is placed below floats to `side` rather than beside them.
+fn clears(b: &LayoutBox<'_>, side: Float) -> bool {
+    match b.style.clear {
+        Clear::None => false,
+        Clear::Both => true,
+        Clear::Left => side == Float::Left,
+        Clear::Right => side == Float::Right,
+    }
+}
+
 /// How many boxes from the first float to the same side in a row; 0 when
 /// the first is not a float.
 fn float_run(boxes: &[LayoutBox<'_>]) -> usize {

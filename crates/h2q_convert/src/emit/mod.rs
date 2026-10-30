@@ -10,6 +10,7 @@ mod flex;
 mod flow;
 mod grid;
 mod ids;
+mod image;
 mod inline;
 mod links;
 mod lists;
@@ -92,6 +93,8 @@ pub(crate) struct Emitter<'a, 'd> {
     in_float_run: bool,
     /// QML modules the emitted objects need beyond the default imports.
     pub imports: std::collections::BTreeSet<&'static str>,
+    /// The file each `<img>` shows.
+    pub images: BTreeMap<NodeId, crate::images::ImageAsset>,
 }
 
 impl<'a, 'd> Emitter<'a, 'd> {
@@ -129,6 +132,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             fragment_links: false,
             in_float_run: false,
             imports: std::collections::BTreeSet::new(),
+            images: BTreeMap::new(),
         }
     }
 
@@ -298,6 +302,15 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     && let Some(control) = controls::classify(self.doc, node)
                 {
                     let e = self.control(b, node, control, line);
+                    return self.transformed(e, b, line);
+                }
+                if let Some(node) = b.node
+                    && self
+                        .doc
+                        .element(node)
+                        .is_some_and(|e| e.is_html() && e.local_name() == "img")
+                {
+                    let e = self.image(b, node, line);
                     return self.transformed(e, b, line);
                 }
                 let e = self.replaced(b, line);

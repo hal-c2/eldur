@@ -1,0 +1,12 @@
+---
+source: crates/h2q_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[qml]: index.html:227: <code>: an inline background has square corners
+info[qml]: index.html:230: <code>: an inline background has square corners
+info[css]: index.html:229: rounded corners with uneven borders: the borders are drawn square
+warning[css]: index.html:237: `overflow: auto/scroll` clips but does not scroll yet
+info[qml]: index.html:251: <code>: an inline background has square corners
+info[qml]: index.html:252: <code>: an inline background has square corners
+info[qml]: index.html:253: <code>: an inline background has square corners
+info[qml]: index.html:254: <code>: an inline background has square corners

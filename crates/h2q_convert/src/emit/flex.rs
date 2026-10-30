@@ -27,6 +27,11 @@ use super::flow::{is_layout, is_viewport_relative, size_value};
 use super::units::{fmt_number, length_expr, number, px_part, round};
 use crate::boxes::{BoxKind, LayoutBox, describe, node_line};
 
+/// The stretch factor of growing items against spacers of factor 1: the
+/// spacers' share of the free space while the items still grow is below
+/// a pixel on any screen (measured: exact at 1200px).
+const CAPPED_STRETCH: f64 = 1_000_000.0;
+
 /// Where `justify-content` puts the free space, in visual order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Pack {
@@ -249,9 +254,22 @@ impl Emitter<'_, '_> {
             slots[i] += u32::from(*start == LengthAuto::Auto);
             slots[i + 1] += u32::from(*end == LengthAuto::Auto);
         }
-        if slots.iter().all(|s| *s == 0) && !any_grow {
+        // Equal growing items that stop at a maximum leave free space, which
+        // Qt would hand to the cells. They outweigh the spacers instead, so
+        // the spacers only get what the items cannot take.
+        let capped = any_grow
+            && !unequal_grow
+            && items.iter().any(|c| {
+                let max = if row {
+                    &c.style.max_width
+                } else {
+                    &c.style.max_height
+                };
+                c.style.flex_grow > 0.0 && matches!(max, Size::Length(l) if !is_zero(l))
+            });
+        if slots.iter().all(|s| *s == 0) && (!any_grow || capped) {
             slots = spacer_slots(pack(style.justify_content, reverse), n, reverse);
-        } else if any_grow {
+        } else if any_grow && !capped {
             // Growing items take all free space; auto margins get none.
             slots = vec![0; n + 1];
         }
@@ -259,15 +277,24 @@ impl Emitter<'_, '_> {
 
         let mut layout = Object::new(if row { "RowLayout" } else { "ColumnLayout" });
         layout.set("spacing", number(if spacers { 0.0 } else { gap }));
+        let stretch = if row {
+            "Layout.horizontalStretchFactor"
+        } else {
+            "Layout.verticalStretchFactor"
+        };
         let spacer = || {
-            Object::new("Item").prop(
+            let mut item = Object::new("Item").prop(
                 if row {
                     "Layout.fillWidth"
                 } else {
                     "Layout.fillHeight"
                 },
                 true,
-            )
+            );
+            if capped {
+                item.set(stretch, 1.0);
+            }
+            item
         };
         for (i, child) in items.iter().enumerate() {
             for _ in 0..slots[i] {
@@ -276,6 +303,9 @@ impl Emitter<'_, '_> {
             let mut obj = self.item(child, decoration).obj;
             let lead_gap = if spacers && i > 0 { gap } else { 0.0 };
             self.flex_item(&mut obj, child, style, axis, unequal_grow, lead_gap);
+            if capped && child.style.flex_grow > 0.0 {
+                obj.set(stretch, CAPPED_STRETCH);
+            }
             if self.options.source_comments
                 && let Some(node) = child.node
             {

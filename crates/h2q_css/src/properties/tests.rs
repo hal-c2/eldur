@@ -1245,3 +1245,62 @@ fn grid_auto_flow_records_dense() {
     apply_decl(&mut s, "grid", "none", &ctx).expect("grid: none resets the flow");
     assert!(!s.grid_auto_flow_dense);
 }
+
+#[test]
+fn counter_properties_and_counters_function() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    let mut s = ComputedStyle::default();
+    let change = |name: &str, value| crate::CounterChange {
+        name: name.to_owned(),
+        value,
+    };
+    compute(&mut s, Longhand::CounterReset, "section sub 3", &ctx).expect("counter-reset");
+    assert_eq!(
+        s.counter_reset,
+        vec![change("section", 0), change("sub", 3)]
+    );
+    compute(&mut s, Longhand::CounterIncrement, "section -2 sub", &ctx).expect("counter-increment");
+    assert_eq!(
+        s.counter_increment,
+        vec![change("section", -2), change("sub", 1)]
+    );
+    compute(&mut s, Longhand::CounterSet, "page 7", &ctx).expect("counter-set");
+    assert_eq!(s.counter_set, vec![change("page", 7)]);
+    compute(&mut s, Longhand::CounterReset, "none", &ctx).expect("none");
+    assert!(s.counter_reset.is_empty());
+    assert!(compute(&mut s, Longhand::CounterReset, "3", &ctx).is_err());
+    assert!(!is_inherited(Longhand::CounterIncrement));
+
+    compute(
+        &mut s,
+        Longhand::Content,
+        "counters(item, \".\", upper-roman) \" \"",
+        &ctx,
+    )
+    .expect("content");
+    assert_eq!(
+        s.content,
+        Some(vec![
+            ContentItem::Counters("item".to_owned(), ".".to_owned(), ListStyleType::UpperRoman),
+            ContentItem::String(" ".to_owned()),
+        ])
+    );
+}
+
+#[test]
+fn clear_keeps_its_side() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    let mut s = ComputedStyle::default();
+    for (value, expected) in [
+        ("left", crate::Clear::Left),
+        ("inline-end", crate::Clear::Right),
+        ("both", crate::Clear::Both),
+        ("none", crate::Clear::None),
+    ] {
+        compute(&mut s, Longhand::Clear, value, &ctx).expect("clear");
+        assert_eq!(s.clear, expected);
+    }
+    assert!(!is_inherited(Longhand::Clear));
+}

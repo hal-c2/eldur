@@ -68,7 +68,9 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     };
     let tree = boxes::build_keeping(&doc, &styles, Some(wanted), &mut diags);
     let body_style = doc.body().and_then(|b| styles.style(b));
+    let images = crate::images::collect(&doc, &input.url, resources, &mut diags);
     let mut emitter = Emitter::new(&doc, &styles, options, &mut diags, wanted);
+    emitter.images = images.by_node;
     let mut root = emitter.document(tree.as_ref(), body_style);
     let targets = std::mem::take(&mut emitter.targets);
     let forms = std::mem::take(&mut emitter.forms);
@@ -91,7 +93,7 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     }
 
     let mut qml = h2q_qml::Document::default();
-    let mut files = Vec::new();
+    let mut files = images.files;
 
     // 6: page.js, with the ids chosen in step 5.
     if !scripts.is_empty() {

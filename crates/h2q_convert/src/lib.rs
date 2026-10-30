@@ -174,5 +174,6 @@ pub fn convert_str(html: &str, options: &Options) -> Output {
 mod boxes;
 mod diag;
 mod emit;
+mod images;
 mod pipeline;
 mod scripts;
