@@ -2,9 +2,5 @@
 source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-info[css]: index.html:231: <div class="billing-toggle"> contains block-level boxes; laid out as a block
 info[html]: index.html:233: <button class="toggle-btn"> has element children; the Button shows only their text
-warning[css]: index.html:251: `transform` on <article class="plan featured"> is not converted yet
-warning[css]: index.html:251: `box-shadow` is not converted yet
-warning[css]: index.html:252: `transform` on <span class="badge"> is not converted yet
 info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

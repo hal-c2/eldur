@@ -2,6 +2,4 @@
 source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-warning[css]: index.html:213: background images and gradients are not converted yet
-warning[css]: index.html:232: background images and gradients are not converted yet
 info[css]: index.html:208: percentage height on <body> is treated as `auto`

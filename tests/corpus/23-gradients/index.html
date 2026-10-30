@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Gradients</title>
+  <style>
+    body { margin: 24px; font: 14px/20px "Liberation Sans", sans-serif; color: #1b2231; background: #ffffff; }
+    .grid { display: flex; flex-wrap: wrap; gap: 16px; }
+    .tile { width: 220px; height: 120px; padding: 12px; box-sizing: border-box; color: #ffffff; font-weight: 700; }
+    .down { background: linear-gradient(#2d6cdf, #8fb3f2); }
+    .right { background: linear-gradient(to right, #11998e, #38ef7d); }
+    .angle { background: linear-gradient(135deg, #5b4cdb 0%, #8a5cf6 45%, #ff7a59 100%); border-radius: 16px; }
+    .steep { background: linear-gradient(160deg, #f6d365 0%, #fda085 100%); border-radius: 8px 24px; }
+    .stops { background: linear-gradient(90deg, #e63946 20%, #f1faee 20%, #f1faee 80%, #1d3557 80%); color: #1b2231; }
+    .px { background: linear-gradient(to bottom, #264653 40px, #e9c46a 80px); }
+    .radial { background: radial-gradient(circle at 30% 30%, #ffffff 0%, #ffd166 45%, #ef476f 100%); color: #1b2231; }
+    .ellipse { background: radial-gradient(#ffffff, #3a86ff); color: #1b2231; }
+    .stripes { background: repeating-linear-gradient(45deg, #ffb703 0 10px, #fb8500 10px 20px); }
+    .layers {
+      background-color: #1d3557;
+      background-image: linear-gradient(180deg, rgba(255, 255, 255, 0) 40%, rgba(0, 0, 0, 0.5) 100%), linear-gradient(120deg, #e8a87c 0%, #c38d9e 45%, #41b3a3 100%);
+    }
+    .bordered { background: linear-gradient(135deg, #6366f1, #ec4899); border: 4px solid #1b2231; border-radius: 20px; }
+    .hero { margin-top: 16px; padding: 32px; border-radius: 12px; color: #ffffff; background: linear-gradient(135deg, #5b4cdb 0%, #8a5cf6 45%, #ff7a59 100%); }
+    .hero h1 { margin: 0 0 8px; font-size: 28px; line-height: 36px; }
+    .hero p { margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="grid">
+    <div class="tile down">Default: to bottom</div>
+    <div class="tile right">to right</div>
+    <div class="tile angle">135deg, rounded</div>
+    <div class="tile steep">160deg, uneven radii</div>
+    <div class="tile stops">Hard stops</div>
+    <div class="tile px">Pixel stops</div>
+    <div class="tile radial">Circle at 30% 30%</div>
+    <div class="tile ellipse">Ellipse</div>
+    <div class="tile stripes">Repeating stripes</div>
+    <div class="tile layers">Two layers</div>
+    <div class="tile bordered">Bordered</div>
+  </div>
+  <div class="hero">
+    <h1>White text on a gradient</h1>
+    <p>The hero section's background is a three-stop gradient.</p>
+  </div>
+</body>
+</html>

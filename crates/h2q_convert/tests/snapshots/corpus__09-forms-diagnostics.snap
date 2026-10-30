@@ -4,5 +4,4 @@ expression: "diagnostics.join(\"\\n\")"
 ---
 info[css]: <style>#1:85: unknown property `resize`
 info[css]: <style>#1:105: unknown property `accent-color`
-warning[css]: index.html:187: `box-shadow` is not converted yet
 info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

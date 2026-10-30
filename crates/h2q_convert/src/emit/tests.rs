@@ -824,3 +824,143 @@ fn overlay_keeps_its_max_width() {
     ));
     assert!(qml.contains("width: Math.min(implicitWidth, 480)"), "{qml}");
 }
+
+#[test]
+fn a_line_with_an_inline_block_is_a_flow_of_words_and_boxes() {
+    let (qml, diags) = convert(&page(
+        "p{font:16px/24px sans-serif} .b{display:inline-block;padding:2px 8px;background:#eee;\
+         font-size:12px;line-height:16px}",
+        "<p>Notes for <b>bold</b>er <span class=b>NEW</span> items</p>",
+    ));
+    let flow = object_after(&qml, "<p>");
+    assert_eq!(flow.lines().nth(1).map(str::trim), Some("Flow {"), "{flow}");
+    // Words keep their spans and the space after them.
+    assert!(flow.contains("text: \"Notes\u{a0}\""), "{flow}");
+    assert!(flow.contains("text: \"<b>bold</b>er\u{a0}\""), "{flow}");
+    assert!(flow.contains("text: \"items\""), "{flow}");
+    // The badge keeps its box and moves down to the text's baseline:
+    // (24 - 18.4) / 2 + 14.48 = 17.28 against 2 + (16 - 13.8) / 2 + 10.86.
+    assert!(flow.contains("color: \"#eeeeee\""), "{flow}");
+    assert!(flow.contains("y: 3.32"), "{flow}");
+    assert!(
+        !diags.iter().any(|d| d.contains("inline text")),
+        "{diags:?}"
+    );
+}
+
+#[test]
+fn atomic_inlines_keep_their_margins_and_centre_in_the_line() {
+    let (qml, _) = convert(&page(
+        ".c{text-align:center} .t{display:inline-block;margin:0 8px 8px 0;padding:4px}",
+        "<div class=c><span class=t>a</span> <span class=t>b</span></div>",
+    ));
+    let flow = object_after(&qml, "<div class=\"c\">");
+    assert!(flow.contains("leftPadding: {"), "{flow}");
+    assert!(flow.contains("width: tBox.width + 8"), "{flow}");
+    assert!(flow.contains("height: tBox.height + 8"), "{flow}");
+    // The space between the boxes is a word of its own.
+    assert!(flow.contains("text: \"\u{a0}\""), "{flow}");
+}
+
+#[test]
+fn box_shadows_are_rectangular_shadows_behind_the_box() {
+    let (qml, diags) = convert(&page(
+        ".s{background:#fff;border-radius:8px;\
+         box-shadow:0 4px 12px rgba(0,0,0,.25),0 0 0 2px #c7d2fe}",
+        "<div class=s>x</div>",
+    ));
+    let shadow = object_after(&qml, "<div class=\"s\">");
+    assert!(qml.contains("import QtQuick.Effects"), "{qml}");
+    let first = shadow.find("RectangularShadow").expect("shadow");
+    let last = shadow.rfind("RectangularShadow").expect("shadow");
+    assert_ne!(first, last, "{shadow}");
+    // The first shadow in CSS paints on top, so it comes last.
+    assert!(shadow[first..last].contains("spread: 2"), "{shadow}");
+    assert!(
+        shadow[last..].contains("offset: Qt.vector2d(0, 4)"),
+        "{shadow}"
+    );
+    // Qt's blur fades faster than CSS's: measured against Chromium.
+    assert!(shadow[last..].contains("blur: 16.4"), "{shadow}");
+    assert!(shadow[last..].contains("color: \"#40000000\""), "{shadow}");
+    assert!(shadow.contains("z: -1"), "{shadow}");
+    assert!(shadow.contains("radius: 8"), "{shadow}");
+    assert!(!diags.iter().any(|d| d.contains("box-shadow")), "{diags:?}");
+}
+
+#[test]
+fn inset_box_shadows_are_reported() {
+    let (qml, diags) = convert(&page(
+        ".s{box-shadow:inset 0 1px 2px #000}",
+        "<div class=s>x</div>",
+    ));
+    assert!(!qml.contains("RectangularShadow"), "{qml}");
+    assert!(diags.iter().any(|d| d.contains("inset")), "{diags:?}");
+}
+
+#[test]
+fn a_clipping_box_keeps_its_shadow_outside_the_clip() {
+    let (qml, _) = convert(&page(
+        ".s{background:#fff;overflow:hidden;box-shadow:0 2px 8px #000}",
+        "<div class=s>x</div>",
+    ));
+    let outer = object_after(&qml, "<div class=\"s\">");
+    assert_eq!(
+        outer.lines().nth(1).map(str::trim),
+        Some("Item {"),
+        "{outer}"
+    );
+    let shadow = outer.find("RectangularShadow").expect("shadow");
+    let clip = outer.find("clip: true").expect("clip");
+    assert!(shadow < clip, "{outer}");
+    assert!(
+        outer.contains("implicitHeight: sClip.implicitHeight"),
+        "{outer}"
+    );
+}
+
+#[test]
+fn transforms_apply_in_css_order_around_the_origin() {
+    let (qml, diags) = convert(&page(
+        ".t{width:100px;height:50px;background:#eee;\
+         transform:translate(-50%, 10px) rotate(45deg) scale(2)}",
+        "<div class=t></div>",
+    ));
+    let obj = object_after(&qml, "<div class=\"t\">");
+    // QML applies the first transform of the list first, CSS the last.
+    let scale = obj.find("Scale {").expect("scale");
+    let rotation = obj.find("Rotation {").expect("rotation");
+    let translate = obj.find("Translate {").expect("translate");
+    assert!(scale < rotation && rotation < translate, "{obj}");
+    assert!(obj.contains("angle: 45"), "{obj}");
+    assert!(obj.contains("xScale: 2"), "{obj}");
+    // Percentages are of the box's own size, as is the default origin.
+    assert!(obj.contains("x: tBox.width * -0.5"), "{obj}");
+    assert!(obj.contains("origin.x: tBox.width * 0.5"), "{obj}");
+    assert!(obj.contains("origin.y: tBox.height * 0.5"), "{obj}");
+    assert!(!diags.iter().any(|d| d.contains("transform")), "{diags:?}");
+}
+
+#[test]
+fn transform_origin_in_px_is_a_number() {
+    let (qml, _) = convert(&page(
+        ".t{width:100px;height:50px;background:#eee;transform:rotate(10deg);\
+         transform-origin:0 0}",
+        "<div class=t></div>",
+    ));
+    let obj = object_after(&qml, "<div class=\"t\">");
+    assert!(obj.contains("angle: 10"), "{obj}");
+    assert!(!obj.contains("origin.x"), "{obj}");
+}
+
+#[test]
+fn a_transformed_text_keeps_its_baseline_shift_first() {
+    let (qml, _) = convert(&page(
+        "p{font:16px/24px sans-serif;transform:translateX(10px)}",
+        "<p>x</p>",
+    ));
+    let text = object_after(&qml, "<p>");
+    let nudge = text.find("y: 2.8").expect("nudge");
+    let moved = text.find("x: 10").expect("translate");
+    assert!(nudge < moved, "{text}");
+}

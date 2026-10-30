@@ -49,11 +49,17 @@ pub(crate) struct Decoration {
     pub insets: Insets,
     pub paints: bool,
     pub clips: bool,
+    /// Gradient layers to paint, bottom first.
+    pub gradients: bool,
+    /// Outer `box-shadow`s to draw behind the box.
+    pub shadows: bool,
+    /// Base for the ids of generated parts (gradient shapes).
+    pub hint: String,
 }
 
 impl Decoration {
     pub(crate) fn needed(&self) -> bool {
-        self.paints || self.clips || !self.insets.is_zero()
+        self.paints || self.gradients || self.shadows || self.clips || !self.insets.is_zero()
     }
 }
 
@@ -98,17 +104,14 @@ impl Emitter<'_, '_> {
         let background = paint_background && !style.background_color.is_transparent();
         let border = sides(style).iter().any(|s| is_visible(s));
         let clips = style.overflow_x != Overflow::Visible || style.overflow_y != Overflow::Visible;
-        if paint_background && style.background_layers.iter().any(|l| l.image.is_some()) {
-            self.diags.warning(
-                "css",
-                line,
-                "background images and gradients are not converted yet".to_owned(),
-            );
-        }
-        if !style.box_shadow.is_empty() {
+        // The canvas propagation only takes the colour; gradients stay on
+        // the box, which is close for the body of a page.
+        let gradients = style.background_layers.iter().any(|l| l.image.is_some());
+        if style.box_shadow.iter().any(|s| s.inset) {
             self.diags
-                .warning("css", line, "`box-shadow` is not converted yet".to_owned());
+                .info("css", line, "inset `box-shadow` is not drawn".to_owned());
         }
+        let shadows = style.box_shadow.iter().any(|s| !s.inset);
         if matches!(style.overflow_x, Overflow::Auto | Overflow::Scroll)
             || matches!(style.overflow_y, Overflow::Auto | Overflow::Scroll)
         {
@@ -122,6 +125,9 @@ impl Emitter<'_, '_> {
             insets,
             paints: background || border,
             clips,
+            gradients,
+            shadows,
+            hint: "box".to_owned(),
         }
     }
 
@@ -167,9 +173,32 @@ impl Emitter<'_, '_> {
                 wrapper.set("implicitHeight", number(insets.vertical()));
             }
         }
+        if deco.shadows && !deco.clips {
+            self.shadows(&mut wrapper, style, line);
+        }
+        let gradients = if deco.gradients {
+            self.gradient_layers(style, &deco.hint, line)
+        } else {
+            Vec::new()
+        };
+        let painted = !gradients.is_empty();
+        for shape in gradients {
+            wrapper.push_child(shape);
+        }
         let borders: Vec<&BorderSide> = sides(style).to_vec();
         let uniform = borders.iter().all(|s| **s == *borders[0]) && is_visible(borders[0]);
-        if uniform {
+        if uniform && painted {
+            // The background is painted under the border (`background-clip:
+            // border-box`), and a Rectangle draws its border below its
+            // children, so the border goes on top as its own outline.
+            let mut outline = Object::new("Rectangle");
+            outline.set("anchors.fill", Value::expr("parent"));
+            outline.set("color", Value::string("transparent"));
+            self.radius(&mut outline, style, line);
+            outline.set("border.width", number(borders[0].width));
+            outline.set("border.color", color(borders[0].color));
+            wrapper.push_child(outline);
+        } else if uniform {
             wrapper.set("border.width", number(borders[0].width));
             wrapper.set("border.color", color(borders[0].color));
         } else {
@@ -227,10 +256,68 @@ impl Emitter<'_, '_> {
             }
             wrapper.push_child(inner);
         }
+        if deco.shadows && deco.clips {
+            // `overflow` clips the content, not the box's own shadow, and a
+            // QML clip takes children with it: the shadow goes on an item
+            // around the clipping box.
+            let id = match &wrapper.id {
+                Some(id) => id.clone(),
+                None => self.ids.claim(&format!("{} clip", deco.hint)),
+            };
+            wrapper.id = Some(id.clone());
+            wrapper.set("anchors.fill", Value::expr("parent"));
+            let mut outer = Object::new("Item");
+            outer.set("implicitWidth", Value::expr(format!("{id}.implicitWidth")));
+            outer.set(
+                "implicitHeight",
+                Value::expr(format!("{id}.implicitHeight")),
+            );
+            self.shadows(&mut outer, style, line);
+            outer.push_child(wrapper);
+            return outer;
+        }
         wrapper
     }
 
-    fn radius(&mut self, wrapper: &mut Object, style: &ComputedStyle, line: Option<u32>) {
+    /// Outer shadows as `RectangularShadow`s below the box (negative `z`
+    /// draws under the parent's own paint), the first in CSS on top. The
+    /// software renderer does not draw them.
+    fn shadows(&mut self, wrapper: &mut Object, style: &ComputedStyle, line: Option<u32>) {
+        self.imports.insert("QtQuick.Effects");
+        for s in style.box_shadow.iter().rev().filter(|s| !s.inset) {
+            let mut shadow = Object::new("RectangularShadow");
+            shadow.set("anchors.fill", Value::expr("parent"));
+            shadow.set("z", -1.0);
+            shadow.set(
+                "offset",
+                Value::expr(format!(
+                    "Qt.vector2d({}, {})",
+                    fmt_number(round(s.offset_x)),
+                    fmt_number(round(s.offset_y))
+                )),
+            );
+            if s.blur > 0.0 {
+                // Qt's blur fades over a shorter distance than the CSS
+                // blur radius; fitted to Chromium's for radii 8 to 40.
+                shadow.set("blur", number(1.2 * s.blur + 2.0));
+            } else {
+                shadow.set("blur", 0.0);
+            }
+            if s.spread != 0.0 {
+                shadow.set("spread", number(s.spread));
+            }
+            shadow.set("color", color(s.color));
+            self.radius(&mut shadow, style, line);
+            wrapper.push_child(shadow);
+        }
+    }
+
+    pub(super) fn radius(
+        &mut self,
+        wrapper: &mut Object,
+        style: &ComputedStyle,
+        line: Option<u32>,
+    ) {
         let r = &style.border_radius;
         let corners = [
             ("topLeftRadius", &r.top_left),

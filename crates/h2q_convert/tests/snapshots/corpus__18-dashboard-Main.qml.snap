@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Shapes
 
 ApplicationWindow {
     id: root
@@ -255,6 +256,37 @@ ApplicationWindow {
                                             Layout.maximumWidth: 26
                                             Layout.preferredHeight: 26
                                             Layout.alignment: Qt.AlignVCenter
+
+                                            Shape {
+                                                id: logoGradient
+                                                anchors.fill: parent
+
+                                                ShapePath {
+                                                    strokeWidth: -1
+                                                    fillGradient: LinearGradient {
+                                                        x1: logoGradient.width * 0.25 - logoGradient.height * 0.25
+                                                        y1: -logoGradient.width * 0.25 + logoGradient.height * 0.25
+                                                        x2: logoGradient.width * 0.75 + logoGradient.height * 0.25
+                                                        y2: logoGradient.width * 0.25 + logoGradient.height * 0.75
+
+                                                        GradientStop {
+                                                            position: 0
+                                                            color: "#6366f1"
+                                                        }
+
+                                                        GradientStop {
+                                                            position: 1
+                                                            color: "#ec4899"
+                                                        }
+                                                    }
+
+                                                    PathRectangle {
+                                                        width: logoGradient.width
+                                                        height: logoGradient.height
+                                                        radius: 8
+                                                    }
+                                                }
+                                            }
                                         }
 
                                         Text {
@@ -709,6 +741,37 @@ ApplicationWindow {
                                             Layout.preferredHeight: 40
                                             Layout.alignment: Qt.AlignVCenter
                                             Layout.leftMargin: 16
+
+                                            Shape {
+                                                id: avatarGradient
+                                                anchors.fill: parent
+
+                                                ShapePath {
+                                                    strokeWidth: -1
+                                                    fillGradient: LinearGradient {
+                                                        x1: avatarGradient.width * 0.25 - avatarGradient.height * 0.25
+                                                        y1: -avatarGradient.width * 0.25 + avatarGradient.height * 0.25
+                                                        x2: avatarGradient.width * 0.75 + avatarGradient.height * 0.25
+                                                        y2: avatarGradient.width * 0.25 + avatarGradient.height * 0.75
+
+                                                        GradientStop {
+                                                            position: 0
+                                                            color: "#6366f1"
+                                                        }
+
+                                                        GradientStop {
+                                                            position: 1
+                                                            color: "#ec4899"
+                                                        }
+                                                    }
+
+                                                    PathRectangle {
+                                                        width: avatarGradient.width
+                                                        height: avatarGradient.height
+                                                        radius: 20
+                                                    }
+                                                }
+                                            }
 
                                             Text {
                                                 id: avatarText

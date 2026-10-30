@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Shapes
 
 ApplicationWindow {
     id: root
@@ -274,6 +275,41 @@ ApplicationWindow {
                         implicitHeight: heroContent.implicitHeight + 216
                         Layout.fillWidth: true
 
+                        Shape {
+                            id: heroGradient
+                            anchors.fill: parent
+
+                            ShapePath {
+                                strokeWidth: -1
+                                fillGradient: LinearGradient {
+                                    x1: heroGradient.width * 0.25 - heroGradient.height * 0.25
+                                    y1: -heroGradient.width * 0.25 + heroGradient.height * 0.25
+                                    x2: heroGradient.width * 0.75 + heroGradient.height * 0.25
+                                    y2: heroGradient.width * 0.25 + heroGradient.height * 0.75
+
+                                    GradientStop {
+                                        position: 0
+                                        color: "#5b4cdb"
+                                    }
+
+                                    GradientStop {
+                                        position: 0.45
+                                        color: "#8a5cf6"
+                                    }
+
+                                    GradientStop {
+                                        position: 1
+                                        color: "#ff7a59"
+                                    }
+                                }
+
+                                PathRectangle {
+                                    width: heroGradient.width
+                                    height: heroGradient.height
+                                }
+                            }
+                        }
+
                         ColumnLayout {
                             id: heroContent
                             spacing: 0
@@ -315,19 +351,41 @@ ApplicationWindow {
                                         Layout.fillHeight: false
                                         Layout.alignment: Qt.AlignVCenter
 
-                                        Text {
-                                            text: "<b><small>New: workflow automation</small></b>"
-                                            textFormat: Text.StyledText
-                                            color: "#ffffff"
-                                            font.family: "sans-serif"
-                                            font.pixelSize: 16
-                                            lineHeight: 25.6
-                                            lineHeightMode: Text.FixedHeight
-                                            transform: Translate {
-                                                y: 3.6
-                                            }
-                                            wrapMode: Text.WordWrap
+                                        Flow {
+                                            id: blockFlow
                                             Layout.fillWidth: true
+
+                                            Rectangle {
+                                                color: "#2effffff"
+                                                radius: 999
+                                                implicitWidth: eyebrowText.implicitWidth + 28
+                                                implicitHeight: eyebrowText.implicitHeight + 12
+                                                width: Math.min(implicitWidth, blockFlow.width)
+
+                                                Text {
+                                                    id: eyebrowText
+                                                    text: "New: workflow automation"
+                                                    textFormat: Text.PlainText
+                                                    color: "#ffffff"
+                                                    font.family: "sans-serif"
+                                                    font.pixelSize: 14
+                                                    font.weight: 600
+                                                    font.letterSpacing: 0.56
+                                                    font.capitalization: Font.AllUppercase
+                                                    lineHeight: 22.4
+                                                    lineHeightMode: Text.FixedHeight
+                                                    transform: Translate {
+                                                        y: 3.15
+                                                    }
+                                                    wrapMode: Text.WordWrap
+                                                    anchors.left: parent.left
+                                                    anchors.right: parent.right
+                                                    anchors.top: parent.top
+                                                    anchors.leftMargin: 14
+                                                    anchors.rightMargin: 14
+                                                    anchors.topMargin: 6
+                                                }
+                                            }
                                         }
 
                                         // <h1>
@@ -941,13 +999,56 @@ ApplicationWindow {
                                                     Layout.preferredWidth: 56
                                                     Layout.preferredHeight: 56
 
+                                                    Shape {
+                                                        id: featureIconGradient
+                                                        anchors.fill: parent
+
+                                                        ShapePath {
+                                                            strokeWidth: -1
+                                                            fillGradient: LinearGradient {
+                                                                x1: featureIconGradient.width * 0.25 - featureIconGradient.height * 0.25
+                                                                y1: -featureIconGradient.width * 0.25 + featureIconGradient.height * 0.25
+                                                                x2: featureIconGradient.width * 0.75 + featureIconGradient.height * 0.25
+                                                                y2: featureIconGradient.width * 0.25 + featureIconGradient.height * 0.75
+
+                                                                GradientStop {
+                                                                    position: 0
+                                                                    color: "#5b4cdb"
+                                                                }
+
+                                                                GradientStop {
+                                                                    position: 1
+                                                                    color: "#8a5cf6"
+                                                                }
+                                                            }
+
+                                                            PathRectangle {
+                                                                width: featureIconGradient.width
+                                                                height: featureIconGradient.height
+                                                                radius: 28
+                                                            }
+                                                        }
+                                                    }
+
                                                     Rectangle {
+                                                        id: blockBox
                                                         color: "#00000000"
                                                         radius: 6
                                                         implicitWidth: 6
                                                         implicitHeight: 6
                                                         border.width: 3
                                                         border.color: "#ffffff"
+                                                        transform: [
+                                                            Rotation {
+                                                                angle: 45
+                                                                origin.x: blockBox.width * 0.5
+                                                                origin.y: blockBox.height * 0.5
+                                                            },
+                                                            Translate {
+                                                                x: blockBox.width * -0.5
+                                                                y: blockBox.height * -0.5
+                                                            }
+                                                        ]
                                                         width: 20
                                                         height: 20
                                                         x: parent.width * 0.5
@@ -1019,13 +1120,56 @@ ApplicationWindow {
                                                     Layout.preferredWidth: 56
                                                     Layout.preferredHeight: 56
 
+                                                    Shape {
+                                                        id: featureIconGradient2
+                                                        anchors.fill: parent
+
+                                                        ShapePath {
+                                                            strokeWidth: -1
+                                                            fillGradient: LinearGradient {
+                                                                x1: featureIconGradient2.width * 0.25 - featureIconGradient2.height * 0.25
+                                                                y1: -featureIconGradient2.width * 0.25 + featureIconGradient2.height * 0.25
+                                                                x2: featureIconGradient2.width * 0.75 + featureIconGradient2.height * 0.25
+                                                                y2: featureIconGradient2.width * 0.25 + featureIconGradient2.height * 0.75
+
+                                                                GradientStop {
+                                                                    position: 0
+                                                                    color: "#ff7a59"
+                                                                }
+
+                                                                GradientStop {
+                                                                    position: 1
+                                                                    color: "#ffb347"
+                                                                }
+                                                            }
+
+                                                            PathRectangle {
+                                                                width: featureIconGradient2.width
+                                                                height: featureIconGradient2.height
+                                                                radius: 28
+                                                            }
+                                                        }
+                                                    }
+
                                                     Rectangle {
+                                                        id: blockBox2
                                                         color: "#00000000"
                                                         radius: 6
                                                         implicitWidth: 6
                                                         implicitHeight: 6
                                                         border.width: 3
                                                         border.color: "#ffffff"
+                                                        transform: [
+                                                            Rotation {
+                                                                angle: 45
+                                                                origin.x: blockBox2.width * 0.5
+                                                                origin.y: blockBox2.height * 0.5
+                                                            },
+                                                            Translate {
+                                                                x: blockBox2.width * -0.5
+                                                                y: blockBox2.height * -0.5
+                                                            }
+                                                        ]
                                                         width: 20
                                                         height: 20
                                                         x: parent.width * 0.5
@@ -1097,13 +1241,56 @@ ApplicationWindow {
                                                     Layout.preferredWidth: 56
                                                     Layout.preferredHeight: 56
 
+                                                    Shape {
+                                                        id: featureIconGradient3
+                                                        anchors.fill: parent
+
+                                                        ShapePath {
+                                                            strokeWidth: -1
+                                                            fillGradient: LinearGradient {
+                                                                x1: featureIconGradient3.width * 0.25 - featureIconGradient3.height * 0.25
+                                                                y1: -featureIconGradient3.width * 0.25 + featureIconGradient3.height * 0.25
+                                                                x2: featureIconGradient3.width * 0.75 + featureIconGradient3.height * 0.25
+                                                                y2: featureIconGradient3.width * 0.25 + featureIconGradient3.height * 0.75
+
+                                                                GradientStop {
+                                                                    position: 0
+                                                                    color: "#14b8a6"
+                                                                }
+
+                                                                GradientStop {
+                                                                    position: 1
+                                                                    color: "#38bdf8"
+                                                                }
+                                                            }
+
+                                                            PathRectangle {
+                                                                width: featureIconGradient3.width
+                                                                height: featureIconGradient3.height
+                                                                radius: 28
+                                                            }
+                                                        }
+                                                    }
+
                                                     Rectangle {
+                                                        id: blockBox3
                                                         color: "#00000000"
                                                         radius: 6
                                                         implicitWidth: 6
                                                         implicitHeight: 6
                                                         border.width: 3
                                                         border.color: "#ffffff"
+                                                        transform: [
+                                                            Rotation {
+                                                                angle: 45
+                                                                origin.x: blockBox3.width * 0.5
+                                                                origin.y: blockBox3.height * 0.5
+                                                            },
+                                                            Translate {
+                                                                x: blockBox3.width * -0.5
+                                                                y: blockBox3.height * -0.5
+                                                            }
+                                                        ]
                                                         width: 20
                                                         height: 20
                                                         x: parent.width * 0.5

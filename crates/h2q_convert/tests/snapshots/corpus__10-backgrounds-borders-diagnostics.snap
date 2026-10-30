@@ -2,11 +2,7 @@
 source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-warning[css]: index.html:139: background images and gradients are not converted yet
 info[css]: index.html:144: border style `dashed` is drawn solid
 info[css]: index.html:149: border style `dotted` is drawn solid
 info[css]: index.html:154: border style `double` is drawn solid
-warning[css]: index.html:159: `box-shadow` is not converted yet
-warning[css]: index.html:164: background images and gradients are not converted yet
-warning[css]: index.html:169: background images and gradients are not converted yet
-warning[css]: index.html:174: background images and gradients are not converted yet
+info[css]: index.html:159: inset `box-shadow` is not drawn

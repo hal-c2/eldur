@@ -1,0 +1,622 @@
+//! Gradient background layers (CSS Images 3 §3) → QtQuick.Shapes fills.
+//!
+//! A `Rectangle`'s own `gradient` only runs vertically or horizontally, and
+//! CSS gradients have any angle, positioned stops and repeat. A `Shape`
+//! whose `ShapePath` is a `PathRectangle` with the box's corner radii,
+//! filled with a `LinearGradient`/`RadialGradient`, does all of that, is
+//! clipped to the rounded corners like the CSS background, and renders
+//! with the software backend too.
+//!
+//! The gradient line depends on the box size, so its end points are
+//! bindings on the shape's `width`/`height`. Everything that is linear in
+//! those is kept as a [`Lin`].
+
+use h2q_css::{BackgroundSize, ColorStop, ComputedStyle, Image, LengthPercentage};
+use h2q_qml::{Object, Value};
+
+use super::Emitter;
+use super::units::{color, fmt_number};
+
+/// `w * width + h * height + k`, a coordinate or length on a box whose size
+/// is only known at run time.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub(crate) struct Lin {
+    pub w: f64,
+    pub h: f64,
+    pub k: f64,
+}
+
+impl Lin {
+    fn k(k: f64) -> Self {
+        Self { w: 0.0, h: 0.0, k }
+    }
+
+    fn add(self, o: Self) -> Self {
+        Self {
+            w: self.w + o.w,
+            h: self.h + o.h,
+            k: self.k + o.k,
+        }
+    }
+
+    fn sub(self, o: Self) -> Self {
+        self.add(o.scale(-1.0))
+    }
+
+    fn scale(self, f: f64) -> Self {
+        Self {
+            w: self.w * f,
+            h: self.h * f,
+            k: self.k * f,
+        }
+    }
+
+    fn is_zero(self) -> bool {
+        self.w.abs() < 1e-9 && self.h.abs() < 1e-9 && self.k.abs() < 1e-9
+    }
+
+    /// `t` with `self == other * t`, when there is one.
+    fn ratio_to(self, other: Self) -> Option<f64> {
+        let pairs = [(self.w, other.w), (self.h, other.h), (self.k, other.k)];
+        let mut t = None;
+        for (a, b) in pairs {
+            if b.abs() < 1e-9 {
+                if a.abs() > 1e-9 {
+                    return None;
+                }
+                continue;
+            }
+            let r = a / b;
+            match t {
+                None => t = Some(r),
+                Some(t) if (t - r).abs() > 1e-6 => return None,
+                _ => {}
+            }
+        }
+        t
+    }
+
+    /// As a QML expression over `{id}.width` and `{id}.height`.
+    pub(crate) fn expr(self, id: &str) -> String {
+        let mut out = String::new();
+        let mut term = |coef: f64, base: Option<String>| {
+            let coef = round4(coef);
+            if coef == 0.0 {
+                return;
+            }
+            let sign = if coef < 0.0 { "-" } else { "+" };
+            let abs = coef.abs();
+            let text = match &base {
+                Some(b) if abs == 1.0 => b.clone(),
+                Some(b) => format!("{b} * {}", fmt_number(abs)),
+                None => fmt_number(abs),
+            };
+            if out.is_empty() {
+                if coef < 0.0 {
+                    out.push('-');
+                }
+            } else {
+                out.push_str(&format!(" {sign} "));
+            }
+            out.push_str(&text);
+        };
+        term(self.w, Some(format!("{id}.width")));
+        term(self.h, Some(format!("{id}.height")));
+        term(self.k, None);
+        if out.is_empty() { "0".to_owned() } else { out }
+    }
+
+    /// A number when the size does not matter, else an expression.
+    fn value(self, id: &str) -> Value {
+        if self.w.abs() < 1e-9 && self.h.abs() < 1e-9 {
+            Value::Number(round4(self.k))
+        } else {
+            Value::expr(self.expr(id))
+        }
+    }
+}
+
+fn round4(v: f64) -> f64 {
+    let r = (v * 10_000.0).round() / 10_000.0;
+    if r == 0.0 { 0.0 } else { r }
+}
+
+/// A stop position along the gradient line: px plus a fraction of the
+/// line length (CSS Images 3 §3.5.1 positions are `<length-percentage>`).
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub(crate) struct StopPos {
+    pub px: f64,
+    pub frac: f64,
+}
+
+impl StopPos {
+    fn lerp(self, o: Self, t: f64) -> Self {
+        Self {
+            px: self.px + (o.px - self.px) * t,
+            frac: self.frac + (o.frac - self.frac) * t,
+        }
+    }
+
+    /// Whether `self` is before `o` whatever the line length is.
+    fn surely_before(self, o: Self) -> bool {
+        self.px <= o.px && self.frac <= o.frac && self != o
+    }
+
+    fn on(self, len: Lin) -> Lin {
+        Lin::k(self.px).add(len.scale(self.frac))
+    }
+}
+
+/// Stop positions with the missing ones filled in (CSS Images 3 §3.5.1):
+/// the first defaults to 0%, the last to 100%, a position before an earlier
+/// one moves up to it, and runs without positions are spread evenly.
+/// `vw`/`vh` resolve against `viewport`. The clamp needs comparable
+/// positions; a px and a % position are left as they are.
+pub(crate) fn fixup_stops(stops: &[ColorStop], viewport: (f32, f32)) -> Vec<StopPos> {
+    let resolve = |l: &LengthPercentage| StopPos {
+        px: f64::from(l.px + l.vw * viewport.0 / 100.0 + l.vh * viewport.1 / 100.0),
+        frac: f64::from(l.percent) / 100.0,
+    };
+    let n = stops.len();
+    let mut pos: Vec<Option<StopPos>> = stops
+        .iter()
+        .map(|s| s.position.as_ref().map(resolve))
+        .collect();
+    if n == 0 {
+        return Vec::new();
+    }
+    if pos[0].is_none() {
+        pos[0] = Some(StopPos::default());
+    }
+    if pos[n - 1].is_none() {
+        pos[n - 1] = Some(StopPos { px: 0.0, frac: 1.0 });
+    }
+    let mut max: Option<StopPos> = None;
+    for p in pos.iter_mut().flatten() {
+        if let Some(m) = max {
+            let comparable = (p.frac == 0.0 && m.frac == 0.0) || (p.px == 0.0 && m.px == 0.0);
+            if comparable && p.surely_before(m) {
+                *p = m;
+            }
+        }
+        if max.is_none_or(|m| m.surely_before(*p)) {
+            max = Some(*p);
+        }
+    }
+    let mut out = Vec::with_capacity(n);
+    let mut i = 0;
+    while i < n {
+        if let Some(p) = pos[i] {
+            out.push(p);
+            i += 1;
+            continue;
+        }
+        let before = out[out.len() - 1];
+        let end = (i..n).find(|&j| pos[j].is_some()).unwrap_or(n - 1);
+        let after = pos[end].unwrap_or_default();
+        let gaps = (end - i + 1) as f64;
+        for (k, _) in (i..end).enumerate() {
+            out.push(before.lerp(after, (k + 1) as f64 / gaps));
+        }
+        i = end;
+    }
+    out
+}
+
+/// The gradient line of a `linear-gradient(angle_deg, …)` on a box (CSS
+/// Images 3 §3.1.1): its start point and unit direction, and its length.
+pub(crate) fn gradient_line(angle_deg: f32) -> ((Lin, Lin), (f64, f64), Lin) {
+    let a = f64::from(angle_deg).to_radians();
+    let (s, c) = (snap(a.sin()), snap(a.cos()));
+    let len = Lin {
+        w: s.abs(),
+        h: c.abs(),
+        k: 0.0,
+    };
+    let half = len.scale(0.5);
+    let centre_x = Lin {
+        w: 0.5,
+        ..Lin::default()
+    };
+    let centre_y = Lin {
+        h: 0.5,
+        ..Lin::default()
+    };
+    let start = (centre_x.sub(half.scale(s)), centre_y.add(half.scale(c)));
+    (start, (s, -c), len)
+}
+
+/// Removes float noise so that `90deg` gives exact 0s and 1s.
+fn snap(v: f64) -> f64 {
+    if v.abs() < 1e-9 {
+        0.0
+    } else if (v.abs() - 1.0).abs() < 1e-9 {
+        v.signum()
+    } else {
+        v
+    }
+}
+
+impl Emitter<'_, '_> {
+    /// One `Shape` per gradient layer, bottom layer first, each filling the
+    /// box. `hint` names the shapes' ids.
+    pub(super) fn gradient_layers(
+        &mut self,
+        style: &ComputedStyle,
+        hint: &str,
+        line: Option<u32>,
+    ) -> Vec<Object> {
+        let mut shapes = Vec::new();
+        for layer in style.background_layers.iter().rev() {
+            let Some(image) = &layer.image else { continue };
+            let fill = match image {
+                Image::LinearGradient {
+                    angle_deg,
+                    stops,
+                    repeating,
+                } => Fill::Linear(*angle_deg, stops, *repeating),
+                Image::RadialGradient {
+                    circle,
+                    center_x,
+                    center_y,
+                    stops,
+                    repeating,
+                } => {
+                    if *repeating {
+                        self.diags.info(
+                            "css",
+                            line,
+                            "`repeating-radial-gradient()` is drawn without repeating".to_owned(),
+                        );
+                    }
+                    Fill::Radial(*circle, center_x, center_y, stops)
+                }
+                Image::ConicGradient { .. } => {
+                    self.diags.warning(
+                        "css",
+                        line,
+                        "`conic-gradient()` backgrounds are not converted yet".to_owned(),
+                    );
+                    continue;
+                }
+                Image::Url(url) => {
+                    self.diags.warning(
+                        "css",
+                        line,
+                        format!("background image `url({url})` is not converted yet"),
+                    );
+                    continue;
+                }
+            };
+            if layer.size != BackgroundSize::Auto {
+                self.diags.info(
+                    "css",
+                    line,
+                    "`background-size` on a gradient is not converted; it fills the box".to_owned(),
+                );
+            }
+            self.imports.insert("QtQuick.Shapes");
+            let id = self.ids.claim(&format!("{hint} gradient"));
+            let mut path = Object::new("ShapePath");
+            path.set("strokeWidth", Value::Number(-1.0));
+            match fill {
+                Fill::Linear(angle, stops, repeating) => {
+                    let g = self.linear(&id, angle, stops, repeating);
+                    path.set("fillGradient", Value::Object(Box::new(g)));
+                }
+                Fill::Radial(circle, cx, cy, stops) => {
+                    let (g, transform) = self.radial(&id, circle, cx, cy, stops, line);
+                    if let Some(t) = transform {
+                        path.set("fillTransform", Value::expr(t));
+                    }
+                    path.set("fillGradient", Value::Object(Box::new(g)));
+                }
+            }
+            let mut rect = Object::new("PathRectangle");
+            rect.set("width", Value::expr(format!("{id}.width")));
+            rect.set("height", Value::expr(format!("{id}.height")));
+            self.radius(&mut rect, style, line);
+            path.push_child(rect);
+            let mut shape = Object::new("Shape").with_id(id);
+            shape.set("anchors.fill", Value::expr("parent"));
+            shape.push_child(path);
+            shapes.push(shape);
+        }
+        shapes
+    }
+
+    fn linear(&self, id: &str, angle: f32, stops: &[ColorStop], repeating: bool) -> Object {
+        let (start, dir, len) = gradient_line(angle);
+        let positions = fixup_stops(stops, self.viewport());
+        let mut g = Object::new("LinearGradient");
+        let along: Vec<Lin> = positions.iter().map(|p| p.on(len)).collect();
+        let first = along.first().copied().unwrap_or_default();
+        let last = along.last().copied().unwrap_or_default();
+        // The gradient runs from the first stop to the last; CSS pads the
+        // colours beyond them, or repeats that stretch.
+        let (first, span) = if last.sub(first).is_zero() {
+            // All stops at one place: a hard edge there.
+            (first, Lin::k(0.01))
+        } else {
+            (first, last.sub(first))
+        };
+        let point = |p: Lin| (start.0.add(p.scale(dir.0)), start.1.add(p.scale(dir.1)));
+        let (x1, y1) = point(first);
+        let (x2, y2) = point(first.add(span));
+        g.set("x1", x1.value(id));
+        g.set("y1", y1.value(id));
+        g.set("x2", x2.value(id));
+        g.set("y2", y2.value(id));
+        if repeating {
+            g.set("spread", Value::expr("ShapeGradient.RepeatSpread"));
+        }
+        let mut positions = Vec::with_capacity(stops.len());
+        for p in &along {
+            let offset = p.sub(first);
+            positions.push(match offset.ratio_to(span) {
+                Some(t) => Value::Number(round4(t.clamp(0.0, 1.0))),
+                None if offset.is_zero() => Value::Number(0.0),
+                None => Value::expr(format!(
+                    "Math.max(0, Math.min(1, ({}) / ({})))",
+                    offset.expr(id),
+                    span.expr(id)
+                )),
+            });
+        }
+        separate(&mut positions);
+        for (stop, position) in stops.iter().zip(positions) {
+            g.push_child(gradient_stop(position, stop));
+        }
+        g
+    }
+
+    /// A radial gradient sized `farthest-corner` (the only size the style
+    /// keeps); an ellipse is a circle scaled by `fillTransform`.
+    fn radial(
+        &mut self,
+        id: &str,
+        circle: bool,
+        cx: &LengthPercentage,
+        cy: &LengthPercentage,
+        stops: &[ColorStop],
+        line: Option<u32>,
+    ) -> (Object, Option<String>) {
+        let (vw, vh) = self.viewport();
+        let axis = |l: &LengthPercentage, w: f64, h: f64| Lin {
+            w: f64::from(l.percent) / 100.0 * w,
+            h: f64::from(l.percent) / 100.0 * h,
+            k: f64::from(l.px + l.vw * vw / 100.0 + l.vh * vh / 100.0),
+        };
+        let x = axis(cx, 1.0, 0.0);
+        let y = axis(cy, 0.0, 1.0);
+        let full_w = Lin {
+            w: 1.0,
+            ..Lin::default()
+        };
+        let full_h = Lin {
+            h: 1.0,
+            ..Lin::default()
+        };
+        // Distance from the centre to the farther side, per axis.
+        let reach = |c: Lin, full: Lin| {
+            let other = full.sub(c);
+            if c == full.scale(0.5) {
+                c.expr(id)
+            } else {
+                format!("Math.max({}, {})", c.expr(id), other.expr(id))
+            }
+        };
+        let (dx, dy) = (reach(x, full_w), reach(y, full_h));
+        let (radius, transform) = if circle {
+            (format!("Math.hypot({dx}, {dy})"), None)
+        } else {
+            // farthest-corner keeps the box's aspect ratio: radii are the
+            // side distances times √2.
+            (
+                format!("({dx}) * Math.SQRT2"),
+                Some(format!(
+                    "PlanarTransform.fromScale(1, ({dy}) / Math.max(1, {dx}), {}, {})",
+                    x.expr(id),
+                    y.expr(id)
+                )),
+            )
+        };
+        let mut g = Object::new("RadialGradient");
+        g.set("centerX", x.value(id));
+        g.set("centerY", y.value(id));
+        g.set("centerRadius", Value::expr(radius.clone()));
+        g.set("focalX", x.value(id));
+        g.set("focalY", y.value(id));
+        let positions = fixup_stops(stops, (vw, vh));
+        let mut lossy = false;
+        let mut values = Vec::with_capacity(stops.len());
+        for p in &positions {
+            values.push(if p.px == 0.0 {
+                lossy |= !(0.0..=1.0).contains(&p.frac);
+                Value::Number(round4(p.frac.clamp(0.0, 1.0)))
+            } else {
+                Value::expr(format!(
+                    "Math.max(0, Math.min(1, {} / ({radius}) + {}))",
+                    fmt_number(round4(p.px)),
+                    fmt_number(round4(p.frac))
+                ))
+            });
+        }
+        separate(&mut values);
+        for (stop, position) in stops.iter().zip(values) {
+            g.push_child(gradient_stop(position, stop));
+        }
+        if lossy {
+            self.diags.info(
+                "css",
+                line,
+                "radial-gradient stops beyond the ending shape are clamped to it".to_owned(),
+            );
+        }
+        (g, transform)
+    }
+
+    fn viewport(&self) -> (f32, f32) {
+        let v = &self.options.viewport;
+        (v.width, v.height)
+    }
+}
+
+enum Fill<'s> {
+    Linear(f32, &'s [ColorStop], bool),
+    Radial(
+        bool,
+        &'s LengthPercentage,
+        &'s LengthPercentage,
+        &'s [ColorStop],
+    ),
+}
+
+/// Qt keeps one stop per position, so a hard edge (two stops at one
+/// position) would lose a colour: equal constant positions are moved a
+/// hair apart, keeping them within 0…1.
+pub(crate) fn separate(positions: &mut [Value]) {
+    const EPS: f64 = 0.0001;
+    let mut prev: Option<f64> = None;
+    for v in positions.iter_mut() {
+        if let Value::Number(n) = v {
+            if let Some(p) = prev
+                && *n <= p
+            {
+                *n = round4(p + EPS);
+            }
+            prev = Some(*n);
+        }
+    }
+    // Past the end: walk back from 1.
+    let mut next: Option<f64> = None;
+    for v in positions.iter_mut().rev() {
+        if let Value::Number(n) = v {
+            let cap = next.map_or(1.0, |x| round4(x - EPS));
+            if *n > cap {
+                *n = cap;
+            }
+            next = Some(*n);
+        }
+    }
+}
+
+fn gradient_stop(position: Value, stop: &ColorStop) -> Object {
+    let mut s = Object::new("GradientStop");
+    s.set("position", position);
+    s.set("color", color(stop.color));
+    s
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use h2q_css::Rgba;
+
+    fn stop(position: Option<LengthPercentage>) -> ColorStop {
+        ColorStop {
+            color: Rgba::WHITE,
+            position,
+        }
+    }
+
+    fn pct(v: f32) -> Option<LengthPercentage> {
+        Some(LengthPercentage::percent(v))
+    }
+
+    fn px(v: f32) -> Option<LengthPercentage> {
+        Some(LengthPercentage::px(v))
+    }
+
+    fn frac(f: f64) -> StopPos {
+        StopPos { px: 0.0, frac: f }
+    }
+
+    #[test]
+    fn missing_stop_positions_are_spread_evenly() {
+        let got = fixup_stops(&[stop(None), stop(None), stop(None)], (0.0, 0.0));
+        assert_eq!(got, [frac(0.0), frac(0.5), frac(1.0)]);
+        let got = fixup_stops(&[stop(pct(20.0)), stop(None), stop(pct(80.0))], (0.0, 0.0));
+        assert_eq!(got, [frac(0.2), frac(0.5), frac(0.8)]);
+    }
+
+    #[test]
+    fn a_stop_before_an_earlier_one_moves_up_to_it() {
+        let got = fixup_stops(&[stop(pct(60.0)), stop(pct(20.0))], (0.0, 0.0));
+        assert_eq!(got, [frac(0.6), frac(0.6)]);
+        let got = fixup_stops(&[stop(px(10.0)), stop(px(5.0)), stop(px(20.0))], (0.0, 0.0));
+        assert_eq!(
+            got[1],
+            StopPos {
+                px: 10.0,
+                frac: 0.0
+            }
+        );
+    }
+
+    #[test]
+    fn gradient_line_follows_the_css_angle() {
+        // `to bottom`: from the top edge's middle, straight down, the
+        // box's height long.
+        let ((x, y), dir, len) = gradient_line(180.0);
+        assert_eq!(
+            (x, y),
+            (
+                Lin {
+                    w: 0.5,
+                    h: 0.0,
+                    k: 0.0
+                },
+                Lin::default()
+            )
+        );
+        assert_eq!(dir, (0.0, 1.0));
+        assert_eq!(
+            len,
+            Lin {
+                w: 0.0,
+                h: 1.0,
+                k: 0.0
+            }
+        );
+        // 135deg on a 200×100 box: the line passes through the centre and
+        // is |w sin a| + |h cos a| long, so the corners get the end colours.
+        let ((x, y), (dx, dy), len) = gradient_line(135.0);
+        let (w, h) = (200.0, 100.0);
+        let at = |l: Lin| l.w * w + l.h * h + l.k;
+        let l = at(len);
+        assert!((l - 150.0 * std::f64::consts::SQRT_2).abs() < 1e-6);
+        let (mx, my) = (at(x) + dx * l / 2.0, at(y) + dy * l / 2.0);
+        assert!((mx - 100.0).abs() < 1e-6 && (my - 50.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn hard_edges_keep_both_colours() {
+        let mut v = [0.0, 0.2, 0.2, 0.8, 0.8, 1.0, 1.0].map(Value::Number);
+        separate(&mut v);
+        assert_eq!(
+            v,
+            [0.0, 0.2, 0.2001, 0.8, 0.8001, 0.9999, 1.0].map(Value::Number)
+        );
+    }
+
+    #[test]
+    fn lin_prints_as_a_binding() {
+        let l = Lin {
+            w: 0.25,
+            h: -0.25,
+            k: 0.0,
+        };
+        assert_eq!(l.expr("g"), "g.width * 0.25 - g.height * 0.25");
+        assert_eq!(Lin::k(3.0).expr("g"), "3");
+        assert_eq!(
+            Lin {
+                w: 0.0,
+                h: -1.0,
+                k: 2.0
+            }
+            .expr("g"),
+            "-g.height + 2"
+        );
+    }
+}

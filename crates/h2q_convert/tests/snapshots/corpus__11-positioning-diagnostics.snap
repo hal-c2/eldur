@@ -2,10 +2,5 @@
 source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-info[css]: index.html:229: <div class="tooltip-wrap"> contains block-level boxes; laid out as a block
 info[html]: index.html:230: inline <button class="btn"> is laid out as a block (no inline replaced elements yet)
 warning[css]: index.html:212: `position: fixed` on <header class="site-header"> is laid out in normal flow (not implemented yet)
-warning[css]: index.html:212: `box-shadow` is not converted yet
-warning[css]: index.html:225: `box-shadow` is not converted yet
-warning[css]: index.html:231: `transform` on <div class="tooltip"> is not converted yet
-warning[css]: index.html:235: background images and gradients are not converted yet

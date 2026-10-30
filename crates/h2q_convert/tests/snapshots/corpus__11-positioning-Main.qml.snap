@@ -6,7 +6,9 @@ expression: qml
 
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Effects
 import QtQuick.Layouts
+import QtQuick.Shapes
 
 ApplicationWindow {
     id: root
@@ -51,6 +53,14 @@ ApplicationWindow {
                         implicitHeight: siteHeaderContent.implicitHeight
                         Layout.fillWidth: true
                         Layout.preferredHeight: 64
+
+                        RectangularShadow {
+                            anchors.fill: parent
+                            z: -1
+                            offset: Qt.vector2d(0, 1)
+                            blur: 0
+                            color: "#d9dee8"
+                        }
 
                         RowLayout {
                             id: siteHeaderContent
@@ -182,6 +192,15 @@ ApplicationWindow {
                                     Layout.maximumWidth: 340
                                     Layout.alignment: Qt.AlignTop
 
+                                    RectangularShadow {
+                                        anchors.fill: parent
+                                        z: -1
+                                        offset: Qt.vector2d(0, 6)
+                                        blur: 23.6
+                                        color: "#14000000"
+                                        radius: 12
+                                    }
+
                                     ColumnLayout {
                                         id: cardContent
                                         spacing: 0
@@ -221,106 +240,122 @@ ApplicationWindow {
                                             Layout.topMargin: 8
                                         }
 
-                                        // <div class="tooltip-wrap">
-                                        Item {
-                                            implicitWidth: tooltipWrapContent.implicitWidth
-                                            implicitHeight: tooltipWrapContent.implicitHeight
-                                            Layout.topMargin: 64
+                                        Flow {
+                                            id: blockFlow
+                                            Layout.fillWidth: true
+                                            Layout.topMargin: 16
 
-                                            ColumnLayout {
-                                                id: tooltipWrapContent
-                                                spacing: 0
-                                                anchors.left: parent.left
-                                                anchors.right: parent.right
-                                                anchors.top: parent.top
+                                            Item {
+                                                width: tooltipWrapBox.width
+                                                height: tooltipWrapBox.height + 64
 
-                                                // <button class="btn">
-                                                Button {
-                                                    id: buttonControl
-                                                    text: "Follow"
-                                                    palette.buttonText: "#ffffff"
-                                                    font.family: "sans-serif"
-                                                    font.pixelSize: 16
-                                                    font.weight: 600
-                                                    background: Rectangle {
-                                                        color: "#3b6fe0"
-                                                        radius: 8
-                                                    }
-                                                    topPadding: 10
-                                                    rightPadding: 18
-                                                    bottomPadding: 10
-                                                    leftPadding: 18
-                                                    Layout.alignment: Qt.AlignHCenter
-                                                }
-                                            }
+                                                Item {
+                                                    id: tooltipWrapBox
+                                                    implicitWidth: tooltipWrapContent.implicitWidth
+                                                    implicitHeight: tooltipWrapContent.implicitHeight
+                                                    width: Math.min(implicitWidth, blockFlow.width)
+                                                    y: 64
 
-                                            Rectangle {
-                                                color: "#1f2937"
-                                                radius: 6
-                                                implicitWidth: tooltipContent.implicitWidth + 20
-                                                implicitHeight: tooltipContent.implicitHeight + 12
-                                                x: parent.width * 0.5
-                                                anchors.bottom: parent.bottom
-                                                anchors.bottomMargin: parent.height + 12
-
-                                                ColumnLayout {
-                                                    id: tooltipContent
-                                                    spacing: 0
-                                                    anchors.left: parent.left
-                                                    anchors.right: parent.right
-                                                    anchors.top: parent.top
-                                                    anchors.leftMargin: 10
-                                                    anchors.rightMargin: 10
-                                                    anchors.topMargin: 6
-
-                                                    Text {
-                                                        text: "Get notified about new posts"
-                                                        textFormat: Text.PlainText
-                                                        color: "#ffffff"
-                                                        font.family: "sans-serif"
-                                                        font.pixelSize: 13
-                                                        wrapMode: Text.NoWrap
-                                                        Layout.fillWidth: true
-                                                    }
-                                                }
-
-                                                Rectangle {
-                                                    color: "#00000000"
-                                                    implicitWidth: 12
-                                                    implicitHeight: 12
-                                                    x: parent.width * 0.5 + -6
-                                                    y: parent.height
-
-                                                    Rectangle {
+                                                    ColumnLayout {
+                                                        id: tooltipWrapContent
+                                                        spacing: 0
                                                         anchors.left: parent.left
                                                         anchors.right: parent.right
                                                         anchors.top: parent.top
-                                                        height: 6
+
+                                                        // <button class="btn">
+                                                        Button {
+                                                            id: buttonControl
+                                                            text: "Follow"
+                                                            palette.buttonText: "#ffffff"
+                                                            font.family: "sans-serif"
+                                                            font.pixelSize: 16
+                                                            font.weight: 600
+                                                            background: Rectangle {
+                                                                color: "#3b6fe0"
+                                                                radius: 8
+                                                            }
+                                                            topPadding: 10
+                                                            rightPadding: 18
+                                                            bottomPadding: 10
+                                                            leftPadding: 18
+                                                            Layout.alignment: Qt.AlignHCenter
+                                                        }
+                                                    }
+
+                                                    Rectangle {
+                                                        id: tooltipBox
                                                         color: "#1f2937"
-                                                    }
-
-                                                    Rectangle {
-                                                        anchors.top: parent.top
+                                                        radius: 6
+                                                        implicitWidth: tooltipContent.implicitWidth + 20
+                                                        implicitHeight: tooltipContent.implicitHeight + 12
+                                                        transform: Translate {
+                                                            x: tooltipBox.width * -0.5
+                                                        }
+                                                        x: parent.width * 0.5
                                                         anchors.bottom: parent.bottom
-                                                        anchors.right: parent.right
-                                                        width: 6
-                                                        color: "#00000000"
-                                                    }
+                                                        anchors.bottomMargin: parent.height + 12
 
-                                                    Rectangle {
-                                                        anchors.left: parent.left
-                                                        anchors.right: parent.right
-                                                        anchors.bottom: parent.bottom
-                                                        height: 6
-                                                        color: "#00000000"
-                                                    }
+                                                        ColumnLayout {
+                                                            id: tooltipContent
+                                                            spacing: 0
+                                                            anchors.left: parent.left
+                                                            anchors.right: parent.right
+                                                            anchors.top: parent.top
+                                                            anchors.leftMargin: 10
+                                                            anchors.rightMargin: 10
+                                                            anchors.topMargin: 6
 
-                                                    Rectangle {
-                                                        anchors.top: parent.top
-                                                        anchors.bottom: parent.bottom
-                                                        anchors.left: parent.left
-                                                        width: 6
-                                                        color: "#00000000"
+                                                            Text {
+                                                                text: "Get notified about new posts"
+                                                                textFormat: Text.PlainText
+                                                                color: "#ffffff"
+                                                                font.family: "sans-serif"
+                                                                font.pixelSize: 13
+                                                                wrapMode: Text.NoWrap
+                                                                Layout.fillWidth: true
+                                                            }
+                                                        }
+
+                                                        Rectangle {
+                                                            color: "#00000000"
+                                                            implicitWidth: 12
+                                                            implicitHeight: 12
+                                                            x: parent.width * 0.5 + -6
+                                                            y: parent.height
+
+                                                            Rectangle {
+                                                                anchors.left: parent.left
+                                                                anchors.right: parent.right
+                                                                anchors.top: parent.top
+                                                                height: 6
+                                                                color: "#1f2937"
+                                                            }
+
+                                                            Rectangle {
+                                                                anchors.top: parent.top
+                                                                anchors.bottom: parent.bottom
+                                                                anchors.right: parent.right
+                                                                width: 6
+                                                                color: "#00000000"
+                                                            }
+
+                                                            Rectangle {
+                                                                anchors.left: parent.left
+                                                                anchors.right: parent.right
+                                                                anchors.bottom: parent.bottom
+                                                                height: 6
+                                                                color: "#00000000"
+                                                            }
+
+                                                            Rectangle {
+                                                                anchors.top: parent.top
+                                                                anchors.bottom: parent.bottom
+                                                                anchors.left: parent.left
+                                                                width: 6
+                                                                color: "#00000000"
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
@@ -366,6 +401,42 @@ ApplicationWindow {
                                     Layout.preferredHeight: 220
                                     Layout.alignment: Qt.AlignTop
                                     Layout.leftMargin: 48
+
+                                    Shape {
+                                        id: mediaGradient
+                                        anchors.fill: parent
+
+                                        ShapePath {
+                                            strokeWidth: -1
+                                            fillGradient: LinearGradient {
+                                                x1: mediaGradient.width * 0.25 - mediaGradient.height * 0.25
+                                                y1: -mediaGradient.width * 0.25 + mediaGradient.height * 0.25
+                                                x2: mediaGradient.width * 0.75 + mediaGradient.height * 0.25
+                                                y2: mediaGradient.width * 0.25 + mediaGradient.height * 0.75
+
+                                                GradientStop {
+                                                    position: 0
+                                                    color: "#7f9cf5"
+                                                }
+
+                                                GradientStop {
+                                                    position: 0.55
+                                                    color: "#b6c8ff"
+                                                }
+
+                                                GradientStop {
+                                                    position: 1
+                                                    color: "#f7d6e0"
+                                                }
+                                            }
+
+                                            PathRectangle {
+                                                width: mediaGradient.width
+                                                height: mediaGradient.height
+                                                radius: 12
+                                            }
+                                        }
+                                    }
 
                                     Rectangle {
                                         color: "#99ffffff"

@@ -6,7 +6,9 @@ expression: qml
 
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Effects
 import QtQuick.Layouts
+import QtQuick.Shapes
 
 ApplicationWindow {
     id: root
@@ -96,6 +98,37 @@ ApplicationWindow {
                                 Layout.preferredHeight: 130
                                 Layout.preferredWidth: 200
                                 Layout.alignment: Qt.AlignHCenter
+
+                                Shape {
+                                    id: boxGradient
+                                    anchors.fill: parent
+
+                                    ShapePath {
+                                        strokeWidth: -1
+                                        fillGradient: LinearGradient {
+                                            x1: boxGradient.width * 0.25 - boxGradient.height * 0.25
+                                            y1: boxGradient.width * 0.25 + boxGradient.height * 0.75
+                                            x2: boxGradient.width * 0.75 + boxGradient.height * 0.25
+                                            y2: -boxGradient.width * 0.25 + boxGradient.height * 0.25
+
+                                            GradientStop {
+                                                position: 0
+                                                color: "#ff7e5f"
+                                            }
+
+                                            GradientStop {
+                                                position: 1
+                                                color: "#feb47b"
+                                            }
+                                        }
+
+                                        PathRectangle {
+                                            width: boxGradient.width
+                                            height: boxGradient.height
+                                            radius: 16
+                                        }
+                                    }
+                                }
                             }
 
                             // <p class="caption">
@@ -294,6 +327,24 @@ ApplicationWindow {
                                 Layout.preferredHeight: 130
                                 Layout.preferredWidth: 200
                                 Layout.alignment: Qt.AlignHCenter
+
+                                RectangularShadow {
+                                    anchors.fill: parent
+                                    z: -1
+                                    offset: Qt.vector2d(0, 8)
+                                    blur: 26
+                                    color: "#26000000"
+                                    radius: 12
+                                }
+
+                                RectangularShadow {
+                                    anchors.fill: parent
+                                    z: -1
+                                    offset: Qt.vector2d(0, 2)
+                                    blur: 6.8
+                                    color: "#1a000000"
+                                    radius: 12
+                                }
                             }
 
                             // <p class="caption">
@@ -332,6 +383,37 @@ ApplicationWindow {
                                 Layout.preferredHeight: 130
                                 Layout.preferredWidth: 200
                                 Layout.alignment: Qt.AlignHCenter
+
+                                Shape {
+                                    id: boxGradient2
+                                    anchors.fill: parent
+
+                                    ShapePath {
+                                        strokeWidth: -1
+                                        fillGradient: LinearGradient {
+                                            x1: 0
+                                            y1: boxGradient2.height * 0.5
+                                            x2: boxGradient2.width
+                                            y2: boxGradient2.height * 0.5
+
+                                            GradientStop {
+                                                position: 0
+                                                color: "#11998e"
+                                            }
+
+                                            GradientStop {
+                                                position: 1
+                                                color: "#38ef7d"
+                                            }
+                                        }
+
+                                        PathRectangle {
+                                            width: boxGradient2.width
+                                            height: boxGradient2.height
+                                            radius: 8
+                                        }
+                                    }
+                                }
                             }
 
                             // <p class="caption">
@@ -370,6 +452,43 @@ ApplicationWindow {
                                 Layout.preferredHeight: 130
                                 Layout.preferredWidth: 200
                                 Layout.alignment: Qt.AlignHCenter
+
+                                Shape {
+                                    id: boxGradient3
+                                    anchors.fill: parent
+
+                                    ShapePath {
+                                        strokeWidth: -1
+                                        fillGradient: RadialGradient {
+                                            centerX: boxGradient3.width * 0.3
+                                            centerY: boxGradient3.height * 0.3
+                                            centerRadius: Math.hypot(Math.max(boxGradient3.width * 0.3, boxGradient3.width * 0.7), Math.max(boxGradient3.height * 0.3, boxGradient3.height * 0.7))
+                                            focalX: boxGradient3.width * 0.3
+                                            focalY: boxGradient3.height * 0.3
+
+                                            GradientStop {
+                                                position: 0
+                                                color: "#ffffff"
+                                            }
+
+                                            GradientStop {
+                                                position: 0.45
+                                                color: "#ffd166"
+                                            }
+
+                                            GradientStop {
+                                                position: 1
+                                                color: "#ef476f"
+                                            }
+                                        }
+
+                                        PathRectangle {
+                                            width: boxGradient3.width
+                                            height: boxGradient3.height
+                                            radius: 8
+                                        }
+                                    }
+                                }
                             }
 
                             // <p class="caption">
@@ -408,6 +527,48 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
+
+                                Shape {
+                                    id: stripesGradient
+                                    anchors.fill: parent
+
+                                    ShapePath {
+                                        strokeWidth: -1
+                                        fillGradient: LinearGradient {
+                                            x1: stripesGradient.width * 0.25 - stripesGradient.height * 0.25
+                                            y1: stripesGradient.width * 0.25 + stripesGradient.height * 0.75
+                                            x2: stripesGradient.width * 0.25 - stripesGradient.height * 0.25 + 14.1421
+                                            y2: stripesGradient.width * 0.25 + stripesGradient.height * 0.75 - 14.1421
+                                            spread: ShapeGradient.RepeatSpread
+
+                                            GradientStop {
+                                                position: 0
+                                                color: "#ffb703"
+                                            }
+
+                                            GradientStop {
+                                                position: 0.5
+                                                color: "#ffb703"
+                                            }
+
+                                            GradientStop {
+                                                position: 0.5001
+                                                color: "#fb8500"
+                                            }
+
+                                            GradientStop {
+                                                position: 1
+                                                color: "#fb8500"
+                                            }
+                                        }
+
+                                        PathRectangle {
+                                            width: stripesGradient.width
+                                            height: stripesGradient.height
+                                            radius: 8
+                                        }
+                                    }
+                                }
 
                                 ColumnLayout {
                                     id: stripesContent

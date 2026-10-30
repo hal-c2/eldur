@@ -6,7 +6,9 @@ expression: qml
 
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Effects
 import QtQuick.Layouts
+import QtQuick.Shapes
 
 ApplicationWindow {
     id: root
@@ -159,6 +161,36 @@ ApplicationWindow {
                     implicitHeight: heroContent.implicitHeight + 96
                     Layout.fillWidth: true
 
+                    Shape {
+                        id: heroGradient
+                        anchors.fill: parent
+
+                        ShapePath {
+                            strokeWidth: -1
+                            fillGradient: LinearGradient {
+                                x1: heroGradient.width * 0.25 - heroGradient.height * 0.25
+                                y1: -heroGradient.width * 0.25 + heroGradient.height * 0.25
+                                x2: heroGradient.width * 0.75 + heroGradient.height * 0.25
+                                y2: heroGradient.width * 0.25 + heroGradient.height * 0.75
+
+                                GradientStop {
+                                    position: 0
+                                    color: "#3b5bdb"
+                                }
+
+                                GradientStop {
+                                    position: 1
+                                    color: "#2f4ac0"
+                                }
+                            }
+
+                            PathRectangle {
+                                width: heroGradient.width
+                                height: heroGradient.height
+                            }
+                        }
+                    }
+
                     ColumnLayout {
                         id: heroContent
                         spacing: 0
@@ -169,19 +201,44 @@ ApplicationWindow {
                         anchors.rightMargin: 64
                         anchors.topMargin: 48
 
-                        Text {
-                            text: "<small>Design tokens v2.4</small>"
-                            textFormat: Text.StyledText
-                            color: "#ffffff"
-                            font.family: "sans-serif"
-                            font.pixelSize: 16
-                            lineHeight: 24
-                            lineHeightMode: Text.FixedHeight
-                            transform: Translate {
-                                y: 2.8
-                            }
-                            wrapMode: Text.WordWrap
+                        Flow {
+                            id: blockFlow
                             Layout.fillWidth: true
+
+                            Item {
+                                width: eyebrowBox.width
+                                height: eyebrowBox.height + 9.75
+
+                                Rectangle {
+                                    id: eyebrowBox
+                                    color: "#2effffff"
+                                    radius: 12
+                                    implicitWidth: eyebrowText.implicitWidth + 19.5
+                                    implicitHeight: eyebrowText.implicitHeight + 6.5
+                                    width: Math.min(implicitWidth, blockFlow.width)
+
+                                    Text {
+                                        id: eyebrowText
+                                        text: "Design tokens v2.4"
+                                        textFormat: Text.PlainText
+                                        color: "#ffffff"
+                                        font.family: "monospace"
+                                        font.pixelSize: 13
+                                        lineHeight: 19.5
+                                        lineHeightMode: Text.FixedHeight
+                                        transform: Translate {
+                                            y: 2.28
+                                        }
+                                        wrapMode: Text.WordWrap
+                                        anchors.left: parent.left
+                                        anchors.right: parent.right
+                                        anchors.top: parent.top
+                                        anchors.leftMargin: 9.75
+                                        anchors.rightMargin: 9.75
+                                        anchors.topMargin: 3.25
+                                    }
+                                }
+                            }
                         }
 
                         // <h1>
@@ -239,6 +296,15 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Layout.preferredWidth: 0
                         Layout.fillHeight: true
+
+                        RectangularShadow {
+                            anchors.fill: parent
+                            z: -1
+                            offset: Qt.vector2d(0, 6)
+                            blur: 23.6
+                            color: "#1f1c2233"
+                            radius: 12
+                        }
 
                         ColumnLayout {
                             id: cardContent
@@ -332,6 +398,15 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Layout.preferredWidth: 0
                         Layout.fillHeight: true
+
+                        RectangularShadow {
+                            anchors.fill: parent
+                            z: -1
+                            offset: Qt.vector2d(0, 6)
+                            blur: 23.6
+                            color: "#1f1c2233"
+                            radius: 12
+                        }
 
                         ColumnLayout {
                             id: cardContent2
@@ -450,6 +525,15 @@ ApplicationWindow {
                         Layout.preferredWidth: 0
                         Layout.fillHeight: true
 
+                        RectangularShadow {
+                            anchors.fill: parent
+                            z: -1
+                            offset: Qt.vector2d(0, 6)
+                            blur: 23.6
+                            color: "#1f1c2233"
+                            radius: 12
+                        }
+
                         ColumnLayout {
                             id: tokensContent
                             spacing: 0
@@ -494,20 +578,192 @@ ApplicationWindow {
                                 Layout.topMargin: 8.8
                             }
 
-                            Text {
-                                text: "<font color=\"#3b5bdb\"><small>--space-sm</small></font> <font color=\"#3b5bdb\"><small>--missing</small></font> <font color=\"#3b5bdb\"><small>--radius</small></font> <font color=\"#3b5bdb\"><small>--font-mono</small></font>"
-                                textFormat: Text.StyledText
-                                color: "#1c2233"
-                                font.family: "sans-serif"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 2.8
-                                }
-                                wrapMode: Text.WordWrap
+                            Flow {
+                                id: blockFlow2
                                 Layout.fillWidth: true
                                 Layout.topMargin: 15.2
+
+                                Item {
+                                    width: tagBox.width + 12
+                                    height: tagBox.height + 6.5
+
+                                    Rectangle {
+                                        id: tagBox
+                                        color: "#f5f7fb"
+                                        radius: 6
+                                        implicitWidth: tagText.implicitWidth + 16
+                                        implicitHeight: tagText.implicitHeight + 8
+                                        width: Math.min(implicitWidth, blockFlow2.width - 12)
+
+                                        Text {
+                                            id: tagText
+                                            text: "--space-sm"
+                                            textFormat: Text.PlainText
+                                            color: "#3b5bdb"
+                                            font.family: "monospace"
+                                            font.pixelSize: 13
+                                            lineHeight: 19.5
+                                            lineHeightMode: Text.FixedHeight
+                                            transform: Translate {
+                                                y: 2.28
+                                            }
+                                            wrapMode: Text.WordWrap
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.leftMargin: 8
+                                            anchors.rightMargin: 8
+                                            anchors.topMargin: 4
+                                        }
+                                    }
+                                }
+
+                                Text {
+                                    text: " "
+                                    textFormat: Text.PlainText
+                                    color: "#1c2233"
+                                    font.family: "sans-serif"
+                                    font.pixelSize: 16
+                                    lineHeight: 24
+                                    lineHeightMode: Text.FixedHeight
+                                    transform: Translate {
+                                        y: 2.8
+                                    }
+                                    topPadding: 0.76
+                                }
+
+                                Item {
+                                    width: tagBox2.width + 12
+                                    height: tagBox2.height + 6.5
+
+                                    Rectangle {
+                                        id: tagBox2
+                                        color: "#f5f7fb"
+                                        radius: 6
+                                        implicitWidth: tagText2.implicitWidth + 16
+                                        implicitHeight: tagText2.implicitHeight + 8
+                                        width: Math.min(implicitWidth, blockFlow2.width - 12)
+
+                                        Text {
+                                            id: tagText2
+                                            text: "--missing"
+                                            textFormat: Text.PlainText
+                                            color: "#3b5bdb"
+                                            font.family: "monospace"
+                                            font.pixelSize: 13
+                                            lineHeight: 19.5
+                                            lineHeightMode: Text.FixedHeight
+                                            transform: Translate {
+                                                y: 2.28
+                                            }
+                                            wrapMode: Text.WordWrap
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.leftMargin: 8
+                                            anchors.rightMargin: 8
+                                            anchors.topMargin: 4
+                                        }
+                                    }
+                                }
+
+                                Text {
+                                    text: " "
+                                    textFormat: Text.PlainText
+                                    color: "#1c2233"
+                                    font.family: "sans-serif"
+                                    font.pixelSize: 16
+                                    lineHeight: 24
+                                    lineHeightMode: Text.FixedHeight
+                                    transform: Translate {
+                                        y: 2.8
+                                    }
+                                    topPadding: 0.76
+                                }
+
+                                Item {
+                                    width: tagBox3.width + 12
+                                    height: tagBox3.height + 6.5
+
+                                    Rectangle {
+                                        id: tagBox3
+                                        color: "#f5f7fb"
+                                        radius: 6
+                                        implicitWidth: tagText3.implicitWidth + 16
+                                        implicitHeight: tagText3.implicitHeight + 8
+                                        width: Math.min(implicitWidth, blockFlow2.width - 12)
+
+                                        Text {
+                                            id: tagText3
+                                            text: "--radius"
+                                            textFormat: Text.PlainText
+                                            color: "#3b5bdb"
+                                            font.family: "monospace"
+                                            font.pixelSize: 13
+                                            lineHeight: 19.5
+                                            lineHeightMode: Text.FixedHeight
+                                            transform: Translate {
+                                                y: 2.28
+                                            }
+                                            wrapMode: Text.WordWrap
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.leftMargin: 8
+                                            anchors.rightMargin: 8
+                                            anchors.topMargin: 4
+                                        }
+                                    }
+                                }
+
+                                Text {
+                                    text: " "
+                                    textFormat: Text.PlainText
+                                    color: "#1c2233"
+                                    font.family: "sans-serif"
+                                    font.pixelSize: 16
+                                    lineHeight: 24
+                                    lineHeightMode: Text.FixedHeight
+                                    transform: Translate {
+                                        y: 2.8
+                                    }
+                                    topPadding: 0.76
+                                }
+
+                                Item {
+                                    width: tagBox4.width + 12
+                                    height: tagBox4.height + 6.5
+
+                                    Rectangle {
+                                        id: tagBox4
+                                        color: "#f5f7fb"
+                                        radius: 6
+                                        implicitWidth: tagText4.implicitWidth + 16
+                                        implicitHeight: tagText4.implicitHeight + 8
+                                        width: Math.min(implicitWidth, blockFlow2.width - 12)
+
+                                        Text {
+                                            id: tagText4
+                                            text: "--font-mono"
+                                            textFormat: Text.PlainText
+                                            color: "#3b5bdb"
+                                            font.family: "monospace"
+                                            font.pixelSize: 13
+                                            lineHeight: 19.5
+                                            lineHeightMode: Text.FixedHeight
+                                            transform: Translate {
+                                                y: 2.28
+                                            }
+                                            wrapMode: Text.WordWrap
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.leftMargin: 8
+                                            anchors.rightMargin: 8
+                                            anchors.topMargin: 4
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -522,6 +778,15 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Layout.preferredWidth: 0
                         Layout.fillHeight: true
+
+                        RectangularShadow {
+                            anchors.fill: parent
+                            z: -1
+                            offset: Qt.vector2d(0, 6)
+                            blur: 23.6
+                            color: "#1f1c2233"
+                            radius: 12
+                        }
 
                         ColumnLayout {
                             id: componentsContent
@@ -567,24 +832,39 @@ ApplicationWindow {
                                 Layout.topMargin: 8.8
                             }
 
-                            Text {
-                                text: "<a href=\"#docs\"><b>Read the docs</b></a>"
-                                textFormat: Text.StyledText
-                                color: "#1c2233"
-                                font.family: "sans-serif"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 2.8
-                                }
-                                wrapMode: Text.WordWrap
-                                linkColor: "#ffffff"
+                            Flow {
+                                id: blockFlow3
                                 Layout.fillWidth: true
                                 Layout.topMargin: 15.2
 
-                                onLinkActivated: (link) => {
-                                    Qt.openUrlExternally(link)
+                                Rectangle {
+                                    color: "#3b5bdb"
+                                    radius: 6
+                                    implicitWidth: buttonText.implicitWidth + 35.2
+                                    implicitHeight: buttonText.implicitHeight + 16
+                                    width: Math.min(implicitWidth, blockFlow3.width)
+
+                                    Text {
+                                        id: buttonText
+                                        text: "Read the docs"
+                                        textFormat: Text.PlainText
+                                        color: "#ffffff"
+                                        font.family: "sans-serif"
+                                        font.pixelSize: 16
+                                        font.weight: 600
+                                        lineHeight: 24
+                                        lineHeightMode: Text.FixedHeight
+                                        transform: Translate {
+                                            y: 2.8
+                                        }
+                                        wrapMode: Text.WordWrap
+                                        anchors.left: parent.left
+                                        anchors.right: parent.right
+                                        anchors.top: parent.top
+                                        anchors.leftMargin: 17.6
+                                        anchors.rightMargin: 17.6
+                                        anchors.topMargin: 8
+                                    }
                                 }
                             }
                         }
@@ -599,6 +879,15 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Layout.preferredWidth: 0
                         Layout.fillHeight: true
+
+                        RectangularShadow {
+                            anchors.fill: parent
+                            z: -1
+                            offset: Qt.vector2d(0, 6)
+                            blur: 23.6
+                            color: "#1f1c2233"
+                            radius: 12
+                        }
 
                         ColumnLayout {
                             id: cardContent3
@@ -658,6 +947,15 @@ ApplicationWindow {
                         Layout.preferredWidth: 0
                         Layout.fillHeight: true
 
+                        RectangularShadow {
+                            anchors.fill: parent
+                            z: -1
+                            offset: Qt.vector2d(0, 6)
+                            blur: 23.6
+                            color: "#1f1c2233"
+                            radius: 12
+                        }
+
                         ColumnLayout {
                             id: docsContent
                             spacing: 0
@@ -715,6 +1013,15 @@ ApplicationWindow {
                     Layout.preferredWidth: Math.max(0, parent.width - 32)
                     Layout.alignment: Qt.AlignHCenter
                     Layout.topMargin: 32
+
+                    RectangularShadow {
+                        anchors.fill: parent
+                        z: -1
+                        offset: Qt.vector2d(0, 6)
+                        blur: 23.6
+                        color: "#1f1c2233"
+                        radius: 12
+                    }
 
                     RowLayout {
                         id: statsContent

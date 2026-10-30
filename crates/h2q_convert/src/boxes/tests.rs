@@ -71,6 +71,11 @@ fn print_inline(doc: &Document, items: &[Inline<'_>], out: &mut String) {
                 out.push_str(name);
                 print_inline(doc, &span.children, out);
             }
+            Inline::Atomic(b) => {
+                let mut inner = String::new();
+                print_box(doc, b, 0, &mut inner);
+                out.push_str(&format!("atomic:{}", inner.trim_end().replace(" <", "<")));
+            }
         }
     }
     out.push(']');
@@ -315,4 +320,35 @@ fn an_inline_block_alone_in_its_parent_keeps_its_box() {
 fn an_inline_block_beside_text_stays_in_the_line() {
     let tree = outline("<div>before <a style=\"display:inline-block\" href=\"#\">x</a></div>");
     assert!(!tree.contains("block <a>"), "{tree}");
+}
+
+#[test]
+fn an_inline_block_beside_text_is_an_atomic_box_in_the_line() {
+    let tree = outline(
+        "<div>before <span style=\"display:inline-block\">x</span> after <span>y</span></div>",
+    );
+    assert!(
+        tree.contains(r#"block <div> ["before "atomic:block<span> ["x"]" after "span["y"]]"#),
+        "{tree}"
+    );
+}
+
+#[test]
+fn an_atomic_inline_keeps_its_block_children() {
+    let tree =
+        outline("<div>a <span style=\"display:inline-flex\"><div>b</div><div>c</div></span></div>");
+    assert!(
+        tree.contains(r#"block <div> ["a "atomic:flex<span>"#),
+        "{tree}"
+    );
+    assert!(tree.contains(r#"block<div> ["b"]"#), "{tree}");
+}
+
+#[test]
+fn a_space_after_an_atomic_inline_at_the_line_end_is_removed() {
+    let tree = outline("<div>a <span style=\"display:inline-block\">x</span> </div>");
+    assert!(
+        tree.contains(r#"block <div> ["a "atomic:block<span> ["x"]]"#),
+        "{tree}"
+    );
 }

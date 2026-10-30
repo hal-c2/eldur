@@ -754,6 +754,9 @@ impl<'a> Emitter<'a, '_> {
             },
             paints: base.paints,
             clips: base.clips,
+            gradients: base.gradients,
+            shadows: base.shadows,
+            hint: hint(self.doc, b),
         };
         let insets = deco.insets;
         let mut body = self.wrap(
@@ -1342,6 +1345,7 @@ fn plain_text(items: &[Inline<'_>], out: &mut String) {
             Inline::Text(t) => out.push_str(t),
             Inline::LineBreak => out.push(' '),
             Inline::Span(span) => plain_text(&span.children, out),
+            Inline::Atomic(_) => out.push(' '),
         }
     }
 }
