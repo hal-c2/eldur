@@ -378,6 +378,28 @@ ApplicationWindow {
                                             anchors.topMargin: 10
                                         }
                                     }
+
+                                    Shape {
+                                        id: mediaCorners
+                                        anchors.fill: parent
+
+                                        ShapePath {
+                                            strokeWidth: -1
+                                            fillColor: "#f3f5f8"
+                                            fillRule: ShapePath.OddEvenFill
+
+                                            PathRectangle {
+                                                width: mediaCorners.width
+                                                height: mediaCorners.height
+                                            }
+
+                                            PathRectangle {
+                                                width: mediaCorners.width
+                                                height: mediaCorners.height
+                                                radius: 12
+                                            }
+                                        }
+                                    }
                                 }
 
                                 // <div class="stack">

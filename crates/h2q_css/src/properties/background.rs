@@ -364,25 +364,40 @@ fn parse_linear_gradient(
         return Err("linear-gradient() requires at least 2 color stops".to_owned());
     }
 
-    let mut angle_deg = 180.0_f32;
+    let mut direction = Direction::Angle(180.0);
     let mut stop_start = 0;
 
-    if let Some(parsed_angle) = try_parse_linear_prelude(parts[0])? {
-        angle_deg = parsed_angle;
+    if let Some(parsed) = try_parse_linear_prelude(parts[0])? {
+        direction = parsed;
         stop_start = 1;
     }
 
     let stops = parse_gradient_stops(&parts[stop_start..], uctx, current_color, false)?;
-    Ok(Image::LinearGradient {
-        angle_deg,
-        stops,
-        repeating,
+    Ok(match direction {
+        Direction::Angle(angle_deg) => Image::LinearGradient {
+            angle_deg,
+            stops,
+            repeating,
+        },
+        Direction::Corner { right, bottom } => Image::LinearGradientToCorner {
+            right,
+            bottom,
+            stops,
+            repeating,
+        },
     })
 }
 
-fn try_parse_linear_prelude(cvs: &[ComponentValue]) -> Result<Option<f32>, String> {
+/// A linear gradient's direction: an angle, or a corner whose angle
+/// depends on the box.
+enum Direction {
+    Angle(f32),
+    Corner { right: bool, bottom: bool },
+}
+
+fn try_parse_linear_prelude(cvs: &[ComponentValue]) -> Result<Option<Direction>, String> {
     let mut cur = Cursor::new(cvs);
-    let mut angle: Option<f32> = None;
+    let mut angle: Option<Direction> = None;
     let mut saw_in = false;
 
     for _ in 0..2 {
@@ -395,7 +410,7 @@ fn try_parse_linear_prelude(cvs: &[ComponentValue]) -> Result<Option<f32>, Strin
         }
         if angle.is_none() {
             if let Some(deg) = eat_angle_deg(&mut cur, true)? {
-                angle = Some(deg);
+                angle = Some(Direction::Angle(deg));
                 continue;
             }
             if cur.eat_ident_eq("to") {
@@ -410,12 +425,12 @@ fn try_parse_linear_prelude(cvs: &[ComponentValue]) -> Result<Option<f32>, Strin
         return Ok(None);
     }
     cur.expect_eof()?;
-    Ok(Some(angle.unwrap_or(180.0)))
+    Ok(Some(angle.unwrap_or(Direction::Angle(180.0))))
 }
 
-/// Converts `to <side-or-corner>` into degrees (CSS convention: 0 = to top, 90 = to right).
-/// Corners are approximated on a square box (45°, 135°, 225°, 315°).
-fn parse_to_side_or_corner(cur: &mut Cursor<'_>) -> Result<f32, String> {
+/// Converts `to <side>` into degrees (CSS convention: 0 = to top, 90 = to
+/// right); a corner is kept as one.
+fn parse_to_side_or_corner(cur: &mut Cursor<'_>) -> Result<Direction, String> {
     let mut horiz: Option<bool> = None; // true = right, false = left
     let mut vert: Option<bool> = None; // true = bottom, false = top
 
@@ -438,14 +453,11 @@ fn parse_to_side_or_corner(cur: &mut Cursor<'_>) -> Result<f32, String> {
     }
 
     match (horiz, vert) {
-        (None, Some(false)) => Ok(0.0),
-        (Some(true), Some(false)) => Ok(45.0),
-        (Some(true), None) => Ok(90.0),
-        (Some(true), Some(true)) => Ok(135.0),
-        (None, Some(true)) => Ok(180.0),
-        (Some(false), Some(true)) => Ok(225.0),
-        (Some(false), None) => Ok(270.0),
-        (Some(false), Some(false)) => Ok(315.0),
+        (Some(right), Some(bottom)) => Ok(Direction::Corner { right, bottom }),
+        (None, Some(false)) => Ok(Direction::Angle(0.0)),
+        (Some(true), None) => Ok(Direction::Angle(90.0)),
+        (None, Some(true)) => Ok(Direction::Angle(180.0)),
+        (Some(false), None) => Ok(Direction::Angle(270.0)),
         (None, None) => Err("expected side or corner after 'to'".to_owned()),
     }
 }

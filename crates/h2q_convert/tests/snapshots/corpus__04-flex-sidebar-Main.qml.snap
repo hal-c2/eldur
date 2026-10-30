@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Shapes
 
 ApplicationWindow {
     id: root
@@ -130,6 +131,30 @@ ApplicationWindow {
                                                 implicitWidth: menuItemText.implicitWidth + 24
                                                 implicitHeight: menuItemText.implicitHeight + 20
                                                 Layout.fillWidth: true
+
+                                                Shape {
+                                                    id: menuItemInset
+                                                    anchors.fill: parent
+
+                                                    ShapePath {
+                                                        strokeWidth: -1
+                                                        fillColor: "#5b9be6"
+                                                        fillRule: ShapePath.OddEvenFill
+
+                                                        PathRectangle {
+                                                            width: menuItemInset.width
+                                                            height: menuItemInset.height
+                                                            radius: 6
+                                                        }
+
+                                                        PathRectangle {
+                                                            x: 3
+                                                            width: Math.max(0, menuItemInset.width - 3)
+                                                            height: menuItemInset.height
+                                                            radius: 6
+                                                        }
+                                                    }
+                                                }
 
                                                 Text {
                                                     id: menuItemText

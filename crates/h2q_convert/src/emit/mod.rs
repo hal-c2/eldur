@@ -11,7 +11,9 @@ mod flow;
 mod grid;
 mod ids;
 mod inline;
+mod links;
 mod lists;
+mod shadow;
 mod table;
 mod text;
 mod transform;
@@ -79,6 +81,15 @@ pub(crate) struct Emitter<'a, 'd> {
     /// `position: fixed` boxes, placed over the window outside the
     /// `Flickable` so they do not scroll.
     fixed: Vec<(Option<String>, Object)>,
+    /// The plain colour painted behind the box being emitted, when it is
+    /// one (a gradient or image makes it unknown).
+    backdrop: Option<h2q_css::Rgba>,
+    /// The QML id of each element with an HTML id, for fragment links.
+    fragments: BTreeMap<String, String>,
+    /// A link on the page goes to a fragment (`href="#…"`).
+    fragment_links: bool,
+    /// The box being emitted is one of a run of floats that share a line.
+    in_float_run: bool,
     /// QML modules the emitted objects need beyond the default imports.
     pub imports: std::collections::BTreeSet<&'static str>,
 }
@@ -113,6 +124,10 @@ impl<'a, 'd> Emitter<'a, 'd> {
             positioned_child: false,
             percent_height_base: None,
             fixed: Vec::new(),
+            backdrop: None,
+            fragments: BTreeMap::new(),
+            fragment_links: false,
+            in_float_run: false,
             imports: std::collections::BTreeSet::new(),
         }
     }
@@ -139,6 +154,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             },
         };
 
+        self.backdrop = Some(canvas);
         let mut root = match self.options.root {
             RootKind::Window => {
                 let mut window = Object::new("ApplicationWindow").with_id(ROOT_ID);
@@ -247,6 +263,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
         if self.has_table {
             Self::table_solver(&mut root);
         }
+        if self.fragment_links {
+            self.scroll_to_fragment(&mut root);
+        }
         self.finish_resets(&mut root);
         self.report_inline_labels();
         root
@@ -278,15 +297,18 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 if let Some(node) = b.node
                     && let Some(control) = controls::classify(self.doc, node)
                 {
-                    return self.control(b, node, control, line);
+                    let e = self.control(b, node, control, line);
+                    return self.transformed(e, b, line);
                 }
-                return self.replaced(b, line);
+                let e = self.replaced(b, line);
+                return self.transformed(e, b, line);
             }
             BoxKind::Table => match style.display {
                 Display::Table | Display::InlineTable => {
                     self.has_table = true;
                     self.positioned_child = false;
-                    return self.table(b, inherited, line);
+                    let e = self.table(b, inherited, line);
+                    return self.transformed(e, b, line);
                 }
                 Display::TableCell | Display::TableCaption => {}
                 _ => self.unsupported_layout(b, line),
@@ -296,7 +318,8 @@ impl<'a, 'd> Emitter<'a, 'd> {
         if let Some(node) = b.node
             && let Some((legend, rest)) = fieldset_parts(self.doc, b)
         {
-            return self.fieldset(b, node, legend, rest, inherited, line);
+            let e = self.fieldset(b, node, legend, rest, inherited, line);
+            return self.transformed(e, b, line);
         }
         let decoration = TextDecorationLine {
             underline: inherited.underline || style.text_decoration_line.underline,
@@ -316,6 +339,14 @@ impl<'a, 'd> Emitter<'a, 'd> {
 
         let mut escaped_top = MarginSet::default();
         let mut escaped_bottom = MarginSet::default();
+        let outer_backdrop = self.backdrop;
+        self.backdrop = if deco.gradients {
+            None
+        } else if paint_background {
+            outer_backdrop.map(|under| over(style.background_color, under))
+        } else {
+            outer_backdrop
+        };
         let lists::Positioned {
             flow: in_flow,
             overlays,
@@ -365,6 +396,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             }
             Content::Empty => None,
         };
+        let inner_backdrop = std::mem::replace(&mut self.backdrop, outer_backdrop);
         if inner.is_none() && (wanted || b.marker.is_some()) {
             // Scripts write text into it; a marker still has its line.
             inner = Some((self.text(style, decoration, &[], line), "Text"));
@@ -397,7 +429,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             .and_then(|e| e.id())
             .map(str::to_owned);
         let outer_id = match (&html_id, wanted) {
-            (Some(id), _) => Some(self.ids.claim(id)),
+            (Some(id), _) => Some(self.claim_html_id(id)),
             (None, true) => Some(self.ids.claim(&hint(self.doc, b))),
             (None, false) => None,
         };
@@ -427,15 +459,16 @@ impl<'a, 'd> Emitter<'a, 'd> {
             // `height`, `min-height` or a stretching parent) among their
             // items, so they fill it; block flow keeps its content height.
             let fill = matches!(b.kind, BoxKind::Flex | BoxKind::Grid);
-            let mut wrapper = self.wrap(style, &deco, paint_background, inner, fill, line);
+            let mut extra = Vec::new();
             if let Some(marker) = &b.marker {
-                let marker = self.marker(b, marker);
-                wrapper.push_child(marker);
+                extra.push(self.marker(b, marker));
             }
+            self.backdrop = inner_backdrop;
             for overlay in overlays {
-                let overlay = self.overlay(style, overlay);
-                wrapper.push_child(overlay);
+                extra.push(self.overlay(style, overlay));
             }
+            self.backdrop = outer_backdrop;
+            let wrapper = self.wrap_with(style, &deco, paint_background, inner, extra, fill, line);
             (wrapper, TargetKind::Box)
         } else {
             let (obj, suffix) = inner.unwrap_or((Object::new("Item"), "Content"));
@@ -465,19 +498,25 @@ impl<'a, 'd> Emitter<'a, 'd> {
             }
         }
         self.label_tap(&mut obj, b.node);
-        if !style.transform.is_empty() {
-            let what = b
-                .node
-                .map_or_else(|| "a generated box".to_owned(), |n| describe(self.doc, n));
-            self.transform(&mut obj, style, &hint(self.doc, b), &what, line);
-        }
         self.visibility(&mut obj, style);
-        Emitted {
+        let e = Emitted {
             obj,
             top,
             bottom,
             collapse_through: false,
+        };
+        self.transformed(e, b, line)
+    }
+
+    /// `e` with `b`'s `transform`, which every kind of box takes.
+    fn transformed(&mut self, mut e: Emitted, b: &LayoutBox<'_>, line: Option<u32>) -> Emitted {
+        if !b.style.transform.is_empty() {
+            let what = b
+                .node
+                .map_or_else(|| "a generated box".to_owned(), |n| describe(self.doc, n));
+            self.transform(&mut e.obj, &b.style, &hint(self.doc, b), &what, line);
         }
+        e
     }
 
     /// Replaced elements and form controls have no emitter yet: an empty
@@ -508,7 +547,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             obj.set("implicitHeight", number(h));
         }
         if let Some(id) = element.and_then(|e| e.id()) {
-            obj.id = Some(self.ids.claim(id));
+            obj.id = Some(self.claim_html_id(id));
             if b.node.is_some_and(|n| self.wanted.contains(&n)) {
                 // Not a script target (it has none of the control's
                 // properties), but the runtime's `getElementById` finds it.
@@ -561,7 +600,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             b.node
                 .map_or_else(|| "a generated box".to_owned(), |n| describe(self.doc, n))
         };
-        if style.float != Float::None {
+        if style.float != Float::None && !self.in_float_run {
             self.diags.warning(
                 "css",
                 line,
@@ -738,4 +777,17 @@ fn place_anonymous_item(text: &mut Object, style: &ComputedStyle, kind: BoxKind)
     if let Some(flag) = flag {
         text.set("verticalAlignment", Value::expr(flag));
     }
+}
+
+/// `top` composited over the opaque `under` (source-over, 8-bit as
+/// Chromium paints it).
+fn over(top: h2q_css::Rgba, under: h2q_css::Rgba) -> h2q_css::Rgba {
+    let a = u32::from(top.a);
+    let mix = |t: u8, u: u8| ((u32::from(t) * a + u32::from(u) * (255 - a)) / 255) as u8;
+    h2q_css::Rgba::new(
+        mix(top.r, under.r),
+        mix(top.g, under.g),
+        mix(top.b, under.b),
+        255,
+    )
 }

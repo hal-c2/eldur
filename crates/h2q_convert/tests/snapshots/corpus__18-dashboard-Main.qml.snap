@@ -341,6 +341,30 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.topMargin: 8
 
+                                        Shape {
+                                            id: navItemInset
+                                            anchors.fill: parent
+
+                                            ShapePath {
+                                                strokeWidth: -1
+                                                fillColor: "#4f46e5"
+                                                fillRule: ShapePath.OddEvenFill
+
+                                                PathRectangle {
+                                                    width: navItemInset.width
+                                                    height: navItemInset.height
+                                                    radius: 8
+                                                }
+
+                                                PathRectangle {
+                                                    x: 3
+                                                    width: Math.max(0, navItemInset.width - 3)
+                                                    height: navItemInset.height
+                                                    radius: 8
+                                                }
+                                            }
+                                        }
+
                                         Text {
                                             id: navItemText
                                             text: "Dashboard"
@@ -1188,6 +1212,28 @@ ApplicationWindow {
                                                                 Layout.preferredHeight: 12
                                                             }
                                                         }
+
+                                                        Shape {
+                                                            id: barTrackCorners
+                                                            anchors.fill: parent
+
+                                                            ShapePath {
+                                                                strokeWidth: -1
+                                                                fillColor: "#ffffff"
+                                                                fillRule: ShapePath.OddEvenFill
+
+                                                                PathRectangle {
+                                                                    width: barTrackCorners.width
+                                                                    height: barTrackCorners.height
+                                                                }
+
+                                                                PathRectangle {
+                                                                    width: barTrackCorners.width
+                                                                    height: barTrackCorners.height
+                                                                    radius: 999
+                                                                }
+                                                            }
+                                                        }
                                                     }
 
                                                     // <span class="bar-value">
@@ -1257,6 +1303,28 @@ ApplicationWindow {
                                                                 implicitHeight: 0
                                                                 Layout.preferredWidth: parent.width * 0.64
                                                                 Layout.preferredHeight: 12
+                                                            }
+                                                        }
+
+                                                        Shape {
+                                                            id: barTrackCorners2
+                                                            anchors.fill: parent
+
+                                                            ShapePath {
+                                                                strokeWidth: -1
+                                                                fillColor: "#ffffff"
+                                                                fillRule: ShapePath.OddEvenFill
+
+                                                                PathRectangle {
+                                                                    width: barTrackCorners2.width
+                                                                    height: barTrackCorners2.height
+                                                                }
+
+                                                                PathRectangle {
+                                                                    width: barTrackCorners2.width
+                                                                    height: barTrackCorners2.height
+                                                                    radius: 999
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -1330,6 +1398,28 @@ ApplicationWindow {
                                                                 Layout.preferredHeight: 12
                                                             }
                                                         }
+
+                                                        Shape {
+                                                            id: barTrackCorners3
+                                                            anchors.fill: parent
+
+                                                            ShapePath {
+                                                                strokeWidth: -1
+                                                                fillColor: "#ffffff"
+                                                                fillRule: ShapePath.OddEvenFill
+
+                                                                PathRectangle {
+                                                                    width: barTrackCorners3.width
+                                                                    height: barTrackCorners3.height
+                                                                }
+
+                                                                PathRectangle {
+                                                                    width: barTrackCorners3.width
+                                                                    height: barTrackCorners3.height
+                                                                    radius: 999
+                                                                }
+                                                            }
+                                                        }
                                                     }
 
                                                     // <span class="bar-value">
@@ -1399,6 +1489,28 @@ ApplicationWindow {
                                                                 implicitHeight: 0
                                                                 Layout.preferredWidth: parent.width * 0.31
                                                                 Layout.preferredHeight: 12
+                                                            }
+                                                        }
+
+                                                        Shape {
+                                                            id: barTrackCorners4
+                                                            anchors.fill: parent
+
+                                                            ShapePath {
+                                                                strokeWidth: -1
+                                                                fillColor: "#ffffff"
+                                                                fillRule: ShapePath.OddEvenFill
+
+                                                                PathRectangle {
+                                                                    width: barTrackCorners4.width
+                                                                    height: barTrackCorners4.height
+                                                                }
+
+                                                                PathRectangle {
+                                                                    width: barTrackCorners4.width
+                                                                    height: barTrackCorners4.height
+                                                                    radius: 999
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -1471,6 +1583,28 @@ ApplicationWindow {
                                                                 implicitHeight: 0
                                                                 Layout.preferredWidth: parent.width * 0.18
                                                                 Layout.preferredHeight: 12
+                                                            }
+                                                        }
+
+                                                        Shape {
+                                                            id: barTrackCorners5
+                                                            anchors.fill: parent
+
+                                                            ShapePath {
+                                                                strokeWidth: -1
+                                                                fillColor: "#ffffff"
+                                                                fillRule: ShapePath.OddEvenFill
+
+                                                                PathRectangle {
+                                                                    width: barTrackCorners5.width
+                                                                    height: barTrackCorners5.height
+                                                                }
+
+                                                                PathRectangle {
+                                                                    width: barTrackCorners5.width
+                                                                    height: barTrackCorners5.height
+                                                                    radius: 999
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -1670,6 +1804,28 @@ ApplicationWindow {
                                                                 implicitHeight: 0
                                                                 Layout.preferredWidth: parent.width * 0.45
                                                                 Layout.preferredHeight: 12
+                                                            }
+                                                        }
+
+                                                        Shape {
+                                                            id: progressCorners
+                                                            anchors.fill: parent
+
+                                                            ShapePath {
+                                                                strokeWidth: -1
+                                                                fillColor: "#ffffff"
+                                                                fillRule: ShapePath.OddEvenFill
+
+                                                                PathRectangle {
+                                                                    width: progressCorners.width
+                                                                    height: progressCorners.height
+                                                                }
+
+                                                                PathRectangle {
+                                                                    width: progressCorners.width
+                                                                    height: progressCorners.height
+                                                                    radius: 999
+                                                                }
                                                             }
                                                         }
                                                     }

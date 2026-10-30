@@ -12,8 +12,8 @@
 use std::borrow::Cow;
 
 use h2q_css::{
-    BorderCollapse, BorderSide, BorderStyle, ComputedStyle, Display, Length, Rgba, Size,
-    TableLayout, TextDecorationLine,
+    BorderCollapse, BorderSide, BorderStyle, ComputedStyle, Display, Length, LengthPercentage,
+    Rgba, Size, TableLayout, TextDecorationLine, TransformFn,
 };
 use h2q_js::TargetKind;
 use h2q_qml::{Member, Object, Value};
@@ -716,8 +716,14 @@ impl<'a> Emitter<'a, '_> {
         let mut fonts: Vec<(String, String)> = Vec::new();
         for (row, row_slots) in parts.rows.iter().zip(&slots) {
             self.table_row_diagnostics(row, line);
+            let moves = self.row_translations(row, line);
             for (cell, &slot) in boxes(row.row).iter().zip(row_slots) {
                 let mut cell_style = cell.style.clone().into_owned();
+                if !moves.is_empty() {
+                    // CSS order: the outer box's transform applies last.
+                    let own = std::mem::take(&mut cell_style.transform);
+                    cell_style.transform = moves.iter().cloned().chain(own).collect();
+                }
                 cell_style.background_color = self.cell_background(cell, row, &parts, slot);
                 if let Some(edges) = &edges {
                     let [top, right, bottom, left] = edges.cell_borders(slot);
@@ -756,6 +762,7 @@ impl<'a> Emitter<'a, '_> {
             clips: base.clips,
             gradients: base.gradients,
             shadows: base.shadows,
+            inset_shadows: base.inset_shadows,
             hint: hint(self.doc, b),
         };
         let insets = deco.insets;
@@ -869,7 +876,7 @@ impl<'a> Emitter<'a, '_> {
             .and_then(|e| e.id())
             .map(str::to_owned);
         let id = match (&html_id, wanted) {
-            (Some(id), _) => self.ids.claim(id),
+            (Some(id), _) => self.claim_html_id(id),
             (None, true) => self.ids.claim(&hint(self.doc, b)),
             (None, false) => return,
         };
@@ -886,6 +893,45 @@ impl<'a> Emitter<'a, '_> {
                 },
             );
         }
+    }
+
+    /// The row's and its group's `transform`s, outermost first, when they
+    /// are px translations: the rows have no item of their own, so their
+    /// cells take them. Anything else turns about the row's own box, which
+    /// a cell cannot do for it.
+    fn row_translations(
+        &mut self,
+        row: &RowRef<'_, '_>,
+        table_line: Option<u32>,
+    ) -> Vec<TransformFn> {
+        let mut out = Vec::new();
+        for part in [row.group, Some(row.row)].into_iter().flatten() {
+            let px = |l: &LengthPercentage| Length::Linear(*l).as_px().is_some();
+            let moves = part.style.transform.iter().all(|f| match f {
+                TransformFn::Translate(x, y) => px(x) && px(y),
+                _ => false,
+            });
+            if moves {
+                out.extend(part.style.transform.iter().cloned());
+            } else {
+                let line = part
+                    .node
+                    .and_then(|n| node_line(self.doc, n))
+                    .or(table_line);
+                let what = part.node.map_or_else(
+                    || "a table row".to_owned(),
+                    |n| crate::boxes::describe(self.doc, n),
+                );
+                self.diags.warning(
+                    "css",
+                    line,
+                    format!(
+                        "`transform` on {what} is left out: only px translations move its cells"
+                    ),
+                );
+            }
+        }
+        out
     }
 
     fn table_row_diagnostics(&mut self, row: &RowRef<'_, '_>, table_line: Option<u32>) {

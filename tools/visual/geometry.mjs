@@ -3,11 +3,15 @@
  *
  *   node tools/visual/geometry.mjs page.html 'selector' ['selector' ...]
  *   node tools/visual/geometry.mjs --html '<p>x</p>' 'p'
+ *   node tools/visual/geometry.mjs --click 'a[href="#f"]' page.html 'h2'
  *
  * Prints one JSON line per matched element: {select, index, x, y, width,
  * height}. The viewport is 1280×800 at deviceScaleFactor 1, as in
  * render_html.mjs, so test expectations measure what the parity harness
  * compares against.
+ *
+ * `--click selector` clicks the first match before measuring and prints
+ * {click, scrollX, scrollY} after it: what following a link does.
  */
 
 import path from "node:path";
@@ -18,6 +22,11 @@ import { loadPlaywright } from "./playwright.mjs";
 const args = process.argv.slice(2);
 let html = null;
 let file = null;
+let click = null;
+if (args[0] === "--click") {
+  args.shift();
+  click = args.shift();
+}
 if (args[0] === "--html") {
   args.shift();
   html = args.shift();
@@ -25,7 +34,9 @@ if (args[0] === "--html") {
   file = args.shift();
 }
 if ((html === null && !file) || args.length === 0) {
-  console.error("usage: geometry.mjs (page.html | --html '<markup>') selector...");
+  console.error(
+    "usage: geometry.mjs [--click selector] (page.html | --html '<markup>') selector...",
+  );
   process.exit(2);
 }
 
@@ -42,6 +53,13 @@ try {
     await page.goto(pathToFileURL(path.resolve(file)).href, { waitUntil: "load" });
   }
   await page.evaluate(() => document.fonts.ready);
+  if (click !== null) {
+    await page.click(click);
+    // Following a fragment scrolls synchronously, but let a frame pass.
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r())));
+    const scroll = await page.evaluate(() => ({ scrollX: window.scrollX, scrollY: window.scrollY }));
+    console.log(JSON.stringify({ click, ...scroll }));
+  }
   for (const select of args) {
     const rects = await page.$$eval(select, (els) =>
       els.map((e) => {

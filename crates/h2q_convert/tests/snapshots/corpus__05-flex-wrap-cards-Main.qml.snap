@@ -404,6 +404,28 @@ ApplicationWindow {
                                             }
                                         }
                                     }
+
+                                    Shape {
+                                        id: cardCorners
+                                        anchors.fill: parent
+
+                                        ShapePath {
+                                            strokeWidth: -1
+                                            fillColor: "#f3f4f8"
+                                            fillRule: ShapePath.OddEvenFill
+
+                                            PathRectangle {
+                                                width: cardCorners.width
+                                                height: cardCorners.height
+                                            }
+
+                                            PathRectangle {
+                                                width: cardCorners.width
+                                                height: cardCorners.height
+                                                radius: 12
+                                            }
+                                        }
+                                    }
                                 }
                             }
 
@@ -573,6 +595,28 @@ ApplicationWindow {
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
                                                 }
+                                            }
+                                        }
+                                    }
+
+                                    Shape {
+                                        id: cardCorners2
+                                        anchors.fill: parent
+
+                                        ShapePath {
+                                            strokeWidth: -1
+                                            fillColor: "#f3f4f8"
+                                            fillRule: ShapePath.OddEvenFill
+
+                                            PathRectangle {
+                                                width: cardCorners2.width
+                                                height: cardCorners2.height
+                                            }
+
+                                            PathRectangle {
+                                                width: cardCorners2.width
+                                                height: cardCorners2.height
+                                                radius: 12
                                             }
                                         }
                                     }
@@ -748,6 +792,28 @@ ApplicationWindow {
                                             }
                                         }
                                     }
+
+                                    Shape {
+                                        id: cardCorners3
+                                        anchors.fill: parent
+
+                                        ShapePath {
+                                            strokeWidth: -1
+                                            fillColor: "#f3f4f8"
+                                            fillRule: ShapePath.OddEvenFill
+
+                                            PathRectangle {
+                                                width: cardCorners3.width
+                                                height: cardCorners3.height
+                                            }
+
+                                            PathRectangle {
+                                                width: cardCorners3.width
+                                                height: cardCorners3.height
+                                                radius: 12
+                                            }
+                                        }
+                                    }
                                 }
                             }
 
@@ -917,6 +983,28 @@ ApplicationWindow {
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
                                                 }
+                                            }
+                                        }
+                                    }
+
+                                    Shape {
+                                        id: cardCorners4
+                                        anchors.fill: parent
+
+                                        ShapePath {
+                                            strokeWidth: -1
+                                            fillColor: "#f3f4f8"
+                                            fillRule: ShapePath.OddEvenFill
+
+                                            PathRectangle {
+                                                width: cardCorners4.width
+                                                height: cardCorners4.height
+                                            }
+
+                                            PathRectangle {
+                                                width: cardCorners4.width
+                                                height: cardCorners4.height
+                                                radius: 12
                                             }
                                         }
                                     }
@@ -1092,6 +1180,28 @@ ApplicationWindow {
                                             }
                                         }
                                     }
+
+                                    Shape {
+                                        id: cardCorners5
+                                        anchors.fill: parent
+
+                                        ShapePath {
+                                            strokeWidth: -1
+                                            fillColor: "#f3f4f8"
+                                            fillRule: ShapePath.OddEvenFill
+
+                                            PathRectangle {
+                                                width: cardCorners5.width
+                                                height: cardCorners5.height
+                                            }
+
+                                            PathRectangle {
+                                                width: cardCorners5.width
+                                                height: cardCorners5.height
+                                                radius: 12
+                                            }
+                                        }
+                                    }
                                 }
                             }
 
@@ -1261,6 +1371,28 @@ ApplicationWindow {
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
                                                 }
+                                            }
+                                        }
+                                    }
+
+                                    Shape {
+                                        id: cardCorners6
+                                        anchors.fill: parent
+
+                                        ShapePath {
+                                            strokeWidth: -1
+                                            fillColor: "#f3f4f8"
+                                            fillRule: ShapePath.OddEvenFill
+
+                                            PathRectangle {
+                                                width: cardCorners6.width
+                                                height: cardCorners6.height
+                                            }
+
+                                            PathRectangle {
+                                                width: cardCorners6.width
+                                                height: cardCorners6.height
+                                                radius: 12
                                             }
                                         }
                                     }

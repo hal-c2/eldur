@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Shapes
 
 ApplicationWindow {
     id: root
@@ -15,6 +16,25 @@ ApplicationWindow {
     title: "Typography Test: Notes on Type"
     width: 1280
     height: 800
+
+    function scrollToFragment(link) {
+        let name = link.slice(1);
+        const targets = Object.create(null);
+        if (!(name in targets)) {
+            try {
+                name = decodeURIComponent(name);
+            } catch (e) {
+                name = null;
+            }
+        }
+        const target = name === null ? undefined : targets[name];
+        if (target) {
+            const y = target.mapToItem(flickable.contentItem, 0, 0).y;
+            flickable.contentY = Math.max(0, Math.min(y, flickable.contentHeight - flickable.height));
+        } else if (name !== null && (name === "" || name.toLowerCase() === "top")) {
+            flickable.contentY = 0;
+        }
+    }
 
     Flickable {
         id: flickable
@@ -167,7 +187,14 @@ ApplicationWindow {
                             Layout.topMargin: 14
 
                             onLinkActivated: (link) => {
-                                Qt.openUrlExternally(link)
+                                if (link.startsWith("#"))
+                                    root.scrollToFragment(link);
+                                else
+                                    Qt.openUrlExternally(link);
+                            }
+
+                            HoverHandler {
+                                cursorShape: parent.linkAt(point.position.x, point.position.y) !== "" ? Qt.PointingHandCursor : Qt.ArrowCursor
                             }
                         }
 
@@ -562,6 +589,28 @@ ApplicationWindow {
                                 anchors.leftMargin: 20
                                 anchors.rightMargin: 20
                                 anchors.topMargin: 16
+                            }
+
+                            Shape {
+                                id: preCorners
+                                anchors.fill: parent
+
+                                ShapePath {
+                                    strokeWidth: -1
+                                    fillColor: "#fdfcf8"
+                                    fillRule: ShapePath.OddEvenFill
+
+                                    PathRectangle {
+                                        width: preCorners.width
+                                        height: preCorners.height
+                                    }
+
+                                    PathRectangle {
+                                        width: preCorners.width
+                                        height: preCorners.height
+                                        radius: 6
+                                    }
+                                }
                             }
                         }
 

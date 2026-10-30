@@ -17,6 +17,25 @@ ApplicationWindow {
     width: 1280
     height: 800
 
+    function scrollToFragment(link) {
+        let name = link.slice(1);
+        const targets = Object.create(null);
+        if (!(name in targets)) {
+            try {
+                name = decodeURIComponent(name);
+            } catch (e) {
+                name = null;
+            }
+        }
+        const target = name === null ? undefined : targets[name];
+        if (target) {
+            const y = target.mapToItem(flickable.contentItem, 0, 0).y;
+            flickable.contentY = Math.max(0, Math.min(y, flickable.contentHeight - flickable.height));
+        } else if (name !== null && (name === "" || name.toLowerCase() === "top")) {
+            flickable.contentY = 0;
+        }
+    }
+
     Flickable {
         id: flickable
         anchors.fill: parent
@@ -130,7 +149,11 @@ ApplicationWindow {
                                         Layout.alignment: Qt.AlignVCenter
 
                                         TapHandler {
-                                            onTapped: Qt.openUrlExternally("#")
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
                                         }
                                     }
 
@@ -153,7 +176,11 @@ ApplicationWindow {
                                         Layout.leftMargin: 28
 
                                         TapHandler {
-                                            onTapped: Qt.openUrlExternally("#")
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
                                         }
                                     }
 
@@ -176,7 +203,11 @@ ApplicationWindow {
                                         Layout.leftMargin: 28
 
                                         TapHandler {
-                                            onTapped: Qt.openUrlExternally("#")
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
                                         }
                                     }
 
@@ -199,7 +230,11 @@ ApplicationWindow {
                                         Layout.leftMargin: 28
 
                                         TapHandler {
-                                            onTapped: Qt.openUrlExternally("#")
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
                                         }
                                     }
 

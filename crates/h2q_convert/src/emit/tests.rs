@@ -889,13 +889,16 @@ fn box_shadows_are_rectangular_shadows_behind_the_box() {
 }
 
 #[test]
-fn inset_box_shadows_are_reported() {
+fn inset_box_shadows_are_drawn_inside_the_box() {
     let (qml, diags) = convert(&page(
         ".s{box-shadow:inset 0 1px 2px #000}",
         "<div class=s>x</div>",
     ));
+    // An outer shadow's `RectangularShadow` would draw outside the box.
     assert!(!qml.contains("RectangularShadow"), "{qml}");
-    assert!(diags.iter().any(|d| d.contains("inset")), "{diags:?}");
+    assert!(qml.contains("Inset\n"), "{qml}");
+    assert!(qml.contains("ShapePath.OddEvenFill"), "{qml}");
+    assert!(!diags.iter().any(|d| d.contains("box-shadow")), "{diags:?}");
 }
 
 #[test]
@@ -939,6 +942,64 @@ fn transforms_apply_in_css_order_around_the_origin() {
     assert!(obj.contains("origin.x: tBox.width * 0.5"), "{obj}");
     assert!(obj.contains("origin.y: tBox.height * 0.5"), "{obj}");
     assert!(!diags.iter().any(|d| d.contains("transform")), "{diags:?}");
+}
+
+#[test]
+fn controls_tables_and_placeholders_are_transformed_too() {
+    // Chromium moves each of these by its own translate (geometry.mjs).
+    let (qml, diags) = convert(&page(
+        "",
+        "<div><input id=field style=\"transform:translateX(20px)\"></div>\
+         <div><button id=go style=\"transform:translate(10px,5px)\">Go</button></div>\
+         <table id=t style=\"transform:translateX(30px)\"><tr><td>a</td></tr></table>\
+         <fieldset id=f style=\"transform:translateX(11px)\"><legend>L</legend>x</fieldset>\
+         <img id=pic width=80 height=40 style=\"transform:translateX(13px)\">",
+    ));
+    for (tag, x) in [
+        ("<input id=\"field\">", 20),
+        ("<button id=\"go\">", 10),
+        ("<table id=\"t\">", 30),
+        ("<fieldset id=\"f\">", 11),
+        ("<img id=\"pic\">", 13),
+    ] {
+        let obj = object_after(&qml, tag);
+        let t = obj.find("transform: Translate {").expect(tag);
+        assert!(obj[t..].contains(&format!("x: {x}")), "{tag}: {obj}");
+    }
+    assert!(object_after(&qml, "<button id=\"go\">").contains("y: 5"));
+    assert!(!diags.iter().any(|d| d.contains("transform")), "{diags:?}");
+}
+
+#[test]
+fn a_row_translation_moves_its_cells() {
+    // Chromium: the cell lands at table + row + cell translation.
+    let (qml, diags) = convert(&page(
+        "",
+        "<table><tbody style=\"transform:translateY(2px)\">\
+         <tr style=\"transform:translateX(7px)\">\
+         <td id=c style=\"transform:translateX(3px)\">a</td></tr></tbody></table>",
+    ));
+    // The only translations on the page, all on the one cell.
+    let list = &qml[qml.find("transform: [").expect("a list")..];
+    let own = list.find("x: 3").expect("the cell's own");
+    let row = list.find("x: 7").expect("the row's");
+    let group = list.find("y: 2").expect("the group's");
+    // QML applies the list from the front: the cell's own first.
+    assert!(own < row && row < group, "{qml}");
+    assert!(!diags.iter().any(|d| d.contains("transform")), "{diags:?}");
+}
+
+#[test]
+fn a_row_rotation_is_reported() {
+    let (qml, diags) = convert(&page(
+        "",
+        "<table><tr style=\"transform:rotate(5deg)\"><td id=c>a</td></tr></table>",
+    ));
+    assert!(!qml.contains("Rotation"), "{qml}");
+    assert!(
+        diags.iter().any(|d| d.contains("`transform` on <tr>")),
+        "{diags:?}"
+    );
 }
 
 #[test]
@@ -1138,7 +1199,7 @@ fn a_text_that_is_one_link_without_underline_is_not_underlined() {
     );
     assert!(!nav.contains("<a "), "{nav}");
     assert!(
-        nav.contains("TapHandler {") && nav.contains("Qt.openUrlExternally(\"#f\")"),
+        nav.contains("TapHandler {") && nav.contains("root.scrollToFragment(\"#f\")"),
         "{nav}"
     );
     // A link inside other text stays a StyledText link, underlined.
@@ -1184,4 +1245,217 @@ fn a_layout_with_a_width_does_not_fill_its_column() {
     ));
     let g = own_lines(object_after(&qml, "<main class=\"g\">"));
     assert!(g.contains(&"Layout.fillWidth: false"), "{g:?}");
+}
+
+#[test]
+fn rounded_overflow_clip_masks_the_corners_with_the_backdrop() {
+    // Chromium (11-positioning): at the bottom-left corner of a 12px
+    // rounded `overflow: hidden` box, the absolutely placed caption is
+    // clipped and the page's #f3f4f6 shows. QML's `clip` is square and the
+    // software renderer has no masking, so the corners outside the
+    // rounded rect are painted over in the colour behind the box.
+    let (qml, diags) = convert(&page(
+        "body{background:#f3f4f6} .m{position:relative;width:320px;height:220px;\
+         border-radius:12px;overflow:hidden;background:#7f9cf5} \
+         .c{position:absolute;bottom:0;left:0;right:0;background:#000}",
+        "<figure class=m><figcaption class=c>Studio</figcaption></figure>",
+    ));
+    let m = object_after(&qml, "<figure class=\"m\">");
+    let caption = m.find("Studio").expect("caption");
+    let mask = m.rfind("Shape {").expect("corner mask");
+    assert!(caption < mask, "the mask is drawn over the content: {m}");
+    let mask = &m[mask..];
+    assert!(mask.contains("fillRule: ShapePath.OddEvenFill"), "{m}");
+    assert!(mask.contains("fillColor: \"#f3f4f6\""), "{m}");
+    assert!(mask.contains("radius: 12"), "{m}");
+    assert!(qml.contains("import QtQuick.Shapes"), "{qml}");
+    assert!(!diags.iter().any(|d| d.contains("square")), "{diags:?}");
+}
+
+#[test]
+fn rounded_clip_mask_composites_a_translucent_backdrop() {
+    // Behind the box: rgba(0,0,0,0.5) over white; Chromium paints
+    // rgb(127, 127, 127) there.
+    let (qml, _) = convert(&page(
+        ".p{background:rgba(0,0,0,0.5);padding:10px} \
+         .m{width:100px;height:50px;border-radius:8px;overflow:hidden}",
+        "<div class=p><div class=m><p>x</p></div></div>",
+    ));
+    let m = object_after(&qml, "<div class=\"m\">");
+    assert!(m.contains("fillColor: \"#7f7f7f\""), "{m}");
+}
+
+#[test]
+fn rounded_clip_redraws_the_border_over_the_content() {
+    let (qml, _) = convert(&page(
+        ".m{width:100px;height:50px;border:3px solid #123456;border-radius:8px;\
+         overflow:hidden} .m p{margin:0;background:#f00;height:50px}",
+        "<div class=m><p>x</p></div>",
+    ));
+    let m = object_after(&qml, "<div class=\"m\">");
+    let content = m.find("\"x\"").expect("content");
+    let after = &m[content..];
+    assert!(after.contains("fillColor: \"#ffffff\""), "{m}");
+    assert!(
+        after.contains("border.width: 3") && after.contains("border.color: \"#123456\""),
+        "the border is drawn again over the content: {m}"
+    );
+}
+
+#[test]
+fn rounded_clip_over_a_gradient_stays_square_with_a_diagnostic() {
+    let (qml, diags) = convert(&page(
+        ".p{background:linear-gradient(red,blue)} \
+         .m{width:100px;height:50px;border-radius:8px;overflow:hidden}",
+        "<div class=p><div class=m><p>x</p></div></div>",
+    ));
+    let m = object_after(&qml, "<div class=\"m\">");
+    assert!(!m.contains("OddEvenFill"), "{m}");
+    assert!(
+        diags
+            .iter()
+            .any(|d| d.contains("rounded") && d.contains("square")),
+        "{diags:?}"
+    );
+}
+
+#[test]
+fn a_fragment_link_scrolls_the_page_to_its_target() {
+    // Chromium: following `#b` scrolls the border-box top of #b to the top
+    // of the viewport, clamped to the page's end; `#` and `#top` scroll to
+    // the top; an unknown fragment does nothing. Other links open outside.
+    let (qml, _) = convert(&page(
+        ".n a{text-decoration:none}",
+        "<ul class=n><li><a href=\"#b\">B</a></li><li><a href=\"https://x.org/\">X</a></li></ul>\
+         <p>See <a href=\"#b\">b</a> or <a href=\"https://x.org/\">x</a>.</p>\
+         <h2 id=b>B</h2>",
+    ));
+    let f = qml
+        .find("function scrollToFragment(")
+        .map(|i| &qml[i..])
+        .expect("scrollToFragment on the root");
+    assert!(f.contains("\"b\": b"), "{f}");
+    assert!(
+        f.contains("mapToItem(flickable.contentItem, 0, 0).y"),
+        "{f}"
+    );
+    assert!(
+        f.contains("flickable.contentHeight - flickable.height"),
+        "{f}"
+    );
+    assert!(f.contains("\"top\""), "{f}");
+
+    let bare = object_after(&qml, "<li>");
+    assert!(bare.contains("root.scrollToFragment(\"#b\")"), "{bare}");
+    assert!(!bare.contains("openUrlExternally"), "{bare}");
+    assert!(
+        bare.contains("cursorShape: Qt.PointingHandCursor"),
+        "{bare}"
+    );
+    let external = qml.find("Qt.openUrlExternally(\"https://x.org/\")");
+    assert!(external.is_some(), "{qml}");
+
+    let p = object_after(&qml, "<p>");
+    assert!(p.contains("link.startsWith(\"#\")"), "{p}");
+    assert!(p.contains("root.scrollToFragment(link)"), "{p}");
+    assert!(p.contains("Qt.openUrlExternally(link)"), "{p}");
+    assert!(p.contains("linkAt("), "a pointing hand over links: {p}");
+}
+
+#[test]
+fn a_page_without_fragment_links_has_no_scroll_function() {
+    let (qml, _) = convert(&page("", "<p><a href=\"https://x.org/\">x</a> y</p>"));
+    assert!(!qml.contains("scrollToFragment"), "{qml}");
+    assert!(qml.contains("onLinkActivated"), "{qml}");
+}
+
+#[test]
+fn an_unblurred_inset_shadow_is_a_ring_inside_the_padding_box() {
+    // Chromium (18-dashboard): `inset 3px 0 0` on an 8px rounded box is a
+    // 3px bar of the shadow colour along the left edge, curved with the
+    // corners, over the background and under the text.
+    let (qml, diags) = convert(&page(
+        ".a{padding:9px 12px;border-radius:8px;background:#1f2937;\
+         box-shadow:inset 3px 0 0 #6366f1}",
+        "<div class=a>Overview</div>",
+    ));
+    let a = object_after(&qml, "<div class=\"a\">");
+    let shadow = a.find("Shape {").expect("inset shadow shape");
+    let text = a.find("Overview").expect("text");
+    assert!(shadow < text, "under the content: {a}");
+    let shape = &a[shadow..text];
+    assert!(shape.contains("fillColor: \"#6366f1\""), "{a}");
+    assert!(shape.contains("fillRule: ShapePath.OddEvenFill"), "{a}");
+    // The hole: shifted right by 3, cut off at the right edge.
+    assert!(shape.contains("x: 3"), "{a}");
+    assert!(shape.contains(".width - 3"), "{a}");
+    assert!(shape.contains("radius: 8"), "{a}");
+    assert!(!diags.iter().any(|d| d.contains("inset")), "{diags:?}");
+}
+
+#[test]
+fn an_inset_spread_is_a_ring_of_its_width() {
+    // `inset 0 0 0 1px` (13-custom-properties): a 1px ring; the hole's
+    // corners are the padding box's, less the spread.
+    let (qml, _) = convert(&page(
+        ".s{width:56px;height:56px;border-radius:6px;background:#2563eb;\
+         box-shadow:inset 0 0 0 1px rgba(0,0,0,0.08)}",
+        "<div class=s></div>",
+    ));
+    let s = object_after(&qml, "<div class=\"s\">");
+    assert!(s.contains("fillColor: \"#14000000\""), "{s}");
+    assert!(s.contains("x: 1") && s.contains("y: 1"), "{s}");
+    assert!(s.contains(".width - 2") && s.contains(".height - 2"), "{s}");
+    assert!(s.contains("radius: 5"), "{s}");
+}
+
+#[test]
+fn a_blurred_inset_shadow_fades_in_bands() {
+    // Chromium: `inset 0 0 20px #000` on a white box is, 0.5px in from the
+    // edge, alpha 119/255, and 20px in, 4/255: 1 - Φ(d / 10). The bands
+    // are nested rings whose alphas compose to it.
+    use super::shadow::inset_bands;
+    let bands = inset_bands(20.0, 1.0);
+    assert!(bands.len() > 1 && bands.len() <= 13, "{bands:?}");
+    let coverage = |depth: f32| {
+        1.0 - bands
+            .iter()
+            .filter(|b| depth < b.depth)
+            .map(|b| 1.0 - b.alpha)
+            .product::<f32>()
+    };
+    for (depth, chromium) in [(0.5, 119.0), (5.5, 74.0), (10.5, 42.0), (20.5, 3.0)] {
+        let got = coverage(depth) * 255.0;
+        assert!(
+            (got - chromium).abs() <= 16.0,
+            "depth {depth}: {got} vs {chromium} in {bands:?}"
+        );
+    }
+    // Deep outside the hole edge it is the full colour.
+    assert!(coverage(-30.0) > 0.95, "{bands:?}");
+}
+
+#[test]
+fn a_float_run_shares_a_line_and_reports_what_follows() {
+    let (qml, diags) = convert(&page(
+        ".f{float:left;width:100px;height:20px}",
+        "<div><div class=f>a</div><div class=f>b</div><p>after</p></div>\
+         <div><div class=f>alone</div></div>",
+    ));
+    assert_eq!(qml.matches("Flow {").count(), 1, "{qml}");
+    // Only the lone float is stacked as a block.
+    assert_eq!(
+        diags
+            .iter()
+            .filter(|d| d.contains("floats do not share a line"))
+            .count(),
+        1,
+        "{diags:?}"
+    );
+    assert!(
+        diags
+            .iter()
+            .any(|d| d.contains("<p> is placed below the floats before it")),
+        "{diags:?}"
+    );
 }
