@@ -802,24 +802,7 @@ pub(crate) fn compute(
         // Priority 2: Color & direction
         Longhand::Color => {
             let parent_color = ctx.parent.map_or(crate::Rgba::BLACK, |p| p.color);
-            let c = parse_color_cvs(cvs, parent_color)?;
-            style.color = c;
-            for side in [
-                &mut style.border.top,
-                &mut style.border.right,
-                &mut style.border.bottom,
-                &mut style.border.left,
-                &mut style.outline,
-            ] {
-                if side.explicit_color.is_none()
-                    && !matches!(
-                        side.style,
-                        crate::BorderStyle::None | crate::BorderStyle::Hidden
-                    )
-                {
-                    side.color = c;
-                }
-            }
+            set_color(style, parse_color_cvs(cvs, parent_color)?);
         }
         Longhand::Direction => {
             style.direction = parse_direction(cvs)?;
@@ -1291,6 +1274,28 @@ pub(crate) fn compute(
     Ok(())
 }
 
+/// Sets `color` and the border/outline sides whose color is still the
+/// initial `currentColor`, so they track it whichever path set it.
+fn set_color(style: &mut ComputedStyle, c: crate::Rgba) {
+    style.color = c;
+    for side in [
+        &mut style.border.top,
+        &mut style.border.right,
+        &mut style.border.bottom,
+        &mut style.border.left,
+        &mut style.outline,
+    ] {
+        if side.explicit_color.is_none()
+            && !matches!(
+                side.style,
+                crate::BorderStyle::None | crate::BorderStyle::Hidden
+            )
+        {
+            side.color = c;
+        }
+    }
+}
+
 /// Copies the single longhand `l` from `src` to `dst` (used for `inherit`,
 /// `initial`, `unset`, and `revert`).
 pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
@@ -1301,7 +1306,7 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
         Longhand::FontStyle => dst.font_style = src.font_style,
         Longhand::FontVariantCaps => dst.small_caps = src.small_caps,
         Longhand::LineHeight => dst.line_height = src.line_height,
-        Longhand::Color => dst.color = src.color,
+        Longhand::Color => set_color(dst, src.color),
         Longhand::Direction => dst.direction = src.direction,
 
         Longhand::BorderTopStyle => dst.border.top.style = src.border.top.style,

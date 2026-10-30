@@ -830,3 +830,22 @@ fn border_width_before_and_after_style() {
     compute(&mut s4, Longhand::BorderTopWidth, "10px", &ctx).expect("border-top-width: 10px");
     assert_eq!(s4.border.top.width, 0.0);
 }
+
+#[test]
+fn inherited_color_updates_current_color_borders_but_not_explicit_ones() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+
+    let mut parent = ComputedStyle::default();
+    compute(&mut parent, Longhand::Color, "blue", &ctx).expect("parent color");
+
+    let mut s = ComputedStyle::default();
+    compute(&mut s, Longhand::BorderTopStyle, "solid", &ctx).expect("border-top-style");
+    compute(&mut s, Longhand::BorderLeftStyle, "solid", &ctx).expect("border-left-style");
+    compute(&mut s, Longhand::BorderLeftColor, "green", &ctx).expect("border-left-color");
+    // `color: inherit` reaches the style through `copy`, not `compute`.
+    copy(&mut s, &parent, Longhand::Color);
+    assert_eq!(s.color, Rgba::new(0, 0, 255, 255));
+    assert_eq!(s.border.top.color, Rgba::new(0, 0, 255, 255));
+    assert_eq!(s.border.left.color, Rgba::new(0, 128, 0, 255));
+}
