@@ -3,6 +3,7 @@ use std::ffi::{OsStr, OsString};
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Component, Path, PathBuf};
+use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
@@ -112,10 +113,7 @@ pub(crate) fn execute_convert(
 
     let key = h2q_cache::CacheKey {
         entry: canonical_input.clone(),
-        converter_version: format!(
-            "{}+fmt{CONVERTER_FORMAT_VERSION}",
-            env!("CARGO_PKG_VERSION")
-        ),
+        converter_version: converter_version().to_owned(),
         options: serialize_options(&options),
     };
 
@@ -359,4 +357,45 @@ fn write_if_changed(target: &Path, contents: &[u8]) -> anyhow::Result<bool> {
     }
 
     Ok(true)
+}
+
+// Mix the running binary's digest into the cache key so rebuilds during
+// development invalidate cached outputs without requiring a version bump.
+fn converter_version() -> &'static str {
+    static VERSION: OnceLock<String> = OnceLock::new();
+    VERSION.get_or_init(|| {
+        let base = format!(
+            "{}+fmt{CONVERTER_FORMAT_VERSION}",
+            env!("CARGO_PKG_VERSION")
+        );
+        match std::env::current_exe().and_then(fs::read) {
+            Ok(bytes) => {
+                let hex = blake3::hash(&bytes).to_hex();
+                format!("{base}+{}", &hex[..16])
+            }
+            Err(_) => base,
+        }
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn converter_version_includes_stable_non_empty_build_id() {
+        let first = converter_version();
+        let second = converter_version();
+        assert_eq!(first, second);
+        let prefix = format!(
+            "{}+fmt{CONVERTER_FORMAT_VERSION}+",
+            env!("CARGO_PKG_VERSION")
+        );
+        let build_id = first
+            .strip_prefix(&prefix)
+            .expect("converter_version should include build id suffix");
+        assert!(!build_id.is_empty());
+        assert_eq!(build_id.len(), 16);
+        assert!(build_id.bytes().all(|b| b.is_ascii_hexdigit()));
+    }
 }

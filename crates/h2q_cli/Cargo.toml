@@ -13,6 +13,7 @@ path = "src/main.rs"
 h2q_convert.workspace = true
 h2q_cache.workspace = true
 anyhow.workspace = true
+blake3.workspace = true
 clap.workspace = true
 notify.workspace = true
 serde_json.workspace = true

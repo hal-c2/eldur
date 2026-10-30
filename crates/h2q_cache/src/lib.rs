@@ -51,8 +51,8 @@ pub enum CacheError {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CacheKey {
     pub entry: PathBuf,
-    /// `env!("CARGO_PKG_VERSION")` of the converter plus a format number;
-    /// bump it whenever output for the same input changes.
+    /// `env!("CARGO_PKG_VERSION")` of the converter, format number, and binary
+    /// build hash so rebuilt binaries invalidate cached outputs automatically.
     pub converter_version: String,
     /// Stable serialisation of the options (e.g. JSON with sorted keys).
     pub options: String,

@@ -6,7 +6,5 @@ cargo build -q -p h2q_cli
 for dir in tests/corpus/*/; do
   case=$(basename "$dir")
   rm -rf "${out:?}/$case"
-  # The cache key does not cover the converter's own code, so a rebuilt
-  # converter would be served stale output.
-  cargo run -q -p h2q_cli -- convert --no-cache -q "$dir/index.html" -o "$out/$case" 2>/dev/null
+  cargo run -q -p h2q_cli -- convert -q "$dir/index.html" -o "$out/$case" 2>/dev/null
 done
