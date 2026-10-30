@@ -252,17 +252,18 @@ impl<'a> ParseCtx<'a> {
     }
 }
 
-/// Sanitizes stray top-level closing braces (`}`) and unclosed `[` / `(` in rule preludes
-/// while preserving byte offsets and line numbers.
+/// Sanitizes stray top-level closing braces (`}`) and unclosed `[` / `(` across rule
+/// boundaries while preserving byte offsets and line numbers.
 ///
 /// - `swc_css_parser` does not implement the CSS Syntax 3 §5.4.3 / CSS 2.1 §4.2 amendment
 ///   that discards an unmatched `}` during qualified-rule prelude consumption instead of
 ///   absorbing the following rule's selector into the broken prelude.
-/// - When `[` or `(` in a rule prelude is not closed before the rule's `{` block,
-///   `swc_css_parser` consumes a simple block to `]`/`)` or EOF, swallowing the `{ ... }`
-///   block and any following rules. Replacing the unclosed opener with `.` keeps the
-///   prelude invalid (e.g. `p..`) so the rule is dropped while allowing `{ ... }` and
-///   subsequent rules to be parsed.
+/// - When `[` or `(` in a rule prelude is not closed before `{`, or when `[` or `(` inside
+///   a declaration value is not closed before the enclosing block's `}`, `swc_css_parser`
+///   consumes a simple block or function to `]`/`)` or EOF, swallowing the rule block or
+///   subsequent rules. Replacing the unclosed opener's bracket character with `.` keeps
+///   the prelude or declaration value invalid so it is dropped while allowing the rest of
+///   the stylesheet to be parsed.
 fn sanitize_rule_boundaries(text: &str) -> std::borrow::Cow<'_, str> {
     let Ok(len) = u32::try_from(text.len()) else {
         return std::borrow::Cow::Borrowed(text);
@@ -275,24 +276,35 @@ fn sanitize_rule_boundaries(text: &str) -> std::borrow::Cow<'_, str> {
     let mut brace_depth = 0usize;
     let mut stray_rbraces: Vec<(usize, usize)> = Vec::new();
     let mut prelude_openers: Vec<(char, usize, usize)> = Vec::new();
-    let mut broken_prelude_openers: Vec<(usize, usize)> = Vec::new();
+    let mut block_openers: Vec<Vec<(char, usize, usize)>> = Vec::new();
+    let mut broken_openers: Vec<(usize, usize)> = Vec::new();
 
     while let Some(ts) = lexer.next() {
         let lo = (ts.span.lo.0 - 1) as usize;
         let hi = (ts.span.hi.0 - 1) as usize;
         match ts.token {
             ast::Token::LBrace => {
-                if brace_depth == 0 && !prelude_openers.is_empty() {
+                if brace_depth == 0 {
                     for (_, o_lo, o_hi) in prelude_openers.drain(..) {
-                        broken_prelude_openers.push((o_lo, o_hi));
+                        broken_openers.push((o_lo, o_hi));
+                    }
+                } else if let Some(top) = block_openers.last_mut() {
+                    for (_, o_lo, o_hi) in top.drain(..) {
+                        broken_openers.push((o_lo, o_hi));
                     }
                 }
                 brace_depth += 1;
+                block_openers.push(Vec::new());
             }
             ast::Token::RBrace => {
                 prelude_openers.clear();
                 if brace_depth > 0 {
                     brace_depth -= 1;
+                    if let Some(unclosed) = block_openers.pop() {
+                        for (_, o_lo, o_hi) in unclosed {
+                            broken_openers.push((o_lo, o_hi));
+                        }
+                    }
                 } else {
                     stray_rbraces.push((lo, hi));
                 }
@@ -300,27 +312,49 @@ fn sanitize_rule_boundaries(text: &str) -> std::borrow::Cow<'_, str> {
             ast::Token::Semi if brace_depth == 0 => {
                 prelude_openers.clear();
             }
-            ast::Token::LBracket if brace_depth == 0 => {
-                prelude_openers.push((']', lo, hi));
-            }
-            ast::Token::LParen | ast::Token::Function { .. } if brace_depth == 0 => {
-                prelude_openers.push((')', lo, hi));
-            }
-            ast::Token::RBracket if brace_depth == 0 => {
-                if let Some(pos) = prelude_openers.iter().rposition(|(c, _, _)| *c == ']') {
-                    prelude_openers.truncate(pos);
+            ast::Token::LBracket => {
+                if brace_depth == 0 {
+                    prelude_openers.push((']', lo, hi));
+                } else if let Some(top) = block_openers.last_mut() {
+                    top.push((']', lo, hi));
                 }
             }
-            ast::Token::RParen if brace_depth == 0 => {
-                if let Some(pos) = prelude_openers.iter().rposition(|(c, _, _)| *c == ')') {
-                    prelude_openers.truncate(pos);
+            ast::Token::LParen | ast::Token::Function { .. } => {
+                if brace_depth == 0 {
+                    prelude_openers.push((')', lo, hi));
+                } else if let Some(top) = block_openers.last_mut() {
+                    top.push((')', lo, hi));
+                }
+            }
+            ast::Token::RBracket => {
+                let stack = if brace_depth == 0 {
+                    Some(&mut prelude_openers)
+                } else {
+                    block_openers.last_mut()
+                };
+                if let Some(s) = stack
+                    && let Some(pos) = s.iter().rposition(|(c, _, _)| *c == ']')
+                {
+                    s.truncate(pos);
+                }
+            }
+            ast::Token::RParen => {
+                let stack = if brace_depth == 0 {
+                    Some(&mut prelude_openers)
+                } else {
+                    block_openers.last_mut()
+                };
+                if let Some(s) = stack
+                    && let Some(pos) = s.iter().rposition(|(c, _, _)| *c == ')')
+                {
+                    s.truncate(pos);
                 }
             }
             _ => {}
         }
     }
 
-    if stray_rbraces.is_empty() && broken_prelude_openers.is_empty() {
+    if stray_rbraces.is_empty() && broken_openers.is_empty() {
         return std::borrow::Cow::Borrowed(text);
     }
     let mut bytes = text.as_bytes().to_vec();
@@ -331,7 +365,7 @@ fn sanitize_rule_boundaries(text: &str) -> std::borrow::Cow<'_, str> {
             }
         }
     }
-    for (lo, hi) in broken_prelude_openers {
+    for (lo, hi) in broken_openers {
         if hi > lo {
             bytes[hi - 1] = b'.';
         }

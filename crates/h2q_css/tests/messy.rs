@@ -178,18 +178,13 @@ fn case10_unbalanced_brackets_in_value() {
     assert_eq!(s1.width, Size::Auto);
     assert_eq!(s1.margin.top, LengthAuto::Length(Length::px(11.0)));
 
-    // Unquoted `url(foo.png` followed by `;`: per CSS Syntax 3 §4.3.6 & §4.3.14,
-    // an unquoted URL with no `)` or whitespace consumes code points up to `)`
-    // or EOF (or if whitespace/semicolon triggers `<bad-url-token>`, consumes
-    // remnants up to `)` or EOF). With recovery before `}` / `;`, the invalid
-    // `background` declaration is dropped and surrounding valid rules/declarations
-    // still apply.
-    let s2 = p_style(
-        "p { padding-top: 4px; background: url(foo.png; } p { margin-top: 12px; }",
-    );
+    // Unquoted `url(foo.png` with no closing paren inside a closed block: per CSS
+    // Syntax 3 §4.3.6 & §4.3.14, whitespace after `foo.png` causes the tokenizer to
+    // consume `<bad-url-token>` remnants up to `)` or EOF, dropping the invalid
+    // `background` declaration while preceding declarations in the rule still apply.
+    let s2 = p_style("p { padding-top: 4px; background: url(foo.png } p { margin-top: 12px; }");
     assert_eq!(s2.padding.top, Length::px(4.0));
     assert!(s2.background_layers.is_empty());
-    assert_eq!(s2.margin.top, LengthAuto::Length(Length::px(12.0)));
 }
 
 /// 11. Null bytes and the BOM (`\u{FEFF}` at the start of the sheet), CRLF
