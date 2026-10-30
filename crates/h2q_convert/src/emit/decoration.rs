@@ -1,0 +1,283 @@
+//! Box decoration (layout.md §7): a `Rectangle` (or `Item` when nothing is
+//! painted) around the box's content, which is anchored inside it, inset
+//! by padding + border.
+
+use h2q_css::{BorderSide, BorderStyle, ComputedStyle, Overflow, Sides};
+use h2q_qml::{Object, Value};
+
+use super::Emitter;
+use super::units::{color, fmt_number, number, px_part, round};
+
+/// Padding + border widths, in px.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub(crate) struct Insets {
+    pub top: f32,
+    pub right: f32,
+    pub bottom: f32,
+    pub left: f32,
+}
+
+impl Insets {
+    pub(crate) fn horizontal(self) -> f32 {
+        self.left + self.right
+    }
+
+    pub(crate) fn vertical(self) -> f32 {
+        self.top + self.bottom
+    }
+
+    fn is_zero(self) -> bool {
+        self == Self::default()
+    }
+}
+
+pub(crate) fn is_visible(side: &BorderSide) -> bool {
+    side.width > 0.0 && !matches!(side.style, BorderStyle::None | BorderStyle::Hidden)
+}
+
+pub(crate) fn border_width(side: &BorderSide) -> f32 {
+    if is_visible(side) { side.width } else { 0.0 }
+}
+
+fn sides(style: &ComputedStyle) -> [&BorderSide; 4] {
+    let b = &style.border;
+    [&b.top, &b.right, &b.bottom, &b.left]
+}
+
+/// What a box needs to be wrapped for.
+pub(crate) struct Decoration {
+    pub insets: Insets,
+    pub paints: bool,
+    pub clips: bool,
+}
+
+impl Decoration {
+    pub(crate) fn needed(&self) -> bool {
+        self.paints || self.clips || !self.insets.is_zero()
+    }
+}
+
+impl Emitter<'_, '_> {
+    /// Padding (px part; percentages are reported) plus border widths.
+    pub(super) fn insets(&mut self, style: &ComputedStyle, line: Option<u32>) -> Insets {
+        let Sides {
+            top,
+            right,
+            bottom,
+            left,
+        } = &style.padding;
+        let mut lossy = false;
+        let mut px = |l| {
+            let (v, dropped) = px_part(l);
+            lossy |= dropped;
+            v.max(0.0)
+        };
+        let insets = Insets {
+            top: px(top) + border_width(&style.border.top),
+            right: px(right) + border_width(&style.border.right),
+            bottom: px(bottom) + border_width(&style.border.bottom),
+            left: px(left) + border_width(&style.border.left),
+        };
+        if lossy {
+            self.diags.info(
+                "css",
+                line,
+                "percentage or `calc()` padding uses its px part only".to_owned(),
+            );
+        }
+        insets
+    }
+
+    pub(super) fn decoration(
+        &mut self,
+        style: &ComputedStyle,
+        paint_background: bool,
+        line: Option<u32>,
+    ) -> Decoration {
+        let insets = self.insets(style, line);
+        let background = paint_background && !style.background_color.is_transparent();
+        let border = sides(style).iter().any(|s| is_visible(s));
+        let clips = style.overflow_x != Overflow::Visible || style.overflow_y != Overflow::Visible;
+        if paint_background && style.background_layers.iter().any(|l| l.image.is_some()) {
+            self.diags.warning(
+                "css",
+                line,
+                "background images and gradients are not converted yet".to_owned(),
+            );
+        }
+        if !style.box_shadow.is_empty() {
+            self.diags
+                .warning("css", line, "`box-shadow` is not converted yet".to_owned());
+        }
+        if matches!(style.overflow_x, Overflow::Auto | Overflow::Scroll)
+            || matches!(style.overflow_y, Overflow::Auto | Overflow::Scroll)
+        {
+            self.diags.warning(
+                "css",
+                line,
+                "`overflow: auto/scroll` clips but does not scroll yet".to_owned(),
+            );
+        }
+        Decoration {
+            insets,
+            paints: background || border,
+            clips,
+        }
+    }
+
+    /// Wraps `inner` (anchored inside, id `inner_id`) in the box's
+    /// decoration. `inner` is `None` for a box without content.
+    pub(super) fn wrap(
+        &mut self,
+        style: &ComputedStyle,
+        deco: &Decoration,
+        paint_background: bool,
+        inner: Option<(Object, String)>,
+        line: Option<u32>,
+    ) -> Object {
+        let mut wrapper = Object::new(if deco.paints { "Rectangle" } else { "Item" });
+        let insets = deco.insets;
+        if deco.paints {
+            let bg = if paint_background {
+                style.background_color
+            } else {
+                h2q_css::Rgba::TRANSPARENT
+            };
+            wrapper.set("color", color(bg));
+            self.radius(&mut wrapper, style, line);
+        }
+        if deco.clips {
+            wrapper.set("clip", true);
+        }
+        match &inner {
+            Some((_, id)) => {
+                wrapper.set(
+                    "implicitWidth",
+                    Value::expr(plus(&format!("{id}.implicitWidth"), insets.horizontal())),
+                );
+                wrapper.set(
+                    "implicitHeight",
+                    Value::expr(plus(&format!("{id}.implicitHeight"), insets.vertical())),
+                );
+            }
+            None => {
+                wrapper.set("implicitWidth", number(insets.horizontal()));
+                wrapper.set("implicitHeight", number(insets.vertical()));
+            }
+        }
+        let borders: Vec<&BorderSide> = sides(style).to_vec();
+        let uniform = borders.iter().all(|s| **s == *borders[0]) && is_visible(borders[0]);
+        if uniform {
+            wrapper.set("border.width", number(borders[0].width));
+            wrapper.set("border.color", color(borders[0].color));
+        } else {
+            self.border_strips(&mut wrapper, style, line);
+        }
+        for side in borders.iter().filter(|s| is_visible(s)) {
+            if !matches!(side.style, BorderStyle::Solid) {
+                self.diags.info(
+                    "css",
+                    line,
+                    format!("border style `{:?}` is drawn solid", side.style).to_lowercase(),
+                );
+            }
+        }
+        if let Some((mut inner, _)) = inner {
+            inner.set("anchors.left", Value::expr("parent.left"));
+            inner.set("anchors.right", Value::expr("parent.right"));
+            inner.set("anchors.top", Value::expr("parent.top"));
+            for (name, v) in [
+                ("anchors.leftMargin", insets.left),
+                ("anchors.rightMargin", insets.right),
+                ("anchors.topMargin", insets.top),
+            ] {
+                if v != 0.0 {
+                    inner.set(name, number(v));
+                }
+            }
+            wrapper.push_child(inner);
+        }
+        wrapper
+    }
+
+    fn radius(&mut self, wrapper: &mut Object, style: &ComputedStyle, line: Option<u32>) {
+        let r = &style.border_radius;
+        let corners = [
+            ("topLeftRadius", &r.top_left),
+            ("topRightRadius", &r.top_right),
+            ("bottomRightRadius", &r.bottom_right),
+            ("bottomLeftRadius", &r.bottom_left),
+        ];
+        let mut px = Vec::new();
+        for (name, c) in corners {
+            match c.as_px() {
+                Some(v) => px.push((name, v)),
+                None => {
+                    self.diags.info(
+                        "css",
+                        line,
+                        "percentage `border-radius` uses its px part only".to_owned(),
+                    );
+                    px.push((name, c.px));
+                }
+            }
+        }
+        if px.iter().all(|(_, v)| *v == px[0].1) {
+            if px[0].1 > 0.0 {
+                wrapper.set("radius", number(px[0].1));
+            }
+        } else {
+            for (name, v) in px {
+                wrapper.set(name, number(v));
+            }
+        }
+    }
+
+    /// Non-uniform borders: one thin `Rectangle` per visible side (corner
+    /// joins are not mitred).
+    fn border_strips(&mut self, wrapper: &mut Object, style: &ComputedStyle, line: Option<u32>) {
+        let b = &style.border;
+        let strips = [
+            ("top", &b.top, ["left", "right", "top"], "height"),
+            ("right", &b.right, ["top", "bottom", "right"], "width"),
+            ("bottom", &b.bottom, ["left", "right", "bottom"], "height"),
+            ("left", &b.left, ["top", "bottom", "left"], "width"),
+        ];
+        let mut any = false;
+        for (_, side, anchors, size) in strips {
+            if !is_visible(side) {
+                continue;
+            }
+            any = true;
+            let mut strip = Object::new("Rectangle");
+            for a in anchors {
+                strip.set(&format!("anchors.{a}"), Value::expr(format!("parent.{a}")));
+            }
+            strip.set(size, number(side.width));
+            strip.set("color", color(side.color));
+            wrapper.push_child(strip);
+        }
+        let r = &style.border_radius;
+        if any
+            && [&r.top_left, &r.top_right, &r.bottom_right, &r.bottom_left]
+                .iter()
+                .any(|c| !c.is_zero())
+        {
+            self.diags.info(
+                "css",
+                line,
+                "rounded corners with uneven borders: the borders are drawn square".to_owned(),
+            );
+        }
+    }
+}
+
+/// `expr + n`, or just `expr` when `n` is 0.
+fn plus(expr: &str, n: f32) -> String {
+    let n = round(n);
+    if n == 0.0 {
+        expr.to_owned()
+    } else {
+        format!("{expr} + {}", fmt_number(n))
+    }
+}
