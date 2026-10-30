@@ -173,6 +173,7 @@ ApplicationWindow {
                         radius: 8
                         implicitWidth: heroCaptionContent.implicitWidth + 40
                         implicitHeight: heroCaptionContent.implicitHeight + 32
+                        width: Math.min(implicitWidth, 480)
                         x: 32
                         anchors.bottom: parent.bottom
                         anchors.bottomMargin: 24

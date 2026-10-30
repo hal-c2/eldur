@@ -163,6 +163,22 @@ impl Emitter<'_, '_> {
         if let Size::Length(h) = &style.height {
             obj.set("height", size_value(h, extra_h));
         }
+        let both_sides =
+            !matches!(style.left, LengthAuto::Auto) && !matches!(style.right, LengthAuto::Auto);
+        if let (Size::Length(max), false, false) = (
+            &style.max_width,
+            matches!(style.width, Size::Length(_)),
+            both_sides,
+        ) && let Some(px) = max.as_px()
+        {
+            obj.set(
+                "width",
+                Value::expr(format!(
+                    "Math.min(implicitWidth, {})",
+                    fmt_number(round(px + extra_w))
+                )),
+            );
+        }
         let parent_border = &parent.border;
         place(
             &mut obj,

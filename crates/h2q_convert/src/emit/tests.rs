@@ -815,3 +815,12 @@ fn overlay_keeps_its_z_index() {
     ));
     assert!(qml.contains("z: 2"), "{qml}");
 }
+
+#[test]
+fn overlay_keeps_its_max_width() {
+    let (qml, _) = convert(&page(
+        "#p{position:relative} .a{position:absolute;left:0;bottom:0;max-width:480px}",
+        "<div id=p><div class=a>x</div></div>",
+    ));
+    assert!(qml.contains("width: Math.min(implicitWidth, 480)"), "{qml}");
+}
