@@ -764,3 +764,25 @@ fn atomic_shorthand_validation() {
     assert!(expand("margin", "10px inherit").is_err());
     assert!(expand("margin", "1px 2px 3px 4px").is_ok());
 }
+
+#[test]
+fn flex_unitless_zero_basis() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    let mut s = ComputedStyle::default();
+
+    apply_decl(&mut s, "flex", "1 1 0", &ctx).expect("flex: 1 1 0");
+    assert_eq!(s.flex_grow, 1.0);
+    assert_eq!(s.flex_shrink, 1.0);
+    assert_eq!(s.flex_basis, Size::Length(Length::px(0.0)));
+
+    apply_decl(&mut s, "flex", "0 0 0", &ctx).expect("flex: 0 0 0");
+    assert_eq!(s.flex_grow, 0.0);
+    assert_eq!(s.flex_shrink, 0.0);
+    assert_eq!(s.flex_basis, Size::Length(Length::px(0.0)));
+
+    apply_decl(&mut s, "flex", "1 0", &ctx).expect("flex: 1 0");
+    assert_eq!(s.flex_grow, 1.0);
+    assert_eq!(s.flex_shrink, 0.0);
+    assert_eq!(s.flex_basis, Size::Length(Length::px(0.0)));
+}
