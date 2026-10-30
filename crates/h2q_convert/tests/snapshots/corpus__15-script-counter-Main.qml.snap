@@ -6,6 +6,7 @@ expression: qml
 
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Effects
 import QtQuick.Layouts
 import "h2q_runtime.js" as H2Q
 import "page.js" as Page
@@ -68,6 +69,15 @@ ApplicationWindow {
                         Layout.preferredWidth: parent.width
                         Layout.maximumWidth: Math.min(parent.width, 520)
                         Layout.alignment: Qt.AlignTop
+
+                        RectangularShadow {
+                            anchors.fill: parent
+                            z: -1
+                            offset: Qt.vector2d(0, 10)
+                            blur: 38
+                            color: "#1f1f2430"
+                            radius: 16
+                        }
 
                         ColumnLayout {
                             id: widgetContent

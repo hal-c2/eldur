@@ -2,16 +2,9 @@
 source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-warning[css]: index.html:270: `box-shadow` is not converted yet
-warning[css]: index.html:274: `box-shadow` is not converted yet
-warning[css]: index.html:275: `box-shadow` is not converted yet
-warning[css]: index.html:276: `box-shadow` is not converted yet
-warning[css]: index.html:280: `box-shadow` is not converted yet
-warning[css]: index.html:291: `box-shadow` is not converted yet
-warning[css]: index.html:300: `box-shadow` is not converted yet
-warning[css]: index.html:306: `box-shadow` is not converted yet
-warning[css]: index.html:311: `box-shadow` is not converted yet
-warning[css]: index.html:317: `box-shadow` is not converted yet
+info[css]: index.html:274: inset `box-shadow` is not drawn
+info[css]: index.html:275: inset `box-shadow` is not drawn
+info[css]: index.html:276: inset `box-shadow` is not drawn
 info[qml]: index.html:320: <span class="stat-label">: font size 14px inside 16px text is approximated with <small>
 info[qml]: index.html:324: <span class="stat-label">: font size 14px inside 16px text is approximated with <small>
 info[qml]: index.html:328: <span class="stat-label">: font size 14px inside 16px text is approximated with <small>

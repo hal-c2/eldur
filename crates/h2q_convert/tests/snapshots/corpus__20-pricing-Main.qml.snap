@@ -6,6 +6,7 @@ expression: qml
 
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Effects
 import QtQuick.Layouts
 
 ApplicationWindow {
@@ -583,6 +584,15 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 0
                                 Layout.fillHeight: true
+
+                                RectangularShadow {
+                                    anchors.fill: parent
+                                    z: -1
+                                    offset: Qt.vector2d(0, 24)
+                                    blur: 59.6
+                                    color: "#2e2563eb"
+                                    radius: 20
+                                }
 
                                 ColumnLayout {
                                     id: planContent2

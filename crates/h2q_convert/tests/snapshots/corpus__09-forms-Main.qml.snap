@@ -6,6 +6,7 @@ expression: qml
 
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Effects
 import QtQuick.Layouts
 
 ApplicationWindow {
@@ -62,6 +63,15 @@ ApplicationWindow {
                         Layout.preferredWidth: parent.width
                         Layout.maximumWidth: Math.min(parent.width, 520)
                         Layout.alignment: Qt.AlignVCenter
+
+                        RectangularShadow {
+                            anchors.fill: parent
+                            z: -1
+                            offset: Qt.vector2d(0, 10)
+                            blur: 38
+                            color: "#1f141e3c"
+                            radius: 14
+                        }
 
                         ColumnLayout {
                             id: cardContent

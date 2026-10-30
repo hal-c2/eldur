@@ -2,11 +2,7 @@
 source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-warning[css]: index.html:211: `box-shadow` is not converted yet
-warning[css]: index.html:215: `box-shadow` is not converted yet
-warning[css]: index.html:219: `box-shadow` is not converted yet
 info[qml]: index.html:229: <a class="link"> is underlined: StyledText always underlines links
 info[qml]: index.html:230: <a class="link"> is underlined: StyledText always underlines links
 info[qml]: index.html:231: <a class="link"> is underlined: StyledText always underlines links
-warning[css]: index.html:236: `box-shadow` is not converted yet
 info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

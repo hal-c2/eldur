@@ -6,6 +6,7 @@ expression: qml
 
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Shapes
 
@@ -326,6 +327,24 @@ ApplicationWindow {
                                 Layout.preferredHeight: 130
                                 Layout.preferredWidth: 200
                                 Layout.alignment: Qt.AlignHCenter
+
+                                RectangularShadow {
+                                    anchors.fill: parent
+                                    z: -1
+                                    offset: Qt.vector2d(0, 8)
+                                    blur: 26
+                                    color: "#26000000"
+                                    radius: 12
+                                }
+
+                                RectangularShadow {
+                                    anchors.fill: parent
+                                    z: -1
+                                    offset: Qt.vector2d(0, 2)
+                                    blur: 6.8
+                                    color: "#1a000000"
+                                    radius: 12
+                                }
                             }
 
                             // <p class="caption">

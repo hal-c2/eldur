@@ -861,3 +861,60 @@ fn atomic_inlines_keep_their_margins_and_centre_in_the_line() {
     // The space between the boxes is a word of its own.
     assert!(flow.contains("text: \"\u{a0}\""), "{flow}");
 }
+
+#[test]
+fn box_shadows_are_rectangular_shadows_behind_the_box() {
+    let (qml, diags) = convert(&page(
+        ".s{background:#fff;border-radius:8px;\
+         box-shadow:0 4px 12px rgba(0,0,0,.25),0 0 0 2px #c7d2fe}",
+        "<div class=s>x</div>",
+    ));
+    let shadow = object_after(&qml, "<div class=\"s\">");
+    assert!(qml.contains("import QtQuick.Effects"), "{qml}");
+    let first = shadow.find("RectangularShadow").expect("shadow");
+    let last = shadow.rfind("RectangularShadow").expect("shadow");
+    assert_ne!(first, last, "{shadow}");
+    // The first shadow in CSS paints on top, so it comes last.
+    assert!(shadow[first..last].contains("spread: 2"), "{shadow}");
+    assert!(
+        shadow[last..].contains("offset: Qt.vector2d(0, 4)"),
+        "{shadow}"
+    );
+    // Qt's blur fades faster than CSS's: measured against Chromium.
+    assert!(shadow[last..].contains("blur: 16.4"), "{shadow}");
+    assert!(shadow[last..].contains("color: \"#40000000\""), "{shadow}");
+    assert!(shadow.contains("z: -1"), "{shadow}");
+    assert!(shadow.contains("radius: 8"), "{shadow}");
+    assert!(!diags.iter().any(|d| d.contains("box-shadow")), "{diags:?}");
+}
+
+#[test]
+fn inset_box_shadows_are_reported() {
+    let (qml, diags) = convert(&page(
+        ".s{box-shadow:inset 0 1px 2px #000}",
+        "<div class=s>x</div>",
+    ));
+    assert!(!qml.contains("RectangularShadow"), "{qml}");
+    assert!(diags.iter().any(|d| d.contains("inset")), "{diags:?}");
+}
+
+#[test]
+fn a_clipping_box_keeps_its_shadow_outside_the_clip() {
+    let (qml, _) = convert(&page(
+        ".s{background:#fff;overflow:hidden;box-shadow:0 2px 8px #000}",
+        "<div class=s>x</div>",
+    ));
+    let outer = object_after(&qml, "<div class=\"s\">");
+    assert_eq!(
+        outer.lines().nth(1).map(str::trim),
+        Some("Item {"),
+        "{outer}"
+    );
+    let shadow = outer.find("RectangularShadow").expect("shadow");
+    let clip = outer.find("clip: true").expect("clip");
+    assert!(shadow < clip, "{outer}");
+    assert!(
+        outer.contains("implicitHeight: sClip.implicitHeight"),
+        "{outer}"
+    );
+}

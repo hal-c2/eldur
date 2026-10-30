@@ -6,6 +6,7 @@ expression: qml
 
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Shapes
 
@@ -296,6 +297,15 @@ ApplicationWindow {
                         Layout.preferredWidth: 0
                         Layout.fillHeight: true
 
+                        RectangularShadow {
+                            anchors.fill: parent
+                            z: -1
+                            offset: Qt.vector2d(0, 6)
+                            blur: 23.6
+                            color: "#1f1c2233"
+                            radius: 12
+                        }
+
                         ColumnLayout {
                             id: cardContent
                             spacing: 0
@@ -388,6 +398,15 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Layout.preferredWidth: 0
                         Layout.fillHeight: true
+
+                        RectangularShadow {
+                            anchors.fill: parent
+                            z: -1
+                            offset: Qt.vector2d(0, 6)
+                            blur: 23.6
+                            color: "#1f1c2233"
+                            radius: 12
+                        }
 
                         ColumnLayout {
                             id: cardContent2
@@ -505,6 +524,15 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Layout.preferredWidth: 0
                         Layout.fillHeight: true
+
+                        RectangularShadow {
+                            anchors.fill: parent
+                            z: -1
+                            offset: Qt.vector2d(0, 6)
+                            blur: 23.6
+                            color: "#1f1c2233"
+                            radius: 12
+                        }
 
                         ColumnLayout {
                             id: tokensContent
@@ -751,6 +779,15 @@ ApplicationWindow {
                         Layout.preferredWidth: 0
                         Layout.fillHeight: true
 
+                        RectangularShadow {
+                            anchors.fill: parent
+                            z: -1
+                            offset: Qt.vector2d(0, 6)
+                            blur: 23.6
+                            color: "#1f1c2233"
+                            radius: 12
+                        }
+
                         ColumnLayout {
                             id: componentsContent
                             spacing: 0
@@ -843,6 +880,15 @@ ApplicationWindow {
                         Layout.preferredWidth: 0
                         Layout.fillHeight: true
 
+                        RectangularShadow {
+                            anchors.fill: parent
+                            z: -1
+                            offset: Qt.vector2d(0, 6)
+                            blur: 23.6
+                            color: "#1f1c2233"
+                            radius: 12
+                        }
+
                         ColumnLayout {
                             id: cardContent3
                             spacing: 0
@@ -901,6 +947,15 @@ ApplicationWindow {
                         Layout.preferredWidth: 0
                         Layout.fillHeight: true
 
+                        RectangularShadow {
+                            anchors.fill: parent
+                            z: -1
+                            offset: Qt.vector2d(0, 6)
+                            blur: 23.6
+                            color: "#1f1c2233"
+                            radius: 12
+                        }
+
                         ColumnLayout {
                             id: docsContent
                             spacing: 0
@@ -958,6 +1013,15 @@ ApplicationWindow {
                     Layout.preferredWidth: Math.max(0, parent.width - 32)
                     Layout.alignment: Qt.AlignHCenter
                     Layout.topMargin: 32
+
+                    RectangularShadow {
+                        anchors.fill: parent
+                        z: -1
+                        offset: Qt.vector2d(0, 6)
+                        blur: 23.6
+                        color: "#1f1c2233"
+                        radius: 12
+                    }
 
                     RowLayout {
                         id: statsContent

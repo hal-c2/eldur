@@ -5,7 +5,7 @@ expression: "diagnostics.join(\"\\n\")"
 info[css]: <style>#1:268: unknown property `accent-color`
 info[css]: <style>#1:309: unknown property `font-variant-numeric`
 info[html]: index.html:442: inline <progress> is laid out as a block (no inline replaced elements yet)
-warning[css]: index.html:357: `box-shadow` is not converted yet
+info[css]: index.html:357: inset `box-shadow` is not drawn
 info[qml]: index.html:408: unequal `fr` columns on <section class="row-2"> are split into 3 equal sub-columns; items are off by a fraction of the gap
 info[css]: index.html:413: percentage height on <div class="bar-fill w-82"> is treated as `auto`
 info[css]: index.html:418: percentage height on <div class="bar-fill w-64"> is treated as `auto`

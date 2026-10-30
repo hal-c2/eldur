@@ -6,6 +6,7 @@ expression: qml
 
 import QtQuick
 import QtQuick.Controls.Basic
+import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Shapes
 
@@ -52,6 +53,14 @@ ApplicationWindow {
                         implicitHeight: siteHeaderContent.implicitHeight
                         Layout.fillWidth: true
                         Layout.preferredHeight: 64
+
+                        RectangularShadow {
+                            anchors.fill: parent
+                            z: -1
+                            offset: Qt.vector2d(0, 1)
+                            blur: 0
+                            color: "#d9dee8"
+                        }
 
                         RowLayout {
                             id: siteHeaderContent
@@ -182,6 +191,15 @@ ApplicationWindow {
                                     Layout.preferredWidth: 340
                                     Layout.maximumWidth: 340
                                     Layout.alignment: Qt.AlignTop
+
+                                    RectangularShadow {
+                                        anchors.fill: parent
+                                        z: -1
+                                        offset: Qt.vector2d(0, 6)
+                                        blur: 23.6
+                                        color: "#14000000"
+                                        radius: 12
+                                    }
 
                                     ColumnLayout {
                                         id: cardContent
