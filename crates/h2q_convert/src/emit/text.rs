@@ -19,6 +19,11 @@ use crate::boxes::{Inline, Span, describe, node_line};
 /// fraction of the font size; used to centre glyphs in the line box.
 pub(super) const CONTENT_AREA: f32 = 1.15;
 
+/// Below this line height (as a fraction of the font size) a fallback
+/// font's own height may exceed the line: Liberation and DejaVu are
+/// 1.13–1.17 in Qt, so this leaves a margin for other families.
+const TIGHT_LINE: f32 = 1.25;
+
 /// What StyledText needs to know about the enclosing inline box.
 #[derive(Clone)]
 struct State {
@@ -163,6 +168,35 @@ impl Emitter<'_, '_> {
                 text.set(
                     "transform",
                     Value::Object(Box::new(Object::new("Translate").prop("y", shift))),
+                );
+            }
+            // Qt gives the last fixed-height line the font's own height when
+            // that is taller, where CSS keeps every line box `line-height`
+            // tall. The font's height is only known at run time, so a
+            // `FontMetrics` of the same font measures it; a binding on
+            // `contentHeight` instead would loop through the layout's width.
+            if lh < TIGHT_LINE * style.font_size {
+                let mut metrics = Object::new("FontMetrics");
+                for name in [
+                    "font.family",
+                    "font.pixelSize",
+                    "font.weight",
+                    "font.italic",
+                ] {
+                    if let Some(value) = text.get(name) {
+                        metrics.set(name, value.clone());
+                    }
+                }
+                text.members.push(Member::PropertyDecl {
+                    ty: "FontMetrics".to_owned(),
+                    name: "metrics".to_owned(),
+                    value: Some(Value::Object(Box::new(metrics))),
+                    readonly: true,
+                    required: false,
+                });
+                text.set(
+                    "bottomPadding",
+                    Value::expr("Math.min(0, lineHeight - Math.ceil(metrics.height))"),
                 );
             }
         }

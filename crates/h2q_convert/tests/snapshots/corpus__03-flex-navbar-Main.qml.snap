@@ -227,6 +227,12 @@ ApplicationWindow {
 
                                             Text {
                                                 id: btnText
+                                                readonly property FontMetrics metrics: FontMetrics {
+                                                    font.family: "sans-serif"
+                                                    font.pixelSize: 15
+                                                    font.weight: 500
+                                                }
+
                                                 text: "Sign up"
                                                 textFormat: Text.PlainText
                                                 color: "#3d4659"
@@ -235,6 +241,7 @@ ApplicationWindow {
                                                 font.weight: 500
                                                 lineHeight: 18
                                                 lineHeightMode: Text.FixedHeight
+                                                bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
                                                 wrapMode: Text.WordWrap
                                                 anchors.left: parent.left
                                                 anchors.right: parent.right
@@ -374,6 +381,12 @@ ApplicationWindow {
 
                             // <h1>
                             Text {
+                                readonly property FontMetrics metrics: FontMetrics {
+                                    font.family: "sans-serif"
+                                    font.pixelSize: 48
+                                    font.weight: 700
+                                }
+
                                 text: "See what your customers do, before they leave"
                                 textFormat: Text.PlainText
                                 color: "#111827"
@@ -383,6 +396,7 @@ ApplicationWindow {
                                 font.letterSpacing: -0.96
                                 lineHeight: 55.2
                                 lineHeightMode: Text.FixedHeight
+                                bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
@@ -437,6 +451,12 @@ ApplicationWindow {
 
                                     Text {
                                         id: btnText2
+                                        readonly property FontMetrics metrics: FontMetrics {
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 16
+                                            font.weight: 600
+                                        }
+
                                         text: "Start free trial"
                                         textFormat: Text.PlainText
                                         color: "#ffffff"
@@ -445,6 +465,7 @@ ApplicationWindow {
                                         font.weight: 600
                                         lineHeight: 19.2
                                         lineHeightMode: Text.FixedHeight
+                                        bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
                                         horizontalAlignment: Text.AlignHCenter
                                         wrapMode: Text.WordWrap
                                         anchors.left: parent.left
@@ -471,6 +492,12 @@ ApplicationWindow {
 
                                     Text {
                                         id: btnText3
+                                        readonly property FontMetrics metrics: FontMetrics {
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 16
+                                            font.weight: 600
+                                        }
+
                                         text: "Watch the demo"
                                         textFormat: Text.PlainText
                                         color: "#0b5cad"
@@ -479,6 +506,7 @@ ApplicationWindow {
                                         font.weight: 600
                                         lineHeight: 19.2
                                         lineHeightMode: Text.FixedHeight
+                                        bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
                                         horizontalAlignment: Text.AlignHCenter
                                         wrapMode: Text.WordWrap
                                         anchors.left: parent.left

@@ -1095,6 +1095,12 @@ ApplicationWindow {
 
                                 // <div>
                                 Text {
+                                    readonly property FontMetrics metrics: FontMetrics {
+                                        font.family: "Liberation Sans"
+                                        font.pixelSize: 28
+                                        font.weight: 700
+                                    }
+
                                     text: "42"
                                     textFormat: Text.PlainText
                                     color: "#1b2231"
@@ -1103,6 +1109,7 @@ ApplicationWindow {
                                     font.weight: 700
                                     lineHeight: 32
                                     lineHeightMode: Text.FixedHeight
+                                    bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                 }
@@ -1149,6 +1156,12 @@ ApplicationWindow {
 
                                 // <div>
                                 Text {
+                                    readonly property FontMetrics metrics: FontMetrics {
+                                        font.family: "Liberation Sans"
+                                        font.pixelSize: 28
+                                        font.weight: 700
+                                    }
+
                                     text: "7"
                                     textFormat: Text.PlainText
                                     color: "#1b2231"
@@ -1157,6 +1170,7 @@ ApplicationWindow {
                                     font.weight: 700
                                     lineHeight: 32
                                     lineHeightMode: Text.FixedHeight
+                                    bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                 }

@@ -992,3 +992,31 @@ fn fixed_box_leaves_the_flow_for_the_window() {
         "{diags:?}"
     );
 }
+
+#[test]
+fn tight_line_height_does_not_grow_the_last_line() {
+    // Chromium: `font: 96px/1` is 96px tall and `16px/1` two lines 32px.
+    // Qt gives the last fixed-height line the font's own height (108px and
+    // 18px), so the padding takes the difference back.
+    let (qml, _) = convert(&page(
+        ".d{margin:0;font:96px/1 sans-serif} .e{margin:0;font:16px/1.5 sans-serif}",
+        "<p class=d>0</p><p class=e>0</p>",
+    ));
+    let d = object_after(&qml, "<p class=\"d\">");
+    assert!(d.contains("lineHeight: 96"), "{d}");
+    assert!(
+        d.contains("bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))"),
+        "{d}"
+    );
+    // The metrics are of the Text's own font.
+    let metrics = d
+        .split("readonly property FontMetrics metrics: FontMetrics {")
+        .nth(1)
+        .and_then(|rest| rest.split('}').next())
+        .unwrap_or_else(|| panic!("no metrics in {d}"));
+    assert!(metrics.contains("font.family: \"sans-serif\""), "{d}");
+    assert!(metrics.contains("font.pixelSize: 96"), "{d}");
+    // A line taller than the font needs nothing.
+    let e = object_after(&qml, "<p class=\"e\">");
+    assert!(!e.contains("bottomPadding"), "{e}");
+}

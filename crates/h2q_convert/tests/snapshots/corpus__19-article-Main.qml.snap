@@ -244,6 +244,12 @@ ApplicationWindow {
 
                             // <h1>
                             Text {
+                                readonly property FontMetrics metrics: FontMetrics {
+                                    font.family: "sans-serif"
+                                    font.pixelSize: 44
+                                    font.weight: 700
+                                }
+
                                 text: "Why we stopped rewriting our build system every two years"
                                 textFormat: Text.PlainText
                                 color: "#1f1d1a"
@@ -253,6 +259,7 @@ ApplicationWindow {
                                 font.letterSpacing: -0.88
                                 lineHeight: 50.6
                                 lineHeightMode: Text.FixedHeight
+                                bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.topMargin: 16
