@@ -8,7 +8,6 @@ use std::collections::HashMap;
 use std::ops::Add;
 
 use h2q_dom::{Document, Element, NodeData, NodeId, ns};
-#[cfg(test)]
 use swc_common::{FileName, SourceMap, sync::Lrc};
 use swc_css_ast as ast;
 
@@ -859,7 +858,6 @@ pub(crate) fn is_supported_complex_selector(cs: &ast::ComplexSelector) -> bool {
 }
 
 /// Parses a CSS selector list string into a [`ConvertedSelectorList`].
-#[cfg(test)]
 pub(crate) fn parse_selector_list_str(selector_text: &str) -> ConvertedSelectorList {
     let wrapped = format!("{selector_text} {{}}");
     let cm: Lrc<SourceMap> = Lrc::default();

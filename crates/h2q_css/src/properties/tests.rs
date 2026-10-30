@@ -1124,3 +1124,59 @@ fn grid_shorthand_auto_flow_forms() {
 
     assert!(apply_decl(&mut s, "grid", "auto-flow / auto-flow", &ctx).is_err());
 }
+
+#[test]
+fn text_decoration_thickness_and_underline_offset_validation() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    let mut s = ComputedStyle::default();
+
+    // Valid text-underline-offset values: auto, length, percentage
+    for val in ["auto", "2px", "-0.1em", "0", "25%"] {
+        assert!(
+            apply_decl(&mut s, "text-underline-offset", val, &ctx).is_ok(),
+            "expected text-underline-offset: {val} to succeed"
+        );
+    }
+
+    // Valid text-decoration-thickness values: auto, from-font, length, percentage
+    for val in ["auto", "from-font", "2px", "0.1em", "0", "15%"] {
+        assert!(
+            apply_decl(&mut s, "text-decoration-thickness", val, &ctx).is_ok(),
+            "expected text-decoration-thickness: {val} to succeed"
+        );
+    }
+
+    // Valid values produce no diagnostic during stylesheet parsing and cascade
+    let doc = h2q_dom::Document::parse("<p>Text</p>");
+    let (sheet, parse_diags) = crate::Stylesheet::parse(
+        "p { text-underline-offset: 3px; text-decoration-thickness: from-font; }",
+        crate::Origin::Author,
+        "test.css",
+        None,
+    );
+    assert!(
+        parse_diags.is_empty(),
+        "unexpected parse diagnostics: {parse_diags:?}"
+    );
+    let map = crate::compute_styles(&doc, &[sheet], &vp);
+    assert!(
+        map.diagnostics.is_empty(),
+        "unexpected cascade diagnostics: {:?}",
+        map.diagnostics
+    );
+
+    // Invalid values such as 'red', 'from-font' on offset, or multi-token values are rejected
+    for val in ["red", "from-font", "none", "2px 4px"] {
+        assert!(
+            apply_decl(&mut s, "text-underline-offset", val, &ctx).is_err(),
+            "expected text-underline-offset: {val} to fail"
+        );
+    }
+    for val in ["red", "none", "2px 4px"] {
+        assert!(
+            apply_decl(&mut s, "text-decoration-thickness", val, &ctx).is_err(),
+            "expected text-decoration-thickness: {val} to fail"
+        );
+    }
+}
