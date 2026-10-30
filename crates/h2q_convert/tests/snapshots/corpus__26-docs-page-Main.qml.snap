@@ -770,17 +770,15 @@ ApplicationWindow {
 
                             // <p>
                             Text {
-                                text: "Tidewater reads its settings from <small>tidewater.toml</small> in the working directory. Every key can be overridden with an environment variable: <small>queue.url</small> becomes <small>TIDEWATER_QUEUE_URL</small>."
-                                textFormat: Text.StyledText
+                                text: "<div style=\"line-height:25.6px\">Tidewater reads its settings from <span style=\"font-size:14px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>tidewater.toml<span style=\"letter-spacing:5px\">&#8288;</span></span> in the working directory. Every key can be overridden with an environment variable: <span style=\"font-size:14px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>queue.url<span style=\"letter-spacing:5px\">&#8288;</span></span> becomes <span style=\"font-size:14px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>TIDEWATER_QUEUE_URL<span style=\"letter-spacing:5px\">&#8288;</span></span>.</div>"
+                                textFormat: Text.RichText
                                 color: "#24292f"
                                 font.family: "sans-serif"
                                 font.pixelSize: 16
-                                lineHeight: 25.6
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3.6
-                                }
                                 wrapMode: Text.WordWrap
+                                transform: Translate {
+                                    y: -3.6
+                                }
                                 Layout.fillWidth: true
                                 Layout.topMargin: 16
                             }
@@ -839,17 +837,15 @@ ApplicationWindow {
                                         }
 
                                         Text {
-                                            text: "Settings are read once at start-up. Send <small>SIGHUP</small> to reload them without dropping jobs."
-                                            textFormat: Text.StyledText
+                                            text: "<div style=\"line-height:25.6px\">Settings are read once at start-up. Send <span style=\"font-size:14px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>SIGHUP<span style=\"letter-spacing:5px\">&#8288;</span></span> to reload them without dropping jobs.</div>"
+                                            textFormat: Text.RichText
                                             color: "#24292f"
                                             font.family: "sans-serif"
                                             font.pixelSize: 16
-                                            lineHeight: 25.6
-                                            lineHeightMode: Text.FixedHeight
-                                            transform: Translate {
-                                                y: 3.6
-                                            }
                                             wrapMode: Text.WordWrap
+                                            transform: Translate {
+                                                y: -3.6
+                                            }
                                             Layout.fillWidth: true
                                             Layout.topMargin: 4
                                         }
@@ -1238,17 +1234,15 @@ ApplicationWindow {
 
                                         Text {
                                             id: tdText
-                                            text: "<small>queue.url</small>"
-                                            textFormat: Text.StyledText
+                                            text: "<div style=\"line-height:22.4px\"><span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>queue.url<span style=\"letter-spacing:5px\">&#8288;</span></span></div>"
+                                            textFormat: Text.RichText
                                             color: "#24292f"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
-                                            lineHeight: 22.4
-                                            lineHeightMode: Text.FixedHeight
-                                            transform: Translate {
-                                                y: 3.15
-                                            }
                                             wrapMode: Text.WordWrap
+                                            transform: Translate {
+                                                y: -3.15
+                                            }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
@@ -1396,17 +1390,15 @@ ApplicationWindow {
 
                                         Text {
                                             id: tdText4
-                                            text: "<small>worker.concurrency</small>"
-                                            textFormat: Text.StyledText
+                                            text: "<div style=\"line-height:22.4px\"><span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>worker.concurrency<span style=\"letter-spacing:5px\">&#8288;</span></span></div>"
+                                            textFormat: Text.RichText
                                             color: "#24292f"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
-                                            lineHeight: 22.4
-                                            lineHeightMode: Text.FixedHeight
-                                            transform: Translate {
-                                                y: 3.15
-                                            }
                                             wrapMode: Text.WordWrap
+                                            transform: Translate {
+                                                y: -3.15
+                                            }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
@@ -1446,17 +1438,15 @@ ApplicationWindow {
 
                                         Text {
                                             id: tdText5
-                                            text: "<small>1</small>"
-                                            textFormat: Text.StyledText
+                                            text: "<div style=\"line-height:22.4px\"><span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>1<span style=\"letter-spacing:5px\">&#8288;</span></span></div>"
+                                            textFormat: Text.RichText
                                             color: "#24292f"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
-                                            lineHeight: 22.4
-                                            lineHeightMode: Text.FixedHeight
-                                            transform: Translate {
-                                                y: 3.15
-                                            }
                                             wrapMode: Text.WordWrap
+                                            transform: Translate {
+                                                y: -3.15
+                                            }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
@@ -1554,17 +1544,15 @@ ApplicationWindow {
 
                                         Text {
                                             id: tdText7
-                                            text: "<small>worker.max_attempts</small>"
-                                            textFormat: Text.StyledText
+                                            text: "<div style=\"line-height:22.4px\"><span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>worker.max_attempts<span style=\"letter-spacing:5px\">&#8288;</span></span></div>"
+                                            textFormat: Text.RichText
                                             color: "#24292f"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
-                                            lineHeight: 22.4
-                                            lineHeightMode: Text.FixedHeight
-                                            transform: Translate {
-                                                y: 3.15
-                                            }
                                             wrapMode: Text.WordWrap
+                                            transform: Translate {
+                                                y: -3.15
+                                            }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
@@ -1604,17 +1592,15 @@ ApplicationWindow {
 
                                         Text {
                                             id: tdText8
-                                            text: "<small>3</small>"
-                                            textFormat: Text.StyledText
+                                            text: "<div style=\"line-height:22.4px\"><span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>3<span style=\"letter-spacing:5px\">&#8288;</span></span></div>"
+                                            textFormat: Text.RichText
                                             color: "#24292f"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
-                                            lineHeight: 22.4
-                                            lineHeightMode: Text.FixedHeight
-                                            transform: Translate {
-                                                y: 3.15
-                                            }
                                             wrapMode: Text.WordWrap
+                                            transform: Translate {
+                                                y: -3.15
+                                            }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
@@ -1720,17 +1706,15 @@ ApplicationWindow {
 
                                         Text {
                                             id: tdText10
-                                            text: "<small>log.level</small>"
-                                            textFormat: Text.StyledText
+                                            text: "<div style=\"line-height:22.4px\"><span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>log.level<span style=\"letter-spacing:5px\">&#8288;</span></span></div>"
+                                            textFormat: Text.RichText
                                             color: "#24292f"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
-                                            lineHeight: 22.4
-                                            lineHeightMode: Text.FixedHeight
-                                            transform: Translate {
-                                                y: 3.15
-                                            }
                                             wrapMode: Text.WordWrap
+                                            transform: Translate {
+                                                y: -3.15
+                                            }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
@@ -1778,17 +1762,15 @@ ApplicationWindow {
 
                                         Text {
                                             id: tdText11
-                                            text: "<small>\"info\"</small>"
-                                            textFormat: Text.StyledText
+                                            text: "<div style=\"line-height:22.4px\"><span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>\"info\"<span style=\"letter-spacing:5px\">&#8288;</span></span></div>"
+                                            textFormat: Text.RichText
                                             color: "#24292f"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
-                                            lineHeight: 22.4
-                                            lineHeightMode: Text.FixedHeight
-                                            transform: Translate {
-                                                y: 3.15
-                                            }
                                             wrapMode: Text.WordWrap
+                                            transform: Translate {
+                                                y: -3.15
+                                            }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
@@ -1814,17 +1796,15 @@ ApplicationWindow {
 
                                         Text {
                                             id: tdText12
-                                            text: "One of <small>debug</small>, <small>info</small>, <small>warn</small> or <small>error</small>."
-                                            textFormat: Text.StyledText
+                                            text: "<div style=\"line-height:22.4px\">One of <span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>debug<span style=\"letter-spacing:5px\">&#8288;</span></span>, <span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>info<span style=\"letter-spacing:5px\">&#8288;</span></span>, <span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>warn<span style=\"letter-spacing:5px\">&#8288;</span></span> or <span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>error<span style=\"letter-spacing:5px\">&#8288;</span></span>.</div>"
+                                            textFormat: Text.RichText
                                             color: "#24292f"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
-                                            lineHeight: 22.4
-                                            lineHeightMode: Text.FixedHeight
-                                            transform: Translate {
-                                                y: 3.15
-                                            }
                                             wrapMode: Text.WordWrap
+                                            transform: Translate {
+                                                y: -3.15
+                                            }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top

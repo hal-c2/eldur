@@ -1,8 +1,10 @@
 //! An inline formatting context → one `Text` (layout.md §2).
 //!
 //! The block's own font and colour go on the `Text`; inline boxes that
-//! differ from their parent become StyledText tags. What StyledText cannot
-//! draw (inline backgrounds, other font families, `sub`/`sup`) is reported.
+//! differ from their parent become StyledText tags. StyledText has no
+//! other font families, inline backgrounds or padding, so a text with such
+//! a run (inline `<code>`) is RichText, with the line height on its block
+//! since RichText ignores `lineHeight`. What neither draws is reported.
 //! QML has no inheritance, so every value the block needs is written out.
 
 use h2q_css::{
@@ -42,6 +44,8 @@ struct Markup {
     plain: String,
     /// Tags were needed.
     rich: bool,
+    /// The tags are RichText's HTML rather than StyledText's.
+    html: bool,
     /// Preserved spaces must survive StyledText's own collapsing.
     preserve: bool,
     prev_space: bool,
@@ -76,6 +80,7 @@ impl Emitter<'_, '_> {
             styled: String::new(),
             plain: String::new(),
             rich: false,
+            html: needs_html(items, &state.family),
             preserve: !matches!(style.white_space, WhiteSpace::Normal | WhiteSpace::NoWrap),
             prev_space: true,
             link_colors: Vec::new(),
@@ -90,7 +95,18 @@ impl Emitter<'_, '_> {
         self.markup(items, &state, &mut markup);
         let fragments = markup.styled.contains("<a href=\"#");
 
-        if markup.rich {
+        if markup.html {
+            let styled = match line_height(style) {
+                Some(lh) => format!(
+                    "<div style=\"line-height:{}px\">{}</div>",
+                    super::units::fmt_number(round(lh)),
+                    markup.styled
+                ),
+                None => markup.styled,
+            };
+            text.set("text", Value::String(styled));
+            text.set("textFormat", Value::expr("Text.RichText"));
+        } else if markup.rich {
             text.set("text", Value::String(markup.styled));
             text.set("textFormat", Value::expr("Text.StyledText"));
         } else {
@@ -98,9 +114,32 @@ impl Emitter<'_, '_> {
             text.set("textFormat", Value::expr("Text.PlainText"));
         }
         self.font(&mut text, style, decoration, line);
+        if markup.html {
+            // A `lineHeight` on the Text replaces the block's in RichText.
+            text.members.retain(|m| {
+                !matches!(m, Member::Property { name, .. }
+                    if name == "lineHeight" || name == "lineHeightMode")
+            });
+            // RichText puts a fixed line's leading above the glyphs, where
+            // `lineHeight` puts it below: the half-leading is moved up.
+            if let Some(lh) = line_height(style) {
+                let shift = round((lh - CONTENT_AREA * style.font_size) / 2.0);
+                text.members
+                    .retain(|m| !matches!(m, Member::Property { name, .. } if name == "transform"));
+                if shift.abs() >= 0.5 {
+                    text.set(
+                        "transform",
+                        Value::Object(Box::new(Object::new("Translate").prop("y", -shift))),
+                    );
+                }
+            }
+        }
         if let Some(&link) = markup.link_colors.first() {
-            text.set("linkColor", color(link));
-            if markup.link_colors.iter().any(|&c| c != link) {
+            // RichText colours each link itself.
+            if !markup.html {
+                text.set("linkColor", color(link));
+            }
+            if !markup.html && markup.link_colors.iter().any(|&c| c != link) {
                 self.diags.info(
                     "qml",
                     line,
@@ -175,12 +214,7 @@ impl Emitter<'_, '_> {
         if decoration.overline {
             text.set("font.overline", true);
         }
-        let line_height = match style.line_height {
-            LineHeight::Normal => None,
-            LineHeight::Number(n) => Some(n * style.font_size),
-            LineHeight::Px(px) => Some(px),
-        };
-        if let Some(lh) = line_height {
+        if let Some(lh) = line_height(style) {
             text.set("lineHeight", number(lh));
             text.set("lineHeightMode", Value::expr("Text.FixedHeight"));
             // CSS centres the glyphs in the line box (half-leading); a fixed
@@ -282,6 +316,22 @@ impl Emitter<'_, '_> {
         if let Some(href) = href
             && !parent.in_link
             && !bare
+            && m.html
+        {
+            // RichText would draw a link blue and underlined.
+            tag(
+                &mut open,
+                format!(
+                    "<a href=\"{}\" style=\"color:{};text-decoration:none\">",
+                    escape_attr(href),
+                    css_color(style.color)
+                ),
+                "</a>",
+            );
+            m.link_colors.push(style.color);
+        } else if let Some(href) = href
+            && !parent.in_link
+            && !bare
         {
             tag(
                 &mut open,
@@ -344,7 +394,12 @@ impl Emitter<'_, '_> {
             tag(&mut open, format!("<font color=\"{c}\">"), "</font>");
         }
         state.color = style.color;
-        if (style.font_size - parent.font_size).abs() > 0.5 {
+        let mut css = Vec::<String>::new();
+        if m.html && (style.font_size - parent.font_size).abs() > 0.5 {
+            // Whole pixels, as `font.pixelSize`.
+            css.push(format!("font-size:{}px", style.font_size.round().max(1.0)));
+            state.font_size = style.font_size;
+        } else if (style.font_size - parent.font_size).abs() > 0.5 {
             let ratio = style.font_size / parent.font_size.max(1.0);
             if ratio < 1.0 {
                 tag(&mut open, "<small>".to_owned(), "</small>");
@@ -364,7 +419,10 @@ impl Emitter<'_, '_> {
             state.font_size = style.font_size;
         }
         let family = font_family(&style.font_family);
-        if family != parent.family {
+        if m.html && family != parent.family {
+            css.push(format!("font-family:'{}'", family.replace(['\'', '"'], "")));
+            state.family = family;
+        } else if family != parent.family {
             self.diags.info(
                 "qml",
                 line,
@@ -374,7 +432,15 @@ impl Emitter<'_, '_> {
                 ),
             );
         }
-        if !style.background_color.is_transparent() || !style.background_layers.is_empty() {
+        if m.html && !style.background_color.is_transparent() {
+            css.push(format!(
+                "background-color:{}",
+                css_color(style.background_color)
+            ));
+        }
+        if !style.background_layers.is_empty()
+            || (!m.html && !style.background_color.is_transparent())
+        {
             self.diags.info(
                 "qml",
                 line,
@@ -403,7 +469,44 @@ impl Emitter<'_, '_> {
         ]
         .iter()
         .any(|p| p.as_px() != Some(0.0));
-        if boxed || padded {
+        let (lead, trail) = (
+            inline_space(style, Side::Left),
+            inline_space(style, Side::Right),
+        );
+        let rounded = {
+            let r = &style.border_radius;
+            [&r.top_left, &r.top_right, &r.bottom_right, &r.bottom_left]
+                .iter()
+                .any(|c| !c.is_zero())
+        };
+        if m.html {
+            // The space padding and borders take on the line, as a zero-width
+            // joiner widened by `letter-spacing`, inside the background.
+            if boxed {
+                self.diags.info(
+                    "qml",
+                    line,
+                    format!("{what}: inline borders take their space but are not drawn"),
+                );
+            }
+            if rounded && !style.background_color.is_transparent() {
+                self.diags.info(
+                    "qml",
+                    line,
+                    format!("{what}: an inline background has square corners"),
+                );
+            }
+            if [&style.padding.left, &style.padding.right]
+                .iter()
+                .any(|p| p.as_px().is_none())
+            {
+                self.diags.info(
+                    "qml",
+                    line,
+                    format!("{what}: percentage inline padding is not converted"),
+                );
+            }
+        } else if boxed || padded {
             self.diags.info(
                 "qml",
                 line,
@@ -418,13 +521,23 @@ impl Emitter<'_, '_> {
             );
         }
 
+        if !css.is_empty() {
+            open.push(format!("<span style=\"{}\">", css.join(";")));
+            close.push("</span>");
+        }
         if !open.is_empty() {
             m.rich = true;
         }
         for o in &open {
             m.styled.push_str(o);
         }
+        if m.html && lead > 0.0 {
+            push_space(m, lead);
+        }
         self.markup(&span.children, &state, m);
+        if m.html && trail > 0.0 {
+            push_space(m, trail);
+        }
         for c in close.iter().rev() {
             m.styled.push_str(c);
         }
@@ -444,6 +557,78 @@ fn push_text(m: &mut Markup, text: &str) {
             _ => m.styled.push(c),
         }
         m.prev_space = c == ' ';
+    }
+}
+
+/// `px` of horizontal space that cannot start or end a line.
+fn push_space(m: &mut Markup, px: f32) {
+    m.rich = true;
+    m.styled.push_str(&format!(
+        "<span style=\"letter-spacing:{}px\">&#8288;</span>",
+        super::units::fmt_number(round(px))
+    ));
+}
+
+#[derive(Clone, Copy)]
+enum Side {
+    Left,
+    Right,
+}
+
+/// The padding and border width on one side of an inline box.
+fn inline_space(style: &ComputedStyle, side: Side) -> f32 {
+    let (padding, border) = match side {
+        Side::Left => (&style.padding.left, &style.border.left),
+        Side::Right => (&style.padding.right, &style.border.right),
+    };
+    let border = if matches!(
+        border.style,
+        h2q_css::BorderStyle::None | h2q_css::BorderStyle::Hidden
+    ) {
+        0.0
+    } else {
+        border.width
+    };
+    padding.as_px().unwrap_or(0.0).max(0.0) + border
+}
+
+/// Whether a run in `items` needs RichText: another font family, a
+/// background colour, or horizontal padding or borders.
+fn needs_html(items: &[Inline<'_>], family: &str) -> bool {
+    items.iter().any(|item| match item {
+        Inline::Span(span) => {
+            let style = span.style;
+            let own = font_family(&style.font_family);
+            own != family
+                || !style.background_color.is_transparent()
+                || inline_space(style, Side::Left) > 0.0
+                || inline_space(style, Side::Right) > 0.0
+                || needs_html(&span.children, &own)
+        }
+        _ => false,
+    })
+}
+
+fn line_height(style: &ComputedStyle) -> Option<f32> {
+    match style.line_height {
+        LineHeight::Normal => None,
+        LineHeight::Number(n) => Some(n * style.font_size),
+        LineHeight::Px(px) => Some(px),
+    }
+}
+
+/// A colour as RichText's CSS reads it.
+fn css_color(c: Rgba) -> String {
+    if c.a == 255 {
+        format!("#{:02x}{:02x}{:02x}", c.r, c.g, c.b)
+    } else {
+        format!(
+            "rgba({},{},{},{})",
+            c.r,
+            c.g,
+            c.b,
+            super::units::fmt_number(f64::from(c.a) / 255.0)
+        )
     }
 }
 

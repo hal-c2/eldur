@@ -260,17 +260,15 @@ ApplicationWindow {
 
                                 // <p>
                                 Text {
-                                    text: "The outer padding is set in pixels. The box below uses padding: 1em 1.5em and a slightly smaller font, so its spacing scales with its own text."
-                                    textFormat: Text.PlainText
+                                    text: "<div style=\"line-height:24px\">The outer padding is set in pixels. The box below uses <span style=\"font-family:'monospace'\">padding: 1em 1.5em</span> and a slightly smaller font, so its spacing scales with its own text.</div>"
+                                    textFormat: Text.RichText
                                     color: "#1f2430"
                                     font.family: "sans-serif"
                                     font.pixelSize: 16
-                                    lineHeight: 24
-                                    lineHeightMode: Text.FixedHeight
-                                    transform: Translate {
-                                        y: 2.8
-                                    }
                                     wrapMode: Text.WordWrap
+                                    transform: Translate {
+                                        y: -2.8
+                                    }
                                     Layout.fillWidth: true
                                     Layout.topMargin: 10
                                 }
@@ -478,17 +476,15 @@ ApplicationWindow {
 
                                     Text {
                                         id: fixedBoxText
-                                        text: "A 480 pixel box with margin: 0 auto centres itself in the page wrapper, so the free space is split equally on both sides."
-                                        textFormat: Text.PlainText
+                                        text: "<div style=\"line-height:24px\">A 480 pixel box with <span style=\"font-family:'monospace'\">margin: 0 auto</span> centres itself in the page wrapper, so the free space is split equally on both sides.</div>"
+                                        textFormat: Text.RichText
                                         color: "#1f2430"
                                         font.family: "sans-serif"
                                         font.pixelSize: 16
-                                        lineHeight: 24
-                                        lineHeightMode: Text.FixedHeight
-                                        transform: Translate {
-                                            y: 2.8
-                                        }
                                         wrapMode: Text.WordWrap
+                                        transform: Translate {
+                                            y: -2.8
+                                        }
                                         anchors.left: parent.left
                                         anchors.right: parent.right
                                         anchors.top: parent.top

@@ -3,8 +3,4 @@ source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
 warning[css]: <style>#1:108: unsupported pseudo-element `::first-letter`
-info[qml]: index.html:273: <code>: font size 16.15px inside 19px text is approximated with <small>
-info[qml]: index.html:273: <code>: font family `monospace` inside `serif` text is not converted
-info[qml]: index.html:273: <code>: inline background is not converted
-info[qml]: index.html:273: <code>: inline padding and borders are not converted
-info[qml]: index.html:289: <strong>: font family `sans-serif` inside `serif` text is not converted
+info[qml]: index.html:273: <code>: an inline background has square corners
