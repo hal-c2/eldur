@@ -255,6 +255,12 @@ impl Emitter<'_, '_> {
                     stops,
                     repeating,
                 } => Fill::Linear(*angle_deg, stops, *repeating),
+                Image::LinearGradientToCorner {
+                    right,
+                    bottom,
+                    stops,
+                    repeating,
+                } => Fill::Corner(*right, *bottom, stops, *repeating),
                 Image::RadialGradient {
                     circle,
                     center_x,
@@ -271,14 +277,12 @@ impl Emitter<'_, '_> {
                     }
                     Fill::Radial(*circle, center_x, center_y, stops)
                 }
-                Image::ConicGradient { .. } => {
-                    self.diags.warning(
-                        "css",
-                        line,
-                        "`conic-gradient()` backgrounds are not converted yet".to_owned(),
-                    );
-                    continue;
-                }
+                Image::ConicGradient {
+                    from_deg,
+                    center_x,
+                    center_y,
+                    stops,
+                } => Fill::Conic(*from_deg, center_x, center_y, stops),
                 Image::Url(url) => {
                     self.diags.warning(
                         "css",
@@ -302,6 +306,14 @@ impl Emitter<'_, '_> {
             match fill {
                 Fill::Linear(angle, stops, repeating) => {
                     let g = self.linear(&id, angle, stops, repeating);
+                    path.set("fillGradient", Value::Object(Box::new(g)));
+                }
+                Fill::Corner(right, bottom, stops, repeating) => {
+                    let g = self.linear_to_corner(&id, (right, bottom), stops, repeating);
+                    path.set("fillGradient", Value::Object(Box::new(g)));
+                }
+                Fill::Conic(from, cx, cy, stops) => {
+                    let g = self.conic(&id, from, cx, cy, stops);
                     path.set("fillGradient", Value::Object(Box::new(g)));
                 }
                 Fill::Radial(circle, cx, cy, stops) => {
@@ -370,6 +382,137 @@ impl Emitter<'_, '_> {
         g
     }
 
+    /// `linear-gradient(to <corner>, …)`: the gradient line is
+    /// perpendicular to the diagonal between the other two corners, so its
+    /// angle follows the box's aspect ratio (CSS Images 3 §3.1.1). With
+    /// `w`, `h` the box and `d = hypot(w, h)`, its direction is
+    /// `(±h, ±w) / d` and its length `2wh / d`.
+    fn linear_to_corner(
+        &self,
+        id: &str,
+        (right, bottom): (bool, bool),
+        stops: &[ColorStop],
+        repeating: bool,
+    ) -> Object {
+        let positions = fixup_stops(stops, self.viewport());
+        let first = positions.first().copied().unwrap_or_default();
+        let mut last = positions.last().copied().unwrap_or_default();
+        if last == first {
+            // All stops at one place: a hard edge there.
+            last.px += 0.01;
+        }
+        let (w, h) = (format!("{id}.width"), format!("{id}.height"));
+        let len = format!("(2 * {w} * {h} / Math.max(1, Math.hypot({w}, {h})))");
+        // The point `p` along the line, as `x` or `y`: `size` is the box's
+        // side on that axis, `other` the other side.
+        let coord = |p: StopPos, sign: f64, size: &str, other: &str| {
+            let mut out = format!("{size} / 2");
+            let f = round4(2.0 * p.frac - 1.0) * sign;
+            if f != 0.0 {
+                out.push_str(&format!(
+                    " {} {size} * {other} * {other} * {} / Math.max(1, {w} * {w} + {h} * {h})",
+                    if f < 0.0 { "-" } else { "+" },
+                    fmt_number(f.abs())
+                ));
+            }
+            let k = round4(p.px) * sign;
+            if k != 0.0 {
+                out.push_str(&format!(
+                    " {} {other} * {} / Math.max(1, Math.hypot({w}, {h}))",
+                    if k < 0.0 { "-" } else { "+" },
+                    fmt_number(k.abs())
+                ));
+            }
+            Value::expr(out)
+        };
+        let sx = if right { 1.0 } else { -1.0 };
+        let sy = if bottom { 1.0 } else { -1.0 };
+        let mut g = Object::new("LinearGradient");
+        g.set("x1", coord(first, sx, &w, &h));
+        g.set("y1", coord(first, sy, &h, &w));
+        g.set("x2", coord(last, sx, &w, &h));
+        g.set("y2", coord(last, sy, &h, &w));
+        if repeating {
+            g.set("spread", Value::expr("ShapeGradient.RepeatSpread"));
+        }
+        // A stop's distance along the line, as `px + frac * len`.
+        let along = |p: StopPos| Lin {
+            w: p.frac,
+            h: 0.0,
+            k: p.px,
+        };
+        let span = along(last).sub(along(first));
+        let mut values = Vec::with_capacity(stops.len());
+        for p in &positions {
+            let offset = along(*p).sub(along(first));
+            values.push(match offset.ratio_to(span) {
+                Some(t) => Value::Number(round4(t.clamp(0.0, 1.0))),
+                None if offset.is_zero() => Value::Number(0.0),
+                None => {
+                    let on = |l: Lin| {
+                        format!(
+                            "{} + {} * {len}",
+                            fmt_number(round4(l.k)),
+                            fmt_number(round4(l.w))
+                        )
+                    };
+                    Value::expr(format!(
+                        "Math.max(0, Math.min(1, ({}) / ({})))",
+                        on(offset),
+                        on(span)
+                    ))
+                }
+            });
+        }
+        separate(&mut values);
+        for (stop, position) in stops.iter().zip(values) {
+            g.push_child(gradient_stop(position, stop));
+        }
+        g
+    }
+
+    /// `conic-gradient()` as a `ConicalGradient`. CSS starts at 12 o'clock
+    /// and turns clockwise; Qt starts at 3 o'clock and turns
+    /// anticlockwise, so the start angle is `90 - from` and the stops are
+    /// mirrored, `1 - position`.
+    fn conic(
+        &self,
+        id: &str,
+        from: f32,
+        cx: &LengthPercentage,
+        cy: &LengthPercentage,
+        stops: &[ColorStop],
+    ) -> Object {
+        let (x, y) = self.centre(cx, cy);
+        let mut g = Object::new("ConicalGradient");
+        g.set("centerX", x.value(id));
+        g.set("centerY", y.value(id));
+        let angle = (90.0 - f64::from(from)).rem_euclid(360.0);
+        g.set("angle", Value::Number(round4(angle)));
+        let positions = fixup_stops(stops, self.viewport());
+        let mut values: Vec<Value> = positions
+            .iter()
+            .rev()
+            .map(|p| Value::Number(round4(1.0 - p.frac.clamp(0.0, 1.0))))
+            .collect();
+        separate(&mut values);
+        for (stop, position) in stops.iter().rev().zip(values) {
+            g.push_child(gradient_stop(position, stop));
+        }
+        g
+    }
+
+    /// A gradient's centre on the box, from `at <position>`.
+    fn centre(&self, cx: &LengthPercentage, cy: &LengthPercentage) -> (Lin, Lin) {
+        let (vw, vh) = self.viewport();
+        let axis = |l: &LengthPercentage, w: f64, h: f64| Lin {
+            w: f64::from(l.percent) / 100.0 * w,
+            h: f64::from(l.percent) / 100.0 * h,
+            k: f64::from(l.px + l.vw * vw / 100.0 + l.vh * vh / 100.0),
+        };
+        (axis(cx, 1.0, 0.0), axis(cy, 0.0, 1.0))
+    }
+
     /// A radial gradient sized `farthest-corner` (the only size the style
     /// keeps); an ellipse is a circle scaled by `fillTransform`.
     fn radial(
@@ -382,13 +525,7 @@ impl Emitter<'_, '_> {
         line: Option<u32>,
     ) -> (Object, Option<String>) {
         let (vw, vh) = self.viewport();
-        let axis = |l: &LengthPercentage, w: f64, h: f64| Lin {
-            w: f64::from(l.percent) / 100.0 * w,
-            h: f64::from(l.percent) / 100.0 * h,
-            k: f64::from(l.px + l.vw * vw / 100.0 + l.vh * vh / 100.0),
-        };
-        let x = axis(cx, 1.0, 0.0);
-        let y = axis(cy, 0.0, 1.0);
+        let (x, y) = self.centre(cx, cy);
         let full_w = Lin {
             w: 1.0,
             ..Lin::default()
@@ -464,6 +601,14 @@ impl Emitter<'_, '_> {
 
 enum Fill<'s> {
     Linear(f32, &'s [ColorStop], bool),
+    /// To a corner: right?, bottom?.
+    Corner(bool, bool, &'s [ColorStop], bool),
+    Conic(
+        f32,
+        &'s LengthPercentage,
+        &'s LengthPercentage,
+        &'s [ColorStop],
+    ),
     Radial(
         bool,
         &'s LengthPercentage,
