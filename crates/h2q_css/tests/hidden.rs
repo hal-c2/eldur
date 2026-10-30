@@ -63,11 +63,9 @@ fn hidden_attribute_is_display_none_with_computed_style() {
     let (doc, styles) = styles();
     let p = doc.element_by_id("attr").expect("attr");
     assert!(styles.get(p).is_none());
-    assert_eq!(styles.computed(p).unwrap().style.display, Display::None);
-    assert_eq!(
-        styles.computed(p).unwrap().style.color,
-        Rgba::new(0, 0, 255, 255)
-    );
+    let computed = styles.computed(p).expect("computed style of [hidden]");
+    assert_eq!(computed.style.display, Display::None);
+    assert_eq!(computed.style.color, Rgba::new(0, 0, 255, 255));
 }
 
 #[test]
