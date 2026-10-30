@@ -1696,12 +1696,11 @@ fn prescan_on_prop_assignments(
                         };
                         if let Some((obj, prop)) = member_pair
                             && let Some(ev) = known_dom_event_from_on_prop(&prop)
-                            && let Some(query) = bindings.resolve_expr(obj)
                             && let Some(target) =
-                                crate::lower::resolve_query_to_single_target(&query, resolver)
+                                resolve_target_for_prescan(obj, scoping, &bindings, resolver, None)
                         {
                             *top_static_counts
-                                .entry((target.qml_id, ev.to_string()))
+                                .entry((target.qml_id.clone(), ev.to_string()))
                                 .or_insert(0) += 1;
                         }
                     }
@@ -1718,9 +1717,13 @@ fn prescan_on_prop_assignments(
                         && let Some(cb) = call.arguments.get(1).and_then(|a| a.as_expression())
                         && is_hoistable_callback_expr(cb)
                         && options_arg_is_pure_or_absent(call.arguments.get(2))
-                        && let Some(query) = bindings.resolve_expr(&member.object)
-                        && let Some(target) =
-                            crate::lower::resolve_query_to_single_target(&query, resolver)
+                        && let Some(target) = resolve_target_for_prescan(
+                            &member.object,
+                            scoping,
+                            &bindings,
+                            resolver,
+                            None,
+                        )
                     {
                         *top_static_listener_counts
                             .entry((target.qml_id, ev))
@@ -1731,6 +1734,7 @@ fn prescan_on_prop_assignments(
         }
 
         let mut scanner = OnPropScanner {
+            scoping,
             bindings: &bindings,
             resolver,
             this_stack: vec![root_this],
@@ -1742,10 +1746,16 @@ fn prescan_on_prop_assignments(
         scanner.visit_program(&v.parsed.program);
     }
 
-    for (key, total) in total_counts {
-        let top_single = top_static_counts.get(&key).copied().unwrap_or(0);
-        if total != 1 || top_single != 1 {
-            shared.dynamic_on_props.insert(key);
+    for (key, &total) in &total_counts {
+        let top_single = top_static_counts.get(key).copied().unwrap_or(0);
+        let needs_dynamic_event_path = total_listener_counts.contains_key(key)
+            || dynamic_listener_ops.contains(key)
+            || targets_with_dispatch.contains(&key.0);
+        if total != 1 || top_single != 1 || needs_dynamic_event_path {
+            shared.dynamic_on_props.insert(key.clone());
+        }
+        if needs_dynamic_event_path {
+            shared.dynamic_listener_events.insert(key.clone());
         }
     }
 
@@ -1753,6 +1763,7 @@ fn prescan_on_prop_assignments(
         let top_single = top_static_listener_counts.get(&key).copied().unwrap_or(0);
         if total != 1
             || top_single != 1
+            || total_counts.contains_key(&key)
             || dynamic_listener_ops.contains(&key)
             || targets_with_dispatch.contains(&key.0)
         {
@@ -1764,7 +1775,44 @@ fn prescan_on_prop_assignments(
     }
 }
 
+fn resolve_target_for_prescan(
+    expr: &Expression<'_>,
+    scoping: &Scoping,
+    bindings: &ScriptQueryBindings<'_>,
+    resolver: &dyn DomResolver,
+    current_this: Option<&QmlTarget>,
+) -> Option<QmlTarget> {
+    let e = unwrap_parens(expr);
+    if matches!(e, Expression::ThisExpression(_)) {
+        return current_this.cloned();
+    }
+    if let Some(query) = bindings.resolve_expr(e) {
+        return crate::lower::resolve_query_to_single_target(&query, resolver);
+    }
+    if let Expression::StaticMemberExpression(member) = e
+        && is_global_document(&member.object, scoping)
+    {
+        match member.property.name.as_str() {
+            "body" => {
+                return resolver
+                    .resolve(&crate::DomQuery::Selector("body".to_string()))
+                    .into_iter()
+                    .next();
+            }
+            "documentElement" => {
+                return resolver
+                    .resolve(&crate::DomQuery::Selector("html".to_string()))
+                    .into_iter()
+                    .next();
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
 struct OnPropScanner<'a, 'b> {
+    scoping: &'b Scoping,
     bindings: &'b ScriptQueryBindings<'a>,
     resolver: &'b dyn DomResolver,
     this_stack: Vec<Option<QmlTarget>>,
@@ -1776,12 +1824,13 @@ struct OnPropScanner<'a, 'b> {
 
 impl OnPropScanner<'_, '_> {
     fn resolve_target(&self, expr: &Expression<'_>) -> Option<QmlTarget> {
-        let e = unwrap_parens(expr);
-        if matches!(e, Expression::ThisExpression(_)) {
-            return self.this_stack.last().and_then(Clone::clone);
-        }
-        let query = self.bindings.resolve_expr(e)?;
-        crate::lower::resolve_query_to_single_target(&query, self.resolver)
+        resolve_target_for_prescan(
+            expr,
+            self.scoping,
+            self.bindings,
+            self.resolver,
+            self.this_stack.last().and_then(Option::as_ref),
+        )
     }
 }
 
@@ -1808,8 +1857,15 @@ impl<'a> Visit<'a> for OnPropScanner<'_, '_> {
         {
             *self
                 .counts
-                .entry((target.qml_id, ev.to_string()))
+                .entry((target.qml_id.clone(), ev.to_string()))
                 .or_insert(0) += 1;
+            let bound_this = Some(target);
+            if let Expression::FunctionExpression(func) = unwrap_parens(&it.right) {
+                self.this_stack.push(bound_this);
+                walk::walk_function(self, func, ScopeFlags::Function);
+                self.this_stack.pop();
+                return;
+            }
         }
         walk::walk_assignment_expression(self, it);
     }
@@ -1818,7 +1874,8 @@ impl<'a> Visit<'a> for OnPropScanner<'_, '_> {
         if let Expression::StaticMemberExpression(member) = unwrap_parens(&it.callee)
             && let Some(target) = self.resolve_target(&member.object)
         {
-            match member.property.name.as_str() {
+            let method = member.property.name.as_str();
+            match method {
                 "addEventListener" => {
                     if let Some(ev) = it
                         .arguments
@@ -1826,7 +1883,26 @@ impl<'a> Visit<'a> for OnPropScanner<'_, '_> {
                         .and_then(|a| a.as_expression())
                         .and_then(extract_string_literal)
                     {
-                        *self.listener_counts.entry((target.qml_id, ev)).or_insert(0) += 1;
+                        *self
+                            .listener_counts
+                            .entry((target.qml_id.clone(), ev))
+                            .or_insert(0) += 1;
+                    } else {
+                        self.targets_with_dispatch.insert(target.qml_id.clone());
+                    }
+                    if let Some(cb) = it.arguments.get(1).and_then(|a| a.as_expression())
+                        && let Expression::FunctionExpression(func) = unwrap_parens(cb)
+                    {
+                        if let Some(first) = it.arguments.first() {
+                            self.visit_argument(first);
+                        }
+                        self.this_stack.push(Some(target));
+                        walk::walk_function(self, func, ScopeFlags::Function);
+                        self.this_stack.pop();
+                        for extra in it.arguments.iter().skip(2) {
+                            self.visit_argument(extra);
+                        }
+                        return;
                     }
                 }
                 "removeEventListener" => {

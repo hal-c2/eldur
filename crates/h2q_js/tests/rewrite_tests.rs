@@ -1944,3 +1944,70 @@ document.getElementById("out").textContent = log.join("|") + "|" + forOfHdr + "|
         out.page_js
     );
 }
+
+#[test]
+fn unifies_mixed_on_property_and_add_event_listener_onto_dynamic_event_path() {
+    let resolver = FakeResolver::default()
+        .with_id("btn", 1, "btn", TargetKind::Button)
+        .with_id("solo", 2, "solo", TargetKind::Button);
+
+    let s = classic(
+        "s.js",
+        r#"
+function f1(ev) {
+    if (ev.defaultPrevented) return;
+}
+function f2(ev) {
+    ev.stopImmediatePropagation();
+}
+const btn = document.getElementById("btn");
+btn.onclick = f1;
+btn.addEventListener("click", f2);
+
+const solo = document.getElementById("solo");
+solo.onclick = f1;
+
+function trigger() {
+    btn.dispatchEvent(new Event("click"));
+}
+"#,
+    );
+
+    let out = run_rewrite(&[s], &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+
+    // `btn` has both `onclick` and `addEventListener("click")` (plus `dispatchEvent`),
+    // so both must share the dynamic `H2Q.setOn` / `H2Q.listen` / `H2Q.dispatchEvent` path
+    // with a single forwarding `EventBinding` (`__h2q_on_click_btn_0`), while `solo` stays
+    // on the static fast path (`__h2q_on_click_solo`).
+    assert_eq!(
+        out.bindings,
+        vec![
+            EventBinding {
+                target: FakeResolver::target(1, "btn", TargetKind::Button),
+                event: "click".to_string(),
+                function: "__h2q_on_click_btn_0".to_string(),
+            },
+            EventBinding {
+                target: FakeResolver::target(2, "solo", TargetKind::Button),
+                event: "click".to_string(),
+                function: "__h2q_on_click_solo".to_string(),
+            },
+        ]
+    );
+    assert!(
+        out.page_js.contains("H2Q.setOn(btn, \"click\", f1);")
+            && out.page_js.contains("H2Q.listen(btn, \"click\", f2);")
+            && out.page_js.contains(
+                "function __h2q_on_click_btn_0(event) {\n    H2Q.dispatchEvent(btn, event);\n}"
+            ),
+        "expected unified dynamic H2Q.setOn + H2Q.listen + H2Q.dispatchEvent path for btn:\n{}",
+        out.page_js
+    );
+    assert!(
+        !out.page_js.contains("function __h2q_on_click_btn(")
+            && !out.page_js.contains("__h2q_prop_click_btn"),
+        "btn.onclick must not stay on a separate static or prop-slot EventBinding:\n{}",
+        out.page_js
+    );
+}

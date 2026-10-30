@@ -434,6 +434,18 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
                 return true;
             }
             if let Some(target) = self.resolve_single_target(member_obj) {
+                if self
+                    .shared
+                    .dynamic_listener_events
+                    .contains(&(target.qml_id.clone(), ev.to_string()))
+                {
+                    self.shared.register_dynamic_listener_slot(&target, ev);
+                    let id = target.qml_id.clone();
+                    let rhs_str = self.rewrite_listener_callback_expr(right, Some(target));
+                    self.editor
+                        .replace(full_span, format!("H2Q.setOn({id}, {ev:?}, {rhs_str})"));
+                    return true;
+                }
                 let slot = self.shared.ensure_prop_handler_slot(&target, ev);
                 let rhs_str = self.rewrite_listener_callback_expr(right, Some(target));
                 self.editor

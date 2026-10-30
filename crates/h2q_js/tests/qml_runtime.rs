@@ -1588,3 +1588,172 @@ Item {
         out.page_js
     );
 }
+
+#[test]
+fn qml6_unifies_mixed_onclick_and_add_event_listener_across_qml_and_dispatch_event() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 mixed onclick/addEventListener test: qml6 not on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("mixed_on_and_listener");
+    let resolver = FakeResolver::default()
+        .with_id("btn", 1, "btnItem", TargetKind::Button)
+        .with_id("dup", 2, "dupItem", TargetKind::Button);
+
+    let script = ScriptInput {
+        name: "mixed_events.js".to_string(),
+        kind: ScriptKind::Classic,
+        line_offset: 1,
+        source: r#"
+let log = [];
+let mode = "normal";
+
+function f1(ev) {
+    log.push("f1:" + ev.defaultPrevented);
+    if (mode === "prevent-in-on") {
+        ev.preventDefault();
+    } else if (mode === "return-false-in-on") {
+        return false;
+    } else if (mode === "stop-in-on") {
+        ev.stopImmediatePropagation();
+    }
+}
+
+function f2(ev) {
+    log.push("f2:" + ev.defaultPrevented);
+    if (mode === "prevent-in-listener") {
+        ev.preventDefault();
+    }
+}
+
+const btn = document.getElementById("btn");
+btn.onclick = f1;
+btn.addEventListener("click", f2);
+
+const dup = document.getElementById("dup");
+let dupCount = 0;
+function onDup() {
+    dupCount += 1;
+}
+dup.addEventListener("click", onDup);
+dup.addEventListener("click", onDup, { once: true });
+
+function runProgChecks() {
+    const b = document.getElementById("btn");
+    const r1 = b.dispatchEvent(new Event("click", { cancelable: true }));
+
+    mode = "prevent-in-on";
+    const r2 = b.dispatchEvent(new Event("click", { cancelable: true }));
+
+    mode = "return-false-in-on";
+    const r3 = b.dispatchEvent(new Event("click", { cancelable: true }));
+
+    mode = "stop-in-on";
+    const r4 = b.dispatchEvent(new Event("click", { cancelable: true }));
+
+    mode = "prevent-in-listener";
+    const r5 = b.dispatchEvent(new Event("click", { cancelable: true }));
+
+    mode = "normal";
+    return [r1, r2, r3, r4, r5].join(",") + "|" + log.join(",");
+}
+
+function setModeForQml(m) {
+    log = [];
+    mode = m;
+}
+
+function takeLogAndClearOnclick() {
+    const out = log.join(",");
+    log = [];
+    document.getElementById("btn").onclick = null;
+    return out;
+}
+
+function checkDuplicateOnceUpgradeIgnored() {
+    const d = document.getElementById("dup");
+    d.dispatchEvent(new Event("click"));
+    d.dispatchEvent(new Event("click"));
+    return dupCount;
+}
+"#
+        .to_string(),
+    };
+
+    let scripts = [script];
+    let analysis = analyze(&scripts);
+    let out = rewrite(&scripts, &analysis, &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    assert_eq!(out.bindings.len(), 2);
+    assert_eq!(out.bindings[0].function, "__h2q_on_click_btnItem_0");
+    assert_eq!(out.bindings[1].function, "__h2q_on_click_dupItem_1");
+
+    let runtime_path = dir.write_file("h2q_runtime.js", RUNTIME_JS);
+    let page_path = dir.write_file("page.js", &out.page_js);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import QtQuick.Controls.Basic
+import "page.js" as Page
+import "h2q_runtime.js" as H2Q
+
+Item {
+    id: root
+    width: 200
+    height: 100
+
+    Button { id: btnItem }
+    Button { id: dupItem }
+
+    Component.onCompleted: {
+        Page.__h2q_init(root);
+        var prog = Page.runProgChecks();
+
+        Page.setModeForQml("prevent-in-on");
+        var qmlEv1 = H2Q.event("click", btnItem, null);
+        Page.__h2q_on_click_btnItem_0(qmlEv1);
+        var qml1 = Page.takeLogAndClearOnclick() + ":" + qmlEv1.defaultPrevented;
+
+        Page.setModeForQml("normal");
+        var qmlEv2 = H2Q.event("click", btnItem, null);
+        Page.__h2q_on_click_btnItem_0(qmlEv2);
+        var qml2 = Page.takeLogAndClearOnclick() + ":" + qmlEv2.defaultPrevented;
+
+        var dupHits = Page.checkDuplicateOnceUpgradeIgnored();
+        Page.__h2q_on_click_dupItem_1(H2Q.event("click", dupItem, null));
+        var dupHitsAfterQml = Page.checkDuplicateOnceUpgradeIgnored();
+
+        console.log("H2Q_OK_MIXED_ON_LISTEN", prog + "||" + qml1 + "||" + qml2 + "||" + dupHits + ":" + dupHitsAfterQml);
+        Qt.quit();
+    }
+}
+"#,
+    );
+
+    if has_binary("qmllint") {
+        for path in [&runtime_path, &page_path, &main_qml] {
+            let lint = Command::new("qmllint")
+                .arg(path)
+                .output()
+                .expect("failed to run qmllint");
+            assert!(
+                lint.status.success(),
+                "qmllint failed on {}: {}{}\npage.js:\n{}",
+                path.display(),
+                String::from_utf8_lossy(&lint.stdout),
+                String::from_utf8_lossy(&lint.stderr),
+                out.page_js
+            );
+        }
+    }
+
+    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    assert!(
+        output.contains(
+            "H2Q_OK_MIXED_ON_LISTEN true,false,false,true,false|f1:false,f2:false,f1:false,f2:true,f1:false,f2:true,f1:false,f1:false,f2:false||f1:false,f2:true:true||f2:false:false||2:5"
+        ),
+        "unexpected qml6 mixed onclick/addEventListener output:\n{output}\npage.js:\n{}",
+        out.page_js
+    );
+}

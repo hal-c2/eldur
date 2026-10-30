@@ -1742,7 +1742,7 @@ function unlisten(item, eventType, handler) {
 
 function setOn(item, eventType, handler) {
     if (!item) {
-        return;
+        return handler;
     }
     var raw = _unwrap(item);
     var type = String(eventType);
@@ -1753,6 +1753,7 @@ function setOn(item, eventType, handler) {
             console.warn("H2Q: dynamic on" + type + " handler cannot bind to a QML signal");
         }
     }
+    return handler;
 }
 
 function dispatchEvent(item, domEv) {
