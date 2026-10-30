@@ -1072,3 +1072,222 @@ Item {
         out.page_js
     );
 }
+
+#[test]
+fn qml6_executes_deferred_export_default_and_reexports() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 export default/re-exports test: qml6 not on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("mod_reexports");
+    let resolver = FakeResolver::default().with_id("out", 1, "outText", TargetKind::Text);
+
+    let leaf = ScriptInput {
+        name: "js/leaf.js".to_string(),
+        kind: ScriptKind::Module,
+        line_offset: 1,
+        source: r#"
+export const BASE = 10;
+export function add(a, b) { return a + b; }
+export default "leaf-def";
+"#
+        .to_string(),
+    };
+    let expr_mod = ScriptInput {
+        name: "js/expr.js".to_string(),
+        kind: ScriptKind::Module,
+        line_offset: 1,
+        source: r#"
+function getVal() { return 40; }
+export default getVal() + 2;
+"#
+        .to_string(),
+    };
+    let barrel = ScriptInput {
+        name: "js/barrel.js".to_string(),
+        kind: ScriptKind::Module,
+        line_offset: 1,
+        source: r#"
+export { BASE as START, add, default as leafDef } from "./leaf.js";
+export * from "./leaf.js";
+export * as LeafAll from "./leaf.js";
+export { default as computedDef } from "./expr.js";
+"#
+        .to_string(),
+    };
+    let entry = ScriptInput {
+        name: "js/main.js".to_string(),
+        kind: ScriptKind::Module,
+        line_offset: 1,
+        source: r#"
+import exprDef from "./expr.js";
+import * as ExprNs from "./expr.js";
+import { START, add, leafDef, BASE, computedDef, LeafAll } from "./barrel.js";
+import * as BarrelNs from "./barrel.js";
+
+const out = document.getElementById("out");
+const summary = [
+    exprDef,
+    ExprNs.default,
+    START,
+    add(BASE, 5),
+    leafDef,
+    computedDef,
+    LeafAll.BASE,
+    BarrelNs.START,
+    BarrelNs.BASE
+].join("|");
+out.textContent = summary;
+console.log("H2Q_OK_REEXPORTS", summary);
+Qt.quit();
+"#
+        .to_string(),
+    };
+
+    let scripts = [entry, barrel, expr_mod, leaf];
+    let analysis = analyze(&scripts);
+    let out = rewrite(&scripts, &analysis, &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    assert_eq!(out.init_function.as_deref(), Some("__h2q_init"));
+
+    let runtime_path = dir.write_file("h2q_runtime.js", RUNTIME_JS);
+    let page_path = dir.write_file("page.js", &out.page_js);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import "page.js" as Page
+
+Item {
+    id: root
+    width: 200
+    height: 100
+
+    Text { id: outText; text: "" }
+
+    Component.onCompleted: Page.__h2q_init(root)
+}
+"#,
+    );
+
+    if has_binary("qmllint") {
+        for path in [&runtime_path, &page_path, &main_qml] {
+            let lint = Command::new("qmllint")
+                .arg(path)
+                .output()
+                .expect("failed to run qmllint");
+            assert!(
+                lint.status.success(),
+                "qmllint failed on {}: {}{}",
+                path.display(),
+                String::from_utf8_lossy(&lint.stdout),
+                String::from_utf8_lossy(&lint.stderr)
+            );
+        }
+    }
+
+    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    assert!(
+        output.contains("H2Q_OK_REEXPORTS 42|42|10|15|leaf-def|42|10|10|10"),
+        "unexpected qml6 re-exports output:\n{output}\npage.js:\n{}",
+        out.page_js
+    );
+}
+
+#[test]
+fn qml6_executes_block_nested_var_hoisting_and_exported_elided_dom_bindings() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 block-nested var hoisting test: qml6 not on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("block_var_hoist");
+    let resolver = FakeResolver::default().with_id("box", 1, "boxItem", TargetKind::Box);
+
+    let dom_mod = ScriptInput {
+        name: "src/dom.js".to_string(),
+        kind: ScriptKind::Module,
+        line_offset: 1,
+        source: r#"
+const box = document.getElementById("box");
+export { box as sharedBox };
+"#
+        .to_string(),
+    };
+    let main_mod = ScriptInput {
+        name: "src/main.js".to_string(),
+        kind: ScriptKind::Module,
+        line_offset: 1,
+        source: r#"
+import { sharedBox } from "./dom.js";
+
+if (true) {
+    var msg = "ready", uninit;
+}
+for (var i = 0; i < 3; i++) {}
+for (var item of ["x", "y"]) {}
+
+export function readState() {
+    sharedBox.textContent = [msg, i, item, uninit === undefined].join(":");
+    return sharedBox.textContent;
+}
+"#
+        .to_string(),
+    };
+
+    let scripts = [main_mod, dom_mod];
+    let analysis = analyze(&scripts);
+    let out = rewrite(&scripts, &analysis, &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    assert_eq!(out.init_function.as_deref(), Some("__h2q_init"));
+
+    let runtime_path = dir.write_file("h2q_runtime.js", RUNTIME_JS);
+    let page_path = dir.write_file("page.js", &out.page_js);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import "page.js" as Page
+
+Item {
+    id: root
+    width: 200
+    height: 100
+
+    Rectangle {
+        id: boxItem
+        Text { id: boxItemText; text: "" }
+    }
+
+    Component.onCompleted: {
+        Page.__h2q_init(root);
+        var state = Page.readState();
+        console.log("H2Q_OK_BLOCK_VAR", state, boxItemText.text);
+        Qt.quit();
+    }
+}
+"#,
+    );
+
+    if has_binary("qmllint") {
+        for path in [&runtime_path, &page_path, &main_qml] {
+            let lint = Command::new("qmllint")
+                .arg(path)
+                .output()
+                .expect("failed to run qmllint");
+            assert!(
+                lint.status.success(),
+                "qmllint failed on {}: {}{}",
+                path.display(),
+                String::from_utf8_lossy(&lint.stdout),
+                String::from_utf8_lossy(&lint.stderr)
+            );
+        }
+    }
+
+    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    assert!(
+        output.contains("H2Q_OK_BLOCK_VAR ready:3:y:true ready:3:y:true"),
+        "unexpected qml6 block-nested var output:\n{output}\npage.js:\n{}",
+        out.page_js
+    );
+}

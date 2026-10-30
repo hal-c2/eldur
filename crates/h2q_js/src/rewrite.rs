@@ -22,9 +22,9 @@ use crate::parse::{
     parse_script,
 };
 use crate::resolve::{
-    ScriptQueryBindings, build_cross_script_query_map, extract_string_literal, is_global_document,
-    is_global_ident, is_global_window, known_dom_event_from_on_prop, normalize_handler_event,
-    resolve_module_specifier, unwrap_parens,
+    CrossScriptQueries, ScriptQueryBindings, build_cross_script_query_map, extract_string_literal,
+    is_global_document, is_global_ident, is_global_window, known_dom_event_from_on_prop,
+    normalize_handler_event, resolve_module_specifier, unwrap_parens,
 };
 use crate::{
     Analysis, Diagnostic, DomResolver, EventBinding, JsOutput, QmlTarget, ScriptInput, ScriptKind,
@@ -75,6 +75,10 @@ struct PageBuffers {
     var_func_slots: HashMap<String, (usize, usize)>,
     /// Top-level `const`/`var` identifiers whose pure literal values are already available at module load.
     pure_top_vars: HashSet<String>,
+    /// Maps elided single-target DOM variable names (`const box = document.getElementById("box")`)
+    /// to their resolved `QmlTarget::qml_id` (`"boxItem"`) so `export { box as sharedBox }` exports
+    /// the QML target rather than a dangling identifier.
+    elided_dom_vars: HashMap<String, String>,
     handler_fns: Vec<String>,
     init_stmts: Vec<String>,
     dcl_stmts: Vec<String>,
@@ -87,7 +91,7 @@ struct PageBuilder<'a> {
     scripts: &'a [ScriptInput],
     valid_map: HashMap<usize, usize>,
     valid_scripts: &'a [ValidScript<'a>],
-    cross_script: &'a HashMap<String, crate::DomQuery>,
+    cross_script: &'a CrossScriptQueries,
     resolver: &'a dyn DomResolver,
     shared: SharedRewriteState,
     out: PageBuffers,
@@ -155,7 +159,7 @@ pub(crate) fn rewrite(
         .iter()
         .map(|v| (v.idx, v.input, &v.parsed))
         .collect();
-    let cross_script = build_cross_script_query_map(&valid_refs);
+    let cross_script = build_cross_script_query_map(scripts, &valid_refs);
 
     let mut shared = SharedRewriteState::default();
     // Reserve `__h2q_init` and all user top-level identifiers so generated helper names never collide.
@@ -166,7 +170,13 @@ pub(crate) fn rewrite(
 
     // Pre-scan `.on<event> = ...` assignments across all valid scripts to find which
     // `(qml_id, event)` pairs cannot be hoisted as a single static top-level binding.
-    prescan_on_prop_assignments(&valid_scripts, &cross_script, resolver, &mut shared);
+    prescan_on_prop_assignments(
+        scripts,
+        &valid_scripts,
+        &cross_script,
+        resolver,
+        &mut shared,
+    );
 
     let mut valid_map = HashMap::with_capacity(valid_scripts.len());
     for (pos, v) in valid_scripts.iter().enumerate() {
@@ -243,8 +253,13 @@ impl<'a> PageBuilder<'a> {
             .alloc_fn_name(&format!("__h2q_on_{safe_ev}_{}", target.qml_id));
 
         let scoping = &v.parsed.scoping;
-        let bindings =
-            ScriptQueryBindings::build(v.input, &v.parsed.program, scoping, self.cross_script);
+        let bindings = ScriptQueryBindings::build(
+            v.input,
+            &v.parsed.program,
+            scoping,
+            self.scripts,
+            self.cross_script,
+        );
         let final_span = v.parsed.program.body.last().map(GetSpan::span);
         let mut lowerer = AstLowerer::new_handler(
             &v.input.source,
@@ -283,8 +298,13 @@ impl<'a> PageBuilder<'a> {
         let v = &self.valid_scripts[valid_pos];
         let is_classic = matches!(v.input.kind, ScriptKind::Classic);
         let scoping = &v.parsed.scoping;
-        let bindings =
-            ScriptQueryBindings::build(v.input, &v.parsed.program, scoping, self.cross_script);
+        let bindings = ScriptQueryBindings::build(
+            v.input,
+            &v.parsed.program,
+            scoping,
+            self.scripts,
+            self.cross_script,
+        );
 
         // Pre-inline any imported local modules in source order before lowering statements.
         if !is_classic {
@@ -437,8 +457,12 @@ impl<'a> PageBuilder<'a> {
                         for spec in &exp.specifiers {
                             let local = spec.local.name().to_string();
                             let exported = spec.exported.name().to_string();
-                            let deferred = !out.pure_top_vars.contains(&local);
-                            me.insert(exported, local, deferred);
+                            if let Some(qml_id) = out.elided_dom_vars.get(&local) {
+                                me.insert(exported, qml_id.clone(), true);
+                            } else {
+                                let deferred = !out.pure_top_vars.contains(&local);
+                                me.insert(exported, local, deferred);
+                            }
                         }
                     }
                 }
@@ -470,14 +494,19 @@ impl<'a> PageBuilder<'a> {
                             let ns_ident =
                                 lowerer.shared.alloc_fn_name(&format!("__h2q_ns_{}", v.idx));
                             let (obj_lit, any_deferred) = format_namespace_object(dep_exports);
-                            if any_deferred {
+                            if any_deferred || !out.init_stmts.is_empty() {
                                 out.top_decls.push(format!("let {ns_ident};"));
                                 out.init_stmts.push(format!("{ns_ident} = {obj_lit};"));
                             } else {
                                 out.top_decls.push(format!("const {ns_ident} = {obj_lit};"));
+                                out.pure_top_vars.insert(ns_ident.clone());
                             }
                             if let Some(me) = mod_exports.as_deref_mut() {
-                                me.insert(alias_name.name().to_string(), ns_ident, any_deferred);
+                                me.insert(
+                                    alias_name.name().to_string(),
+                                    ns_ident,
+                                    any_deferred || !out.init_stmts.is_empty(),
+                                );
                             }
                         } else if let Some(me) = mod_exports.as_deref_mut() {
                             for key in &dep_exports.ordered_keys {
@@ -516,6 +545,17 @@ impl<'a> PageBuilder<'a> {
 
                 _ => {
                     lowerer.visit_statement(stmt);
+                    for name in lowerer.hoisted_top_vars.drain(..) {
+                        out.pure_top_vars.remove(&name);
+                        if !is_classic || !out.var_func_slots.contains_key(&name) {
+                            let slot_idx = out.top_decls.len();
+                            out.top_decls.push(format!("var {name};"));
+                            if is_classic {
+                                out.var_func_slots
+                                    .insert(name, (slot_idx, out.init_stmts.len()));
+                            }
+                        }
+                    }
                     let rendered = lowerer.editor.extract_and_consume(stmt.span());
                     let trimmed = rendered.trim();
                     if !trimmed.is_empty() {
@@ -633,6 +673,7 @@ impl PageBuffers {
             .to_string();
         self.top_decls.push(cls_str);
 
+        let mut deferred_statics = false;
         if let Some(static_stmts) = lowerer
             .post_class_static_inits
             .remove(&(cls.span.start, cls.span.end))
@@ -641,15 +682,18 @@ impl PageBuffers {
                 self.top_decls.extend(static_stmts);
             } else {
                 self.init_stmts.extend(static_stmts);
+                deferred_statics = true;
             }
         }
 
-        if is_exported
-            && let Some(id) = &cls.id
-            && let Some(me) = mod_exports
-        {
+        if let Some(id) = &cls.id {
             let name = id.name.to_string();
-            me.insert(name.clone(), name, false);
+            if !deferred_statics {
+                self.pure_top_vars.insert(name.clone());
+            }
+            if is_exported && let Some(me) = mod_exports {
+                me.insert(name.clone(), name, deferred_statics);
+            }
         }
     }
 
@@ -672,9 +716,12 @@ impl PageBuffers {
                     && let Some(query) = bindings.symbol_queries.get(&sym_id)
                     && let Some(target) =
                         crate::lower::resolve_query_to_single_target(query, resolver)
-                    && let Some(me) = mod_exports.as_deref_mut()
                 {
-                    me.insert(bind_id.name.to_string(), target.qml_id, false);
+                    self.elided_dom_vars
+                        .insert(bind_id.name.to_string(), target.qml_id.clone());
+                    if let Some(me) = mod_exports.as_deref_mut() {
+                        me.insert(bind_id.name.to_string(), target.qml_id, true);
+                    }
                 }
                 continue;
             }
@@ -891,6 +938,7 @@ impl PageBuffers {
                         .shared
                         .alloc_fn_name(&format!("__h2q_default_{script_idx}"));
                     self.top_decls.push(format!("const {def_name} = {fn_str};"));
+                    self.pure_top_vars.insert(def_name.clone());
                     def_name
                 };
                 if let Some(me) = mod_exports {
@@ -923,6 +971,7 @@ impl PageBuffers {
                         .push(format!("const {def_name} = {cls_str};"));
                     def_name
                 };
+                let mut deferred_statics = false;
                 if let Some(static_stmts) = lowerer
                     .post_class_static_inits
                     .remove(&(cls.span.start, cls.span.end))
@@ -931,10 +980,14 @@ impl PageBuffers {
                         self.top_decls.extend(static_stmts);
                     } else {
                         self.init_stmts.extend(static_stmts);
+                        deferred_statics = true;
                     }
                 }
+                if !deferred_statics {
+                    self.pure_top_vars.insert(name.clone());
+                }
                 if let Some(me) = mod_exports {
-                    me.insert("default", name, false);
+                    me.insert("default", name, deferred_statics);
                 }
             }
             ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {}
@@ -1169,18 +1222,62 @@ impl PageBuffers {
 }
 
 fn collect_program_declared_names(program: &Program<'_>, out: &mut HashSet<String>) {
+    struct TopDeclaredNameCollector<'a> {
+        out: &'a mut HashSet<String>,
+        fn_depth: usize,
+    }
+
+    impl<'a> Visit<'a> for TopDeclaredNameCollector<'_> {
+        fn visit_function(&mut self, it: &oxc_ast::ast::Function<'a>, flags: ScopeFlags) {
+            if self.fn_depth == 0
+                && let Some(id) = &it.id
+            {
+                self.out.insert(id.name.to_string());
+            }
+            self.fn_depth += 1;
+            walk::walk_function(self, it, flags);
+            self.fn_depth -= 1;
+        }
+
+        fn visit_arrow_function_expression(
+            &mut self,
+            it: &oxc_ast::ast::ArrowFunctionExpression<'a>,
+        ) {
+            self.fn_depth += 1;
+            walk::walk_arrow_function_expression(self, it);
+            self.fn_depth -= 1;
+        }
+
+        fn visit_class(&mut self, it: &oxc_ast::ast::Class<'a>) {
+            if self.fn_depth == 0
+                && let Some(id) = &it.id
+            {
+                self.out.insert(id.name.to_string());
+            }
+            self.fn_depth += 1;
+            walk::walk_class(self, it);
+            self.fn_depth -= 1;
+        }
+
+        fn visit_variable_declaration(&mut self, it: &VariableDeclaration<'a>) {
+            if self.fn_depth == 0 && it.kind == VariableDeclarationKind::Var {
+                for decl in &it.declarations {
+                    let mut idents = Vec::new();
+                    collect_binding_identifiers(&decl.id, &mut idents);
+                    for id in idents {
+                        self.out.insert(id.name.to_string());
+                    }
+                }
+            }
+            walk::walk_variable_declaration(self, it);
+        }
+    }
+
+    let mut collector = TopDeclaredNameCollector { out, fn_depth: 0 };
+    collector.visit_program(program);
+
     for stmt in &program.body {
         match stmt {
-            Statement::FunctionDeclaration(f) => {
-                if let Some(id) = &f.id {
-                    out.insert(id.name.to_string());
-                }
-            }
-            Statement::ClassDeclaration(c) => {
-                if let Some(id) = &c.id {
-                    out.insert(id.name.to_string());
-                }
-            }
             Statement::VariableDeclaration(vd) => {
                 for decl in &vd.declarations {
                     let mut idents = Vec::new();
@@ -1190,18 +1287,25 @@ fn collect_program_declared_names(program: &Program<'_>, out: &mut HashSet<Strin
                     }
                 }
             }
-            Statement::ExportDeclaration(exp) => match &exp.declaration {
-                Declaration::FunctionDeclaration(f) => {
-                    if let Some(id) = &f.id {
-                        out.insert(id.name.to_string());
+            Statement::ImportDeclaration(imp) => {
+                if let Some(specs) = &imp.specifiers {
+                    for spec in specs {
+                        match spec {
+                            ImportDeclarationSpecifier::ImportSpecifier(s) => {
+                                out.insert(s.local.name.to_string());
+                            }
+                            ImportDeclarationSpecifier::ImportDefaultSpecifier(s) => {
+                                out.insert(s.local.name.to_string());
+                            }
+                            ImportDeclarationSpecifier::ImportNamespaceSpecifier(s) => {
+                                out.insert(s.local.name.to_string());
+                            }
+                        }
                     }
                 }
-                Declaration::ClassDeclaration(c) => {
-                    if let Some(id) = &c.id {
-                        out.insert(id.name.to_string());
-                    }
-                }
-                Declaration::VariableDeclaration(vd) => {
+            }
+            Statement::ExportDeclaration(exp) => {
+                if let Declaration::VariableDeclaration(vd) = &exp.declaration {
                     for decl in &vd.declarations {
                         let mut idents = Vec::new();
                         collect_binding_identifiers(&decl.id, &mut idents);
@@ -1210,16 +1314,16 @@ fn collect_program_declared_names(program: &Program<'_>, out: &mut HashSet<Strin
                         }
                     }
                 }
-                _ => {}
-            },
+            }
             _ => {}
         }
     }
 }
 
 fn prescan_on_prop_assignments(
+    all_scripts: &[ScriptInput],
     valid_scripts: &[ValidScript<'_>],
-    cross_script: &HashMap<String, crate::DomQuery>,
+    cross_script: &CrossScriptQueries,
     resolver: &dyn DomResolver,
     shared: &mut SharedRewriteState,
 ) {
@@ -1232,8 +1336,13 @@ fn prescan_on_prop_assignments(
 
     for v in valid_scripts {
         let scoping = &v.parsed.scoping;
-        let bindings =
-            ScriptQueryBindings::build(v.input, &v.parsed.program, scoping, cross_script);
+        let bindings = ScriptQueryBindings::build(
+            v.input,
+            &v.parsed.program,
+            scoping,
+            all_scripts,
+            cross_script,
+        );
         let root_this = match &v.input.kind {
             ScriptKind::HandlerAttribute { element, .. } => resolver.element(*element),
             _ => None,

@@ -1229,3 +1229,140 @@ function captureAssigned(rhs, pickNode) {
 }
 "###);
 }
+
+#[test]
+fn rejects_cross_script_block_nested_var_conflict_with_lexical_binding() {
+    let resolver = FakeResolver::default();
+    let s1 = classic("s1.js", "let x = 1;");
+    let s2 = classic("s2.js", "if (true) { var x = 2; }\nconsole.log(x);");
+    let out1 = run_rewrite(&[s1, s2], &resolver);
+    assert_eq!(out1.diagnostics.len(), 1);
+    assert_eq!(out1.diagnostics[0].severity, Severity::Error);
+    assert_eq!(out1.diagnostics[0].source, "s2.js");
+    assert_eq!(out1.init_function, None);
+    assert_eq!(
+        out1.page_js,
+        ".import \"h2q_runtime.js\" as H2Q\n\nlet x = 1;\n"
+    );
+
+    let s3 = classic("s3.js", "if (true) { var y = 1; }");
+    let s4 = classic("s4.js", "let y = 2;");
+    let out2 = run_rewrite(&[s3, s4], &resolver);
+    assert_eq!(out2.diagnostics.len(), 1);
+    assert_eq!(out2.diagnostics[0].severity, Severity::Error);
+    assert_eq!(out2.diagnostics[0].source, "s4.js");
+    assert_eq!(out2.init_function.as_deref(), Some("__h2q_init"));
+}
+
+#[test]
+fn defers_export_default_expression_and_reexports_from_other_modules() {
+    let resolver = FakeResolver::default().with_id("out", 1, "outText", TargetKind::Text);
+
+    let leaf = module_script(
+        "js/leaf.js",
+        r#"
+export const BASE = 10;
+export function add(a, b) { return a + b; }
+export default "leaf-default";
+"#,
+    );
+    let expr_mod = module_script(
+        "js/expr.js",
+        r#"
+function getVal() { return 42; }
+export default getVal() + 1;
+"#,
+    );
+    let barrel = module_script(
+        "js/barrel.js",
+        r#"
+export { BASE as START, add, default as leafDef } from "./leaf.js";
+export * from "./leaf.js";
+export * as LeafAll from "./leaf.js";
+export { default as computedDef } from "./expr.js";
+"#,
+    );
+    let entry = module_script(
+        "js/main.js",
+        r#"
+import exprDef from "./expr.js";
+import * as ExprNs from "./expr.js";
+import { START, add, leafDef, BASE, computedDef, LeafAll } from "./barrel.js";
+import * as BarrelNs from "./barrel.js";
+
+document.getElementById("out").textContent = [
+    exprDef,
+    ExprNs.default,
+    START,
+    add(BASE, 5),
+    leafDef,
+    computedDef,
+    LeafAll.BASE,
+    BarrelNs.START,
+    BarrelNs.BASE
+].join("|");
+"#,
+    );
+
+    let out = run_rewrite(&[entry, barrel, expr_mod, leaf], &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    assert_eq!(out.init_function.as_deref(), Some("__h2q_init"));
+    assert!(
+        !out.page_js.contains("const __h2q_default_"),
+        "export default expression was not deferred to init:\n{}",
+        out.page_js
+    );
+    assert!(
+        !out.page_js.contains("export "),
+        "raw export syntax remained in page_js:\n{}",
+        out.page_js
+    );
+}
+
+#[test]
+fn hoists_block_nested_var_to_top_level_and_exports_elided_dom_bindings() {
+    let resolver = FakeResolver::default().with_id("box", 1, "boxItem", TargetKind::Box);
+
+    let dom_mod = module_script(
+        "js/dom.js",
+        r#"
+const box = document.getElementById("box");
+export { box as sharedBox };
+"#,
+    );
+    let main_mod = module_script(
+        "js/main.js",
+        r#"
+import { sharedBox } from "./dom.js";
+if (true) {
+    var msg = "ready", count;
+}
+for (var i = 0; i < 3; i++) {
+    msg += ":" + i;
+}
+export function readState() {
+    sharedBox.textContent = msg + ":" + i + ":" + (count === undefined);
+    return sharedBox.textContent;
+}
+"#,
+    );
+
+    let out = run_rewrite(&[main_mod, dom_mod], &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    assert_eq!(out.init_function.as_deref(), Some("__h2q_init"));
+    assert!(
+        !out.page_js.contains("= box;"),
+        "elided DOM binding `box` was referenced instead of `boxItem`:\n{}",
+        out.page_js
+    );
+    assert!(
+        out.page_js.contains("var msg;") && out.page_js.contains("var i;"),
+        "block/for-header `var` bindings were not hoisted to file scope:\n{}",
+        out.page_js
+    );
+    assert!(
+        !out.page_js.contains("    var msg") && !out.page_js.contains("for (var i"),
+        "`var` keyword remained inside __h2q_init, shadowing file-scope var:\n{}",
+        out.page_js
+    );
+}

@@ -257,6 +257,38 @@ fn reports_cross_script_lexical_redeclaration_as_error() {
 }
 
 #[test]
+fn reports_cross_script_block_nested_var_conflict_with_lexical_binding() {
+    let s1 = classic("s1.js", "let x = 1;");
+    let s2 = ScriptInput {
+        source: "if (true) {\n    var x = 2;\n}".to_string(),
+        name: "s2.js".to_string(),
+        kind: ScriptKind::Classic,
+        line_offset: 10,
+    };
+
+    let res = analyze(&[s1, s2]);
+    assert_eq!(res.diagnostics.len(), 1);
+    assert_eq!(res.diagnostics[0].severity, Severity::Error);
+    assert_eq!(res.diagnostics[0].source, "s2.js");
+    assert_eq!(res.diagnostics[0].line, Some(11));
+    assert!(res.diagnostics[0].message.contains("x"));
+
+    let s3 = classic("s3.js", "for (var y = 0; y < 1; ++y) {}");
+    let s4 = ScriptInput {
+        source: "let y = 3;".to_string(),
+        name: "s4.js".to_string(),
+        kind: ScriptKind::Classic,
+        line_offset: 20,
+    };
+    let res2 = analyze(&[s3, s4]);
+    assert_eq!(res2.diagnostics.len(), 1);
+    assert_eq!(res2.diagnostics[0].severity, Severity::Error);
+    assert_eq!(res2.diagnostics[0].source, "s4.js");
+    assert_eq!(res2.diagnostics[0].line, Some(20));
+    assert!(res2.diagnostics[0].message.contains("y"));
+}
+
+#[test]
 fn reports_unsupported_js_and_browser_features() {
     let script = classic(
         "unsupported.js",

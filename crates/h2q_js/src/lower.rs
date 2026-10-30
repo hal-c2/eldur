@@ -16,7 +16,7 @@ use oxc_syntax::operator::{AssignmentOperator, UnaryOperator};
 use oxc_syntax::scope::ScopeFlags;
 
 use crate::edit::SpanEditor;
-use crate::parse::async_body_has_unlowerable_constructs;
+use crate::parse::{async_body_has_unlowerable_constructs, collect_binding_identifiers};
 use crate::resolve::{
     ScriptQueryBindings, extract_dom_query_from_call, extract_string_literal, is_global_document,
     is_global_ident, is_global_window, known_dom_event_from_on_prop, unwrap_parens,
@@ -188,10 +188,17 @@ pub(crate) struct AstLowerer<'a, 'b> {
     pub handler_final_stmt_span: Option<Span>,
     /// Nesting depth inside functions (regular or arrow) relative to the root snippet.
     pub fn_depth: u32,
+    /// Nesting depth inside classes relative to the root snippet.
+    pub class_depth: u32,
     /// Nesting depth inside `for (...)` headers where variable declarations are not standalone lines.
     pub in_for_header: u32,
+    /// Nesting depth inside `for (... in/of ...)` headers where a single LHS binding cannot be empty.
+    pub in_for_in_of_header: u32,
     /// Nesting depth inside member/call object position where unary `!x.enabled` needs parens.
     pub member_object_depth: u32,
+    /// Block-nested `var` names hoisted out of top-level blocks/loops (`fn_depth == 0 && class_depth == 0`)
+    /// so they are declared at file scope in `page.js` rather than trapped inside `__h2q_init`.
+    pub hoisted_top_vars: Vec<String>,
     /// Static field initializers (`ClassName.field = val;`) generated for top-level/block
     /// `ClassDeclaration`s, keyed by `Class::span`.
     pub post_class_static_inits: HashMap<(u32, u32), Vec<String>>,
@@ -219,8 +226,11 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
             is_handler_attr: false,
             handler_final_stmt_span: None,
             fn_depth: 0,
+            class_depth: 0,
             in_for_header: 0,
+            in_for_in_of_header: 0,
             member_object_depth: 0,
+            hoisted_top_vars: Vec::new(),
             post_class_static_inits: HashMap::new(),
             method_fn_spans: HashSet::new(),
         }
@@ -1119,7 +1129,9 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
 
     fn visit_for_in_statement(&mut self, it: &ForInStatement<'a>) {
         self.in_for_header += 1;
+        self.in_for_in_of_header += 1;
         self.visit_for_statement_left(&it.left);
+        self.in_for_in_of_header -= 1;
         self.in_for_header -= 1;
         self.visit_expression(&it.right);
         self.visit_statement(&it.body);
@@ -1127,13 +1139,19 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
 
     fn visit_for_of_statement(&mut self, it: &ForOfStatement<'a>) {
         self.in_for_header += 1;
+        self.in_for_in_of_header += 1;
         self.visit_for_statement_left(&it.left);
+        self.in_for_in_of_header -= 1;
         self.in_for_header -= 1;
         self.visit_expression(&it.right);
         self.visit_statement(&it.body);
     }
 
     fn visit_variable_declaration(&mut self, it: &VariableDeclaration<'a>) {
+        let hoist_top_var = !self.is_handler_attr
+            && self.fn_depth == 0
+            && self.class_depth == 0
+            && it.kind == VariableDeclarationKind::Var;
         let can_elide = self.in_for_header == 0;
         let has_elidable = can_elide
             && it
@@ -1144,12 +1162,25 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             matches!(&d.id, BindingPattern::ObjectPattern(obj) if obj.rest.is_some())
                 && d.init.is_some()
         });
-        if !has_elidable && !needs_rest_lowering {
+        if !hoist_top_var && !has_elidable && !needs_rest_lowering {
             walk::walk_variable_declaration(self, it);
             return;
         }
 
         walk::walk_variable_declaration(self, it);
+
+        if hoist_top_var {
+            let mut bound = Vec::new();
+            for decl in &it.declarations {
+                if can_elide && is_elidable_dom_declarator(decl, self.bindings, self.resolver) {
+                    continue;
+                }
+                collect_binding_identifiers(&decl.id, &mut bound);
+            }
+            for id in bound {
+                self.hoisted_top_vars.push(id.name.to_string());
+            }
+        }
 
         let kw = match it.kind {
             VariableDeclarationKind::Var => "var",
@@ -1198,13 +1229,33 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                     ));
                 } else {
                     let tmp = format!("__h2q_obj_{}", self.shared.fresh_id());
+                    if hoist_top_var {
+                        self.hoisted_top_vars.push(tmp.clone());
+                    }
                     out_decls.push(format!("{tmp} = {init_str}"));
-                    out_decls.push(format!("{{ {} }} = {tmp}", regular_props.join(", ")));
+                    if hoist_top_var {
+                        out_decls.push(format!("({{ {} }} = {tmp})", regular_props.join(", ")));
+                    } else {
+                        out_decls.push(format!("{{ {} }} = {tmp}", regular_props.join(", ")));
+                    }
                     out_decls.push(format!(
                         "{} = H2Q.objectRest({tmp}, [{}])",
                         rest_ident.name,
                         excluded_keys.join(", ")
                     ));
+                }
+            } else if hoist_top_var {
+                if self.in_for_in_of_header > 0 && decl.init.is_none() {
+                    out_decls.push(self.editor.extract_and_consume(decl.id.span()));
+                } else if decl.init.is_some() {
+                    let decl_str = self.editor.extract_and_consume(decl.span);
+                    if matches!(decl.id, BindingPattern::ObjectPattern(_)) {
+                        out_decls.push(format!("({decl_str})"));
+                    } else {
+                        out_decls.push(decl_str);
+                    }
+                } else {
+                    let _ = self.editor.extract_and_consume(decl.span);
                 }
             } else {
                 out_decls.push(self.editor.extract_and_consume(decl.span));
@@ -1212,11 +1263,18 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
         }
 
         if all_ok {
+            let had_semi = self.editor.slice(it.span).trim_end().ends_with(';');
+            let semi = if had_semi { ";" } else { "" };
             if out_decls.is_empty() {
-                self.editor.remove_statement_line(it.span);
+                if self.in_for_header > 0 {
+                    self.editor.replace(it.span, semi.to_string());
+                } else {
+                    self.editor.remove_statement_line(it.span);
+                }
+            } else if hoist_top_var {
+                self.editor
+                    .replace(it.span, format!("{}{semi}", out_decls.join(", ")));
             } else {
-                let had_semi = self.editor.slice(it.span).trim_end().ends_with(';');
-                let semi = if had_semi { ";" } else { "" };
                 self.editor
                     .replace(it.span, format!("{kw} {}{semi}", out_decls.join(", ")));
             }
@@ -1338,7 +1396,9 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             .iter()
             .any(|el| matches!(el, ClassElement::PropertyDefinition(_)));
 
+        self.class_depth += 1;
         walk::walk_class(self, it);
+        self.class_depth -= 1;
 
         if has_unsupported_elements || !has_fields {
             return;

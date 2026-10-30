@@ -4,7 +4,7 @@ use oxc_allocator::Allocator;
 use oxc_ast::ast::{
     ArrowFunctionExpression, BigIntLiteral, BindingIdentifier, BindingPattern, CallExpression,
     Class, ClassElement, Expression, ForOfStatement, Function, NewExpression, Program, RegExpFlags,
-    RegExpLiteral, Statement, VariableDeclarationKind, WithStatement,
+    RegExpLiteral, Statement, VariableDeclaration, VariableDeclarationKind, WithStatement,
 };
 use oxc_ast_visit::{Visit, walk};
 use oxc_parser::Parser;
@@ -153,7 +153,12 @@ impl GlobalDeclTracker {
                         script_decls.push((id.name.to_string(), TopDeclKind::Lexical, id.span));
                     }
                 }
-                _ => {}
+                _ => {
+                    let mut collector = HoistedVarCollector {
+                        out: &mut script_decls,
+                    };
+                    collector.visit_statement(stmt);
+                }
             }
         }
 
@@ -179,6 +184,38 @@ impl GlobalDeclTracker {
             self.decls.insert(name, kind);
         }
         Ok(())
+    }
+}
+
+struct HoistedVarCollector<'a> {
+    out: &'a mut Vec<(String, TopDeclKind, Span)>,
+}
+
+impl<'a> Visit<'a> for HoistedVarCollector<'_> {
+    fn visit_variable_declaration(&mut self, it: &VariableDeclaration<'a>) {
+        if it.kind == VariableDeclarationKind::Var {
+            for decl in &it.declarations {
+                let mut idents = Vec::new();
+                collect_binding_identifiers(&decl.id, &mut idents);
+                for ident in idents {
+                    self.out
+                        .push((ident.name.to_string(), TopDeclKind::VarOrFunc, ident.span));
+                }
+            }
+        }
+        walk::walk_variable_declaration(self, it);
+    }
+
+    fn visit_function(&mut self, _it: &Function<'a>, _flags: ScopeFlags) {
+        // Do not descend into function bodies; `var` inside a function is function-scoped.
+    }
+
+    fn visit_arrow_function_expression(&mut self, _it: &ArrowFunctionExpression<'a>) {
+        // Do not descend into arrow function bodies.
+    }
+
+    fn visit_class(&mut self, _it: &Class<'a>) {
+        // Do not descend into class bodies.
     }
 }
 
