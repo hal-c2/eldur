@@ -1,0 +1,54 @@
+---
+source: crates/h2q_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[css]: index.html:264: `display: inline-block` on <span class="eyebrow"> is laid out as inline text
+info[css]: index.html:294: `display: inline-block` on <span class="tag"> is laid out as inline text
+info[css]: index.html:295: `display: inline-block` on <span class="tag"> is laid out as inline text
+info[css]: index.html:296: `display: inline-block` on <span class="tag"> is laid out as inline text
+info[css]: index.html:297: `display: inline-block` on <span class="tag"> is laid out as inline text
+info[css]: index.html:303: `display: inline-block` on <a class="button"> is laid out as inline text
+warning[css]: index.html:254: `display: flex` on <header class="site-header"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:256: `display: flex` on <nav class="nav"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:263: background images and gradients are not converted yet
+info[qml]: index.html:264: <span class="eyebrow">: font size 13px inside 16px text is approximated with <small>
+info[qml]: index.html:264: <span class="eyebrow">: font family `monospace` inside `sans-serif` text is not converted
+info[qml]: index.html:264: <span class="eyebrow">: inline background is not converted
+info[qml]: index.html:264: <span class="eyebrow">: inline padding and borders are not converted
+warning[css]: index.html:269: `display: grid` on <main class="layout"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:270: `box-shadow` is not converted yet
+warning[css]: index.html:273: `display: flex` on <ul class="swatches"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:274: `box-shadow` is not converted yet
+warning[css]: index.html:275: `box-shadow` is not converted yet
+warning[css]: index.html:276: `box-shadow` is not converted yet
+warning[css]: index.html:280: `box-shadow` is not converted yet
+warning[css]: index.html:283: `display: flex` on <ul class="spacing-demo"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:291: `box-shadow` is not converted yet
+info[qml]: index.html:294: <span class="tag">: font size 13px inside 16px text is approximated with <small>
+info[qml]: index.html:294: <span class="tag">: font family `monospace` inside `sans-serif` text is not converted
+info[qml]: index.html:294: <span class="tag">: inline background is not converted
+info[qml]: index.html:294: <span class="tag">: inline padding and borders are not converted
+info[qml]: index.html:295: <span class="tag">: font size 13px inside 16px text is approximated with <small>
+info[qml]: index.html:295: <span class="tag">: font family `monospace` inside `sans-serif` text is not converted
+info[qml]: index.html:295: <span class="tag">: inline background is not converted
+info[qml]: index.html:295: <span class="tag">: inline padding and borders are not converted
+info[qml]: index.html:296: <span class="tag">: font size 13px inside 16px text is approximated with <small>
+info[qml]: index.html:296: <span class="tag">: font family `monospace` inside `sans-serif` text is not converted
+info[qml]: index.html:296: <span class="tag">: inline background is not converted
+info[qml]: index.html:296: <span class="tag">: inline padding and borders are not converted
+info[qml]: index.html:297: <span class="tag">: font size 13px inside 16px text is approximated with <small>
+info[qml]: index.html:297: <span class="tag">: font family `monospace` inside `sans-serif` text is not converted
+info[qml]: index.html:297: <span class="tag">: inline background is not converted
+info[qml]: index.html:297: <span class="tag">: inline padding and borders are not converted
+warning[css]: index.html:300: `box-shadow` is not converted yet
+info[qml]: index.html:303: <a class="button"> is underlined: StyledText always underlines links
+info[qml]: index.html:303: <a class="button">: inline background is not converted
+info[qml]: index.html:303: <a class="button">: inline padding and borders are not converted
+warning[css]: index.html:306: `box-shadow` is not converted yet
+warning[css]: index.html:311: `box-shadow` is not converted yet
+warning[css]: index.html:317: `display: flex` on <section class="stats"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:317: `box-shadow` is not converted yet
+info[qml]: index.html:320: <span class="stat-label">: font size 14px inside 16px text is approximated with <small>
+info[qml]: index.html:324: <span class="stat-label">: font size 14px inside 16px text is approximated with <small>
+info[qml]: index.html:328: <span class="stat-label">: font size 14px inside 16px text is approximated with <small>
+info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

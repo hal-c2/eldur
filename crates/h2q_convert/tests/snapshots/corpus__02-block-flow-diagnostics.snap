@@ -1,0 +1,8 @@
+---
+source: crates/h2q_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[qml]: index.html:172: <code>: font family `monospace` inside `sans-serif` text is not converted
+warning[css]: index.html:181: `float` on <div class="half"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:184: `float` on <div class="half"> is laid out as block flow (not implemented yet)
+info[qml]: index.html:193: <code>: font family `monospace` inside `sans-serif` text is not converted

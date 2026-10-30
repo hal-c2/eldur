@@ -1,0 +1,12 @@
+---
+source: crates/h2q_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[css]: <style>#1:42: unknown property `font-variant-numeric`
+info[css]: index.html:190: <p id="empty" class="empty"> is `display: none` and used by a script: it is kept invisible, as its text in its parent's style
+warning[css]: index.html:178: `box-shadow` is not converted yet
+warning[css]: index.html:179: `display: flex` on <header class="app-header"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:184: `display: flex` on <div class="composer"> is laid out as block flow (not implemented yet)
+warning[html]: index.html:185: <input id="todo-input"> is not converted yet; an empty placeholder keeps its space
+info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet
+warning[js]: index.html:185: <input id="todo-input"> is used by a script but has no QML object of its own (inline, hidden or not converted); script access to it does nothing

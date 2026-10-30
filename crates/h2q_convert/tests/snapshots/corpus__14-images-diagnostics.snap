@@ -1,0 +1,15 @@
+---
+source: crates/h2q_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+warning[css]: index.html:207: `display: flex` on <header class="site-header"> is laid out as block flow (not implemented yet)
+warning[html]: index.html:208: <img class="logo"> is not converted yet; an empty placeholder keeps its space
+warning[css]: index.html:209: `display: flex` on <nav class="site-nav"> is laid out as block flow (not implemented yet)
+warning[html]: index.html:217: <img class="hero-img"> is not converted yet; an empty placeholder keeps its space
+warning[css]: index.html:218: `position: absolute` on <div class="hero-caption"> is laid out in normal flow (not implemented yet)
+warning[css]: index.html:225: `display: flex` on <div class="author"> is laid out as block flow (not implemented yet)
+warning[html]: index.html:226: <img class="avatar"> is not converted yet; an empty placeholder keeps its space
+warning[css]: index.html:233: `display: grid` on <section class="feature"> is laid out as block flow (not implemented yet)
+warning[html]: index.html:235: <img> is not converted yet; an empty placeholder keeps its space
+warning[html]: index.html:246: <img class="thumb"> is not converted yet; an empty placeholder keeps its space
+info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

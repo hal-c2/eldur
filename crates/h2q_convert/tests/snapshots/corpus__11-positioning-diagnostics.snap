@@ -1,0 +1,26 @@
+---
+source: crates/h2q_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[css]: index.html:229: <div class="tooltip-wrap"> contains block-level boxes; laid out as a block
+info[css]: index.html:230: `display: inline-block` on <button class="btn"> is laid out as inline text
+warning[css]: index.html:212: `display: flex` on <header class="site-header"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:212: `position: fixed` on <header class="site-header"> is laid out in normal flow (not implemented yet)
+warning[css]: index.html:212: `box-shadow` is not converted yet
+warning[css]: index.html:214: `display: flex` on <nav class="nav"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:221: `display: flex` on <main class="page"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:224: `display: flex` on <section class="row"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:225: `box-shadow` is not converted yet
+warning[css]: index.html:226: `display: flex` on <span class="badge"> is laid out as block flow (not implemented yet)
+warning[css]: index.html:226: `position: absolute` on <span class="badge"> is laid out in normal flow (not implemented yet)
+info[css]: index.html:226: percentage `border-radius` uses its px part only
+info[qml]: index.html:230: <button class="btn">: inline background is not converted
+info[qml]: index.html:230: <button class="btn">: inline padding and borders are not converted
+warning[css]: index.html:231: `position: absolute` on <div class="tooltip"> is laid out in normal flow (not implemented yet)
+warning[css]: index.html:231: `transform` on <div class="tooltip"> is not converted yet
+warning[css]: index.html: `position: absolute` on a generated box is laid out in normal flow (not implemented yet)
+warning[css]: index.html:235: background images and gradients are not converted yet
+info[css]: index.html: percentage `border-radius` uses its px part only
+warning[css]: index.html:236: `position: absolute` on <figcaption class="media__caption"> is laid out in normal flow (not implemented yet)
+warning[css]: index.html:240: `position: absolute` on <div class="layer layer--front"> is laid out in normal flow (not implemented yet)
+warning[css]: index.html:241: `position: absolute` on <div class="layer layer--back"> is laid out in normal flow (not implemented yet)
