@@ -1348,6 +1348,8 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             if out_decls.is_empty() {
                 if self.in_for_header > 0 {
                     self.editor.replace(it.span, semi.to_string());
+                } else if hoist_top_var {
+                    self.editor.replace(it.span, ";");
                 } else {
                     self.editor.remove_statement_line(it.span);
                 }

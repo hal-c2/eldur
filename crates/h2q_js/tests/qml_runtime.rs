@@ -1382,3 +1382,209 @@ Item {
         out.page_js
     );
 }
+
+#[test]
+fn qml6_executes_top_level_destructured_var_across_scripts_in_statement_order() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 test: qml6 not found on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("top_destructured_var");
+    let resolver = FakeResolver::default().with_id("out", 1, "outText", TargetKind::Text);
+
+    let s1 = ScriptInput {
+        name: "s1.js".to_string(),
+        kind: ScriptKind::Classic,
+        line_offset: 1,
+        source: r#"
+var trace = [];
+var a = 1;
+function step(label) {
+    trace.push(label + ":" + a + ":" + (b === undefined ? "u" : b) + ":" + (c === undefined ? "u" : c));
+    a = 99;
+}
+step("s1-pre");
+var { a, nested: [b, { c = 30 }] } = { a: 2, nested: [20, {}] };
+step("s1-mid");
+var [a, b] = [3, 40];
+step("s1-post");
+"#
+        .to_string(),
+    };
+    let s2 = ScriptInput {
+        name: "s2.js".to_string(),
+        kind: ScriptKind::Classic,
+        line_offset: 1,
+        source: r#"
+var a = 4;
+step("s2-scalar");
+var { b, c } = { b: 50, c: 60 };
+var [a, d] = [5, 70];
+function summary() {
+    return trace.join("|") + "=>a=" + a + ",b=" + b + ",c=" + c + ",d=" + d;
+}
+document.getElementById("out").textContent = summary();
+"#
+        .to_string(),
+    };
+
+    let scripts = [s1, s2];
+    let analysis = analyze(&scripts);
+    let out = rewrite(&scripts, &analysis, &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+
+    let runtime_path = dir.write_file("h2q_runtime.js", RUNTIME_JS);
+    let page_path = dir.write_file("page.js", &out.page_js);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import "page.js" as Page
+
+Item {
+    id: root
+    width: 200
+    height: 100
+
+    Text { id: outText; text: "" }
+
+    Component.onCompleted: {
+        Page.__h2q_init(root);
+        console.log("H2Q_OK_DESTRUCTURED_VAR", outText.text);
+        Qt.quit();
+    }
+}
+"#,
+    );
+
+    if has_binary("qmllint") {
+        for path in [&runtime_path, &page_path, &main_qml] {
+            let lint = Command::new("qmllint")
+                .arg(path)
+                .output()
+                .expect("failed to run qmllint");
+            assert!(
+                lint.status.success(),
+                "qmllint failed on {}: {}{}\npage.js:\n{}",
+                path.display(),
+                String::from_utf8_lossy(&lint.stdout),
+                String::from_utf8_lossy(&lint.stderr),
+                out.page_js
+            );
+        }
+    }
+
+    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    assert!(
+        output.contains(
+            "H2Q_OK_DESTRUCTURED_VAR s1-pre:1:u:u|s1-mid:2:20:30|s1-post:3:40:30|s2-scalar:4:40:30=>a=5,b=50,c=60,d=70"
+        ),
+        "unexpected qml6 destructured var output:\n{output}\npage.js:\n{}",
+        out.page_js
+    );
+}
+
+#[test]
+fn qml6_executes_uninitialized_nested_var_in_control_flow_and_for_headers() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 test: qml6 not found on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("uninit_nested_var");
+    let resolver = FakeResolver::default().with_id("out", 1, "outText", TargetKind::Text);
+
+    let s1 = ScriptInput {
+        name: "s1.js".to_string(),
+        kind: ScriptKind::Classic,
+        line_offset: 1,
+        source: r#"
+var trace = [];
+if (false) var branchSingle;
+trace.push("single:" + (branchSingle === undefined));
+if (false)
+    var branchNewline;
+trace.push("newline:" + (branchNewline === undefined));
+branchNewline = "set";
+if (true) var thenOnly; else var elseOnly;
+while (false) var whileOnly;
+do var doOnly; while (false);
+forHdr = 0;
+for (var forHdr; forHdr < 2; forHdr++) var forBody;
+for (var forOfHdr of ["m", "n"]) var forOfBody;
+if (true) {
+    var blockOnly;
+}
+function readAll() {
+    var localUninit;
+    if (false) var localBranch;
+    for (var localIdx = 0; localIdx < 3; localIdx++) {}
+    return [
+        trace.join(","),
+        branchNewline,
+        forHdr,
+        forOfHdr,
+        blockOnly === undefined,
+        localUninit === undefined,
+        localBranch === undefined,
+        localIdx
+    ].join("|");
+}
+document.getElementById("out").textContent = readAll();
+"#
+        .to_string(),
+    };
+
+    let scripts = [s1];
+    let analysis = analyze(&scripts);
+    let out = rewrite(&scripts, &analysis, &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+
+    let runtime_path = dir.write_file("h2q_runtime.js", RUNTIME_JS);
+    let page_path = dir.write_file("page.js", &out.page_js);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import "page.js" as Page
+
+Item {
+    id: root
+    width: 200
+    height: 100
+
+    Text { id: outText; text: "" }
+
+    Component.onCompleted: {
+        Page.__h2q_init(root);
+        console.log("H2Q_OK_UNINIT_NESTED_VAR", outText.text);
+        Qt.quit();
+    }
+}
+"#,
+    );
+
+    if has_binary("qmllint") {
+        for path in [&runtime_path, &page_path, &main_qml] {
+            let lint = Command::new("qmllint")
+                .arg(path)
+                .output()
+                .expect("failed to run qmllint");
+            assert!(
+                lint.status.success(),
+                "qmllint failed on {}: {}{}\npage.js:\n{}",
+                path.display(),
+                String::from_utf8_lossy(&lint.stdout),
+                String::from_utf8_lossy(&lint.stderr),
+                out.page_js
+            );
+        }
+    }
+
+    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    assert!(
+        output
+            .contains("H2Q_OK_UNINIT_NESTED_VAR single:true,newline:true|set|2|n|true|true|true|3"),
+        "unexpected qml6 uninit nested var output:\n{output}\npage.js:\n{}",
+        out.page_js
+    );
+}

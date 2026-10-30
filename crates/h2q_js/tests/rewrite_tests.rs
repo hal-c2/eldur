@@ -1756,3 +1756,191 @@ console.log("init:main:" + record("M") + ":" + seenTicks + ":" + checkShadow("ar
         out.page_js
     );
 }
+
+#[test]
+fn deduplicates_top_level_destructured_var_slots_and_preserves_init_order() {
+    let resolver = FakeResolver::default().with_id("out", 1, "outText", TargetKind::Text);
+
+    let s1 = classic(
+        "s1.js",
+        r#"
+var log = [];
+var a = 1;
+function sideEffect(tag) {
+    log.push(tag + ":" + a + ":" + typeof b + ":" + b + ":" + typeof c + ":" + c);
+    a = 99;
+}
+sideEffect("before");
+var { a, b: [c, { d = 4 }] } = { a: 2, b: [3, {}] };
+sideEffect("mid");
+var [a, e] = [5, 6];
+"#,
+    );
+    let s2 = classic(
+        "s2.js",
+        r#"
+var a = 7;
+sideEffect("s2-after-scalar");
+var { c, e } = { c: 8, e: 9 };
+var [d, f] = [10, 11];
+document.getElementById("out").textContent = log.join("|") + "|" + [a, c, d, e, f].join(",");
+"#,
+    );
+
+    let out = run_rewrite(&[s1, s2], &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+
+    let init_pos = out.page_js.find("function __h2q_init").expect("init fn");
+    let top_scope = &out.page_js[..init_pos];
+    let init_scope = &out.page_js[init_pos..];
+
+    assert_eq!(
+        top_scope.matches("var a").count(),
+        1,
+        "expected a single top-level `var a` declaration:\n{}",
+        out.page_js
+    );
+    for name in ["c", "d", "e", "f"] {
+        let pat = format!("var {name};");
+        assert_eq!(
+            top_scope.matches(&pat).count(),
+            1,
+            "expected a single `{pat}` in top_scope:\n{}",
+            out.page_js
+        );
+    }
+    assert!(
+        !top_scope.contains("var {") && !top_scope.contains("var ["),
+        "destructured `var` should not be emitted directly in top_decls:\n{}",
+        out.page_js
+    );
+
+    let p_before = init_scope
+        .find("sideEffect(\"before\");")
+        .expect("before call");
+    let p_obj1 = init_scope
+        .find("({ a, b: [c, { d = 4 }] } = { a: 2, b: [3, {}] });")
+        .expect("first object destructuring in init_stmts");
+    let p_mid = init_scope.find("sideEffect(\"mid\");").expect("mid call");
+    let p_arr1 = init_scope
+        .find("[a, e] = [5, 6];")
+        .expect("first array destructuring in init_stmts");
+    let p_scalar = init_scope
+        .find("a = 7;")
+        .expect("later-script scalar var reuse in init_stmts");
+    let p_s2_call = init_scope
+        .find("sideEffect(\"s2-after-scalar\");")
+        .expect("s2 call");
+    let p_obj2 = init_scope
+        .find("({ c, e } = { c: 8, e: 9 });")
+        .expect("second object destructuring in init_stmts");
+    let p_arr2 = init_scope
+        .find("[d, f] = [10, 11];")
+        .expect("second array destructuring in init_stmts");
+
+    assert!(
+        p_before < p_obj1
+            && p_obj1 < p_mid
+            && p_mid < p_arr1
+            && p_arr1 < p_scalar
+            && p_scalar < p_s2_call
+            && p_s2_call < p_obj2
+            && p_obj2 < p_arr2,
+        "expected destructuring and intervening statements to preserve execution order:\n{}",
+        out.page_js
+    );
+}
+
+#[test]
+fn preserves_empty_statement_for_hoisted_uninitialized_nested_var_and_for_headers() {
+    let resolver = FakeResolver::default().with_id("out", 1, "outText", TargetKind::Text);
+
+    let s1 = classic(
+        "s1.js",
+        r#"
+var log = [];
+if (false) var branchSingle;
+log.push("after-single");
+if (false)
+    var branchNewline;
+log.push("after-newline");
+if (true) var thenOnly; else var elseOnly;
+while (false) var whileOnly;
+do var doOnly; while (false);
+for (var forHdr; false; ) var forBody;
+for (var forOfHdr of ["x", "y"]) var forOfBody;
+if (true) {
+    var blockOnly;
+}
+function keepLocal() {
+    var localUninit;
+    if (false) var localBranch;
+    for (var localIdx = 0; localIdx < 2; localIdx++) {}
+    return [typeof localUninit, typeof localBranch, localIdx].join(":");
+}
+document.getElementById("out").textContent = log.join("|") + "|" + forOfHdr + "|" + keepLocal();
+"#,
+    );
+
+    let out = run_rewrite(&[s1], &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+
+    let init_pos = out.page_js.find("function __h2q_init").expect("init fn");
+    let top_scope = &out.page_js[..init_pos];
+    let init_scope = &out.page_js[init_pos..];
+
+    for name in [
+        "branchSingle",
+        "branchNewline",
+        "thenOnly",
+        "elseOnly",
+        "whileOnly",
+        "doOnly",
+        "forHdr",
+        "forBody",
+        "forOfHdr",
+        "forOfBody",
+        "blockOnly",
+    ] {
+        let decl = format!("var {name};");
+        assert!(
+            top_scope.contains(&decl),
+            "expected `{decl}` hoisted to file scope:\n{}",
+            out.page_js
+        );
+    }
+    let keep_local_pos = top_scope
+        .find("function keepLocal()")
+        .expect("keepLocal fn");
+    let file_var_scope = &top_scope[..keep_local_pos];
+    for local_name in ["localUninit", "localBranch", "localIdx"] {
+        let decl = format!("var {local_name}");
+        assert!(
+            !file_var_scope.contains(&decl),
+            "function-local `{decl}` should not be hoisted to file scope:\n{}",
+            out.page_js
+        );
+    }
+    assert!(
+        top_scope.contains("var localUninit;")
+            && top_scope.contains("if (false) var localBranch;")
+            && top_scope.contains("for (var localIdx = 0; localIdx < 2; localIdx++)"),
+        "function-local vars should remain untouched inside keepLocal:\n{}",
+        out.page_js
+    );
+    assert!(
+        !init_scope.contains("var "),
+        "no `var` keyword should remain inside __h2q_init:\n{}",
+        out.page_js
+    );
+    assert!(
+        init_scope.contains("if (false) ;")
+            && init_scope.contains("if (true) ; else ;")
+            && init_scope.contains("while (false) ;")
+            && init_scope.contains("do ; while (false);")
+            && init_scope.contains("for (; false; ) ;")
+            && init_scope.contains("for (forOfHdr of [\"x\", \"y\"]) ;"),
+        "expected valid empty statements and for-header handling in __h2q_init:\n{}",
+        out.page_js
+    );
+}

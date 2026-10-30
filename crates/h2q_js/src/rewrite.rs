@@ -799,7 +799,10 @@ impl PageBuffers {
 
             let has_obj_rest =
                 matches!(&decl.id, BindingPattern::ObjectPattern(obj) if obj.rest.is_some());
+            let is_destructured_var = vd.kind == VariableDeclarationKind::Var
+                && !matches!(&decl.id, BindingPattern::BindingIdentifier(_));
             let is_pure = !has_obj_rest
+                && !is_destructured_var
                 && pattern_defaults_are_pure(
                     &decl.id,
                     scoping,
