@@ -2,12 +2,8 @@
 source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-info[qml]: index.html:175: <a> is underlined: StyledText always underlines links
 info[qml]: index.html:175: <a>: font size 15px inside 16px text is approximated with <small>
-info[qml]: index.html:176: <a> is underlined: StyledText always underlines links
 info[qml]: index.html:176: <a>: font size 15px inside 16px text is approximated with <small>
-info[qml]: index.html:177: <a> is underlined: StyledText always underlines links
 info[qml]: index.html:177: <a>: font size 15px inside 16px text is approximated with <small>
-info[qml]: index.html:178: <a> is underlined: StyledText always underlines links
 info[qml]: index.html:178: <a>: font size 15px inside 16px text is approximated with <small>
 info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

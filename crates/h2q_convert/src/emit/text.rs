@@ -9,6 +9,7 @@ use h2q_css::{
     ComputedStyle, Direction, FontStyle, LineHeight, Rgba, TextAlign, TextDecorationLine,
     TextTransform, VerticalAlign, WhiteSpace, WordBreak,
 };
+use h2q_dom::{Document, NodeId};
 use h2q_qml::{Member, Object, Value};
 
 use super::Emitter;
@@ -45,6 +46,10 @@ struct Markup {
     preserve: bool,
     prev_space: bool,
     link_colors: Vec<Rgba>,
+    /// The one link the whole text is, when it is not underlined: it is
+    /// written as plain text and the Text opens its `href` when tapped,
+    /// since StyledText underlines every link.
+    bare_link: Option<(NodeId, String)>,
 }
 
 impl Emitter<'_, '_> {
@@ -74,6 +79,13 @@ impl Emitter<'_, '_> {
             preserve: !matches!(style.white_space, WhiteSpace::Normal | WhiteSpace::NoWrap),
             prev_space: true,
             link_colors: Vec::new(),
+            bare_link: match items {
+                [Inline::Span(span)] if !decoration.underline => link_href(self.doc, span)
+                    .filter(|_| !span.style.text_decoration_line.underline)
+                    .zip(span.node)
+                    .map(|(href, node)| (node, href.to_owned())),
+                _ => None,
+            },
         };
         self.markup(items, &state, &mut markup);
 
@@ -100,6 +112,18 @@ impl Emitter<'_, '_> {
                 params: vec!["link".to_owned()],
                 body: vec!["Qt.openUrlExternally(link)".to_owned()],
             });
+        }
+        if let Some((_, href)) = markup.bare_link {
+            let mut tap = Object::new("TapHandler");
+            tap.members.push(Member::Handler {
+                name: "onTapped".to_owned(),
+                params: Vec::new(),
+                body: vec![format!(
+                    "Qt.openUrlExternally({})",
+                    super::controls::js_string(&href)
+                )],
+            });
+            text.push_child(tap);
         }
         text
     }
@@ -252,13 +276,14 @@ impl Emitter<'_, '_> {
             close.push(c);
         };
 
-        let href = span
-            .node
-            .and_then(|n| self.doc.element(n))
-            .filter(|e| e.is_html() && e.local_name() == "a")
-            .and_then(|e| e.attr("href"));
+        let href = link_href(self.doc, span);
+        let bare = m
+            .bare_link
+            .as_ref()
+            .is_some_and(|(node, _)| span.node == Some(*node));
         if let Some(href) = href
             && !parent.in_link
+            && !bare
         {
             tag(
                 &mut open,
@@ -459,4 +484,12 @@ pub(super) fn text_align(style: &ComputedStyle) -> Option<&'static str> {
         TextAlign::Center => Some("Text.AlignHCenter"),
         TextAlign::Justify => Some("Text.AlignJustify"),
     }
+}
+
+/// The `href` of an `<a>` span.
+fn link_href<'a>(doc: &'a Document, span: &Span<'_>) -> Option<&'a str> {
+    span.node
+        .and_then(|n| doc.element(n))
+        .filter(|e| e.is_html() && e.local_name() == "a")
+        .and_then(|e| e.attr("href"))
 }

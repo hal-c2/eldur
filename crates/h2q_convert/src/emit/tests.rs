@@ -1120,3 +1120,36 @@ fn fr_ratio_reported_only_when_sub_columns_approximate_it() {
         "{inexact:?}"
     );
 }
+
+#[test]
+fn a_text_that_is_one_link_without_underline_is_not_underlined() {
+    // Chromium: `li a` computes `text-decoration-line: none`, colour
+    // rgb(51, 65, 85); without the rule, `underline` and rgb(0, 0, 238).
+    let (qml, diags) = convert(&page(
+        ".n a{color:#334155;text-decoration:none}",
+        "<ul class=n><li><a href=\"#f\">Features</a></li></ul>\
+         <p class=n>See <a href=\"#d\">docs</a>.</p>\
+         <ul><li><a href=\"#u\">Underlined</a></li></ul>",
+    ));
+    let nav = object_after(&qml, "<li>");
+    assert!(
+        nav.contains("text: \"<font color=\\\"#334155\\\">Features</font>\""),
+        "{nav}"
+    );
+    assert!(!nav.contains("<a "), "{nav}");
+    assert!(
+        nav.contains("TapHandler {") && nav.contains("Qt.openUrlExternally(\"#f\")"),
+        "{nav}"
+    );
+    // A link inside other text stays a StyledText link, underlined.
+    let p = object_after(&qml, "<p class=\"n\">");
+    assert!(p.contains("<a href=\\\"#d\\\">docs</a>"), "{p}");
+    assert_eq!(
+        diags.iter().filter(|d| d.contains("is underlined")).count(),
+        1,
+        "{diags:?}"
+    );
+    // An underlined link keeps StyledText's link.
+    let u = qml.split("<a href=\\\"#u\\\">").count();
+    assert_eq!(u, 2, "{qml}");
+}

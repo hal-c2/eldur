@@ -2,7 +2,4 @@
 source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-info[qml]: index.html:229: <a class="link"> is underlined: StyledText always underlines links
-info[qml]: index.html:230: <a class="link"> is underlined: StyledText always underlines links
-info[qml]: index.html:231: <a class="link"> is underlined: StyledText always underlines links
 info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

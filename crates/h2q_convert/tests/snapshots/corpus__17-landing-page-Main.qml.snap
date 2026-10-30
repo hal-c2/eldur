@@ -118,7 +118,7 @@ ApplicationWindow {
 
                                         // <li>
                                         Text {
-                                            text: "<a href=\"#features\">Features</a>"
+                                            text: "<font color=\"#5c6378\">Features</font>"
                                             textFormat: Text.StyledText
                                             color: "#1d2233"
                                             font.family: "sans-serif"
@@ -129,19 +129,18 @@ ApplicationWindow {
                                                 y: 3.6
                                             }
                                             wrapMode: Text.WordWrap
-                                            linkColor: "#5c6378"
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                             Layout.fillHeight: true
 
-                                            onLinkActivated: (link) => {
-                                                Qt.openUrlExternally(link)
+                                            TapHandler {
+                                                onTapped: Qt.openUrlExternally("#features")
                                             }
                                         }
 
                                         // <li>
                                         Text {
-                                            text: "<a href=\"#pricing\">Pricing</a>"
+                                            text: "<font color=\"#5c6378\">Pricing</font>"
                                             textFormat: Text.StyledText
                                             color: "#1d2233"
                                             font.family: "sans-serif"
@@ -152,20 +151,19 @@ ApplicationWindow {
                                                 y: 3.6
                                             }
                                             wrapMode: Text.WordWrap
-                                            linkColor: "#5c6378"
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                             Layout.fillHeight: true
                                             Layout.leftMargin: 32
 
-                                            onLinkActivated: (link) => {
-                                                Qt.openUrlExternally(link)
+                                            TapHandler {
+                                                onTapped: Qt.openUrlExternally("#pricing")
                                             }
                                         }
 
                                         // <li>
                                         Text {
-                                            text: "<a href=\"#customers\">Customers</a>"
+                                            text: "<font color=\"#5c6378\">Customers</font>"
                                             textFormat: Text.StyledText
                                             color: "#1d2233"
                                             font.family: "sans-serif"
@@ -176,20 +174,19 @@ ApplicationWindow {
                                                 y: 3.6
                                             }
                                             wrapMode: Text.WordWrap
-                                            linkColor: "#5c6378"
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                             Layout.fillHeight: true
                                             Layout.leftMargin: 32
 
-                                            onLinkActivated: (link) => {
-                                                Qt.openUrlExternally(link)
+                                            TapHandler {
+                                                onTapped: Qt.openUrlExternally("#customers")
                                             }
                                         }
 
                                         // <li>
                                         Text {
-                                            text: "<a href=\"#docs\">Docs</a>"
+                                            text: "<font color=\"#5c6378\">Docs</font>"
                                             textFormat: Text.StyledText
                                             color: "#1d2233"
                                             font.family: "sans-serif"
@@ -200,14 +197,13 @@ ApplicationWindow {
                                                 y: 3.6
                                             }
                                             wrapMode: Text.WordWrap
-                                            linkColor: "#5c6378"
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                             Layout.fillHeight: true
                                             Layout.leftMargin: 32
 
-                                            onLinkActivated: (link) => {
-                                                Qt.openUrlExternally(link)
+                                            TapHandler {
+                                                onTapped: Qt.openUrlExternally("#docs")
                                             }
                                         }
 
@@ -1805,8 +1801,8 @@ ApplicationWindow {
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#features\">Features</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Features"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -1816,19 +1812,18 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: Qt.openUrlExternally("#features")
                                                 }
                                             }
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#pricing\">Pricing</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Pricing"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -1838,19 +1833,18 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: Qt.openUrlExternally("#pricing")
                                                 }
                                             }
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#changelog\">Changelog</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Changelog"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -1860,19 +1854,18 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: Qt.openUrlExternally("#changelog")
                                                 }
                                             }
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#security\">Security</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Security"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -1882,12 +1875,11 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: Qt.openUrlExternally("#security")
                                                 }
                                             }
                                         }
@@ -1937,8 +1929,8 @@ ApplicationWindow {
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#about\">About</a>"
-                                                textFormat: Text.StyledText
+                                                text: "About"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -1948,19 +1940,18 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: Qt.openUrlExternally("#about")
                                                 }
                                             }
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#careers\">Careers</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Careers"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -1970,19 +1961,18 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: Qt.openUrlExternally("#careers")
                                                 }
                                             }
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#blog\">Blog</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Blog"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -1992,19 +1982,18 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: Qt.openUrlExternally("#blog")
                                                 }
                                             }
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#press\">Press</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Press"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -2014,12 +2003,11 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: Qt.openUrlExternally("#press")
                                                 }
                                             }
                                         }
@@ -2068,8 +2056,8 @@ ApplicationWindow {
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#docs\">Docs</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Docs"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -2079,19 +2067,18 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: Qt.openUrlExternally("#docs")
                                                 }
                                             }
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#guides\">Guides</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Guides"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -2101,19 +2088,18 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: Qt.openUrlExternally("#guides")
                                                 }
                                             }
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#status\">Status</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Status"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -2123,19 +2109,18 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: Qt.openUrlExternally("#status")
                                                 }
                                             }
 
                                             // <li>
                                             Text {
-                                                text: "<a href=\"#community\">Community</a>"
-                                                textFormat: Text.StyledText
+                                                text: "Community"
+                                                textFormat: Text.PlainText
                                                 color: "#c9cee0"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 16
@@ -2145,12 +2130,11 @@ ApplicationWindow {
                                                     y: 3.6
                                                 }
                                                 wrapMode: Text.WordWrap
-                                                linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
                                                 Layout.fillHeight: true
 
-                                                onLinkActivated: (link) => {
-                                                    Qt.openUrlExternally(link)
+                                                TapHandler {
+                                                    onTapped: Qt.openUrlExternally("#community")
                                                 }
                                             }
                                         }
