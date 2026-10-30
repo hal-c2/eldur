@@ -350,7 +350,8 @@ pub(crate) fn validate_area_rectangles(rows: &[Vec<Option<String>>]) -> Result<(
     Ok(())
 }
 
-pub(crate) fn parse_grid_auto_flow(cvs: &[ComponentValue]) -> Result<bool, String> {
+/// Returns `(column, dense)`.
+pub(crate) fn parse_grid_auto_flow(cvs: &[ComponentValue]) -> Result<(bool, bool), String> {
     let mut cur = Cursor::new(cvs);
     let mut dir: Option<bool> = None;
     let mut dense = false;
@@ -381,7 +382,7 @@ pub(crate) fn parse_grid_auto_flow(cvs: &[ComponentValue]) -> Result<bool, Strin
     if dir.is_none() && !dense {
         return Err("empty grid-auto-flow".to_owned());
     }
-    Ok(dir.unwrap_or(false))
+    Ok((dir.unwrap_or(false), dense))
 }
 
 /// Parses `<grid-line>`: `auto`, `<int != 0>`, `<custom-ident>`, `span <int >= 1>`,

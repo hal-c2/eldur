@@ -1044,7 +1044,7 @@ pub(crate) fn compute(
             style.grid_template_areas = parse_grid_template_areas(cvs)?;
         }
         Longhand::GridAutoFlow => {
-            style.grid_auto_flow_column = parse_grid_auto_flow(cvs)?;
+            (style.grid_auto_flow_column, style.grid_auto_flow_dense) = parse_grid_auto_flow(cvs)?;
         }
         Longhand::GridAutoRows => {
             style.grid_auto_rows = parse_grid_auto_tracks(cvs, &uctx_pct)?;
@@ -1459,6 +1459,7 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
         Longhand::GridTemplateAreas => dst.grid_template_areas.clone_from(&src.grid_template_areas),
         Longhand::GridAutoFlow => {
             dst.grid_auto_flow_column = src.grid_auto_flow_column;
+            dst.grid_auto_flow_dense = src.grid_auto_flow_dense;
         }
         Longhand::GridAutoRows => dst.grid_auto_rows.clone_from(&src.grid_auto_rows),
         Longhand::GridAutoColumns => dst.grid_auto_columns.clone_from(&src.grid_auto_columns),

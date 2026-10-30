@@ -1180,3 +1180,25 @@ fn text_decoration_thickness_and_underline_offset_validation() {
         );
     }
 }
+
+#[test]
+fn grid_auto_flow_records_dense() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    let mut s = ComputedStyle::default();
+
+    compute(&mut s, Longhand::GridAutoFlow, "dense", &ctx).expect("dense alone");
+    assert!(!s.grid_auto_flow_column);
+    assert!(s.grid_auto_flow_dense);
+
+    compute(&mut s, Longhand::GridAutoFlow, "column", &ctx).expect("column");
+    assert!(s.grid_auto_flow_column);
+    assert!(!s.grid_auto_flow_dense);
+
+    apply_decl(&mut s, "grid", "100px / auto-flow dense", &ctx).expect("grid shorthand");
+    assert!(s.grid_auto_flow_column);
+    assert!(s.grid_auto_flow_dense);
+
+    apply_decl(&mut s, "grid", "none", &ctx).expect("grid: none resets the flow");
+    assert!(!s.grid_auto_flow_dense);
+}
