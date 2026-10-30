@@ -2125,3 +2125,47 @@ let modTarget = 0;
         out.page_js
     );
 }
+
+#[test]
+fn registers_block_nested_module_var_in_exports_with_hygienic_rename() {
+    let resolver = FakeResolver::default();
+    let classic_script = classic("c.js", "var count = 1;\n");
+    let a = module_script(
+        "a.js",
+        r#"
+{ var count = 10; }
+if (false) { var skipped = 1; }
+function local() { if (true) { var inner = 1; } return inner; }
+export { count, skipped as renamedSkipped };
+"#,
+    );
+    let b = module_script(
+        "b.js",
+        r#"
+import { count, renamedSkipped } from "./a.js";
+import * as ns from "./a.js";
+console.log(count, renamedSkipped, ns.count);
+"#,
+    );
+
+    let out = run_rewrite(&[classic_script, a, b], &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    let js = &out.page_js;
+    assert!(js.contains("var __h2q_m1_count;"), "{js}");
+    assert!(js.contains("var __h2q_m1_skipped;"), "{js}");
+    assert!(js.contains("__h2q_m1_count = 10;"), "{js}");
+    assert!(
+        js.contains("renamedSkipped = __h2q_m1_skipped;")
+            && js.contains("console.log(__h2q_m1_count, renamedSkipped, ns.count);"),
+        "importer must alias the hoisted exports:\n{js}"
+    );
+    assert!(
+        js.contains("count: __h2q_m1_count, renamedSkipped: __h2q_m1_skipped"),
+        "namespace object must carry the hoisted exports:\n{js}"
+    );
+    assert!(
+        js.contains("var inner = 1;"),
+        "function-local var untouched:\n{js}"
+    );
+    assert!(!js.contains("__h2q_m1_inner"), "{js}");
+}
