@@ -43,7 +43,7 @@ Rewriting uses **Static Resolution First, Runtime Fallback Second**:
 | `document.createTextNode(text)` | `H2Q.document.createTextNode(text)` | Dynamically creates QML `Text` item wrapped in `H2Q.wrap` | Implemented (untested) |
 | `document.createDocumentFragment()` | `H2Q.document.createDocumentFragment()` | Lightweight fragment container (`nodeType === 11`); children splice into parent on insertion | Supported & tested |
 
-Runtime selector matching inspects `objectName` for `#id`, `h2qTag` (with QML type-name inference fallback for common controls) for tag selectors, and `h2qClasses` / `cls_<name>` booleans for class selectors. Note: `h2q_convert` does not yet emit `h2qTag`, `h2qClasses`, or `baseUrl` on converted pages (see [Section 11](#11-coverage)); until the converter emits those properties, runtime selectors on converted pages cannot match a converted element's classes or tag (e.g., `btn.matches(".x")` on a converted `<button class="x">` returns `false`).
+Runtime selector matching inspects `objectName` for `#id`, `h2qTag` (with QML type-name inference fallback for common controls) for tag selectors, and `h2qClasses` / `cls_<name>` booleans for class selectors. On a converted page whose scripts reach elements at run time, `h2q_convert` emits `h2qTag` and `h2qClasses` on every element that has its own QML object (see [Section 11](#converter-metadata-h2q_convert)).
 
 ---
 
@@ -324,6 +324,24 @@ An item counts as tested only when a test checks its result. Across the **142** 
 - **10 items asserted only by a rewrite test**: `document.body` / `document.documentElement`, `el.style.backgroundColor` / `background`, `el.insertAdjacentElement`, `el.insertAdjacentText`, `el.click()`, `mouseenter`/`mouseleave`/`mouseover`/`mouseout`, `cancelAnimationFrame`, `fetch`, `alert`, `confirm` / `prompt`.
 - **26 items not asserted at all**: `document.head`, `document.createTextNode`, `el.offsetLeft`, `el.offsetTop`, `el.removeAttribute`, `el.hasAttribute`, `el.style.visibility`, `el.style.minWidth`/`minHeight`/`maxWidth`/`maxHeight`, `el.style.left`/`top`, `el.style.fontSize`, `el.style.fontWeight`, `el.style.fontStyle`, `el.style.textAlign`, `el.style.borderRadius`, `el.style.borderColor`, `el.style.borderWidth`, `el.style.zIndex`, `parent.removeChild`, `parent.insertBefore`, `mousedown`/`mouseup`/`pointerdown`/`pointerup`/`touchstart`/`touchend`, `contextmenu`, `change` on `TextField`, `submit`, `resize`, `visibilitychange`, `queueMicrotask`.
 
-### Converter Metadata Gap (`h2q_convert`)
+### Converter Metadata (`h2q_convert`)
 
-`h2q_convert` does not yet emit `h2qTag`, `h2qClasses`, or `baseUrl` on converted QML pages. Because runtime selector matching relies on `h2qTag` and `h2qClasses` when static selector resolution is unavailable, calling `btn.matches(".x")` (or dynamic `querySelector(".x")`, `closest(".x")`, `getElementsByClassName("x")` / `getElementsByTagName("button")`) on a converted `<button class="x">` returns `false` (or no matches) until the converter emits `h2qTag` and `h2qClasses`. Likewise, relative `a.href` and `img.src` values on converted pages only resolve against a document base once `h2q_convert` passes `baseUrl` to `H2Q.init(root, baseUrl)` or emits `property string baseUrl` on the root item.
+What `h2q_convert` emits for the runtime (`docs/design/dynamic-styles.md` §7, §8.1):
+
+| Name | On | When |
+|---|---|---|
+| `property string h2qTag` (lower-case tag) | every element with its own QML object | the page's analysis has `runtime_dom` (runtime selectors, traversal, `matches`/`closest`, event targets, or DOM mutation) |
+| `property string h2qClasses` (the `class` attribute as written) | same, when the element has a non-empty `class` | same |
+| `objectName` (the HTML id) | same, when the element has an `id` | same (and, as before, on every element a script reaches by a literal query) |
+| `property bool cls_<s>` (initially whether the element has the class) | static elements a script writes classes on through a literal query, for each class it names | the page has class writes |
+| `property var h2qStyledClasses` (sorted classes that selectors name) | root | `runtime_dom` |
+| `property string baseUrl` | root | the page has any script |
+
+`baseUrl` is the page's URL for `http(s)` inputs, `Qt.resolvedUrl("Main.qml")` for local inputs (the converted app, next to which assets are copied), and `<base href>` resolved against either. Pages with no element access beyond literal queries are byte-identical to before apart from `baseUrl`; pages without scripts are unchanged. Classes that sanitise to the same `cls_` name (`a-b`, `a_b`) get an `info[js]` diagnostic. Elements merged into a `StyledText` run have no object and no metadata.
+
+Asserted end to end in qml6 against Chromium's answers for the same page (`crates/h2q_convert/tests/metadata_e2e.rs`, values recorded by `tests/metadata/chromium.mjs`): `el.matches` (class, tag and class, non-matching class and tag), `el.closest` (by class, by tag, no match → `null`) and reading `.id`/`.className` of the result, `classList.contains`, `classList.toggle` followed by `matches`, `document.querySelector` by class and by descendant class selector, `tagName`, `className`, `location.href`, and `a.href` for relative, `../` and `/` URLs, both from the page URL and from `<base href>`. For a local page `location.href` is the converted `Main.qml`, not the source file (dynamic-styles §14, decision 2).
+
+Known gaps:
+- `document.querySelectorAll`, `getElementsByClassName` and `getElementsByTagName` return every element **twice** on converted pages. `_walkItems` visits both a `Flickable`'s `contentItem` and its `children`, and `Flickable.children` lists the `contentItem`'s children, so every element under the page's `Flickable` is visited twice. `querySelector` (first match) is not affected.
+- When a page has `<base href>`, `location.href` is the base URL rather than the document's URL, because the runtime starts `location` from `baseUrl`.
+- `cls_<s>` is not yet declared on elements reached without a literal query (`event.target`, `this`) or on created elements (dynamic-styles S6/S7).

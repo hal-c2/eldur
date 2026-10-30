@@ -419,6 +419,7 @@ dependencies = [
  "imagesize",
  "insta",
  "thiserror",
+ "url",
 ]
 
 [[package]]

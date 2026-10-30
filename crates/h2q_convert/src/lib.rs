@@ -175,5 +175,6 @@ mod boxes;
 mod diag;
 mod emit;
 mod images;
+mod metadata;
 mod pipeline;
 mod scripts;
