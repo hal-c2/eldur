@@ -2263,3 +2263,150 @@ function clear() {
     );
     assert!(output.contains("H2Q_OK_APPEND 2 true true 0 1"), "{output}");
 }
+
+
+#[test]
+fn qml6_unmapped_dom_members_use_wrapper_and_skip_box_text_child() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default()
+        .with_id("empty", 1, "emptyBox", TargetKind::Box)
+        .with_id("list", 2, "listBox", TargetKind::Box)
+        .with_id("item-1", 3, "item1", TargetKind::Box)
+        .with_id("item-2", 4, "item2", TargetKind::Button);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verify() {
+    const empty = document.getElementById("empty");
+    const list = document.getElementById("list");
+    const first = document.getElementById("item-1");
+    const second = document.getElementById("item-2");
+
+    list.setAttribute("data-role", "nav");
+    const checks = [
+        empty.children.length === 0,
+        empty.childElementCount === 0,
+        empty.firstElementChild === null,
+        empty.lastElementChild === null,
+        list.children.length === 2,
+        list.childElementCount === 2,
+        list.firstElementChild.id === "item-1",
+        list.lastElementChild.id === "item-2",
+        first.nextElementSibling.id === "item-2",
+        first.previousElementSibling === null,
+        second.previousElementSibling.id === "item-1",
+        second.nextElementSibling === null,
+        first.parentElement.id === "list",
+        list.id === "list",
+        list.tagName === "DIV",
+        second.tagName === "BUTTON",
+        list.getAttribute("data-role") === "nav"
+    ];
+    list.id = "renamed-list";
+    checks.push(list.id === "renamed-list");
+    checks.push(first.parentElement.id === "renamed-list");
+
+    const dynA = document.createElement("div");
+    dynA.id = "dyn-a";
+    const dynB = document.createElement("span");
+    dynB.id = "dyn-b";
+    empty.appendChild(dynA);
+    empty.appendChild(dynB);
+    checks.push(empty.children.length === 2);
+    checks.push(empty.firstElementChild.id === "dyn-a");
+    checks.push(empty.lastElementChild.id === "dyn-b");
+    checks.push(dynA.nextElementSibling.id === "dyn-b");
+    checks.push(dynB.previousElementSibling.id === "dyn-a");
+    checks.push(dynA.parentElement.id === "empty");
+    return checks.map((c, idx) => c ? "ok" : ("fail@" + idx)).join(",");
+}
+"##,
+        r#"Item {
+    id: root
+    Rectangle {
+        id: emptyBox
+        objectName: "empty"
+        Text { id: emptyBoxText; text: "Only text" }
+    }
+    Rectangle {
+        id: listBox
+        objectName: "list"
+        Text { id: listBoxText; text: "Header text" }
+        Rectangle { id: item1; objectName: "item-1" }
+        Button { id: item2; objectName: "item-2"; text: "Second" }
+    }
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        console.log("H2Q_OK_WRAP_MEMBERS", Page.verify());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains("H2Q_OK_WRAP_MEMBERS") && !output.contains("fail@"),
+        "{output}"
+    );
+}
+
+#[test]
+fn qml6_range_and_spinbox_value_reads_as_string_and_increments_correctly() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default()
+        .with_id("range", 1, "rangeSlider", TargetKind::Range)
+        .with_id("spin", 2, "spinBox", TargetKind::Range)
+        .with_id("prog", 3, "progBar", TargetKind::Progress);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verify() {
+    const range = document.getElementById("range");
+    const spin = document.getElementById("spin");
+    const prog = document.getElementById("prog");
+    const dynRange = document.querySelector("#range");
+    const dynSpin = document.querySelector("#spin");
+
+    const r1 = range.value + 1;
+    const dr1 = dynRange.value + 1;
+    range.value = 2.5;
+    const r2 = range.value;
+    const r2Concat = range.value + 1;
+    const dr2 = dynRange.value;
+
+    const sBefore = spin.value + 1;
+    spin.value++;
+    const sAfterInc = spin.value;
+    const dsAfterInc = dynSpin.value;
+    dynSpin.value++;
+    const sAfterDynInc = spin.value;
+    --spin.value;
+    const sAfterDec = spin.value;
+
+    const pType = typeof prog.value;
+    const pAdd = prog.value + 1;
+
+    return [r1, dr1, r2, r2Concat, dr2, sBefore, sAfterInc, dsAfterInc, sAfterDynInc, sAfterDec, pType, pAdd].join("|");
+}
+"##,
+        r#"Item {
+    id: root
+    Slider { id: rangeSlider; objectName: "range"; from: 0; to: 10; stepSize: 0.5; value: 2 }
+    SpinBox { id: spinBox; objectName: "spin"; from: 0; to: 100; value: 2 }
+    ProgressBar { id: progBar; objectName: "prog"; from: 0; to: 10; value: 4 }
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        console.log("H2Q_OK_RANGE_STR", Page.verify());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains("H2Q_OK_RANGE_STR 21|21|2.5|2.51|2.5|21|3|3|4|3|number|5"),
+        "{output}"
+    );
+}

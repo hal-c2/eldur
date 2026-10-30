@@ -388,39 +388,39 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
         }
     }
 
-    fn rewrite_resolved_prop_read(&self, target: &QmlTarget, prop: &str) -> Option<String> {
+    fn rewrite_resolved_prop_read(&self, target: &QmlTarget, prop: &str) -> String {
         let id = &target.qml_id;
         match prop {
             "textContent" | "innerText" => {
                 if target.kind == TargetKind::Box {
-                    Some(format!("{id}Text.text"))
+                    format!("{id}Text.text")
                 } else {
-                    Some(format!("{id}.text"))
+                    format!("{id}.text")
                 }
             }
-            "innerHTML" => Some(format!("H2Q.getInnerHTML({id})")),
+            "innerHTML" => format!("H2Q.getInnerHTML({id})"),
             "value" => match target.kind {
-                TargetKind::ComboBox => Some(format!("{id}.currentValue")),
-                TargetKind::Range
-                | TargetKind::Progress
+                TargetKind::ComboBox => format!("{id}.currentValue"),
+                TargetKind::Range => format!("String({id}.value)"),
+                TargetKind::Progress
                 | TargetKind::CheckBox
-                | TargetKind::RadioButton => Some(format!("{id}.value")),
-                _ => Some(format!("{id}.text")),
+                | TargetKind::RadioButton => format!("{id}.value"),
+                _ => format!("{id}.text"),
             },
-            "selectedIndex" => Some(format!("{id}.currentIndex")),
-            "checked" => Some(format!("{id}.checked")),
-            "disabled" => Some(self.format_negated_flag(format!("{id}.enabled"))),
-            "hidden" => Some(self.format_negated_flag(format!("{id}.visible"))),
-            "src" => Some(format!("{id}.source")),
-            "placeholder" => Some(format!("{id}.placeholderText")),
-            "readOnly" => Some(format!("{id}.readOnly")),
-            "offsetWidth" | "clientWidth" => Some(format!("{id}.width")),
-            "offsetHeight" | "clientHeight" => Some(format!("{id}.height")),
-            "classList" => Some(format!("H2Q.classList({id})")),
-            "className" => Some(format!("H2Q.getClassName({id})")),
-            "dataset" => Some(format!("H2Q.dataset({id})")),
-            "style" => Some(format!("H2Q.wrap({id}).style")),
-            _ => None,
+            "selectedIndex" => format!("{id}.currentIndex"),
+            "checked" => format!("{id}.checked"),
+            "disabled" => self.format_negated_flag(format!("{id}.enabled")),
+            "hidden" => self.format_negated_flag(format!("{id}.visible")),
+            "src" => format!("{id}.source"),
+            "placeholder" => format!("{id}.placeholderText"),
+            "readOnly" => format!("{id}.readOnly"),
+            "offsetWidth" | "clientWidth" => format!("{id}.width"),
+            "offsetHeight" | "clientHeight" => format!("{id}.height"),
+            "classList" => format!("H2Q.classList({id})"),
+            "className" => format!("H2Q.getClassName({id})"),
+            "dataset" => format!("H2Q.dataset({id})"),
+            "style" => format!("H2Q.wrap({id}).style"),
+            _ => format!("H2Q.wrap({id}).{prop}"),
         }
     }
 
@@ -550,7 +550,13 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
                         if op == AssignmentOperator::Assign
                             && rhs_str.trim().parse::<f64>().is_err() =>
                     {
-                        format!("{id}.value = Number({rhs_str})")
+                        let inner = rhs_str
+                            .trim()
+                            .strip_prefix("String(")
+                            .and_then(|s| s.strip_suffix(')'))
+                            .filter(|s| !s.contains(['(', ')']))
+                            .unwrap_or(&rhs_str);
+                        format!("{id}.value = Number({inner})")
                     }
                     TargetKind::Range | TargetKind::Progress => {
                         format_assignment(&format!("{id}.value"), op, &rhs_str)
@@ -574,7 +580,7 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
                         format!("H2Q.setClassName({id}, {val})")
                     })
                 }
-                _ => format_assignment(&format!("{id}.{prop}"), op, &rhs_str),
+                _ => format_assignment(&format!("H2Q.wrap({id}).{prop}"), op, &rhs_str),
             };
             self.editor.replace(full_span, replacement);
             return true;
@@ -768,11 +774,8 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
 
         // 1. Statically resolved element property read
         if let Some(target) = self.resolve_single_target(&it.object) {
-            if let Some(rep) = self.rewrite_resolved_prop_read(&target, prop) {
-                self.editor.replace(it.span, rep);
-                return;
-            }
-            self.editor.replace(it.object.span(), target.qml_id);
+            let rep = self.rewrite_resolved_prop_read(&target, prop);
+            self.editor.replace(it.span, rep);
             return;
         }
 
@@ -936,24 +939,23 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             && let Some(target) = self.resolve_single_target(&member.object)
         {
             let id = &target.qml_id;
-            let mapped_lhs = match member.property.name.as_str() {
+            let prop = member.property.name.as_str();
+            let lhs = match prop {
                 "value" => match target.kind {
-                    TargetKind::Range | TargetKind::Progress => Some(format!("{id}.value")),
-                    _ => Some(format!("{id}.text")),
+                    TargetKind::Range | TargetKind::Progress => format!("{id}.value"),
+                    _ => format!("{id}.text"),
                 },
-                "selectedIndex" => Some(format!("{id}.currentIndex")),
-                _ => None,
+                "selectedIndex" => format!("{id}.currentIndex"),
+                _ => format!("H2Q.wrap({id}).{prop}"),
             };
-            if let Some(lhs) = mapped_lhs {
-                let op_str = it.operator.as_str();
-                let rep = if it.prefix {
-                    format!("{op_str}{lhs}")
-                } else {
-                    format!("{lhs}{op_str}")
-                };
-                self.editor.replace(it.span, rep);
-                return;
-            }
+            let op_str = it.operator.as_str();
+            let rep = if it.prefix {
+                format!("{op_str}{lhs}")
+            } else {
+                format!("{lhs}{op_str}")
+            };
+            self.editor.replace(it.span, rep);
+            return;
         }
         walk::walk_update_expression(self, it);
     }

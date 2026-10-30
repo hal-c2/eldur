@@ -2169,3 +2169,75 @@ console.log(count, renamedSkipped, ns.count);
     );
     assert!(!js.contains("__h2q_m1_inner"), "{js}");
 }
+
+
+#[test]
+fn routes_unmapped_dom_members_through_wrapper_and_coerces_range_value_to_string() {
+    let resolver = FakeResolver::default()
+        .with_id("list", 1, "list_", TargetKind::Box)
+        .with_id("vol", 2, "volSlider", TargetKind::Range)
+        .with_id("spin", 3, "spinBox", TargetKind::Range)
+        .with_id("prog", 4, "loadBar", TargetKind::Progress)
+        .with_id("field", 5, "fieldInput", TargetKind::TextField);
+
+    let script = classic(
+        "members_and_range.js",
+        r#"
+function inspectDom() {
+    const list = document.getElementById("list");
+    const vol = document.getElementById("vol");
+    const spin = document.getElementById("spin");
+    const prog = document.getElementById("prog");
+    const field = document.getElementById("field");
+
+    const len = list.children.length;
+    const count = list.childElementCount;
+    const first = list.firstElementChild;
+    const last = list.lastElementChild;
+    const parent = list.parentElement;
+    const next = list.nextElementSibling;
+    const prev = list.previousElementSibling;
+    const curId = list.id;
+    const tag = list.tagName;
+    const attr = list.getAttribute("data-role");
+
+    list.id = "main-list";
+    field.type = "checkbox";
+    list.customProp ||= 1;
+    list.customProp++;
+
+    const rangeConcat = vol.value + 1;
+    const progAdd = prog.value + 1;
+    spin.value++;
+    --spin.value;
+    return [len, count, first, last, parent, next, prev, curId, tag, attr, rangeConcat, progAdd, spin.value];
+}
+"#,
+    );
+
+    let out = run_rewrite(&[script], &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    let js = &out.page_js;
+    assert!(js.contains("const len = H2Q.wrap(list_).children.length;"), "{js}");
+    assert!(js.contains("const count = H2Q.wrap(list_).childElementCount;"), "{js}");
+    assert!(js.contains("const first = H2Q.wrap(list_).firstElementChild;"), "{js}");
+    assert!(js.contains("const last = H2Q.wrap(list_).lastElementChild;"), "{js}");
+    assert!(js.contains("const parent = H2Q.wrap(list_).parentElement;"), "{js}");
+    assert!(js.contains("const next = H2Q.wrap(list_).nextElementSibling;"), "{js}");
+    assert!(js.contains("const prev = H2Q.wrap(list_).previousElementSibling;"), "{js}");
+    assert!(js.contains("const curId = H2Q.wrap(list_).id;"), "{js}");
+    assert!(js.contains("const tag = H2Q.wrap(list_).tagName;"), "{js}");
+    assert!(js.contains("const attr = H2Q.getAttribute(list_, \"data-role\");"), "{js}");
+    assert!(js.contains("H2Q.wrap(list_).id = \"main-list\";"), "{js}");
+    assert!(js.contains("H2Q.wrap(fieldInput).type = \"checkbox\";"), "{js}");
+    assert!(
+        js.contains("H2Q.wrap(list_).customProp || (H2Q.wrap(list_).customProp = 1);"),
+        "{js}"
+    );
+    assert!(js.contains("H2Q.wrap(list_).customProp++;"), "{js}");
+    assert!(js.contains("const rangeConcat = String(volSlider.value) + 1;"), "{js}");
+    assert!(js.contains("const progAdd = loadBar.value + 1;"), "{js}");
+    assert!(js.contains("spinBox.value++;"), "{js}");
+    assert!(js.contains("--spinBox.value;"), "{js}");
+    assert!(js.contains("String(spinBox.value)]"), "{js}");
+}
