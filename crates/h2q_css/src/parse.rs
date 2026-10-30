@@ -307,6 +307,14 @@ fn cap_nesting_depth(text: &str) -> Cow<'_, str> {
         }
     }
 
+    // Any opener still on `stack` at EOF is genuinely unclosed per CSS Syntax 3,
+    // because a closer of a different kind inside it is just a token of its block,
+    // as the mismatch check above already treats it. It and all its ancestors run to
+    // EOF, so blanking the deep ones cannot change which rules or declarations are valid.
+    for &(_, open_idx) in stack.iter().skip(MAX_SWC_NESTING_DEPTH) {
+        blank_positions.push(open_idx);
+    }
+
     if blank_positions.is_empty() {
         return Cow::Borrowed(text);
     }

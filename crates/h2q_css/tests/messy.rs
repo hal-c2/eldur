@@ -314,6 +314,43 @@ fn case12_huge_inputs() {
         assert_eq!(s.color, Rgba::BLACK);
         assert_eq!(s.margin.top, LengthAuto::Length(Length::px(17.0)));
     });
+
+    // (g) Unclosed `calc(` functions nested 5000 levels deep running to EOF.
+    run_on_2mb_stack("unclosed_calc_5000", || {
+        let open = "calc(".repeat(5000);
+        let css = format!("p {{ padding-top: 4px; }} p {{ margin-top: 21px; width: {open}");
+        let s = p_style(&css);
+        assert_eq!(s.padding.top, Length::px(4.0));
+        assert_eq!(s.margin.top, LengthAuto::Length(Length::px(21.0)));
+        assert_eq!(s.width, Size::Auto);
+    });
+
+    // (h) Unclosed `{` blocks nested 5000 levels deep running to EOF.
+    run_on_2mb_stack("unclosed_braces_5000", || {
+        let open = "{".repeat(5000);
+        let css = format!("p {{ padding-top: 4px; }} p {{ margin-top: 22px; a: {open}");
+        let s = p_style(&css);
+        assert_eq!(s.padding.top, Length::px(4.0));
+        assert_eq!(s.margin.top, LengthAuto::Length(Length::px(22.0)));
+    });
+
+    // (i) Unclosed `[` blocks in a rule prelude nested 5000 levels deep running to EOF.
+    run_on_2mb_stack("unclosed_brackets_5000", || {
+        let open = "[".repeat(5000);
+        let css = format!("p {{ padding-top: 4px; }} p {open}");
+        let s = p_style(&css);
+        assert_eq!(s.padding.top, Length::px(4.0));
+    });
+
+    // (j) Inline style with 5000 unclosed `(` running to EOF.
+    run_on_2mb_stack("inline_unclosed_parens_5000", || {
+        let open = "(".repeat(5000);
+        let html = format!(r#"<p id="t" style="margin-top: 24px; width: {open}">hello</p>"#);
+        let s = style_for("p { padding-top: 4px; }", &html, "t");
+        assert_eq!(s.padding.top, Length::px(4.0));
+        assert_eq!(s.margin.top, LengthAuto::Length(Length::px(24.0)));
+        assert_eq!(s.width, Size::Auto);
+    });
 }
 
 // 13. `@media` with garbage, `@media screen and (min-width: ) { p { color: red } }`.
