@@ -14,14 +14,20 @@ use crate::{Diagnostic, Input, Options, Output, OutputFile, Resources, Severity,
 struct Loader<'r> {
     resources: &'r mut dyn Resources,
     base: &'r str,
+    /// Texts of the loaded sheets, for what the cascade does not keep.
+    texts: Vec<String>,
 }
 
 impl StylesheetLoader for Loader<'_> {
     fn load(&mut self, href: &str) -> Option<LoadedSheet> {
-        self.resources.read(href, self.base).map(|r| LoadedSheet {
+        let sheet = self.resources.read(href, self.base).map(|r| LoadedSheet {
             text: String::from_utf8_lossy(&r.bytes).into_owned(),
             url: r.resolved,
-        })
+        });
+        if let Some(sheet) = &sheet {
+            self.texts.push(sheet.text.clone());
+        }
+        sheet
     }
 }
 
@@ -30,14 +36,21 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
 
     // 1–2: DOM and computed styles.
     let doc = Document::parse(&input.html);
-    let (sheets, sheet_diags) = h2q_css::collect_stylesheets(
-        &doc,
-        &mut Loader {
-            resources,
-            base: &input.url,
-        },
-        &options.viewport,
-    );
+    let mut loader = Loader {
+        resources,
+        base: &input.url,
+        texts: Vec::new(),
+    };
+    let (sheets, sheet_diags) = h2q_css::collect_stylesheets(&doc, &mut loader, &options.viewport);
+    let resources = loader.resources;
+    if uses_dense(&doc, &loader.texts) {
+        // h2q_css does not record `dense`, so the text is searched.
+        diags.info(
+            "css",
+            None,
+            "`grid-auto-flow: dense` is laid out as sparse auto-placement".to_owned(),
+        );
+    }
     let styles = h2q_css::compute_styles(&doc, &sheets, &options.viewport);
     for d in sheet_diags.iter().chain(&styles.diagnostics) {
         diags.push(css_diagnostic(d));
@@ -129,6 +142,35 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         files,
         diagnostics: diags.into_vec(),
     }
+}
+
+/// Whether any `grid-auto-flow` or `grid` declaration in the page's CSS
+/// (`<style>`, `style` attributes, loaded sheets) says `dense`.
+fn uses_dense(doc: &Document, loaded: &[String]) -> bool {
+    let mut texts: Vec<String> = loaded.to_vec();
+    for node in doc.descendants(doc.root()) {
+        let Some(element) = doc.element(node) else {
+            continue;
+        };
+        if element.local_name() == "style" {
+            texts.push(doc.text_content(node));
+        }
+        if let Some(style) = element.attr("style") {
+            texts.push(style.to_owned());
+        }
+    }
+    texts.iter().any(|text| {
+        text.split(['{', '}', ';']).any(|decl| {
+            let Some((name, value)) = decl.split_once(':') else {
+                return false;
+            };
+            let name = name.trim().to_ascii_lowercase();
+            (name == "grid-auto-flow" || name == "grid")
+                && value
+                    .split(|c: char| c.is_whitespace() || c == '!')
+                    .any(|w| w.eq_ignore_ascii_case("dense"))
+        })
+    })
 }
 
 fn css_diagnostic(d: &h2q_css::Diagnostic) -> Diagnostic {
