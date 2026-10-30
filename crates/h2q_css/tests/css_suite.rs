@@ -875,6 +875,198 @@ fn state_variants_hover_focus_within_visited_and_multi_dynamic_rejection() {
 }
 
 #[test]
+fn state_variants_nested_has_nth_child_of_and_logical_combinations() {
+    let doc = Document::parse(
+        r#"<!doctype html>
+        <html><body>
+          <div id="card" class="card">
+            <h2 id="card-title" class="title"><span id="card-sub">Sub</span></h2>
+          </div>
+          <div id="other-card" class="card">
+            <h2 id="other-title" class="title">Other</h2>
+          </div>
+          <div id="plain-card" class="card">
+            <p id="plain-text">No title</p>
+          </div>
+
+          <ul id="list">
+            <li id="li-skip">Skip</li>
+            <li id="li-first" class="item"><span id="li-first-label">First</span></li>
+            <li id="li-second" class="item"><span id="li-second-label">Second</span></li>
+          </ul>
+
+          <section id="panel" class="panel">
+            <button id="panel-trigger" class="trigger">Open</button>
+            <p id="panel-body">Body</p>
+          </section>
+        </body></html>"#,
+    );
+
+    let css = r#"
+        .card { margin-top: 4px; color: rgb(10, 20, 30); }
+        .card:has(.title:hover) { margin-top: 16px; color: rgb(220, 80, 0); }
+
+        ul > li { margin-top: 2px; color: rgb(30, 40, 50); }
+        li:nth-child(1 of .item:hover) { margin-top: 14px; color: rgb(0, 180, 90); }
+        li:nth-last-child(1 of .item:focus) { margin-top: 24px; }
+
+        .panel { margin-top: 6px; color: rgb(40, 50, 60); }
+        .panel:is(:has(.trigger:focus)) { margin-top: 18px; color: rgb(140, 20, 200); }
+
+        /* Multi-element dynamic conditions must still be rejected! */
+        .card:hover:has(.title:focus) { margin-top: 99px; }
+        .card:has(.title:hover) .trigger:focus { margin-top: 99px; }
+        li:nth-child(1 of .card:hover .item:focus) { margin-top: 99px; }
+    "#;
+
+    let (sheet, diags) = parse_author(css);
+    assert_eq!(
+        diags.len(),
+        3,
+        "expected 3 multi-dynamic diagnostics: {diags:?}"
+    );
+    assert!(diags.iter().all(|d| d.severity == Severity::Unsupported));
+
+    let map = compute_styles(&doc, &[sheet], &Viewport::default());
+
+    let card = doc.element_by_id("card").expect("card");
+    let card_title = doc.element_by_id("card-title").expect("card-title");
+    let card_sub = doc.element_by_id("card-sub").expect("card-sub");
+    let other_card = doc.element_by_id("other-card").expect("other-card");
+    let other_title = doc.element_by_id("other-title").expect("other-title");
+    let plain_card = doc.element_by_id("plain-card").expect("plain-card");
+    let plain_text = doc.element_by_id("plain-text").expect("plain-text");
+
+    let li_skip = doc.element_by_id("li-skip").expect("li-skip");
+    let li_first = doc.element_by_id("li-first").expect("li-first");
+    let li_first_label = doc.element_by_id("li-first-label").expect("li-first-label");
+    let li_second = doc.element_by_id("li-second").expect("li-second");
+    let li_second_label = doc
+        .element_by_id("li-second-label")
+        .expect("li-second-label");
+
+    let panel = doc.element_by_id("panel").expect("panel");
+    let panel_trigger = doc.element_by_id("panel-trigger").expect("panel-trigger");
+    let panel_body = doc.element_by_id("panel-body").expect("panel-body");
+
+    // Base styles must remain unchanged (no dynamic pseudo-classes active).
+    assert_eq!(map.style(card).expect("card").margin.top, px(4.0));
+    assert_eq!(
+        map.style(card).expect("card").color,
+        Rgba::new(10, 20, 30, 255)
+    );
+    assert_eq!(
+        map.style(card_title).expect("card-title").color,
+        Rgba::new(10, 20, 30, 255)
+    );
+    assert_eq!(map.style(li_first).expect("li-first").margin.top, px(2.0));
+    assert_eq!(
+        map.style(li_first).expect("li-first").color,
+        Rgba::new(30, 40, 50, 255)
+    );
+    assert_eq!(map.style(li_second).expect("li-second").margin.top, px(2.0));
+    assert_eq!(map.style(panel).expect("panel").margin.top, px(6.0));
+    assert_eq!(
+        map.style(panel).expect("panel").color,
+        Rgba::new(40, 50, 60, 255)
+    );
+
+    // 1. `.card:has(.title:hover)` records condition element `#card-title` with changed styles
+    // on `#card` and inherited `color` on `#card-title` and `#card-sub`, without affecting `#other-card`.
+    let title_hover = map
+        .variants_of(card_title)
+        .find(|v| v.state == PseudoState::Hover)
+        .expect("card-title hover variant");
+    assert_eq!(title_hover.node, card_title);
+    assert_eq!(title_hover.changed.len(), 3);
+    assert_eq!(title_hover.changed[0].0, card);
+    assert_eq!(title_hover.changed[0].1.margin.top, px(16.0));
+    assert_eq!(title_hover.changed[0].1.color, Rgba::new(220, 80, 0, 255));
+    assert_eq!(title_hover.changed[1].0, card_title);
+    assert_eq!(title_hover.changed[1].1.color, Rgba::new(220, 80, 0, 255));
+    assert_eq!(title_hover.changed[2].0, card_sub);
+    assert_eq!(title_hover.changed[2].1.color, Rgba::new(220, 80, 0, 255));
+
+    // `#other-title` only changes `#other-card` and `#other-title`, not `#card`.
+    let other_title_hover = map
+        .variants_of(other_title)
+        .find(|v| v.state == PseudoState::Hover)
+        .expect("other-title hover variant");
+    assert_eq!(other_title_hover.node, other_title);
+    assert_eq!(other_title_hover.changed.len(), 2);
+    assert_eq!(other_title_hover.changed[0].0, other_card);
+    assert_eq!(other_title_hover.changed[1].0, other_title);
+
+    // `#plain-card` (no `.title` descendant) has no variants.
+    assert!(map.variants_of(plain_card).next().is_none());
+    assert!(map.variants_of(plain_text).next().is_none());
+
+    // 2. `li:nth-child(1 of .item:hover)` matches `#li-first` (not `#li-skip` or `#li-second`),
+    // and `li:nth-last-child(1 of .item:focus)` matches `#li-second` (not `#li-first`).
+    let li_first_hover = map
+        .variants_of(li_first)
+        .find(|v| v.state == PseudoState::Hover)
+        .expect("li-first hover variant");
+    assert_eq!(li_first_hover.node, li_first);
+    assert_eq!(li_first_hover.changed.len(), 2);
+    assert_eq!(li_first_hover.changed[0].0, li_first);
+    assert_eq!(li_first_hover.changed[0].1.margin.top, px(14.0));
+    assert_eq!(
+        li_first_hover.changed[0].1.color,
+        Rgba::new(0, 180, 90, 255)
+    );
+    assert_eq!(li_first_hover.changed[1].0, li_first_label);
+    assert_eq!(
+        li_first_hover.changed[1].1.color,
+        Rgba::new(0, 180, 90, 255)
+    );
+    assert!(
+        !map.variants_of(li_first)
+            .any(|v| v.state == PseudoState::Focus)
+    );
+
+    let li_second_focus = map
+        .variants_of(li_second)
+        .find(|v| v.state == PseudoState::Focus)
+        .expect("li-second focus variant");
+    assert_eq!(li_second_focus.node, li_second);
+    assert_eq!(li_second_focus.changed.len(), 1);
+    assert_eq!(li_second_focus.changed[0].0, li_second);
+    assert_eq!(li_second_focus.changed[0].1.margin.top, px(24.0));
+    assert!(
+        !map.variants_of(li_second)
+            .any(|v| v.state == PseudoState::Hover)
+    );
+    assert!(map.variants_of(li_second_label).next().is_none());
+    assert!(map.variants_of(li_skip).next().is_none());
+
+    // 3. Nested logical combination `.panel:is(:has(.trigger:focus))` records condition element
+    // `#panel-trigger` and updates `#panel` plus inherited `color` on `#panel-trigger` and `#panel-body`.
+    let trigger_focus = map
+        .variants_of(panel_trigger)
+        .find(|v| v.state == PseudoState::Focus)
+        .expect("panel-trigger focus variant");
+    assert_eq!(trigger_focus.node, panel_trigger);
+    assert_eq!(trigger_focus.changed.len(), 3);
+    assert_eq!(trigger_focus.changed[0].0, panel);
+    assert_eq!(trigger_focus.changed[0].1.margin.top, px(18.0));
+    assert_eq!(
+        trigger_focus.changed[0].1.color,
+        Rgba::new(140, 20, 200, 255)
+    );
+    assert_eq!(trigger_focus.changed[1].0, panel_trigger);
+    assert_eq!(
+        trigger_focus.changed[1].1.color,
+        Rgba::new(140, 20, 200, 255)
+    );
+    assert_eq!(trigger_focus.changed[2].0, panel_body);
+    assert_eq!(
+        trigger_focus.changed[2].1.color,
+        Rgba::new(140, 20, 200, 255)
+    );
+}
+
+#[test]
 fn error_recovery_diagnostics_and_adversarial_inputs_never_panic() {
     let doc = Document::parse(
         r#"<!doctype html>

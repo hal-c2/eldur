@@ -516,24 +516,19 @@ pub(crate) fn compute_styles(
         {
             continue;
         }
-        let parent_id = parent_elements[cond_node.index()];
-        let parent_style = parent_id
-            .and_then(|pid| styles.get(pid.index()))
-            .and_then(Option::as_ref)
-            .map(|es| &es.style);
-        let enclosing_box_display = engine.find_enclosing_box_display(cond_node, &styles);
-
         let mut variant_root_fs = root_font_size;
         let mut changed: Vec<(NodeId, Box<ComputedStyle>)> = Vec::new();
-        engine.compute_variant_subtree(
-            cond_node,
-            (cond_node, state),
-            parent_style,
-            enclosing_box_display,
-            &mut variant_root_fs,
-            &styles,
-            &mut changed,
-        );
+        for child in doc.element_children(doc.root()) {
+            engine.compute_variant_subtree(
+                child,
+                (cond_node, state),
+                None,
+                None,
+                &mut variant_root_fs,
+                &styles,
+                &mut changed,
+            );
+        }
 
         if !changed.is_empty() {
             variants.push(StateVariant {
@@ -665,21 +660,6 @@ enum ResolvedAction {
 }
 
 impl<'a> CascadeEngine<'a> {
-    fn find_enclosing_box_display(
-        &self,
-        node: NodeId,
-        styles: &[Option<ElementStyle>],
-    ) -> Option<Display> {
-        for anc in self.doc.ancestors(node) {
-            if let Some(es) = styles.get(anc.index()).and_then(Option::as_ref)
-                && es.style.display != Display::Contents
-            {
-                return Some(es.style.display);
-            }
-        }
-        None
-    }
-
     fn compute_base_subtree(
         &self,
         node: NodeId,

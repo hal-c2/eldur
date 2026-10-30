@@ -251,47 +251,19 @@ impl Selector {
     /// subtree could change style when `E` enters `state`.
     pub(crate) fn dynamic_variants(&self) -> Vec<(Selector, PseudoState)> {
         let mut out = Vec::new();
-        let last = self.compounds.len().saturating_sub(1);
 
         for (idx, compound) in self.compounds.iter().enumerate() {
-            let subject_in_subtree = idx == last
-                || matches!(
-                    self.combinators.get(idx),
-                    Some(Combinator::Child | Combinator::Descendant)
-                );
-            if !subject_in_subtree {
-                continue;
-            }
-
+            let prefix = self.prefix_without_dynamic(idx);
             let mut self_states = Vec::new();
             collect_compound_self_dynamic_states(compound, &mut self_states);
-            if !self_states.is_empty() {
-                let prefix = self.prefix_without_dynamic(idx);
-                for st in self_states {
-                    out.push((prefix.clone(), st));
-                }
+            for st in self_states {
+                out.push((prefix.clone(), st));
             }
 
-            // Also handle nested selectors inside `:is(...)` / `:where(...)` / `:not(...)`
-            // where the dynamic pseudo-class sits on an ancestor compound of that argument
-            // (for example `.card:hover .mid { .title { ... } }`).
-            for pc in &compound.pseudos {
-                if let PseudoClass::Is(list) | PseudoClass::Where(list) | PseudoClass::Not(list) =
-                    pc
-                {
-                    for inner in list {
-                        if inner.compounds.len() > 1 {
-                            for (inner_prefix, st) in inner.dynamic_variants() {
-                                // Only take inner ancestor states; `inner`'s rightmost
-                                // compound was already handled by `self_states` above.
-                                if inner_prefix.compounds.len() < inner.compounds.len() {
-                                    out.push((inner_prefix, st));
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            // Also handle nested selectors inside `:has(...)`, `:is(...)`, `:where(...)`,
+            // `:not(...)`, `:nth-child(... of ...)`, and `:nth-last-child(... of ...)`
+            // where the dynamic pseudo-class sits on a relative target or ancestor compound.
+            collect_compound_non_self_dynamic_variants(compound, &prefix, &mut out);
         }
 
         out
@@ -321,10 +293,69 @@ fn collect_compound_self_dynamic_states(c: &CompoundSelector, out: &mut Vec<Pseu
                     out.push(*st);
                 }
             }
-            PseudoClass::Is(list) | PseudoClass::Where(list) | PseudoClass::Not(list) => {
+            PseudoClass::Is(list)
+            | PseudoClass::Where(list)
+            | PseudoClass::Not(list)
+            | PseudoClass::NthChild(_, Some(list))
+            | PseudoClass::NthLastChild(_, Some(list)) => {
                 for sel in list {
                     if let Some(last) = sel.compounds.last() {
                         collect_compound_self_dynamic_states(last, out);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+fn collect_compound_non_self_dynamic_variants(
+    c: &CompoundSelector,
+    anchor_prefix: &Selector,
+    out: &mut Vec<(Selector, PseudoState)>,
+) {
+    for pc in &c.pseudos {
+        match pc {
+            PseudoClass::Has(rels) => {
+                for rel in rels {
+                    for (inner_prefix, st) in rel.selector.dynamic_variants() {
+                        let mut compounds = anchor_prefix.compounds.clone();
+                        compounds.extend(inner_prefix.compounds);
+                        let mut combinators = anchor_prefix.combinators.clone();
+                        combinators.push(rel.leading);
+                        combinators.extend(inner_prefix.combinators);
+                        let specificity = compute_selector_specificity(&compounds, None);
+                        out.push((
+                            Selector {
+                                compounds,
+                                combinators,
+                                pseudo_element: None,
+                                specificity,
+                            },
+                            st,
+                        ));
+                    }
+                }
+            }
+            PseudoClass::Is(list)
+            | PseudoClass::Where(list)
+            | PseudoClass::Not(list)
+            | PseudoClass::NthChild(_, Some(list))
+            | PseudoClass::NthLastChild(_, Some(list)) => {
+                for inner in list {
+                    let last_idx = inner.compounds.len().saturating_sub(1);
+                    for (inner_idx, inner_c) in inner.compounds.iter().enumerate() {
+                        if inner_idx < last_idx {
+                            let inner_prefix = inner.prefix_without_dynamic(inner_idx);
+                            let mut self_states = Vec::new();
+                            collect_compound_self_dynamic_states(inner_c, &mut self_states);
+                            for st in self_states {
+                                out.push((inner_prefix.clone(), st));
+                            }
+                            collect_compound_non_self_dynamic_variants(inner_c, &inner_prefix, out);
+                        } else {
+                            collect_compound_non_self_dynamic_variants(inner_c, anchor_prefix, out);
+                        }
                     }
                 }
             }
@@ -339,9 +370,6 @@ fn strip_compound_dynamic(c: &CompoundSelector) -> CompoundSelector {
     for pc in &c.pseudos {
         match pc {
             PseudoClass::Dynamic(st) => {
-                // `:visited` can only ever match hyperlinks (`<a href>`, `<area href>`),
-                // so preserve `:any-link` on the candidate prefix to avoid testing
-                // non-link elements for `PseudoState::Visited`.
                 if *st == PseudoState::Visited {
                     requires_hyperlink = true;
                 }
@@ -357,14 +385,32 @@ fn strip_compound_dynamic(c: &CompoundSelector) -> CompoundSelector {
                 ));
             }
             PseudoClass::Not(list) => {
-                // Inside `:not(:hover)`, stripping `:hover` could turn `:not(:hover)`
-                // into `:not(*)` (false) and miss candidates! Dropping a `:not(...)`
-                // that depends on a dynamic state makes the candidate prefix slightly
-                // broader (a safe superset), which the actual subtree recomputation filters.
                 if list.iter().any(selector_has_any_dynamic) {
                     continue;
                 }
                 pseudos.push(PseudoClass::Not(list.clone()));
+            }
+            PseudoClass::Has(rels) => {
+                pseudos.push(PseudoClass::Has(
+                    rels.iter()
+                        .map(|rel| RelativeSelector {
+                            leading: rel.leading,
+                            selector: strip_selector_dynamic(&rel.selector),
+                        })
+                        .collect(),
+                ));
+            }
+            PseudoClass::NthChild(formula, Some(list)) => {
+                pseudos.push(PseudoClass::NthChild(
+                    *formula,
+                    Some(list.iter().map(strip_selector_dynamic).collect()),
+                ));
+            }
+            PseudoClass::NthLastChild(formula, Some(list)) => {
+                pseudos.push(PseudoClass::NthLastChild(
+                    *formula,
+                    Some(list.iter().map(strip_selector_dynamic).collect()),
+                ));
             }
             other => pseudos.push(other.clone()),
         }
