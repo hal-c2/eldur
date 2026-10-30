@@ -18,16 +18,23 @@ ApplicationWindow {
     height: 800
 
     function scrollToFragment(link) {
-        const name = decodeURIComponent(link.slice(1));
-        const targets = {
+        let name = link.slice(1);
+        const targets = Object.assign(Object.create(null), {
             "customers": customers,
             "features": features
-        };
-        const target = targets[name];
+        });
+        if (!(name in targets)) {
+            try {
+                name = decodeURIComponent(name);
+            } catch (e) {
+                name = null;
+            }
+        }
+        const target = name === null ? undefined : targets[name];
         if (target) {
             const y = target.mapToItem(flickable.contentItem, 0, 0).y;
             flickable.contentY = Math.max(0, Math.min(y, flickable.contentHeight - flickable.height));
-        } else if (name === "" || name.toLowerCase() === "top") {
+        } else if (name !== null && (name === "" || name.toLowerCase() === "top")) {
             flickable.contentY = 0;
         }
     }
