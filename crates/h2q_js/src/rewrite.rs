@@ -2,12 +2,12 @@ use std::collections::{HashMap, HashSet};
 
 use oxc_allocator::Allocator;
 use oxc_ast::ast::{
-    Argument, AssignmentOperator, AssignmentTarget, BindingPattern, Declaration,
+    Argument, AssignmentOperator, AssignmentTarget, BindingIdentifier, BindingPattern, Declaration,
     ExportDefaultDeclarationKind, Expression, ImportDeclarationSpecifier, ObjectPropertyKind,
     Program, PropertyKind, Statement, UnaryOperator, VariableDeclaration, VariableDeclarationKind,
 };
 use oxc_ast_visit::{Visit, walk};
-use oxc_semantic::{IsGlobalReference, Scoping};
+use oxc_semantic::{IsGlobalReference, Scoping, SymbolId};
 use oxc_span::GetSpan;
 use oxc_syntax::operator::BinaryOperator;
 use oxc_syntax::scope::ScopeFlags;
@@ -44,8 +44,8 @@ enum LoadEntry {
 
 #[derive(Default, Clone)]
 struct ModuleExports {
-    /// Maps exported name (`"foo"`, `"default"`) -> `(top_level_ident, deferred_to_init)`.
-    entries: HashMap<String, (String, bool)>,
+    /// Maps exported name (`"foo"`, `"default"`) -> `(top_level_ident, deferred_to_init, is_mutable)`.
+    entries: HashMap<String, (String, bool, bool)>,
     ordered_keys: Vec<String>,
 }
 
@@ -55,12 +55,14 @@ impl ModuleExports {
         exported: impl Into<String>,
         local_ident: impl Into<String>,
         deferred: bool,
+        is_mutable: bool,
     ) {
         let key = exported.into();
         if !self.entries.contains_key(&key) {
             self.ordered_keys.push(key.clone());
         }
-        self.entries.insert(key, (local_ident.into(), deferred));
+        self.entries
+            .insert(key, (local_ident.into(), deferred, is_mutable));
     }
 }
 
@@ -91,6 +93,7 @@ struct PageBuilder<'a> {
     resolver: &'a dyn DomResolver,
     shared: SharedRewriteState,
     out: PageBuffers,
+    claimed_top_names: HashSet<String>,
     emitted_modules: HashSet<usize>,
     visiting_modules: HashSet<usize>,
     module_exports: HashMap<usize, ModuleExports>,
@@ -158,10 +161,24 @@ pub(crate) fn rewrite(
     let cross_script = build_cross_script_query_map(&valid_refs);
 
     let mut shared = SharedRewriteState::default();
-    // Reserve `__h2q_init` and all user top-level identifiers so generated helper names never collide.
+    let mut claimed_top_names = HashSet::new();
+    // Reserve `__h2q_init` and all user identifiers so generated helper names never collide.
     shared.used_names.insert("__h2q_init".to_string());
+    claimed_top_names.insert("__h2q_init".to_string());
+    claimed_top_names.insert("H2Q".to_string());
     for v in &valid_scripts {
         collect_program_declared_names(&v.parsed.program, &mut shared.used_names);
+        for sym_id in v.parsed.scoping.symbol_ids() {
+            shared
+                .used_names
+                .insert(v.parsed.scoping.symbol_name(sym_id).to_string());
+        }
+        if matches!(v.input.kind, ScriptKind::Classic) {
+            collect_program_declared_names(&v.parsed.program, &mut claimed_top_names);
+            for name in v.parsed.scoping.root_unresolved_references().keys() {
+                claimed_top_names.insert(name.to_string());
+            }
+        }
     }
 
     // Pre-scan `.on<event> = ...` assignments across all valid scripts to find which
@@ -181,6 +198,7 @@ pub(crate) fn rewrite(
         resolver,
         shared,
         out: PageBuffers::default(),
+        claimed_top_names,
         emitted_modules: HashSet::new(),
         visiting_modules: HashSet::new(),
         module_exports: HashMap::new(),
@@ -289,35 +307,26 @@ impl<'a> PageBuilder<'a> {
         // Pre-inline any imported local modules in source order before lowering statements.
         if !is_classic {
             for stmt in &v.parsed.program.body {
-                match stmt {
-                    Statement::ImportDeclaration(imp) => {
-                        if let Some(dep_idx) = resolve_module_specifier(
-                            &v.input.name,
-                            imp.source.value.as_str(),
-                            self.scripts,
-                        ) {
-                            self.ensure_module_emitted(dep_idx);
-                        }
+                let spec_opt = match stmt {
+                    Statement::ImportDeclaration(imp) => Some(imp.source.value.as_str()),
+                    Statement::ExportAllDeclaration(exp) => Some(exp.source.value.as_str()),
+                    Statement::ExportFromDeclaration(exp) => Some(exp.source.value.as_str()),
+                    _ => None,
+                };
+                if let Some(spec) = spec_opt
+                    && let Some(dep_idx) =
+                        resolve_module_specifier(&v.input.name, spec, self.scripts)
+                {
+                    if self.visiting_modules.contains(&dep_idx) {
+                        self.diagnostics.push(Diagnostic {
+                            severity: Severity::Unsupported,
+                            source: v.input.name.clone(),
+                            line: Some(v.input.line_offset.max(1)),
+                            message: format!("circular module import '{spec}' is not supported"),
+                        });
+                    } else {
+                        self.ensure_module_emitted(dep_idx);
                     }
-                    Statement::ExportAllDeclaration(exp) => {
-                        if let Some(dep_idx) = resolve_module_specifier(
-                            &v.input.name,
-                            exp.source.value.as_str(),
-                            self.scripts,
-                        ) {
-                            self.ensure_module_emitted(dep_idx);
-                        }
-                    }
-                    Statement::ExportFromDeclaration(exp) => {
-                        if let Some(dep_idx) = resolve_module_specifier(
-                            &v.input.name,
-                            exp.source.value.as_str(),
-                            self.scripts,
-                        ) {
-                            self.ensure_module_emitted(dep_idx);
-                        }
-                    }
-                    _ => {}
                 }
             }
         }
@@ -327,6 +336,21 @@ impl<'a> PageBuilder<'a> {
         let module_exports = &self.module_exports;
         let out = &mut self.out;
 
+        let (symbol_renames, elided_dom_symbols) = if is_classic {
+            (HashMap::new(), HashMap::new())
+        } else {
+            prepare_module_symbol_renames(
+                v,
+                scoping,
+                &bindings,
+                resolver,
+                scripts,
+                module_exports,
+                &mut self.claimed_top_names,
+                &mut self.shared,
+            )
+        };
+
         let mut lowerer = AstLowerer::new(
             &v.input.source,
             scoping,
@@ -334,6 +358,7 @@ impl<'a> PageBuilder<'a> {
             resolver,
             &mut self.shared,
         );
+        lowerer.symbol_renames = symbol_renames;
 
         for stmt in &v.parsed.program.body {
             match stmt {
@@ -347,11 +372,8 @@ impl<'a> PageBuilder<'a> {
                         .trim()
                         .to_string();
                     if let Some(id) = &func.id {
-                        let name = id.name.to_string();
-                        out.emit_top_function_decl(is_classic, &name, fn_str);
-                        if let Some(exp) = mod_exports.as_deref_mut() {
-                            exp.insert(name.clone(), name, false);
-                        }
+                        let emitted_name = lowerer.bound_name(id).to_string();
+                        out.emit_top_function_decl(is_classic, &emitted_name, fn_str);
                     } else {
                         out.top_decls.push(fn_str);
                     }
@@ -387,6 +409,7 @@ impl<'a> PageBuilder<'a> {
                         out.emit_import_bindings(
                             dep_exports,
                             imp.specifiers.as_ref().map(|vec| vec.as_slice()),
+                            &lowerer,
                         );
                     }
                 }
@@ -400,10 +423,15 @@ impl<'a> PageBuilder<'a> {
                             .trim()
                             .to_string();
                         if let Some(id) = &func.id {
-                            let name = id.name.to_string();
-                            out.emit_top_function_decl(false, &name, fn_str);
+                            let orig_name = id.name.to_string();
+                            let emitted_name = lowerer.bound_name(id).to_string();
+                            let is_mutated = id
+                                .symbol_id
+                                .get()
+                                .is_some_and(|sid| scoping.symbol_is_mutated(sid));
+                            out.emit_top_function_decl(false, &emitted_name, fn_str);
                             if let Some(me) = mod_exports.as_deref_mut() {
-                                me.insert(name.clone(), name, false);
+                                me.insert(orig_name, emitted_name, false, is_mutated);
                             }
                         } else {
                             out.top_decls.push(fn_str);
@@ -435,10 +463,24 @@ impl<'a> PageBuilder<'a> {
                 Statement::ExportNamedDeclaration(exp) => {
                     if let Some(me) = mod_exports.as_deref_mut() {
                         for spec in &exp.specifiers {
-                            let local = spec.local.name().to_string();
+                            let local_orig = spec.local.name().as_str();
                             let exported = spec.exported.name().to_string();
-                            let deferred = !out.pure_top_vars.contains(&local);
-                            me.insert(exported, local, deferred);
+                            let sym_id =
+                                scoping.get_binding(scoping.root_scope_id(), local_orig.into());
+                            if let Some(sid) = sym_id
+                                && let Some(qml_id) = elided_dom_symbols.get(&sid)
+                            {
+                                me.insert(exported, qml_id.clone(), false, false);
+                                continue;
+                            }
+                            let emitted_local = sym_id
+                                .and_then(|sid| lowerer.symbol_renames.get(&sid))
+                                .cloned()
+                                .unwrap_or_else(|| local_orig.to_string());
+                            let is_mutated =
+                                sym_id.is_some_and(|sid| scoping.symbol_is_mutated(sid));
+                            let deferred = !out.pure_top_vars.contains(&emitted_local);
+                            me.insert(exported, emitted_local, deferred, is_mutated);
                         }
                     }
                 }
@@ -452,10 +494,10 @@ impl<'a> PageBuilder<'a> {
                         for spec in &exp.specifiers {
                             let imported = spec.local.name().as_str();
                             let exported = spec.exported.name().to_string();
-                            if let Some((target_ident, deferred)) =
+                            if let Some((target_ident, deferred, is_mutable)) =
                                 dep_exports.entries.get(imported)
                             {
-                                me.insert(exported, target_ident.clone(), *deferred);
+                                me.insert(exported, target_ident.clone(), *deferred, *is_mutable);
                             }
                         }
                     }
@@ -477,15 +519,25 @@ impl<'a> PageBuilder<'a> {
                                 out.top_decls.push(format!("const {ns_ident} = {obj_lit};"));
                             }
                             if let Some(me) = mod_exports.as_deref_mut() {
-                                me.insert(alias_name.name().to_string(), ns_ident, any_deferred);
+                                me.insert(
+                                    alias_name.name().to_string(),
+                                    ns_ident,
+                                    any_deferred,
+                                    false,
+                                );
                             }
                         } else if let Some(me) = mod_exports.as_deref_mut() {
                             for key in &dep_exports.ordered_keys {
                                 if key != "default"
-                                    && let Some((target_ident, deferred)) =
+                                    && let Some((target_ident, deferred, is_mutable)) =
                                         dep_exports.entries.get(key)
                                 {
-                                    me.insert(key.clone(), target_ident.clone(), *deferred);
+                                    me.insert(
+                                        key.clone(),
+                                        target_ident.clone(),
+                                        *deferred,
+                                        *is_mutable,
+                                    );
                                 }
                             }
                         }
@@ -629,10 +681,16 @@ impl PageBuffers {
         is_exported: bool,
     ) {
         let all_static_pure = cls.body.body.iter().all(|el| match el {
-            oxc_ast::ast::ClassElement::PropertyDefinition(p) if p.r#static => p
-                .value
-                .as_ref()
-                .is_none_or(|val| is_pure_top_level_init(val, scoping, &self.pure_top_vars)),
+            oxc_ast::ast::ClassElement::PropertyDefinition(p) if p.r#static => {
+                p.value.as_ref().is_none_or(|val| {
+                    is_pure_top_level_init(
+                        val,
+                        scoping,
+                        &self.pure_top_vars,
+                        &lowerer.symbol_renames,
+                    )
+                })
+            }
             _ => true,
         });
 
@@ -655,12 +713,19 @@ impl PageBuffers {
             }
         }
 
-        if is_exported
-            && let Some(id) = &cls.id
-            && let Some(me) = mod_exports
-        {
-            let name = id.name.to_string();
-            me.insert(name.clone(), name, false);
+        if let Some(id) = &cls.id {
+            let emitted_name = lowerer.bound_name(id).to_string();
+            if all_static_pure && self.init_stmts.is_empty() {
+                self.pure_top_vars.insert(emitted_name.clone());
+            }
+            if is_exported && let Some(me) = mod_exports {
+                let orig_name = id.name.to_string();
+                let is_mutated = id
+                    .symbol_id
+                    .get()
+                    .is_some_and(|sid| scoping.symbol_is_mutated(sid));
+                me.insert(orig_name, emitted_name, false, is_mutated);
+            }
         }
     }
 
@@ -675,6 +740,7 @@ impl PageBuffers {
         resolver: &dyn DomResolver,
         mut mod_exports: Option<&mut ModuleExports>,
     ) {
+        let is_mutable_kind = vd.kind != VariableDeclarationKind::Const;
         for decl in &vd.declarations {
             // Check if this declarator is a single-target statically resolved DOM binding.
             if is_elidable_dom_declarator(decl, bindings, resolver) {
@@ -685,7 +751,7 @@ impl PageBuffers {
                         crate::lower::resolve_query_to_single_target(query, resolver)
                     && let Some(me) = mod_exports.as_deref_mut()
                 {
-                    me.insert(bind_id.name.to_string(), target.qml_id, false);
+                    me.insert(bind_id.name.to_string(), target.qml_id, false, false);
                 }
                 continue;
             }
@@ -697,17 +763,16 @@ impl PageBuffers {
                 // Uninitialized declaration (`let x;` / `var x;`).
                 if vd.kind == VariableDeclarationKind::Var {
                     for ident in &bound_idents {
-                        let name = ident.name.to_string();
-                        if !is_classic || !self.var_func_slots.contains_key(&name) {
+                        let orig_name = ident.name.to_string();
+                        let emitted_name = lowerer.bound_name(ident).to_string();
+                        if !self.var_func_slots.contains_key(&emitted_name) {
                             let slot_idx = self.top_decls.len();
-                            self.top_decls.push(format!("var {name};"));
-                            if is_classic {
-                                self.var_func_slots
-                                    .insert(name.clone(), (slot_idx, self.init_stmts.len()));
-                            }
+                            self.top_decls.push(format!("var {emitted_name};"));
+                            self.var_func_slots
+                                .insert(emitted_name.clone(), (slot_idx, self.init_stmts.len()));
                         }
                         if let Some(me) = mod_exports.as_deref_mut() {
-                            me.insert(name.clone(), name, true);
+                            me.insert(orig_name, emitted_name, true, true);
                         }
                     }
                 } else {
@@ -716,15 +781,16 @@ impl PageBuffers {
                     self.top_decls.push(format!("let {pat_str};"));
                     if !self.init_stmts.is_empty() {
                         for ident in &bound_idents {
-                            let name = ident.name.to_string();
-                            self.pure_top_vars.remove(&name);
-                            self.init_stmts.push(format!("{name} = undefined;"));
+                            let emitted_name = lowerer.bound_name(ident).to_string();
+                            self.pure_top_vars.remove(&emitted_name);
+                            self.init_stmts.push(format!("{emitted_name} = undefined;"));
                         }
                     }
                     if let Some(me) = mod_exports.as_deref_mut() {
                         for ident in &bound_idents {
-                            let name = ident.name.to_string();
-                            me.insert(name.clone(), name, true);
+                            let orig_name = ident.name.to_string();
+                            let emitted_name = lowerer.bound_name(ident).to_string();
+                            me.insert(orig_name, emitted_name, true, true);
                         }
                     }
                 }
@@ -734,8 +800,18 @@ impl PageBuffers {
             let has_obj_rest =
                 matches!(&decl.id, BindingPattern::ObjectPattern(obj) if obj.rest.is_some());
             let is_pure = !has_obj_rest
-                && pattern_defaults_are_pure(&decl.id, scoping, &self.pure_top_vars)
-                && is_pure_top_level_init(init, scoping, &self.pure_top_vars);
+                && pattern_defaults_are_pure(
+                    &decl.id,
+                    scoping,
+                    &self.pure_top_vars,
+                    &lowerer.symbol_renames,
+                )
+                && is_pure_top_level_init(
+                    init,
+                    scoping,
+                    &self.pure_top_vars,
+                    &lowerer.symbol_renames,
+                );
 
             if is_pure {
                 lowerer.visit_binding_pattern(&decl.id);
@@ -746,29 +822,29 @@ impl PageBuffers {
                 if vd.kind == VariableDeclarationKind::Var
                     && let BindingPattern::BindingIdentifier(bind_id) = &decl.id
                 {
-                    let name = bind_id.name.to_string();
-                    if is_classic
-                        && let Some(&(slot_idx, prev_init_len)) = self.var_func_slots.get(&name)
+                    let orig_name = bind_id.name.to_string();
+                    let emitted_name = lowerer.bound_name(bind_id).to_string();
+                    if let Some(&(slot_idx, prev_init_len)) = self.var_func_slots.get(&emitted_name)
                     {
                         if self.init_stmts.len() == prev_init_len {
-                            self.top_decls[slot_idx] = format!("var {name} = {init_str};");
+                            self.top_decls[slot_idx] = format!("var {emitted_name} = {init_str};");
                         } else {
-                            self.pure_top_vars.remove(&name);
-                            self.init_stmts.push(format!("{name} = {init_str};"));
+                            self.pure_top_vars.remove(&emitted_name);
+                            self.init_stmts
+                                .push(format!("{emitted_name} = {init_str};"));
                         }
                     } else {
                         let slot_idx = self.top_decls.len();
-                        self.top_decls.push(format!("var {name} = {init_str};"));
+                        self.top_decls
+                            .push(format!("var {emitted_name} = {init_str};"));
                         if self.init_stmts.is_empty() {
-                            self.pure_top_vars.insert(name.clone());
+                            self.pure_top_vars.insert(emitted_name.clone());
                         }
-                        if is_classic {
-                            self.var_func_slots
-                                .insert(name.clone(), (slot_idx, self.init_stmts.len()));
-                        }
+                        self.var_func_slots
+                            .insert(emitted_name.clone(), (slot_idx, self.init_stmts.len()));
                     }
                     if let Some(me) = mod_exports.as_deref_mut() {
-                        me.insert(name.clone(), name, !self.init_stmts.is_empty());
+                        me.insert(orig_name, emitted_name, !self.init_stmts.is_empty(), true);
                     }
                 } else {
                     let kw = match vd.kind {
@@ -781,13 +857,15 @@ impl PageBuffers {
                     self.top_decls.push(format!("{kw} {pat_str} = {init_str};"));
                     if vd.kind == VariableDeclarationKind::Const && self.init_stmts.is_empty() {
                         for ident in &bound_idents {
-                            self.pure_top_vars.insert(ident.name.to_string());
+                            self.pure_top_vars
+                                .insert(lowerer.bound_name(ident).to_string());
                         }
                     }
                     if let Some(me) = mod_exports.as_deref_mut() {
                         for ident in &bound_idents {
-                            let name = ident.name.to_string();
-                            me.insert(name.clone(), name, false);
+                            let orig_name = ident.name.to_string();
+                            let emitted_name = lowerer.bound_name(ident).to_string();
+                            me.insert(orig_name, emitted_name, false, is_mutable_kind);
                         }
                     }
                 }
@@ -798,21 +876,19 @@ impl PageBuffers {
             // or uses object rest): hoist declaration to top level and assign in `__h2q_init()`.
             if vd.kind == VariableDeclarationKind::Var {
                 for ident in &bound_idents {
-                    let name = ident.name.to_string();
-                    self.pure_top_vars.remove(&name);
-                    if !is_classic || !self.var_func_slots.contains_key(&name) {
+                    let emitted_name = lowerer.bound_name(ident).to_string();
+                    self.pure_top_vars.remove(&emitted_name);
+                    if !self.var_func_slots.contains_key(&emitted_name) {
                         let slot_idx = self.top_decls.len();
-                        self.top_decls.push(format!("var {name};"));
-                        if is_classic {
-                            self.var_func_slots
-                                .insert(name, (slot_idx, self.init_stmts.len()));
-                        }
+                        self.top_decls.push(format!("var {emitted_name};"));
+                        self.var_func_slots
+                            .insert(emitted_name, (slot_idx, self.init_stmts.len()));
                     }
                 }
             } else if !bound_idents.is_empty() {
                 let names = bound_idents
                     .iter()
-                    .map(|id| id.name.as_str())
+                    .map(|id| lowerer.bound_name(id))
                     .collect::<Vec<_>>()
                     .join(", ");
                 self.top_decls.push(format!("let {names};"));
@@ -820,8 +896,9 @@ impl PageBuffers {
 
             if let Some(me) = mod_exports.as_deref_mut() {
                 for ident in &bound_idents {
-                    let name = ident.name.to_string();
-                    me.insert(name.clone(), name, true);
+                    let orig_name = ident.name.to_string();
+                    let emitted_name = lowerer.bound_name(ident).to_string();
+                    me.insert(orig_name, emitted_name, true, is_mutable_kind);
                 }
             }
 
@@ -849,17 +926,15 @@ impl PageBuffers {
                         regular_props.push(lowerer.editor.extract_and_consume(prop.span));
                     }
                     if ok {
+                        let rest_name = lowerer.bound_name(rest_ident).to_string();
                         if regular_props.is_empty() {
-                            self.init_stmts.push(format!(
-                                "{} = H2Q.objectRest({init_str}, []);",
-                                rest_ident.name
-                            ));
+                            self.init_stmts
+                                .push(format!("{rest_name} = H2Q.objectRest({init_str}, []);"));
                         } else {
                             let tmp = format!("__h2q_obj_{}", lowerer.shared.fresh_id());
                             self.init_stmts.push(format!(
-                                "{{ const {tmp} = {init_str}; ({{ {} }} = {tmp}); {} = H2Q.objectRest({tmp}, [{}]); }}",
+                                "{{ const {tmp} = {init_str}; ({{ {} }} = {tmp}); {rest_name} = H2Q.objectRest({tmp}, [{}]); }}",
                                 regular_props.join(", "),
-                                rest_ident.name,
                                 excluded_keys.join(", ")
                             ));
                         }
@@ -875,6 +950,7 @@ impl PageBuffers {
                 self.init_stmts.push(format!("{pat_str} = {init_str};"));
             }
         }
+        let _ = is_classic;
     }
 
     fn emit_export_default<'b>(
@@ -893,26 +969,36 @@ impl PageBuffers {
                     .extract_and_consume(func.span)
                     .trim()
                     .to_string();
-                let name = if let Some(id) = &func.id {
-                    let n = id.name.to_string();
+                let (name, is_mutated) = if let Some(id) = &func.id {
+                    let n = lowerer.bound_name(id).to_string();
+                    let m = id
+                        .symbol_id
+                        .get()
+                        .is_some_and(|sid| scoping.symbol_is_mutated(sid));
                     self.emit_top_function_decl(false, &n, fn_str);
-                    n
+                    (n, m)
                 } else {
                     let def_name = lowerer
                         .shared
                         .alloc_fn_name(&format!("__h2q_default_{script_idx}"));
                     self.top_decls.push(format!("const {def_name} = {fn_str};"));
-                    def_name
+                    self.pure_top_vars.insert(def_name.clone());
+                    (def_name, false)
                 };
                 if let Some(me) = mod_exports {
-                    me.insert("default", name, false);
+                    me.insert("default", name, false, is_mutated);
                 }
             }
             ExportDefaultDeclarationKind::ClassDeclaration(cls) => {
                 let all_static_pure = cls.body.body.iter().all(|el| match el {
                     oxc_ast::ast::ClassElement::PropertyDefinition(p) if p.r#static => {
                         p.value.as_ref().is_none_or(|val| {
-                            is_pure_top_level_init(val, scoping, &self.pure_top_vars)
+                            is_pure_top_level_init(
+                                val,
+                                scoping,
+                                &self.pure_top_vars,
+                                &lowerer.symbol_renames,
+                            )
                         })
                     }
                     _ => true,
@@ -923,17 +1009,25 @@ impl PageBuffers {
                     .extract_and_consume(cls.span)
                     .trim()
                     .to_string();
-                let name = if let Some(id) = &cls.id {
+                let (name, is_mutated) = if let Some(id) = &cls.id {
                     self.top_decls.push(cls_str);
-                    id.name.to_string()
+                    let n = lowerer.bound_name(id).to_string();
+                    let m = id
+                        .symbol_id
+                        .get()
+                        .is_some_and(|sid| scoping.symbol_is_mutated(sid));
+                    (n, m)
                 } else {
                     let def_name = lowerer
                         .shared
                         .alloc_fn_name(&format!("__h2q_default_{script_idx}"));
                     self.top_decls
                         .push(format!("const {def_name} = {cls_str};"));
-                    def_name
+                    (def_name, false)
                 };
+                if all_static_pure && self.init_stmts.is_empty() {
+                    self.pure_top_vars.insert(name.clone());
+                }
                 if let Some(static_stmts) = lowerer
                     .post_class_static_inits
                     .remove(&(cls.span.start, cls.span.end))
@@ -945,13 +1039,18 @@ impl PageBuffers {
                     }
                 }
                 if let Some(me) = mod_exports {
-                    me.insert("default", name, false);
+                    me.insert("default", name, false, is_mutated);
                 }
             }
             ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {}
             _ => {
                 if let Some(expr) = decl_kind.as_expression() {
-                    let is_pure = is_pure_top_level_init(expr, scoping, &self.pure_top_vars);
+                    let is_pure = is_pure_top_level_init(
+                        expr,
+                        scoping,
+                        &self.pure_top_vars,
+                        &lowerer.symbol_renames,
+                    );
                     lowerer.visit_expression(expr);
                     let expr_str = lowerer.editor.extract_and_consume(expr.span());
                     let def_name = lowerer
@@ -962,13 +1061,13 @@ impl PageBuffers {
                             .push(format!("const {def_name} = {expr_str};"));
                         self.pure_top_vars.insert(def_name.clone());
                         if let Some(me) = mod_exports {
-                            me.insert("default", def_name, false);
+                            me.insert("default", def_name, false, false);
                         }
                     } else {
                         self.top_decls.push(format!("let {def_name};"));
                         self.init_stmts.push(format!("{def_name} = {expr_str};"));
                         if let Some(me) = mod_exports {
-                            me.insert("default", def_name, true);
+                            me.insert("default", def_name, true, false);
                         }
                     }
                 }
@@ -980,6 +1079,7 @@ impl PageBuffers {
         &mut self,
         dep_exports: &ModuleExports,
         specifiers: Option<&[ImportDeclarationSpecifier<'_>]>,
+        lowerer: &AstLowerer<'_, '_>,
     ) {
         let Some(specs) = specifiers else {
             return;
@@ -989,23 +1089,23 @@ impl PageBuffers {
             match spec {
                 ImportDeclarationSpecifier::ImportSpecifier(named) => {
                     let imported = named.imported.name().as_str();
-                    let local = named.local.name.as_str();
-                    if let Some((target_ident, deferred)) = dep_exports.entries.get(imported)
+                    let local = lowerer.bound_name(&named.local);
+                    if let Some((target_ident, deferred, _)) = dep_exports.entries.get(imported)
                         && target_ident != local
                     {
                         self.emit_alias_binding(local, target_ident, *deferred);
                     }
                 }
                 ImportDeclarationSpecifier::ImportDefaultSpecifier(def) => {
-                    let local = def.local.name.as_str();
-                    if let Some((target_ident, deferred)) = dep_exports.entries.get("default")
+                    let local = lowerer.bound_name(&def.local);
+                    if let Some((target_ident, deferred, _)) = dep_exports.entries.get("default")
                         && target_ident != local
                     {
                         self.emit_alias_binding(local, target_ident, *deferred);
                     }
                 }
                 ImportDeclarationSpecifier::ImportNamespaceSpecifier(ns) => {
-                    let local = ns.local.name.as_str();
+                    let local = lowerer.bound_name(&ns.local);
                     let (obj_lit, any_deferred) = format_namespace_object(dep_exports);
                     if any_deferred || !self.init_stmts.is_empty() {
                         self.top_decls.push(format!("let {local};"));
@@ -1179,6 +1279,299 @@ impl PageBuffers {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
+fn prepare_module_symbol_renames<'a>(
+    v: &ValidScript<'a>,
+    scoping: &Scoping,
+    bindings: &ScriptQueryBindings<'a>,
+    resolver: &dyn DomResolver,
+    scripts: &[ScriptInput],
+    module_exports: &HashMap<usize, ModuleExports>,
+    claimed_top_names: &mut HashSet<String>,
+    shared: &mut SharedRewriteState,
+) -> (HashMap<SymbolId, String>, HashMap<SymbolId, String>) {
+    let mut symbol_renames: HashMap<SymbolId, String> = HashMap::new();
+    let mut elided_dom_symbols: HashMap<SymbolId, String> = HashMap::new();
+    let mut handled_symbols: HashSet<SymbolId> = HashSet::new();
+
+    let mut unaliased_named_exports: HashSet<&str> = HashSet::new();
+    for stmt in &v.parsed.program.body {
+        if let Statement::ExportNamedDeclaration(exp) = stmt {
+            for spec in &exp.specifiers {
+                if spec.local.name() == spec.exported.name() {
+                    unaliased_named_exports.insert(spec.local.name().as_str());
+                }
+            }
+        }
+    }
+
+    fn alloc_binding(
+        script_idx: usize,
+        bind_id: &BindingIdentifier<'_>,
+        is_exported: bool,
+        handled_symbols: &mut HashSet<SymbolId>,
+        claimed_top_names: &mut HashSet<String>,
+        shared: &mut SharedRewriteState,
+        symbol_renames: &mut HashMap<SymbolId, String>,
+    ) {
+        let Some(sym_id) = bind_id.symbol_id.get() else {
+            return;
+        };
+        if !handled_symbols.insert(sym_id) {
+            return;
+        }
+        let orig = bind_id.name.as_str();
+        if is_exported && !claimed_top_names.contains(orig) {
+            claimed_top_names.insert(orig.to_string());
+            shared.used_names.insert(orig.to_string());
+        } else {
+            let new_name = shared.alloc_fn_name(&format!("__h2q_m{script_idx}_{orig}"));
+            claimed_top_names.insert(new_name.clone());
+            symbol_renames.insert(sym_id, new_name);
+        }
+    }
+
+    for stmt in &v.parsed.program.body {
+        match stmt {
+            Statement::ImportDeclaration(imp) => {
+                let spec = imp.source.value.as_str();
+                let Some(dep_idx) = resolve_module_specifier(&v.input.name, spec, scripts) else {
+                    continue;
+                };
+                let Some(dep_exports) = module_exports.get(&dep_idx) else {
+                    continue;
+                };
+                for s in imp.specifiers.iter().flatten() {
+                    match s {
+                        ImportDeclarationSpecifier::ImportSpecifier(named) => {
+                            let imported = named.imported.name().as_str();
+                            let local_id = &named.local;
+                            let local = local_id.name.as_str();
+                            if let Some(sym_id) = local_id.symbol_id.get() {
+                                handled_symbols.insert(sym_id);
+                            }
+                            if let Some((target_ident, _deferred, is_mutable)) =
+                                dep_exports.entries.get(imported)
+                            {
+                                if target_ident == local {
+                                    claimed_top_names.insert(local.to_string());
+                                } else if !*is_mutable && !claimed_top_names.contains(local) {
+                                    claimed_top_names.insert(local.to_string());
+                                    shared.used_names.insert(local.to_string());
+                                } else if let Some(sym_id) = local_id.symbol_id.get() {
+                                    symbol_renames.insert(sym_id, target_ident.clone());
+                                }
+                            }
+                        }
+                        ImportDeclarationSpecifier::ImportDefaultSpecifier(def) => {
+                            let local_id = &def.local;
+                            let local = local_id.name.as_str();
+                            if let Some(sym_id) = local_id.symbol_id.get() {
+                                handled_symbols.insert(sym_id);
+                            }
+                            if let Some((target_ident, _deferred, is_mutable)) =
+                                dep_exports.entries.get("default")
+                            {
+                                if target_ident == local {
+                                    claimed_top_names.insert(local.to_string());
+                                } else if !*is_mutable && !claimed_top_names.contains(local) {
+                                    claimed_top_names.insert(local.to_string());
+                                    shared.used_names.insert(local.to_string());
+                                } else if let Some(sym_id) = local_id.symbol_id.get() {
+                                    symbol_renames.insert(sym_id, target_ident.clone());
+                                }
+                            }
+                        }
+                        ImportDeclarationSpecifier::ImportNamespaceSpecifier(ns) => {
+                            let local_id = &ns.local;
+                            let local = local_id.name.as_str();
+                            if let Some(sym_id) = local_id.symbol_id.get() {
+                                handled_symbols.insert(sym_id);
+                            }
+                            if !claimed_top_names.contains(local) {
+                                claimed_top_names.insert(local.to_string());
+                                shared.used_names.insert(local.to_string());
+                            } else {
+                                let new_name =
+                                    shared.alloc_fn_name(&format!("__h2q_m{}_{local}", v.idx));
+                                claimed_top_names.insert(new_name.clone());
+                                if let Some(sym_id) = local_id.symbol_id.get() {
+                                    symbol_renames.insert(sym_id, new_name);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Statement::FunctionDeclaration(f) => {
+                if let Some(id) = &f.id {
+                    let is_exp = unaliased_named_exports.contains(id.name.as_str());
+                    alloc_binding(
+                        v.idx,
+                        id,
+                        is_exp,
+                        &mut handled_symbols,
+                        claimed_top_names,
+                        shared,
+                        &mut symbol_renames,
+                    );
+                }
+            }
+            Statement::ClassDeclaration(c) => {
+                if let Some(id) = &c.id {
+                    let is_exp = unaliased_named_exports.contains(id.name.as_str());
+                    alloc_binding(
+                        v.idx,
+                        id,
+                        is_exp,
+                        &mut handled_symbols,
+                        claimed_top_names,
+                        shared,
+                        &mut symbol_renames,
+                    );
+                }
+            }
+            Statement::VariableDeclaration(vd) => {
+                for decl in &vd.declarations {
+                    if is_elidable_dom_declarator(decl, bindings, resolver) {
+                        if let BindingPattern::BindingIdentifier(bind_id) = &decl.id
+                            && let Some(sym_id) = bind_id.symbol_id.get()
+                            && let Some(query) = bindings.symbol_queries.get(&sym_id)
+                            && let Some(target) =
+                                crate::lower::resolve_query_to_single_target(query, resolver)
+                        {
+                            handled_symbols.insert(sym_id);
+                            elided_dom_symbols.insert(sym_id, target.qml_id);
+                        }
+                        continue;
+                    }
+                    let mut idents = Vec::new();
+                    collect_binding_identifiers(&decl.id, &mut idents);
+                    for id in idents {
+                        let is_exp = unaliased_named_exports.contains(id.name.as_str());
+                        alloc_binding(
+                            v.idx,
+                            id,
+                            is_exp,
+                            &mut handled_symbols,
+                            claimed_top_names,
+                            shared,
+                            &mut symbol_renames,
+                        );
+                    }
+                }
+            }
+            Statement::ExportDeclaration(exp) => match &exp.declaration {
+                Declaration::FunctionDeclaration(f) => {
+                    if let Some(id) = &f.id {
+                        alloc_binding(
+                            v.idx,
+                            id,
+                            true,
+                            &mut handled_symbols,
+                            claimed_top_names,
+                            shared,
+                            &mut symbol_renames,
+                        );
+                    }
+                }
+                Declaration::ClassDeclaration(c) => {
+                    if let Some(id) = &c.id {
+                        alloc_binding(
+                            v.idx,
+                            id,
+                            true,
+                            &mut handled_symbols,
+                            claimed_top_names,
+                            shared,
+                            &mut symbol_renames,
+                        );
+                    }
+                }
+                Declaration::VariableDeclaration(vd) => {
+                    for decl in &vd.declarations {
+                        if is_elidable_dom_declarator(decl, bindings, resolver) {
+                            if let BindingPattern::BindingIdentifier(bind_id) = &decl.id
+                                && let Some(sym_id) = bind_id.symbol_id.get()
+                                && let Some(query) = bindings.symbol_queries.get(&sym_id)
+                                && let Some(target) =
+                                    crate::lower::resolve_query_to_single_target(query, resolver)
+                            {
+                                handled_symbols.insert(sym_id);
+                                elided_dom_symbols.insert(sym_id, target.qml_id);
+                            }
+                            continue;
+                        }
+                        let mut idents = Vec::new();
+                        collect_binding_identifiers(&decl.id, &mut idents);
+                        for id in idents {
+                            alloc_binding(
+                                v.idx,
+                                id,
+                                true,
+                                &mut handled_symbols,
+                                claimed_top_names,
+                                shared,
+                                &mut symbol_renames,
+                            );
+                        }
+                    }
+                }
+                _ => {}
+            },
+            Statement::ExportDefaultDeclaration(exp) => match &exp.declaration {
+                ExportDefaultDeclarationKind::FunctionDeclaration(f) => {
+                    if let Some(id) = &f.id {
+                        alloc_binding(
+                            v.idx,
+                            id,
+                            true,
+                            &mut handled_symbols,
+                            claimed_top_names,
+                            shared,
+                            &mut symbol_renames,
+                        );
+                    }
+                }
+                ExportDefaultDeclarationKind::ClassDeclaration(c) => {
+                    if let Some(id) = &c.id {
+                        alloc_binding(
+                            v.idx,
+                            id,
+                            true,
+                            &mut handled_symbols,
+                            claimed_top_names,
+                            shared,
+                            &mut symbol_renames,
+                        );
+                    }
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+    }
+
+    for sym_id in scoping.symbol_ids() {
+        if scoping.symbol_scope_id(sym_id) == scoping.root_scope_id()
+            && handled_symbols.insert(sym_id)
+        {
+            let orig = scoping.symbol_name(sym_id);
+            let is_exp = unaliased_named_exports.contains(orig);
+            if is_exp && !claimed_top_names.contains(orig) {
+                claimed_top_names.insert(orig.to_string());
+                shared.used_names.insert(orig.to_string());
+            } else {
+                let new_name = shared.alloc_fn_name(&format!("__h2q_m{}_{orig}", v.idx));
+                claimed_top_names.insert(new_name.clone());
+                symbol_renames.insert(sym_id, new_name);
+            }
+        }
+    }
+
+    (symbol_renames, elided_dom_symbols)
+}
+
 fn collect_program_declared_names(program: &Program<'_>, out: &mut HashSet<String>) {
     for stmt in &program.body {
         match stmt {
@@ -1201,6 +1594,21 @@ fn collect_program_declared_names(program: &Program<'_>, out: &mut HashSet<Strin
                     }
                 }
             }
+            Statement::ImportDeclaration(imp) => {
+                for spec in imp.specifiers.iter().flatten() {
+                    match spec {
+                        ImportDeclarationSpecifier::ImportSpecifier(s) => {
+                            out.insert(s.local.name.to_string());
+                        }
+                        ImportDeclarationSpecifier::ImportDefaultSpecifier(s) => {
+                            out.insert(s.local.name.to_string());
+                        }
+                        ImportDeclarationSpecifier::ImportNamespaceSpecifier(s) => {
+                            out.insert(s.local.name.to_string());
+                        }
+                    }
+                }
+            }
             Statement::ExportDeclaration(exp) => match &exp.declaration {
                 Declaration::FunctionDeclaration(f) => {
                     if let Some(id) = &f.id {
@@ -1219,6 +1627,19 @@ fn collect_program_declared_names(program: &Program<'_>, out: &mut HashSet<Strin
                         for id in idents {
                             out.insert(id.name.to_string());
                         }
+                    }
+                }
+                _ => {}
+            },
+            Statement::ExportDefaultDeclaration(exp) => match &exp.declaration {
+                ExportDefaultDeclarationKind::FunctionDeclaration(f) => {
+                    if let Some(id) = &f.id {
+                        out.insert(id.name.to_string());
+                    }
+                }
+                ExportDefaultDeclarationKind::ClassDeclaration(c) => {
+                    if let Some(id) = &c.id {
+                        out.insert(id.name.to_string());
                     }
                 }
                 _ => {}
@@ -1495,7 +1916,7 @@ fn format_namespace_object(exports: &ModuleExports) -> (String, bool) {
     let mut fields = Vec::with_capacity(exports.ordered_keys.len());
     let mut any_deferred = false;
     for key in &exports.ordered_keys {
-        if let Some((target_ident, deferred)) = exports.entries.get(key) {
+        if let Some((target_ident, deferred, _)) = exports.entries.get(key) {
             if *deferred {
                 any_deferred = true;
             }
@@ -1528,31 +1949,30 @@ fn pattern_defaults_are_pure(
     pat: &BindingPattern<'_>,
     scoping: &Scoping,
     pure_vars: &HashSet<String>,
+    symbol_renames: &HashMap<SymbolId, String>,
 ) -> bool {
     match pat {
         BindingPattern::BindingIdentifier(_) => true,
         BindingPattern::AssignmentPattern(assign) => {
-            pattern_defaults_are_pure(&assign.left, scoping, pure_vars)
-                && is_pure_top_level_init(&assign.right, scoping, pure_vars)
+            pattern_defaults_are_pure(&assign.left, scoping, pure_vars, symbol_renames)
+                && is_pure_top_level_init(&assign.right, scoping, pure_vars, symbol_renames)
         }
         BindingPattern::ObjectPattern(obj) => {
-            obj.properties
-                .iter()
-                .all(|p| !p.computed && pattern_defaults_are_pure(&p.value, scoping, pure_vars))
-                && obj
-                    .rest
-                    .as_ref()
-                    .is_none_or(|r| pattern_defaults_are_pure(&r.argument, scoping, pure_vars))
+            obj.properties.iter().all(|p| {
+                !p.computed
+                    && pattern_defaults_are_pure(&p.value, scoping, pure_vars, symbol_renames)
+            }) && obj.rest.as_ref().is_none_or(|r| {
+                pattern_defaults_are_pure(&r.argument, scoping, pure_vars, symbol_renames)
+            })
         }
         BindingPattern::ArrayPattern(arr) => {
             arr.elements
                 .iter()
                 .flatten()
-                .all(|el| pattern_defaults_are_pure(el, scoping, pure_vars))
-                && arr
-                    .rest
-                    .as_ref()
-                    .is_none_or(|r| pattern_defaults_are_pure(&r.argument, scoping, pure_vars))
+                .all(|el| pattern_defaults_are_pure(el, scoping, pure_vars, symbol_renames))
+                && arr.rest.as_ref().is_none_or(|r| {
+                    pattern_defaults_are_pure(&r.argument, scoping, pure_vars, symbol_renames)
+                })
         }
     }
 }
@@ -1561,6 +1981,7 @@ fn is_pure_top_level_init(
     expr: &Expression<'_>,
     scoping: &Scoping,
     pure_vars: &HashSet<String>,
+    symbol_renames: &HashMap<SymbolId, String>,
 ) -> bool {
     match unwrap_parens(expr) {
         Expression::BooleanLiteral(_)
@@ -1575,62 +1996,68 @@ fn is_pure_top_level_init(
         Expression::TemplateLiteral(tpl) => tpl
             .expressions
             .iter()
-            .all(|e| is_pure_top_level_init(e, scoping, pure_vars)),
+            .all(|e| is_pure_top_level_init(e, scoping, pure_vars, symbol_renames)),
 
         Expression::Identifier(id) => {
             if id.is_global_reference(scoping) {
                 matches!(id.name.as_str(), "undefined" | "NaN" | "Infinity")
                     || pure_vars.contains(id.name.as_str())
             } else {
-                pure_vars.contains(id.name.as_str())
+                let resolved_name = id
+                    .reference_id
+                    .get()
+                    .and_then(|rid| scoping.get_reference(rid).symbol_id())
+                    .and_then(|sid| symbol_renames.get(&sid))
+                    .map_or(id.name.as_str(), String::as_str);
+                pure_vars.contains(resolved_name)
             }
         }
 
         Expression::UnaryExpression(u) => {
             u.operator != UnaryOperator::Delete
-                && is_pure_top_level_init(&u.argument, scoping, pure_vars)
+                && is_pure_top_level_init(&u.argument, scoping, pure_vars, symbol_renames)
         }
 
         Expression::BinaryExpression(b) => {
             !matches!(b.operator, BinaryOperator::In | BinaryOperator::Instanceof)
-                && is_pure_top_level_init(&b.left, scoping, pure_vars)
-                && is_pure_top_level_init(&b.right, scoping, pure_vars)
+                && is_pure_top_level_init(&b.left, scoping, pure_vars, symbol_renames)
+                && is_pure_top_level_init(&b.right, scoping, pure_vars, symbol_renames)
         }
 
         Expression::LogicalExpression(l) => {
-            is_pure_top_level_init(&l.left, scoping, pure_vars)
-                && is_pure_top_level_init(&l.right, scoping, pure_vars)
+            is_pure_top_level_init(&l.left, scoping, pure_vars, symbol_renames)
+                && is_pure_top_level_init(&l.right, scoping, pure_vars, symbol_renames)
         }
 
         Expression::ConditionalExpression(c) => {
-            is_pure_top_level_init(&c.test, scoping, pure_vars)
-                && is_pure_top_level_init(&c.consequent, scoping, pure_vars)
-                && is_pure_top_level_init(&c.alternate, scoping, pure_vars)
+            is_pure_top_level_init(&c.test, scoping, pure_vars, symbol_renames)
+                && is_pure_top_level_init(&c.consequent, scoping, pure_vars, symbol_renames)
+                && is_pure_top_level_init(&c.alternate, scoping, pure_vars, symbol_renames)
         }
 
         Expression::SequenceExpression(seq) => seq
             .expressions
             .iter()
-            .all(|e| is_pure_top_level_init(e, scoping, pure_vars)),
+            .all(|e| is_pure_top_level_init(e, scoping, pure_vars, symbol_renames)),
 
         Expression::ArrayExpression(arr) => arr.elements.iter().all(|el| match el {
             oxc_ast::ast::ArrayExpressionElement::SpreadElement(sp) => {
-                is_pure_top_level_init(&sp.argument, scoping, pure_vars)
+                is_pure_top_level_init(&sp.argument, scoping, pure_vars, symbol_renames)
             }
             oxc_ast::ast::ArrayExpressionElement::Elision(_) => true,
             _ => el
                 .as_expression()
-                .is_some_and(|e| is_pure_top_level_init(e, scoping, pure_vars)),
+                .is_some_and(|e| is_pure_top_level_init(e, scoping, pure_vars, symbol_renames)),
         }),
 
         Expression::ObjectExpression(obj) => obj.properties.iter().all(|p| match p {
             ObjectPropertyKind::ObjectProperty(prop) => {
                 prop.kind == PropertyKind::Init
                     && !prop.computed
-                    && is_pure_top_level_init(&prop.value, scoping, pure_vars)
+                    && is_pure_top_level_init(&prop.value, scoping, pure_vars, symbol_renames)
             }
             ObjectPropertyKind::SpreadProperty(sp) => {
-                is_pure_top_level_init(&sp.argument, scoping, pure_vars)
+                is_pure_top_level_init(&sp.argument, scoping, pure_vars, symbol_renames)
             }
         }),
 

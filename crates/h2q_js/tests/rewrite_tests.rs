@@ -1395,3 +1395,364 @@ function supported() {
         clean_out.diagnostics
     );
 }
+
+#[test]
+fn isolates_colliding_module_private_const_let_function_and_class_bindings() {
+    let resolver = FakeResolver::default().with_id("out", 1, "outText", TargetKind::Text);
+
+    let mod_a = module_script(
+        "js/a.js",
+        r#"
+const factor = 2;
+let offset = 10;
+function helper(n) {
+    return n * factor + offset;
+}
+class Box {
+    static tag = "A";
+    constructor(v) {
+        this.value = helper(v);
+    }
+    describe() {
+        return Box.tag + ":" + this.value;
+    }
+}
+export function computeA(x) {
+    offset += 1;
+    return new Box(x).describe();
+}
+"#,
+    );
+
+    let mod_b = module_script(
+        "js/b.js",
+        r#"
+const factor = 3;
+let offset = 100;
+function helper(n) {
+    return n * factor + offset;
+}
+class Box {
+    static tag = "B";
+    constructor(v) {
+        this.value = helper(v);
+    }
+    describe() {
+        return Box.tag + ":" + this.value;
+    }
+}
+export function computeB(x) {
+    offset += 5;
+    return new Box(x).describe();
+}
+"#,
+    );
+
+    let main_mod = module_script(
+        "js/main.js",
+        r#"
+import { computeA } from "./a.js";
+import { computeB } from "./b.js";
+document.getElementById("out").textContent = computeA(4) + "|" + computeB(4);
+"#,
+    );
+
+    let out = run_rewrite(&[main_mod, mod_a, mod_b], &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    assert!(
+        !out.page_js.contains("const factor =")
+            && !out.page_js.contains("let offset =")
+            && !out.page_js.contains("function helper(")
+            && !out.page_js.contains("class Box {"),
+        "module-private bindings should be hygienically renamed:\n{}",
+        out.page_js
+    );
+    assert!(
+        out.page_js.contains("const __h2q_m1_factor = 2;")
+            && out.page_js.contains("const __h2q_m2_factor = 3;")
+            && out.page_js.contains("let __h2q_m1_offset = 10;")
+            && out.page_js.contains("let __h2q_m2_offset = 100;")
+            && out.page_js.contains("function __h2q_m1_helper(n)")
+            && out.page_js.contains("function __h2q_m2_helper(n)")
+            && out.page_js.contains("class __h2q_m1_Box")
+            && out.page_js.contains("class __h2q_m2_Box")
+            && out.page_js.contains("__h2q_m1_Box.tag = \"A\";")
+            && out.page_js.contains("__h2q_m2_Box.tag = \"B\";"),
+        "expected isolated module-private bindings for both modules:\n{}",
+        out.page_js
+    );
+}
+
+#[test]
+fn isolates_module_private_bindings_from_classic_script_declarations() {
+    let resolver = FakeResolver::default().with_id("out", 1, "outText", TargetKind::Text);
+
+    let widget_mod = module_script(
+        "js/widget.js",
+        r#"
+const factor = 2;
+let offset = 3;
+var sharedState = "module";
+function helper(v) {
+    return v * factor + offset;
+}
+class Box {
+    read(v) {
+        return sharedState + ":" + helper(v);
+    }
+}
+export function readWidget(v) {
+    return new Box().read(v);
+}
+"#,
+    );
+
+    let classic_before = classic(
+        "js/classic_before.js",
+        r#"
+const factor = 100;
+let offset = 50;
+"#,
+    );
+
+    let classic_after = classic(
+        "js/classic_after.js",
+        r#"
+var sharedState = "classic";
+function helper(v) {
+    return v + factor + offset;
+}
+class Box {
+    read(v) {
+        return sharedState + ":" + helper(v);
+    }
+}
+document.getElementById("out").textContent = new Box().read(1);
+"#,
+    );
+
+    let out = run_rewrite(&[widget_mod, classic_before, classic_after], &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    assert_eq!(
+        out.page_js.matches("const factor =").count(),
+        1,
+        "{}",
+        out.page_js
+    );
+    assert_eq!(
+        out.page_js.matches("let offset =").count(),
+        1,
+        "{}",
+        out.page_js
+    );
+    assert_eq!(
+        out.page_js.matches("var sharedState =").count(),
+        1,
+        "{}",
+        out.page_js
+    );
+    assert_eq!(
+        out.page_js.matches("function helper(").count(),
+        1,
+        "{}",
+        out.page_js
+    );
+    assert_eq!(
+        out.page_js.matches("class Box ").count(),
+        1,
+        "{}",
+        out.page_js
+    );
+    assert!(
+        out.page_js.contains("const factor = 100;")
+            && out.page_js.contains("let offset = 50;")
+            && out.page_js.contains("var sharedState = \"classic\";")
+            && out.page_js.contains("const __h2q_m0_factor = 2;")
+            && out.page_js.contains("let __h2q_m0_offset = 3;")
+            && out
+                .page_js
+                .contains("var __h2q_m0_sharedState = \"module\";")
+            && out.page_js.contains("function __h2q_m0_helper(v)")
+            && out.page_js.contains("class __h2q_m0_Box"),
+        "expected classic declarations to keep global names and module-private declarations to be isolated:\n{}",
+        out.page_js
+    );
+}
+
+#[test]
+fn connects_imported_bindings_and_references_to_correct_exporter_under_collisions() {
+    let resolver = FakeResolver::default().with_id("out", 1, "outText", TargetKind::Text);
+
+    let exp_a = module_script(
+        "js/exp_a.js",
+        r#"
+const secret = 10;
+const alias = 999;
+export const token = secret + 1;
+export function compute(x) {
+    return x + token + (alias - 999);
+}
+"#,
+    );
+
+    let exp_b = module_script(
+        "js/exp_b.js",
+        r#"
+const secret = 20;
+export const token = secret + 2;
+export function compute(x) {
+    return x * token;
+}
+"#,
+    );
+
+    let use_a = module_script(
+        "js/use_a.js",
+        r#"
+import { token, compute as alias } from "./exp_a.js";
+const localBias = 1;
+export function fromA(v) {
+    return alias(v) + token + localBias;
+}
+"#,
+    );
+
+    let use_b = module_script(
+        "js/use_b.js",
+        r#"
+import { token, compute as alias } from "./exp_b.js";
+const localBias = 2;
+export function fromB(v) {
+    return alias(v) + token + localBias;
+}
+"#,
+    );
+
+    let main_mod = module_script(
+        "js/main.js",
+        r#"
+import { fromA } from "./use_a.js";
+import { fromB } from "./use_b.js";
+document.getElementById("out").textContent = fromA(5) + ":" + fromB(5);
+"#,
+    );
+
+    let out = run_rewrite(&[main_mod, use_a, use_b, exp_a, exp_b], &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    assert_eq!(
+        out.page_js.matches("const token =").count(),
+        1,
+        "{}",
+        out.page_js
+    );
+    assert_eq!(
+        out.page_js.matches("function compute(").count(),
+        1,
+        "{}",
+        out.page_js
+    );
+    assert_eq!(
+        out.page_js.matches("const alias =").count(),
+        1,
+        "{}",
+        out.page_js
+    );
+    assert!(
+        out.page_js.contains("function __h2q_m4_compute(x)")
+            && out
+                .page_js
+                .contains("const __h2q_m4_token = __h2q_m4_secret + 2;")
+            && out
+                .page_js
+                .contains("return __h2q_m4_compute(v) + __h2q_m4_token + __h2q_m2_localBias;"),
+        "expected second importer to stay connected to second exporter's renamed bindings:\n{}",
+        out.page_js
+    );
+}
+
+#[test]
+fn preserves_execution_order_and_single_evaluation_for_repeated_shared_imports_and_keeps_function_shadowing_untouched()
+ {
+    let resolver = FakeResolver::default();
+
+    let shared_mod = module_script(
+        "js/shared.js",
+        r#"
+const step = 2;
+export let ticks = 0;
+export function record(tag) {
+    ticks += step;
+    return tag + "@" + ticks;
+}
+console.log("init:shared:" + record("S"));
+"#,
+    );
+
+    let left_mod = module_script(
+        "js/left.js",
+        r#"
+import { record, ticks as seenTicks } from "./shared.js";
+const label = "L";
+export function checkShadow(label, step) {
+    const ticks = 100;
+    {
+        const label = "block";
+        console.log(label);
+    }
+    return [label, step, ticks, seenTicks, record("call")].join(":");
+}
+console.log("init:left:" + record(label) + ":" + seenTicks);
+"#,
+    );
+
+    let right_mod = module_script(
+        "js/right.js",
+        r#"
+import { record, ticks as seenTicks } from "./shared.js";
+const label = "R";
+console.log("init:right:" + record(label) + ":" + seenTicks);
+"#,
+    );
+
+    let main_mod = module_script(
+        "js/main.js",
+        r#"
+import { checkShadow } from "./left.js";
+import "./right.js";
+import { record, ticks as seenTicks } from "./shared.js";
+console.log("init:main:" + record("M") + ":" + seenTicks + ":" + checkShadow("arg", 7));
+"#,
+    );
+
+    let out = run_rewrite(&[main_mod, left_mod, right_mod, shared_mod], &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+
+    // 1. Shared module side effect is emitted exactly once and before left, right, main.
+    assert_eq!(
+        out.page_js.matches("init:shared:").count(),
+        1,
+        "{}",
+        out.page_js
+    );
+    let pos_shared = out.page_js.find("init:shared:").expect("shared init");
+    let pos_left = out.page_js.find("init:left:").expect("left init");
+    let pos_right = out.page_js.find("init:right:").expect("right init");
+    let pos_main = out.page_js.find("init:main:").expect("main init");
+    assert!(
+        pos_shared < pos_left && pos_left < pos_right && pos_right < pos_main,
+        "expected shared -> left -> right -> main execution order in page_js:\n{}",
+        out.page_js
+    );
+
+    // 2. Lexical shadowing inside `checkShadow` remains untouched while module-scope `seenTicks` and `record` resolve to `shared.js`.
+    assert!(
+        out.page_js.contains("function checkShadow(label, step)")
+            && out.page_js.contains("const ticks = 100;")
+            && out.page_js.contains("const label = \"block\";")
+            && out
+                .page_js
+                .contains("return [label, step, ticks, ticks, record(\"call\")].join(\":\");"),
+        "expected function-scoped shadowed bindings to remain untouched and imported live binding to resolve to exporter:\n{}",
+        out.page_js
+    );
+}

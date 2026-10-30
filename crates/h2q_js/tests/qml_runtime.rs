@@ -1185,3 +1185,200 @@ Item {
         out.page_js
     );
 }
+
+#[test]
+fn qml6_executes_colliding_modules_classic_globals_shared_imports_and_shadowing() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 colliding modules test: qml6 not on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("colliding_modules");
+    let resolver = FakeResolver::default().with_id("out", 1, "outText", TargetKind::Text);
+
+    let shared_mod = ScriptInput {
+        name: "src/shared.js".to_string(),
+        kind: ScriptKind::Module,
+        line_offset: 1,
+        source: r#"
+const step = 2;
+export let ticks = 0;
+export const order = [];
+export function bump(tag) {
+    ticks += step;
+    order.push(tag + "@" + ticks);
+    return ticks;
+}
+bump("S");
+"#
+        .to_string(),
+    };
+
+    let mod_a = ScriptInput {
+        name: "src/mod_a.js".to_string(),
+        kind: ScriptKind::Module,
+        line_offset: 1,
+        source: r#"
+import { bump, ticks as seenTicks } from "./shared.js";
+const factor = 2;
+let offset = 10;
+function helper(v) {
+    return v * factor + offset;
+}
+class Box {
+    static tag = "A";
+    constructor(v) {
+        this.v = helper(v);
+    }
+    read() {
+        return Box.tag + ":" + this.v;
+    }
+}
+export const token = factor + offset;
+export function calc(x) {
+    offset += 1;
+    return new Box(x).read() + ":" + seenTicks;
+}
+export function shadowA(factor, offset) {
+    const helper = (n) => n + factor + offset;
+    return helper(3) + ":" + token;
+}
+bump("A");
+"#
+        .to_string(),
+    };
+
+    let mod_b = ScriptInput {
+        name: "src/mod_b.js".to_string(),
+        kind: ScriptKind::Module,
+        line_offset: 1,
+        source: r#"
+import { bump, ticks as seenTicks } from "./shared.js";
+const factor = 3;
+let offset = 100;
+function helper(v) {
+    return v * factor + offset;
+}
+class Box {
+    static tag = "B";
+    constructor(v) {
+        this.v = helper(v);
+    }
+    read() {
+        return Box.tag + ":" + this.v;
+    }
+}
+export const token = factor + offset;
+export function calc(x) {
+    offset += 5;
+    return new Box(x).read() + ":" + seenTicks;
+}
+bump("B");
+"#
+        .to_string(),
+    };
+
+    let classic_script = ScriptInput {
+        name: "src/classic.js".to_string(),
+        kind: ScriptKind::Classic,
+        line_offset: 1,
+        source: r#"
+const factor = 1000;
+let offset = 500;
+var sharedName = "classic";
+function helper(v) {
+    return v + factor + offset;
+}
+class Box {
+    constructor(v) {
+        this.v = helper(v);
+    }
+    read() {
+        return sharedName + ":" + this.v;
+    }
+}
+function readClassic(v) {
+    return new Box(v).read();
+}
+"#
+        .to_string(),
+    };
+
+    let main_mod = ScriptInput {
+        name: "src/main.js".to_string(),
+        kind: ScriptKind::Module,
+        line_offset: 1,
+        source: r#"
+import { calc as calcA, token as tokenA, shadowA } from "./mod_a.js";
+import { calc as calcB, token as tokenB } from "./mod_b.js";
+import { bump, order, ticks as seenTicks } from "./shared.js";
+
+const factor = 7;
+bump("M");
+const summary = [
+    calcA(4),
+    calcB(4),
+    shadowA(5, 6),
+    readClassic(1),
+    tokenA + "+" + tokenB + "+" + factor + "+" + seenTicks,
+    order.join(",")
+].join("|");
+document.getElementById("out").textContent = summary;
+"#
+        .to_string(),
+    };
+
+    let scripts = [main_mod, mod_a, mod_b, shared_mod, classic_script];
+    let analysis = analyze(&scripts);
+    let out = rewrite(&scripts, &analysis, &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+
+    let runtime_path = dir.write_file("h2q_runtime.js", RUNTIME_JS);
+    let page_path = dir.write_file("page.js", &out.page_js);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import "page.js" as Page
+
+Item {
+    id: root
+    width: 200
+    height: 100
+
+    Text { id: outText; text: "" }
+
+    Component.onCompleted: {
+        Page.__h2q_init(root);
+        console.log("H2Q_OK_COLLIDING_MODULES", outText.text, Page.readClassic(2));
+        Qt.quit();
+    }
+}
+"#,
+    );
+
+    if has_binary("qmllint") {
+        for path in [&runtime_path, &page_path, &main_qml] {
+            let lint = Command::new("qmllint")
+                .arg(path)
+                .output()
+                .expect("failed to run qmllint");
+            assert!(
+                lint.status.success(),
+                "qmllint failed on {}: {}{}\npage.js:\n{}",
+                path.display(),
+                String::from_utf8_lossy(&lint.stdout),
+                String::from_utf8_lossy(&lint.stderr),
+                out.page_js
+            );
+        }
+    }
+
+    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    assert!(
+        output.contains(
+            "H2Q_OK_COLLIDING_MODULES A:19:8|B:117:8|14:12|classic:1501|12+103+7+8|S@2,A@4,B@6,M@8 classic:1502"
+        ),
+        "unexpected qml6 colliding modules output:\n{output}\npage.js:\n{}",
+        out.page_js
+    );
+}

@@ -2,15 +2,16 @@ use std::collections::{HashMap, HashSet};
 
 use oxc_ast::ast::{
     ArrowFunctionBody, ArrowFunctionExpression, AssignmentExpression, AssignmentTarget,
-    AwaitExpression, BindingPattern, CallExpression, CatchClause, Class, ClassElement, ClassType,
+    AssignmentTargetPropertyIdentifier, AwaitExpression, BindingIdentifier, BindingPattern,
+    BindingProperty, CallExpression, CatchClause, Class, ClassElement, ClassType,
     ComputedMemberExpression, Expression, ForInStatement, ForOfStatement, ForStatement, Function,
-    IdentifierReference, MethodDefinition, MethodDefinitionKind, ObjectExpression,
+    IdentifierReference, MethodDefinition, MethodDefinitionKind, ObjectExpression, ObjectProperty,
     ObjectPropertyKind, PropertyKey, ReturnStatement, SimpleAssignmentTarget, Statement,
     StaticMemberExpression, UnaryExpression, UpdateExpression, VariableDeclaration,
     VariableDeclarationKind, VariableDeclarator,
 };
 use oxc_ast_visit::{Visit, walk};
-use oxc_semantic::{IsGlobalReference, Scoping};
+use oxc_semantic::{IsGlobalReference, Scoping, SymbolId};
 use oxc_span::{GetSpan, Span};
 use oxc_syntax::operator::{AssignmentOperator, UnaryOperator};
 use oxc_syntax::scope::ScopeFlags;
@@ -205,6 +206,7 @@ pub(crate) struct AstLowerer<'a, 'b> {
     /// Span starts of `Function` nodes that belong to a `MethodDefinition`, so `visit_function`
     /// leaves method header syntax (`async foo(...)`) to `visit_method_definition`.
     method_fn_spans: HashSet<(u32, u32)>,
+    pub symbol_renames: HashMap<SymbolId, String>,
 }
 
 impl<'a, 'b> AstLowerer<'a, 'b> {
@@ -233,6 +235,7 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
             hoisted_top_vars: Vec::new(),
             post_class_static_inits: HashMap::new(),
             method_fn_spans: HashSet::new(),
+            symbol_renames: HashMap::new(),
         }
     }
 
@@ -250,6 +253,13 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
         lowerer.is_handler_attr = true;
         lowerer.handler_final_stmt_span = handler_final_stmt_span;
         lowerer
+    }
+
+    pub(crate) fn bound_name<'c>(&'c self, id: &'c BindingIdentifier<'_>) -> &'c str {
+        id.symbol_id
+            .get()
+            .and_then(|sym_id| self.symbol_renames.get(&sym_id))
+            .map_or(id.name.as_str(), String::as_str)
     }
 
     pub(crate) fn resolve_single_target(&self, expr: &Expression<'_>) -> Option<QmlTarget> {
@@ -596,11 +606,84 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
         walk::walk_return_statement(self, it);
     }
 
+    fn visit_binding_identifier(&mut self, it: &BindingIdentifier<'a>) {
+        if let Some(sym_id) = it.symbol_id.get()
+            && let Some(new_name) = self.symbol_renames.get(&sym_id)
+        {
+            self.editor.replace(it.span, new_name.clone());
+        }
+    }
+
+    fn visit_binding_property(&mut self, it: &BindingProperty<'a>) {
+        if it.shorthand {
+            let bind_id = match &it.value {
+                BindingPattern::BindingIdentifier(id) => Some(id.as_ref()),
+                BindingPattern::AssignmentPattern(assign) => match &assign.left {
+                    BindingPattern::BindingIdentifier(id) => Some(id.as_ref()),
+                    _ => None,
+                },
+                _ => None,
+            };
+            if let Some(id) = bind_id
+                && let Some(sym_id) = id.symbol_id.get()
+                && let Some(new_name) = self.symbol_renames.get(&sym_id).cloned()
+            {
+                if let BindingPattern::AssignmentPattern(assign) = &it.value {
+                    self.visit_expression(&assign.right);
+                }
+                self.editor
+                    .replace(id.span, format!("{}: {new_name}", id.name));
+                return;
+            }
+        }
+        walk::walk_binding_property(self, it);
+    }
+
+    fn visit_object_property(&mut self, it: &ObjectProperty<'a>) {
+        if it.shorthand
+            && let Expression::Identifier(id) = &it.value
+            && let Some(rid) = id.reference_id.get()
+            && let Some(sym_id) = self.scoping.get_reference(rid).symbol_id()
+            && let Some(new_name) = self.symbol_renames.get(&sym_id)
+        {
+            self.editor
+                .replace(it.span, format!("{}: {new_name}", id.name));
+            return;
+        }
+        walk::walk_object_property(self, it);
+    }
+
+    fn visit_assignment_target_property_identifier(
+        &mut self,
+        it: &AssignmentTargetPropertyIdentifier<'a>,
+    ) {
+        if let Some(rid) = it.binding.reference_id.get()
+            && let Some(sym_id) = self.scoping.get_reference(rid).symbol_id()
+            && let Some(new_name) = self.symbol_renames.get(&sym_id).cloned()
+        {
+            if let Some(init) = &it.init {
+                self.visit_expression(init);
+            }
+            self.editor
+                .replace(it.binding.span, format!("{}: {new_name}", it.binding.name));
+            return;
+        }
+        walk::walk_assignment_target_property_identifier(self, it);
+    }
+
     fn visit_identifier_reference(&mut self, it: &IdentifierReference<'a>) {
         if let Some(query) = self.bindings.resolve_ident(it, false)
             && let Some(target) = resolve_query_to_single_target(&query, self.resolver)
         {
             self.editor.replace(it.span, target.qml_id);
+            return;
+        }
+
+        if let Some(rid) = it.reference_id.get()
+            && let Some(sym_id) = self.scoping.get_reference(rid).symbol_id()
+            && let Some(new_name) = self.symbol_renames.get(&sym_id)
+        {
+            self.editor.replace(it.span, new_name.clone());
             return;
         }
 
@@ -1178,7 +1261,7 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                 collect_binding_identifiers(&decl.id, &mut bound);
             }
             for id in bound {
-                self.hoisted_top_vars.push(id.name.to_string());
+                self.hoisted_top_vars.push(self.bound_name(id).to_string());
             }
         }
 
@@ -1222,11 +1305,9 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                     break;
                 }
                 let init_str = self.editor.extract_and_consume(init.span());
+                let rest_name = self.bound_name(rest_ident).to_string();
                 if regular_props.is_empty() {
-                    out_decls.push(format!(
-                        "{} = H2Q.objectRest({init_str}, [])",
-                        rest_ident.name
-                    ));
+                    out_decls.push(format!("{rest_name} = H2Q.objectRest({init_str}, [])"));
                 } else {
                     let tmp = format!("__h2q_obj_{}", self.shared.fresh_id());
                     if hoist_top_var {
@@ -1239,8 +1320,7 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                         out_decls.push(format!("{{ {} }} = {tmp}", regular_props.join(", ")));
                     }
                     out_decls.push(format!(
-                        "{} = H2Q.objectRest({tmp}, [{}])",
-                        rest_ident.name,
+                        "{rest_name} = H2Q.objectRest({tmp}, [{}])",
                         excluded_keys.join(", ")
                     ));
                 }
@@ -1469,7 +1549,7 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             if it.r#type == ClassType::ClassDeclaration
                 && let Some(cls_id) = &it.id
             {
-                let cls_name = cls_id.name.as_str();
+                let cls_name = self.bound_name(cls_id);
                 let stmts = static_fields
                     .into_iter()
                     .map(|(acc, val)| format!("{cls_name}{acc} = {val};"))
