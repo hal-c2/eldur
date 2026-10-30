@@ -756,3 +756,96 @@ fn transitions_and_animations_parsing() {
     assert_eq!(s2.animations[1].name, "pulse");
     assert_eq!(s2.animations[1].duration_ms, 400.0);
 }
+
+#[test]
+fn atomic_shorthand_validation() {
+    assert!(expand("margin", "10px bogus").is_err());
+    assert!(expand("padding", "12px -4px").is_err());
+    assert!(expand("margin", "10px inherit").is_err());
+    assert!(expand("margin", "1px 2px 3px 4px").is_ok());
+}
+
+#[test]
+fn flex_unitless_zero_basis() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    let mut s = ComputedStyle::default();
+
+    apply_decl(&mut s, "flex", "1 1 0", &ctx).expect("flex: 1 1 0");
+    assert_eq!(s.flex_grow, 1.0);
+    assert_eq!(s.flex_shrink, 1.0);
+    assert_eq!(s.flex_basis, Size::Length(Length::px(0.0)));
+
+    apply_decl(&mut s, "flex", "0 0 0", &ctx).expect("flex: 0 0 0");
+    assert_eq!(s.flex_grow, 0.0);
+    assert_eq!(s.flex_shrink, 0.0);
+    assert_eq!(s.flex_basis, Size::Length(Length::px(0.0)));
+
+    apply_decl(&mut s, "flex", "1 0", &ctx).expect("flex: 1 0");
+    assert_eq!(s.flex_grow, 1.0);
+    assert_eq!(s.flex_shrink, 0.0);
+    assert_eq!(s.flex_basis, Size::Length(Length::px(0.0)));
+}
+
+#[test]
+fn border_color_transparent_vs_unset() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+
+    let mut s1 = ComputedStyle::default();
+    compute(&mut s1, Longhand::Color, "red", &ctx).expect("color: red");
+    compute(&mut s1, Longhand::BorderTopColor, "transparent", &ctx)
+        .expect("border-top-color: transparent");
+    compute(&mut s1, Longhand::BorderTopStyle, "solid", &ctx).expect("border-top-style: solid");
+    assert_eq!(s1.border.top.color, Rgba::TRANSPARENT);
+
+    let mut s2 = ComputedStyle::default();
+    compute(&mut s2, Longhand::Color, "red", &ctx).expect("color: red");
+    compute(&mut s2, Longhand::BorderTopStyle, "solid", &ctx).expect("border-top-style: solid");
+    assert_eq!(s2.border.top.color, Rgba::new(255, 0, 0, 255));
+}
+
+#[test]
+fn border_width_before_and_after_style() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+
+    let mut s1 = ComputedStyle::default();
+    compute(&mut s1, Longhand::BorderTopWidth, "10px", &ctx).expect("border-top-width: 10px");
+    compute(&mut s1, Longhand::BorderTopStyle, "solid", &ctx).expect("border-top-style: solid");
+    assert_eq!(s1.border.top.width, 10.0);
+
+    let mut s2 = ComputedStyle::default();
+    compute(&mut s2, Longhand::BorderTopStyle, "solid", &ctx).expect("border-top-style: solid");
+    compute(&mut s2, Longhand::BorderTopWidth, "10px", &ctx).expect("border-top-width: 10px");
+    assert_eq!(s2.border.top.width, 10.0);
+
+    let mut s3 = ComputedStyle::default();
+    compute(&mut s3, Longhand::BorderTopWidth, "10px", &ctx).expect("border-top-width: 10px");
+    compute(&mut s3, Longhand::BorderTopStyle, "none", &ctx).expect("border-top-style: none");
+    assert_eq!(s3.border.top.width, 0.0);
+
+    let mut s4 = ComputedStyle::default();
+    compute(&mut s4, Longhand::BorderTopStyle, "none", &ctx).expect("border-top-style: none");
+    compute(&mut s4, Longhand::BorderTopWidth, "10px", &ctx).expect("border-top-width: 10px");
+    assert_eq!(s4.border.top.width, 0.0);
+}
+
+#[test]
+fn inherited_color_updates_current_color_borders_but_not_explicit_ones() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+
+    let mut parent = ComputedStyle::default();
+    compute(&mut parent, Longhand::Color, "blue", &ctx).expect("parent color");
+
+    let mut s = ComputedStyle::default();
+    compute(&mut s, Longhand::BorderTopStyle, "solid", &ctx).expect("border-top-style");
+    compute(&mut s, Longhand::BorderLeftStyle, "solid", &ctx).expect("border-left-style");
+    compute(&mut s, Longhand::BorderLeftColor, "green", &ctx).expect("border-left-color");
+    // `color: inherit` reaches the style through `copy`, not `compute`.
+    copy(&mut s, &parent, Longhand::Color);
+    assert_eq!(s.color, Rgba::new(0, 0, 255, 255));
+    assert_eq!(s.border.top.color, Rgba::new(0, 0, 255, 255));
+    assert_eq!(s.border.left.color, Rgba::new(0, 128, 0, 255));
+}

@@ -39,12 +39,12 @@ use self::{
         parse_position_2d, parse_shadow_list, validate_bg_attachment_list, validate_bg_box_list,
     },
     box_model::{
-        apply_border_style, apply_border_width, parse_aspect_ratio, parse_border_style,
-        parse_box_sizing, parse_corner_radius, parse_display, parse_float, parse_inset_side,
-        parse_line_width, parse_margin_side, parse_outline_offset, parse_padding_side,
-        parse_position, parse_size, parse_z_index,
+        apply_border_color, apply_border_style, apply_border_width, parse_aspect_ratio,
+        parse_border_style, parse_box_sizing, parse_corner_radius, parse_display, parse_float,
+        parse_inset_side, parse_line_width, parse_margin_side, parse_outline_offset,
+        parse_padding_side, parse_position, parse_size, parse_z_index,
     },
-    color::parse_color_cvs,
+    color::{is_current_color_cvs, parse_color_cvs},
     cursor::{parse_component_values, trim_ws},
     flex::{
         AlignTarget, parse_align, parse_flex_basis, parse_flex_direction, parse_flex_factor,
@@ -645,7 +645,21 @@ pub(crate) fn expand(name: &str, value: &str) -> Result<Vec<(Longhand, String)>,
         return Err(format!("empty value for '{name}'"));
     }
     if shorthand::shorthand_longhands(&lower).is_some() {
-        return shorthand::expand_shorthand(&lower, cvs);
+        let pairs = shorthand::expand_shorthand(&lower, cvs)?;
+        let vp = Viewport::default();
+        let ctx = ComputeContext {
+            parent: None,
+            root_font_size: 16.0,
+            viewport: &vp,
+        };
+        let mut style = ComputedStyle::default();
+        for (l, v) in &pairs {
+            if CssWide::parse(v).is_some() {
+                return Err(format!("CSS-wide keyword in shorthand '{name}'"));
+            }
+            compute(&mut style, *l, v, &ctx)?;
+        }
+        return Ok(pairs);
     }
     if let PropertyKind::Longhand(l) = kind(&lower) {
         return Ok(vec![(l, value.trim().to_owned())]);
@@ -788,7 +802,7 @@ pub(crate) fn compute(
         // Priority 2: Color & direction
         Longhand::Color => {
             let parent_color = ctx.parent.map_or(crate::Rgba::BLACK, |p| p.color);
-            style.color = parse_color_cvs(cvs, parent_color)?;
+            set_color(style, parse_color_cvs(cvs, parent_color)?);
         }
         Longhand::Direction => {
             style.direction = parse_direction(cvs)?;
@@ -834,23 +848,28 @@ pub(crate) fn compute(
             apply_border_width(&mut style.border.left, w);
         }
         Longhand::BorderTopColor => {
-            style.border.top.color = parse_color_cvs(cvs, style.color)?;
+            let c = parse_color_cvs(cvs, style.color)?;
+            apply_border_color(&mut style.border.top, c, is_current_color_cvs(cvs));
         }
         Longhand::BorderRightColor => {
-            style.border.right.color = parse_color_cvs(cvs, style.color)?;
+            let c = parse_color_cvs(cvs, style.color)?;
+            apply_border_color(&mut style.border.right, c, is_current_color_cvs(cvs));
         }
         Longhand::BorderBottomColor => {
-            style.border.bottom.color = parse_color_cvs(cvs, style.color)?;
+            let c = parse_color_cvs(cvs, style.color)?;
+            apply_border_color(&mut style.border.bottom, c, is_current_color_cvs(cvs));
         }
         Longhand::BorderLeftColor => {
-            style.border.left.color = parse_color_cvs(cvs, style.color)?;
+            let c = parse_color_cvs(cvs, style.color)?;
+            apply_border_color(&mut style.border.left, c, is_current_color_cvs(cvs));
         }
         Longhand::OutlineWidth => {
             let w = parse_line_width(cvs, &uctx_no_pct)?;
             apply_border_width(&mut style.outline, w);
         }
         Longhand::OutlineColor => {
-            style.outline.color = parse_color_cvs(cvs, style.color)?;
+            let c = parse_color_cvs(cvs, style.color)?;
+            apply_border_color(&mut style.outline, c, is_current_color_cvs(cvs));
         }
         Longhand::OutlineOffset => {
             style.outline_offset = parse_outline_offset(cvs, &uctx_no_pct)?;
@@ -1255,6 +1274,28 @@ pub(crate) fn compute(
     Ok(())
 }
 
+/// Sets `color` and the border/outline sides whose color is still the
+/// initial `currentColor`, so they track it whichever path set it.
+fn set_color(style: &mut ComputedStyle, c: crate::Rgba) {
+    style.color = c;
+    for side in [
+        &mut style.border.top,
+        &mut style.border.right,
+        &mut style.border.bottom,
+        &mut style.border.left,
+        &mut style.outline,
+    ] {
+        if side.explicit_color.is_none()
+            && !matches!(
+                side.style,
+                crate::BorderStyle::None | crate::BorderStyle::Hidden
+            )
+        {
+            side.color = c;
+        }
+    }
+}
+
 /// Copies the single longhand `l` from `src` to `dst` (used for `inherit`,
 /// `initial`, `unset`, and `revert`).
 pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
@@ -1265,7 +1306,7 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
         Longhand::FontStyle => dst.font_style = src.font_style,
         Longhand::FontVariantCaps => dst.small_caps = src.small_caps,
         Longhand::LineHeight => dst.line_height = src.line_height,
-        Longhand::Color => dst.color = src.color,
+        Longhand::Color => set_color(dst, src.color),
         Longhand::Direction => dst.direction = src.direction,
 
         Longhand::BorderTopStyle => dst.border.top.style = src.border.top.style,
@@ -1274,16 +1315,46 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
         Longhand::BorderLeftStyle => dst.border.left.style = src.border.left.style,
         Longhand::OutlineStyle => dst.outline.style = src.outline.style,
 
-        Longhand::BorderTopWidth => dst.border.top.width = src.border.top.width,
-        Longhand::BorderRightWidth => dst.border.right.width = src.border.right.width,
-        Longhand::BorderBottomWidth => dst.border.bottom.width = src.border.bottom.width,
-        Longhand::BorderLeftWidth => dst.border.left.width = src.border.left.width,
-        Longhand::BorderTopColor => dst.border.top.color = src.border.top.color,
-        Longhand::BorderRightColor => dst.border.right.color = src.border.right.color,
-        Longhand::BorderBottomColor => dst.border.bottom.color = src.border.bottom.color,
-        Longhand::BorderLeftColor => dst.border.left.color = src.border.left.color,
-        Longhand::OutlineWidth => dst.outline.width = src.outline.width,
-        Longhand::OutlineColor => dst.outline.color = src.outline.color,
+        Longhand::BorderTopWidth => {
+            dst.border.top.width = src.border.top.width;
+            dst.border.top.explicit_width = src.border.top.explicit_width;
+        }
+        Longhand::BorderRightWidth => {
+            dst.border.right.width = src.border.right.width;
+            dst.border.right.explicit_width = src.border.right.explicit_width;
+        }
+        Longhand::BorderBottomWidth => {
+            dst.border.bottom.width = src.border.bottom.width;
+            dst.border.bottom.explicit_width = src.border.bottom.explicit_width;
+        }
+        Longhand::BorderLeftWidth => {
+            dst.border.left.width = src.border.left.width;
+            dst.border.left.explicit_width = src.border.left.explicit_width;
+        }
+        Longhand::BorderTopColor => {
+            dst.border.top.color = src.border.top.color;
+            dst.border.top.explicit_color = src.border.top.explicit_color;
+        }
+        Longhand::BorderRightColor => {
+            dst.border.right.color = src.border.right.color;
+            dst.border.right.explicit_color = src.border.right.explicit_color;
+        }
+        Longhand::BorderBottomColor => {
+            dst.border.bottom.color = src.border.bottom.color;
+            dst.border.bottom.explicit_color = src.border.bottom.explicit_color;
+        }
+        Longhand::BorderLeftColor => {
+            dst.border.left.color = src.border.left.color;
+            dst.border.left.explicit_color = src.border.left.explicit_color;
+        }
+        Longhand::OutlineWidth => {
+            dst.outline.width = src.outline.width;
+            dst.outline.explicit_width = src.outline.explicit_width;
+        }
+        Longhand::OutlineColor => {
+            dst.outline.color = src.outline.color;
+            dst.outline.explicit_color = src.outline.explicit_color;
+        }
         Longhand::OutlineOffset => dst.outline_offset = src.outline_offset,
 
         Longhand::Display => dst.display = src.display,

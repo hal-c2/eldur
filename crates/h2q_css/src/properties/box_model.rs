@@ -330,17 +330,23 @@ pub(crate) fn apply_border_style(
     if matches!(new_style, BorderStyle::None | BorderStyle::Hidden) {
         side.width = 0.0;
     } else if was_unpainted {
-        if side.width == 0.0 {
-            side.width = 3.0;
-        }
-        if side.color == Rgba::TRANSPARENT {
+        side.width = side.explicit_width.unwrap_or(3.0);
+        if let Some(c) = side.explicit_color {
+            side.color = c;
+        } else {
             side.color = current_color;
         }
     }
 }
 
+pub(crate) fn apply_border_color(side: &mut BorderSide, color: Rgba, is_current_color: bool) {
+    side.color = color;
+    side.explicit_color = if is_current_color { None } else { Some(color) };
+}
+
 /// Applies `border-*-width` / `outline-width` to `side` (`0` when `style` is `none`/`hidden`).
 pub(crate) fn apply_border_width(side: &mut BorderSide, parsed_px: f32) {
+    side.explicit_width = Some(parsed_px);
     side.width = if matches!(side.style, BorderStyle::None | BorderStyle::Hidden) {
         0.0
     } else {
