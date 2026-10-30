@@ -1208,7 +1208,8 @@ ApplicationWindow {
                                                                 radius: 999
                                                                 implicitWidth: 0
                                                                 implicitHeight: 0
-                                                                Layout.preferredWidth: parent.width * 0.82
+                                                                Layout.fillWidth: true
+                                                                Layout.maximumWidth: parent.width * 0.82
                                                                 Layout.preferredHeight: 12
                                                             }
                                                         }
@@ -1301,7 +1302,8 @@ ApplicationWindow {
                                                                 radius: 999
                                                                 implicitWidth: 0
                                                                 implicitHeight: 0
-                                                                Layout.preferredWidth: parent.width * 0.64
+                                                                Layout.fillWidth: true
+                                                                Layout.maximumWidth: parent.width * 0.64
                                                                 Layout.preferredHeight: 12
                                                             }
                                                         }
@@ -1394,7 +1396,8 @@ ApplicationWindow {
                                                                 radius: 999
                                                                 implicitWidth: 0
                                                                 implicitHeight: 0
-                                                                Layout.preferredWidth: parent.width * 0.47
+                                                                Layout.fillWidth: true
+                                                                Layout.maximumWidth: parent.width * 0.47
                                                                 Layout.preferredHeight: 12
                                                             }
                                                         }
@@ -1487,7 +1490,8 @@ ApplicationWindow {
                                                                 radius: 999
                                                                 implicitWidth: 0
                                                                 implicitHeight: 0
-                                                                Layout.preferredWidth: parent.width * 0.31
+                                                                Layout.fillWidth: true
+                                                                Layout.maximumWidth: parent.width * 0.31
                                                                 Layout.preferredHeight: 12
                                                             }
                                                         }
@@ -1581,7 +1585,8 @@ ApplicationWindow {
                                                                 radius: 999
                                                                 implicitWidth: 0
                                                                 implicitHeight: 0
-                                                                Layout.preferredWidth: parent.width * 0.18
+                                                                Layout.fillWidth: true
+                                                                Layout.maximumWidth: parent.width * 0.18
                                                                 Layout.preferredHeight: 12
                                                             }
                                                         }
@@ -1728,7 +1733,7 @@ ApplicationWindow {
                                                                 color: "#0075ff"
                                                             }
                                                         }
-                                                        Layout.preferredWidth: parent.width
+                                                        Layout.fillWidth: true
                                                         Layout.preferredHeight: 12
                                                         Layout.topMargin: 8
                                                     }
@@ -1802,7 +1807,8 @@ ApplicationWindow {
                                                                 radius: 999
                                                                 implicitWidth: 0
                                                                 implicitHeight: 0
-                                                                Layout.preferredWidth: parent.width * 0.45
+                                                                Layout.fillWidth: true
+                                                                Layout.maximumWidth: parent.width * 0.45
                                                                 Layout.preferredHeight: 12
                                                             }
                                                         }
@@ -1888,7 +1894,7 @@ ApplicationWindow {
                                                 implicitWidth: tableGrid.maxContentWidth
                                                 implicitHeight: tableGrid.implicitHeight
                                                 Layout.minimumWidth: tableGrid.minContentWidth
-                                                Layout.preferredWidth: parent.width
+                                                Layout.fillWidth: true
                                                 Layout.topMargin: 16
 
                                                 GridLayout {

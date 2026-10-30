@@ -1093,7 +1093,8 @@ ApplicationWindow {
                     radius: 12
                     implicitWidth: statsContent.implicitWidth + 32
                     implicitHeight: statsContent.implicitHeight + 32
-                    Layout.preferredWidth: Math.max(0, parent.width - 32)
+                    Layout.fillWidth: true
+                    Layout.maximumWidth: Math.max(0, parent.width - 32)
                     Layout.alignment: Qt.AlignHCenter
                     Layout.topMargin: 32
 

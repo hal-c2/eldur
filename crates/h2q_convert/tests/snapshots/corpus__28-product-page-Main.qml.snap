@@ -667,7 +667,7 @@ ApplicationWindow {
                                         }
                                     }
                                     Accessible.name: "Only 7 left in stock"
-                                    Layout.preferredWidth: parent.width
+                                    Layout.fillWidth: true
                                     Layout.preferredHeight: 10
                                     Layout.topMargin: 4
                                 }
@@ -787,7 +787,7 @@ ApplicationWindow {
                                                 font.pixelSize: 12
                                             }
                                             Accessible.name: "Colour"
-                                            Layout.preferredWidth: parent.width
+                                            Layout.fillWidth: true
                                             Layout.topMargin: 4
                                         }
                                     }
@@ -866,7 +866,7 @@ ApplicationWindow {
                                                 inputMethodHints: Qt.ImhFormattedNumbersOnly
                                             }
                                             Accessible.name: "Quantity"
-                                            Layout.preferredWidth: parent.width
+                                            Layout.fillWidth: true
                                             Layout.topMargin: 4
                                         }
                                     }

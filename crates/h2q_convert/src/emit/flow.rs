@@ -497,18 +497,20 @@ impl Emitter<'_, '_> {
         if is_layout(&obj.type_name) && matches!(style.width, Size::Length(_)) {
             obj.set("Layout.fillWidth", false);
         }
-        let image = b
-            .node
-            .and_then(|n| self.doc.element(n))
-            .is_some_and(|e| e.is_html() && e.local_name() == "img");
+        // A preferred width bound to the column's width feeds the column's
+        // implicit width back into itself, which can widen the whole page,
+        // and a control that does not fill cannot be narrower than its
+        // implicit width: an item fills up to its percentage instead. A
+        // Layout's own width does not depend on its column's.
+        let fill_percent = super::image::is_percent_width(style) && !is_layout(&obj.type_name);
         match &style.width {
-            // A preferred width bound to the column's width feeds the
-            // column's implicit width back into itself, which can widen
-            // the whole page; an image fills up to its percentage instead.
-            Size::Length(w) if image && super::image::is_percent_width(style) => {
+            Size::Length(w) if fill_percent => {
                 obj.set("Layout.fillWidth", true);
                 if *w != Length::Linear(h2q_css::LengthPercentage::percent(100.0)) {
                     obj.set("Layout.maximumWidth", size_value(w, extra_w));
+                }
+                if let Some(a) = alignment {
+                    obj.set("Layout.alignment", Value::expr(a));
                 }
             }
             Size::Length(w) => {
@@ -557,6 +559,17 @@ impl Emitter<'_, '_> {
             {
                 obj.set(name, length_value_nonneg(l));
             }
+        }
+        // A filling item is no wider than its cell, but a percentage of the
+        // content box overflows by the padding and border, as in CSS; it
+        // overflows on the right, so an item placed right keeps its edge.
+        if fill_percent
+            && extra_w > 0.0
+            && alignment.is_none()
+            && let LengthAuto::Length(l) = &style.margin.right
+            && let Some(right) = l.as_px()
+        {
+            obj.set("Layout.rightMargin", number(right.max(0.0) - extra_w));
         }
         match &style.height {
             Size::Length(h) if h.as_px().is_some() || is_viewport_relative(h) => {

@@ -366,7 +366,9 @@ ApplicationWindow {
                                             implicitHeight: halfText.implicitHeight + 26
                                             border.width: 1
                                             border.color: "#c4cad6"
-                                            Layout.preferredWidth: parent.width * 0.5 + 34
+                                            Layout.fillWidth: true
+                                            Layout.maximumWidth: parent.width * 0.5 + 34
+                                            Layout.rightMargin: -34
 
                                             Text {
                                                 id: halfText
@@ -397,7 +399,8 @@ ApplicationWindow {
                                             implicitHeight: halfText2.implicitHeight + 26
                                             border.width: 1
                                             border.color: "#c4cad6"
-                                            Layout.preferredWidth: parent.width * 0.5 + 34
+                                            Layout.fillWidth: true
+                                            Layout.maximumWidth: parent.width * 0.5 + 34
                                             Layout.alignment: Qt.AlignRight
                                             Layout.topMargin: 24
                                             Layout.bottomMargin: 24
