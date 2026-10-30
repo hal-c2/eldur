@@ -1,10 +1,10 @@
 use crate::{
-    Align, Animation, BackgroundRepeat, BackgroundSize, BorderStyle, BoxSizing, ColorStop,
-    ComputedStyle, ContentItem, Cursor, Direction, Display, Easing, FlexDirection, FlexWrap, Float,
-    FontStyle, GridLine, Image, Length, LengthAuto, LengthPercentage, LineHeight, ListStyleType,
-    ObjectFit, Overflow, PointerEvents, Position, Rgba, Shadow, Size, TextAlign, TextOverflow,
-    TextTransform, Track, TransformFn, Transition, VerticalAlign, Viewport, Visibility, WhiteSpace,
-    WordBreak,
+    Align, Animation, BackgroundRepeat, BackgroundSize, BorderStyle, BoxSizing, CalcNode,
+    ColorStop, ComputedStyle, ContentItem, Cursor, Direction, Display, Easing, FlexDirection,
+    FlexWrap, Float, FontStyle, GridLine, Image, Length, LengthAuto, LengthPercentage, LineHeight,
+    ListStyleType, ObjectFit, Overflow, PointerEvents, Position, Rgba, Shadow, Size, TextAlign,
+    TextOverflow, TextTransform, Track, TransformFn, Transition, VerticalAlign, Viewport,
+    Visibility, WhiteSpace, WordBreak,
 };
 
 use super::{
@@ -848,4 +848,166 @@ fn inherited_color_updates_current_color_borders_but_not_explicit_ones() {
     assert_eq!(s.color, Rgba::new(0, 0, 255, 255));
     assert_eq!(s.border.top.color, Rgba::new(0, 0, 255, 255));
     assert_eq!(s.border.left.color, Rgba::new(0, 128, 0, 255));
+}
+
+#[test]
+fn copy_sub_properties_preserves_siblings() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    let default_style = ComputedStyle::default();
+
+    let mut bg = ComputedStyle::default();
+    compute(&mut bg, Longhand::BackgroundImage, "url(hero.png)", &ctx).expect("bg image");
+    compute(&mut bg, Longhand::BackgroundRepeat, "no-repeat", &ctx).expect("bg repeat");
+    copy(&mut bg, &default_style, Longhand::BackgroundRepeat);
+    assert_eq!(bg.background_layers.len(), 1);
+    assert_eq!(
+        bg.background_layers[0].image,
+        Some(Image::Url("hero.png".to_owned()))
+    );
+    assert_eq!(bg.background_layers[0].repeat, BackgroundRepeat::Repeat);
+
+    let mut tf = ComputedStyle::default();
+    compute(&mut tf, Longhand::Translate, "10px 20px", &ctx).expect("translate");
+    compute(&mut tf, Longhand::Rotate, "45deg", &ctx).expect("rotate");
+    copy(&mut tf, &default_style, Longhand::Rotate);
+    assert_eq!(
+        tf.transform,
+        vec![TransformFn::Translate(
+            LengthPercentage::px(10.0),
+            LengthPercentage::px(20.0),
+        )]
+    );
+
+    let mut tr = ComputedStyle::default();
+    compute(&mut tr, Longhand::TransitionProperty, "opacity", &ctx).expect("transition-property");
+    compute(&mut tr, Longhand::TransitionDuration, "200ms", &ctx).expect("transition-duration");
+    copy(&mut tr, &default_style, Longhand::TransitionDuration);
+    assert_eq!(tr.transitions.len(), 1);
+    assert_eq!(tr.transitions[0].property, "opacity");
+    assert_eq!(tr.transitions[0].duration_ms, 0.0);
+
+    let mut anim = ComputedStyle::default();
+    compute(&mut anim, Longhand::AnimationName, "fade", &ctx).expect("animation-name");
+    compute(&mut anim, Longhand::AnimationDuration, "300ms", &ctx).expect("animation-duration");
+    copy(&mut anim, &default_style, Longhand::AnimationDuration);
+    assert_eq!(anim.animations.len(), 1);
+    assert_eq!(anim.animations[0].name, "fade");
+    assert_eq!(anim.animations[0].duration_ms, 0.0);
+}
+
+#[test]
+fn transform_replaces_and_keeps_individual_transforms_independent() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+
+    let mut s1 = ComputedStyle::default();
+    compute(&mut s1, Longhand::Transform, "skewX(15deg)", &ctx).expect("skewX");
+    compute(&mut s1, Longhand::Transform, "none", &ctx).expect("transform: none");
+    assert!(s1.transform.is_empty());
+
+    let mut s2 = ComputedStyle::default();
+    compute(&mut s2, Longhand::Transform, "skewX(15deg)", &ctx).expect("skewX");
+    compute(&mut s2, Longhand::Transform, "rotate(30deg)", &ctx).expect("rotate(30deg)");
+    assert_eq!(s2.transform, vec![TransformFn::Rotate(30.0)]);
+
+    let mut s3 = ComputedStyle::default();
+    compute(&mut s3, Longhand::Transform, "translate(5px)", &ctx).expect("transform translate");
+    compute(&mut s3, Longhand::Translate, "10px", &ctx).expect("individual translate");
+    assert_eq!(
+        s3.transform,
+        vec![
+            TransformFn::Translate(LengthPercentage::px(10.0), LengthPercentage::ZERO),
+            TransformFn::Translate(LengthPercentage::px(5.0), LengthPercentage::ZERO),
+        ]
+    );
+
+    let mut s4 = ComputedStyle::default();
+    compute(&mut s4, Longhand::Rotate, "10deg", &ctx).expect("individual rotate");
+    compute(&mut s4, Longhand::Transform, "rotate(20deg)", &ctx).expect("transform rotate");
+    assert_eq!(
+        s4.transform,
+        vec![TransformFn::Rotate(10.0), TransformFn::Rotate(20.0)]
+    );
+}
+
+#[test]
+fn min_max_clamp_with_percentages_preserved_as_calc_tree() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    let mut s = ComputedStyle::default();
+
+    compute(
+        &mut s,
+        Longhand::BorderTopLeftRadius,
+        "min(50%, 20px)",
+        &ctx,
+    )
+    .expect("border-top-left-radius with min()");
+    assert_eq!(
+        s.border_radius_calc.top_left,
+        Some(CalcNode::Min(vec![
+            CalcNode::Leaf(LengthPercentage::percent(50.0)),
+            CalcNode::Leaf(LengthPercentage::px(20.0)),
+        ]))
+    );
+
+    compute(
+        &mut s,
+        Longhand::Transform,
+        "translateX(clamp(10px, 50%, 100px))",
+        &ctx,
+    )
+    .expect("transform translateX with clamp()");
+    assert_eq!(
+        s.transform,
+        vec![TransformFn::TranslateCalc(
+            Length::Calc(CalcNode::Clamp(
+                Box::new(CalcNode::Leaf(LengthPercentage::px(10.0))),
+                Box::new(CalcNode::Leaf(LengthPercentage::percent(50.0))),
+                Box::new(CalcNode::Leaf(LengthPercentage::px(100.0))),
+            )),
+            Length::Linear(LengthPercentage::ZERO),
+        )]
+    );
+}
+
+#[test]
+fn grid_template_areas_dots_and_adjacent_tokens() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    let mut s = ComputedStyle::default();
+
+    compute(&mut s, Longhand::GridTemplateAreas, "\"a . b\"", &ctx).expect("single dot");
+    assert_eq!(
+        s.grid_template_areas,
+        vec![vec![Some("a".to_owned()), None, Some("b".to_owned()),]]
+    );
+
+    compute(&mut s, Longhand::GridTemplateAreas, "\"a .. b\"", &ctx).expect("double dot");
+    assert_eq!(
+        s.grid_template_areas,
+        vec![vec![Some("a".to_owned()), None, Some("b".to_owned()),]]
+    );
+
+    compute(&mut s, Longhand::GridTemplateAreas, "\".a\"", &ctx).expect("dot before ident");
+    assert_eq!(
+        s.grid_template_areas,
+        vec![vec![None, Some("a".to_owned())]]
+    );
+
+    compute(&mut s, Longhand::GridTemplateAreas, "\"a.b\"", &ctx).expect("dot between idents");
+    assert_eq!(
+        s.grid_template_areas,
+        vec![vec![Some("a".to_owned()), None, Some("b".to_owned()),]]
+    );
+}
+
+#[test]
+fn border_radius_rejects_multiple_slashes() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    let mut s = ComputedStyle::default();
+
+    assert!(apply_decl(&mut s, "border-radius", "10px / 20px / 30px", &ctx).is_err());
 }

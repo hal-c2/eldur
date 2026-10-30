@@ -743,6 +743,31 @@ fn calc_node_to_px(node: &CalcNode, uctx: &UnitContext) -> Result<f32, String> {
 
 /// Converts a [`Length`] to a linear [`LengthPercentage`] (evaluating non-linear
 /// viewport `min()`/`max()`/`clamp()` to `px` when no `%` is involved).
+/// Simplifies a [`Length`] when its calc tree has no unresolved `%` (folding
+/// viewport-only `min()`/`max()`/`clamp()` to `px`), and otherwise preserves
+/// [`Length::Calc`] intact.
+pub(crate) fn simplify_length(len: Length, uctx: &UnitContext, non_negative: bool) -> Length {
+    match len {
+        Length::Linear(mut lp) => {
+            if non_negative && lp.as_px().is_some_and(|p| p < 0.0) {
+                lp.px = 0.0;
+            }
+            Length::Linear(lp)
+        }
+        Length::Calc(node) => {
+            if let Ok(px) = calc_node_to_px(&node, uctx) {
+                Length::Linear(LengthPercentage::px(if non_negative {
+                    px.max(0.0)
+                } else {
+                    px
+                }))
+            } else {
+                Length::Calc(node)
+            }
+        }
+    }
+}
+
 pub(crate) fn length_to_lp(
     len: Length,
     uctx: &UnitContext,

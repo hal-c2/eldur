@@ -333,11 +333,11 @@ impl<T: PartialEq> Sides<T> {
 /// Top-left, top-right, bottom-right, bottom-left. Elliptical radii are
 /// approximated by their horizontal radius (QML Rectangle has no ellipses).
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct Corners {
-    pub top_left: LengthPercentage,
-    pub top_right: LengthPercentage,
-    pub bottom_right: LengthPercentage,
-    pub bottom_left: LengthPercentage,
+pub struct Corners<T = LengthPercentage> {
+    pub top_left: T,
+    pub top_right: T,
+    pub bottom_right: T,
+    pub bottom_left: T,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -574,6 +574,9 @@ pub struct BackgroundLayer {
 #[derive(Debug, Clone, PartialEq)]
 pub enum TransformFn {
     Translate(LengthPercentage, LengthPercentage),
+    /// A translation with a non-linear component (`min()`/`max()`/`clamp()`
+    /// over percentages), kept as an expression for a QML binding.
+    TranslateCalc(Length, Length),
     Scale(f32, f32),
     /// Degrees, clockwise.
     Rotate(f32),
@@ -727,6 +730,10 @@ pub struct ComputedStyle {
     pub padding: Sides<Length>,
     pub border: Sides<BorderSide>,
     pub border_radius: Corners,
+    /// A corner's radius when it is a non-linear expression that cannot be
+    /// resolved before layout; `Some` overrides the same corner of
+    /// `border_radius`.
+    pub border_radius_calc: Corners<Option<CalcNode>>,
     pub outline: BorderSide,
     pub outline_offset: f32,
 
@@ -768,6 +775,14 @@ pub struct ComputedStyle {
     pub opacity: f32,
     pub overflow_x: Overflow,
     pub overflow_y: Overflow,
+    /// The individual `translate`/`rotate`/`scale` properties. They are
+    /// already included at the front of `transform`; kept separately so
+    /// each can be replaced without touching the `transform` property.
+    pub translate: Option<TransformFn>,
+    pub rotate: Option<TransformFn>,
+    pub scale: Option<TransformFn>,
+    /// The effective list: `translate`, `rotate`, `scale` (when set), then
+    /// the `transform` property's functions (CSS Transforms 2 §4).
     pub transform: Vec<TransformFn>,
     /// Percentages of the border box; default 50% 50%.
     pub transform_origin: (LengthPercentage, LengthPercentage),
@@ -846,6 +861,7 @@ impl Default for ComputedStyle {
             padding: Sides::all(Length::px(0.0)),
             border: Sides::all(BorderSide::default()),
             border_radius: Corners::default(),
+            border_radius_calc: Corners::default(),
             outline: BorderSide::default(),
             outline_offset: 0.0,
             flex_direction: FlexDirection::Row,
@@ -878,6 +894,9 @@ impl Default for ComputedStyle {
             opacity: 1.0,
             overflow_x: Overflow::Visible,
             overflow_y: Overflow::Visible,
+            translate: None,
+            rotate: None,
+            scale: None,
             transform: Vec::new(),
             transform_origin: (
                 LengthPercentage::percent(50.0),
