@@ -230,6 +230,51 @@ pub fn compute_styles(doc: &Document, sheets: &[Stylesheet], viewport: &Viewport
     cascade::compute_styles(doc, sheets, viewport)
 }
 
+/// Elements matching `selector` in document order, as `querySelectorAll`
+/// would return them for a page in its initial state (no hover/focus/active).
+/// `None` when the selector does not parse.
+#[must_use]
+pub fn query_selector_all(doc: &Document, selector: &str) -> Option<Vec<NodeId>> {
+    let list = selectors::parse_selector_list_str(selector);
+    if list.invalid {
+        return None;
+    }
+    let ctx = selectors::MatchContext {
+        doc,
+        active_state: None,
+    };
+    let mut out = Vec::new();
+    for node in doc.descendants(doc.root()) {
+        if doc.element(node).is_some()
+            && list
+                .selectors
+                .iter()
+                .any(|sel| selectors::matches_selector(sel, node, &ctx))
+        {
+            out.push(node);
+        }
+    }
+    Some(out)
+}
+
+/// Whether `node` matches `selector` (initial state). `None` when it does not parse.
+#[must_use]
+pub fn element_matches(doc: &Document, node: NodeId, selector: &str) -> Option<bool> {
+    let list = selectors::parse_selector_list_str(selector);
+    if list.invalid {
+        return None;
+    }
+    let ctx = selectors::MatchContext {
+        doc,
+        active_state: None,
+    };
+    Some(
+        list.selectors
+            .iter()
+            .any(|sel| selectors::matches_selector(sel, node, &ctx)),
+    )
+}
+
 mod cascade;
 mod collect;
 mod media;
