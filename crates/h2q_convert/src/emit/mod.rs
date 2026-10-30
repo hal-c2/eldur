@@ -95,6 +95,9 @@ pub(crate) struct Emitter<'a, 'd> {
     pub imports: std::collections::BTreeSet<&'static str>,
     /// The file each `<img>` shows.
     pub images: BTreeMap<NodeId, crate::images::ImageAsset>,
+    /// Scripts reach elements at run time, so every element object says
+    /// what it is (`h2qTag`, `h2qClasses`).
+    pub runtime_dom: bool,
 }
 
 impl<'a, 'd> Emitter<'a, 'd> {
@@ -133,6 +136,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             in_float_run: false,
             imports: std::collections::BTreeSet::new(),
             images: BTreeMap::new(),
+            runtime_dom: false,
         }
     }
 
@@ -528,6 +532,12 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 .node
                 .map_or_else(|| "a generated box".to_owned(), |n| describe(self.doc, n));
             self.transform(&mut e.obj, &b.style, &hint(self.doc, b), &what, line);
+        }
+        // Every element box ends here, with its outermost object.
+        if self.runtime_dom
+            && let Some(node) = b.node
+        {
+            crate::metadata::tag(&mut e.obj, self.doc, node);
         }
         e
     }

@@ -1,0 +1,52 @@
+{
+  "probe-https": {
+    "matchesClass": true,
+    "matchesTagAndClass": true,
+    "matchesOtherClass": false,
+    "matchesWrongTag": false,
+    "closestId": "card",
+    "closestClassName": "card outer",
+    "closestTag": "inner",
+    "closestNone": true,
+    "containsOwn": true,
+    "containsOther": false,
+    "querySelectorText": "Title",
+    "querySelectorNested": "btn",
+    "tagName": "BUTTON",
+    "className": "x primary",
+    "matchesAfterToggle": true,
+    "locationHref": "https://example.com/docs/guide/index.html",
+    "relativeHref": "https://example.com/docs/guide/sub/page.html?q=1#h",
+    "parentHref": "https://example.com/docs/up.html",
+    "rootHref": "https://example.com/root.html"
+  },
+  "base-https": {
+    "relativeHref": "https://example.com/docs/api/v2/sub/page.html",
+    "parentHref": "https://example.com/docs/api/up.html",
+    "rootHref": "https://example.com/root.html"
+  },
+  "literal-https": {
+    "text": "Note",
+    "locationHref": "https://example.com/docs/guide/index.html"
+  },
+  "probe-local": {
+    "matchesClass": true,
+    "matchesTagAndClass": true,
+    "matchesOtherClass": false,
+    "matchesWrongTag": false,
+    "closestId": "card",
+    "closestClassName": "card outer",
+    "closestTag": "inner",
+    "closestNone": true,
+    "containsOwn": true,
+    "containsOther": false,
+    "querySelectorText": "Title",
+    "querySelectorNested": "btn",
+    "tagName": "BUTTON",
+    "className": "x primary",
+    "matchesAfterToggle": true,
+    "locationHref": "{dir}/index.html",
+    "relativeHref": "{dir}/sub/page.html?q=1#h",
+    "rootHref": "file:///root.html"
+  }
+}

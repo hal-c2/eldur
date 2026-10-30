@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html><head><style>
+.card { padding: 8px; background: #f0f0f0 }
+.x { color: #c00000 }
+.primary { font-weight: bold }
+.title { font-size: 20px; margin: 0 }
+</style></head><body>
+<div class="card outer" id="card">
+  <p class="title">Title</p>
+  <section class="inner"><button id="btn" class="x primary">Go</button></section>
+</div>
+<p class="note">Note</p>
+<script>
+// Selectors are built at run time, so the converter cannot resolve them
+// and the runtime has to match them against the emitted metadata.
+function probe() {
+  var dot = '.';
+  var btn = document.getElementById('btn');
+  var r = {};
+  r.matchesClass = btn.matches(dot + 'x');
+  r.matchesTagAndClass = btn.matches('button' + dot + 'primary');
+  r.matchesOtherClass = btn.matches(dot + 'card');
+  r.matchesWrongTag = btn.matches('div' + dot + 'x');
+  r.closestId = btn.closest(dot + 'outer').id;
+  r.closestClassName = btn.closest(dot + 'card').className;
+  r.closestTag = btn.closest('section').className;
+  r.closestNone = btn.closest(dot + 'nope') === null;
+  r.containsOwn = btn.classList.contains('primary');
+  r.containsOther = btn.classList.contains('card');
+  r.querySelectorText = document.querySelector(dot + 'title').textContent;
+  r.querySelectorNested = document.querySelector(dot + 'outer ' + dot + 'x').id;
+  r.tagName = btn.tagName;
+  r.className = btn.className;
+  btn.classList.toggle('active');
+  r.matchesAfterToggle = btn.matches(dot + 'active');
+  r.locationHref = location.href;
+  var a = document.createElement('a');
+  a.setAttribute('href', 'sub/page.html?q=1#h');
+  r.relativeHref = a.href;
+  var up = document.createElement('a');
+  up.setAttribute('href', '../up.html');
+  r.parentHref = up.href;
+  var abs = document.createElement('a');
+  abs.setAttribute('href', '/root.html');
+  r.rootHref = abs.href;
+  return JSON.stringify(r);
+}
+</script></body></html>
