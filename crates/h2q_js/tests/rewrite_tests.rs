@@ -869,17 +869,94 @@ function setup(cb) {
 .import "h2q_runtime.js" as H2Q
 
 function setup(cb) {
-    __h2q_listeners_click_boxItem_0.push(cb);
+    H2Q.listen(boxItem, "click", cb);
     H2Q.unlisten(boxItem, "click", cb);
     H2Q.dispatchEvent(boxItem, new H2Q.CustomEvent("ping"));
     return H2Q.getBoundingClientRect(boxItem);
 }
 
-var __h2q_listeners_click_boxItem_0 = [];
 function __h2q_on_click_boxItem_0(event) {
-    for (var i = 0; i < __h2q_listeners_click_boxItem_0.length; ++i) {
-        __h2q_listeners_click_boxItem_0[i].call(boxItem, event);
-    }
+    H2Q.dispatchEvent(boxItem, event);
+}
+"###);
+}
+
+#[test]
+fn unifies_resolved_target_add_remove_dispatch_and_duplicate_listeners() {
+    let resolver = FakeResolver::default().with_id("box", 1, "boxItem", TargetKind::Box);
+    let script = classic(
+        "unified_listeners.js",
+        r#"
+const topBox = document.getElementById("box");
+topBox.addEventListener("click", onTop);
+topBox.addEventListener("click", onOnce, { once: true });
+
+function bindAndExercise(cb) {
+    const box = document.getElementById("box");
+    box.addEventListener("click", cb);
+    box.addEventListener("click", cb);
+    box.dispatchEvent(new CustomEvent("click"));
+    box.removeEventListener("click", cb);
+    box.dispatchEvent(new CustomEvent("click"));
+}
+"#,
+    );
+
+    let out = run_rewrite(&[script], &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    assert_eq!(out.bindings.len(), 1);
+    assert_eq!(out.bindings[0].event, "click");
+    assert_eq!(out.bindings[0].function, "__h2q_on_click_boxItem_0");
+    assert_eq!(out.init_function.as_deref(), Some("__h2q_init"));
+    assert!(!out.page_js.contains("__h2q_listeners_"));
+    insta::assert_snapshot!(out.page_js, @r###"
+.import "h2q_runtime.js" as H2Q
+
+function bindAndExercise(cb) {
+    H2Q.listen(boxItem, "click", cb);
+    H2Q.listen(boxItem, "click", cb);
+    H2Q.dispatchEvent(boxItem, new H2Q.CustomEvent("click"));
+    H2Q.unlisten(boxItem, "click", cb);
+    H2Q.dispatchEvent(boxItem, new H2Q.CustomEvent("click"));
+}
+
+function __h2q_on_click_boxItem_0(event) {
+    H2Q.dispatchEvent(boxItem, event);
+}
+
+function __h2q_init(rootItem) {
+    H2Q.init(rootItem || (typeof root !== "undefined" ? root : null));
+    H2Q.listen(boxItem, "click", onTop);
+    H2Q.listen(boxItem, "click", onOnce, { once: true });
+}
+"###);
+}
+
+#[test]
+fn retains_uninitialized_top_level_let_after_init_stmts_with_reset_semantics() {
+    let resolver = FakeResolver::default();
+    let script = classic(
+        "top_let.js",
+        r#"
+console.log("boot");
+let state;
+function setState(v) { state = v; }
+"#,
+    );
+
+    let out = run_rewrite(&[script], &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    assert_eq!(out.init_function.as_deref(), Some("__h2q_init"));
+    insta::assert_snapshot!(out.page_js, @r###"
+.import "h2q_runtime.js" as H2Q
+
+let state;
+function setState(v) { state = v; }
+
+function __h2q_init(rootItem) {
+    H2Q.init(rootItem || (typeof root !== "undefined" ? root : null));
+    console.log("boot");
+    state = undefined;
 }
 "###);
 }

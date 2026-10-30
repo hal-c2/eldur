@@ -556,3 +556,170 @@ Item {
         out.page_js
     );
 }
+
+#[test]
+fn qml6_unifies_resolved_target_add_remove_dispatch_and_dedup_listeners() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 resolved listener unification test: qml6 not on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("unified_listen");
+    let resolver = FakeResolver::default().with_id("box", 1, "boxItem", TargetKind::Box);
+
+    let script = ScriptInput {
+        name: "listeners.js".to_string(),
+        kind: ScriptKind::Classic,
+        line_offset: 1,
+        source: r#"
+let hits = 0;
+let log = [];
+
+function onHit(ev) {
+    hits += 1;
+    log.push(ev.type + ":" + hits);
+}
+
+function onOnce(ev) {
+    log.push("once:" + ev.type);
+}
+
+const topBox = document.getElementById("box");
+topBox.addEventListener("click", onHit);
+topBox.addEventListener("click", onOnce, { once: true });
+
+function registerDuplicate() {
+    const box = document.getElementById("box");
+    box.addEventListener("click", onHit);
+    box.addEventListener("click", onHit);
+}
+
+function dispatchClick() {
+    const box = document.getElementById("box");
+    box.dispatchEvent(new CustomEvent("click"));
+}
+
+function unregisterAndDispatch() {
+    const box = document.getElementById("box");
+    box.removeEventListener("click", onHit);
+    box.dispatchEvent(new CustomEvent("click"));
+    return hits + "|" + log.join(",");
+}
+"#
+        .to_string(),
+    };
+
+    let scripts = [script];
+    let analysis = analyze(&scripts);
+    let out = rewrite(&scripts, &analysis, &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    assert_eq!(out.bindings.len(), 1);
+    assert_eq!(out.bindings[0].function, "__h2q_on_click_boxItem_0");
+    assert_eq!(out.init_function.as_deref(), Some("__h2q_init"));
+
+    dir.write_file("h2q_runtime.js", RUNTIME_JS);
+    dir.write_file("page.js", &out.page_js);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import "page.js" as Page
+import "h2q_runtime.js" as H2Q
+
+Item {
+    id: root
+    width: 200
+    height: 200
+
+    Rectangle {
+        id: boxItem
+        Text { id: boxItemText; text: "" }
+    }
+
+    Component.onCompleted: {
+        Page.__h2q_init(root);
+        Page.registerDuplicate();
+        Page.dispatchClick();
+        Page.__h2q_on_click_boxItem_0(H2Q.event("click", boxItem, null));
+        var summary = Page.unregisterAndDispatch();
+        Page.__h2q_on_click_boxItem_0(H2Q.event("click", boxItem, null));
+        var finalSummary = Page.unregisterAndDispatch();
+        console.log("H2Q_OK_UNIFIED_LISTEN", summary, finalSummary);
+        Qt.quit();
+    }
+}
+"#,
+    );
+
+    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    assert!(
+        output.contains(
+            "H2Q_OK_UNIFIED_LISTEN 2|click:1,once:click,click:2 2|click:1,once:click,click:2"
+        ),
+        "unexpected qml6 unified listener output:\n{output}\npage.js:\n{}",
+        out.page_js
+    );
+}
+
+#[test]
+fn qml6_retains_uninitialized_top_level_let_with_script_order_reset() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 top-level let test: qml6 not on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("top_let");
+    let resolver = FakeResolver::default();
+
+    let script = ScriptInput {
+        name: "state.js".to_string(),
+        kind: ScriptKind::Classic,
+        line_offset: 1,
+        source: r#"
+setState("before_decl");
+console.log("boot");
+let state;
+function setState(v) { state = v; }
+function getState() { return state; }
+"#
+        .to_string(),
+    };
+
+    let scripts = [script];
+    let analysis = analyze(&scripts);
+    let out = rewrite(&scripts, &analysis, &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    assert_eq!(out.init_function.as_deref(), Some("__h2q_init"));
+
+    dir.write_file("h2q_runtime.js", RUNTIME_JS);
+    dir.write_file("page.js", &out.page_js);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import "page.js" as Page
+
+Item {
+    id: root
+    width: 100
+    height: 100
+
+    Component.onCompleted: {
+        Page.__h2q_init(root);
+        var afterInit = String(Page.getState());
+        Page.setState("ready");
+        var afterSet = String(Page.getState());
+        Page.__h2q_init(root);
+        var afterReinit = String(Page.getState());
+        console.log("H2Q_OK_TOP_LET", afterInit + "|" + afterSet + "|" + afterReinit);
+        Qt.quit();
+    }
+}
+"#,
+    );
+
+    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    assert!(
+        output.contains("H2Q_OK_TOP_LET undefined|ready|undefined"),
+        "unexpected qml6 top-level let output:\n{output}\npage.js:\n{}",
+        out.page_js
+    );
+}

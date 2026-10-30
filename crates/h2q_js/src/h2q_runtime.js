@@ -864,6 +864,7 @@ function _meta(item) {
             dataset: {},
             styles: {},
             listeners: {},
+            onceListeners: {},
             onHandlers: {},
             connected: {},
             wrapper: null
@@ -886,6 +887,7 @@ function _meta(item) {
             dataset: {},
             styles: {},
             listeners: {},
+            onceListeners: {},
             onHandlers: {},
             connected: {},
             wrapper: null
@@ -1525,10 +1527,22 @@ function _dispatchDynamic(raw, type, qtEv) {
     }
 
     var list = m.listeners[type];
+    var onceList = m.onceListeners[type];
     if (list && list.length > 0) {
         var copy = list.slice();
         for (var i = 0; i < copy.length; ++i) {
-            copy[i].call(target, domEv);
+            var fn = copy[i];
+            if (onceList) {
+                var onceIdx = onceList.indexOf(fn);
+                if (onceIdx !== -1) {
+                    onceList.splice(onceIdx, 1);
+                    var listIdx = list.indexOf(fn);
+                    if (listIdx !== -1) {
+                        list.splice(listIdx, 1);
+                    }
+                }
+            }
+            fn.call(target, domEv);
             if (domEv._immediateStopped) {
                 break;
             }
@@ -1677,7 +1691,7 @@ function _connectSignalOnce(raw, type) {
     return false;
 }
 
-function listen(item, eventType, handler) {
+function listen(item, eventType, handler, options) {
     if (!item || typeof handler !== "function") {
         return;
     }
@@ -1689,6 +1703,14 @@ function listen(item, eventType, handler) {
     }
     if (m.listeners[type].indexOf(handler) === -1) {
         m.listeners[type].push(handler);
+        if (options && typeof options === "object" && Boolean(options.once)) {
+            if (!m.onceListeners[type]) {
+                m.onceListeners[type] = [];
+            }
+            if (m.onceListeners[type].indexOf(handler) === -1) {
+                m.onceListeners[type].push(handler);
+            }
+        }
     }
     if (!_connectSignalOnce(raw, type)) {
         console.warn("H2Q: dynamic listener for '" + type + "' cannot bind to a QML signal");
@@ -1700,13 +1722,21 @@ function unlisten(item, eventType, handler) {
         return;
     }
     var m = _meta(item);
-    var list = m.listeners[String(eventType)];
+    var type = String(eventType);
+    var list = m.listeners[type];
     if (!list) {
         return;
     }
     var idx = list.indexOf(handler);
     if (idx !== -1) {
         list.splice(idx, 1);
+    }
+    var onceList = m.onceListeners[type];
+    if (onceList) {
+        var onceIdx = onceList.indexOf(handler);
+        if (onceIdx !== -1) {
+            onceList.splice(onceIdx, 1);
+        }
     }
 }
 
@@ -1849,7 +1879,7 @@ function wrap(rawItem) {
         getAttribute: function(k) { return getAttribute(rawItem, k); },
         removeAttribute: function(k) { removeAttribute(rawItem, k); },
         hasAttribute: function(k) { return hasAttribute(rawItem, k); },
-        addEventListener: function(t, fn) { listen(rawItem, t, fn); },
+        addEventListener: function(t, fn, opts) { listen(rawItem, t, fn, opts); },
         removeEventListener: function(t, fn) { unlisten(rawItem, t, fn); },
         dispatchEvent: function(ev) { return dispatchEvent(rawItem, ev); },
         focus: function() {
@@ -2079,9 +2109,9 @@ var document = {
         }
         return wrap(created);
     },
-    addEventListener: function(type, fn) {
+    addEventListener: function(type, fn, opts) {
         if (_root) {
-            listen(_root, type, fn);
+            listen(_root, type, fn, opts);
         }
     },
     removeEventListener: function(type, fn) {
@@ -2141,9 +2171,9 @@ var window = {
     open: function(url) {
         Qt.openUrlExternally(String(url));
     },
-    addEventListener: function(type, fn) {
+    addEventListener: function(type, fn, opts) {
         if (_root) {
-            listen(_root, type, fn);
+            listen(_root, type, fn, opts);
         }
     },
     removeEventListener: function(type, fn) {

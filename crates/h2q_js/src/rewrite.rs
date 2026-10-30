@@ -703,6 +703,13 @@ impl PageBuffers {
                     lowerer.visit_binding_pattern(&decl.id);
                     let pat_str = lowerer.editor.extract_and_consume(decl.id.span());
                     self.top_decls.push(format!("let {pat_str};"));
+                    if !self.init_stmts.is_empty() {
+                        for ident in &bound_idents {
+                            let name = ident.name.to_string();
+                            self.pure_top_vars.remove(&name);
+                            self.init_stmts.push(format!("{name} = undefined;"));
+                        }
+                    }
                     if let Some(me) = mod_exports.as_deref_mut() {
                         for ident in &bound_idents {
                             let name = ident.name.to_string();
@@ -1045,6 +1052,10 @@ impl PageBuffers {
             }
 
             if let Some(target) = lowerer.resolve_single_target(&member.object)
+                && !lowerer
+                    .shared
+                    .dynamic_listener_events
+                    .contains(&(target.qml_id.clone(), ev.clone()))
                 && is_hoistable_callback_expr(cb)
                 && options_arg_is_pure_or_absent(call.arguments.get(2))
             {
@@ -1214,6 +1225,10 @@ fn prescan_on_prop_assignments(
 ) {
     let mut total_counts: HashMap<(String, String), usize> = HashMap::new();
     let mut top_static_counts: HashMap<(String, String), usize> = HashMap::new();
+    let mut total_listener_counts: HashMap<(String, String), usize> = HashMap::new();
+    let mut top_static_listener_counts: HashMap<(String, String), usize> = HashMap::new();
+    let mut dynamic_listener_ops: HashSet<(String, String)> = HashSet::new();
+    let mut targets_with_dispatch: HashSet<String> = HashSet::new();
 
     for v in valid_scripts {
         let scoping = &v.parsed.scoping;
@@ -1224,31 +1239,54 @@ fn prescan_on_prop_assignments(
             _ => None,
         };
 
-        // Count top-level simple `el.on<ev> = fn` statements in classic/module scripts.
+        // Count top-level simple `el.on<ev> = fn` and `el.addEventListener(ev, fn)` statements in classic/module scripts.
         if matches!(v.input.kind, ScriptKind::Classic | ScriptKind::Module) {
             for stmt in &v.parsed.program.body {
-                if let Statement::ExpressionStatement(es) = stmt
-                    && let Expression::AssignmentExpression(assign) = unwrap_parens(&es.expression)
-                    && assign.operator == AssignmentOperator::Assign
-                    && is_hoistable_callback_expr(&assign.right)
-                {
-                    let member_pair = match &assign.left {
-                        AssignmentTarget::StaticMemberExpression(m) => {
-                            Some((&m.object, m.property.name.as_str().to_string()))
+                if let Statement::ExpressionStatement(es) = stmt {
+                    let expr = unwrap_parens(&es.expression);
+                    if let Expression::AssignmentExpression(assign) = expr
+                        && assign.operator == AssignmentOperator::Assign
+                        && is_hoistable_callback_expr(&assign.right)
+                    {
+                        let member_pair = match &assign.left {
+                            AssignmentTarget::StaticMemberExpression(m) => {
+                                Some((&m.object, m.property.name.as_str().to_string()))
+                            }
+                            AssignmentTarget::ComputedMemberExpression(c) => {
+                                extract_string_literal(&c.expression).map(|p| (&c.object, p))
+                            }
+                            _ => None,
+                        };
+                        if let Some((obj, prop)) = member_pair
+                            && let Some(ev) = known_dom_event_from_on_prop(&prop)
+                            && let Some(query) = bindings.resolve_expr(obj)
+                            && let Some(target) =
+                                crate::lower::resolve_query_to_single_target(&query, resolver)
+                        {
+                            *top_static_counts
+                                .entry((target.qml_id, ev.to_string()))
+                                .or_insert(0) += 1;
                         }
-                        AssignmentTarget::ComputedMemberExpression(c) => {
-                            extract_string_literal(&c.expression).map(|p| (&c.object, p))
-                        }
-                        _ => None,
-                    };
-                    if let Some((obj, prop)) = member_pair
-                        && let Some(ev) = known_dom_event_from_on_prop(&prop)
-                        && let Some(query) = bindings.resolve_expr(obj)
+                    }
+
+                    if let Expression::CallExpression(call) = expr
+                        && let Expression::StaticMemberExpression(member) =
+                            unwrap_parens(&call.callee)
+                        && member.property.name == "addEventListener"
+                        && let Some(ev) = call
+                            .arguments
+                            .first()
+                            .and_then(|a| a.as_expression())
+                            .and_then(extract_string_literal)
+                        && let Some(cb) = call.arguments.get(1).and_then(|a| a.as_expression())
+                        && is_hoistable_callback_expr(cb)
+                        && options_arg_is_pure_or_absent(call.arguments.get(2))
+                        && let Some(query) = bindings.resolve_expr(&member.object)
                         && let Some(target) =
                             crate::lower::resolve_query_to_single_target(&query, resolver)
                     {
-                        *top_static_counts
-                            .entry((target.qml_id, ev.to_string()))
+                        *top_static_listener_counts
+                            .entry((target.qml_id, ev))
                             .or_insert(0) += 1;
                     }
                 }
@@ -1260,6 +1298,9 @@ fn prescan_on_prop_assignments(
             resolver,
             this_stack: vec![root_this],
             counts: &mut total_counts,
+            listener_counts: &mut total_listener_counts,
+            dynamic_listener_ops: &mut dynamic_listener_ops,
+            targets_with_dispatch: &mut targets_with_dispatch,
         };
         scanner.visit_program(&v.parsed.program);
     }
@@ -1270,6 +1311,20 @@ fn prescan_on_prop_assignments(
             shared.dynamic_on_props.insert(key);
         }
     }
+
+    for (key, total) in total_listener_counts {
+        let top_single = top_static_listener_counts.get(&key).copied().unwrap_or(0);
+        if total != 1
+            || top_single != 1
+            || dynamic_listener_ops.contains(&key)
+            || targets_with_dispatch.contains(&key.0)
+        {
+            shared.dynamic_listener_events.insert(key);
+        }
+    }
+    for key in dynamic_listener_ops {
+        shared.dynamic_listener_events.insert(key);
+    }
 }
 
 struct OnPropScanner<'a, 'b> {
@@ -1277,6 +1332,9 @@ struct OnPropScanner<'a, 'b> {
     resolver: &'b dyn DomResolver,
     this_stack: Vec<Option<QmlTarget>>,
     counts: &'b mut HashMap<(String, String), usize>,
+    listener_counts: &'b mut HashMap<(String, String), usize>,
+    dynamic_listener_ops: &'b mut HashSet<(String, String)>,
+    targets_with_dispatch: &'b mut HashSet<String>,
 }
 
 impl OnPropScanner<'_, '_> {
@@ -1317,6 +1375,42 @@ impl<'a> Visit<'a> for OnPropScanner<'_, '_> {
                 .or_insert(0) += 1;
         }
         walk::walk_assignment_expression(self, it);
+    }
+
+    fn visit_call_expression(&mut self, it: &oxc_ast::ast::CallExpression<'a>) {
+        if let Expression::StaticMemberExpression(member) = unwrap_parens(&it.callee)
+            && let Some(target) = self.resolve_target(&member.object)
+        {
+            match member.property.name.as_str() {
+                "addEventListener" => {
+                    if let Some(ev) = it
+                        .arguments
+                        .first()
+                        .and_then(|a| a.as_expression())
+                        .and_then(extract_string_literal)
+                    {
+                        *self.listener_counts.entry((target.qml_id, ev)).or_insert(0) += 1;
+                    }
+                }
+                "removeEventListener" => {
+                    if let Some(ev) = it
+                        .arguments
+                        .first()
+                        .and_then(|a| a.as_expression())
+                        .and_then(extract_string_literal)
+                    {
+                        self.dynamic_listener_ops.insert((target.qml_id, ev));
+                    } else {
+                        self.targets_with_dispatch.insert(target.qml_id);
+                    }
+                }
+                "dispatchEvent" => {
+                    self.targets_with_dispatch.insert(target.qml_id);
+                }
+                _ => {}
+            }
+        }
+        walk::walk_call_expression(self, it);
     }
 }
 

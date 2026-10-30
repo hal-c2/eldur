@@ -34,6 +34,13 @@ pub(crate) struct SharedRewriteState {
     /// Set of `(qml_id, event)` pairs that need dynamic slot assignment rather than
     /// single top-level static hoisting.
     pub dynamic_on_props: HashSet<(String, String)>,
+    /// Set of `(qml_id, event)` pairs whose `addEventListener` calls must go through
+    /// `H2Q.listen` rather than single top-level static hoisting because the script
+    /// registers multiple listeners, removes listeners, or dispatches events dynamically.
+    pub dynamic_listener_events: HashSet<(String, String)>,
+    /// Tracks which `(qml_id, event)` pairs already have a forwarding `EventBinding`
+    /// registered for `H2Q.listen` / `H2Q.dispatchEvent`.
+    pub dynamic_listener_slots: HashSet<(String, String)>,
     /// Top-level identifiers already claimed so generated helper names never collide.
     pub used_names: HashSet<String>,
 }
@@ -81,21 +88,16 @@ impl SharedRewriteState {
         slot_var
     }
 
-    pub(crate) fn register_dynamic_listener_slot(
-        &mut self,
-        target: &QmlTarget,
-        event: &str,
-    ) -> String {
+    pub(crate) fn register_dynamic_listener_slot(&mut self, target: &QmlTarget, event: &str) {
+        let key = (target.qml_id.clone(), event.to_string());
+        if !self.dynamic_listener_slots.insert(key) {
+            return;
+        }
         let uid = self.fresh_id();
         let safe_ev = sanitize_ident(event);
-        let list_var = self.alloc_fn_name(&format!(
-            "__h2q_listeners_{safe_ev}_{}_{uid}",
-            target.qml_id
-        ));
         let fn_name = self.alloc_fn_name(&format!("__h2q_on_{safe_ev}_{}_{uid}", target.qml_id));
-        self.generated_decls.push(format!("var {list_var} = [];"));
         self.generated_decls.push(format!(
-            "function {fn_name}(event) {{\n    for (var i = 0; i < {list_var}.length; ++i) {{\n        {list_var}[i].call({}, event);\n    }}\n}}",
+            "function {fn_name}(event) {{\n    H2Q.dispatchEvent({}, event);\n}}",
             target.qml_id
         ));
         self.bindings.push(EventBinding {
@@ -103,7 +105,6 @@ impl SharedRewriteState {
             event: event.to_string(),
             function: fn_name,
         });
-        list_var
     }
 }
 
@@ -976,11 +977,17 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                             .and_then(extract_string_literal)
                             && let Some(cb) = it.arguments.get(1).and_then(|a| a.as_expression())
                         {
-                            let list_var = self.shared.register_dynamic_listener_slot(&target, &ev);
+                            self.shared.register_dynamic_listener_slot(&target, &ev);
+                            let ev_str = self.editor.extract_and_consume(it.arguments[0].span());
                             let cb_str =
                                 self.rewrite_listener_callback_expr(cb, Some(target.clone()));
+                            let mut call_args = vec![id.clone(), ev_str, cb_str];
+                            for extra in it.arguments.iter().skip(2) {
+                                self.visit_argument(extra);
+                                call_args.push(self.editor.extract_and_consume(extra.span()));
+                            }
                             self.editor
-                                .replace(it.span, format!("{list_var}.push({cb_str})"));
+                                .replace(it.span, format!("H2Q.listen({})", call_args.join(", ")));
                             return;
                         }
                         let args_str = self.render_call_args(&it.arguments);
@@ -1019,6 +1026,7 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                 method,
                 "addEventListener"
                     | "removeEventListener"
+                    | "dispatchEvent"
                     | "setAttribute"
                     | "getAttribute"
                     | "removeAttribute"
