@@ -82,7 +82,7 @@ fn _touch_stylesheet_inner(s: &crate::Stylesheet) {
 
 /// Identifies a single longhand property (one field or sub-field of
 /// [`ComputedStyle`]).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub(crate) enum Longhand {
     // Priority 0: font-size (resolves `em` on the element)
     FontSize,

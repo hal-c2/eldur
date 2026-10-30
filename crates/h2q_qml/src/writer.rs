@@ -192,7 +192,7 @@ fn write_member(out: &mut String, m: &Member, level: usize) {
             property,
             animation,
         } => {
-            let _ = write!(out, "Behavior on {property} {{\n");
+            let _ = writeln!(out, "Behavior on {property} {{");
             indent(out, level + 1);
             write_object(out, animation, level + 1);
             out.push('\n');
