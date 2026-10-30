@@ -23,7 +23,7 @@ mod tests;
 use std::collections::{BTreeMap, HashSet};
 
 use h2q_css::{
-    ComputedStyle, Display, Float, LengthAuto, Overflow, Position, Size, StyleMap,
+    BoxSizing, ComputedStyle, Display, Float, LengthAuto, Overflow, Position, Size, StyleMap,
     TextDecorationLine, Visibility,
 };
 use h2q_dom::{Document, NodeId};
@@ -72,6 +72,10 @@ pub(crate) struct Emitter<'a, 'd> {
     /// The box being emitted is an overlay of its positioned parent, so its
     /// `position` is handled.
     positioned_child: bool,
+    /// The content height in px of the block whose children are being
+    /// laid out, when it is definite: their percentage heights resolve
+    /// against it (CSS 2.2 §10.5).
+    percent_height_base: Option<f32>,
     /// `position: fixed` boxes, placed over the window outside the
     /// `Flickable` so they do not scroll.
     fixed: Vec<(Option<String>, Object)>,
@@ -107,6 +111,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             root_node: None,
             has_table: false,
             positioned_child: false,
+            percent_height_base: None,
             fixed: Vec::new(),
             imports: std::collections::BTreeSet::new(),
         }
@@ -334,7 +339,16 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 Some((self.grid(b, &in_flow, decoration, line), "Content"))
             }
             Content::Blocks(_) => {
+                let base = match &style.height {
+                    Size::Length(h) => h.as_px().map(|px| match style.box_sizing {
+                        BoxSizing::ContentBox => px,
+                        BoxSizing::BorderBox => (px - deco.insets.vertical()).max(0.0),
+                    }),
+                    _ => None,
+                };
+                let outer = std::mem::replace(&mut self.percent_height_base, base);
                 let column = self.column(&in_flow, decoration, top_open, bottom_open);
+                self.percent_height_base = outer;
                 escaped_top = column.escaped_top;
                 escaped_bottom = column.escaped_bottom;
                 column.obj.map(|o| (o, "Content"))

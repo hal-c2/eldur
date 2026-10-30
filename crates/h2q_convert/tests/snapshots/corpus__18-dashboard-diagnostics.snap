@@ -7,10 +7,4 @@ info[css]: <style>#1:309: unknown property `font-variant-numeric`
 info[html]: index.html:442: inline <progress> is laid out as a block (no inline replaced elements yet)
 info[css]: index.html:357: inset `box-shadow` is not drawn
 info[qml]: index.html:408: unequal `fr` columns on <section class="row-2"> are split into 3 equal sub-columns; items are off by a fraction of the gap
-info[css]: index.html:413: percentage height on <div class="bar-fill w-82"> is treated as `auto`
-info[css]: index.html:418: percentage height on <div class="bar-fill w-64"> is treated as `auto`
-info[css]: index.html:423: percentage height on <div class="bar-fill w-47"> is treated as `auto`
-info[css]: index.html:428: percentage height on <div class="bar-fill w-31"> is treated as `auto`
-info[css]: index.html:433: percentage height on <div class="bar-fill w-18"> is treated as `auto`
-info[css]: index.html:446: percentage height on <div class="progress-fill p-45"> is treated as `auto`
 info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

@@ -1020,3 +1020,34 @@ fn tight_line_height_does_not_grow_the_last_line() {
     let e = object_after(&qml, "<p class=\"e\">");
     assert!(!e.contains("bottomPadding"), "{e}");
 }
+
+#[test]
+fn percentage_height_resolves_against_a_definite_parent() {
+    // Chromium: .f 8px (100% of 8px), .g 10px (50% of the 20px content
+    // box), .h 15px (50% of 40px border box less 10px padding), .i auto.
+    let (qml, diags) = convert(&page(
+        "div{background:#eee} .t{height:8px} .f{height:100%;width:50%} \
+         .u{height:20px;padding:5px} .g{height:50%} \
+         .v{height:40px;padding:5px;box-sizing:border-box} .h{height:50%} .i{height:50%}",
+        "<div class=t><div class=f></div></div><div class=u><div class=g></div></div>\
+         <div class=v><div class=h></div></div><div class=w><div class=i>x</div></div>",
+    ));
+    for (comment, height) in [
+        ("<div class=\"f\">", "Layout.preferredHeight: 8"),
+        ("<div class=\"g\">", "Layout.preferredHeight: 10"),
+        ("<div class=\"h\">", "Layout.preferredHeight: 15"),
+    ] {
+        let obj = object_after(&qml, comment);
+        assert!(own_lines(obj).contains(&height), "{obj}");
+    }
+    let i = object_after(&qml, "<div class=\"i\">");
+    assert!(!i.contains("preferredHeight"), "{i}");
+    assert_eq!(
+        diags
+            .iter()
+            .filter(|d| d.contains("percentage height"))
+            .count(),
+        1,
+        "{diags:?}"
+    );
+}

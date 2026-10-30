@@ -266,6 +266,16 @@ impl Emitter<'_, '_> {
             Size::Length(h) if h.as_px().is_some() || is_viewport_relative(h) => {
                 obj.set("Layout.preferredHeight", size_value(h, extra_h));
             }
+            Size::Length(Length::Linear(l))
+                if let Some(base) = self.percent_height_base
+                    && l.vw == 0.0
+                    && l.vh == 0.0 =>
+            {
+                obj.set(
+                    "Layout.preferredHeight",
+                    number(l.px + l.percent / 100.0 * base + extra_h),
+                );
+            }
             Size::Length(_) => {
                 self.diags.info(
                     "css",

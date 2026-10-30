@@ -1175,6 +1175,7 @@ ApplicationWindow {
                                                                 implicitWidth: 0
                                                                 implicitHeight: 0
                                                                 Layout.preferredWidth: parent.width * 0.82
+                                                                Layout.preferredHeight: 12
                                                             }
                                                         }
                                                     }
@@ -1245,6 +1246,7 @@ ApplicationWindow {
                                                                 implicitWidth: 0
                                                                 implicitHeight: 0
                                                                 Layout.preferredWidth: parent.width * 0.64
+                                                                Layout.preferredHeight: 12
                                                             }
                                                         }
                                                     }
@@ -1315,6 +1317,7 @@ ApplicationWindow {
                                                                 implicitWidth: 0
                                                                 implicitHeight: 0
                                                                 Layout.preferredWidth: parent.width * 0.47
+                                                                Layout.preferredHeight: 12
                                                             }
                                                         }
                                                     }
@@ -1385,6 +1388,7 @@ ApplicationWindow {
                                                                 implicitWidth: 0
                                                                 implicitHeight: 0
                                                                 Layout.preferredWidth: parent.width * 0.31
+                                                                Layout.preferredHeight: 12
                                                             }
                                                         }
                                                     }
@@ -1456,6 +1460,7 @@ ApplicationWindow {
                                                                 implicitWidth: 0
                                                                 implicitHeight: 0
                                                                 Layout.preferredWidth: parent.width * 0.18
+                                                                Layout.preferredHeight: 12
                                                             }
                                                         }
                                                     }
@@ -1653,6 +1658,7 @@ ApplicationWindow {
                                                                 implicitWidth: 0
                                                                 implicitHeight: 0
                                                                 Layout.preferredWidth: parent.width * 0.45
+                                                                Layout.preferredHeight: 12
                                                             }
                                                         }
                                                     }
