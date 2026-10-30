@@ -3,12 +3,6 @@ source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
 warning[css]: <style>#1:108: unsupported pseudo-element `::first-letter`
-info[css]: <style>#1:181: unknown property `counter-reset`
-info[css]: <style>#1:188: unknown property `counter-increment`
-warning[css]: index.html:295: generated content `Counter("step", Decimal)` on <li> is not supported; dropped
-warning[css]: index.html:296: generated content `Counter("step", Decimal)` on <li> is not supported; dropped
-warning[css]: index.html:297: generated content `Counter("step", Decimal)` on <li> is not supported; dropped
-warning[css]: index.html:298: generated content `Counter("step", Decimal)` on <li> is not supported; dropped
 info[qml]: index.html:273: <code>: font size 16.15px inside 19px text is approximated with <small>
 info[qml]: index.html:273: <code>: font family `monospace` inside `serif` text is not converted
 info[qml]: index.html:273: <code>: inline background is not converted

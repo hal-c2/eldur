@@ -10,6 +10,7 @@
 //! their emitters can be added without touching the builder; until then the
 //! emitter lays them out as block flow and says so.
 
+mod counters;
 mod table;
 mod whitespace;
 
@@ -135,7 +136,9 @@ pub(crate) fn build_keeping<'a>(
         styles,
         keep,
         diags,
+        counters: counters::Counters::new(),
     };
+    builder.counters.apply(style);
     // The root element always establishes a block formatting context; its
     // own display only matters for the kind of layout it uses.
     Some(builder.block_box(root, style, kind_of(style.display)))
@@ -165,6 +168,7 @@ struct Builder<'a, 'd> {
     styles: &'a StyleMap,
     keep: Option<&'a HashSet<NodeId>>,
     diags: &'d mut Diagnostics,
+    counters: counters::Counters,
 }
 
 impl<'a> Builder<'a, '_> {
@@ -237,6 +241,7 @@ impl<'a> Builder<'a, '_> {
     /// Appends the boxes of `node`'s children (and its `::before` /
     /// `::after`) to `out`.
     fn children_of(&mut self, node: NodeId, out: &mut Vec<Child<'a>>) {
+        self.counters.push();
         let element_style = self.styles.computed(node);
         if let Some(before) = element_style.and_then(|s| s.before.as_deref()) {
             self.pseudo(node, before, out);
@@ -261,6 +266,7 @@ impl<'a> Builder<'a, '_> {
         if let Some(after) = element_style.and_then(|s| s.after.as_deref()) {
             self.pseudo(node, after, out);
         }
+        self.counters.pop();
     }
 
     fn element(&mut self, node: NodeId, out: &mut Vec<Child<'a>>) {
@@ -275,6 +281,7 @@ impl<'a> Builder<'a, '_> {
         let Some(style) = style else {
             return;
         };
+        self.counters.apply(style);
         match self.level(node, style) {
             Level::None => {}
             Level::Contents => self.children_of(node, out),
@@ -332,7 +339,10 @@ impl<'a> Builder<'a, '_> {
         } else {
             BoxKind::Block
         };
+        // A `display: none` subtree counts nothing.
+        let counters = self.counters.clone();
         let mut built = self.block_box(node, computed, kind);
+        self.counters = counters;
         let mut style = computed.clone();
         style.display = Display::Block;
         style.visibility = h2q_css::Visibility::Collapse;
@@ -344,6 +354,7 @@ impl<'a> Builder<'a, '_> {
         if style.display == Display::None {
             return;
         }
+        self.counters.apply(style);
         let text = self.generated_content(node, style);
         let children = if text.is_empty() {
             Vec::new()
@@ -382,7 +393,19 @@ impl<'a> Builder<'a, '_> {
                 }
                 ContentItem::OpenQuote => text.push('\u{201c}'),
                 ContentItem::CloseQuote => text.push('\u{201d}'),
-                ContentItem::Counter(..) | ContentItem::Url(_) => {
+                ContentItem::Counter(name, list_style) => {
+                    text.push_str(&counters::format(self.counters.value(name), *list_style));
+                }
+                ContentItem::Counters(name, separator, list_style) => {
+                    let values = self.counters.all(name);
+                    let values = if values.is_empty() { vec![0] } else { values };
+                    let parts: Vec<String> = values
+                        .into_iter()
+                        .map(|v| counters::format(v, *list_style))
+                        .collect();
+                    text.push_str(&parts.join(separator));
+                }
+                ContentItem::Url(_) => {
                     self.diags.warning(
                         "css",
                         node_line(self.doc, node),

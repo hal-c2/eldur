@@ -3,15 +3,6 @@ source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
 warning[css]: <style>#1:50: unsupported pseudo-element `::first-letter`
-info[css]: <style>#1:86: unknown property `counter-reset`
-info[css]: <style>#1:90: unknown property `counter-increment`
-warning[css]: index.html:163: generated content `Counter("section", Decimal)` on <li> is not supported; dropped
-warning[css]: index.html:165: generated content `Counter("section", Decimal)` on <li> is not supported; dropped
-warning[css]: index.html:165: generated content `Counter("sub", LowerAlpha)` on <li> is not supported; dropped
-warning[css]: index.html:166: generated content `Counter("section", Decimal)` on <li> is not supported; dropped
-warning[css]: index.html:166: generated content `Counter("sub", LowerAlpha)` on <li> is not supported; dropped
-warning[css]: index.html:169: generated content `Counter("section", Decimal)` on <li> is not supported; dropped
-warning[css]: index.html:170: generated content `Counter("section", Decimal)` on <li> is not supported; dropped
 info[qml]: index.html:146: <a>: font size 22px inside 18px text is approximated with <big>
 info[qml]: index.html:146: <a>: font family `sans-serif` inside `serif` text is not converted
 info[css]: index.html:146: border style `double` is drawn solid

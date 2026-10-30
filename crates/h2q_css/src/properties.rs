@@ -62,13 +62,13 @@ use self::{
     length::{UnitContext, parse_integer_cvs, parse_length_auto_cvs, parse_length_cvs},
     text::{
         compose_white_space, decompose_white_space, parse_border_collapse, parse_border_spacing,
-        parse_caption_side, parse_content, parse_cursor, parse_direction, parse_list_style_image,
-        parse_list_style_position, parse_list_style_type, parse_overflow_wrap,
-        parse_pointer_events, parse_spacing, parse_table_layout, parse_text_align,
-        parse_text_decoration_color, parse_text_decoration_line, parse_text_decoration_style,
-        parse_text_indent, parse_text_overflow, parse_text_shadow, parse_text_transform,
-        parse_text_wrap_mode, parse_user_select, parse_vertical_align, parse_visibility,
-        parse_white_space_collapse, parse_word_break,
+        parse_caption_side, parse_content, parse_counter_changes, parse_cursor, parse_direction,
+        parse_list_style_image, parse_list_style_position, parse_list_style_type,
+        parse_overflow_wrap, parse_pointer_events, parse_spacing, parse_table_layout,
+        parse_text_align, parse_text_decoration_color, parse_text_decoration_line,
+        parse_text_decoration_style, parse_text_indent, parse_text_overflow, parse_text_shadow,
+        parse_text_transform, parse_text_wrap_mode, parse_user_select, parse_vertical_align,
+        parse_visibility, parse_white_space_collapse, parse_word_break,
     },
     transform::{
         parse_individual_rotate, parse_individual_scale, parse_individual_translate,
@@ -241,6 +241,9 @@ pub(crate) enum Longhand {
     ListStylePosition,
     ListStyleImage,
     Content,
+    CounterReset,
+    CounterIncrement,
+    CounterSet,
     BorderCollapse,
     BorderSpacing,
     CaptionSide,
@@ -493,6 +496,9 @@ pub(crate) fn kind(name: &str) -> PropertyKind {
         "list-style-position" => PropertyKind::Longhand(Longhand::ListStylePosition),
         "list-style-image" => PropertyKind::Longhand(Longhand::ListStyleImage),
         "content" => PropertyKind::Longhand(Longhand::Content),
+        "counter-reset" => PropertyKind::Longhand(Longhand::CounterReset),
+        "counter-increment" => PropertyKind::Longhand(Longhand::CounterIncrement),
+        "counter-set" => PropertyKind::Longhand(Longhand::CounterSet),
         "border-collapse" => PropertyKind::Longhand(Longhand::BorderCollapse),
         "border-spacing" => PropertyKind::Longhand(Longhand::BorderSpacing),
         "caption-side" => PropertyKind::Longhand(Longhand::CaptionSide),
@@ -1252,6 +1258,9 @@ pub(crate) fn compute(
         Longhand::Content => {
             style.content = parse_content(cvs)?;
         }
+        Longhand::CounterReset => style.counter_reset = parse_counter_changes(cvs, 0)?,
+        Longhand::CounterIncrement => style.counter_increment = parse_counter_changes(cvs, 1)?,
+        Longhand::CounterSet => style.counter_set = parse_counter_changes(cvs, 0)?,
         Longhand::BorderCollapse => {
             style.border_collapse = parse_border_collapse(cvs)?;
         }
@@ -1607,6 +1616,9 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
         Longhand::ListStylePosition => dst.list_style_inside = src.list_style_inside,
         Longhand::ListStyleImage => dst.list_style_image.clone_from(&src.list_style_image),
         Longhand::Content => dst.content.clone_from(&src.content),
+        Longhand::CounterReset => dst.counter_reset.clone_from(&src.counter_reset),
+        Longhand::CounterIncrement => dst.counter_increment.clone_from(&src.counter_increment),
+        Longhand::CounterSet => dst.counter_set.clone_from(&src.counter_set),
         Longhand::BorderCollapse => dst.border_collapse = src.border_collapse,
         Longhand::BorderSpacing => dst.border_spacing = src.border_spacing,
         Longhand::CaptionSide => dst.caption_side = src.caption_side,

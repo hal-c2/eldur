@@ -303,7 +303,7 @@ ApplicationWindow {
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
 
                                         Text {
-                                            text: "<b><font color=\"#c9533b\">. </font></b>The dark months"
+                                            text: "<b><font color=\"#c9533b\">1. </font></b>The dark months"
                                             textFormat: Text.StyledText
                                             color: "#2e2a26"
                                             font.family: "serif"
@@ -333,7 +333,7 @@ ApplicationWindow {
 
                                                 // <li>
                                                 Text {
-                                                    text: "<b><font color=\"#c9533b\">. </font></b>Weather as a calendar"
+                                                    text: "<b><font color=\"#c9533b\">1.a </font></b>Weather as a calendar"
                                                     textFormat: Text.StyledText
                                                     color: "#2e2a26"
                                                     font.family: "serif"
@@ -349,7 +349,7 @@ ApplicationWindow {
 
                                                 // <li>
                                                 Text {
-                                                    text: "<b><font color=\"#c9533b\">. </font></b>The last ferry"
+                                                    text: "<b><font color=\"#c9533b\">1.b </font></b>The last ferry"
                                                     textFormat: Text.StyledText
                                                     color: "#2e2a26"
                                                     font.family: "serif"
@@ -368,7 +368,7 @@ ApplicationWindow {
 
                                     // <li>
                                     Text {
-                                        text: "<b><font color=\"#c9533b\">. </font></b>Learning the town"
+                                        text: "<b><font color=\"#c9533b\">2. </font></b>Learning the town"
                                         textFormat: Text.StyledText
                                         color: "#2e2a26"
                                         font.family: "serif"
@@ -384,7 +384,7 @@ ApplicationWindow {
 
                                     // <li>
                                     Text {
-                                        text: "<b><font color=\"#c9533b\">. </font></b>What I wrote instead"
+                                        text: "<b><font color=\"#c9533b\">3. </font></b>What I wrote instead"
                                         textFormat: Text.StyledText
                                         color: "#2e2a26"
                                         font.family: "serif"

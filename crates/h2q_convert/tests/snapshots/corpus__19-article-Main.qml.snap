@@ -617,12 +617,34 @@ ApplicationWindow {
                                     Rectangle {
                                         color: "#1f1d1a"
                                         radius: 14
-                                        implicitWidth: 0
-                                        implicitHeight: 0
+                                        implicitWidth: blockText.implicitWidth
+                                        implicitHeight: blockText.implicitHeight
                                         width: 28
                                         height: 28
                                         x: 0
                                         y: 2
+
+                                        Text {
+                                            id: blockText
+                                            text: "1"
+                                            textFormat: Text.PlainText
+                                            color: "#fbf9f4"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 14
+                                            font.weight: 700
+                                            lineHeight: 23.8
+                                            lineHeightMode: Text.FixedHeight
+                                            transform: Translate {
+                                                y: 4.08
+                                            }
+                                            wrapMode: Text.WordWrap
+                                            horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
+                                        }
                                     }
                                 }
 
@@ -660,12 +682,34 @@ ApplicationWindow {
                                     Rectangle {
                                         color: "#1f1d1a"
                                         radius: 14
-                                        implicitWidth: 0
-                                        implicitHeight: 0
+                                        implicitWidth: blockText2.implicitWidth
+                                        implicitHeight: blockText2.implicitHeight
                                         width: 28
                                         height: 28
                                         x: 0
                                         y: 2
+
+                                        Text {
+                                            id: blockText2
+                                            text: "2"
+                                            textFormat: Text.PlainText
+                                            color: "#fbf9f4"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 14
+                                            font.weight: 700
+                                            lineHeight: 23.8
+                                            lineHeightMode: Text.FixedHeight
+                                            transform: Translate {
+                                                y: 4.08
+                                            }
+                                            wrapMode: Text.WordWrap
+                                            horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
+                                        }
                                     }
                                 }
 
@@ -703,12 +747,34 @@ ApplicationWindow {
                                     Rectangle {
                                         color: "#1f1d1a"
                                         radius: 14
-                                        implicitWidth: 0
-                                        implicitHeight: 0
+                                        implicitWidth: blockText3.implicitWidth
+                                        implicitHeight: blockText3.implicitHeight
                                         width: 28
                                         height: 28
                                         x: 0
                                         y: 2
+
+                                        Text {
+                                            id: blockText3
+                                            text: "3"
+                                            textFormat: Text.PlainText
+                                            color: "#fbf9f4"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 14
+                                            font.weight: 700
+                                            lineHeight: 23.8
+                                            lineHeightMode: Text.FixedHeight
+                                            transform: Translate {
+                                                y: 4.08
+                                            }
+                                            wrapMode: Text.WordWrap
+                                            horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
+                                        }
                                     }
                                 }
 
@@ -746,12 +812,34 @@ ApplicationWindow {
                                     Rectangle {
                                         color: "#1f1d1a"
                                         radius: 14
-                                        implicitWidth: 0
-                                        implicitHeight: 0
+                                        implicitWidth: blockText4.implicitWidth
+                                        implicitHeight: blockText4.implicitHeight
                                         width: 28
                                         height: 28
                                         x: 0
                                         y: 2
+
+                                        Text {
+                                            id: blockText4
+                                            text: "4"
+                                            textFormat: Text.PlainText
+                                            color: "#fbf9f4"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 14
+                                            font.weight: 700
+                                            lineHeight: 23.8
+                                            lineHeightMode: Text.FixedHeight
+                                            transform: Translate {
+                                                y: 4.08
+                                            }
+                                            wrapMode: Text.WordWrap
+                                            horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
+                                        }
                                     }
                                 }
                             }
