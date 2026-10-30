@@ -1002,3 +1002,12 @@ fn grid_template_areas_dots_and_adjacent_tokens() {
         vec![vec![Some("a".to_owned()), None, Some("b".to_owned()),]]
     );
 }
+
+#[test]
+fn border_radius_rejects_multiple_slashes() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    let mut s = ComputedStyle::default();
+
+    assert!(apply_decl(&mut s, "border-radius", "10px / 20px / 30px", &ctx).is_err());
+}
