@@ -46,106 +46,6 @@ ApplicationWindow {
                     anchors.top: parent.top
                     anchors.topMargin: 88
 
-                    // <header class="site-header">
-                    Rectangle {
-                        color: "#f0ffffff"
-                        implicitWidth: siteHeaderContent.implicitWidth + 80
-                        implicitHeight: siteHeaderContent.implicitHeight
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 64
-
-                        RectangularShadow {
-                            anchors.fill: parent
-                            z: -1
-                            offset: Qt.vector2d(0, 1)
-                            blur: 0
-                            color: "#d9dee8"
-                        }
-
-                        RowLayout {
-                            id: siteHeaderContent
-                            spacing: 0
-                            anchors.left: parent.left
-                            anchors.right: parent.right
-                            anchors.top: parent.top
-                            anchors.bottom: parent.bottom
-                            anchors.leftMargin: 40
-                            anchors.rightMargin: 40
-
-                            // <div class="brand">
-                            Text {
-                                text: "Acme Studio"
-                                textFormat: Text.PlainText
-                                color: "#3b6fe0"
-                                font.family: "sans-serif"
-                                font.pixelSize: 20
-                                font.weight: 700
-                                wrapMode: Text.WordWrap
-                                Layout.fillWidth: true
-                                Layout.maximumWidth: Math.ceil(implicitWidth)
-                                Layout.alignment: Qt.AlignVCenter
-                            }
-
-                            Item {
-                                Layout.fillWidth: true
-                            }
-
-                            // <nav class="nav">
-                            RowLayout {
-                                spacing: 0
-                                Layout.fillWidth: true
-                                Layout.maximumWidth: Math.ceil(implicitWidth)
-                                Layout.fillHeight: false
-                                Layout.alignment: Qt.AlignVCenter
-
-                                // <a>
-                                Text {
-                                    text: "Work"
-                                    textFormat: Text.PlainText
-                                    color: "#374151"
-                                    font.family: "sans-serif"
-                                    font.pixelSize: 15
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                    Layout.maximumWidth: Math.ceil(implicitWidth)
-                                    Layout.fillHeight: true
-                                }
-
-                                // <a>
-                                Text {
-                                    text: "About"
-                                    textFormat: Text.PlainText
-                                    color: "#374151"
-                                    font.family: "sans-serif"
-                                    font.pixelSize: 15
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                    Layout.maximumWidth: Math.ceil(implicitWidth)
-                                    Layout.fillHeight: true
-                                    Layout.leftMargin: 24
-                                }
-
-                                // <a>
-                                Text {
-                                    text: "Contact"
-                                    textFormat: Text.PlainText
-                                    color: "#374151"
-                                    font.family: "sans-serif"
-                                    font.pixelSize: 15
-                                    wrapMode: Text.WordWrap
-                                    Layout.fillWidth: true
-                                    Layout.maximumWidth: Math.ceil(implicitWidth)
-                                    Layout.fillHeight: true
-                                    Layout.leftMargin: 24
-                                }
-
-                                Item {
-                                    Layout.fillWidth: true
-                                }
-                            }
-                        }
-                    }
-
                     // <main class="page">
                     Item {
                         implicitWidth: pageContent.implicitWidth + 80
@@ -382,6 +282,8 @@ ApplicationWindow {
                                             font.pixelSize: 13
                                             font.weight: 700
                                             wrapMode: Text.WordWrap
+                                            horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
@@ -558,6 +460,111 @@ ApplicationWindow {
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // <header class="site-header">
+    Rectangle {
+        color: "#f0ffffff"
+        implicitWidth: siteHeaderContent.implicitWidth + 80
+        implicitHeight: siteHeaderContent.implicitHeight
+        z: 10
+        height: 64
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.leftMargin: 0
+        anchors.rightMargin: 0
+        y: 0
+
+        RectangularShadow {
+            anchors.fill: parent
+            z: -1
+            offset: Qt.vector2d(0, 1)
+            blur: 0
+            color: "#d9dee8"
+        }
+
+        RowLayout {
+            id: siteHeaderContent
+            spacing: 0
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            anchors.leftMargin: 40
+            anchors.rightMargin: 40
+
+            // <div class="brand">
+            Text {
+                text: "Acme Studio"
+                textFormat: Text.PlainText
+                color: "#3b6fe0"
+                font.family: "sans-serif"
+                font.pixelSize: 20
+                font.weight: 700
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+                Layout.maximumWidth: Math.ceil(implicitWidth)
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            Item {
+                Layout.fillWidth: true
+            }
+
+            // <nav class="nav">
+            RowLayout {
+                spacing: 0
+                Layout.fillWidth: true
+                Layout.maximumWidth: Math.ceil(implicitWidth)
+                Layout.fillHeight: false
+                Layout.alignment: Qt.AlignVCenter
+
+                // <a>
+                Text {
+                    text: "Work"
+                    textFormat: Text.PlainText
+                    color: "#374151"
+                    font.family: "sans-serif"
+                    font.pixelSize: 15
+                    wrapMode: Text.WordWrap
+                    Layout.fillWidth: true
+                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                    Layout.fillHeight: true
+                }
+
+                // <a>
+                Text {
+                    text: "About"
+                    textFormat: Text.PlainText
+                    color: "#374151"
+                    font.family: "sans-serif"
+                    font.pixelSize: 15
+                    wrapMode: Text.WordWrap
+                    Layout.fillWidth: true
+                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                    Layout.fillHeight: true
+                    Layout.leftMargin: 24
+                }
+
+                // <a>
+                Text {
+                    text: "Contact"
+                    textFormat: Text.PlainText
+                    color: "#374151"
+                    font.family: "sans-serif"
+                    font.pixelSize: 15
+                    wrapMode: Text.WordWrap
+                    Layout.fillWidth: true
+                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                    Layout.fillHeight: true
+                    Layout.leftMargin: 24
+                }
+
+                Item {
+                    Layout.fillWidth: true
                 }
             }
         }

@@ -23,8 +23,8 @@ mod tests;
 use std::collections::{BTreeMap, HashSet};
 
 use h2q_css::{
-    ComputedStyle, Display, Float, LengthAuto, Overflow, Position, Size, StyleMap,
-    TextDecorationLine, Visibility,
+    Align, BoxSizing, ComputedStyle, Direction, Display, FlexDirection, Float, LengthAuto,
+    Overflow, Position, Size, StyleMap, TextDecorationLine, Visibility,
 };
 use h2q_dom::{Document, NodeId};
 use h2q_js::TargetKind;
@@ -72,6 +72,13 @@ pub(crate) struct Emitter<'a, 'd> {
     /// The box being emitted is an overlay of its positioned parent, so its
     /// `position` is handled.
     positioned_child: bool,
+    /// The content height in px of the block whose children are being
+    /// laid out, when it is definite: their percentage heights resolve
+    /// against it (CSS 2.2 §10.5).
+    percent_height_base: Option<f32>,
+    /// `position: fixed` boxes, placed over the window outside the
+    /// `Flickable` so they do not scroll.
+    fixed: Vec<(Option<String>, Object)>,
     /// QML modules the emitted objects need beyond the default imports.
     pub imports: std::collections::BTreeSet<&'static str>,
 }
@@ -104,6 +111,8 @@ impl<'a, 'd> Emitter<'a, 'd> {
             root_node: None,
             has_table: false,
             positioned_child: false,
+            percent_height_base: None,
+            fixed: Vec::new(),
             imports: std::collections::BTreeSet::new(),
         }
     }
@@ -226,6 +235,12 @@ impl<'a, 'd> Emitter<'a, 'd> {
         }
         flickable.set("contentHeight", Value::expr(content_height));
         root.push_child(flickable);
+        for (comment, fixed) in std::mem::take(&mut self.fixed) {
+            if let Some(comment) = comment {
+                root.members.push(Member::Comment(comment));
+            }
+            root.push_child(fixed);
+        }
         for group in self.radio_groups.values() {
             root.push_child(Object::new("ButtonGroup").with_id(group.clone()));
         }
@@ -301,7 +316,21 @@ impl<'a, 'd> Emitter<'a, 'd> {
 
         let mut escaped_top = MarginSet::default();
         let mut escaped_bottom = MarginSet::default();
-        let (in_flow, overlays) = self.split_positioned(b);
+        let lists::Positioned {
+            flow: in_flow,
+            overlays,
+            fixed,
+        } = self.split_positioned(b);
+        for f in fixed {
+            // The viewport has no border, so the initial style stands in
+            // for the containing block's.
+            let obj = self.overlay(&ComputedStyle::default(), f);
+            let comment = f
+                .node
+                .filter(|_| self.options.source_comments)
+                .map(|n| describe(self.doc, n));
+            self.fixed.push((comment, obj));
+        }
         let mut inner = match &b.content {
             Content::Blocks(_) if b.kind == BoxKind::Flex => {
                 Some((self.flex(b, &in_flow, decoration, line), "Content"))
@@ -310,7 +339,16 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 Some((self.grid(b, &in_flow, decoration, line), "Content"))
             }
             Content::Blocks(_) => {
+                let base = match &style.height {
+                    Size::Length(h) => h.as_px().map(|px| match style.box_sizing {
+                        BoxSizing::ContentBox => px,
+                        BoxSizing::BorderBox => (px - deco.insets.vertical()).max(0.0),
+                    }),
+                    _ => None,
+                };
+                let outer = std::mem::replace(&mut self.percent_height_base, base);
                 let column = self.column(&in_flow, decoration, top_open, bottom_open);
+                self.percent_height_base = outer;
                 escaped_top = column.escaped_top;
                 escaped_bottom = column.escaped_bottom;
                 column.obj.map(|o| (o, "Content"))
@@ -318,7 +356,13 @@ impl<'a, 'd> Emitter<'a, 'd> {
             Content::Inline(items) if inline::has_atomic(items) => {
                 Some((self.inline_flow(b, decoration, items, line), "Content"))
             }
-            Content::Inline(items) => Some((self.text(style, decoration, items, line), "Text")),
+            Content::Inline(items) => {
+                let mut text = self.text(style, decoration, items, line);
+                if matches!(b.kind, BoxKind::Flex | BoxKind::Grid) {
+                    place_anonymous_item(&mut text, style, b.kind);
+                }
+                Some((text, "Text"))
+            }
             Content::Empty => None,
         };
         if inner.is_none() && (wanted || b.marker.is_some()) {
@@ -522,7 +566,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 "css",
                 line,
                 format!(
-                    "`float` on {} is laid out as block flow (not implemented yet)",
+                    "`float` on {} is laid out as a block at its side: floats do not share a line with other boxes yet",
                     what()
                 ),
             );
@@ -531,7 +575,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         match style.position {
             Position::Static => {}
             Position::Relative if is_unmoved(style) => {}
-            Position::Absolute if positioned => {}
+            Position::Absolute | Position::Fixed if positioned => {}
             p => self.diags.warning(
                 "css",
                 line,
@@ -609,4 +653,89 @@ fn hint(doc: &Document, b: &LayoutBox<'_>) -> String {
         .and_then(|e| e.classes().next().map(str::to_owned))
         .or_else(|| element.map(|e| e.local_name().to_owned()))
         .unwrap_or_else(|| "block".to_owned())
+}
+
+/// Where along one axis a lone item sits in its flex or grid container.
+#[derive(Clone, Copy, PartialEq)]
+enum Place {
+    Start,
+    Center,
+    End,
+    /// The item is as long as the container.
+    Stretch,
+}
+
+/// Text directly in a flex or grid container is one anonymous item
+/// (CSS Flexbox 1 §4, CSS Grid 1 §6.1) that the container's alignment
+/// places, and the Text fills the container, so the item's place becomes
+/// the Text's alignment. A line shorter than the container is the whole
+/// item, so `text-align` does not move it; wrapped lines make the item as
+/// wide as the container and `text-align` places them.
+fn place_anonymous_item(text: &mut Object, style: &ComputedStyle, kind: BoxKind) {
+    let content = |a: Align| match a {
+        Align::Center | Align::SpaceAround | Align::SpaceEvenly => Place::Center,
+        Align::End | Align::FlexEnd | Align::Right => Place::End,
+        _ => Place::Start,
+    };
+    let item = |a: Align, stretch: Place| match a {
+        Align::Center => Place::Center,
+        Align::End | Align::FlexEnd | Align::Right => Place::End,
+        Align::Normal | Align::Stretch | Align::Auto => stretch,
+        _ => Place::Start,
+    };
+    let (horizontal, vertical) = if kind == BoxKind::Grid {
+        // A lone auto track fills the container under `normal` content
+        // alignment, and the item then fills the track.
+        let track = |a: Align| match a {
+            Align::Normal | Align::Stretch => Place::Stretch,
+            other => content(other),
+        };
+        let h = match item(style.justify_items, Place::Stretch) {
+            Place::Stretch => track(style.justify_content),
+            p => p,
+        };
+        let v = match item(style.align_items, Place::Stretch) {
+            Place::Stretch => track(style.align_content),
+            p => p,
+        };
+        (h, v)
+    } else {
+        let main = content(style.justify_content);
+        let cross = item(style.align_items, Place::Stretch);
+        let flip = |p: Place| match p {
+            Place::Start => Place::End,
+            Place::End => Place::Start,
+            p => p,
+        };
+        match style.flex_direction {
+            FlexDirection::Row => (main, cross),
+            FlexDirection::RowReverse => (flip(main), cross),
+            FlexDirection::Column => (cross, main),
+            FlexDirection::ColumnReverse => (cross, flip(main)),
+        }
+    };
+    let rtl = style.direction == Direction::Rtl;
+    let single = match horizontal {
+        Place::Stretch => None,
+        Place::Center => Some("Text.AlignHCenter"),
+        Place::Start if rtl => Some("Text.AlignRight"),
+        Place::End if !rtl => Some("Text.AlignRight"),
+        Place::Start | Place::End => Some("Text.AlignLeft"),
+    };
+    // When both agree, `text-align` has already set it.
+    let wrapped = text::text_align(style).unwrap_or("Text.AlignLeft");
+    if let Some(single) = single.filter(|s| *s != wrapped) {
+        text.set(
+            "horizontalAlignment",
+            Value::expr(format!("lineCount > 1 ? {wrapped} : {single}")),
+        );
+    }
+    let flag = match vertical {
+        Place::Center => Some("Text.AlignVCenter"),
+        Place::End => Some("Text.AlignBottom"),
+        Place::Start | Place::Stretch => None,
+    };
+    if let Some(flag) = flag {
+        text.set("verticalAlignment", Value::expr(flag));
+    }
 }

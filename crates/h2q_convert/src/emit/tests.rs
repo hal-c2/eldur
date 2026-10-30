@@ -964,3 +964,224 @@ fn a_transformed_text_keeps_its_baseline_shift_first() {
     let moved = text.find("x: 10").expect("translate");
     assert!(nudge < moved, "{text}");
 }
+
+#[test]
+fn fixed_box_leaves_the_flow_for_the_window() {
+    // Chromium: header at (0, 0) 1280×20; p at y 30 (the body's padding
+    // only, the header takes no space).
+    let (qml, diags) = convert(&page(
+        "body{padding-top:30px} header{position:fixed;top:0;left:0;right:0;height:20px;\
+         background:red} p{margin:0}",
+        "<header>h</header><p>x</p>",
+    ));
+    // The window's children are at indent 4; the header follows the
+    // Flickable, so it does not scroll.
+    let flickable = qml.find("\n    Flickable {").expect("flickable");
+    let flickable_end = flickable + qml[flickable..].find("\n    }\n").expect("end");
+    let header = &qml[flickable_end..];
+    assert!(
+        header.starts_with("\n    }\n\n    // <header>\n    Rectangle {"),
+        "{qml}"
+    );
+    assert!(header.contains("color: \"#ff0000\""), "{qml}");
+    assert!(header.contains("anchors.left: parent.left"), "{qml}");
+    assert!(header.contains("anchors.right: parent.right"), "{qml}");
+    assert!(header.contains("height: 20"), "{qml}");
+    assert!(
+        !diags.iter().any(|d| d.contains("position: fixed")),
+        "{diags:?}"
+    );
+}
+
+#[test]
+fn tight_line_height_does_not_grow_the_last_line() {
+    // Chromium: `font: 96px/1` is 96px tall and `16px/1` two lines 32px.
+    // Qt gives the last fixed-height line the font's own height (108px and
+    // 18px), so the padding takes the difference back.
+    let (qml, _) = convert(&page(
+        ".d{margin:0;font:96px/1 sans-serif} .e{margin:0;font:16px/1.5 sans-serif}",
+        "<p class=d>0</p><p class=e>0</p>",
+    ));
+    let d = object_after(&qml, "<p class=\"d\">");
+    assert!(d.contains("lineHeight: 96"), "{d}");
+    assert!(
+        d.contains("bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))"),
+        "{d}"
+    );
+    // The metrics are of the Text's own font.
+    let metrics = d
+        .split("readonly property FontMetrics metrics: FontMetrics {")
+        .nth(1)
+        .and_then(|rest| rest.split('}').next())
+        .unwrap_or_else(|| panic!("no metrics in {d}"));
+    assert!(metrics.contains("font.family: \"sans-serif\""), "{d}");
+    assert!(metrics.contains("font.pixelSize: 96"), "{d}");
+    // A line taller than the font needs nothing.
+    let e = object_after(&qml, "<p class=\"e\">");
+    assert!(!e.contains("bottomPadding"), "{e}");
+}
+
+#[test]
+fn percentage_height_resolves_against_a_definite_parent() {
+    // Chromium: .f 8px (100% of 8px), .g 10px (50% of the 20px content
+    // box), .h 15px (50% of 40px border box less 10px padding), .i auto.
+    let (qml, diags) = convert(&page(
+        "div{background:#eee} .t{height:8px} .f{height:100%;width:50%} \
+         .u{height:20px;padding:5px} .g{height:50%} \
+         .v{height:40px;padding:5px;box-sizing:border-box} .h{height:50%} .i{height:50%}",
+        "<div class=t><div class=f></div></div><div class=u><div class=g></div></div>\
+         <div class=v><div class=h></div></div><div class=w><div class=i>x</div></div>",
+    ));
+    for (comment, height) in [
+        ("<div class=\"f\">", "Layout.preferredHeight: 8"),
+        ("<div class=\"g\">", "Layout.preferredHeight: 10"),
+        ("<div class=\"h\">", "Layout.preferredHeight: 15"),
+    ] {
+        let obj = object_after(&qml, comment);
+        assert!(own_lines(obj).contains(&height), "{obj}");
+    }
+    let i = object_after(&qml, "<div class=\"i\">");
+    assert!(!i.contains("preferredHeight"), "{i}");
+    assert_eq!(
+        diags
+            .iter()
+            .filter(|d| d.contains("percentage height"))
+            .count(),
+        1,
+        "{diags:?}"
+    );
+}
+
+#[test]
+fn text_of_a_flex_or_grid_box_is_placed_as_its_one_item() {
+    // Chromium (getBoundingClientRect): .a's "SK" at (10.7, 12) in a 40×40
+    // box, centred both ways; .b centred in 200×52; .c's "x" at the bottom
+    // right of 100×60; .d's text wraps to the full 100px, lines at x 0.
+    let (qml, _) = convert(&page(
+        "div{background:#eee;font:14px sans-serif} \
+         .a{display:grid;place-items:center;width:40px;height:40px} \
+         .b{display:flex;align-items:center;justify-content:center;height:52px;width:200px} \
+         .c{display:flex;flex-direction:column;justify-content:flex-end;\
+            align-items:flex-end;height:60px;width:100px} \
+         .d{display:flex;justify-content:center;width:100px}",
+        "<div class=a>SK</div><div class=b>Sign in</div><div class=c>x</div>\
+         <div class=d>one two three four five six</div>",
+    ));
+    let text = |class: &str| {
+        let obj = object_after(&qml, &format!("<div class=\"{class}\">"));
+        obj.split("Text {")
+            .nth(1)
+            .unwrap_or_else(|| panic!("no Text in {obj}"))
+            .to_owned()
+    };
+    let a = text("a");
+    assert!(a.contains("verticalAlignment: Text.AlignVCenter"), "{a}");
+    assert!(
+        a.contains("horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter"),
+        "{a}"
+    );
+    let b = text("b");
+    assert!(b.contains("verticalAlignment: Text.AlignVCenter"), "{b}");
+    assert!(
+        b.contains("horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter"),
+        "{b}"
+    );
+    let c = text("c");
+    assert!(c.contains("verticalAlignment: Text.AlignBottom"), "{c}");
+    assert!(
+        c.contains("horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignRight"),
+        "{c}"
+    );
+    // Wrapped, the item is the box's width and `text-align` places the lines.
+    let d = text("d");
+    assert!(
+        d.contains("horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter"),
+        "{d}"
+    );
+    assert!(!d.contains("verticalAlignment"), "{d}");
+}
+
+#[test]
+fn fr_ratio_reported_only_when_sub_columns_approximate_it() {
+    let diags_for = |cols: &str| {
+        convert(&page(
+            &format!(".g{{display:grid;grid-template-columns:{cols};gap:20px}}"),
+            "<div class=g><div>a</div><div>b</div></div>",
+        ))
+        .1
+    };
+    let exact = diags_for("2fr 1fr");
+    assert!(!exact.iter().any(|d| d.contains("`fr`")), "{exact:?}");
+    let inexact = diags_for("1.1fr 0.9fr");
+    assert!(
+        inexact
+            .iter()
+            .any(|d| d.contains("1.1:0.9") && d.contains("5:4")),
+        "{inexact:?}"
+    );
+}
+
+#[test]
+fn a_text_that_is_one_link_without_underline_is_not_underlined() {
+    // Chromium: `li a` computes `text-decoration-line: none`, colour
+    // rgb(51, 65, 85); without the rule, `underline` and rgb(0, 0, 238).
+    let (qml, diags) = convert(&page(
+        ".n a{color:#334155;text-decoration:none}",
+        "<ul class=n><li><a href=\"#f\">Features</a></li></ul>\
+         <p class=n>See <a href=\"#d\">docs</a>.</p>\
+         <ul><li><a href=\"#u\">Underlined</a></li></ul>",
+    ));
+    let nav = object_after(&qml, "<li>");
+    assert!(
+        nav.contains("text: \"<font color=\\\"#334155\\\">Features</font>\""),
+        "{nav}"
+    );
+    assert!(!nav.contains("<a "), "{nav}");
+    assert!(
+        nav.contains("TapHandler {") && nav.contains("Qt.openUrlExternally(\"#f\")"),
+        "{nav}"
+    );
+    // A link inside other text stays a StyledText link, underlined.
+    let p = object_after(&qml, "<p class=\"n\">");
+    assert!(p.contains("<a href=\\\"#d\\\">docs</a>"), "{p}");
+    assert_eq!(
+        diags.iter().filter(|d| d.contains("is underlined")).count(),
+        1,
+        "{diags:?}"
+    );
+    // An underlined link keeps StyledText's link.
+    let u = qml.split("<a href=\\\"#u\\\">").count();
+    assert_eq!(u, 2, "{qml}");
+}
+
+#[test]
+fn a_right_float_sits_at_the_right_edge() {
+    // Chromium: in a 400px box, a 50% `float: right` with a 6px right
+    // margin is at x 194 of it; a left float stays at the left.
+    let (qml, _) = convert(&page(
+        ".c{width:400px} .r{float:right;width:50%;height:10px;margin-right:6px} \
+         .l{float:left;width:100px;height:10px}",
+        "<div class=c><div class=r></div><div class=l></div></div>",
+    ));
+    let r = own_lines(object_after(&qml, "<div class=\"r\">"));
+    assert!(r.contains(&"Layout.alignment: Qt.AlignRight"), "{r:?}");
+    assert!(r.contains(&"Layout.rightMargin: 6"), "{r:?}");
+    let l = own_lines(object_after(&qml, "<div class=\"l\">"));
+    assert!(
+        !l.iter().any(|p| p.starts_with("Layout.alignment")),
+        "{l:?}"
+    );
+}
+
+#[test]
+fn a_layout_with_a_width_does_not_fill_its_column() {
+    // Chromium, in a 600px box: .g is 568px wide at x 16. A Qt Layout
+    // fills by default, so it has to be told not to.
+    let (qml, _) = convert(&page(
+        ".c{width:600px} .g{display:grid;grid-template-columns:1fr 1fr;\
+         width:calc(100% - 32px);margin:0 auto}",
+        "<div class=c><main class=g><p>a</p><p>b</p></main></div>",
+    ));
+    let g = own_lines(object_after(&qml, "<main class=\"g\">"));
+    assert!(g.contains(&"Layout.fillWidth: false"), "{g:?}");
+}

@@ -3,4 +3,3 @@ source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
 info[html]: index.html:230: inline <button class="btn"> is laid out as a block (no inline replaced elements yet)
-warning[css]: index.html:212: `position: fixed` on <header class="site-header"> is laid out in normal flow (not implemented yet)

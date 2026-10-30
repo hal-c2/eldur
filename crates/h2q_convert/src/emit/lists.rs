@@ -203,30 +203,49 @@ impl Emitter<'_, '_> {
         obj
     }
 
-    /// The in-flow children of a positioned box and its absolute ones, which
-    /// are not part of its flow. Children without a positioned parent stay
-    /// in flow (reported by `out_of_flow`).
-    pub(super) fn split_positioned<'c, 'l>(
-        &self,
-        b: &'c LayoutBox<'l>,
-    ) -> (Cow<'c, [LayoutBox<'l>]>, Vec<&'c LayoutBox<'l>>) {
+    /// The in-flow children of a box, its absolute ones when it is
+    /// positioned, and its fixed ones, none of which are part of its flow.
+    /// Absolute children without a positioned parent stay in flow (reported
+    /// by `out_of_flow`); fixed ones always belong to the viewport.
+    pub(super) fn split_positioned<'c, 'l>(&self, b: &'c LayoutBox<'l>) -> Positioned<'c, 'l> {
         let Content::Blocks(children) = &b.content else {
-            return (Cow::Borrowed(&[]), Vec::new());
+            return Positioned {
+                flow: Cow::Borrowed(&[]),
+                overlays: Vec::new(),
+                fixed: Vec::new(),
+            };
         };
-        let is_overlay = |c: &LayoutBox<'_>| c.style.position == Position::Absolute;
-        if b.style.position == Position::Static || !children.iter().any(is_overlay) {
-            return (Cow::Borrowed(children), Vec::new());
+        let positioned = b.style.position != Position::Static;
+        let is_overlay = |c: &LayoutBox<'_>| positioned && c.style.position == Position::Absolute;
+        let is_fixed = |c: &LayoutBox<'_>| c.style.position == Position::Fixed;
+        if !children.iter().any(|c| is_overlay(c) || is_fixed(c)) {
+            return Positioned {
+                flow: Cow::Borrowed(children),
+                overlays: Vec::new(),
+                fixed: Vec::new(),
+            };
         }
-        let flow = children
-            .iter()
-            .filter(|c| !is_overlay(c))
-            .cloned()
-            .collect();
-        (
-            Cow::Owned(flow),
-            children.iter().filter(|c| is_overlay(c)).collect(),
-        )
+        Positioned {
+            flow: Cow::Owned(
+                children
+                    .iter()
+                    .filter(|c| !is_overlay(c) && !is_fixed(c))
+                    .cloned()
+                    .collect(),
+            ),
+            overlays: children.iter().filter(|c| is_overlay(c)).collect(),
+            fixed: children.iter().filter(|c| is_fixed(c)).collect(),
+        }
     }
+}
+
+/// A box's children sorted by how they are placed.
+pub(super) struct Positioned<'c, 'l> {
+    pub flow: Cow<'c, [LayoutBox<'l>]>,
+    /// Absolute children of a positioned box: overlays of its wrapper.
+    pub overlays: Vec<&'c LayoutBox<'l>>,
+    /// Fixed children: overlays of the window, outside the `Flickable`.
+    pub fixed: Vec<&'c LayoutBox<'l>>,
 }
 
 fn margin_px(margin: &LengthAuto) -> f32 {
