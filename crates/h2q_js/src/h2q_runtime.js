@@ -1037,7 +1037,8 @@ function _appendTarget(raw) {
         return m.flow;
     }
     for (var i = 0; raw.children && i < raw.children.length; ++i) {
-        if (typeof raw.children[i].spacing === "number") {
+        if (typeof raw.children[i].spacing === "number" || typeof raw.children[i].columnSpacing === "number") {
+            _meta(raw.children[i]).hostBox = raw;
             return raw.children[i];
         }
     }
@@ -1056,6 +1057,7 @@ function _appendTarget(raw) {
     });
     // `textContent = x` replaces every child.
     text.textChanged.connect(function() { _clearAppended(raw); });
+    _meta(flow).hostBox = raw;
     m.flow = flow;
     return flow;
 }
@@ -1071,17 +1073,132 @@ function _clearAppended(raw) {
     }
 }
 
+function _isPlainTextItem(item) {
+    return Boolean(
+        item
+        && typeof item.text === "string"
+        && item.background === undefined
+        && typeof item.readOnly !== "boolean"
+        && typeof item.clicked !== "function"
+        && typeof item.toggled !== "function"
+    );
+}
+
 function _findTextChild(raw) {
     if (!raw || !raw.children) {
         return null;
     }
     for (var i = 0; i < raw.children.length; ++i) {
         var child = raw.children[i];
-        if (child && typeof child.text === "string") {
+        if (_isPlainTextItem(child) && !child.objectName && !_meta(child).createdTag) {
             return child;
         }
     }
     return null;
+}
+
+function _childContainer(raw) {
+    if (!raw) {
+        return null;
+    }
+    if (typeof raw.contentHeight === "number" && raw.contentItem) {
+        return raw.contentItem;
+    }
+    if (typeof raw.spacing === "number" || typeof raw.columnSpacing === "number") {
+        return raw;
+    }
+    var m = _meta(raw);
+    if (m.flow) {
+        return m.flow;
+    }
+    if (raw.color !== undefined && raw.children) {
+        for (var i = 0; i < raw.children.length; ++i) {
+            var ch = raw.children[i];
+            if (ch && (typeof ch.spacing === "number" || typeof ch.columnSpacing === "number")
+                && !ch.objectName && !_meta(ch).createdTag) {
+                _meta(ch).hostBox = raw;
+                return ch;
+            }
+        }
+    }
+    return raw;
+}
+
+function _rawElementChildren(raw) {
+    var container = _childContainer(raw);
+    if (!container || !container.children) {
+        return [];
+    }
+    var isLayout = typeof container.spacing === "number" || typeof container.columnSpacing === "number";
+    var out = [];
+    for (var i = 0; i < container.children.length; ++i) {
+        var child = container.children[i];
+        if (!child) {
+            continue;
+        }
+        if (!isLayout && _isPlainTextItem(child) && !child.objectName && !_meta(child).createdTag) {
+            continue;
+        }
+        out.push(child);
+    }
+    return out;
+}
+
+function _logicalParent(raw) {
+    if (!raw || !raw.parent) {
+        return null;
+    }
+    var p = raw.parent;
+    var pm = _meta(p);
+    if (pm.hostBox) {
+        return pm.hostBox;
+    }
+    if ((typeof p.spacing === "number" || typeof p.columnSpacing === "number")
+        && !p.objectName && !pm.createdTag
+        && p.parent && p.parent.color !== undefined
+        && typeof p.parent.spacing !== "number" && typeof p.parent.columnSpacing !== "number") {
+        return p.parent;
+    }
+    return p;
+}
+
+function _inferTagName(raw) {
+    if (!raw) {
+        return "";
+    }
+    var m = _meta(raw);
+    if (m.createdTag) {
+        return String(m.createdTag).toUpperCase();
+    }
+    if (typeof raw.h2qTag === "string" && raw.h2qTag !== "") {
+        return raw.h2qTag.toUpperCase();
+    }
+    if (typeof raw.find === "function" && typeof raw.currentIndex === "number") {
+        return "SELECT";
+    }
+    if (typeof raw.checked === "boolean" && typeof raw.toggled === "function" && raw.checkable) {
+        return "INPUT";
+    }
+    if (typeof raw.value === "number" && (typeof raw.from === "number" || typeof raw.stepSize === "number")
+        && typeof raw.indeterminate !== "boolean") {
+        return "INPUT";
+    }
+    if (typeof raw.value === "number") {
+        return "PROGRESS";
+    }
+    if (typeof raw.clicked === "function") {
+        return "BUTTON";
+    }
+    if (typeof raw.readOnly === "boolean" && typeof raw.placeholderText === "string") {
+        return raw.textFormat !== undefined ? "TEXTAREA" : "INPUT";
+    }
+    if (raw.source !== undefined) {
+        return "IMG";
+    }
+    if (typeof raw.text === "string") {
+        return "SPAN";
+    }
+    return "DIV";
 }
 
 function getText(item) {
@@ -1263,7 +1380,9 @@ function setAttribute(item, attrName, attrValue) {
         m.dataset[_kebabToCamel(name.slice(5))] = val;
         return;
     }
-    if (name === "class") {
+    if (name === "id" && typeof raw.objectName === "string") {
+        raw.objectName = val;
+    } else if (name === "class") {
         setClassName(raw, val);
     } else if (name === "disabled" && typeof raw.enabled === "boolean") {
         raw.enabled = false;
@@ -1950,13 +2069,20 @@ function wrap(rawItem) {
             }
         },
         get id() {
-            return typeof rawItem.objectName === "string" ? rawItem.objectName : "";
+            if (typeof rawItem.objectName === "string" && rawItem.objectName !== "") {
+                return rawItem.objectName;
+            }
+            return m.attrs.id || "";
         },
         set id(v) {
+            var s = String(v);
+            m.attrs.id = s;
             if (typeof rawItem.objectName === "string") {
-                rawItem.objectName = String(v);
+                rawItem.objectName = s;
             }
         },
+        get tagName() { return _inferTagName(rawItem); },
+        get nodeName() { return _inferTagName(rawItem); },
         get textContent() { return getText(rawItem); },
         set textContent(v) { setText(rawItem, v); },
         get innerText() { return getText(rawItem); },
@@ -1976,7 +2102,9 @@ function wrap(rawItem) {
                 return rawItem.text;
             }
             if (typeof rawItem.value === "number") {
-                return rawItem.value;
+                return typeof rawItem.indeterminate === "boolean"
+                    ? rawItem.value
+                    : String(rawItem.value);
             }
             return "";
         },
@@ -1992,6 +2120,14 @@ function wrap(rawItem) {
                 rawItem.value = Number(v) || 0;
             }
         },
+        get selectedIndex() {
+            return typeof rawItem.currentIndex === "number" ? rawItem.currentIndex : -1;
+        },
+        set selectedIndex(v) {
+            if (typeof rawItem.currentIndex === "number") {
+                rawItem.currentIndex = Number(v) || 0;
+            }
+        },
         get checked() { return Boolean(rawItem.checked); },
         set checked(v) {
             if (typeof rawItem.checked === "boolean") {
@@ -2002,6 +2138,12 @@ function wrap(rawItem) {
         set disabled(v) {
             if (typeof rawItem.enabled === "boolean") {
                 rawItem.enabled = !v;
+            }
+        },
+        get readOnly() { return Boolean(rawItem.readOnly); },
+        set readOnly(v) {
+            if (typeof rawItem.readOnly === "boolean") {
+                rawItem.readOnly = Boolean(v);
             }
         },
         get hidden() { return rawItem.visible !== undefined ? !rawItem.visible : false; },
@@ -2022,27 +2164,108 @@ function wrap(rawItem) {
                 rawItem.placeholderText = String(v);
             }
         },
+        get name() {
+            if (typeof rawItem.name === "string") {
+                return rawItem.name;
+            }
+            return getAttribute(rawItem, "name") || "";
+        },
+        set name(v) {
+            var s = String(v);
+            if (typeof rawItem.name === "string") {
+                rawItem.name = s;
+            }
+            setAttribute(rawItem, "name", s);
+        },
+        get title() { return getAttribute(rawItem, "title") || ""; },
+        set title(v) { setAttribute(rawItem, "title", String(v)); },
+        get href() { return getAttribute(rawItem, "href") || ""; },
+        set href(v) { setAttribute(rawItem, "href", String(v)); },
+        get alt() { return getAttribute(rawItem, "alt") || ""; },
+        set alt(v) { setAttribute(rawItem, "alt", String(v)); },
+        get min() { return getAttribute(rawItem, "min") || ""; },
+        set min(v) { setAttribute(rawItem, "min", String(v)); },
+        get max() { return getAttribute(rawItem, "max") || ""; },
+        set max(v) { setAttribute(rawItem, "max", String(v)); },
+        get step() { return getAttribute(rawItem, "step") || ""; },
+        set step(v) { setAttribute(rawItem, "step", String(v)); },
+        get htmlFor() { return getAttribute(rawItem, "for") || ""; },
+        set htmlFor(v) { setAttribute(rawItem, "for", String(v)); },
+        get lang() { return getAttribute(rawItem, "lang") || ""; },
+        set lang(v) { setAttribute(rawItem, "lang", String(v)); },
+        get width() {
+            if (typeof rawItem.width === "number") {
+                return rawItem.width;
+            }
+            return Number(getAttribute(rawItem, "width")) || 0;
+        },
+        set width(v) {
+            var n = Number(v) || 0;
+            if (typeof rawItem.width === "number") {
+                rawItem.width = n;
+            }
+            setAttribute(rawItem, "width", String(n));
+        },
+        get height() {
+            if (typeof rawItem.height === "number") {
+                return rawItem.height;
+            }
+            return Number(getAttribute(rawItem, "height")) || 0;
+        },
+        set height(v) {
+            var n = Number(v) || 0;
+            if (typeof rawItem.height === "number") {
+                rawItem.height = n;
+            }
+            setAttribute(rawItem, "height", String(n));
+        },
         get className() { return getClassName(rawItem); },
         set className(v) { setClassName(rawItem, v); },
         get classList() { return classList(rawItem); },
         get dataset() { return dataset(rawItem); },
         get offsetWidth() { return typeof rawItem.width === "number" ? rawItem.width : 0; },
         get offsetHeight() { return typeof rawItem.height === "number" ? rawItem.height : 0; },
-        get parentNode() { return rawItem.parent ? wrap(rawItem.parent) : null; },
+        get clientWidth() { return typeof rawItem.width === "number" ? rawItem.width : 0; },
+        get clientHeight() { return typeof rawItem.height === "number" ? rawItem.height : 0; },
+        get parentNode() {
+            var p = _logicalParent(rawItem);
+            return p ? wrap(p) : null;
+        },
+        get parentElement() {
+            var p = _logicalParent(rawItem);
+            return p ? wrap(p) : null;
+        },
         get children() {
-            var out = [];
-            if (rawItem.children) {
-                for (var i = 0; i < rawItem.children.length; ++i) {
-                    out.push(wrap(rawItem.children[i]));
-                }
+            return _rawElementChildren(rawItem).map(wrap);
+        },
+        get childElementCount() {
+            return _rawElementChildren(rawItem).length;
+        },
+        get firstElementChild() {
+            var kids = _rawElementChildren(rawItem);
+            return kids.length > 0 ? wrap(kids[0]) : null;
+        },
+        get lastElementChild() {
+            var kids = _rawElementChildren(rawItem);
+            return kids.length > 0 ? wrap(kids[kids.length - 1]) : null;
+        },
+        get nextElementSibling() {
+            var p = _logicalParent(rawItem);
+            if (!p) {
+                return null;
             }
-            if (m.flow) {
-                out = [];
-                for (var j = 0; j < m.flow.children.length; ++j) {
-                    out.push(wrap(m.flow.children[j]));
-                }
+            var kids = _rawElementChildren(p);
+            var idx = kids.indexOf(rawItem);
+            return idx !== -1 && idx + 1 < kids.length ? wrap(kids[idx + 1]) : null;
+        },
+        get previousElementSibling() {
+            var p = _logicalParent(rawItem);
+            if (!p) {
+                return null;
             }
-            return out;
+            var kids = _rawElementChildren(p);
+            var idx = kids.indexOf(rawItem);
+            return idx > 0 ? wrap(kids[idx - 1]) : null;
         },
         setAttribute: function(k, v) { setAttribute(rawItem, k, v); },
         getAttribute: function(k) { return getAttribute(rawItem, k); },
@@ -2084,7 +2307,7 @@ function wrap(rawItem) {
         insertBefore: function(newChild, refChild) {
             var rawNew = _unwrap(newChild);
             var rawRef = _unwrap(refChild);
-            var container = rawItem.contentItem || rawItem;
+            var container = _appendTarget(rawItem);
             if (!rawNew || rawNew.parent === undefined) {
                 return newChild;
             }
