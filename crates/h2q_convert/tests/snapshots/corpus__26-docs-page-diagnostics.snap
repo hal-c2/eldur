@@ -1,0 +1,30 @@
+---
+source: crates/h2q_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[qml]: index.html:227: <code>: font size 13.6px inside 16px text is approximated with <small>
+info[qml]: index.html:227: <code>: font family `monospace` inside `sans-serif` text is not converted
+info[qml]: index.html:227: <code>: inline background is not converted
+info[qml]: index.html:227: <code>: inline padding and borders are not converted
+info[qml]: index.html:230: <code>: font size 13.6px inside 16px text is approximated with <small>
+info[qml]: index.html:230: <code>: font family `monospace` inside `sans-serif` text is not converted
+info[qml]: index.html:230: <code>: inline background is not converted
+info[qml]: index.html:230: <code>: inline padding and borders are not converted
+info[css]: index.html:229: rounded corners with uneven borders: the borders are drawn square
+warning[css]: index.html:237: `overflow: auto/scroll` clips but does not scroll yet
+info[qml]: index.html:251: <code>: font size 11.9px inside 14px text is approximated with <small>
+info[qml]: index.html:251: <code>: font family `monospace` inside `sans-serif` text is not converted
+info[qml]: index.html:251: <code>: inline background is not converted
+info[qml]: index.html:251: <code>: inline padding and borders are not converted
+info[qml]: index.html:252: <code>: font size 11.9px inside 14px text is approximated with <small>
+info[qml]: index.html:252: <code>: font family `monospace` inside `sans-serif` text is not converted
+info[qml]: index.html:252: <code>: inline background is not converted
+info[qml]: index.html:252: <code>: inline padding and borders are not converted
+info[qml]: index.html:253: <code>: font size 11.9px inside 14px text is approximated with <small>
+info[qml]: index.html:253: <code>: font family `monospace` inside `sans-serif` text is not converted
+info[qml]: index.html:253: <code>: inline background is not converted
+info[qml]: index.html:253: <code>: inline padding and borders are not converted
+info[qml]: index.html:254: <code>: font size 11.9px inside 14px text is approximated with <small>
+info[qml]: index.html:254: <code>: font family `monospace` inside `sans-serif` text is not converted
+info[qml]: index.html:254: <code>: inline background is not converted
+info[qml]: index.html:254: <code>: inline padding and borders are not converted

@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fjord Kettle 1.2 L · Hearth &amp; Co.</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+      color: #1d2329;
+      background: #ffffff;
+    }
+
+    .shopbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 32px;
+      background: #1d2329;
+      color: #ffffff;
+    }
+
+    .shopbar .logo {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .shopbar .cart {
+      font-size: 14px;
+    }
+
+    .crumbs {
+      max-width: 1120px;
+      margin: 16px auto 0;
+      padding: 0 32px;
+      color: #6b7682;
+      font-size: 13px;
+    }
+
+    .product {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 16px 32px 40px;
+    }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .gallery img {
+      display: block;
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid #e3e7eb;
+    }
+
+    .gallery .main {
+      grid-column: 1 / 4;
+    }
+
+    .badges {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .badge {
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .badge.new {
+      background: #e3f4e8;
+      color: #23733d;
+    }
+
+    .badge.sale {
+      background: #fde8e4;
+      color: #b4321c;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      line-height: 1.2;
+    }
+
+    .rating {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      color: #6b7682;
+      font-size: 14px;
+    }
+
+    .stars {
+      color: #e0a100;
+      font-size: 18px;
+      letter-spacing: 2px;
+    }
+
+    .price {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .price .now {
+      font-size: 28px;
+      font-weight: 700;
+      color: #b4321c;
+    }
+
+    .price .was {
+      color: #6b7682;
+      text-decoration: line-through;
+    }
+
+    .stock {
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    .stock label {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .stock progress {
+      width: 100%;
+      height: 10px;
+    }
+
+    .description {
+      margin: 0 0 20px;
+      color: #3d4650;
+    }
+
+    .buy {
+      display: grid;
+      grid-template-columns: 1fr 120px;
+      gap: 12px;
+      padding: 20px;
+      border: 1px solid #e3e7eb;
+      border-radius: 10px;
+      background: #f7f9fa;
+    }
+
+    .buy label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .buy select,
+    .buy input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #c5ccd3;
+      border-radius: 6px;
+      background: #ffffff;
+      font: inherit;
+    }
+
+    .buy button {
+      grid-column: 1 / 3;
+      padding: 12px;
+      border: 0;
+      border-radius: 6px;
+      background: #1d6fd1;
+      color: #ffffff;
+      font: inherit;
+      font-weight: 700;
+    }
+
+    .reviews {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 32px 48px;
+    }
+
+    .reviews h2 {
+      margin: 0 0 16px;
+      font-size: 22px;
+    }
+
+    .reviews ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .review {
+      padding: 16px 0;
+      border-top: 1px solid #e3e7eb;
+    }
+
+    .review-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+
+    .review-head strong {
+      font-size: 15px;
+    }
+
+    .review-head meter {
+      width: 100px;
+    }
+
+    .review p {
+      margin: 0;
+      color: #3d4650;
+    }
+  </style>
+</head>
+<body>
+  <header class="shopbar">
+    <span class="logo">Hearth &amp; Co.</span>
+    <span class="cart">Cart (2)</span>
+  </header>
+
+  <p class="crumbs">Kitchen / Kettles / Fjord Kettle</p>
+
+  <main class="product">
+    <section class="gallery">
+      <img class="main" src="kettle-1.svg" alt="Fjord Kettle in blue">
+      <img src="kettle-2.svg" alt="Fjord Kettle in red">
+      <img src="kettle-3.svg" alt="Fjord Kettle in green">
+      <img src="kettle-4.svg" alt="Fjord Kettle in yellow">
+    </section>
+
+    <section class="details">
+      <div class="badges">
+        <span class="badge new">New</span>
+        <span class="badge sale">Sale</span>
+      </div>
+      <h1>Fjord Kettle 1.2 L</h1>
+      <div class="rating">
+        <span class="stars">★★★★☆</span>
+        <span>4.3 from 128 reviews</span>
+      </div>
+      <div class="price">
+        <span class="now">€59.00</span>
+        <span class="was">€79.00</span>
+      </div>
+      <div class="stock">
+        <label for="stock">Only 7 left in stock</label>
+        <progress id="stock" max="50" value="7">7 of 50</progress>
+      </div>
+      <p class="description">An enamelled steel kettle that works on gas, electric and induction hobs. The handle stays cool, and the whistle can be flipped up when you would rather it didn't.</p>
+
+      <form class="buy">
+        <div>
+          <label for="colour">Colour</label>
+          <select id="colour" name="colour">
+            <option>Fjord blue</option>
+            <option>Ember red</option>
+            <option>Moss green</option>
+            <option>Mustard</option>
+          </select>
+        </div>
+        <div>
+          <label for="qty">Quantity</label>
+          <input id="qty" name="qty" type="number" min="1" max="7" value="1">
+        </div>
+        <button type="submit">Add to cart</button>
+      </form>
+    </section>
+  </main>
+
+  <section class="reviews">
+    <h2>Reviews</h2>
+    <ul>
+      <li class="review">
+        <div class="review-head">
+          <strong>Hanna L.</strong>
+          <meter min="0" max="5" value="5">5 out of 5</meter>
+        </div>
+        <p>Boils quickly on our induction hob and looks lovely on the stove.</p>
+      </li>
+      <li class="review">
+        <div class="review-head">
+          <strong>Tomás R.</strong>
+          <meter min="0" max="5" low="2" high="4" optimum="5" value="3">3 out of 5</meter>
+        </div>
+        <p>Good kettle, but the lid gets hot. Use a cloth.</p>
+      </li>
+    </ul>
+  </section>
+</body>
+</html>
