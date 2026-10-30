@@ -3,8 +3,6 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::sync::OnceLock;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
 
 use h2q_dom::{Document, Element, NodeId};
 
@@ -543,11 +541,10 @@ pub(crate) fn compute_styles(
         }
     }
 
-    register_element_cascades(&mut parent_elements, doc.root(), element_cascades);
-
     StyleMap {
         styles,
         parent_elements,
+        element_cascades,
         root_font_size,
         viewport: viewport.clone(),
         variants,
@@ -558,7 +555,7 @@ pub(crate) fn compute_styles(
 }
 
 #[derive(Debug, Clone, Default)]
-struct ElementCascade {
+pub(crate) struct ElementCascade {
     /// Winning action from the full base cascade for each longhand that had
     /// at least one matching declaration on this element.
     base_actions: BTreeMap<Longhand, ResolvedAction>,
@@ -567,35 +564,7 @@ struct ElementCascade {
     ua_actions: BTreeMap<Longhand, ResolvedAction>,
 }
 
-static NEXT_CASCADE_ID: AtomicU64 = AtomicU64::new(1);
-static CASCADE_REGISTRY: Mutex<BTreeMap<u64, Arc<Vec<Option<ElementCascade>>>>> =
-    Mutex::new(BTreeMap::new());
-
-fn register_element_cascades(
-    parent_elements: &mut Vec<Option<NodeId>>,
-    marker_node: NodeId,
-    cascades: Vec<Option<ElementCascade>>,
-) {
-    let id = NEXT_CASCADE_ID.fetch_add(1, Ordering::Relaxed);
-    for i in 0..64 {
-        if ((id >> i) & 1) == 1 {
-            parent_elements.push(Some(marker_node));
-        } else {
-            parent_elements.push(None);
-        }
-    }
-    if let Ok(mut reg) = CASCADE_REGISTRY.lock() {
-        if reg.len() >= 512 {
-            reg.pop_first();
-        }
-        reg.insert(id, Arc::new(cascades));
-    }
-}
-
 fn parent_element_of(map: &StyleMap, node: NodeId) -> Option<NodeId> {
-    if node.index() >= map.styles.len() {
-        return None;
-    }
     map.parent_elements.get(node.index()).copied().flatten()
 }
 
@@ -611,21 +580,10 @@ fn enclosing_box_display_of(map: &StyleMap, node: NodeId) -> Option<Display> {
     None
 }
 
-fn element_cascade_of(map: &StyleMap, node: NodeId) -> Option<ElementCascade> {
-    let base_len = map.styles.len();
-    if map.parent_elements.len() < base_len + 64 {
-        return None;
-    }
-    let mut id = 0u64;
-    for i in 0..64 {
-        if map.parent_elements[base_len + i].is_some() {
-            id |= 1u64 << i;
-        }
-    }
-    let reg = CASCADE_REGISTRY.lock().ok()?;
-    reg.get(&id)
-        .and_then(|v| v.get(node.index()))
-        .and_then(Option::clone)
+fn element_cascade_of(map: &StyleMap, node: NodeId) -> Option<&ElementCascade> {
+    map.element_cascades
+        .get(node.index())
+        .and_then(Option::as_ref)
 }
 
 /// Applies a [`Keyframe`]'s declarations on top of `node`'s base [`ComputedStyle`].
@@ -708,13 +666,11 @@ pub(crate) fn keyframe_style(
                             // CSS Cascade 5 §7.3.4 & §7.3.5 Note: `revert` in `@keyframes`
                             // collapses the animation and author origins, rolling back to UA.
                             CssWide::Revert => elem_cascade
-                                .as_ref()
                                 .and_then(|c| c.ua_actions.get(&l).cloned())
                                 .unwrap_or(ResolvedAction::Unset),
                             // CSS Cascade 5 §7.3.5: the animation origin forms its own cascade
                             // layer for `revert-layer`, rolling back to the element's base cascade.
                             CssWide::RevertLayer => elem_cascade
-                                .as_ref()
                                 .and_then(|c| c.base_actions.get(&l).cloned())
                                 .unwrap_or(ResolvedAction::Unset),
                         };
@@ -730,8 +686,9 @@ pub(crate) fn keyframe_style(
         }
     }
 
-    let mut combined: BTreeMap<Longhand, ResolvedAction> =
-        elem_cascade.map(|c| c.base_actions).unwrap_or_default();
+    let mut combined: BTreeMap<Longhand, ResolvedAction> = elem_cascade
+        .map(|c| c.base_actions.clone())
+        .unwrap_or_default();
     for (l, act) in winners {
         combined.insert(l, act);
     }
@@ -1896,5 +1853,122 @@ mod tests {
             .keyframe_style(contents_grid_item, &kf)
             .expect("contents grid kf");
         assert_eq!(contents_grid_kf.display, Display::Block);
+    }
+
+    #[test]
+    fn keyframe_style_independent_maps_and_clones_do_not_cross_contaminate() {
+        let doc_a =
+            Document::parse(r#"<!doctype html><html><body><h1 id="t">A</h1></body></html>"#);
+        let doc_b =
+            Document::parse(r#"<!doctype html><html><body><span id="t">B</span></body></html>"#);
+        let target_a = doc_a.element_by_id("t").expect("target_a");
+        let target_b = doc_b.element_by_id("t").expect("target_b");
+        assert_eq!(target_a.index(), target_b.index());
+
+        let css_a = r#"
+            @layer base {
+                #t { color: rgb(10, 20, 30); }
+            }
+            #t {
+                display: inline;
+                color: rgb(100, 110, 120);
+                font-size: 20px;
+                margin-top: 2em;
+            }
+            @keyframes kf-revert {
+                to { display: revert; font-size: revert; }
+            }
+            @keyframes kf-revert-layer {
+                to { color: revert-layer; font-size: revert-layer; }
+            }
+        "#;
+        let css_b = r#"
+            @layer base {
+                #t { color: rgb(40, 50, 60); }
+            }
+            #t {
+                display: block;
+                color: rgb(200, 210, 220);
+                font-size: 12px;
+                margin-top: 3em;
+            }
+            @keyframes kf-revert {
+                to { display: revert; font-size: revert; }
+            }
+            @keyframes kf-revert-layer {
+                to { color: revert-layer; font-size: revert-layer; }
+            }
+        "#;
+
+        let (sheet_a, _) = Stylesheet::parse(css_a, Origin::Author, "a.css", None);
+        let (sheet_b, _) = Stylesheet::parse(css_b, Origin::Author, "b.css", None);
+
+        let map_a = compute_styles(&doc_a, &[sheet_a], &Viewport::default());
+        let map_b = compute_styles(&doc_b, &[sheet_b], &Viewport::default());
+
+        assert_eq!(map_a.parent_elements.len(), doc_a.len());
+        assert_eq!(map_a.element_cascades.len(), doc_a.len());
+        assert_eq!(map_b.parent_elements.len(), doc_b.len());
+        assert_eq!(map_b.element_cascades.len(), doc_b.len());
+
+        let kf_rev_a = map_a.keyframes["kf-revert"][0].clone();
+        let kf_layer_a = map_a.keyframes["kf-revert-layer"][0].clone();
+        let kf_rev_b = map_b.keyframes["kf-revert"][0].clone();
+        let kf_layer_b = map_b.keyframes["kf-revert-layer"][0].clone();
+
+        // Interleaved queries across map_a and map_b:
+        let a_rev_1 = map_a.keyframe_style(target_a, &kf_rev_a).expect("a_rev_1");
+        let b_rev_1 = map_b.keyframe_style(target_b, &kf_rev_b).expect("b_rev_1");
+        let a_layer_1 = map_a
+            .keyframe_style(target_a, &kf_layer_a)
+            .expect("a_layer_1");
+        let b_layer_1 = map_b
+            .keyframe_style(target_b, &kf_layer_b)
+            .expect("b_layer_1");
+
+        // h1 UA has display: block and font-size: 2em (32px); author margin-top: 2em -> 64px
+        assert_eq!(a_rev_1.display, Display::Block);
+        assert_eq!(a_rev_1.font_size, 32.0);
+        assert_eq!(
+            a_rev_1.margin.top,
+            crate::LengthAuto::Length(crate::Length::px(64.0))
+        );
+        // span has no UA display/font-size rules (unset -> inline, 16px); margin-top: 3em -> 48px
+        assert_eq!(b_rev_1.display, Display::Inline);
+        assert_eq!(b_rev_1.font_size, 16.0);
+        assert_eq!(
+            b_rev_1.margin.top,
+            crate::LengthAuto::Length(crate::Length::px(48.0))
+        );
+
+        // revert-layer in keyframes rolls back to each map's own base cascade winner
+        assert_eq!(a_layer_1.color, Rgba::new(100, 110, 120, 255));
+        assert_eq!(a_layer_1.font_size, 20.0);
+        assert_eq!(
+            a_layer_1.margin.top,
+            crate::LengthAuto::Length(crate::Length::px(40.0))
+        );
+        assert_eq!(b_layer_1.color, Rgba::new(200, 210, 220, 255));
+        assert_eq!(b_layer_1.font_size, 12.0);
+        assert_eq!(
+            b_layer_1.margin.top,
+            crate::LengthAuto::Length(crate::Length::px(36.0))
+        );
+
+        // Clone map_a, drop the original map_a, and interleave with map_b again.
+        let map_a_clone = map_a.clone();
+        drop(map_a);
+
+        let b_rev_2 = map_b.keyframe_style(target_b, &kf_rev_b).expect("b_rev_2");
+        let a_clone_rev = map_a_clone
+            .keyframe_style(target_a, &kf_rev_a)
+            .expect("a_clone_rev");
+        let a_clone_layer = map_a_clone
+            .keyframe_style(target_a, &kf_layer_a)
+            .expect("a_clone_layer");
+
+        assert_eq!(b_rev_2, b_rev_1);
+        assert_eq!(a_clone_rev, a_rev_1);
+        assert_eq!(a_clone_layer, a_layer_1);
     }
 }

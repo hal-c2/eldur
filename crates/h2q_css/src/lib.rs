@@ -188,6 +188,7 @@ pub struct StyleMap {
     /// elements under a `display: none` ancestor (they have no box).
     pub(crate) styles: Vec<Option<ElementStyle>>,
     pub(crate) parent_elements: Vec<Option<NodeId>>,
+    pub(crate) element_cascades: Vec<Option<cascade::ElementCascade>>,
     pub(crate) root_font_size: f32,
     pub(crate) viewport: Viewport,
     pub variants: Vec<StateVariant>,
