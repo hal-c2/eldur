@@ -252,13 +252,18 @@ impl<'a> ParseCtx<'a> {
     }
 }
 
-/// Replaces stray top-level closing braces (`}`) with whitespace while preserving byte
-/// offsets and line numbers.
+/// Sanitizes stray top-level closing braces (`}`) and unclosed `[` / `(` in rule preludes
+/// while preserving byte offsets and line numbers.
 ///
-/// `swc_css_parser` does not implement the CSS Syntax 3 §5.4.3 / CSS 2.1 §4.2 amendment
-/// that discards an unmatched `}` during qualified-rule prelude consumption instead of
-/// absorbing the following rule's selector into the broken prelude.
-fn strip_stray_closing_braces(text: &str) -> std::borrow::Cow<'_, str> {
+/// - `swc_css_parser` does not implement the CSS Syntax 3 §5.4.3 / CSS 2.1 §4.2 amendment
+///   that discards an unmatched `}` during qualified-rule prelude consumption instead of
+///   absorbing the following rule's selector into the broken prelude.
+/// - When `[` or `(` in a rule prelude is not closed before the rule's `{` block,
+///   `swc_css_parser` consumes a simple block to `]`/`)` or EOF, swallowing the `{ ... }`
+///   block and any following rules. Replacing the unclosed opener with `.` keeps the
+///   prelude invalid (e.g. `p..`) so the rule is dropped while allowing `{ ... }` and
+///   subsequent rules to be parsed.
+fn sanitize_rule_boundaries(text: &str) -> std::borrow::Cow<'_, str> {
     let Ok(len) = u32::try_from(text.len()) else {
         return std::borrow::Cow::Borrowed(text);
     };
@@ -268,31 +273,67 @@ fn strip_stray_closing_braces(text: &str) -> std::borrow::Cow<'_, str> {
         ParserConfig::default(),
     );
     let mut brace_depth = 0usize;
-    let mut stray_ranges: Vec<(usize, usize)> = Vec::new();
+    let mut stray_rbraces: Vec<(usize, usize)> = Vec::new();
+    let mut prelude_openers: Vec<(char, usize, usize)> = Vec::new();
+    let mut broken_prelude_openers: Vec<(usize, usize)> = Vec::new();
+
     while let Some(ts) = lexer.next() {
+        let lo = (ts.span.lo.0 - 1) as usize;
+        let hi = (ts.span.hi.0 - 1) as usize;
         match ts.token {
-            ast::Token::LBrace => brace_depth += 1,
+            ast::Token::LBrace => {
+                if brace_depth == 0 && !prelude_openers.is_empty() {
+                    for (_, o_lo, o_hi) in prelude_openers.drain(..) {
+                        broken_prelude_openers.push((o_lo, o_hi));
+                    }
+                }
+                brace_depth += 1;
+            }
             ast::Token::RBrace => {
+                prelude_openers.clear();
                 if brace_depth > 0 {
                     brace_depth -= 1;
                 } else {
-                    let lo = (ts.span.lo.0 - 1) as usize;
-                    let hi = (ts.span.hi.0 - 1) as usize;
-                    stray_ranges.push((lo, hi));
+                    stray_rbraces.push((lo, hi));
+                }
+            }
+            ast::Token::Semi if brace_depth == 0 => {
+                prelude_openers.clear();
+            }
+            ast::Token::LBracket if brace_depth == 0 => {
+                prelude_openers.push((']', lo, hi));
+            }
+            ast::Token::LParen | ast::Token::Function { .. } if brace_depth == 0 => {
+                prelude_openers.push((')', lo, hi));
+            }
+            ast::Token::RBracket if brace_depth == 0 => {
+                if let Some(pos) = prelude_openers.iter().rposition(|(c, _, _)| *c == ']') {
+                    prelude_openers.truncate(pos);
+                }
+            }
+            ast::Token::RParen if brace_depth == 0 => {
+                if let Some(pos) = prelude_openers.iter().rposition(|(c, _, _)| *c == ')') {
+                    prelude_openers.truncate(pos);
                 }
             }
             _ => {}
         }
     }
-    if stray_ranges.is_empty() {
+
+    if stray_rbraces.is_empty() && broken_prelude_openers.is_empty() {
         return std::borrow::Cow::Borrowed(text);
     }
     let mut bytes = text.as_bytes().to_vec();
-    for (lo, hi) in stray_ranges {
+    for (lo, hi) in stray_rbraces {
         for b in &mut bytes[lo..hi] {
             if *b != b'\n' && *b != b'\r' {
                 *b = b' ';
             }
+        }
+    }
+    for (lo, hi) in broken_prelude_openers {
+        if hi > lo {
+            bytes[hi - 1] = b'.';
         }
     }
     std::borrow::Cow::Owned(
@@ -307,7 +348,7 @@ pub(crate) fn parse_stylesheet(
     source_name: &str,
     base_url: Option<&str>,
 ) -> (Stylesheet, Vec<Diagnostic>) {
-    let sanitized = strip_stray_closing_braces(text);
+    let sanitized = sanitize_rule_boundaries(text);
     let text = sanitized.as_ref();
     let cm: Lrc<SourceMap> = Lrc::default();
     let fm = cm.new_source_file(FileName::Anon.into(), text.to_owned());
