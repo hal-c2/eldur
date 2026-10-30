@@ -299,11 +299,15 @@ var _explicitBaseUrl = "";
 // QML QObjects reject ad-hoc JS property assignments, whereas ES6 Map keys
 // preserve QObject identity across direct id references and tree walks.
 var _itemMeta = new Map();
+var _warnedMissingTemplates = {};
+var _componentProbeCache = new Map();
 
 function init(rootItem, baseUrl) {
     if (rootItem) {
         _root = rootItem;
     }
+    _warnedMissingTemplates = {};
+    _componentProbeCache = new Map();
     if (typeof baseUrl === "string" && baseUrl !== "") {
         _explicitBaseUrl = baseUrl;
         _updateLocationFromHref(baseUrl, false);
@@ -1325,30 +1329,52 @@ function _syncClassProp(raw, cls, active) {
     }
 }
 
+function _syncH2qClasses(raw, m) {
+    if (raw && typeof raw === "object" && typeof raw.h2qClasses === "string") {
+        var joined = m.classes.join(" ");
+        if (raw.h2qClasses !== joined) {
+            raw.h2qClasses = joined;
+        }
+    }
+}
+
+function _afterClassMutation(raw, m) {
+    var curRaw = (m && m.raw) ? m.raw : raw;
+    _syncH2qClasses(curRaw, m);
+    if (_isCreatedElement(curRaw) && _isConnected(curRaw)) {
+        _materializeSubtree(curRaw);
+    }
+}
+
 function classList(item) {
     var raw = _unwrap(item);
     var m = _meta(raw);
     return {
         add: function() {
+            var curRaw = m.raw || raw;
             for (var i = 0; i < arguments.length; ++i) {
                 var cls = String(arguments[i]);
                 if (cls && m.classes.indexOf(cls) === -1) {
                     m.classes.push(cls);
                 }
-                _syncClassProp(raw, cls, true);
+                _syncClassProp(curRaw, cls, true);
             }
+            _afterClassMutation(curRaw, m);
         },
         remove: function() {
+            var curRaw = m.raw || raw;
             for (var i = 0; i < arguments.length; ++i) {
                 var cls = String(arguments[i]);
                 var idx = m.classes.indexOf(cls);
                 if (idx !== -1) {
                     m.classes.splice(idx, 1);
                 }
-                _syncClassProp(raw, cls, false);
+                _syncClassProp(curRaw, cls, false);
             }
+            _afterClassMutation(curRaw, m);
         },
         toggle: function(clsName, force) {
+            var curRaw = m.raw || raw;
             var cls = String(clsName);
             var idx = m.classes.indexOf(cls);
             var shouldHave = force !== undefined ? Boolean(force) : idx === -1;
@@ -1359,32 +1385,43 @@ function classList(item) {
             } else if (idx !== -1) {
                 m.classes.splice(idx, 1);
             }
-            _syncClassProp(raw, cls, shouldHave);
+            _syncClassProp(curRaw, cls, shouldHave);
+            _afterClassMutation(curRaw, m);
             return shouldHave;
         },
         contains: function(clsName) {
+            var curRaw = m.raw || raw;
             var cls = String(clsName);
             if (m.classes.indexOf(cls) !== -1) {
                 return true;
             }
-            if (raw && typeof raw === "object") {
+            if (curRaw && typeof curRaw === "object") {
                 var prop = _sanitizeClassProp(cls);
-                if (typeof raw[prop] === "boolean") {
-                    return raw[prop];
+                if (typeof curRaw[prop] === "boolean") {
+                    return curRaw[prop];
                 }
             }
             return false;
         },
         replace: function(oldCls, newCls) {
+            var curRaw = m.raw || raw;
             var oldStr = String(oldCls);
             var newStr = String(newCls);
             var idx = m.classes.indexOf(oldStr);
             if (idx === -1) {
                 return false;
             }
-            m.classes[idx] = newStr;
-            _syncClassProp(raw, oldStr, false);
-            _syncClassProp(raw, newStr, true);
+            var existingNewIdx = m.classes.indexOf(newStr);
+            if (existingNewIdx !== -1 && existingNewIdx !== idx) {
+                m.classes.splice(idx, 1);
+            } else {
+                m.classes[idx] = newStr;
+            }
+            if (oldStr !== newStr) {
+                _syncClassProp(curRaw, oldStr, false);
+            }
+            _syncClassProp(curRaw, newStr, true);
+            _afterClassMutation(curRaw, m);
             return true;
         },
         get value() {
@@ -1406,8 +1443,9 @@ function classList(item) {
 function setClassName(item, value) {
     var raw = _unwrap(item);
     var m = _meta(raw);
+    var curRaw = m.raw || raw;
     for (var i = 0; i < m.classes.length; ++i) {
-        _syncClassProp(raw, m.classes[i], false);
+        _syncClassProp(curRaw, m.classes[i], false);
     }
     m.classes.length = 0;
     var trimmed = String(value).trim();
@@ -1416,10 +1454,11 @@ function setClassName(item, value) {
         for (var j = 0; j < parts.length; ++j) {
             if (parts[j] && m.classes.indexOf(parts[j]) === -1) {
                 m.classes.push(parts[j]);
-                _syncClassProp(raw, parts[j], true);
+                _syncClassProp(curRaw, parts[j], true);
             }
         }
     }
+    _afterClassMutation(curRaw, m);
 }
 
 function getClassName(item) {
@@ -1445,9 +1484,11 @@ function _appendTarget(raw) {
         return m.flow;
     }
     for (var i = 0; raw.children && i < raw.children.length; ++i) {
-        if (typeof raw.children[i].spacing === "number" || typeof raw.children[i].columnSpacing === "number") {
-            _meta(raw.children[i]).hostBox = raw;
-            return raw.children[i];
+        var boxChild = raw.children[i];
+        if (boxChild && (typeof boxChild.spacing === "number" || typeof boxChild.columnSpacing === "number")
+            && !boxChild.objectName && !_meta(boxChild).createdTag && typeof boxChild.h2qTag !== "string") {
+            _meta(boxChild).hostBox = raw;
+            return boxChild;
         }
     }
     var text = _findTextChild(raw);
@@ -1523,7 +1564,7 @@ function _childContainer(raw) {
         for (var i = 0; i < raw.children.length; ++i) {
             var ch = raw.children[i];
             if (ch && (typeof ch.spacing === "number" || typeof ch.columnSpacing === "number")
-                && !ch.objectName && !_meta(ch).createdTag) {
+                && !ch.objectName && !_meta(ch).createdTag && typeof ch.h2qTag !== "string") {
                 _meta(ch).hostBox = raw;
                 return ch;
             }
@@ -1562,7 +1603,7 @@ function _logicalParent(raw) {
         return pm.hostBox;
     }
     if ((typeof p.spacing === "number" || typeof p.columnSpacing === "number")
-        && !p.objectName && !pm.createdTag
+        && !p.objectName && !pm.createdTag && typeof p.h2qTag !== "string"
         && p.parent && (p.parent.color !== undefined || p.parent.clip === true)
         && typeof p.parent.spacing !== "number" && typeof p.parent.columnSpacing !== "number") {
         return p.parent;
@@ -1573,6 +1614,9 @@ function _logicalParent(raw) {
 function _inferTagName(raw) {
     if (!raw) {
         return "";
+    }
+    if (typeof raw.h2qTag === "string" && raw.h2qTag !== "") {
+        return raw.h2qTag.toUpperCase();
     }
     var m = _meta(raw);
     if (m.createdTag) {
@@ -1622,9 +1666,10 @@ function getText(item) {
     }
     var textChild = _findTextChild(raw);
     if (textChild) {
-        return textChild.text;
+        return String(textChild.text);
     }
-    return "";
+    var m = _meta(raw);
+    return m.explicitText !== undefined ? String(m.explicitText) : "";
 }
 
 function setText(item, value) {
@@ -1637,6 +1682,8 @@ function setText(item, value) {
         return;
     }
     var str = value === null || value === undefined ? "" : String(value);
+    var m = _meta(raw);
+    m.explicitText = str;
     if (typeof raw.text === "string") {
         raw.text = str;
         return;
@@ -1931,6 +1978,8 @@ function setAttribute(item, attrName, attrValue) {
     }
     if (name === "id" && typeof raw.objectName === "string") {
         raw.objectName = val;
+    } else if (name === "type" && m.createdTag === "input") {
+        wrap(raw).type = val;
     } else if (name === "class") {
         setClassName(raw, val);
     } else if (name === "disabled" && typeof raw.enabled === "boolean") {
@@ -2860,40 +2909,447 @@ function _insertRawNodesBefore(container, rawNodes, rawRef) {
                 rawNodes[a].parent = container;
             }
         }
-        return;
-    }
-    var kids = [];
-    for (var i = 0; i < container.children.length; ++i) {
-        kids.push(container.children[i]);
-    }
-    var idx = kids.indexOf(rawRef);
-    if (idx === -1) {
-        for (var b = 0; b < rawNodes.length; ++b) {
-            if (rawNodes[b] && rawNodes[b].parent !== undefined) {
-                rawNodes[b].parent = null;
-                rawNodes[b].parent = container;
+    } else {
+        var kids = [];
+        for (var i = 0; i < container.children.length; ++i) {
+            kids.push(container.children[i]);
+        }
+        var idx = kids.indexOf(rawRef);
+        if (idx === -1) {
+            for (var b = 0; b < rawNodes.length; ++b) {
+                if (rawNodes[b] && rawNodes[b].parent !== undefined) {
+                    rawNodes[b].parent = null;
+                    rawNodes[b].parent = container;
+                }
+            }
+        } else {
+            var tail = [];
+            for (var t = idx; t < kids.length; ++t) {
+                if (rawNodes.indexOf(kids[t]) === -1) {
+                    tail.push(kids[t]);
+                }
+            }
+            for (var j = 0; j < tail.length; ++j) {
+                tail[j].parent = null;
+            }
+            for (var m = 0; m < rawNodes.length; ++m) {
+                if (rawNodes[m] && rawNodes[m].parent !== undefined) {
+                    rawNodes[m].parent = null;
+                    rawNodes[m].parent = container;
+                }
+            }
+            for (var k = 0; k < tail.length; ++k) {
+                tail[k].parent = container;
             }
         }
+    }
+    if (_isConnected(container)) {
+        for (var mIdx = 0; mIdx < rawNodes.length; ++mIdx) {
+            _materializeSubtree(rawNodes[mIdx]);
+        }
+    }
+}
+
+function _genericElementSource(tag, inputType) {
+    if (tag === "input") {
+        return _inputSource(inputType || "text");
+    }
+    if (tag === "textarea") {
+        return _NATIVE_IMPORTS + "TextArea { color: \"black\"; background: Rectangle { color: \"white\"; border.color: \"#767676\" } }";
+    }
+    if (tag === "li") {
+        return "import QtQuick; import QtQuick.Layouts; RowLayout { Layout.fillWidth: true; spacing: 8 }";
+    }
+    if (tag === "ul" || tag === "ol") {
+        return "import QtQuick; import QtQuick.Layouts; ColumnLayout { Layout.fillWidth: true; spacing: 0 }";
+    }
+    if (tag === "span" || tag === "p" || tag === "label" || tag === "h1" || tag === "h2" || tag === "h3" || tag === "a") {
+        return "import QtQuick; Text { color: \"black\"; font.pixelSize: 16 }";
+    }
+    if (tag === "div" || tag === "section" || tag === "article" || tag === "header" || tag === "footer" || tag === "main" || tag === "nav") {
+        return "import QtQuick; Rectangle { color: \"transparent\" }";
+    }
+    if (tag === "img") {
+        return "import QtQuick; Image {}";
+    }
+    if (tag === "button") {
+        return _NATIVE_IMPORTS + "Button { palette.buttonText: \"black\"; background: Rectangle { color: \"#efefef\"; border.color: \"#767676\"; radius: 3 } }";
+    }
+    return "import QtQuick; Item {}";
+}
+
+function _isCreatedElement(raw) {
+    if (!raw || typeof raw !== "object") {
+        return false;
+    }
+    var m = _meta(raw);
+    return Boolean(m.createdTag && m.createdTag !== "#text" && !m.isFragment);
+}
+
+function _isConnected(raw) {
+    if (!raw || !_root) {
+        return false;
+    }
+    var cur = raw;
+    while (cur) {
+        if (cur === _root || (_root.contentItem && cur === _root.contentItem)) {
+            return true;
+        }
+        cur = _logicalParent(cur) || cur.parent || null;
+    }
+    return false;
+}
+
+function _logicalAncestorAt(raw, distance) {
+    var cur = raw;
+    for (var d = 0; d < distance && cur; ++d) {
+        cur = _logicalParent(cur);
+        if (cur === _root) {
+            return null;
+        }
+    }
+    return cur || null;
+}
+
+function _getComponentSchema(component) {
+    if (!component) {
+        return null;
+    }
+    var schema = _componentProbeCache.get(component);
+    if (schema) {
+        return schema;
+    }
+    var probe = component.createObject(null);
+    schema = {
+        boolProps: {},
+        hasClasses: Boolean(probe && typeof probe.h2qClasses === "string"),
+        upRanks: [],
+        templateName: (probe && typeof probe.h2qTemplate === "string") ? probe.h2qTemplate : ""
+    };
+    if (probe) {
+        for (var k in probe) {
+            if (k.indexOf("cls_") === 0 && typeof probe[k] === "boolean") {
+                schema.boolProps[k] = true;
+            } else {
+                var upMatch = /^h2qUp([1-9][0-9]*)$/.exec(k);
+                if (upMatch && typeof probe[k] !== "function") {
+                    schema.upRanks.push(Number(upMatch[1]));
+                }
+            }
+        }
+        probe.destroy();
+    }
+    _componentProbeCache.set(component, schema);
+    return schema;
+}
+
+function _buildTemplateKeys(raw) {
+    var m = _meta(raw);
+    var tag = String(m.createdTag || (typeof raw.h2qTag === "string" ? raw.h2qTag : "")).toLowerCase();
+    var inputType = tag === "input" ? String(m.inputType || m.attrs.type || "").toLowerCase() : "";
+    var tagPart = (tag === "input" && inputType !== "") ? ("input[type=" + inputType + "]") : tag;
+
+    var styled = (_root && _root.h2qStyledClasses !== undefined && _root.h2qStyledClasses !== null && typeof _root.h2qStyledClasses.length === "number")
+        ? _root.h2qStyledClasses
+        : null;
+    var filtered = [];
+    for (var i = 0; i < m.classes.length; ++i) {
+        var c = m.classes[i];
+        if (!c || filtered.indexOf(c) !== -1) {
+            continue;
+        }
+        if (styled === null || Array.prototype.indexOf.call(styled, c) !== -1) {
+            filtered.push(c);
+        }
+    }
+    filtered.sort();
+    var classPart = filtered.length > 0 ? ("." + filtered.join(".")) : "";
+
+    var p = _logicalParent(raw);
+    var context = "*";
+    if (p && typeof p === "object") {
+        if (typeof p.h2qTemplate === "string" && p.h2qTemplate !== "") {
+            context = p.h2qTemplate;
+        } else if (typeof p.h2qKey === "string" && p.h2qKey !== "") {
+            context = p.h2qKey;
+        }
+    }
+
+    return [
+        tagPart + classPart + "@" + context,
+        tagPart + classPart + "@*",
+        tagPart + "@" + context,
+        tagPart + "@*"
+    ];
+}
+
+function _lookupTemplate(raw) {
+    if (!_root || !_root.h2qTemplates || typeof _root.h2qTemplates !== "object") {
+        return null;
+    }
+    var templates = _root.h2qTemplates;
+    var keys = _buildTemplateKeys(raw);
+    var exact = keys[0];
+    if (templates[exact]) {
+        return { component: templates[exact], exactKey: exact, step: exact };
+    }
+    for (var i = 1; i < keys.length; ++i) {
+        var cand = keys[i];
+        if (templates[cand]) {
+            if (!_warnedMissingTemplates[exact]) {
+                _warnedMissingTemplates[exact] = true;
+                console.warn("h2q: no style template for " + exact + "; using " + cand);
+            }
+            return { component: templates[cand], exactKey: exact, step: cand };
+        }
+    }
+    if (!_warnedMissingTemplates[exact]) {
+        _warnedMissingTemplates[exact] = true;
+        console.warn("h2q: no style template for " + exact + "; using generic");
+    }
+    return { component: null, exactKey: exact, step: "generic" };
+}
+
+function _syncUpPointersOnItem(raw) {
+    if (!raw || typeof raw !== "object") {
         return;
     }
+    var m = _meta(raw);
+    var schema = m.templateComponent ? _getComponentSchema(m.templateComponent) : null;
+    if (schema && schema.upRanks.length > 0) {
+        for (var i = 0; i < schema.upRanks.length; ++i) {
+            var rank = schema.upRanks[i];
+            var anc = _logicalAncestorAt(raw, rank);
+            raw["h2qUp" + rank] = anc;
+        }
+    } else {
+        for (var n = 1; n <= 8; ++n) {
+            var prop = "h2qUp" + n;
+            if (raw[prop] !== undefined && typeof raw[prop] !== "function") {
+                raw[prop] = _logicalAncestorAt(raw, n);
+            }
+        }
+    }
+}
+
+function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
+    var m = _meta(oldRaw);
+    var parentContainer = oldRaw.parent || null;
+
     var tail = [];
-    for (var t = idx; t < kids.length; ++t) {
-        if (rawNodes.indexOf(kids[t]) === -1) {
-            tail.push(kids[t]);
+    if (parentContainer && parentContainer.children) {
+        var pKids = parentContainer.children;
+        var foundOld = false;
+        for (var pk = 0; pk < pKids.length; ++pk) {
+            if (pKids[pk] === oldRaw) {
+                foundOld = true;
+            } else if (foundOld) {
+                tail.push(pKids[pk]);
+            }
         }
     }
-    for (var j = 0; j < tail.length; ++j) {
-        tail[j].parent = null;
+
+    if (typeof oldRaw.checked === "boolean") {
+        m.explicitChecked = oldRaw.checked;
     }
-    for (var m = 0; m < rawNodes.length; ++m) {
-        if (rawNodes[m] && rawNodes[m].parent !== undefined) {
-            rawNodes[m].parent = null;
-            rawNodes[m].parent = container;
+    var childElements = _rawElementChildren(oldRaw);
+    var savedText = (childElements.length === 0 && m.createdTag !== "input" && m.createdTag !== "textarea")
+        ? (m.explicitText !== undefined ? m.explicitText : getText(oldRaw))
+        : m.explicitText;
+    if (m.flow) {
+        delete m.flow;
+    }
+
+    var next = null;
+    if (component) {
+        var schema = _getComponentSchema(component);
+        var initProps = {};
+        var bKeys = Object.keys(schema.boolProps);
+        for (var b = 0; b < bKeys.length; ++b) {
+            initProps[bKeys[b]] = false;
+        }
+        for (var ci = 0; ci < m.classes.length; ++ci) {
+            var cProp = _sanitizeClassProp(m.classes[ci]);
+            if (schema.boolProps[cProp]) {
+                initProps[cProp] = true;
+            }
+        }
+        if (schema.hasClasses) {
+            initProps.h2qClasses = m.classes.join(" ");
+        }
+        for (var u = 0; u < schema.upRanks.length; ++u) {
+            var rank = schema.upRanks[u];
+            var anc = _logicalAncestorAt(oldRaw, rank);
+            if (anc) {
+                initProps["h2qUp" + rank] = anc;
+            }
+        }
+        next = component.createObject(parentContainer || _qobjectParent(), initProps);
+        if (!parentContainer && next && next.parent !== undefined) {
+            next.parent = null;
+        }
+        m.templateComponent = component;
+    } else {
+        var tag = String(m.createdTag || "div").toLowerCase();
+        var src = fallbackQmlSrc || _genericElementSource(tag, m.inputType);
+        next = Qt.createQmlObject(src, _qobjectParent(), "h2q_el_" + tag);
+        if (next && next.parent !== undefined) {
+            next.parent = parentContainer;
+        }
+        m.templateComponent = null;
+    }
+
+    if (oldRaw.parent !== undefined) {
+        oldRaw.parent = null;
+    }
+    for (var t = 0; t < tail.length; ++t) {
+        if (tail[t] && tail[t] !== next && tail[t].parent === parentContainer) {
+            tail[t].parent = null;
+            tail[t].parent = parentContainer;
         }
     }
-    for (var k = 0; k < tail.length; ++k) {
-        tail[k].parent = container;
+
+    _itemMeta.delete(oldRaw);
+    _itemMeta.set(next, m);
+    m.raw = next;
+    if (typeof m._setRaw === "function") {
+        m._setRaw(next);
     }
+    oldRaw.destroy();
+
+    if (typeof next.h2qClasses === "string" && next.h2qClasses !== m.classes.join(" ")) {
+        next.h2qClasses = m.classes.join(" ");
+    }
+    for (var k = 0; k < m.classes.length; ++k) {
+        var cp = _sanitizeClassProp(m.classes[k]);
+        if (typeof next[cp] === "boolean" && next[cp] !== true) {
+            next[cp] = true;
+        }
+    }
+
+    if (childElements.length === 0 && savedText !== undefined && m.createdTag !== "input" && m.createdTag !== "textarea") {
+        if (savedText !== "" || m.explicitText !== undefined) {
+            setText(next, savedText);
+        }
+    }
+
+    if (childElements.length > 0) {
+        var nextTarget = _appendTarget(next);
+        for (var c = 0; c < childElements.length; ++c) {
+            if (childElements[c] && childElements[c].parent !== undefined) {
+                childElements[c].parent = null;
+                childElements[c].parent = nextTarget;
+            }
+        }
+    }
+
+    var attrNames = Object.keys(m.attrs);
+    for (var a = 0; a < attrNames.length; ++a) {
+        var ak = attrNames[a];
+        if (ak !== "type" && ak !== "class") {
+            setAttribute(next, ak, m.attrs[ak]);
+        }
+    }
+
+    if (m.explicitValue !== undefined) {
+        if (typeof next.find === "function" && typeof next.currentIndex === "number") {
+            var byValue = next.indexOfValue(String(m.explicitValue));
+            next.currentIndex = byValue !== -1 ? byValue : next.find(String(m.explicitValue));
+        } else if (typeof next.checked === "boolean" && typeof next.value === "string") {
+            next.value = String(m.explicitValue);
+        } else if (typeof next.text === "string" && (m.createdTag === "input" || m.createdTag === "textarea")) {
+            next.text = String(m.explicitValue);
+        } else if (typeof next.value === "number") {
+            next.value = Number(m.explicitValue) || 0;
+        }
+    }
+    if (m.explicitChecked !== undefined && typeof next.checked === "boolean") {
+        next.checked = Boolean(m.explicitChecked);
+    }
+    if (m.explicitDisabled !== undefined && typeof next.enabled === "boolean") {
+        next.enabled = !m.explicitDisabled;
+    }
+    if (m.explicitReadOnly !== undefined && typeof next.readOnly === "boolean") {
+        next.readOnly = Boolean(m.explicitReadOnly);
+    }
+    if (m.explicitHidden !== undefined && typeof next.visible === "boolean") {
+        next.visible = !m.explicitHidden;
+    }
+
+    var styleNames = Object.keys(m.styles);
+    for (var s = 0; s < styleNames.length; ++s) {
+        var sk = styleNames[s];
+        if (sk.indexOf("--") === 0 || sk.indexOf("-") === -1) {
+            setStyle(next, sk, m.styles[sk]);
+        }
+    }
+
+    _syncUpPointersOnItem(next);
+
+    var eventTypes = {};
+    var cKeys = Object.keys(m.connected);
+    var ei;
+    for (ei = 0; ei < cKeys.length; ++ei) {
+        eventTypes[cKeys[ei]] = true;
+    }
+    var lKeys = Object.keys(m.listeners);
+    for (ei = 0; ei < lKeys.length; ++ei) {
+        if (m.listeners[lKeys[ei]] && m.listeners[lKeys[ei]].length > 0) {
+            eventTypes[lKeys[ei]] = true;
+        }
+    }
+    var oKeys = Object.keys(m.onHandlers);
+    for (ei = 0; ei < oKeys.length; ++ei) {
+        if (typeof m.onHandlers[oKeys[ei]] === "function") {
+            eventTypes[oKeys[ei]] = true;
+        }
+    }
+    m.connected = {};
+    var evNames = Object.keys(eventTypes);
+    for (ei = 0; ei < evNames.length; ++ei) {
+        _connectSignalOnce(next, evNames[ei]);
+    }
+
+    return next;
+}
+
+function _materializeSubtree(raw) {
+    if (!raw || typeof raw !== "object") {
+        return raw;
+    }
+    var cur = raw;
+    if (_isCreatedElement(cur)) {
+        var m = _meta(cur);
+        var res = _lookupTemplate(cur);
+        if (res) {
+            if (res.component) {
+                var schema = _getComponentSchema(res.component);
+                var sameComp = (m.templateComponent === res.component)
+                    || (typeof cur.h2qTemplate === "string" && cur.h2qTemplate !== "" && schema.templateName !== "" && cur.h2qTemplate === schema.templateName);
+                if (!sameComp) {
+                    cur = _swapRawItem(cur, res.component, null);
+                } else {
+                    m.templateComponent = res.component;
+                    _syncUpPointersOnItem(cur);
+                }
+            } else {
+                var wasTemplate = Boolean(m.templateComponent || (typeof cur.h2qTemplate === "string" && cur.h2qTemplate !== ""));
+                var inputChanged = (m.createdTag === "input" && m.lastGenericInputSource && m.lastGenericInputSource !== _inputSource(m.inputType || "text"));
+                if (wasTemplate || inputChanged) {
+                    cur = _swapRawItem(cur, null, _genericElementSource(m.createdTag, m.inputType));
+                } else {
+                    _syncUpPointersOnItem(cur);
+                }
+            }
+        } else {
+            _syncUpPointersOnItem(cur);
+        }
+    }
+    var kids = _rawElementChildren(cur);
+    for (var i = 0; i < kids.length; ++i) {
+        _materializeSubtree(kids[i]);
+    }
+    return cur;
 }
 
 function _unescapeHtmlText(str) {
@@ -3134,9 +3590,14 @@ function wrap(rawItem) {
             _dispatchDynamic(rawItem, "scroll", null);
         }
     }
+    m.raw = rawItem;
     if (m.wrapper) {
         return m.wrapper;
     }
+    m._setRaw = function(nextRaw) {
+        rawItem = nextRaw;
+        m.raw = nextRaw;
+    };
 
     var styleMethods = {
         setProperty: function(prop, val) {
@@ -3183,28 +3644,18 @@ function wrap(rawItem) {
             var from = m.inputType || "text";
             m.inputType = ty;
             m.attrs.type = ty;
-            if (m.createdTag !== "input" || _inputSource(ty) === _inputSource(from)) {
+            if (m.createdTag !== "input") {
                 return;
             }
-            var next = Qt.createQmlObject(_inputSource(ty), _qobjectParent(), "h2q_el_input");
-            next.parent = rawItem.parent;
-            var old = rawItem;
-            _itemMeta.delete(old);
-            _itemMeta.set(next, m);
-            rawItem = next;
-            old.destroy();
-            var attrNames = Object.keys(m.attrs);
-            for (var a = 0; a < attrNames.length; ++a) {
-                var ak = attrNames[a];
-                if (ak !== "type") {
-                    setAttribute(next, ak, m.attrs[ak]);
-                }
+            if (_isConnected(rawItem) && _root && _root.h2qTemplates && typeof _root.h2qTemplates === "object") {
+                _materializeSubtree(rawItem);
+                return;
             }
-            var connected = Object.keys(m.connected);
-            m.connected = {};
-            for (var i = 0; i < connected.length; ++i) {
-                _connectSignalOnce(next, connected[i]);
+            if (_inputSource(ty) === _inputSource(from) && !m.templateComponent) {
+                return;
             }
+            m.lastGenericInputSource = _inputSource(ty);
+            _swapRawItem(rawItem, null, _inputSource(ty));
         },
         get id() {
             if (typeof rawItem.objectName === "string" && rawItem.objectName !== "") {
@@ -3247,6 +3698,7 @@ function wrap(rawItem) {
             return "";
         },
         set value(v) {
+            m.explicitValue = v;
             if (typeof rawItem.find === "function" && typeof rawItem.currentIndex === "number") {
                 var byValue = rawItem.indexOfValue(String(v));
                 rawItem.currentIndex = byValue !== -1 ? byValue : rawItem.find(String(v));
@@ -3266,26 +3718,40 @@ function wrap(rawItem) {
                 rawItem.currentIndex = Number(v) || 0;
             }
         },
-        get checked() { return Boolean(rawItem.checked); },
+        get checked() {
+            if (typeof rawItem.checked === "boolean") {
+                return Boolean(rawItem.checked);
+            }
+            return Boolean(m.explicitChecked);
+        },
         set checked(v) {
+            m.explicitChecked = Boolean(v);
             if (typeof rawItem.checked === "boolean") {
                 rawItem.checked = Boolean(v);
             }
         },
-        get disabled() { return rawItem.enabled !== undefined ? !rawItem.enabled : false; },
+        get disabled() { return rawItem.enabled !== undefined ? !rawItem.enabled : Boolean(m.explicitDisabled); },
         set disabled(v) {
+            m.explicitDisabled = Boolean(v);
             if (typeof rawItem.enabled === "boolean") {
                 rawItem.enabled = !v;
             }
         },
-        get readOnly() { return Boolean(rawItem.readOnly); },
+        get readOnly() {
+            if (typeof rawItem.readOnly === "boolean") {
+                return Boolean(rawItem.readOnly);
+            }
+            return Boolean(m.explicitReadOnly);
+        },
         set readOnly(v) {
+            m.explicitReadOnly = Boolean(v);
             if (typeof rawItem.readOnly === "boolean") {
                 rawItem.readOnly = Boolean(v);
             }
         },
-        get hidden() { return rawItem.visible !== undefined ? !rawItem.visible : false; },
+        get hidden() { return rawItem.visible !== undefined ? !rawItem.visible : Boolean(m.explicitHidden); },
         set hidden(v) {
+            m.explicitHidden = Boolean(v);
             if (typeof rawItem.visible === "boolean") {
                 rawItem.visible = !v;
             }
@@ -3803,7 +4269,7 @@ function _isInternalHelperNode(node) {
     if (m.hostBox || m.isFragment) {
         return true;
     }
-    if (_isPlainTextItem(node) && !node.objectName && !m.createdTag
+    if (_isPlainTextItem(node) && !node.objectName && !m.createdTag && typeof node.h2qTag !== "string"
         && node.parent && (node.parent.color !== undefined || node.parent.clip === true)) {
         return true;
     }
@@ -4205,26 +4671,12 @@ var document = {
     },
     createElement: function(tagName) {
         var tag = String(tagName).toLowerCase();
-        var qmlSrc = "import QtQuick; Item {}";
-        if (tag === "input") {
-            qmlSrc = _inputSource("text");
-        } else if (tag === "textarea") {
-            qmlSrc = _NATIVE_IMPORTS + "TextArea { color: \"black\"; background: Rectangle { color: \"white\"; border.color: \"#767676\" } }";
-        } else if (tag === "li") {
-            qmlSrc = "import QtQuick; import QtQuick.Layouts; RowLayout { Layout.fillWidth: true; spacing: 8 }";
-        } else if (tag === "ul" || tag === "ol") {
-            qmlSrc = "import QtQuick; import QtQuick.Layouts; ColumnLayout { Layout.fillWidth: true; spacing: 0 }";
-        } else if (tag === "span" || tag === "p" || tag === "label" || tag === "h1" || tag === "h2" || tag === "h3" || tag === "a") {
-            qmlSrc = "import QtQuick; Text { color: \"black\"; font.pixelSize: 16 }";
-        } else if (tag === "div" || tag === "section" || tag === "article" || tag === "header" || tag === "footer" || tag === "main" || tag === "nav") {
-            qmlSrc = "import QtQuick; Rectangle { color: \"transparent\" }";
-        } else if (tag === "img") {
-            qmlSrc = "import QtQuick; Image {}";
-        } else if (tag === "button") {
-            qmlSrc = _NATIVE_IMPORTS + "Button { palette.buttonText: \"black\"; background: Rectangle { color: \"#efefef\"; border.color: \"#767676\"; radius: 3 } }";
-        }
+        var qmlSrc = _genericElementSource(tag, "text");
         var created = Qt.createQmlObject(qmlSrc, _qobjectParent(), "h2q_el_" + tag);
         _meta(created).createdTag = tag;
+        if (tag === "input") {
+            _meta(created).lastGenericInputSource = qmlSrc;
+        }
         if (created && created.parent !== undefined) {
             created.parent = null;
         }
