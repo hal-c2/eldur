@@ -12,24 +12,14 @@
  *   - Waits for `document.fonts.ready` followed by 2 `requestAnimationFrame` ticks.
  *   - Captures a viewport-only PNG screenshot (not fullPage).
  *
- * Playwright resolution:
- *   When Playwright is installed globally via mise rather than in a local
- *   package.json, bare `import("playwright")` fails in ESM. We try:
- *     1. Standard `import("playwright")` (local node_modules / NODE_PATH)
- *     2. `PLAYWRIGHT_MODULE_PATH` environment variable (if set)
- *     3. `<npm root -g>/playwright` via `createRequire`
- *     4. `~/.local/share/mise/installs/npm-playwright/latest/node_modules/playwright`
- *     5. Sibling `../playwright` relative to any `playwright` executable on `PATH`
+ * Playwright is resolved by `playwright.mjs`.
  */
 
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
-import { createRequire } from "node:module";
-import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-const require = createRequire(import.meta.url);
+import { loadPlaywright } from "./playwright.mjs";
 
 const DISABLE_MOTION_CSS =
   "*{animation:none!important;transition:none!important;caret-color:transparent!important}" +
@@ -101,65 +91,6 @@ function parseArgs(argv) {
     width,
     height,
   };
-}
-
-async function loadPlaywright() {
-  try {
-    return await import("playwright");
-  } catch {
-    // Fall back to global npm / mise installation paths.
-  }
-
-  const candidates = [];
-
-  if (process.env.PLAYWRIGHT_MODULE_PATH) {
-    candidates.push(process.env.PLAYWRIGHT_MODULE_PATH);
-  }
-
-  try {
-    const npmRoot = execFileSync("npm", ["root", "-g"], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
-    if (npmRoot) {
-      candidates.push(path.join(npmRoot, "playwright"));
-    }
-  } catch {
-    // npm may not be on PATH in minimal environments; continue checking mise paths.
-  }
-
-  candidates.push(
-    path.join(
-      os.homedir(),
-      ".local/share/mise/installs/npm-playwright/latest/node_modules/playwright"
-    )
-  );
-
-  for (const dir of (process.env.PATH || "").split(path.delimiter)) {
-    if (!dir) continue;
-    const binCandidate = path.join(dir, "playwright");
-    if (fs.existsSync(binCandidate)) {
-      try {
-        const realBin = fs.realpathSync(binCandidate);
-        candidates.push(path.resolve(path.dirname(realBin), "..", "playwright"));
-      } catch {
-        // Ignore unreadable or broken symlink entries.
-      }
-    }
-  }
-
-  const tried = [];
-  for (const candidate of candidates) {
-    if (tried.includes(candidate)) continue;
-    tried.push(candidate);
-    if (fs.existsSync(candidate)) {
-      return require(candidate);
-    }
-  }
-
-  throw new Error(
-    `Cannot resolve 'playwright' module. Checked standard import and: ${tried.join(", ")}`
-  );
 }
 
 async function main() {
