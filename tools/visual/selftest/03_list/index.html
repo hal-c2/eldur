@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>List Layout</title>
+<style>
+  * {
+    box-sizing: border-box;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: #f1f5f9;
+    font-family: "Liberation Sans", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .panel {
+    margin: 48px 0 0 64px;
+    width: 680px;
+    padding: 28px;
+    background: #ffffff;
+    border: 2px solid #cbd5e1;
+    border-radius: 12px;
+  }
+  .title {
+    margin: 0 0 20px 0;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 30px;
+    color: #0f172a;
+  }
+  ul.checklist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  ul.checklist li {
+    height: 56px;
+    padding: 0 18px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+  .dot-1 { background: #2563eb; }
+  .dot-2 { background: #0284c7; }
+  .dot-3 { background: #10b981; }
+  .dot-4 { background: #6366f1; }
+  .label {
+    font-size: 16px;
+    font-weight: 400;
+    color: #1e293b;
+  }
+</style>
+</head>
+<body>
+  <div class="panel">
+    <h1 class="title">Conversion Pipeline Steps</h1>
+    <ul class="checklist">
+      <li><span class="dot dot-1"></span><span class="label">Parse HTML5 document into arena DOM</span></li>
+      <li><span class="dot dot-2"></span><span class="label">Resolve CSS cascade and computed values</span></li>
+      <li><span class="dot dot-3"></span><span class="label">Build block and inline formatting boxes</span></li>
+      <li><span class="dot dot-4"></span><span class="label">Emit idiomatic Qt Quick 6.11 QML</span></li>
+    </ul>
+  </div>
+</body>
+</html>
