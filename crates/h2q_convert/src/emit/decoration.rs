@@ -49,11 +49,15 @@ pub(crate) struct Decoration {
     pub insets: Insets,
     pub paints: bool,
     pub clips: bool,
+    /// Gradient layers to paint, bottom first.
+    pub gradients: bool,
+    /// Base for the ids of generated parts (gradient shapes).
+    pub hint: String,
 }
 
 impl Decoration {
     pub(crate) fn needed(&self) -> bool {
-        self.paints || self.clips || !self.insets.is_zero()
+        self.paints || self.gradients || self.clips || !self.insets.is_zero()
     }
 }
 
@@ -98,13 +102,9 @@ impl Emitter<'_, '_> {
         let background = paint_background && !style.background_color.is_transparent();
         let border = sides(style).iter().any(|s| is_visible(s));
         let clips = style.overflow_x != Overflow::Visible || style.overflow_y != Overflow::Visible;
-        if paint_background && style.background_layers.iter().any(|l| l.image.is_some()) {
-            self.diags.warning(
-                "css",
-                line,
-                "background images and gradients are not converted yet".to_owned(),
-            );
-        }
+        // The canvas propagation only takes the colour; gradients stay on
+        // the box, which is close for the body of a page.
+        let gradients = style.background_layers.iter().any(|l| l.image.is_some());
         if !style.box_shadow.is_empty() {
             self.diags
                 .warning("css", line, "`box-shadow` is not converted yet".to_owned());
@@ -122,6 +122,8 @@ impl Emitter<'_, '_> {
             insets,
             paints: background || border,
             clips,
+            gradients,
+            hint: "box".to_owned(),
         }
     }
 
@@ -167,9 +169,29 @@ impl Emitter<'_, '_> {
                 wrapper.set("implicitHeight", number(insets.vertical()));
             }
         }
+        let gradients = if deco.gradients {
+            self.gradient_layers(style, &deco.hint, line)
+        } else {
+            Vec::new()
+        };
+        let painted = !gradients.is_empty();
+        for shape in gradients {
+            wrapper.push_child(shape);
+        }
         let borders: Vec<&BorderSide> = sides(style).to_vec();
         let uniform = borders.iter().all(|s| **s == *borders[0]) && is_visible(borders[0]);
-        if uniform {
+        if uniform && painted {
+            // The background is painted under the border (`background-clip:
+            // border-box`), and a Rectangle draws its border below its
+            // children, so the border goes on top as its own outline.
+            let mut outline = Object::new("Rectangle");
+            outline.set("anchors.fill", Value::expr("parent"));
+            outline.set("color", Value::string("transparent"));
+            self.radius(&mut outline, style, line);
+            outline.set("border.width", number(borders[0].width));
+            outline.set("border.color", color(borders[0].color));
+            wrapper.push_child(outline);
+        } else if uniform {
             wrapper.set("border.width", number(borders[0].width));
             wrapper.set("border.color", color(borders[0].color));
         } else {
@@ -230,7 +252,12 @@ impl Emitter<'_, '_> {
         wrapper
     }
 
-    fn radius(&mut self, wrapper: &mut Object, style: &ComputedStyle, line: Option<u32>) {
+    pub(super) fn radius(
+        &mut self,
+        wrapper: &mut Object,
+        style: &ComputedStyle,
+        line: Option<u32>,
+    ) {
         let r = &style.border_radius;
         let corners = [
             ("topLeftRadius", &r.top_left),

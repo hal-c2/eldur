@@ -754,6 +754,8 @@ impl<'a> Emitter<'a, '_> {
             },
             paints: base.paints,
             clips: base.clips,
+            gradients: base.gradients,
+            hint: hint(self.doc, b),
         };
         let insets = deco.insets;
         let mut body = self.wrap(

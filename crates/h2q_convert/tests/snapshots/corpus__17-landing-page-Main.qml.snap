@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Shapes
 
 ApplicationWindow {
     id: root
@@ -273,6 +274,41 @@ ApplicationWindow {
                         implicitWidth: heroContent.implicitWidth
                         implicitHeight: heroContent.implicitHeight + 216
                         Layout.fillWidth: true
+
+                        Shape {
+                            id: heroGradient
+                            anchors.fill: parent
+
+                            ShapePath {
+                                strokeWidth: -1
+                                fillGradient: LinearGradient {
+                                    x1: heroGradient.width * 0.25 - heroGradient.height * 0.25
+                                    y1: -heroGradient.width * 0.25 + heroGradient.height * 0.25
+                                    x2: heroGradient.width * 0.75 + heroGradient.height * 0.25
+                                    y2: heroGradient.width * 0.25 + heroGradient.height * 0.75
+
+                                    GradientStop {
+                                        position: 0
+                                        color: "#5b4cdb"
+                                    }
+
+                                    GradientStop {
+                                        position: 0.45
+                                        color: "#8a5cf6"
+                                    }
+
+                                    GradientStop {
+                                        position: 1
+                                        color: "#ff7a59"
+                                    }
+                                }
+
+                                PathRectangle {
+                                    width: heroGradient.width
+                                    height: heroGradient.height
+                                }
+                            }
+                        }
 
                         ColumnLayout {
                             id: heroContent
@@ -941,6 +977,37 @@ ApplicationWindow {
                                                     Layout.preferredWidth: 56
                                                     Layout.preferredHeight: 56
 
+                                                    Shape {
+                                                        id: featureIconGradient
+                                                        anchors.fill: parent
+
+                                                        ShapePath {
+                                                            strokeWidth: -1
+                                                            fillGradient: LinearGradient {
+                                                                x1: featureIconGradient.width * 0.25 - featureIconGradient.height * 0.25
+                                                                y1: -featureIconGradient.width * 0.25 + featureIconGradient.height * 0.25
+                                                                x2: featureIconGradient.width * 0.75 + featureIconGradient.height * 0.25
+                                                                y2: featureIconGradient.width * 0.25 + featureIconGradient.height * 0.75
+
+                                                                GradientStop {
+                                                                    position: 0
+                                                                    color: "#5b4cdb"
+                                                                }
+
+                                                                GradientStop {
+                                                                    position: 1
+                                                                    color: "#8a5cf6"
+                                                                }
+                                                            }
+
+                                                            PathRectangle {
+                                                                width: featureIconGradient.width
+                                                                height: featureIconGradient.height
+                                                                radius: 28
+                                                            }
+                                                        }
+                                                    }
+
                                                     Rectangle {
                                                         color: "#00000000"
                                                         radius: 6
@@ -1019,6 +1086,37 @@ ApplicationWindow {
                                                     Layout.preferredWidth: 56
                                                     Layout.preferredHeight: 56
 
+                                                    Shape {
+                                                        id: featureIconGradient2
+                                                        anchors.fill: parent
+
+                                                        ShapePath {
+                                                            strokeWidth: -1
+                                                            fillGradient: LinearGradient {
+                                                                x1: featureIconGradient2.width * 0.25 - featureIconGradient2.height * 0.25
+                                                                y1: -featureIconGradient2.width * 0.25 + featureIconGradient2.height * 0.25
+                                                                x2: featureIconGradient2.width * 0.75 + featureIconGradient2.height * 0.25
+                                                                y2: featureIconGradient2.width * 0.25 + featureIconGradient2.height * 0.75
+
+                                                                GradientStop {
+                                                                    position: 0
+                                                                    color: "#ff7a59"
+                                                                }
+
+                                                                GradientStop {
+                                                                    position: 1
+                                                                    color: "#ffb347"
+                                                                }
+                                                            }
+
+                                                            PathRectangle {
+                                                                width: featureIconGradient2.width
+                                                                height: featureIconGradient2.height
+                                                                radius: 28
+                                                            }
+                                                        }
+                                                    }
+
                                                     Rectangle {
                                                         color: "#00000000"
                                                         radius: 6
@@ -1096,6 +1194,37 @@ ApplicationWindow {
                                                     implicitHeight: 0
                                                     Layout.preferredWidth: 56
                                                     Layout.preferredHeight: 56
+
+                                                    Shape {
+                                                        id: featureIconGradient3
+                                                        anchors.fill: parent
+
+                                                        ShapePath {
+                                                            strokeWidth: -1
+                                                            fillGradient: LinearGradient {
+                                                                x1: featureIconGradient3.width * 0.25 - featureIconGradient3.height * 0.25
+                                                                y1: -featureIconGradient3.width * 0.25 + featureIconGradient3.height * 0.25
+                                                                x2: featureIconGradient3.width * 0.75 + featureIconGradient3.height * 0.25
+                                                                y2: featureIconGradient3.width * 0.25 + featureIconGradient3.height * 0.75
+
+                                                                GradientStop {
+                                                                    position: 0
+                                                                    color: "#14b8a6"
+                                                                }
+
+                                                                GradientStop {
+                                                                    position: 1
+                                                                    color: "#38bdf8"
+                                                                }
+                                                            }
+
+                                                            PathRectangle {
+                                                                width: featureIconGradient3.width
+                                                                height: featureIconGradient3.height
+                                                                radius: 28
+                                                            }
+                                                        }
+                                                    }
 
                                                     Rectangle {
                                                         color: "#00000000"

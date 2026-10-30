@@ -13,5 +13,4 @@ info[qml]: index.html:273: <code>: font size 16.15px inside 19px text is approxi
 info[qml]: index.html:273: <code>: font family `monospace` inside `serif` text is not converted
 info[qml]: index.html:273: <code>: inline background is not converted
 info[qml]: index.html:273: <code>: inline padding and borders are not converted
-warning[css]: index.html:284: background images and gradients are not converted yet
 info[qml]: index.html:289: <strong>: font family `sans-serif` inside `serif` text is not converted

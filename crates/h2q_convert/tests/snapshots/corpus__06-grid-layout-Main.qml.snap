@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Shapes
 
 ApplicationWindow {
     id: root
@@ -172,6 +173,37 @@ ApplicationWindow {
                                             Layout.maximumWidth: 36
                                             Layout.preferredHeight: 36
                                             Layout.alignment: Qt.AlignVCenter
+
+                                            Shape {
+                                                id: avatarGradient
+                                                anchors.fill: parent
+
+                                                ShapePath {
+                                                    strokeWidth: -1
+                                                    fillGradient: LinearGradient {
+                                                        x1: avatarGradient.width * 0.25 - avatarGradient.height * 0.25
+                                                        y1: -avatarGradient.width * 0.25 + avatarGradient.height * 0.25
+                                                        x2: avatarGradient.width * 0.75 + avatarGradient.height * 0.25
+                                                        y2: avatarGradient.width * 0.25 + avatarGradient.height * 0.75
+
+                                                        GradientStop {
+                                                            position: 0
+                                                            color: "#0f766e"
+                                                        }
+
+                                                        GradientStop {
+                                                            position: 1
+                                                            color: "#34d399"
+                                                        }
+                                                    }
+
+                                                    PathRectangle {
+                                                        width: avatarGradient.width
+                                                        height: avatarGradient.height
+                                                        radius: 18
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -505,8 +537,6 @@ ApplicationWindow {
                                                 radius: 12
                                                 implicitWidth: tileContent.implicitWidth + 38
                                                 implicitHeight: tileContent.implicitHeight + 34
-                                                border.width: 1
-                                                border.color: "#00000000"
                                                 Layout.row: 0
                                                 Layout.column: 0
                                                 Layout.columnSpan: 2
@@ -515,6 +545,45 @@ ApplicationWindow {
                                                 Layout.preferredHeight: 120
                                                 Layout.minimumHeight: 120
                                                 Layout.maximumHeight: 120
+
+                                                Shape {
+                                                    id: tileGradient
+                                                    anchors.fill: parent
+
+                                                    ShapePath {
+                                                        strokeWidth: -1
+                                                        fillGradient: LinearGradient {
+                                                            x1: tileGradient.width * 0.125 - tileGradient.height * 0.2165
+                                                            y1: -tileGradient.width * 0.2165 + tileGradient.height * 0.375
+                                                            x2: tileGradient.width * 0.875 + tileGradient.height * 0.2165
+                                                            y2: tileGradient.width * 0.2165 + tileGradient.height * 0.625
+
+                                                            GradientStop {
+                                                                position: 0
+                                                                color: "#0f766e"
+                                                            }
+
+                                                            GradientStop {
+                                                                position: 1
+                                                                color: "#155e75"
+                                                            }
+                                                        }
+
+                                                        PathRectangle {
+                                                            width: tileGradient.width
+                                                            height: tileGradient.height
+                                                            radius: 12
+                                                        }
+                                                    }
+                                                }
+
+                                                Rectangle {
+                                                    anchors.fill: parent
+                                                    color: "transparent"
+                                                    radius: 12
+                                                    border.width: 1
+                                                    border.color: "#00000000"
+                                                }
 
                                                 ColumnLayout {
                                                     id: tileContent

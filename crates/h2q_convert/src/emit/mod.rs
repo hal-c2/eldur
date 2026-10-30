@@ -3,6 +3,7 @@
 //! [`Emitter::block`] dispatches on [`BoxKind`]; each layout kind has its
 //! own submodule.
 
+mod background;
 mod controls;
 mod decoration;
 mod flex;
@@ -69,6 +70,8 @@ pub(crate) struct Emitter<'a, 'd> {
     /// The box being emitted is an overlay of its positioned parent, so its
     /// `position` is handled.
     positioned_child: bool,
+    /// QML modules the emitted objects need beyond the default imports.
+    pub imports: std::collections::BTreeSet<&'static str>,
 }
 
 impl<'a, 'd> Emitter<'a, 'd> {
@@ -99,6 +102,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             root_node: None,
             has_table: false,
             positioned_child: false,
+            imports: std::collections::BTreeSet::new(),
         }
     }
 
@@ -283,7 +287,8 @@ impl<'a, 'd> Emitter<'a, 'd> {
             line_through: inherited.line_through || style.text_decoration_line.line_through,
         };
         let paint_background = b.node.is_none() || b.node != self.canvas_node;
-        let deco = self.decoration(style, paint_background, line);
+        let mut deco = self.decoration(style, paint_background, line);
+        deco.hint = hint(self.doc, b);
         let wanted = b.node.is_some_and(|n| self.wanted.contains(&n));
         let mt = self.vertical_margin(&style.margin.top, line);
         let mb = self.vertical_margin(&style.margin.bottom, line);

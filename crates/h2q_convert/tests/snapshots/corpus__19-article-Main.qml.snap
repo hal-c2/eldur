@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Shapes
 
 ApplicationWindow {
     id: root
@@ -420,6 +421,73 @@ ApplicationWindow {
                                     implicitHeight: 0
                                     Layout.fillWidth: true
                                     Layout.preferredHeight: 280
+
+                                    Shape {
+                                        id: figureArtGradient
+                                        anchors.fill: parent
+
+                                        ShapePath {
+                                            strokeWidth: -1
+                                            fillGradient: LinearGradient {
+                                                x1: figureArtGradient.width * 0.125 - figureArtGradient.height * 0.2165
+                                                y1: -figureArtGradient.width * 0.2165 + figureArtGradient.height * 0.375
+                                                x2: figureArtGradient.width * 0.875 + figureArtGradient.height * 0.2165
+                                                y2: figureArtGradient.width * 0.2165 + figureArtGradient.height * 0.625
+
+                                                GradientStop {
+                                                    position: 0
+                                                    color: "#e8a87c"
+                                                }
+
+                                                GradientStop {
+                                                    position: 0.45
+                                                    color: "#c38d9e"
+                                                }
+
+                                                GradientStop {
+                                                    position: 1
+                                                    color: "#41b3a3"
+                                                }
+                                            }
+
+                                            PathRectangle {
+                                                width: figureArtGradient.width
+                                                height: figureArtGradient.height
+                                                radius: 6
+                                            }
+                                        }
+                                    }
+
+                                    Shape {
+                                        id: figureArtGradient2
+                                        anchors.fill: parent
+
+                                        ShapePath {
+                                            strokeWidth: -1
+                                            fillGradient: LinearGradient {
+                                                x1: figureArtGradient2.width * 0.4883 - figureArtGradient2.height * 0.0321
+                                                y1: -figureArtGradient2.width * 0.0321 + figureArtGradient2.height * 0.4117
+                                                x2: figureArtGradient2.width * 0.5585 + figureArtGradient2.height * 0.1607
+                                                y2: figureArtGradient2.width * 0.1607 + figureArtGradient2.height * 0.9415
+
+                                                GradientStop {
+                                                    position: 0
+                                                    color: "#00ffffff"
+                                                }
+
+                                                GradientStop {
+                                                    position: 1
+                                                    color: "#401f1d1a"
+                                                }
+                                            }
+
+                                            PathRectangle {
+                                                width: figureArtGradient2.width
+                                                height: figureArtGradient2.height
+                                                radius: 6
+                                            }
+                                        }
+                                    }
                                 }
 
                                 // <figcaption>

@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Shapes
 
 ApplicationWindow {
     id: root
@@ -266,6 +267,36 @@ ApplicationWindow {
                         implicitHeight: heroContent.implicitHeight + 128
                         Layout.fillWidth: true
                         Layout.minimumHeight: 520
+
+                        Shape {
+                            id: heroGradient
+                            anchors.fill: parent
+
+                            ShapePath {
+                                strokeWidth: -1
+                                fillGradient: LinearGradient {
+                                    x1: heroGradient.width * 0.5
+                                    y1: 0
+                                    x2: heroGradient.width * 0.5
+                                    y2: heroGradient.height
+
+                                    GradientStop {
+                                        position: 0
+                                        color: "#f4f8fd"
+                                    }
+
+                                    GradientStop {
+                                        position: 1
+                                        color: "#e6eef9"
+                                    }
+                                }
+
+                                PathRectangle {
+                                    width: heroGradient.width
+                                    height: heroGradient.height
+                                }
+                            }
+                        }
 
                         ColumnLayout {
                             id: heroContent

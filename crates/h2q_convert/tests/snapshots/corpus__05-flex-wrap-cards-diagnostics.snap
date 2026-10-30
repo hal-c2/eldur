@@ -3,16 +3,10 @@ source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
 warning[css]: index.html:179: `box-shadow` is not converted yet
-warning[css]: index.html:180: background images and gradients are not converted yet
 warning[css]: index.html:189: `box-shadow` is not converted yet
-warning[css]: index.html:190: background images and gradients are not converted yet
 warning[css]: index.html:199: `box-shadow` is not converted yet
-warning[css]: index.html:200: background images and gradients are not converted yet
 warning[css]: index.html:209: `box-shadow` is not converted yet
-warning[css]: index.html:210: background images and gradients are not converted yet
 warning[css]: index.html:219: `box-shadow` is not converted yet
-warning[css]: index.html:220: background images and gradients are not converted yet
 warning[css]: index.html:229: `box-shadow` is not converted yet
-warning[css]: index.html:230: background images and gradients are not converted yet
 info[qml]: index.html:178: items of the wrapping <section class="product-grid"> are not stretched to their line's height
 info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

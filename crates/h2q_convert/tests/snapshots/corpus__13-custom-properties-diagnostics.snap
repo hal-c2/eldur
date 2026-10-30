@@ -8,7 +8,6 @@ info[css]: index.html:295: `display: inline-block` on <span class="tag"> is laid
 info[css]: index.html:296: `display: inline-block` on <span class="tag"> is laid out as inline text
 info[css]: index.html:297: `display: inline-block` on <span class="tag"> is laid out as inline text
 info[css]: index.html:303: `display: inline-block` on <a class="button"> is laid out as inline text
-warning[css]: index.html:263: background images and gradients are not converted yet
 info[qml]: index.html:264: <span class="eyebrow">: font size 13px inside 16px text is approximated with <small>
 info[qml]: index.html:264: <span class="eyebrow">: font family `monospace` inside `sans-serif` text is not converted
 info[qml]: index.html:264: <span class="eyebrow">: inline background is not converted

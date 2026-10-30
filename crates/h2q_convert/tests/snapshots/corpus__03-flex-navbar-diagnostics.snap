@@ -10,5 +10,4 @@ info[qml]: index.html:177: <a> is underlined: StyledText always underlines links
 info[qml]: index.html:177: <a>: font size 15px inside 16px text is approximated with <small>
 info[qml]: index.html:178: <a> is underlined: StyledText always underlines links
 info[qml]: index.html:178: <a>: font size 15px inside 16px text is approximated with <small>
-warning[css]: index.html:185: background images and gradients are not converted yet
 info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet
