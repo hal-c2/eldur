@@ -566,7 +566,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 "css",
                 line,
                 format!(
-                    "`float` on {} is laid out as block flow (not implemented yet)",
+                    "`float` on {} is laid out as a block at its side: floats do not share a line with other boxes yet",
                     what()
                 ),
             );

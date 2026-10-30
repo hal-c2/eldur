@@ -7,8 +7,8 @@
 //! that collapse through are dropped.
 
 use h2q_css::{
-    BoxSizing, ComputedStyle, Display, Length, LengthAuto, Size, TextAlign, TextDecorationLine,
-    Visibility,
+    BoxSizing, ComputedStyle, Display, Float, Length, LengthAuto, Size, TextAlign,
+    TextDecorationLine, Visibility,
 };
 use h2q_qml::{Member, Object, Value};
 
@@ -188,9 +188,13 @@ impl Emitter<'_, '_> {
         };
         let auto_left = style.margin.left == LengthAuto::Auto;
         let auto_right = style.margin.right == LengthAuto::Auto;
-        let alignment = match (auto_left, auto_right) {
-            (true, true) => Some("Qt.AlignHCenter"),
-            (true, false) => Some("Qt.AlignRight"),
+        // Floats stack as blocks here, so one that does not share its line
+        // is placed right; `auto` margins of a float are zero.
+        let alignment = match (style.float, auto_left, auto_right) {
+            (Float::Right, ..) => Some("Qt.AlignRight"),
+            (Float::Left, ..) => None,
+            (_, true, true) => Some("Qt.AlignHCenter"),
+            (_, true, false) => Some("Qt.AlignRight"),
             _ => None,
         };
         // An `inline-flex`/`inline-grid` laid out as a block keeps its

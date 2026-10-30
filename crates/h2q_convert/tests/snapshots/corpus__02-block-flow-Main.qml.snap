@@ -400,6 +400,7 @@ ApplicationWindow {
                                             border.width: 1
                                             border.color: "#c4cad6"
                                             Layout.preferredWidth: parent.width * 0.5 + 34
+                                            Layout.alignment: Qt.AlignRight
                                             Layout.topMargin: 24
                                             Layout.bottomMargin: 24
 

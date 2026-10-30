@@ -1153,3 +1153,22 @@ fn a_text_that_is_one_link_without_underline_is_not_underlined() {
     let u = qml.split("<a href=\\\"#u\\\">").count();
     assert_eq!(u, 2, "{qml}");
 }
+
+#[test]
+fn a_right_float_sits_at_the_right_edge() {
+    // Chromium: in a 400px box, a 50% `float: right` with a 6px right
+    // margin is at x 194 of it; a left float stays at the left.
+    let (qml, _) = convert(&page(
+        ".c{width:400px} .r{float:right;width:50%;height:10px;margin-right:6px} \
+         .l{float:left;width:100px;height:10px}",
+        "<div class=c><div class=r></div><div class=l></div></div>",
+    ));
+    let r = own_lines(object_after(&qml, "<div class=\"r\">"));
+    assert!(r.contains(&"Layout.alignment: Qt.AlignRight"), "{r:?}");
+    assert!(r.contains(&"Layout.rightMargin: 6"), "{r:?}");
+    let l = own_lines(object_after(&qml, "<div class=\"l\">"));
+    assert!(
+        !l.iter().any(|p| p.starts_with("Layout.alignment")),
+        "{l:?}"
+    );
+}
