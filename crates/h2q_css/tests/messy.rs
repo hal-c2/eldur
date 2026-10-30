@@ -119,9 +119,7 @@ fn case6_garbage_selector() {
 // 7. `!important` misspelt as `! importantt` drops that declaration.
 #[test]
 fn case7_misspelt_important() {
-    let s = p_style(
-        "p { padding-top: 4px; color: rgb(255, 0, 0) ! importantt; margin-top: 8px; }",
-    );
+    let s = p_style("p { padding-top: 4px; color: rgb(255, 0, 0) ! importantt; margin-top: 8px; }");
     assert_eq!(s.padding.top, Length::px(4.0));
     assert_eq!(s.color, Rgba::BLACK);
     assert_eq!(s.margin.top, LengthAuto::Length(Length::px(8.0)));
@@ -163,9 +161,7 @@ fn case8_vendor_hacks() {
 // declarations apply.
 #[test]
 fn case9_ie_backslash_hacks() {
-    let s = p_style(
-        "p { padding-top: 4px; color: red\\9; width: 100px\\0/; margin-top: 10px; }",
-    );
+    let s = p_style("p { padding-top: 4px; color: red\\9; width: 100px\\0/; margin-top: 10px; }");
     assert_eq!(s.padding.top, Length::px(4.0));
     assert_eq!(s.color, Rgba::BLACK);
     assert_eq!(s.width, Size::Auto);
@@ -221,6 +217,8 @@ fn case11_null_bytes_bom_crlf_form_feeds() {
 // - A 2 MB sheet of 20 000 rules.
 // - Selectors nested 2000 levels deep, `div div div ...`.
 // - `calc()` nested 500 levels deep.
+// - `{` blocks nested 5000 levels deep.
+// - `[` blocks nested 5000 levels deep.
 // - A 100 000-character identifier.
 // Each must finish in under 2 s in release-independent terms (< 10 s in debug)
 // and must not overflow a 2 MB thread stack.
@@ -233,7 +231,9 @@ fn case12_huge_inputs() {
             .stack_size(2 * 1024 * 1024)
             .spawn(f)
             .expect("spawn thread");
-        handle.join().unwrap_or_else(|e| panic!("{name} panicked: {e:?}"));
+        handle
+            .join()
+            .unwrap_or_else(|e| panic!("{name} panicked: {e:?}"));
         let elapsed = start.elapsed();
         assert!(
             elapsed < Duration::from_secs(10),
@@ -268,11 +268,7 @@ fn case12_huge_inputs() {
         let css = format!(
             "p {{ padding-top: 4px; }} {deep_selector} {{ color: rgb(255, 0, 0); }} p {{ margin-top: 15px; }}"
         );
-        let s = style_for(
-            &css,
-            r#"<div><div><p id="t">hello</p></div></div>"#,
-            "t",
-        );
+        let s = style_for(&css, r#"<div><div><p id="t">hello</p></div></div>"#, "t");
         assert_eq!(s.padding.top, Length::px(4.0));
         assert_eq!(s.color, Rgba::BLACK);
         assert_eq!(s.margin.top, LengthAuto::Length(Length::px(15.0)));
@@ -282,21 +278,37 @@ fn case12_huge_inputs() {
     run_on_2mb_stack("nested_calc_500", || {
         let open = "calc(".repeat(500);
         let close = ")".repeat(500);
-        let css = format!(
-            "p {{ padding-top: 4px; width: {open}10px{close}; margin-top: 20px; }}"
-        );
+        let css = format!("p {{ padding-top: 4px; width: {open}10px{close}; margin-top: 20px; }}");
         let s = p_style(&css);
         assert_eq!(s.padding.top, Length::px(4.0));
         assert_eq!(s.width, Size::Auto);
         assert_eq!(s.margin.top, LengthAuto::Length(Length::px(20.0)));
     });
 
-    // (d) A 100 000-character identifier.
+    // (d) `{` blocks nested 5000 levels deep.
+    run_on_2mb_stack("nested_braces_5000", || {
+        let open = "{".repeat(5000);
+        let close = "}".repeat(5000);
+        let css = format!("p {{ padding-top: 4px; a: {open}{close} }} p {{ margin-top: 20px }}");
+        let s = p_style(&css);
+        assert_eq!(s.padding.top, Length::px(4.0));
+        assert_eq!(s.margin.top, LengthAuto::Length(Length::px(20.0)));
+    });
+
+    // (e) `[` blocks nested 5000 levels deep.
+    run_on_2mb_stack("nested_brackets_5000", || {
+        let open = "[".repeat(5000);
+        let close = "]".repeat(5000);
+        let css = format!("p {{ padding-top: 4px; a: {open}{close} }} p {{ margin-top: 20px }}");
+        let s = p_style(&css);
+        assert_eq!(s.padding.top, Length::px(4.0));
+        assert_eq!(s.margin.top, LengthAuto::Length(Length::px(20.0)));
+    });
+
+    // (f) A 100 000-character identifier.
     run_on_2mb_stack("ident_100k", || {
         let long_ident = "a".repeat(100_000);
-        let css = format!(
-            "p {{ padding-top: 4px; color: {long_ident}; margin-top: 17px; }}"
-        );
+        let css = format!("p {{ padding-top: 4px; color: {long_ident}; margin-top: 17px; }}");
         let s = p_style(&css);
         assert_eq!(s.padding.top, Length::px(4.0));
         assert_eq!(s.color, Rgba::BLACK);

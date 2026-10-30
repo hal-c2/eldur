@@ -1,16 +1,17 @@
 //! CSS stylesheet and inline `style` parsing via `swc_css_parser` with CSS Syntax 3
 //! error recovery.
 
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use swc_common::{BytePos, FileName, SourceMap, Span, Spanned, sync::Lrc};
+use swc_common::{BytePos, FileName, SourceMap, Span, Spanned, input::StringInput, sync::Lrc};
 use swc_css_ast as ast;
 use swc_css_codegen::{
     CodeGenerator, CodegenConfig, Emit,
     writer::basic::{BasicCssWriter, BasicCssWriterConfig},
 };
-use swc_css_parser::parser::ParserConfig;
+use swc_css_parser::{lexer::Lexer, parser::ParserConfig};
 
 use crate::media::MediaQueryList;
 use crate::properties::{self, ComputeContext, CssWide, Longhand, PropertyKind};
@@ -252,6 +253,70 @@ impl<'a> ParseCtx<'a> {
     }
 }
 
+/// Maximum block/function nesting depth (`{`, `[`, `(`, `<function-token>`) passed to
+/// `swc_css_parser` before excess inner balanced pairs are blanked out.
+/// `h2q_css` already rejects property values nested deeper than `MAX_NESTING_DEPTH = 32`,
+/// while `swc_css_parser`'s recursive descent overflows a 2 MB thread stack in
+/// unoptimized debug builds around ~150 nested frames.
+const MAX_SWC_NESTING_DEPTH: usize = 48;
+
+/// Neutralizes balanced `{`..`}`, `[`..`]`, `(`..`)`, and `<function-token>`..`)` pairs
+/// nested deeper than [`MAX_SWC_NESTING_DEPTH`] by replacing the opener and closer
+/// delimiter bytes with ASCII spaces, preserving byte offsets and line numbers.
+/// Returns `Cow::Borrowed(text)` when no nesting exceeds the limit.
+fn cap_nesting_depth(text: &str) -> Cow<'_, str> {
+    let Ok(len) = u32::try_from(text.len()) else {
+        return Cow::Borrowed(text);
+    };
+    let lexer = Lexer::new(
+        StringInput::new(text, BytePos(1), BytePos(1 + len)),
+        None,
+        ParserConfig::default(),
+    );
+    let mut stack: Vec<(u8, usize)> = Vec::new();
+    let mut blank_positions: Vec<usize> = Vec::new();
+
+    for ts in lexer {
+        let lo = (ts.span.lo.0 - 1) as usize;
+        let hi = (ts.span.hi.0 - 1) as usize;
+        match ts.token {
+            ast::Token::LBrace => {
+                stack.push((b'}', hi - 1));
+            }
+            ast::Token::LBracket => {
+                stack.push((b']', hi - 1));
+            }
+            ast::Token::LParen | ast::Token::Function { .. } => {
+                stack.push((b')', hi - 1));
+            }
+            ast::Token::RBrace | ast::Token::RBracket | ast::Token::RParen => {
+                let closer = match ts.token {
+                    ast::Token::RBrace => b'}',
+                    ast::Token::RBracket => b']',
+                    _ => b')',
+                };
+                if stack.last().is_some_and(|&(c, _)| c == closer)
+                    && let Some((_, open_idx)) = stack.pop()
+                    && stack.len() >= MAX_SWC_NESTING_DEPTH
+                {
+                    blank_positions.push(open_idx);
+                    blank_positions.push(lo);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    if blank_positions.is_empty() {
+        return Cow::Borrowed(text);
+    }
+    let mut bytes = text.as_bytes().to_vec();
+    for idx in blank_positions {
+        bytes[idx] = b' ';
+    }
+    Cow::Owned(String::from_utf8(bytes).unwrap_or_else(|_| text.to_owned()))
+}
+
 /// Parses a full CSS stylesheet into [`Stylesheet`] and recoverable [`Diagnostic`]s.
 pub(crate) fn parse_stylesheet(
     text: &str,
@@ -259,6 +324,8 @@ pub(crate) fn parse_stylesheet(
     source_name: &str,
     base_url: Option<&str>,
 ) -> (Stylesheet, Vec<Diagnostic>) {
+    let capped = cap_nesting_depth(text);
+    let text = capped.as_ref();
     let cm: Lrc<SourceMap> = Lrc::default();
     let fm = cm.new_source_file(FileName::Anon.into(), text.to_owned());
     let config = ParserConfig {
@@ -316,6 +383,8 @@ pub(crate) fn parse_inline_style(
     if text.trim().is_empty() {
         return (Vec::new(), Vec::new());
     }
+    let capped = cap_nesting_depth(text);
+    let text = capped.as_ref();
     let cm: Lrc<SourceMap> = Lrc::default();
     let fm = cm.new_source_file(FileName::Anon.into(), text.to_owned());
     let mut swc_errors = Vec::new();
