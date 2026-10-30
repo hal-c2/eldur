@@ -107,10 +107,9 @@ ApplicationWindow {
                         }
 
                         // <div class="button-row">
-                        ColumnLayout {
-                            spacing: 0
+                        Flow {
+                            spacing: 12
                             Layout.fillWidth: true
-                            Layout.maximumWidth: Number.POSITIVE_INFINITY
                             Layout.topMargin: 12
 
                             // <button class="btn btn--primary">
@@ -121,7 +120,7 @@ ApplicationWindow {
                                 implicitHeight: btnText.implicitHeight + 22
                                 border.width: 1
                                 border.color: "#00000000"
-                                Layout.fillWidth: true
+                                width: Math.min(Math.ceil(implicitWidth), parent.width)
 
                                 Text {
                                     id: btnText
@@ -155,7 +154,7 @@ ApplicationWindow {
                                 implicitHeight: btnText2.implicitHeight + 22
                                 border.width: 1
                                 border.color: "#cfd6e4"
-                                Layout.fillWidth: true
+                                width: Math.min(Math.ceil(implicitWidth), parent.width)
 
                                 Text {
                                     id: btnText2
@@ -189,7 +188,7 @@ ApplicationWindow {
                                 implicitHeight: btnText3.implicitHeight + 22
                                 border.width: 1
                                 border.color: "#00000000"
-                                Layout.fillWidth: true
+                                width: Math.min(Math.ceil(implicitWidth), parent.width)
 
                                 Text {
                                     id: btnText3
@@ -223,7 +222,7 @@ ApplicationWindow {
                                 implicitHeight: btnText4.implicitHeight + 22
                                 border.width: 1
                                 border.color: "#e5e7eb"
-                                Layout.fillWidth: true
+                                width: Math.min(Math.ceil(implicitWidth), parent.width)
 
                                 Text {
                                     id: btnText4
@@ -278,8 +277,10 @@ ApplicationWindow {
                         }
 
                         // <div class="cards">
-                        ColumnLayout {
-                            spacing: 0
+                        GridLayout {
+                            columns: 3
+                            columnSpacing: 20
+                            rowSpacing: 20
                             Layout.fillWidth: true
                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                             Layout.topMargin: 12
@@ -291,6 +292,8 @@ ApplicationWindow {
                                 implicitWidth: liftCardContent.implicitWidth + 44
                                 implicitHeight: liftCardContent.implicitHeight + 44
                                 Layout.fillWidth: true
+                                Layout.preferredWidth: 0
+                                Layout.fillHeight: true
 
                                 ColumnLayout {
                                     id: liftCardContent
@@ -345,6 +348,8 @@ ApplicationWindow {
                                 implicitWidth: liftCardContent2.implicitWidth + 44
                                 implicitHeight: liftCardContent2.implicitHeight + 44
                                 Layout.fillWidth: true
+                                Layout.preferredWidth: 0
+                                Layout.fillHeight: true
 
                                 ColumnLayout {
                                     id: liftCardContent2
@@ -399,6 +404,8 @@ ApplicationWindow {
                                 implicitWidth: liftCardContent3.implicitWidth + 44
                                 implicitHeight: liftCardContent3.implicitHeight + 44
                                 Layout.fillWidth: true
+                                Layout.preferredWidth: 0
+                                Layout.fillHeight: true
 
                                 ColumnLayout {
                                     id: liftCardContent3
@@ -449,8 +456,10 @@ ApplicationWindow {
                     }
 
                     // <section class="section columns">
-                    ColumnLayout {
-                        spacing: 0
+                    GridLayout {
+                        columns: 2
+                        columnSpacing: 32
+                        rowSpacing: 32
                         Layout.fillWidth: true
                         Layout.maximumWidth: Number.POSITIVE_INFINITY
                         Layout.topMargin: 32
@@ -460,7 +469,11 @@ ApplicationWindow {
                         ColumnLayout {
                             spacing: 0
                             Layout.fillWidth: true
+                            Layout.preferredWidth: 0
                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                            Layout.maximumHeight: Number.POSITIVE_INFINITY
+                            Layout.fillHeight: false
+                            Layout.alignment: Qt.AlignTop
 
                             // <h2 class="section__title">
                             Text {
@@ -541,6 +554,7 @@ ApplicationWindow {
                                 linkColor: "#3b6fe0"
                                 Layout.fillWidth: true
                                 Layout.topMargin: 15
+                                Layout.bottomMargin: 15
 
                                 onLinkActivated: (link) => {
                                     Qt.openUrlExternally(link)
@@ -551,9 +565,12 @@ ApplicationWindow {
                         // <div>
                         ColumnLayout {
                             spacing: 0
-                            Layout.fillWidth: true
-                            Layout.maximumWidth: Number.POSITIVE_INFINITY
-                            Layout.topMargin: 15
+                            Layout.preferredWidth: 280
+                            Layout.minimumWidth: 280
+                            Layout.maximumWidth: 280
+                            Layout.maximumHeight: Number.POSITIVE_INFINITY
+                            Layout.fillHeight: false
+                            Layout.alignment: Qt.AlignTop
 
                             // <h2 class="section__title">
                             Text {
@@ -599,15 +616,17 @@ ApplicationWindow {
                                         implicitHeight: itemContent.implicitHeight + 20
                                         Layout.fillWidth: true
 
-                                        ColumnLayout {
+                                        RowLayout {
                                             id: itemContent
                                             spacing: 0
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
                                             anchors.leftMargin: 12
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 10
+                                            anchors.bottomMargin: 10
 
                                             // <span class="icon">
                                             Rectangle {
@@ -615,8 +634,11 @@ ApplicationWindow {
                                                 radius: 4
                                                 implicitWidth: 0
                                                 implicitHeight: 0
+                                                Layout.fillWidth: true
                                                 Layout.preferredWidth: 16
+                                                Layout.maximumWidth: 16
                                                 Layout.preferredHeight: 16
+                                                Layout.alignment: Qt.AlignVCenter
                                             }
 
                                             // <span class="item__label">
@@ -633,6 +655,13 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.alignment: Qt.AlignVCenter
+                                                Layout.leftMargin: 12
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
                                             }
                                         }
                                     }
@@ -643,15 +672,17 @@ ApplicationWindow {
                                         implicitHeight: itemContent2.implicitHeight + 20
                                         Layout.fillWidth: true
 
-                                        ColumnLayout {
+                                        RowLayout {
                                             id: itemContent2
                                             spacing: 0
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
                                             anchors.leftMargin: 12
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 10
+                                            anchors.bottomMargin: 10
 
                                             // <span class="icon">
                                             Rectangle {
@@ -659,8 +690,11 @@ ApplicationWindow {
                                                 radius: 4
                                                 implicitWidth: 0
                                                 implicitHeight: 0
+                                                Layout.fillWidth: true
                                                 Layout.preferredWidth: 16
+                                                Layout.maximumWidth: 16
                                                 Layout.preferredHeight: 16
+                                                Layout.alignment: Qt.AlignVCenter
                                             }
 
                                             // <span class="item__label">
@@ -677,6 +711,13 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.alignment: Qt.AlignVCenter
+                                                Layout.leftMargin: 12
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
                                             }
                                         }
                                     }
@@ -687,15 +728,17 @@ ApplicationWindow {
                                         implicitHeight: itemContent3.implicitHeight + 20
                                         Layout.fillWidth: true
 
-                                        ColumnLayout {
+                                        RowLayout {
                                             id: itemContent3
                                             spacing: 0
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
                                             anchors.leftMargin: 12
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 10
+                                            anchors.bottomMargin: 10
 
                                             // <span class="icon">
                                             Rectangle {
@@ -703,8 +746,11 @@ ApplicationWindow {
                                                 radius: 4
                                                 implicitWidth: 0
                                                 implicitHeight: 0
+                                                Layout.fillWidth: true
                                                 Layout.preferredWidth: 16
+                                                Layout.maximumWidth: 16
                                                 Layout.preferredHeight: 16
+                                                Layout.alignment: Qt.AlignVCenter
                                             }
 
                                             // <span class="item__label">
@@ -721,6 +767,13 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.alignment: Qt.AlignVCenter
+                                                Layout.leftMargin: 12
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
                                             }
                                         }
                                     }
@@ -731,15 +784,17 @@ ApplicationWindow {
                                         implicitHeight: itemContent4.implicitHeight + 20
                                         Layout.fillWidth: true
 
-                                        ColumnLayout {
+                                        RowLayout {
                                             id: itemContent4
                                             spacing: 0
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
                                             anchors.leftMargin: 12
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 10
+                                            anchors.bottomMargin: 10
 
                                             // <span class="icon">
                                             Rectangle {
@@ -747,8 +802,11 @@ ApplicationWindow {
                                                 radius: 4
                                                 implicitWidth: 0
                                                 implicitHeight: 0
+                                                Layout.fillWidth: true
                                                 Layout.preferredWidth: 16
+                                                Layout.maximumWidth: 16
                                                 Layout.preferredHeight: 16
+                                                Layout.alignment: Qt.AlignVCenter
                                             }
 
                                             // <span class="item__label">
@@ -764,6 +822,13 @@ ApplicationWindow {
                                                     y: 2.63
                                                 }
                                                 wrapMode: Text.WordWrap
+                                                Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.alignment: Qt.AlignVCenter
+                                                Layout.leftMargin: 12
+                                            }
+
+                                            Item {
                                                 Layout.fillWidth: true
                                             }
                                         }

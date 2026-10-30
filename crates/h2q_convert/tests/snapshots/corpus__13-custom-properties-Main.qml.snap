@@ -43,15 +43,17 @@ ApplicationWindow {
                     implicitHeight: siteHeaderContent.implicitHeight + 40
                     Layout.fillWidth: true
 
-                    ColumnLayout {
+                    RowLayout {
                         id: siteHeaderContent
                         spacing: 0
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.top: parent.top
+                        anchors.bottom: parent.bottom
                         anchors.leftMargin: 32
                         anchors.rightMargin: 32
                         anchors.topMargin: 20
+                        anchors.bottomMargin: 20
 
                         // <div class="brand">
                         Text {
@@ -69,13 +71,21 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
+                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+
+                        Item {
+                            Layout.fillWidth: true
                         }
 
                         // <nav class="nav">
-                        ColumnLayout {
+                        RowLayout {
                             spacing: 0
                             Layout.fillWidth: true
-                            Layout.maximumWidth: Number.POSITIVE_INFINITY
+                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                            Layout.fillHeight: false
+                            Layout.alignment: Qt.AlignVCenter
 
                             // <a>
                             Text {
@@ -92,6 +102,8 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 opacity: 0.9
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.fillHeight: true
                             }
 
                             // <a>
@@ -109,6 +121,9 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 opacity: 0.9
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.fillHeight: true
+                                Layout.leftMargin: 20
                             }
 
                             // <a>
@@ -125,6 +140,13 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 opacity: 0.9
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.fillHeight: true
+                                Layout.leftMargin: 20
+                            }
+
+                            Item {
                                 Layout.fillWidth: true
                             }
                         }
@@ -199,8 +221,10 @@ ApplicationWindow {
                 }
 
                 // <main class="layout">
-                ColumnLayout {
-                    spacing: 0
+                GridLayout {
+                    columns: 3
+                    columnSpacing: 16
+                    rowSpacing: 16
                     Layout.preferredWidth: Math.max(0, parent.width - 32)
                     Layout.alignment: Qt.AlignHCenter
                     Layout.maximumWidth: Number.POSITIVE_INFINITY
@@ -213,6 +237,8 @@ ApplicationWindow {
                         implicitWidth: cardContent.implicitWidth + 32
                         implicitHeight: cardContent.implicitHeight + 32
                         Layout.fillWidth: true
+                        Layout.preferredWidth: 0
+                        Layout.fillHeight: true
 
                         ColumnLayout {
                             id: cardContent
@@ -259,10 +285,9 @@ ApplicationWindow {
                             }
 
                             // <ul class="swatches">
-                            ColumnLayout {
-                                spacing: 0
+                            Flow {
+                                spacing: 8
                                 Layout.fillWidth: true
-                                Layout.maximumWidth: Number.POSITIVE_INFINITY
                                 Layout.topMargin: 15.2
 
                                 // <li class="swatch swatch--primary">
@@ -271,8 +296,8 @@ ApplicationWindow {
                                     radius: 12
                                     implicitWidth: 0
                                     implicitHeight: 0
-                                    Layout.preferredWidth: 56
-                                    Layout.preferredHeight: 56
+                                    width: Math.min(56, parent.width)
+                                    height: 56
                                 }
 
                                 // <li class="swatch swatch--surface">
@@ -281,8 +306,8 @@ ApplicationWindow {
                                     radius: 12
                                     implicitWidth: 0
                                     implicitHeight: 0
-                                    Layout.preferredWidth: 56
-                                    Layout.preferredHeight: 56
+                                    width: Math.min(56, parent.width)
+                                    height: 56
                                 }
 
                                 // <li class="swatch swatch--text">
@@ -291,8 +316,8 @@ ApplicationWindow {
                                     radius: 12
                                     implicitWidth: 0
                                     implicitHeight: 0
-                                    Layout.preferredWidth: 56
-                                    Layout.preferredHeight: 56
+                                    width: Math.min(56, parent.width)
+                                    height: 56
                                 }
                             }
                         }
@@ -305,6 +330,8 @@ ApplicationWindow {
                         implicitWidth: cardContent2.implicitWidth + 32
                         implicitHeight: cardContent2.implicitHeight + 32
                         Layout.fillWidth: true
+                        Layout.preferredWidth: 0
+                        Layout.fillHeight: true
 
                         ColumnLayout {
                             id: cardContent2
@@ -351,8 +378,8 @@ ApplicationWindow {
                             }
 
                             // <ul class="spacing-demo">
-                            ColumnLayout {
-                                spacing: 0
+                            RowLayout {
+                                spacing: 8
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
                                 Layout.topMargin: 15.2
@@ -365,7 +392,9 @@ ApplicationWindow {
                                     implicitHeight: 0
                                     opacity: 0.8
                                     Layout.fillWidth: true
+                                    Layout.preferredWidth: 0
                                     Layout.preferredHeight: 16
+                                    Layout.alignment: Qt.AlignBottom
                                 }
 
                                 // <li>
@@ -376,7 +405,9 @@ ApplicationWindow {
                                     implicitHeight: 0
                                     opacity: 0.8
                                     Layout.fillWidth: true
+                                    Layout.preferredWidth: 0
                                     Layout.preferredHeight: 32
+                                    Layout.alignment: Qt.AlignBottom
                                 }
 
                                 // <li>
@@ -387,7 +418,9 @@ ApplicationWindow {
                                     implicitHeight: 0
                                     opacity: 0.8
                                     Layout.fillWidth: true
+                                    Layout.preferredWidth: 0
                                     Layout.preferredHeight: 48
+                                    Layout.alignment: Qt.AlignBottom
                                 }
 
                                 // <li>
@@ -398,7 +431,9 @@ ApplicationWindow {
                                     implicitHeight: 0
                                     opacity: 0.8
                                     Layout.fillWidth: true
+                                    Layout.preferredWidth: 0
                                     Layout.preferredHeight: 64
+                                    Layout.alignment: Qt.AlignBottom
                                 }
                             }
                         }
@@ -412,6 +447,8 @@ ApplicationWindow {
                         implicitWidth: tokensContent.implicitWidth + 32
                         implicitHeight: tokensContent.implicitHeight + 32
                         Layout.fillWidth: true
+                        Layout.preferredWidth: 0
+                        Layout.fillHeight: true
 
                         ColumnLayout {
                             id: tokensContent
@@ -483,6 +520,8 @@ ApplicationWindow {
                         implicitWidth: componentsContent.implicitWidth + 32
                         implicitHeight: componentsContent.implicitHeight + 32
                         Layout.fillWidth: true
+                        Layout.preferredWidth: 0
+                        Layout.fillHeight: true
 
                         ColumnLayout {
                             id: componentsContent
@@ -558,6 +597,8 @@ ApplicationWindow {
                         implicitWidth: cardContent3.implicitWidth + 32
                         implicitHeight: cardContent3.implicitHeight + 32
                         Layout.fillWidth: true
+                        Layout.preferredWidth: 0
+                        Layout.fillHeight: true
 
                         ColumnLayout {
                             id: cardContent3
@@ -614,6 +655,8 @@ ApplicationWindow {
                         implicitWidth: docsContent.implicitWidth + 32
                         implicitHeight: docsContent.implicitHeight + 32
                         Layout.fillWidth: true
+                        Layout.preferredWidth: 0
+                        Layout.fillHeight: true
 
                         ColumnLayout {
                             id: docsContent
@@ -673,21 +716,29 @@ ApplicationWindow {
                     Layout.alignment: Qt.AlignHCenter
                     Layout.topMargin: 32
 
-                    ColumnLayout {
+                    RowLayout {
                         id: statsContent
                         spacing: 0
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.top: parent.top
+                        anchors.bottom: parent.bottom
                         anchors.leftMargin: 16
                         anchors.rightMargin: 16
                         anchors.topMargin: 16
+                        anchors.bottomMargin: 16
+
+                        Item {
+                            Layout.fillWidth: true
+                        }
 
                         // <div>
                         ColumnLayout {
                             spacing: 0
                             Layout.fillWidth: true
-                            Layout.maximumWidth: Number.POSITIVE_INFINITY
+                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                            Layout.fillHeight: true
+                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                             // <span class="stat-value">
                             Text {
@@ -724,11 +775,22 @@ ApplicationWindow {
                             }
                         }
 
+                        Item {
+                            Layout.fillWidth: true
+                        }
+
+                        Item {
+                            Layout.fillWidth: true
+                        }
+
                         // <div>
                         ColumnLayout {
                             spacing: 0
                             Layout.fillWidth: true
-                            Layout.maximumWidth: Number.POSITIVE_INFINITY
+                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                            Layout.fillHeight: true
+                            Layout.maximumHeight: Number.POSITIVE_INFINITY
+                            Layout.leftMargin: 16
 
                             // <span class="stat-value">
                             Text {
@@ -765,11 +827,22 @@ ApplicationWindow {
                             }
                         }
 
+                        Item {
+                            Layout.fillWidth: true
+                        }
+
+                        Item {
+                            Layout.fillWidth: true
+                        }
+
                         // <div>
                         ColumnLayout {
                             spacing: 0
                             Layout.fillWidth: true
-                            Layout.maximumWidth: Number.POSITIVE_INFINITY
+                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                            Layout.fillHeight: true
+                            Layout.maximumHeight: Number.POSITIVE_INFINITY
+                            Layout.leftMargin: 16
 
                             // <span class="stat-value">
                             Text {
@@ -804,6 +877,10 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                             }
+                        }
+
+                        Item {
+                            Layout.fillWidth: true
                         }
                     }
                 }

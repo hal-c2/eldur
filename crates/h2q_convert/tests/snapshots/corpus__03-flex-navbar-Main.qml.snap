@@ -66,15 +66,17 @@ ApplicationWindow {
                             Layout.alignment: Qt.AlignHCenter
                             Layout.maximumWidth: 1200
 
-                            ColumnLayout {
+                            RowLayout {
                                 id: navbarContent
                                 spacing: 0
                                 anchors.left: parent.left
                                 anchors.right: parent.right
                                 anchors.top: parent.top
+                                anchors.bottom: parent.bottom
                                 anchors.leftMargin: 32
                                 anchors.rightMargin: 32
                                 anchors.topMargin: 16
+                                anchors.bottomMargin: 16
 
                                 // <a class="logo">
                                 Text {
@@ -92,13 +94,22 @@ ApplicationWindow {
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
+                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                    Layout.alignment: Qt.AlignVCenter
+                                }
+
+                                Item {
+                                    Layout.fillWidth: true
                                 }
 
                                 // <ul class="nav-links">
-                                ColumnLayout {
+                                RowLayout {
                                     spacing: 0
                                     Layout.fillWidth: true
-                                    Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                    Layout.fillHeight: false
+                                    Layout.alignment: Qt.AlignVCenter
+                                    Layout.leftMargin: 24
 
                                     // <li>
                                     Text {
@@ -115,6 +126,8 @@ ApplicationWindow {
                                         wrapMode: Text.WordWrap
                                         linkColor: "#3d4659"
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: Math.ceil(implicitWidth)
+                                        Layout.alignment: Qt.AlignVCenter
 
                                         onLinkActivated: (link) => {
                                             Qt.openUrlExternally(link)
@@ -136,6 +149,9 @@ ApplicationWindow {
                                         wrapMode: Text.WordWrap
                                         linkColor: "#3d4659"
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: Math.ceil(implicitWidth)
+                                        Layout.alignment: Qt.AlignVCenter
+                                        Layout.leftMargin: 28
 
                                         onLinkActivated: (link) => {
                                             Qt.openUrlExternally(link)
@@ -157,6 +173,9 @@ ApplicationWindow {
                                         wrapMode: Text.WordWrap
                                         linkColor: "#3d4659"
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: Math.ceil(implicitWidth)
+                                        Layout.alignment: Qt.AlignVCenter
+                                        Layout.leftMargin: 28
 
                                         onLinkActivated: (link) => {
                                             Qt.openUrlExternally(link)
@@ -178,6 +197,9 @@ ApplicationWindow {
                                         wrapMode: Text.WordWrap
                                         linkColor: "#3d4659"
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: Math.ceil(implicitWidth)
+                                        Layout.alignment: Qt.AlignVCenter
+                                        Layout.leftMargin: 28
 
                                         onLinkActivated: (link) => {
                                             Qt.openUrlExternally(link)
@@ -199,10 +221,17 @@ ApplicationWindow {
                                         wrapMode: Text.WordWrap
                                         linkColor: "#3d4659"
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: Math.ceil(implicitWidth)
+                                        Layout.alignment: Qt.AlignVCenter
+                                        Layout.leftMargin: 28
 
                                         onLinkActivated: (link) => {
                                             Qt.openUrlExternally(link)
                                         }
+                                    }
+
+                                    Item {
+                                        Layout.fillWidth: true
                                     }
                                 }
                             }
@@ -229,9 +258,15 @@ ApplicationWindow {
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.top: parent.top
+                            anchors.bottom: parent.bottom
                             anchors.leftMargin: 32
                             anchors.rightMargin: 32
                             anchors.topMargin: 64
+                            anchors.bottomMargin: 64
+
+                            Item {
+                                Layout.fillHeight: true
+                            }
 
                             // <span class="badge">
                             Rectangle {
@@ -242,6 +277,8 @@ ApplicationWindow {
                                 border.width: 1
                                 border.color: "#c9d8ec"
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.alignment: Qt.AlignHCenter
 
                                 Text {
                                     id: badgeText
@@ -284,6 +321,9 @@ ApplicationWindow {
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.alignment: Qt.AlignHCenter
+                                Layout.topMargin: 20
                             }
 
                             // <h1>
@@ -300,7 +340,9 @@ ApplicationWindow {
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.maximumWidth: 720
+                                Layout.maximumWidth: Math.min(Math.ceil(implicitWidth), 720)
+                                Layout.alignment: Qt.AlignHCenter
+                                Layout.topMargin: 20
                             }
 
                             // <p class="hero-lead">
@@ -318,15 +360,22 @@ ApplicationWindow {
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.maximumWidth: 560
+                                Layout.maximumWidth: Math.min(Math.ceil(implicitWidth), 560)
+                                Layout.alignment: Qt.AlignHCenter
+                                Layout.topMargin: 20
                             }
 
                             // <div class="hero-actions">
-                            ColumnLayout {
+                            RowLayout {
                                 spacing: 0
                                 Layout.fillWidth: true
-                                Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                Layout.topMargin: 8
+                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.alignment: Qt.AlignHCenter
+                                Layout.topMargin: 28
+
+                                Item {
+                                    Layout.fillWidth: true
+                                }
 
                                 // <a class="btn btn-primary">
                                 Rectangle {
@@ -337,6 +386,8 @@ ApplicationWindow {
                                     border.width: 1
                                     border.color: "#0b5cad"
                                     Layout.fillWidth: true
+                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                    Layout.alignment: Qt.AlignVCenter
 
                                     Text {
                                         id: btnText
@@ -368,6 +419,9 @@ ApplicationWindow {
                                     border.width: 1
                                     border.color: "#0b5cad"
                                     Layout.fillWidth: true
+                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                    Layout.alignment: Qt.AlignVCenter
+                                    Layout.leftMargin: 12
 
                                     Text {
                                         id: btnText2
@@ -389,6 +443,10 @@ ApplicationWindow {
                                         anchors.topMargin: 15
                                     }
                                 }
+
+                                Item {
+                                    Layout.fillWidth: true
+                                }
                             }
 
                             // <p class="hero-note">
@@ -406,6 +464,13 @@ ApplicationWindow {
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.alignment: Qt.AlignHCenter
+                                Layout.topMargin: 20
+                            }
+
+                            Item {
+                                Layout.fillHeight: true
                             }
                         }
                     }

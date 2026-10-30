@@ -126,13 +126,15 @@ impl Emitter<'_, '_> {
     }
 
     /// Wraps `inner` (anchored inside, id `inner_id`) in the box's
-    /// decoration. `inner` is `None` for a box without content.
+    /// decoration. `inner` is `None` for a box without content. With
+    /// `fill_height`, `inner` is anchored to the bottom edge too.
     pub(super) fn wrap(
         &mut self,
         style: &ComputedStyle,
         deco: &Decoration,
         paint_background: bool,
         inner: Option<(Object, String)>,
+        fill_height: bool,
         line: Option<u32>,
     ) -> Object {
         let mut wrapper = Object::new(if deco.paints { "Rectangle" } else { "Item" });
@@ -186,11 +188,16 @@ impl Emitter<'_, '_> {
             inner.set("anchors.left", Value::expr("parent.left"));
             inner.set("anchors.right", Value::expr("parent.right"));
             inner.set("anchors.top", Value::expr("parent.top"));
-            for (name, v) in [
+            let mut margins = vec![
                 ("anchors.leftMargin", insets.left),
                 ("anchors.rightMargin", insets.right),
                 ("anchors.topMargin", insets.top),
-            ] {
+            ];
+            if fill_height {
+                inner.set("anchors.bottom", Value::expr("parent.bottom"));
+                margins.push(("anchors.bottomMargin", insets.bottom));
+            }
+            for (name, v) in margins {
                 if v != 0.0 {
                     inner.set(name, number(v));
                 }

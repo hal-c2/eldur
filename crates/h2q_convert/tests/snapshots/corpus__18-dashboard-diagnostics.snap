@@ -11,39 +11,17 @@ info[css]: index.html:476: `display: inline-block` on <span class="pill pill-pen
 info[css]: index.html:483: `display: inline-block` on <span class="pill pill-shipped"> is laid out as inline text
 info[css]: index.html:490: `display: inline-block` on <span class="pill pill-refunded"> is laid out as inline text
 info[css]: index.html:497: `display: inline-block` on <span class="pill pill-paid"> is laid out as inline text
-warning[css]: index.html:348: `display: grid` on <div class="app"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:350: `display: flex` on <div class="sidebar-brand"> is laid out as block flow (not implemented yet)
 warning[css]: index.html:351: background images and gradients are not converted yet
-warning[css]: index.html:357: `display: flex` on <a class="nav-item active"> is laid out as block flow (not implemented yet)
 warning[css]: index.html:357: `box-shadow` is not converted yet
-warning[css]: index.html:358: `display: flex` on <a class="nav-item"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:359: `display: flex` on <a class="nav-item"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:362: `display: flex` on <a class="nav-item"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:363: `display: flex` on <a class="nav-item"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:364: `display: flex` on <a class="nav-item"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:367: `display: flex` on <a class="nav-item"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:368: `display: flex` on <a class="nav-item"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:373: `display: flex` on <header class="topbar"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:378: `display: flex` on <div class="topbar-right"> is laid out as block flow (not implemented yet)
 warning[html]: index.html:379: <input class="search"> is not converted yet; an empty placeholder keeps its space
-warning[css]: index.html:380: `display: grid` on <div class="avatar"> is laid out as block flow (not implemented yet)
 warning[css]: index.html:380: background images and gradients are not converted yet
-warning[css]: index.html:384: `display: grid` on <main class="content"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:385: `display: grid` on <section class="stats"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:408: `display: grid` on <section class="row-2"> is laid out as block flow (not implemented yet)
-warning[css]: index.html:411: `display: grid` on <div class="bar-row"> is laid out as block flow (not implemented yet)
+info[qml]: index.html:408: unequal `fr` columns on <section class="row-2"> are split into 3 equal sub-columns; items are off by a fraction of the gap
 info[css]: index.html:413: percentage height on <div class="bar-fill w-82"> is treated as `auto`
-warning[css]: index.html:416: `display: grid` on <div class="bar-row"> is laid out as block flow (not implemented yet)
 info[css]: index.html:418: percentage height on <div class="bar-fill w-64"> is treated as `auto`
-warning[css]: index.html:421: `display: grid` on <div class="bar-row"> is laid out as block flow (not implemented yet)
 info[css]: index.html:423: percentage height on <div class="bar-fill w-47"> is treated as `auto`
-warning[css]: index.html:426: `display: grid` on <div class="bar-row"> is laid out as block flow (not implemented yet)
 info[css]: index.html:428: percentage height on <div class="bar-fill w-31"> is treated as `auto`
-warning[css]: index.html:431: `display: grid` on <div class="bar-row"> is laid out as block flow (not implemented yet)
 info[css]: index.html:433: percentage height on <div class="bar-fill w-18"> is treated as `auto`
-warning[css]: index.html:441: `display: flex` on <div class="progress-label"> is laid out as block flow (not implemented yet)
 warning[html]: index.html:442: <progress> is not converted yet; an empty placeholder keeps its space
-warning[css]: index.html:445: `display: flex` on <div class="progress-label"> is laid out as block flow (not implemented yet)
 info[css]: index.html:446: percentage height on <div class="progress-fill p-45"> is treated as `auto`
 warning[css]: index.html:453: `display: table` on <table> is laid out as block flow (not implemented yet)
 info[qml]: index.html:469: <span class="pill pill-paid">: font size 12px inside 14px text is approximated with <small>

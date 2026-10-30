@@ -1,14 +1,19 @@
 //! Step 5: the QML tree. Each box picks its QML form (`docs/spec/layout.md`).
 //!
 //! [`Emitter::block`] dispatches on [`BoxKind`]; each layout kind has its
-//! own submodule. Flex, grid and table containers have no emitter yet and
-//! are laid out as block flow, with a diagnostic.
+//! own submodule. Table containers have no emitter yet and are laid out as
+//! block flow, with a diagnostic.
 
 mod decoration;
+mod flex;
 mod flow;
+mod grid;
 mod ids;
 mod text;
 pub(crate) mod units;
+
+#[cfg(test)]
+mod tests;
 
 use std::collections::{BTreeMap, HashSet};
 
@@ -197,12 +202,28 @@ impl<'a, 'd> Emitter<'a, 'd> {
 
     /// A block-level box and its margins, as its parent's flow sees it.
     pub(super) fn block(&mut self, b: &LayoutBox<'_>, inherited: TextDecorationLine) -> Emitted {
+        self.block_box(b, inherited, false)
+    }
+
+    /// A flex or grid item: it establishes an independent formatting
+    /// context (CSS Flexbox 1 §4, CSS Grid 2 §6), so no child margin
+    /// escapes it, and its own margins do not collapse.
+    pub(super) fn item(&mut self, b: &LayoutBox<'_>, inherited: TextDecorationLine) -> Emitted {
+        self.block_box(b, inherited, true)
+    }
+
+    fn block_box(
+        &mut self,
+        b: &LayoutBox<'_>,
+        inherited: TextDecorationLine,
+        independent: bool,
+    ) -> Emitted {
         let style = &*b.style;
         let line = b.node.and_then(|n| node_line(self.doc, n));
         match b.kind {
-            BoxKind::Block => {}
+            BoxKind::Block | BoxKind::Flex | BoxKind::Grid => {}
             BoxKind::Replaced => return self.replaced(b, line),
-            BoxKind::Flex | BoxKind::Grid | BoxKind::Table => self.unsupported_layout(b, line),
+            BoxKind::Table => self.unsupported_layout(b, line),
         }
         self.out_of_flow(b, line);
         let decoration = TextDecorationLine {
@@ -215,13 +236,20 @@ impl<'a, 'd> Emitter<'a, 'd> {
         let wanted = b.node.is_some_and(|n| self.wanted.contains(&n));
         let mt = self.vertical_margin(&style.margin.top, line);
         let mb = self.vertical_margin(&style.margin.bottom, line);
-        let bfc_root = establishes_bfc(style) || (b.node.is_some() && b.node == self.root_node);
+        let bfc_root =
+            independent || establishes_bfc(style) || (b.node.is_some() && b.node == self.root_node);
         let top_open = !bfc_root && deco.insets.top == 0.0;
         let bottom_open = !bfc_root && deco.insets.bottom == 0.0 && !has_height(style);
 
         let mut escaped_top = MarginSet::default();
         let mut escaped_bottom = MarginSet::default();
         let mut inner = match &b.content {
+            Content::Blocks(children) if b.kind == BoxKind::Flex => {
+                Some((self.flex(b, children, decoration, line), "Content"))
+            }
+            Content::Blocks(children) if b.kind == BoxKind::Grid => {
+                Some((self.grid(b, children, decoration, line), "Content"))
+            }
             Content::Blocks(children) => {
                 let column = self.column(children, decoration, top_open, bottom_open);
                 escaped_top = column.escaped_top;
@@ -267,12 +295,18 @@ impl<'a, 'd> Emitter<'a, 'd> {
             (None, true) => Some(self.ids.claim(&hint(self.doc, b))),
             (None, false) => None,
         };
-        let needs_wrapper =
-            deco.needed() || inner.is_none() || (has_height(style) && inner.is_some());
+        // A layout whose children refer to it by id keeps that id, so an
+        // HTML id goes on a wrapper.
+        let inner_has_id = inner.as_ref().is_some_and(|(o, _)| o.id.is_some());
+        let needs_wrapper = deco.needed()
+            || inner.is_none()
+            || (has_height(style) && inner.is_some())
+            || (inner_has_id && outer_id.is_some());
         let (mut obj, kind) = if needs_wrapper {
             let inner = inner.map(|(mut obj, suffix)| {
-                let id = match &outer_id {
-                    Some(outer) if self.ids.try_exact(&format!("{outer}{suffix}")) => {
+                let id = match (&obj.id, &outer_id) {
+                    (Some(own), _) => own.clone(),
+                    (None, Some(outer)) if self.ids.try_exact(&format!("{outer}{suffix}")) => {
                         format!("{outer}{suffix}")
                     }
                     _ => self.ids.claim(&format!("{} {suffix}", hint(self.doc, b))),
@@ -280,7 +314,11 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 obj.id = Some(id.clone());
                 (obj, id)
             });
-            let wrapper = self.wrap(style, &deco, paint_background, inner, line);
+            // Flex and grid layouts distribute the box's height (a
+            // `height`, `min-height` or a stretching parent) among their
+            // items, so they fill it; block flow keeps its content height.
+            let fill = matches!(b.kind, BoxKind::Flex | BoxKind::Grid);
+            let wrapper = self.wrap(style, &deco, paint_background, inner, fill, line);
             (wrapper, TargetKind::Box)
         } else {
             let (obj, suffix) = inner.unwrap_or((Object::new("Item"), "Content"));

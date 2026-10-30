@@ -67,12 +67,13 @@ ApplicationWindow {
                             Layout.maximumWidth: 1120
                             Layout.preferredHeight: 72
 
-                            ColumnLayout {
+                            RowLayout {
                                 id: containerContent
                                 spacing: 0
                                 anchors.left: parent.left
                                 anchors.right: parent.right
                                 anchors.top: parent.top
+                                anchors.bottom: parent.bottom
                                 anchors.leftMargin: 24
                                 anchors.rightMargin: 24
 
@@ -92,16 +93,24 @@ ApplicationWindow {
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
+                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                    Layout.alignment: Qt.AlignVCenter
+                                }
+
+                                Item {
+                                    Layout.fillWidth: true
                                 }
 
                                 // <nav>
                                 ColumnLayout {
                                     spacing: 0
                                     Layout.fillWidth: true
-                                    Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                    Layout.fillHeight: false
+                                    Layout.alignment: Qt.AlignVCenter
 
                                     // <ul class="nav-links">
-                                    ColumnLayout {
+                                    RowLayout {
                                         spacing: 0
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
@@ -121,6 +130,8 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             linkColor: "#5c6378"
                                             Layout.fillWidth: true
+                                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                                            Layout.fillHeight: true
 
                                             onLinkActivated: (link) => {
                                                 Qt.openUrlExternally(link)
@@ -142,6 +153,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             linkColor: "#5c6378"
                                             Layout.fillWidth: true
+                                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                                            Layout.fillHeight: true
+                                            Layout.leftMargin: 32
 
                                             onLinkActivated: (link) => {
                                                 Qt.openUrlExternally(link)
@@ -163,6 +177,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             linkColor: "#5c6378"
                                             Layout.fillWidth: true
+                                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                                            Layout.fillHeight: true
+                                            Layout.leftMargin: 32
 
                                             onLinkActivated: (link) => {
                                                 Qt.openUrlExternally(link)
@@ -184,12 +201,23 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             linkColor: "#5c6378"
                                             Layout.fillWidth: true
+                                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                                            Layout.fillHeight: true
+                                            Layout.leftMargin: 32
 
                                             onLinkActivated: (link) => {
                                                 Qt.openUrlExternally(link)
                                             }
                                         }
+
+                                        Item {
+                                            Layout.fillWidth: true
+                                        }
                                     }
+                                }
+
+                                Item {
+                                    Layout.fillWidth: true
                                 }
 
                                 // <a class="btn btn-small">
@@ -201,7 +229,9 @@ ApplicationWindow {
                                     border.width: 2
                                     border.color: "#00000000"
                                     Layout.fillWidth: true
+                                    Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.preferredHeight: 40
+                                    Layout.alignment: Qt.AlignVCenter
 
                                     Text {
                                         id: btnText
@@ -220,9 +250,11 @@ ApplicationWindow {
                                         anchors.left: parent.left
                                         anchors.right: parent.right
                                         anchors.top: parent.top
+                                        anchors.bottom: parent.bottom
                                         anchors.leftMargin: 20
                                         anchors.rightMargin: 20
                                         anchors.topMargin: 2
+                                        anchors.bottomMargin: 2
                                     }
                                 }
                             }
@@ -258,20 +290,30 @@ ApplicationWindow {
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.maximumWidth: 1120
 
-                                ColumnLayout {
+                                GridLayout {
                                     id: containerContent2
-                                    spacing: 0
+                                    columns: 9
+                                    columnSpacing: 48
+                                    rowSpacing: 0
                                     anchors.left: parent.left
                                     anchors.right: parent.right
                                     anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
                                     anchors.leftMargin: 24
                                     anchors.rightMargin: 24
 
                                     // <div>
                                     ColumnLayout {
                                         spacing: 0
+                                        Layout.row: 0
+                                        Layout.column: 0
+                                        Layout.columnSpan: 5
                                         Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                        Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                        Layout.fillHeight: false
+                                        Layout.alignment: Qt.AlignVCenter
 
                                         Text {
                                             text: "<b><small>New: workflow automation</small></b>"
@@ -327,10 +369,9 @@ ApplicationWindow {
                                         }
 
                                         // <div class="cta-row">
-                                        ColumnLayout {
-                                            spacing: 0
+                                        Flow {
+                                            spacing: 16
                                             Layout.fillWidth: true
-                                            Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.topMargin: 40
 
                                             // <a class="btn btn-primary">
@@ -341,8 +382,8 @@ ApplicationWindow {
                                                 implicitHeight: btnText2.implicitHeight + 4
                                                 border.width: 2
                                                 border.color: "#00000000"
-                                                Layout.fillWidth: true
-                                                Layout.preferredHeight: 52
+                                                width: Math.min(Math.ceil(implicitWidth), parent.width)
+                                                height: 52
 
                                                 Text {
                                                     id: btnText2
@@ -361,9 +402,11 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.top: parent.top
+                                                    anchors.bottom: parent.bottom
                                                     anchors.leftMargin: 30
                                                     anchors.rightMargin: 30
                                                     anchors.topMargin: 2
+                                                    anchors.bottomMargin: 2
                                                 }
                                             }
 
@@ -375,8 +418,8 @@ ApplicationWindow {
                                                 implicitHeight: btnText3.implicitHeight + 4
                                                 border.width: 2
                                                 border.color: "#99ffffff"
-                                                Layout.fillWidth: true
-                                                Layout.preferredHeight: 52
+                                                width: Math.min(Math.ceil(implicitWidth), parent.width)
+                                                height: 52
 
                                                 Text {
                                                     id: btnText3
@@ -395,9 +438,11 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.top: parent.top
+                                                    anchors.bottom: parent.bottom
                                                     anchors.leftMargin: 30
                                                     anchors.rightMargin: 30
                                                     anchors.topMargin: 2
+                                                    anchors.bottomMargin: 2
                                                 }
                                             }
                                         }
@@ -411,7 +456,12 @@ ApplicationWindow {
                                         implicitHeight: heroPanelContent.implicitHeight + 58
                                         border.width: 1
                                         border.color: "#4dffffff"
+                                        Layout.row: 0
+                                        Layout.column: 5
+                                        Layout.columnSpan: 4
                                         Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
+                                        Layout.alignment: Qt.AlignVCenter
 
                                         ColumnLayout {
                                             id: heroPanelContent
@@ -424,7 +474,7 @@ ApplicationWindow {
                                             anchors.topMargin: 29
 
                                             // <div class="panel-head">
-                                            ColumnLayout {
+                                            RowLayout {
                                                 spacing: 0
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
@@ -434,8 +484,11 @@ ApplicationWindow {
                                                     color: "#80ffffff"
                                                     implicitWidth: 0
                                                     implicitHeight: 0
+                                                    Layout.fillWidth: true
                                                     Layout.preferredWidth: 10
+                                                    Layout.maximumWidth: 10
                                                     Layout.preferredHeight: 10
+                                                    Layout.alignment: Qt.AlignTop
                                                 }
 
                                                 // <span class="dot">
@@ -443,8 +496,12 @@ ApplicationWindow {
                                                     color: "#80ffffff"
                                                     implicitWidth: 0
                                                     implicitHeight: 0
+                                                    Layout.fillWidth: true
                                                     Layout.preferredWidth: 10
+                                                    Layout.maximumWidth: 10
                                                     Layout.preferredHeight: 10
+                                                    Layout.alignment: Qt.AlignTop
+                                                    Layout.leftMargin: 8
                                                 }
 
                                                 // <span class="dot">
@@ -452,13 +509,21 @@ ApplicationWindow {
                                                     color: "#80ffffff"
                                                     implicitWidth: 0
                                                     implicitHeight: 0
+                                                    Layout.fillWidth: true
                                                     Layout.preferredWidth: 10
+                                                    Layout.maximumWidth: 10
                                                     Layout.preferredHeight: 10
+                                                    Layout.alignment: Qt.AlignTop
+                                                    Layout.leftMargin: 8
+                                                }
+
+                                                Item {
+                                                    Layout.fillWidth: true
                                                 }
                                             }
 
                                             // <div class="panel-row">
-                                            ColumnLayout {
+                                            RowLayout {
                                                 spacing: 0
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
@@ -478,6 +543,12 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                    Layout.alignment: Qt.AlignBaseline
+                                                }
+
+                                                Item {
+                                                    Layout.fillWidth: true
                                                 }
 
                                                 // <strong>
@@ -495,6 +566,8 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                    Layout.alignment: Qt.AlignBaseline
                                                 }
                                             }
 
@@ -528,7 +601,7 @@ ApplicationWindow {
                                             }
 
                                             // <div class="panel-row">
-                                            ColumnLayout {
+                                            RowLayout {
                                                 spacing: 0
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
@@ -548,6 +621,12 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                    Layout.alignment: Qt.AlignBaseline
+                                                }
+
+                                                Item {
+                                                    Layout.fillWidth: true
                                                 }
 
                                                 // <strong>
@@ -565,6 +644,8 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                    Layout.alignment: Qt.AlignBaseline
                                                 }
                                             }
 
@@ -598,7 +679,7 @@ ApplicationWindow {
                                             }
 
                                             // <div class="panel-row">
-                                            ColumnLayout {
+                                            RowLayout {
                                                 spacing: 0
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
@@ -618,6 +699,12 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                    Layout.alignment: Qt.AlignBaseline
+                                                }
+
+                                                Item {
+                                                    Layout.fillWidth: true
                                                 }
 
                                                 // <strong>
@@ -635,6 +722,8 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                    Layout.alignment: Qt.AlignBaseline
                                                 }
                                             }
 
@@ -667,6 +756,69 @@ ApplicationWindow {
                                                 }
                                             }
                                         }
+                                    }
+
+                                    Item {
+                                        Layout.row: 1
+                                        Layout.column: 0
+                                        Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
+                                    }
+
+                                    Item {
+                                        Layout.row: 1
+                                        Layout.column: 1
+                                        Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
+                                    }
+
+                                    Item {
+                                        Layout.row: 1
+                                        Layout.column: 2
+                                        Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
+                                    }
+
+                                    Item {
+                                        Layout.row: 1
+                                        Layout.column: 3
+                                        Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
+                                    }
+
+                                    Item {
+                                        Layout.row: 1
+                                        Layout.column: 4
+                                        Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
+                                    }
+
+                                    Item {
+                                        Layout.row: 1
+                                        Layout.column: 5
+                                        Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
+                                    }
+
+                                    Item {
+                                        Layout.row: 1
+                                        Layout.column: 6
+                                        Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
+                                    }
+
+                                    Item {
+                                        Layout.row: 1
+                                        Layout.column: 7
+                                        Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
+                                    }
+
+                                    Item {
+                                        Layout.row: 1
+                                        Layout.column: 8
+                                        Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
                                     }
                                 }
                             }
@@ -751,8 +903,10 @@ ApplicationWindow {
                                     }
 
                                     // <div class="features-grid">
-                                    ColumnLayout {
-                                        spacing: 0
+                                    GridLayout {
+                                        columns: 3
+                                        columnSpacing: 24
+                                        rowSpacing: 24
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
                                         Layout.topMargin: 56
@@ -764,6 +918,8 @@ ApplicationWindow {
                                             implicitWidth: featureCardContent.implicitWidth + 64
                                             implicitHeight: featureCardContent.implicitHeight + 64
                                             Layout.fillWidth: true
+                                            Layout.preferredWidth: 0
+                                            Layout.fillHeight: true
 
                                             ColumnLayout {
                                                 id: featureCardContent
@@ -846,6 +1002,8 @@ ApplicationWindow {
                                             implicitWidth: featureCardContent2.implicitWidth + 64
                                             implicitHeight: featureCardContent2.implicitHeight + 64
                                             Layout.fillWidth: true
+                                            Layout.preferredWidth: 0
+                                            Layout.fillHeight: true
 
                                             ColumnLayout {
                                                 id: featureCardContent2
@@ -928,6 +1086,8 @@ ApplicationWindow {
                                             implicitWidth: featureCardContent3.implicitWidth + 64
                                             implicitHeight: featureCardContent3.implicitHeight + 64
                                             Layout.fillWidth: true
+                                            Layout.preferredWidth: 0
+                                            Layout.fillHeight: true
 
                                             ColumnLayout {
                                                 id: featureCardContent3
@@ -1066,19 +1226,26 @@ ApplicationWindow {
                                         }
 
                                         // <figcaption class="quote-author">
-                                        ColumnLayout {
+                                        RowLayout {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.topMargin: 28
+
+                                            Item {
+                                                Layout.fillWidth: true
+                                            }
 
                                             // <span class="avatar">
                                             Rectangle {
                                                 color: "#c7c2f5"
                                                 implicitWidth: avatarText.implicitWidth
                                                 implicitHeight: avatarText.implicitHeight
+                                                Layout.fillWidth: true
                                                 Layout.preferredWidth: 48
+                                                Layout.maximumWidth: 48
                                                 Layout.preferredHeight: 48
+                                                Layout.alignment: Qt.AlignVCenter
 
                                                 Text {
                                                     id: avatarText
@@ -1098,6 +1265,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.top: parent.top
+                                                    anchors.bottom: parent.bottom
                                                 }
                                             }
 
@@ -1105,7 +1273,10 @@ ApplicationWindow {
                                             ColumnLayout {
                                                 spacing: 0
                                                 Layout.fillWidth: true
-                                                Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: false
+                                                Layout.alignment: Qt.AlignVCenter
+                                                Layout.leftMargin: 14
 
                                                 // <span class="author-name">
                                                 Text {
@@ -1140,6 +1311,10 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                 }
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
                                             }
                                         }
                                     }
@@ -1187,21 +1362,25 @@ ApplicationWindow {
                                         implicitHeight: ctaBandContent.implicitHeight + 128
                                         Layout.fillWidth: true
 
-                                        ColumnLayout {
+                                        RowLayout {
                                             id: ctaBandContent
                                             spacing: 0
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
                                             anchors.leftMargin: 64
                                             anchors.rightMargin: 64
                                             anchors.topMargin: 64
+                                            anchors.bottomMargin: 64
 
                                             // <div>
                                             ColumnLayout {
                                                 spacing: 0
                                                 Layout.fillWidth: true
-                                                Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: false
+                                                Layout.alignment: Qt.AlignVCenter
 
                                                 // <h2>
                                                 Text {
@@ -1239,6 +1418,10 @@ ApplicationWindow {
                                                 }
                                             }
 
+                                            Item {
+                                                Layout.fillWidth: true
+                                            }
+
                                             // <a class="btn btn-accent">
                                             Rectangle {
                                                 color: "#ff7a59"
@@ -1248,7 +1431,10 @@ ApplicationWindow {
                                                 border.width: 2
                                                 border.color: "#00000000"
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.preferredHeight: 52
+                                                Layout.alignment: Qt.AlignVCenter
+                                                Layout.leftMargin: 32
 
                                                 Text {
                                                     id: btnText4
@@ -1267,9 +1453,11 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.top: parent.top
+                                                    anchors.bottom: parent.bottom
                                                     anchors.leftMargin: 30
                                                     anchors.rightMargin: 30
                                                     anchors.topMargin: 2
+                                                    anchors.bottomMargin: 2
                                                 }
                                             }
                                         }
@@ -1313,16 +1501,24 @@ ApplicationWindow {
                                 anchors.rightMargin: 24
 
                                 // <div class="footer-grid">
-                                ColumnLayout {
-                                    spacing: 0
+                                GridLayout {
+                                    columns: 5
+                                    columnSpacing: 40
+                                    rowSpacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
 
                                     // <div>
                                     ColumnLayout {
                                         spacing: 0
+                                        Layout.row: 0
+                                        Layout.column: 0
+                                        Layout.columnSpan: 2
                                         Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                        Layout.fillHeight: true
+                                        Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                         // <p class="footer-brand">
                                         Text {
@@ -1356,15 +1552,20 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
                                             Layout.topMargin: 16
+                                            Layout.bottomMargin: 16
                                         }
                                     }
 
                                     // <div>
                                     ColumnLayout {
                                         spacing: 0
+                                        Layout.row: 0
+                                        Layout.column: 2
                                         Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.topMargin: 16
+                                        Layout.fillHeight: true
+                                        Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                         // <h4>
                                         Text {
@@ -1386,8 +1587,10 @@ ApplicationWindow {
                                         }
 
                                         // <ul>
-                                        ColumnLayout {
-                                            spacing: 0
+                                        GridLayout {
+                                            columns: 1
+                                            columnSpacing: 10
+                                            rowSpacing: 10
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.topMargin: 16
@@ -1407,6 +1610,7 @@ ApplicationWindow {
                                                 wrapMode: Text.WordWrap
                                                 linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
+                                                Layout.fillHeight: true
 
                                                 onLinkActivated: (link) => {
                                                     Qt.openUrlExternally(link)
@@ -1428,6 +1632,7 @@ ApplicationWindow {
                                                 wrapMode: Text.WordWrap
                                                 linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
+                                                Layout.fillHeight: true
 
                                                 onLinkActivated: (link) => {
                                                     Qt.openUrlExternally(link)
@@ -1449,6 +1654,7 @@ ApplicationWindow {
                                                 wrapMode: Text.WordWrap
                                                 linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
+                                                Layout.fillHeight: true
 
                                                 onLinkActivated: (link) => {
                                                     Qt.openUrlExternally(link)
@@ -1470,6 +1676,7 @@ ApplicationWindow {
                                                 wrapMode: Text.WordWrap
                                                 linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
+                                                Layout.fillHeight: true
 
                                                 onLinkActivated: (link) => {
                                                     Qt.openUrlExternally(link)
@@ -1481,8 +1688,13 @@ ApplicationWindow {
                                     // <div>
                                     ColumnLayout {
                                         spacing: 0
+                                        Layout.row: 0
+                                        Layout.column: 3
                                         Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                        Layout.fillHeight: true
+                                        Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                         // <h4>
                                         Text {
@@ -1504,8 +1716,10 @@ ApplicationWindow {
                                         }
 
                                         // <ul>
-                                        ColumnLayout {
-                                            spacing: 0
+                                        GridLayout {
+                                            columns: 1
+                                            columnSpacing: 10
+                                            rowSpacing: 10
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.topMargin: 16
@@ -1525,6 +1739,7 @@ ApplicationWindow {
                                                 wrapMode: Text.WordWrap
                                                 linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
+                                                Layout.fillHeight: true
 
                                                 onLinkActivated: (link) => {
                                                     Qt.openUrlExternally(link)
@@ -1546,6 +1761,7 @@ ApplicationWindow {
                                                 wrapMode: Text.WordWrap
                                                 linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
+                                                Layout.fillHeight: true
 
                                                 onLinkActivated: (link) => {
                                                     Qt.openUrlExternally(link)
@@ -1567,6 +1783,7 @@ ApplicationWindow {
                                                 wrapMode: Text.WordWrap
                                                 linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
+                                                Layout.fillHeight: true
 
                                                 onLinkActivated: (link) => {
                                                     Qt.openUrlExternally(link)
@@ -1588,6 +1805,7 @@ ApplicationWindow {
                                                 wrapMode: Text.WordWrap
                                                 linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
+                                                Layout.fillHeight: true
 
                                                 onLinkActivated: (link) => {
                                                     Qt.openUrlExternally(link)
@@ -1599,8 +1817,13 @@ ApplicationWindow {
                                     // <div>
                                     ColumnLayout {
                                         spacing: 0
+                                        Layout.row: 0
+                                        Layout.column: 4
                                         Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                        Layout.fillHeight: true
+                                        Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                         // <h4>
                                         Text {
@@ -1622,8 +1845,10 @@ ApplicationWindow {
                                         }
 
                                         // <ul>
-                                        ColumnLayout {
-                                            spacing: 0
+                                        GridLayout {
+                                            columns: 1
+                                            columnSpacing: 10
+                                            rowSpacing: 10
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.topMargin: 16
@@ -1643,6 +1868,7 @@ ApplicationWindow {
                                                 wrapMode: Text.WordWrap
                                                 linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
+                                                Layout.fillHeight: true
 
                                                 onLinkActivated: (link) => {
                                                     Qt.openUrlExternally(link)
@@ -1664,6 +1890,7 @@ ApplicationWindow {
                                                 wrapMode: Text.WordWrap
                                                 linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
+                                                Layout.fillHeight: true
 
                                                 onLinkActivated: (link) => {
                                                     Qt.openUrlExternally(link)
@@ -1685,6 +1912,7 @@ ApplicationWindow {
                                                 wrapMode: Text.WordWrap
                                                 linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
+                                                Layout.fillHeight: true
 
                                                 onLinkActivated: (link) => {
                                                     Qt.openUrlExternally(link)
@@ -1706,12 +1934,27 @@ ApplicationWindow {
                                                 wrapMode: Text.WordWrap
                                                 linkColor: "#c9cee0"
                                                 Layout.fillWidth: true
+                                                Layout.fillHeight: true
 
                                                 onLinkActivated: (link) => {
                                                     Qt.openUrlExternally(link)
                                                 }
                                             }
                                         }
+                                    }
+
+                                    Item {
+                                        Layout.row: 1
+                                        Layout.column: 0
+                                        Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
+                                    }
+
+                                    Item {
+                                        Layout.row: 1
+                                        Layout.column: 1
+                                        Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
                                     }
                                 }
 
@@ -1731,12 +1974,13 @@ ApplicationWindow {
                                         color: "#262c44"
                                     }
 
-                                    ColumnLayout {
+                                    RowLayout {
                                         id: footerBottomContent
                                         spacing: 0
                                         anchors.left: parent.left
                                         anchors.right: parent.right
                                         anchors.top: parent.top
+                                        anchors.bottom: parent.bottom
                                         anchors.topMargin: 25
 
                                         // <span>
@@ -1752,6 +1996,12 @@ ApplicationWindow {
                                                 y: 3.24
                                             }
                                             wrapMode: Text.WordWrap
+                                            Layout.fillWidth: true
+                                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                                            Layout.fillHeight: true
+                                        }
+
+                                        Item {
                                             Layout.fillWidth: true
                                         }
 
@@ -1769,6 +2019,8 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                                            Layout.fillHeight: true
                                         }
                                     }
                                 }

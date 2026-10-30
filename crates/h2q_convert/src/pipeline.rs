@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 
-use h2q_css::{LoadedSheet, StylesheetLoader};
+use h2q_css::{Display, LoadedSheet, StylesheetLoader};
 use h2q_dom::Document;
 use h2q_qml::{Import, Member};
 
@@ -30,15 +30,25 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
 
     // 1–2: DOM and computed styles.
     let doc = Document::parse(&input.html);
-    let (sheets, sheet_diags) = h2q_css::collect_stylesheets(
-        &doc,
-        &mut Loader {
-            resources,
-            base: &input.url,
-        },
-        &options.viewport,
-    );
+    let mut loader = Loader {
+        resources,
+        base: &input.url,
+    };
+    let (sheets, sheet_diags) = h2q_css::collect_stylesheets(&doc, &mut loader, &options.viewport);
+    let resources = loader.resources;
     let styles = h2q_css::compute_styles(&doc, &sheets, &options.viewport);
+    let dense_grid = doc.descendants(doc.root()).any(|n| {
+        styles.style(n).is_some_and(|s| {
+            s.grid_auto_flow_dense && matches!(s.display, Display::Grid | Display::InlineGrid)
+        })
+    });
+    if dense_grid {
+        diags.info(
+            "css",
+            None,
+            "`grid-auto-flow: dense` is laid out as sparse auto-placement".to_owned(),
+        );
+    }
     for d in sheet_diags.iter().chain(&styles.diagnostics) {
         diags.push(css_diagnostic(d));
     }

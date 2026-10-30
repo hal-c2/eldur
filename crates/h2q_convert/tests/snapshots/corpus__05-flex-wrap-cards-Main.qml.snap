@@ -52,14 +52,16 @@ ApplicationWindow {
                         color: "#e2e5ee"
                     }
 
-                    ColumnLayout {
+                    RowLayout {
                         id: siteHeaderContent
                         spacing: 0
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.top: parent.top
+                        anchors.bottom: parent.bottom
                         anchors.leftMargin: 32
                         anchors.rightMargin: 32
+                        anchors.bottomMargin: 1
 
                         // <div class="brand">
                         Text {
@@ -77,13 +79,21 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
+                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                            Layout.alignment: Qt.AlignVCenter
+                        }
+
+                        Item {
+                            Layout.fillWidth: true
                         }
 
                         // <nav class="site-nav">
-                        ColumnLayout {
+                        RowLayout {
                             spacing: 0
                             Layout.fillWidth: true
-                            Layout.maximumWidth: Number.POSITIVE_INFINITY
+                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                            Layout.fillHeight: false
+                            Layout.alignment: Qt.AlignVCenter
 
                             // <a>
                             Text {
@@ -99,6 +109,8 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.fillHeight: true
                             }
 
                             // <a>
@@ -115,6 +127,9 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.fillHeight: true
+                                Layout.leftMargin: 24
                             }
 
                             // <a>
@@ -131,6 +146,9 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.fillHeight: true
+                                Layout.leftMargin: 24
                             }
 
                             // <a>
@@ -146,6 +164,13 @@ ApplicationWindow {
                                     y: 2.63
                                 }
                                 wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.fillHeight: true
+                                Layout.leftMargin: 24
+                            }
+
+                            Item {
                                 Layout.fillWidth: true
                             }
                         }
@@ -203,10 +228,9 @@ ApplicationWindow {
                         }
 
                         // <section class="product-grid">
-                        ColumnLayout {
-                            spacing: 0
+                        Flow {
+                            spacing: 24
                             Layout.fillWidth: true
-                            Layout.maximumWidth: Number.POSITIVE_INFINITY
                             Layout.topMargin: 24
 
                             // <article class="card">
@@ -216,7 +240,7 @@ ApplicationWindow {
                                 clip: true
                                 implicitWidth: cardContent.implicitWidth
                                 implicitHeight: cardContent.implicitHeight
-                                Layout.preferredWidth: 280
+                                width: Math.min(280, parent.width)
 
                                 ColumnLayout {
                                     id: cardContent
@@ -224,19 +248,21 @@ ApplicationWindow {
                                     anchors.left: parent.left
                                     anchors.right: parent.right
                                     anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
 
                                     // <div class="card-media card-media--coral">
                                     Item {
                                         implicitWidth: 0
                                         implicitHeight: 0
-                                        Layout.fillWidth: true
                                         Layout.preferredHeight: 120
+                                        Layout.fillWidth: true
                                     }
 
                                     // <div class="card-body">
                                     Item {
                                         implicitWidth: cardBodyContent.implicitWidth + 40
                                         implicitHeight: cardBodyContent.implicitHeight + 36
+                                        Layout.fillHeight: true
                                         Layout.fillWidth: true
 
                                         ColumnLayout {
@@ -245,9 +271,11 @@ ApplicationWindow {
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
                                             anchors.leftMargin: 20
                                             anchors.rightMargin: 20
                                             anchors.topMargin: 16
+                                            anchors.bottomMargin: 20
 
                                             // <h2 class="card-title">
                                             Text {
@@ -264,6 +292,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.bottomMargin: 4
                                             }
 
                                             // <p class="card-price">
@@ -281,7 +310,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.topMargin: 4
+                                                Layout.bottomMargin: 8
                                             }
 
                                             // <p class="card-text">
@@ -298,7 +327,11 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.topMargin: 8
+                                                Layout.bottomMargin: 16
+                                            }
+
+                                            Item {
+                                                Layout.fillHeight: true
                                             }
 
                                             // <button class="card-button">
@@ -308,7 +341,7 @@ ApplicationWindow {
                                                 implicitWidth: cardButtonText.implicitWidth + 32
                                                 implicitHeight: cardButtonText.implicitHeight + 24
                                                 Layout.preferredWidth: parent.width
-                                                Layout.topMargin: 16
+                                                Layout.alignment: Qt.AlignLeft
 
                                                 Text {
                                                     id: cardButtonText
@@ -345,7 +378,7 @@ ApplicationWindow {
                                 clip: true
                                 implicitWidth: cardContent2.implicitWidth
                                 implicitHeight: cardContent2.implicitHeight
-                                Layout.preferredWidth: 280
+                                width: Math.min(280, parent.width)
 
                                 ColumnLayout {
                                     id: cardContent2
@@ -353,19 +386,21 @@ ApplicationWindow {
                                     anchors.left: parent.left
                                     anchors.right: parent.right
                                     anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
 
                                     // <div class="card-media card-media--ocean">
                                     Item {
                                         implicitWidth: 0
                                         implicitHeight: 0
-                                        Layout.fillWidth: true
                                         Layout.preferredHeight: 120
+                                        Layout.fillWidth: true
                                     }
 
                                     // <div class="card-body">
                                     Item {
                                         implicitWidth: cardBodyContent2.implicitWidth + 40
                                         implicitHeight: cardBodyContent2.implicitHeight + 36
+                                        Layout.fillHeight: true
                                         Layout.fillWidth: true
 
                                         ColumnLayout {
@@ -374,9 +409,11 @@ ApplicationWindow {
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
                                             anchors.leftMargin: 20
                                             anchors.rightMargin: 20
                                             anchors.topMargin: 16
+                                            anchors.bottomMargin: 20
 
                                             // <h2 class="card-title">
                                             Text {
@@ -393,6 +430,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.bottomMargin: 4
                                             }
 
                                             // <p class="card-price">
@@ -410,7 +448,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.topMargin: 4
+                                                Layout.bottomMargin: 8
                                             }
 
                                             // <p class="card-text">
@@ -427,7 +465,11 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.topMargin: 8
+                                                Layout.bottomMargin: 16
+                                            }
+
+                                            Item {
+                                                Layout.fillHeight: true
                                             }
 
                                             // <button class="card-button">
@@ -437,7 +479,7 @@ ApplicationWindow {
                                                 implicitWidth: cardButtonText2.implicitWidth + 32
                                                 implicitHeight: cardButtonText2.implicitHeight + 24
                                                 Layout.preferredWidth: parent.width
-                                                Layout.topMargin: 16
+                                                Layout.alignment: Qt.AlignLeft
 
                                                 Text {
                                                     id: cardButtonText2
@@ -474,7 +516,7 @@ ApplicationWindow {
                                 clip: true
                                 implicitWidth: cardContent3.implicitWidth
                                 implicitHeight: cardContent3.implicitHeight
-                                Layout.preferredWidth: 280
+                                width: Math.min(280, parent.width)
 
                                 ColumnLayout {
                                     id: cardContent3
@@ -482,19 +524,21 @@ ApplicationWindow {
                                     anchors.left: parent.left
                                     anchors.right: parent.right
                                     anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
 
                                     // <div class="card-media card-media--sunset">
                                     Item {
                                         implicitWidth: 0
                                         implicitHeight: 0
-                                        Layout.fillWidth: true
                                         Layout.preferredHeight: 120
+                                        Layout.fillWidth: true
                                     }
 
                                     // <div class="card-body">
                                     Item {
                                         implicitWidth: cardBodyContent3.implicitWidth + 40
                                         implicitHeight: cardBodyContent3.implicitHeight + 36
+                                        Layout.fillHeight: true
                                         Layout.fillWidth: true
 
                                         ColumnLayout {
@@ -503,9 +547,11 @@ ApplicationWindow {
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
                                             anchors.leftMargin: 20
                                             anchors.rightMargin: 20
                                             anchors.topMargin: 16
+                                            anchors.bottomMargin: 20
 
                                             // <h2 class="card-title">
                                             Text {
@@ -522,6 +568,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.bottomMargin: 4
                                             }
 
                                             // <p class="card-price">
@@ -539,7 +586,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.topMargin: 4
+                                                Layout.bottomMargin: 8
                                             }
 
                                             // <p class="card-text">
@@ -556,7 +603,11 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.topMargin: 8
+                                                Layout.bottomMargin: 16
+                                            }
+
+                                            Item {
+                                                Layout.fillHeight: true
                                             }
 
                                             // <button class="card-button">
@@ -566,7 +617,7 @@ ApplicationWindow {
                                                 implicitWidth: cardButtonText3.implicitWidth + 32
                                                 implicitHeight: cardButtonText3.implicitHeight + 24
                                                 Layout.preferredWidth: parent.width
-                                                Layout.topMargin: 16
+                                                Layout.alignment: Qt.AlignLeft
 
                                                 Text {
                                                     id: cardButtonText3
@@ -603,7 +654,7 @@ ApplicationWindow {
                                 clip: true
                                 implicitWidth: cardContent4.implicitWidth
                                 implicitHeight: cardContent4.implicitHeight
-                                Layout.preferredWidth: 280
+                                width: Math.min(280, parent.width)
 
                                 ColumnLayout {
                                     id: cardContent4
@@ -611,19 +662,21 @@ ApplicationWindow {
                                     anchors.left: parent.left
                                     anchors.right: parent.right
                                     anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
 
                                     // <div class="card-media card-media--forest">
                                     Item {
                                         implicitWidth: 0
                                         implicitHeight: 0
-                                        Layout.fillWidth: true
                                         Layout.preferredHeight: 120
+                                        Layout.fillWidth: true
                                     }
 
                                     // <div class="card-body">
                                     Item {
                                         implicitWidth: cardBodyContent4.implicitWidth + 40
                                         implicitHeight: cardBodyContent4.implicitHeight + 36
+                                        Layout.fillHeight: true
                                         Layout.fillWidth: true
 
                                         ColumnLayout {
@@ -632,9 +685,11 @@ ApplicationWindow {
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
                                             anchors.leftMargin: 20
                                             anchors.rightMargin: 20
                                             anchors.topMargin: 16
+                                            anchors.bottomMargin: 20
 
                                             // <h2 class="card-title">
                                             Text {
@@ -651,6 +706,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.bottomMargin: 4
                                             }
 
                                             // <p class="card-price">
@@ -668,7 +724,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.topMargin: 4
+                                                Layout.bottomMargin: 8
                                             }
 
                                             // <p class="card-text">
@@ -685,7 +741,11 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.topMargin: 8
+                                                Layout.bottomMargin: 16
+                                            }
+
+                                            Item {
+                                                Layout.fillHeight: true
                                             }
 
                                             // <button class="card-button">
@@ -695,7 +755,7 @@ ApplicationWindow {
                                                 implicitWidth: cardButtonText4.implicitWidth + 32
                                                 implicitHeight: cardButtonText4.implicitHeight + 24
                                                 Layout.preferredWidth: parent.width
-                                                Layout.topMargin: 16
+                                                Layout.alignment: Qt.AlignLeft
 
                                                 Text {
                                                     id: cardButtonText4
@@ -732,7 +792,7 @@ ApplicationWindow {
                                 clip: true
                                 implicitWidth: cardContent5.implicitWidth
                                 implicitHeight: cardContent5.implicitHeight
-                                Layout.preferredWidth: 280
+                                width: Math.min(280, parent.width)
 
                                 ColumnLayout {
                                     id: cardContent5
@@ -740,19 +800,21 @@ ApplicationWindow {
                                     anchors.left: parent.left
                                     anchors.right: parent.right
                                     anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
 
                                     // <div class="card-media card-media--violet">
                                     Item {
                                         implicitWidth: 0
                                         implicitHeight: 0
-                                        Layout.fillWidth: true
                                         Layout.preferredHeight: 120
+                                        Layout.fillWidth: true
                                     }
 
                                     // <div class="card-body">
                                     Item {
                                         implicitWidth: cardBodyContent5.implicitWidth + 40
                                         implicitHeight: cardBodyContent5.implicitHeight + 36
+                                        Layout.fillHeight: true
                                         Layout.fillWidth: true
 
                                         ColumnLayout {
@@ -761,9 +823,11 @@ ApplicationWindow {
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
                                             anchors.leftMargin: 20
                                             anchors.rightMargin: 20
                                             anchors.topMargin: 16
+                                            anchors.bottomMargin: 20
 
                                             // <h2 class="card-title">
                                             Text {
@@ -780,6 +844,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.bottomMargin: 4
                                             }
 
                                             // <p class="card-price">
@@ -797,7 +862,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.topMargin: 4
+                                                Layout.bottomMargin: 8
                                             }
 
                                             // <p class="card-text">
@@ -814,7 +879,11 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.topMargin: 8
+                                                Layout.bottomMargin: 16
+                                            }
+
+                                            Item {
+                                                Layout.fillHeight: true
                                             }
 
                                             // <button class="card-button">
@@ -824,7 +893,7 @@ ApplicationWindow {
                                                 implicitWidth: cardButtonText5.implicitWidth + 32
                                                 implicitHeight: cardButtonText5.implicitHeight + 24
                                                 Layout.preferredWidth: parent.width
-                                                Layout.topMargin: 16
+                                                Layout.alignment: Qt.AlignLeft
 
                                                 Text {
                                                     id: cardButtonText5
@@ -861,7 +930,7 @@ ApplicationWindow {
                                 clip: true
                                 implicitWidth: cardContent6.implicitWidth
                                 implicitHeight: cardContent6.implicitHeight
-                                Layout.preferredWidth: 280
+                                width: Math.min(280, parent.width)
 
                                 ColumnLayout {
                                     id: cardContent6
@@ -869,19 +938,21 @@ ApplicationWindow {
                                     anchors.left: parent.left
                                     anchors.right: parent.right
                                     anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
 
                                     // <div class="card-media card-media--amber">
                                     Item {
                                         implicitWidth: 0
                                         implicitHeight: 0
-                                        Layout.fillWidth: true
                                         Layout.preferredHeight: 120
+                                        Layout.fillWidth: true
                                     }
 
                                     // <div class="card-body">
                                     Item {
                                         implicitWidth: cardBodyContent6.implicitWidth + 40
                                         implicitHeight: cardBodyContent6.implicitHeight + 36
+                                        Layout.fillHeight: true
                                         Layout.fillWidth: true
 
                                         ColumnLayout {
@@ -890,9 +961,11 @@ ApplicationWindow {
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
                                             anchors.leftMargin: 20
                                             anchors.rightMargin: 20
                                             anchors.topMargin: 16
+                                            anchors.bottomMargin: 20
 
                                             // <h2 class="card-title">
                                             Text {
@@ -909,6 +982,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.bottomMargin: 4
                                             }
 
                                             // <p class="card-price">
@@ -926,7 +1000,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.topMargin: 4
+                                                Layout.bottomMargin: 8
                                             }
 
                                             // <p class="card-text">
@@ -943,7 +1017,11 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.topMargin: 8
+                                                Layout.bottomMargin: 16
+                                            }
+
+                                            Item {
+                                                Layout.fillHeight: true
                                             }
 
                                             // <button class="card-button">
@@ -953,7 +1031,7 @@ ApplicationWindow {
                                                 implicitWidth: cardButtonText6.implicitWidth + 32
                                                 implicitHeight: cardButtonText6.implicitHeight + 24
                                                 Layout.preferredWidth: parent.width
-                                                Layout.topMargin: 16
+                                                Layout.alignment: Qt.AlignLeft
 
                                                 Text {
                                                     id: cardButtonText6

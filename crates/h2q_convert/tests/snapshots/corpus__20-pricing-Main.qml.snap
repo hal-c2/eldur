@@ -129,18 +129,20 @@ ApplicationWindow {
                                 implicitHeight: billingToggleContent.implicitHeight + 10
                                 border.width: 1
                                 border.color: "#e2e8f0"
-                                Layout.fillWidth: true
+                                Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 36
 
-                                ColumnLayout {
+                                RowLayout {
                                     id: billingToggleContent
                                     spacing: 0
                                     anchors.left: parent.left
                                     anchors.right: parent.right
                                     anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
                                     anchors.leftMargin: 5
                                     anchors.rightMargin: 5
                                     anchors.topMargin: 5
+                                    anchors.bottomMargin: 5
 
                                     // <button class="toggle-btn active">
                                     Rectangle {
@@ -149,7 +151,9 @@ ApplicationWindow {
                                         implicitWidth: toggleBtnText.implicitWidth + 44
                                         implicitHeight: toggleBtnText.implicitHeight
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: Math.ceil(implicitWidth)
                                         Layout.preferredHeight: 40
+                                        Layout.alignment: Qt.AlignTop
 
                                         Text {
                                             id: toggleBtnText
@@ -179,7 +183,10 @@ ApplicationWindow {
                                         implicitWidth: toggleBtnText2.implicitWidth + 44
                                         implicitHeight: toggleBtnText2.implicitHeight
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: Math.ceil(implicitWidth)
                                         Layout.preferredHeight: 40
+                                        Layout.alignment: Qt.AlignTop
+                                        Layout.leftMargin: 4
 
                                         Text {
                                             id: toggleBtnText2
@@ -203,13 +210,17 @@ ApplicationWindow {
                                             anchors.rightMargin: 22
                                         }
                                     }
+
+                                    Item {
+                                        Layout.fillWidth: true
+                                    }
                                 }
                             }
                         }
 
                         // <section class="pricing-grid">
-                        ColumnLayout {
-                            spacing: 0
+                        RowLayout {
+                            spacing: 28
                             Layout.fillWidth: true
                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                             Layout.topMargin: 56
@@ -223,6 +234,8 @@ ApplicationWindow {
                                 border.width: 1
                                 border.color: "#e2e8f0"
                                 Layout.fillWidth: true
+                                Layout.preferredWidth: 0
+                                Layout.fillHeight: true
 
                                 ColumnLayout {
                                     id: planContent
@@ -230,9 +243,11 @@ ApplicationWindow {
                                     anchors.left: parent.left
                                     anchors.right: parent.right
                                     anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
                                     anchors.leftMargin: 33
                                     anchors.rightMargin: 33
                                     anchors.topMargin: 41
+                                    anchors.bottomMargin: 33
 
                                     // <h2 class="plan-name">
                                     Text {
@@ -249,15 +264,16 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        Layout.bottomMargin: 8
                                     }
 
                                     // <p class="plan-desc">
                                     Item {
                                         implicitWidth: planDescText.implicitWidth
                                         implicitHeight: planDescText.implicitHeight
-                                        Layout.fillWidth: true
                                         Layout.minimumHeight: 44
-                                        Layout.topMargin: 8
+                                        Layout.fillWidth: true
+                                        Layout.bottomMargin: 24
 
                                         Text {
                                             id: planDescText
@@ -279,11 +295,11 @@ ApplicationWindow {
                                     }
 
                                     // <p class="price">
-                                    ColumnLayout {
+                                    RowLayout {
                                         spacing: 0
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.topMargin: 24
+                                        Layout.bottomMargin: 28
 
                                         // <span class="amount">
                                         Text {
@@ -301,6 +317,8 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                                            Layout.alignment: Qt.AlignBaseline
                                         }
 
                                         // <span class="period">
@@ -317,21 +335,32 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                                            Layout.alignment: Qt.AlignBaseline
+                                            Layout.leftMargin: 4
+                                        }
+
+                                        Item {
+                                            Layout.fillWidth: true
                                         }
                                     }
 
                                     // <ul class="features">
-                                    ColumnLayout {
-                                        spacing: 0
+                                    GridLayout {
+                                        columns: 1
+                                        columnSpacing: 12
+                                        rowSpacing: 12
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.topMargin: 28
+                                        Layout.bottomMargin: 32
 
                                         // <li>
-                                        ColumnLayout {
+                                        RowLayout {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                            Layout.fillHeight: true
+                                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
                                             Text {
@@ -348,6 +377,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
                                             }
 
                                             Text {
@@ -363,14 +394,23 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
+                                                Layout.leftMargin: 10
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
-                                        ColumnLayout {
+                                        RowLayout {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                            Layout.fillHeight: true
+                                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
                                             Text {
@@ -387,6 +427,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
                                             }
 
                                             Text {
@@ -402,14 +444,23 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
+                                                Layout.leftMargin: 10
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
-                                        ColumnLayout {
+                                        RowLayout {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                            Layout.fillHeight: true
+                                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
                                             Text {
@@ -426,6 +477,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
                                             }
 
                                             Text {
@@ -441,14 +494,23 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
+                                                Layout.leftMargin: 10
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
-                                        ColumnLayout {
+                                        RowLayout {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                            Layout.fillHeight: true
+                                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
                                             Text {
@@ -465,6 +527,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
                                             }
 
                                             Text {
@@ -480,8 +544,19 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
+                                                Layout.leftMargin: 10
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
                                             }
                                         }
+                                    }
+
+                                    Item {
+                                        Layout.fillHeight: true
                                     }
 
                                     // <button class="plan-btn">
@@ -492,9 +567,9 @@ ApplicationWindow {
                                         implicitHeight: planBtnText.implicitHeight + 4
                                         border.width: 2
                                         border.color: "#2563eb"
-                                        Layout.preferredWidth: parent.width
                                         Layout.preferredHeight: 50
-                                        Layout.topMargin: 32
+                                        Layout.preferredWidth: parent.width
+                                        Layout.alignment: Qt.AlignLeft
 
                                         Text {
                                             id: planBtnText
@@ -531,6 +606,8 @@ ApplicationWindow {
                                 border.width: 2
                                 border.color: "#2563eb"
                                 Layout.fillWidth: true
+                                Layout.preferredWidth: 0
+                                Layout.fillHeight: true
 
                                 ColumnLayout {
                                     id: planContent2
@@ -538,9 +615,11 @@ ApplicationWindow {
                                     anchors.left: parent.left
                                     anchors.right: parent.right
                                     anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
                                     anchors.leftMargin: 34
                                     anchors.rightMargin: 34
                                     anchors.topMargin: 42
+                                    anchors.bottomMargin: 34
 
                                     // <span class="badge">
                                     Rectangle {
@@ -588,15 +667,16 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        Layout.bottomMargin: 8
                                     }
 
                                     // <p class="plan-desc">
                                     Item {
                                         implicitWidth: planDescText2.implicitWidth
                                         implicitHeight: planDescText2.implicitHeight
-                                        Layout.fillWidth: true
                                         Layout.minimumHeight: 44
-                                        Layout.topMargin: 8
+                                        Layout.fillWidth: true
+                                        Layout.bottomMargin: 24
 
                                         Text {
                                             id: planDescText2
@@ -618,11 +698,11 @@ ApplicationWindow {
                                     }
 
                                     // <p class="price">
-                                    ColumnLayout {
+                                    RowLayout {
                                         spacing: 0
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.topMargin: 24
+                                        Layout.bottomMargin: 28
 
                                         // <span class="amount">
                                         Text {
@@ -640,6 +720,8 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                                            Layout.alignment: Qt.AlignBaseline
                                         }
 
                                         // <span class="period">
@@ -656,21 +738,32 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                                            Layout.alignment: Qt.AlignBaseline
+                                            Layout.leftMargin: 4
+                                        }
+
+                                        Item {
+                                            Layout.fillWidth: true
                                         }
                                     }
 
                                     // <ul class="features">
-                                    ColumnLayout {
-                                        spacing: 0
+                                    GridLayout {
+                                        columns: 1
+                                        columnSpacing: 12
+                                        rowSpacing: 12
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.topMargin: 28
+                                        Layout.bottomMargin: 32
 
                                         // <li>
-                                        ColumnLayout {
+                                        RowLayout {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                            Layout.fillHeight: true
+                                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
                                             Text {
@@ -687,6 +780,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
                                             }
 
                                             Text {
@@ -702,14 +797,23 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
+                                                Layout.leftMargin: 10
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
-                                        ColumnLayout {
+                                        RowLayout {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                            Layout.fillHeight: true
+                                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
                                             Text {
@@ -726,6 +830,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
                                             }
 
                                             Text {
@@ -741,14 +847,23 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
+                                                Layout.leftMargin: 10
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
-                                        ColumnLayout {
+                                        RowLayout {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                            Layout.fillHeight: true
+                                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
                                             Text {
@@ -765,6 +880,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
                                             }
 
                                             Text {
@@ -780,14 +897,23 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
+                                                Layout.leftMargin: 10
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
-                                        ColumnLayout {
+                                        RowLayout {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                            Layout.fillHeight: true
+                                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
                                             Text {
@@ -804,6 +930,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
                                             }
 
                                             Text {
@@ -819,14 +947,23 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
+                                                Layout.leftMargin: 10
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
-                                        ColumnLayout {
+                                        RowLayout {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                            Layout.fillHeight: true
+                                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
                                             Text {
@@ -843,6 +980,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
                                             }
 
                                             Text {
@@ -858,8 +997,19 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
+                                                Layout.leftMargin: 10
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
                                             }
                                         }
+                                    }
+
+                                    Item {
+                                        Layout.fillHeight: true
                                     }
 
                                     // <button class="plan-btn solid">
@@ -870,9 +1020,9 @@ ApplicationWindow {
                                         implicitHeight: planBtnText2.implicitHeight + 4
                                         border.width: 2
                                         border.color: "#2563eb"
-                                        Layout.preferredWidth: parent.width
                                         Layout.preferredHeight: 50
-                                        Layout.topMargin: 32
+                                        Layout.preferredWidth: parent.width
+                                        Layout.alignment: Qt.AlignLeft
 
                                         Text {
                                             id: planBtnText2
@@ -909,6 +1059,8 @@ ApplicationWindow {
                                 border.width: 1
                                 border.color: "#e2e8f0"
                                 Layout.fillWidth: true
+                                Layout.preferredWidth: 0
+                                Layout.fillHeight: true
 
                                 ColumnLayout {
                                     id: planContent3
@@ -916,9 +1068,11 @@ ApplicationWindow {
                                     anchors.left: parent.left
                                     anchors.right: parent.right
                                     anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
                                     anchors.leftMargin: 33
                                     anchors.rightMargin: 33
                                     anchors.topMargin: 41
+                                    anchors.bottomMargin: 33
 
                                     // <h2 class="plan-name">
                                     Text {
@@ -935,15 +1089,16 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        Layout.bottomMargin: 8
                                     }
 
                                     // <p class="plan-desc">
                                     Item {
                                         implicitWidth: planDescText3.implicitWidth
                                         implicitHeight: planDescText3.implicitHeight
-                                        Layout.fillWidth: true
                                         Layout.minimumHeight: 44
-                                        Layout.topMargin: 8
+                                        Layout.fillWidth: true
+                                        Layout.bottomMargin: 24
 
                                         Text {
                                             id: planDescText3
@@ -965,11 +1120,11 @@ ApplicationWindow {
                                     }
 
                                     // <p class="price">
-                                    ColumnLayout {
+                                    RowLayout {
                                         spacing: 0
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.topMargin: 24
+                                        Layout.bottomMargin: 28
 
                                         // <span class="amount">
                                         Text {
@@ -987,6 +1142,8 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                                            Layout.alignment: Qt.AlignBaseline
                                         }
 
                                         // <span class="period">
@@ -1003,21 +1160,32 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                                            Layout.alignment: Qt.AlignBaseline
+                                            Layout.leftMargin: 4
+                                        }
+
+                                        Item {
+                                            Layout.fillWidth: true
                                         }
                                     }
 
                                     // <ul class="features">
-                                    ColumnLayout {
-                                        spacing: 0
+                                    GridLayout {
+                                        columns: 1
+                                        columnSpacing: 12
+                                        rowSpacing: 12
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.topMargin: 28
+                                        Layout.bottomMargin: 32
 
                                         // <li>
-                                        ColumnLayout {
+                                        RowLayout {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                            Layout.fillHeight: true
+                                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
                                             Text {
@@ -1034,6 +1202,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
                                             }
 
                                             Text {
@@ -1049,14 +1219,23 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
+                                                Layout.leftMargin: 10
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
-                                        ColumnLayout {
+                                        RowLayout {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                            Layout.fillHeight: true
+                                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
                                             Text {
@@ -1073,6 +1252,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
                                             }
 
                                             Text {
@@ -1088,14 +1269,23 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
+                                                Layout.leftMargin: 10
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
-                                        ColumnLayout {
+                                        RowLayout {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                            Layout.fillHeight: true
+                                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
                                             Text {
@@ -1112,6 +1302,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
                                             }
 
                                             Text {
@@ -1127,14 +1319,23 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
+                                                Layout.leftMargin: 10
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
-                                        ColumnLayout {
+                                        RowLayout {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                            Layout.fillHeight: true
+                                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
                                             Text {
@@ -1151,6 +1352,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
                                             }
 
                                             Text {
@@ -1166,14 +1369,23 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
+                                                Layout.leftMargin: 10
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
-                                        ColumnLayout {
+                                        RowLayout {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                            Layout.fillHeight: true
+                                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
                                             Text {
@@ -1190,6 +1402,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
                                             }
 
                                             Text {
@@ -1205,8 +1419,19 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
+                                                Layout.leftMargin: 10
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
                                             }
                                         }
+                                    }
+
+                                    Item {
+                                        Layout.fillHeight: true
                                     }
 
                                     // <button class="plan-btn">
@@ -1217,9 +1442,9 @@ ApplicationWindow {
                                         implicitHeight: planBtnText3.implicitHeight + 4
                                         border.width: 2
                                         border.color: "#2563eb"
-                                        Layout.preferredWidth: parent.width
                                         Layout.preferredHeight: 50
-                                        Layout.topMargin: 32
+                                        Layout.preferredWidth: parent.width
+                                        Layout.alignment: Qt.AlignLeft
 
                                         Text {
                                             id: planBtnText3

@@ -71,8 +71,10 @@ ApplicationWindow {
                     }
 
                     // <div class="gallery">
-                    ColumnLayout {
-                        spacing: 0
+                    GridLayout {
+                        columns: 4
+                        columnSpacing: 24
+                        rowSpacing: 28
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignHCenter
                         Layout.maximumWidth: 1120
@@ -82,14 +84,18 @@ ApplicationWindow {
                         ColumnLayout {
                             spacing: 0
                             Layout.fillWidth: true
+                            Layout.preferredWidth: 0
                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                            Layout.fillHeight: true
+                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                             // <div class="box b1">
                             Item {
                                 implicitWidth: 0
                                 implicitHeight: 0
-                                Layout.preferredWidth: 200
                                 Layout.preferredHeight: 130
+                                Layout.preferredWidth: 200
+                                Layout.alignment: Qt.AlignHCenter
                             }
 
                             // <p class="caption">
@@ -102,6 +108,13 @@ ApplicationWindow {
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.alignment: Qt.AlignHCenter
+                                Layout.topMargin: 12
+                            }
+
+                            Item {
+                                Layout.fillHeight: true
                             }
                         }
 
@@ -109,7 +122,10 @@ ApplicationWindow {
                         ColumnLayout {
                             spacing: 0
                             Layout.fillWidth: true
+                            Layout.preferredWidth: 0
                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                            Layout.fillHeight: true
+                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                             // <div class="box b2">
                             Rectangle {
@@ -122,8 +138,9 @@ ApplicationWindow {
                                 implicitHeight: 6
                                 border.width: 3
                                 border.color: "#3b6fe0"
-                                Layout.preferredWidth: 200
                                 Layout.preferredHeight: 130
+                                Layout.preferredWidth: 200
+                                Layout.alignment: Qt.AlignHCenter
                             }
 
                             // <p class="caption">
@@ -136,6 +153,13 @@ ApplicationWindow {
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.alignment: Qt.AlignHCenter
+                                Layout.topMargin: 12
+                            }
+
+                            Item {
+                                Layout.fillHeight: true
                             }
                         }
 
@@ -143,7 +167,10 @@ ApplicationWindow {
                         ColumnLayout {
                             spacing: 0
                             Layout.fillWidth: true
+                            Layout.preferredWidth: 0
                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                            Layout.fillHeight: true
+                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                             // <div class="box b3">
                             Rectangle {
@@ -152,8 +179,9 @@ ApplicationWindow {
                                 implicitHeight: 6
                                 border.width: 3
                                 border.color: "#2e8b57"
-                                Layout.preferredWidth: 130
                                 Layout.preferredHeight: 130
+                                Layout.preferredWidth: 130
+                                Layout.alignment: Qt.AlignHCenter
                             }
 
                             // <p class="caption">
@@ -166,6 +194,13 @@ ApplicationWindow {
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.alignment: Qt.AlignHCenter
+                                Layout.topMargin: 12
+                            }
+
+                            Item {
+                                Layout.fillHeight: true
                             }
                         }
 
@@ -173,15 +208,19 @@ ApplicationWindow {
                         ColumnLayout {
                             spacing: 0
                             Layout.fillWidth: true
+                            Layout.preferredWidth: 0
                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                            Layout.fillHeight: true
+                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                             // <div class="box b4">
                             Rectangle {
                                 color: "#ffffff"
                                 implicitWidth: 12
                                 implicitHeight: 12
-                                Layout.preferredWidth: 200
                                 Layout.preferredHeight: 130
+                                Layout.preferredWidth: 200
+                                Layout.alignment: Qt.AlignHCenter
 
                                 Rectangle {
                                     anchors.left: parent.left
@@ -226,6 +265,13 @@ ApplicationWindow {
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.alignment: Qt.AlignHCenter
+                                Layout.topMargin: 12
+                            }
+
+                            Item {
+                                Layout.fillHeight: true
                             }
                         }
 
@@ -233,7 +279,10 @@ ApplicationWindow {
                         ColumnLayout {
                             spacing: 0
                             Layout.fillWidth: true
+                            Layout.preferredWidth: 0
                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                            Layout.fillHeight: true
+                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                             // <div class="box b5">
                             Rectangle {
@@ -241,8 +290,9 @@ ApplicationWindow {
                                 radius: 12
                                 implicitWidth: 0
                                 implicitHeight: 0
-                                Layout.preferredWidth: 200
                                 Layout.preferredHeight: 130
+                                Layout.preferredWidth: 200
+                                Layout.alignment: Qt.AlignHCenter
                             }
 
                             // <p class="caption">
@@ -255,6 +305,13 @@ ApplicationWindow {
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.alignment: Qt.AlignHCenter
+                                Layout.topMargin: 12
+                            }
+
+                            Item {
+                                Layout.fillHeight: true
                             }
                         }
 
@@ -262,14 +319,18 @@ ApplicationWindow {
                         ColumnLayout {
                             spacing: 0
                             Layout.fillWidth: true
+                            Layout.preferredWidth: 0
                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                            Layout.fillHeight: true
+                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                             // <div class="box b6">
                             Item {
                                 implicitWidth: 0
                                 implicitHeight: 0
-                                Layout.preferredWidth: 200
                                 Layout.preferredHeight: 130
+                                Layout.preferredWidth: 200
+                                Layout.alignment: Qt.AlignHCenter
                             }
 
                             // <p class="caption">
@@ -282,6 +343,13 @@ ApplicationWindow {
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.alignment: Qt.AlignHCenter
+                                Layout.topMargin: 12
+                            }
+
+                            Item {
+                                Layout.fillHeight: true
                             }
                         }
 
@@ -289,14 +357,18 @@ ApplicationWindow {
                         ColumnLayout {
                             spacing: 0
                             Layout.fillWidth: true
+                            Layout.preferredWidth: 0
                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                            Layout.fillHeight: true
+                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                             // <div class="box b7">
                             Item {
                                 implicitWidth: 0
                                 implicitHeight: 0
-                                Layout.preferredWidth: 200
                                 Layout.preferredHeight: 130
+                                Layout.preferredWidth: 200
+                                Layout.alignment: Qt.AlignHCenter
                             }
 
                             // <p class="caption">
@@ -309,6 +381,13 @@ ApplicationWindow {
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.alignment: Qt.AlignHCenter
+                                Layout.topMargin: 12
+                            }
+
+                            Item {
+                                Layout.fillHeight: true
                             }
                         }
 
@@ -316,13 +395,18 @@ ApplicationWindow {
                         ColumnLayout {
                             spacing: 0
                             Layout.fillWidth: true
+                            Layout.preferredWidth: 0
                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                            Layout.fillHeight: true
+                            Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                             // <div class="stripes">
                             Item {
                                 implicitWidth: stripesContent.implicitWidth + 40
                                 implicitHeight: stripesContent.implicitHeight + 40
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.alignment: Qt.AlignHCenter
 
                                 ColumnLayout {
                                     id: stripesContent
@@ -358,6 +442,13 @@ ApplicationWindow {
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.alignment: Qt.AlignHCenter
+                                Layout.topMargin: 12
+                            }
+
+                            Item {
+                                Layout.fillHeight: true
                             }
                         }
                     }

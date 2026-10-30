@@ -760,6 +760,8 @@ pub struct ComputedStyle {
     /// Rows of area names; `.` cells are `None`.
     pub grid_template_areas: Vec<Vec<Option<String>>>,
     pub grid_auto_flow_column: bool,
+    /// `grid-auto-flow: dense`: auto-placed items backfill earlier holes.
+    pub grid_auto_flow_dense: bool,
     pub grid_auto_columns: Vec<Track>,
     pub grid_auto_rows: Vec<Track>,
     pub grid_column_start: GridLine,
@@ -882,6 +884,7 @@ impl Default for ComputedStyle {
             grid_template_rows: Vec::new(),
             grid_template_areas: Vec::new(),
             grid_auto_flow_column: false,
+            grid_auto_flow_dense: false,
             grid_auto_columns: Vec::new(),
             grid_auto_rows: Vec::new(),
             grid_column_start: GridLine::Auto,

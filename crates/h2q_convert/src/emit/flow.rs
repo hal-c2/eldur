@@ -6,7 +6,7 @@
 //! bottom edge are handed up to the parent's own margins, and empty boxes
 //! that collapse through are dropped.
 
-use h2q_css::{BoxSizing, ComputedStyle, Length, LengthAuto, Size, TextDecorationLine};
+use h2q_css::{BoxSizing, ComputedStyle, Display, Length, LengthAuto, Size, TextDecorationLine};
 use h2q_qml::{Member, Object, Value};
 
 use super::Emitter;
@@ -146,7 +146,10 @@ impl Emitter<'_, '_> {
             (true, false) => Some("Qt.AlignRight"),
             _ => None,
         };
-        let shrink = b.kind == crate::boxes::BoxKind::Replaced;
+        // An `inline-flex`/`inline-grid` laid out as a block keeps its
+        // shrink-to-fit width.
+        let shrink = b.kind == crate::boxes::BoxKind::Replaced
+            || matches!(style.display, Display::InlineFlex | Display::InlineGrid);
         match &style.width {
             Size::Length(w) => {
                 obj.set("Layout.preferredWidth", size_value(w, extra_w));
@@ -172,7 +175,7 @@ impl Emitter<'_, '_> {
         }
         if let Size::Length(max) = &style.max_width {
             obj.set("Layout.maximumWidth", size_value(max, extra_w));
-        } else if obj.type_name == "ColumnLayout" {
+        } else if is_layout(&obj.type_name) {
             // A layout's maximum width defaults to its children's largest;
             // a block without `max-width` still spans its container.
             obj.set(
@@ -196,7 +199,7 @@ impl Emitter<'_, '_> {
             }
         }
         match &style.height {
-            Size::Length(h) if h.as_px().is_some() => {
+            Size::Length(h) if h.as_px().is_some() || is_viewport_relative(h) => {
                 obj.set("Layout.preferredHeight", size_value(h, extra_h));
             }
             Size::Length(_) => {
@@ -264,7 +267,19 @@ pub(crate) fn has_height(style: &ComputedStyle) -> bool {
     definite(&style.height) || definite(&style.min_height)
 }
 
-fn size_value(length: &Length, extra: f32) -> Value {
+/// QML Layout types: their size limits default to their children's, not
+/// to infinity as for other items.
+pub(crate) fn is_layout(type_name: &str) -> bool {
+    matches!(type_name, "ColumnLayout" | "RowLayout" | "GridLayout")
+}
+
+/// A length of px and viewport units only: definite at any depth (unlike a
+/// percentage height, which needs a definite containing block).
+pub(crate) fn is_viewport_relative(length: &Length) -> bool {
+    matches!(length, Length::Linear(l) if l.percent == 0.0)
+}
+
+pub(crate) fn size_value(length: &Length, extra: f32) -> Value {
     match length.as_px() {
         Some(px) => number(px + extra),
         None if extra == 0.0 => Value::Expr(length_expr(length, "parent.width")),
@@ -278,7 +293,7 @@ fn size_value(length: &Length, extra: f32) -> Value {
 
 /// Layout margins are not negative in Qt; negative CSS margins are
 /// approximated as 0.
-fn length_value_nonneg(l: &Length) -> Value {
+pub(crate) fn length_value_nonneg(l: &Length) -> Value {
     match l.as_px() {
         Some(px) => number(px.max(0.0)),
         None => Value::Expr(format!("Math.max(0, {})", length_expr(l, "parent.width"))),

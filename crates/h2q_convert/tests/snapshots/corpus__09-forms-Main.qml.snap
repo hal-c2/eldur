@@ -36,15 +36,21 @@ ApplicationWindow {
                 implicitHeight: bodyContent.implicitHeight + 64
                 Layout.fillWidth: true
 
-                ColumnLayout {
+                RowLayout {
                     id: bodyContent
                     spacing: 0
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.top: parent.top
+                    anchors.bottom: parent.bottom
                     anchors.leftMargin: 16
                     anchors.rightMargin: 16
                     anchors.topMargin: 32
+                    anchors.bottomMargin: 32
+
+                    Item {
+                        Layout.fillWidth: true
+                    }
 
                     // <main class="card">
                     Rectangle {
@@ -52,8 +58,10 @@ ApplicationWindow {
                         radius: 14
                         implicitWidth: cardContent.implicitWidth + 64
                         implicitHeight: cardContent.implicitHeight + 56
+                        Layout.fillWidth: true
                         Layout.preferredWidth: parent.width
-                        Layout.maximumWidth: 520
+                        Layout.maximumWidth: Math.min(parent.width, 520)
+                        Layout.alignment: Qt.AlignVCenter
 
                         ColumnLayout {
                             id: cardContent
@@ -100,8 +108,10 @@ ApplicationWindow {
                             }
 
                             // <form class="form">
-                            ColumnLayout {
-                                spacing: 0
+                            GridLayout {
+                                columns: 1
+                                columnSpacing: 14
+                                rowSpacing: 14
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
                                 Layout.topMargin: 20
@@ -111,6 +121,8 @@ ApplicationWindow {
                                     spacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                    Layout.fillHeight: true
+                                    Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                     // <label class="field__label">
                                     Text {
@@ -127,13 +139,18 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        Layout.bottomMargin: 5
                                     }
 
                                     // <input id="name" class="input">
                                     Item {
                                         id: name
                                         Layout.preferredWidth: parent.width
-                                        Layout.topMargin: 5
+                                        Layout.alignment: Qt.AlignLeft
+                                    }
+
+                                    Item {
+                                        Layout.fillHeight: true
                                     }
                                 }
 
@@ -142,6 +159,8 @@ ApplicationWindow {
                                     spacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                    Layout.fillHeight: true
+                                    Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                     // <label class="field__label">
                                     Text {
@@ -158,13 +177,18 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        Layout.bottomMargin: 5
                                     }
 
                                     // <input id="email" class="input">
                                     Item {
                                         id: email
                                         Layout.preferredWidth: parent.width
-                                        Layout.topMargin: 5
+                                        Layout.alignment: Qt.AlignLeft
+                                    }
+
+                                    Item {
+                                        Layout.fillHeight: true
                                     }
                                 }
 
@@ -173,6 +197,8 @@ ApplicationWindow {
                                     spacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                    Layout.fillHeight: true
+                                    Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                     // <label class="field__label">
                                     Text {
@@ -189,13 +215,18 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        Layout.bottomMargin: 5
                                     }
 
                                     // <input id="password" class="input">
                                     Item {
                                         id: password
                                         Layout.preferredWidth: parent.width
-                                        Layout.topMargin: 5
+                                        Layout.alignment: Qt.AlignLeft
+                                    }
+
+                                    Item {
+                                        Layout.fillHeight: true
                                     }
                                 }
 
@@ -204,6 +235,8 @@ ApplicationWindow {
                                     spacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                    Layout.fillHeight: true
+                                    Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                     // <label class="field__label">
                                     Text {
@@ -220,13 +253,18 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        Layout.bottomMargin: 5
                                     }
 
                                     // <select id="team" class="input">
                                     Item {
                                         id: team
                                         Layout.preferredWidth: parent.width
-                                        Layout.topMargin: 5
+                                        Layout.alignment: Qt.AlignLeft
+                                    }
+
+                                    Item {
+                                        Layout.fillHeight: true
                                     }
                                 }
 
@@ -235,6 +273,8 @@ ApplicationWindow {
                                     spacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                    Layout.fillHeight: true
+                                    Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                     // <label class="field__label">
                                     Text {
@@ -251,14 +291,19 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        Layout.bottomMargin: 5
                                     }
 
                                     // <textarea id="bio" class="input">
                                     Item {
                                         id: bio
-                                        Layout.preferredWidth: parent.width
                                         Layout.minimumHeight: 76
-                                        Layout.topMargin: 5
+                                        Layout.preferredWidth: parent.width
+                                        Layout.alignment: Qt.AlignLeft
+                                    }
+
+                                    Item {
+                                        Layout.fillHeight: true
                                     }
                                 }
 
@@ -271,6 +316,7 @@ ApplicationWindow {
                                     border.width: 1
                                     border.color: "#cfd6e4"
                                     Layout.fillWidth: true
+                                    Layout.fillHeight: true
 
                                     ColumnLayout {
                                         id: groupContent
@@ -311,19 +357,25 @@ ApplicationWindow {
                                         }
 
                                         // <div class="options">
-                                        ColumnLayout {
+                                        RowLayout {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
 
                                             // <label class="option">
-                                            ColumnLayout {
+                                            RowLayout {
                                                 spacing: 0
                                                 Layout.fillWidth: true
-                                                Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
+                                                Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                                 // <input>
-                                                Item {}
+                                                Item {
+                                                    Layout.fillWidth: true
+                                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                    Layout.alignment: Qt.AlignVCenter
+                                                }
 
                                                 Text {
                                                     text: "Free"
@@ -338,17 +390,31 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                    Layout.alignment: Qt.AlignVCenter
+                                                    Layout.leftMargin: 6
+                                                }
+
+                                                Item {
+                                                    Layout.fillWidth: true
                                                 }
                                             }
 
                                             // <label class="option">
-                                            ColumnLayout {
+                                            RowLayout {
                                                 spacing: 0
                                                 Layout.fillWidth: true
-                                                Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
+                                                Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                                Layout.leftMargin: 18
 
                                                 // <input>
-                                                Item {}
+                                                Item {
+                                                    Layout.fillWidth: true
+                                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                    Layout.alignment: Qt.AlignVCenter
+                                                }
 
                                                 Text {
                                                     text: "Pro"
@@ -363,17 +429,31 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                    Layout.alignment: Qt.AlignVCenter
+                                                    Layout.leftMargin: 6
+                                                }
+
+                                                Item {
+                                                    Layout.fillWidth: true
                                                 }
                                             }
 
                                             // <label class="option">
-                                            ColumnLayout {
+                                            RowLayout {
                                                 spacing: 0
                                                 Layout.fillWidth: true
-                                                Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.fillHeight: true
+                                                Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                                Layout.leftMargin: 18
 
                                                 // <input>
-                                                Item {}
+                                                Item {
+                                                    Layout.fillWidth: true
+                                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                    Layout.alignment: Qt.AlignVCenter
+                                                }
 
                                                 Text {
                                                     text: "Team"
@@ -388,23 +468,41 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                    Layout.alignment: Qt.AlignVCenter
+                                                    Layout.leftMargin: 6
                                                 }
+
+                                                Item {
+                                                    Layout.fillWidth: true
+                                                }
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
                                             }
                                         }
                                     }
                                 }
 
                                 // <div class="row">
-                                ColumnLayout {
-                                    spacing: 0
+                                GridLayout {
+                                    columns: 2
+                                    columnSpacing: 14
+                                    rowSpacing: 14
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                    Layout.fillHeight: true
+                                    Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                     // <div class="field">
                                     ColumnLayout {
                                         spacing: 0
                                         Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                        Layout.fillHeight: true
+                                        Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                         // <label class="field__label">
                                         Text {
@@ -421,13 +519,18 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            Layout.bottomMargin: 5
                                         }
 
                                         // <input id="seats" class="input">
                                         Item {
                                             id: seats
                                             Layout.preferredWidth: parent.width
-                                            Layout.topMargin: 5
+                                            Layout.alignment: Qt.AlignLeft
+                                        }
+
+                                        Item {
+                                            Layout.fillHeight: true
                                         }
                                     }
 
@@ -435,7 +538,10 @@ ApplicationWindow {
                                     ColumnLayout {
                                         spacing: 0
                                         Layout.fillWidth: true
+                                        Layout.preferredWidth: 0
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                        Layout.fillHeight: true
+                                        Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                         // <label class="field__label">
                                         Text {
@@ -452,12 +558,13 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            Layout.bottomMargin: 5
                                         }
 
                                         // <input id="volume">
                                         Item {
                                             id: volume
-                                            Layout.topMargin: 5
+                                            Layout.fillWidth: true
                                         }
 
                                         // <p class="hint">
@@ -476,21 +583,30 @@ ApplicationWindow {
                                             Layout.fillWidth: true
                                             Layout.topMargin: 4
                                         }
+
+                                        Item {
+                                            Layout.fillHeight: true
+                                        }
                                     }
                                 }
 
                                 // <label class="check">
-                                ColumnLayout {
+                                RowLayout {
                                     spacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                    Layout.fillHeight: true
+                                    Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                     // <input>
                                     Item {
                                         implicitWidth: 16
                                         implicitHeight: 16
+                                        Layout.fillWidth: true
                                         Layout.preferredWidth: 16
+                                        Layout.maximumWidth: 16
                                         Layout.preferredHeight: 16
+                                        Layout.alignment: Qt.AlignVCenter
                                     }
 
                                     Text {
@@ -506,15 +622,28 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: Math.ceil(implicitWidth)
+                                        Layout.alignment: Qt.AlignVCenter
+                                        Layout.leftMargin: 8
+                                    }
+
+                                    Item {
+                                        Layout.fillWidth: true
                                     }
                                 }
 
                                 // <div class="actions">
-                                ColumnLayout {
+                                RowLayout {
                                     spacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                    Layout.fillHeight: true
+                                    Layout.maximumHeight: Number.POSITIVE_INFINITY
                                     Layout.topMargin: 6
+
+                                    Item {
+                                        Layout.fillWidth: true
+                                    }
 
                                     // <button class="btn btn--secondary">
                                     Rectangle {
@@ -525,6 +654,8 @@ ApplicationWindow {
                                         border.width: 1
                                         border.color: "#cfd6e4"
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: Math.ceil(implicitWidth)
+                                        Layout.fillHeight: true
 
                                         Text {
                                             id: btnText
@@ -559,6 +690,9 @@ ApplicationWindow {
                                         border.width: 1
                                         border.color: "#00000000"
                                         Layout.fillWidth: true
+                                        Layout.maximumWidth: Math.ceil(implicitWidth)
+                                        Layout.fillHeight: true
+                                        Layout.leftMargin: 10
 
                                         Text {
                                             id: btnText2
@@ -586,6 +720,10 @@ ApplicationWindow {
                                 }
                             }
                         }
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
                     }
                 }
             }

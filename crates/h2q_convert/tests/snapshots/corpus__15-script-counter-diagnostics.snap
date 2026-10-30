@@ -4,11 +4,8 @@ expression: "diagnostics.join(\"\\n\")"
 ---
 info[css]: <style>#1:41: unknown property `font-variant-numeric`
 info[css]: index.html:195: <section id="details" class="panel"> is `display: none` and used by a script: it is kept invisible, as its text in its parent's style
-warning[css]: index.html:174: `display: flex` on <body> is laid out as block flow (not implemented yet)
 warning[css]: index.html:175: `box-shadow` is not converted yet
-warning[css]: index.html:180: `display: flex` on <div class="controls"> is laid out as block flow (not implemented yet)
 warning[html]: index.html:187: <input id="mirror-input" class="text-input"> is not converted yet; an empty placeholder keeps its space
-warning[css]: index.html:190: `display: flex` on <label class="toggle"> is laid out as block flow (not implemented yet)
 warning[html]: index.html:191: <input id="details-toggle"> is not converted yet; an empty placeholder keeps its space
 info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet
 warning[js]: index.html:187: <input id="mirror-input" class="text-input"> is used by a script but has no QML object of its own (inline, hidden or not converted); script access to it does nothing
