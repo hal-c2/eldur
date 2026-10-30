@@ -140,11 +140,38 @@ ApplicationWindow {
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
                                         Layout.bottomMargin: 5
+
+                                        TapHandler {
+                                            onTapped: (eventPoint, button) => {
+                                                if (name.enabled) { name.forceActiveFocus(); }
+                                            }
+                                        }
                                     }
 
                                     // <input id="name" class="input">
-                                    Item {
+                                    TextField {
                                         id: name
+                                        property string name: "name"
+
+                                        color: "#1d2433"
+                                        font.family: "sans-serif"
+                                        font.pixelSize: 15
+                                        verticalAlignment: TextInput.AlignVCenter
+                                        background: Rectangle {
+                                            color: "#ffffff"
+                                            radius: 8
+                                            border.width: 1
+                                            border.color: "#cfd6e4"
+                                        }
+                                        topPadding: 10
+                                        rightPadding: 13
+                                        bottomPadding: 10
+                                        leftPadding: 13
+                                        implicitHeight: 41
+                                        implicitWidth: 191
+                                        placeholderText: "Ada Lovelace"
+                                        placeholderTextColor: "#757575"
+                                        Accessible.name: "Full name"
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
                                     }
@@ -178,11 +205,39 @@ ApplicationWindow {
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
                                         Layout.bottomMargin: 5
+
+                                        TapHandler {
+                                            onTapped: (eventPoint, button) => {
+                                                if (email.enabled) { email.forceActiveFocus(); }
+                                            }
+                                        }
                                     }
 
                                     // <input id="email" class="input">
-                                    Item {
+                                    TextField {
                                         id: email
+                                        property string name: "email"
+
+                                        color: "#1d2433"
+                                        font.family: "sans-serif"
+                                        font.pixelSize: 15
+                                        verticalAlignment: TextInput.AlignVCenter
+                                        background: Rectangle {
+                                            color: "#ffffff"
+                                            radius: 8
+                                            border.width: 1
+                                            border.color: "#cfd6e4"
+                                        }
+                                        topPadding: 10
+                                        rightPadding: 13
+                                        bottomPadding: 10
+                                        leftPadding: 13
+                                        implicitHeight: 41
+                                        implicitWidth: 191
+                                        placeholderText: "you@example.com"
+                                        placeholderTextColor: "#757575"
+                                        inputMethodHints: Qt.ImhEmailCharactersOnly
+                                        Accessible.name: "Email"
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
                                     }
@@ -216,11 +271,39 @@ ApplicationWindow {
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
                                         Layout.bottomMargin: 5
+
+                                        TapHandler {
+                                            onTapped: (eventPoint, button) => {
+                                                if (password.enabled) { password.forceActiveFocus(); }
+                                            }
+                                        }
                                     }
 
                                     // <input id="password" class="input">
-                                    Item {
+                                    TextField {
                                         id: password
+                                        property string name: "password"
+
+                                        color: "#1d2433"
+                                        font.family: "sans-serif"
+                                        font.pixelSize: 15
+                                        verticalAlignment: TextInput.AlignVCenter
+                                        background: Rectangle {
+                                            color: "#ffffff"
+                                            radius: 8
+                                            border.width: 1
+                                            border.color: "#cfd6e4"
+                                        }
+                                        topPadding: 10
+                                        rightPadding: 13
+                                        bottomPadding: 10
+                                        leftPadding: 13
+                                        implicitHeight: 41
+                                        implicitWidth: 191
+                                        placeholderText: "At least 8 characters"
+                                        placeholderTextColor: "#757575"
+                                        echoMode: TextInput.Password
+                                        Accessible.name: "Password"
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
                                     }
@@ -254,11 +337,52 @@ ApplicationWindow {
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
                                         Layout.bottomMargin: 5
+
+                                        TapHandler {
+                                            onTapped: (eventPoint, button) => {
+                                                if (team.enabled) { team.forceActiveFocus(); }
+                                            }
+                                        }
                                     }
 
                                     // <select id="team" class="input">
-                                    Item {
+                                    ComboBox {
                                         id: team
+                                        property string name: "team"
+
+                                        model: [{ text: "Just me", value: "1" }, { text: "2 to 10 people", value: "2" }, { text: "11 to 50 people", value: "3" }, { text: "More than 50 people", value: "4" }]
+                                        textRole: "text"
+                                        valueRole: "value"
+                                        currentIndex: 1
+                                        implicitContentWidthPolicy: ComboBox.WidestText
+                                        font.family: "sans-serif"
+                                        font.pixelSize: 15
+                                        background: Rectangle {
+                                            color: "#ffffff"
+                                            radius: 8
+                                            border.width: 1
+                                            border.color: "#cfd6e4"
+                                        }
+                                        topPadding: 10
+                                        rightPadding: 31
+                                        bottomPadding: 10
+                                        leftPadding: 13
+                                        implicitHeight: 41
+                                        contentItem: Text {
+                                            text: team.displayText
+                                            font: team.font
+                                            color: "#1d2433"
+                                            verticalAlignment: Text.AlignVCenter
+                                            elide: Text.ElideRight
+                                        }
+                                        indicator: Text {
+                                            x: team.width - width - 13
+                                            y: (team.height - height) / 2
+                                            text: "▾"
+                                            color: "#1d2433"
+                                            font.pixelSize: 12
+                                        }
+                                        Accessible.name: "Team size"
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
                                     }
@@ -292,14 +416,42 @@ ApplicationWindow {
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
                                         Layout.bottomMargin: 5
+
+                                        TapHandler {
+                                            onTapped: (eventPoint, button) => {
+                                                if (bio.enabled) { bio.forceActiveFocus(); }
+                                            }
+                                        }
                                     }
 
                                     // <textarea id="bio" class="input">
-                                    Item {
+                                    ScrollView {
                                         id: bio
                                         Layout.minimumHeight: 76
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
+
+                                        TextArea {
+                                            property string name: "bio"
+
+                                            color: "#1d2433"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 15
+                                            wrapMode: TextEdit.Wrap
+                                            background: Rectangle {
+                                                color: "#ffffff"
+                                                radius: 8
+                                                border.width: 1
+                                                border.color: "#cfd6e4"
+                                            }
+                                            topPadding: 10
+                                            rightPadding: 13
+                                            bottomPadding: 10
+                                            leftPadding: 13
+                                            placeholderText: "What will you build?"
+                                            placeholderTextColor: "#757575"
+                                            Accessible.name: "About you"
+                                        }
                                     }
 
                                     Item {
@@ -308,53 +460,53 @@ ApplicationWindow {
                                 }
 
                                 // <fieldset class="group">
-                                Rectangle {
-                                    color: "#00000000"
-                                    radius: 8
-                                    implicitWidth: groupContent.implicitWidth + 26
-                                    implicitHeight: groupContent.implicitHeight + 24
-                                    border.width: 1
-                                    border.color: "#cfd6e4"
+                                GroupBox {
+                                    id: fieldset
+                                    background: Rectangle {
+                                        color: "#00000000"
+                                        radius: 8
+                                        border.width: 1
+                                        border.color: "#cfd6e4"
+                                        y: Math.max(0, (fieldset.implicitLabelHeight - 1) / 2)
+                                        height: fieldset.height - y
+                                    }
+                                    label: Item {
+                                        implicitWidth: legendText.implicitWidth + 12
+                                        implicitHeight: legendText.implicitHeight
+                                        x: 13
+
+                                        Text {
+                                            id: legendText
+                                            text: "Plan"
+                                            textFormat: Text.PlainText
+                                            color: "#1d2433"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 14
+                                            font.weight: 600
+                                            lineHeight: 19.6
+                                            lineHeightMode: Text.FixedHeight
+                                            transform: Translate {
+                                                y: 1.75
+                                            }
+                                            wrapMode: Text.WordWrap
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.leftMargin: 6
+                                            anchors.rightMargin: 6
+                                        }
+                                    }
+                                    topPadding: Math.max(fieldset.implicitLabelHeight, 1) + 10
+                                    rightPadding: 13
+                                    bottomPadding: 13
+                                    leftPadding: 13
                                     Layout.fillWidth: true
                                     Layout.fillHeight: true
 
                                     ColumnLayout {
-                                        id: groupContent
                                         spacing: 0
                                         anchors.left: parent.left
                                         anchors.right: parent.right
-                                        anchors.top: parent.top
-                                        anchors.leftMargin: 13
-                                        anchors.rightMargin: 13
-                                        anchors.topMargin: 11
-
-                                        // <legend>
-                                        Item {
-                                            implicitWidth: legendText.implicitWidth + 12
-                                            implicitHeight: legendText.implicitHeight
-                                            Layout.fillWidth: true
-
-                                            Text {
-                                                id: legendText
-                                                text: "Plan"
-                                                textFormat: Text.PlainText
-                                                color: "#1d2433"
-                                                font.family: "sans-serif"
-                                                font.pixelSize: 14
-                                                font.weight: 600
-                                                lineHeight: 19.6
-                                                lineHeightMode: Text.FixedHeight
-                                                transform: Translate {
-                                                    y: 1.75
-                                                }
-                                                wrapMode: Text.WordWrap
-                                                anchors.left: parent.left
-                                                anchors.right: parent.right
-                                                anchors.top: parent.top
-                                                anchors.leftMargin: 6
-                                                anchors.rightMargin: 6
-                                            }
-                                        }
 
                                         // <div class="options">
                                         RowLayout {
@@ -371,7 +523,36 @@ ApplicationWindow {
                                                 Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                                 // <input>
-                                                Item {
+                                                RadioButton {
+                                                    id: plan
+                                                    property string value: "free"
+                                                    property string name: "plan"
+
+                                                    checked: true
+                                                    implicitWidth: 13
+                                                    implicitHeight: 13
+                                                    padding: 0
+                                                    spacing: 0
+                                                    contentItem: Item {}
+                                                    indicator: Rectangle {
+                                                        width: plan.width
+                                                        height: plan.height
+                                                        border.width: 1
+                                                        radius: width / 2
+                                                        color: "#ffffff"
+                                                        border.color: plan.checked ? "#0075ff" : "#767676"
+
+                                                        Rectangle {
+                                                            anchors.centerIn: parent
+                                                            width: parent.width * 0.6
+                                                            height: width
+                                                            radius: width / 2
+                                                            color: "#0075ff"
+                                                            visible: plan.checked
+                                                        }
+                                                    }
+                                                    ButtonGroup.group: planGroup
+                                                    Accessible.name: "Free"
                                                     Layout.fillWidth: true
                                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                                     Layout.alignment: Qt.AlignVCenter
@@ -398,6 +579,12 @@ ApplicationWindow {
                                                 Item {
                                                     Layout.fillWidth: true
                                                 }
+
+                                                TapHandler {
+                                                    onTapped: (eventPoint, button) => {
+                                                        if (plan.enabled) { plan.click(); }
+                                                    }
+                                                }
                                             }
 
                                             // <label class="option">
@@ -410,7 +597,35 @@ ApplicationWindow {
                                                 Layout.leftMargin: 18
 
                                                 // <input>
-                                                Item {
+                                                RadioButton {
+                                                    id: plan2
+                                                    property string value: "pro"
+                                                    property string name: "plan"
+
+                                                    implicitWidth: 13
+                                                    implicitHeight: 13
+                                                    padding: 0
+                                                    spacing: 0
+                                                    contentItem: Item {}
+                                                    indicator: Rectangle {
+                                                        width: plan2.width
+                                                        height: plan2.height
+                                                        border.width: 1
+                                                        radius: width / 2
+                                                        color: "#ffffff"
+                                                        border.color: plan2.checked ? "#0075ff" : "#767676"
+
+                                                        Rectangle {
+                                                            anchors.centerIn: parent
+                                                            width: parent.width * 0.6
+                                                            height: width
+                                                            radius: width / 2
+                                                            color: "#0075ff"
+                                                            visible: plan2.checked
+                                                        }
+                                                    }
+                                                    ButtonGroup.group: planGroup
+                                                    Accessible.name: "Pro"
                                                     Layout.fillWidth: true
                                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                                     Layout.alignment: Qt.AlignVCenter
@@ -437,6 +652,12 @@ ApplicationWindow {
                                                 Item {
                                                     Layout.fillWidth: true
                                                 }
+
+                                                TapHandler {
+                                                    onTapped: (eventPoint, button) => {
+                                                        if (plan2.enabled) { plan2.click(); }
+                                                    }
+                                                }
                                             }
 
                                             // <label class="option">
@@ -449,7 +670,35 @@ ApplicationWindow {
                                                 Layout.leftMargin: 18
 
                                                 // <input>
-                                                Item {
+                                                RadioButton {
+                                                    id: plan3
+                                                    property string value: "team"
+                                                    property string name: "plan"
+
+                                                    implicitWidth: 13
+                                                    implicitHeight: 13
+                                                    padding: 0
+                                                    spacing: 0
+                                                    contentItem: Item {}
+                                                    indicator: Rectangle {
+                                                        width: plan3.width
+                                                        height: plan3.height
+                                                        border.width: 1
+                                                        radius: width / 2
+                                                        color: "#ffffff"
+                                                        border.color: plan3.checked ? "#0075ff" : "#767676"
+
+                                                        Rectangle {
+                                                            anchors.centerIn: parent
+                                                            width: parent.width * 0.6
+                                                            height: width
+                                                            radius: width / 2
+                                                            color: "#0075ff"
+                                                            visible: plan3.checked
+                                                        }
+                                                    }
+                                                    ButtonGroup.group: planGroup
+                                                    Accessible.name: "Team"
                                                     Layout.fillWidth: true
                                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                                     Layout.alignment: Qt.AlignVCenter
@@ -475,6 +724,12 @@ ApplicationWindow {
 
                                                 Item {
                                                     Layout.fillWidth: true
+                                                }
+
+                                                TapHandler {
+                                                    onTapped: (eventPoint, button) => {
+                                                        if (plan3.enabled) { plan3.click(); }
+                                                    }
                                                 }
                                             }
 
@@ -520,11 +775,53 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
                                             Layout.bottomMargin: 5
+
+                                            TapHandler {
+                                                onTapped: (eventPoint, button) => {
+                                                    if (seats.enabled) { seats.forceActiveFocus(); }
+                                                }
+                                            }
                                         }
 
                                         // <input id="seats" class="input">
-                                        Item {
+                                        SpinBox {
                                             id: seats
+                                            property string name: "seats"
+
+                                            from: 1
+                                            to: 10
+                                            value: 2
+                                            editable: true
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 15
+                                            background: Rectangle {
+                                                color: "#ffffff"
+                                                radius: 8
+                                                border.width: 1
+                                                border.color: "#cfd6e4"
+                                            }
+                                            topPadding: 10
+                                            rightPadding: 13
+                                            bottomPadding: 10
+                                            leftPadding: 13
+                                            implicitHeight: 41
+                                            implicitWidth: 191
+                                            up.indicator.visible: false
+                                            up.indicator.width: 0
+                                            up.indicator.height: 0
+                                            down.indicator.visible: false
+                                            down.indicator.width: 0
+                                            down.indicator.height: 0
+                                            contentItem: TextInput {
+                                                text: seats.displayText
+                                                font: seats.font
+                                                color: "#1d2433"
+                                                verticalAlignment: Qt.AlignVCenter
+                                                readOnly: !seats.editable
+                                                validator: seats.validator
+                                                inputMethodHints: Qt.ImhFormattedNumbersOnly
+                                            }
+                                            Accessible.name: "Seats"
                                             Layout.preferredWidth: parent.width
                                             Layout.alignment: Qt.AlignLeft
                                         }
@@ -559,11 +856,51 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
                                             Layout.bottomMargin: 5
+
+                                            TapHandler {
+                                                onTapped: (eventPoint, button) => {
+                                                    if (volume.enabled) { volume.forceActiveFocus(); }
+                                                }
+                                            }
                                         }
 
                                         // <input id="volume">
-                                        Item {
+                                        Slider {
                                             id: volume
+                                            property string name: "volume"
+
+                                            from: 0
+                                            to: 100
+                                            stepSize: 1
+                                            snapMode: Slider.SnapAlways
+                                            value: 40
+                                            implicitWidth: 129
+                                            implicitHeight: 16
+                                            padding: 0
+                                            background: Rectangle {
+                                                y: (volume.height - height) / 2
+                                                width: volume.width
+                                                height: 8
+                                                radius: 4
+                                                color: "#efefef"
+                                                border.color: "#767676"
+
+                                                Rectangle {
+                                                    width: volume.visualPosition * parent.width
+                                                    height: parent.height
+                                                    radius: 4
+                                                    color: "#0075ff"
+                                                }
+                                            }
+                                            handle: Rectangle {
+                                                x: volume.visualPosition * (volume.width - width)
+                                                y: (volume.height - height) / 2
+                                                width: 16
+                                                height: 16
+                                                radius: 8
+                                                color: "#0075ff"
+                                            }
+                                            Accessible.name: "Notification volume"
                                             Layout.fillWidth: true
                                         }
 
@@ -599,9 +936,33 @@ ApplicationWindow {
                                     Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                     // <input>
-                                    Item {
-                                        implicitWidth: 16
-                                        implicitHeight: 16
+                                    CheckBox {
+                                        id: terms
+                                        property string value: "on"
+                                        property string name: "terms"
+
+                                        implicitWidth: 13
+                                        implicitHeight: 13
+                                        padding: 0
+                                        spacing: 0
+                                        contentItem: Item {}
+                                        indicator: Rectangle {
+                                            width: terms.width
+                                            height: terms.height
+                                            border.width: 1
+                                            radius: 2
+                                            color: terms.checked ? "#0075ff" : "#ffffff"
+                                            border.color: terms.checked ? "#0075ff" : "#767676"
+
+                                            Text {
+                                                anchors.centerIn: parent
+                                                text: "✓"
+                                                color: "#ffffff"
+                                                font.pixelSize: Math.max(1, terms.height - 2)
+                                                visible: terms.checked
+                                            }
+                                        }
+                                        Accessible.name: "I agree to the terms of service"
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 16
                                         Layout.maximumWidth: 16
@@ -630,6 +991,12 @@ ApplicationWindow {
                                     Item {
                                         Layout.fillWidth: true
                                     }
+
+                                    TapHandler {
+                                        onTapped: (eventPoint, button) => {
+                                            if (terms.enabled) { terms.click(); }
+                                        }
+                                    }
                                 }
 
                                 // <div class="actions">
@@ -646,76 +1013,66 @@ ApplicationWindow {
                                     }
 
                                     // <button class="btn btn--secondary">
-                                    Rectangle {
-                                        color: "#ffffff"
-                                        radius: 8
-                                        implicitWidth: btnText.implicitWidth + 38
-                                        implicitHeight: btnText.implicitHeight + 22
-                                        border.width: 1
-                                        border.color: "#cfd6e4"
+                                    Button {
+                                        id: buttonControl
+                                        text: "Reset"
+                                        palette.buttonText: "#1d2433"
+                                        font.family: "sans-serif"
+                                        font.pixelSize: 15
+                                        font.weight: 600
+                                        background: Rectangle {
+                                            color: "#ffffff"
+                                            radius: 8
+                                            border.width: 1
+                                            border.color: "#cfd6e4"
+                                        }
+                                        topPadding: 11
+                                        rightPadding: 19
+                                        bottomPadding: 11
+                                        leftPadding: 19
+                                        implicitHeight: 43
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Math.ceil(implicitWidth)
                                         Layout.fillHeight: true
 
-                                        Text {
-                                            id: btnText
-                                            text: "Reset"
-                                            textFormat: Text.PlainText
-                                            color: "#1d2433"
-                                            font.family: "sans-serif"
-                                            font.pixelSize: 15
-                                            font.weight: 600
-                                            lineHeight: 21
-                                            lineHeightMode: Text.FixedHeight
-                                            transform: Translate {
-                                                y: 1.88
-                                            }
-                                            horizontalAlignment: Text.AlignHCenter
-                                            wrapMode: Text.WordWrap
-                                            anchors.left: parent.left
-                                            anchors.right: parent.right
-                                            anchors.top: parent.top
-                                            anchors.leftMargin: 19
-                                            anchors.rightMargin: 19
-                                            anchors.topMargin: 11
+                                        onClicked: {
+                                            name.text = "";
+                                            email.text = "";
+                                            password.text = "";
+                                            team.currentIndex = 1;
+                                            bio.text = "";
+                                            plan.checked = true;
+                                            plan2.checked = false;
+                                            plan3.checked = false;
+                                            seats.value = 2;
+                                            volume.value = 40;
+                                            terms.checked = false;
                                         }
                                     }
 
                                     // <button class="btn btn--primary">
-                                    Rectangle {
-                                        color: "#3b6fe0"
-                                        radius: 8
-                                        implicitWidth: btnText2.implicitWidth + 38
-                                        implicitHeight: btnText2.implicitHeight + 22
-                                        border.width: 1
-                                        border.color: "#00000000"
+                                    Button {
+                                        id: buttonControl2
+                                        text: "Create account"
+                                        palette.buttonText: "#ffffff"
+                                        font.family: "sans-serif"
+                                        font.pixelSize: 15
+                                        font.weight: 600
+                                        background: Rectangle {
+                                            color: "#3b6fe0"
+                                            radius: 8
+                                            border.width: 1
+                                            border.color: "#00000000"
+                                        }
+                                        topPadding: 11
+                                        rightPadding: 19
+                                        bottomPadding: 11
+                                        leftPadding: 19
+                                        implicitHeight: 43
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Math.ceil(implicitWidth)
                                         Layout.fillHeight: true
                                         Layout.leftMargin: 10
-
-                                        Text {
-                                            id: btnText2
-                                            text: "Create account"
-                                            textFormat: Text.PlainText
-                                            color: "#ffffff"
-                                            font.family: "sans-serif"
-                                            font.pixelSize: 15
-                                            font.weight: 600
-                                            lineHeight: 21
-                                            lineHeightMode: Text.FixedHeight
-                                            transform: Translate {
-                                                y: 1.88
-                                            }
-                                            horizontalAlignment: Text.AlignHCenter
-                                            wrapMode: Text.WordWrap
-                                            anchors.left: parent.left
-                                            anchors.right: parent.right
-                                            anchors.top: parent.top
-                                            anchors.leftMargin: 19
-                                            anchors.rightMargin: 19
-                                            anchors.topMargin: 11
-                                        }
                                     }
                                 }
                             }
@@ -728,5 +1085,9 @@ ApplicationWindow {
                 }
             }
         }
+    }
+
+    ButtonGroup {
+        id: planGroup
     }
 }

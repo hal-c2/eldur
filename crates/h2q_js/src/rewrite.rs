@@ -639,6 +639,7 @@ impl<'a> PageBuilder<'a> {
         page_js.push('\n');
 
         JsOutput {
+            redispatching_slots: self.shared.redispatching_slots,
             page_js,
             init_function,
             bindings: self.shared.bindings,

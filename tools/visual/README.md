@@ -40,12 +40,24 @@ node tools/visual/render_html.mjs <page.html> <out.png> [--width 1280 --height 8
   `requestAnimationFrame` ticks, and captures a viewport-only PNG (`fullPage: false`).
 - **Playwright module resolution:** When Playwright is installed globally via
   `mise` rather than a workspace `node_modules/`, Node ESM cannot resolve bare
-  `import("playwright")`. `render_html.mjs` first attempts `import("playwright")`,
+  `import("playwright")`. `playwright.mjs` (shared by `render_html.mjs` and
+  `computed.mjs`) first attempts `import("playwright")`,
   then falls back via `module.createRequire` through:
   1. `PLAYWRIGHT_MODULE_PATH` (if set),
   2. `<npm root -g>/playwright`,
   3. `~/.local/share/mise/installs/npm-playwright/latest/node_modules/playwright`,
   4. `../playwright` relative to the resolved `playwright` binary on `PATH`.
+
+### Computed-style oracle: `computed.mjs`
+
+```bash
+node tools/visual/computed.mjs cases.json   # or JSON on stdin
+```
+
+Reports what Chromium's `getComputedStyle()` gives for each case
+(`{name, html, select, props}`), one JSON line per case. Use it to choose the
+expected values in h2q_css tests, so that they assert browser behaviour:
+error recovery in particular is easy to misread from the spec.
 
 ### 2. `Shot.qml` + `render_qml.py`
 

@@ -120,48 +120,60 @@ ApplicationWindow {
                                 Layout.topMargin: 20
 
                                 // <input id="todo-input">
-                                Item {
+                                TextField {
                                     id: todoInput
+                                    color: "#1f2430"
+                                    font.family: "sans-serif"
+                                    font.pixelSize: 16
+                                    verticalAlignment: TextInput.AlignVCenter
+                                    background: Rectangle {
+                                        color: "#00000000"
+                                        radius: 8
+                                        border.width: 1
+                                        border.color: "#c9d1e0"
+                                    }
+                                    topPadding: 11
+                                    rightPadding: 13
+                                    bottomPadding: 11
+                                    leftPadding: 13
+                                    implicitWidth: 202
+                                    placeholderText: "What needs doing?"
+                                    placeholderTextColor: "#757575"
                                     objectName: "todo-input"
                                     Layout.fillWidth: true
                                     Layout.preferredWidth: 0
                                     Layout.fillHeight: true
+
+                                    Keys.onPressed: (event) => {
+                                        const dom = H2Q.event("keydown", todoInput, event);
+                                        Page.__h2q_on_keydown_todoInput(dom);
+                                        event.accepted = dom.defaultPrevented;
+                                    }
                                 }
 
                                 // <button id="add-btn" class="btn">
-                                Rectangle {
+                                Button {
                                     id: addBtn
-                                    color: "#1d4ed8"
-                                    radius: 8
-                                    implicitWidth: addBtnText.implicitWidth + 36
-                                    implicitHeight: addBtnText.implicitHeight + 20
+                                    text: "Add"
+                                    palette.buttonText: "#ffffff"
+                                    font.family: "sans-serif"
+                                    font.pixelSize: 16
+                                    font.weight: 600
+                                    background: Rectangle {
+                                        color: "#1d4ed8"
+                                        radius: 8
+                                    }
+                                    topPadding: 10
+                                    rightPadding: 18
+                                    bottomPadding: 10
+                                    leftPadding: 18
                                     objectName: "add-btn"
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.fillHeight: true
 
-                                    Text {
-                                        id: addBtnText
-                                        text: "Add"
-                                        textFormat: Text.PlainText
-                                        color: "#ffffff"
-                                        font.family: "sans-serif"
-                                        font.pixelSize: 16
-                                        font.weight: 600
-                                        horizontalAlignment: Text.AlignHCenter
-                                        wrapMode: Text.WordWrap
-                                        anchors.left: parent.left
-                                        anchors.right: parent.right
-                                        anchors.top: parent.top
-                                        anchors.leftMargin: 18
-                                        anchors.rightMargin: 18
-                                        anchors.topMargin: 10
-                                    }
-
-                                    TapHandler {
-                                        onTapped: (eventPoint, button) => {
-                                            Page.__h2q_on_click_addBtn(H2Q.event("click", addBtn, eventPoint));
-                                        }
+                                    onClicked: {
+                                        Page.__h2q_on_click_addBtn(H2Q.event("click", addBtn, null));
                                     }
                                 }
                             }
@@ -204,13 +216,15 @@ ApplicationWindow {
                                 id: empty
                                 text: "Nothing here yet."
                                 textFormat: Text.PlainText
-                                color: "#1f2430"
+                                color: "#6b7280"
                                 font.family: "sans-serif"
-                                font.pixelSize: 16
+                                font.pixelSize: 15
+                                horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 objectName: "empty"
                                 visible: false
                                 Layout.fillWidth: true
+                                Layout.topMargin: 16
                             }
 
                             // <p class="footer-note">

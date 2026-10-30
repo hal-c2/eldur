@@ -6,8 +6,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use h2q_js::{
-    DomQuery, DomResolver, ElementKey, QmlTarget, RUNTIME_JS, ScriptInput, ScriptKind, TargetKind,
-    analyze, rewrite,
+    DomQuery, DomResolver, ElementKey, JsOutput, QmlTarget, RUNTIME_JS, ScriptInput, ScriptKind,
+    TargetKind, analyze, rewrite,
 };
 
 #[derive(Default)]
@@ -1999,4 +1999,267 @@ Item {
         "unexpected qml6 module block-nested var output:\n{output}\npage.js:\n{}",
         out.page_js
     );
+}
+
+/// Runs `script` against `main` (imports added) and returns qml6's output.
+fn run_page(resolver: &FakeResolver, script: &str, main: &str) -> (String, JsOutput) {
+    let dir = TempQmlDir::new("controls");
+    let scripts = [ScriptInput {
+        source: script.to_string(),
+        name: "inline script #1".to_string(),
+        kind: ScriptKind::Classic,
+        line_offset: 1,
+    }];
+    let analysis = analyze(&scripts);
+    let out = rewrite(&scripts, &analysis, resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    dir.write_file("h2q_runtime.js", RUNTIME_JS);
+    dir.write_file("page.js", &out.page_js);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        &format!(
+            "import QtQuick\nimport QtQuick.Controls.Basic\nimport \"page.js\" as Page\n\
+             import \"h2q_runtime.js\" as H2Q\n\n{main}\n"
+        ),
+    );
+    (run_qml6_offscreen(&main_qml, Duration::from_secs(3)), out)
+}
+
+#[test]
+fn qml6_connects_listeners_for_each_control_signal_once() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default()
+        .with_id("c", 1, "check", TargetKind::CheckBox)
+        .with_id("r", 2, "range", TargetKind::Range)
+        .with_id("n", 3, "spin", TargetKind::Range)
+        .with_id("s", 4, "combo", TargetKind::ComboBox);
+    let (output, _) = run_page(
+        &resolver,
+        r#"
+var seen = [];
+function note(e) { seen.push(e.type + ":" + e.target.value); }
+function add(el) { el.addEventListener("input", note); el.addEventListener("change", note); }
+function start() {
+    add(document.querySelector('#c'));
+    add(document.querySelector('#r'));
+    add(document.querySelector('#n'));
+    add(document.querySelector('#s'));
+}
+function report() { return seen.join(","); }
+"#,
+        r#"Item {
+    id: root
+    CheckBox { id: check; objectName: "c"; property string value: "yes" }
+    Slider { id: range; objectName: "r"; from: 0; to: 10; value: 3 }
+    SpinBox { id: spin; objectName: "n"; value: 4 }
+    ComboBox {
+        id: combo; objectName: "s"; textRole: "text"; valueRole: "value"
+        model: [{ text: "Alpha", value: "a" }]
+    }
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        Page.start();
+        check.toggled();
+        range.moved();
+        range.pressedChanged();
+        spin.valueModified();
+        combo.activated(0);
+        console.log("H2Q_OK_SIGNALS", Page.report());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains(
+            "H2Q_OK_SIGNALS input:yes,change:yes,input:3,change:3,input:4,change:4,input:a,change:a"
+        ),
+        "{output}"
+    );
+    assert!(!output.contains("cannot bind"), "{output}");
+}
+
+#[test]
+fn qml6_key_listener_on_a_known_element_needs_no_connection() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("t", 1, "field", TargetKind::TextField);
+    let (output, out) = run_page(
+        &resolver,
+        r#"
+var keys = [];
+function note(e) { keys.push(e.key + "/" + e.code); e.preventDefault(); }
+var field = document.getElementById("t");
+field.addEventListener("keydown", note);
+field.removeEventListener("keydown", note);
+field.addEventListener("keydown", note);
+function report() { return keys.join(","); }
+"#,
+        r#"Item {
+    id: root
+    TextField { id: field; objectName: "t" }
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        var qt = { key: Qt.Key_Return, text: "\r", modifiers: 0, accepted: false };
+        var dom = H2Q.event("keydown", field, qt);
+        Page.__h2q_on_keydown_field_0(dom);
+        console.log("H2Q_OK_KEYS", Page.report(), dom.defaultPrevented, qt.accepted);
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        out.page_js.contains("H2Q.listenBound(field"),
+        "{}",
+        out.page_js
+    );
+    assert!(
+        output.contains("H2Q_OK_KEYS Enter/Enter true true"),
+        "{output}"
+    );
+    assert!(!output.contains("cannot bind"), "{output}");
+}
+
+#[test]
+fn qml6_generated_handler_defers_to_a_connected_signal() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("b", 1, "btn", TargetKind::Button);
+    let (output, out) = run_page(
+        &resolver,
+        r#"
+var hits = 0;
+function hit() { hits += 1; }
+var btn = document.getElementById("b");
+btn.addEventListener("click", hit);
+btn.removeEventListener("click", hit);
+btn.addEventListener("click", hit);
+function report() { return hits; }
+"#,
+        r#"Item {
+    id: root
+    Button { id: btn; objectName: "b" }
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        console.log("H2Q_OK_CONNECTED", H2Q.connected(btn, "click"), H2Q.connected(btn, "input"));
+        btn.clicked();
+        console.log("H2Q_OK_HITS", Page.report());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert_eq!(out.redispatching_slots, ["__h2q_on_click_btn_0"]);
+    assert!(output.contains("H2Q_OK_CONNECTED true false"), "{output}");
+    assert!(output.contains("H2Q_OK_HITS 1"), "{output}");
+}
+
+#[test]
+fn qml6_created_input_becomes_what_its_type_says_and_keeps_listeners() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let (output, _) = run_page(
+        &FakeResolver::default(),
+        r#"
+var seen = [];
+function run() {
+    var box = document.createElement("input");
+    box.addEventListener("change", function () { seen.push("change:" + box.checked); });
+    box.type = "checkbox";
+    box.checked = true;
+    box._item.toggled();
+    var text = document.createElement("input");
+    text.addEventListener("keydown", function (e) { seen.push("key:" + e.key); });
+    text._item.h2qKeyDown({ key: Qt.Key_A, text: "a", modifiers: 0, accepted: false });
+    text.value = "v";
+    return seen.join(",") + "|" + box.type + "|" + text.value;
+}
+"#,
+        r#"Item {
+    id: root
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        console.log("H2Q_OK_CREATED", Page.run());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains("H2Q_OK_CREATED change:true,key:a|checkbox|v"),
+        "{output}"
+    );
+}
+
+#[test]
+fn qml6_empty_box_grows_with_appended_children_until_text_content_clears_them() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("l", 1, "list", TargetKind::Box);
+    let (output, _) = run_page(
+        &resolver,
+        r#"
+var list = document.getElementById("l");
+function add() {
+    var li = document.createElement("li");
+    var label = document.createElement("span");
+    label.textContent = "x";
+    li.appendChild(label);
+    list.appendChild(li);
+}
+function clear() {
+    list.textContent = "";
+}
+"#,
+        r#"Window {
+    // Layouts settle their implicit size on the window's polish pass, so the
+    // growth is only there to read after a frame.
+    visible: true
+    width: 200
+    height: 200
+    Item {
+        id: root
+        width: 200
+        Rectangle {
+            id: list
+            objectName: "l"
+            width: 200
+            implicitHeight: listText.implicitHeight + 1
+            Text { id: listText; text: ""; width: parent.width; y: 1 }
+        }
+    }
+    Timer {
+        id: settled
+        interval: 100
+        onTriggered: {
+            var grownHeight = list.implicitHeight;
+            var appended = H2Q.wrap(list).children.length;
+            var textHidden = !listText.visible;
+            Page.clear();
+            var left = H2Q.wrap(list).children.length;
+            cleared.report = [appended, textHidden, grownHeight > 1, left];
+            cleared.start();
+        }
+    }
+    Timer {
+        id: cleared
+        property var report
+        interval: 100
+        onTriggered: {
+            console.log("H2Q_OK_APPEND", report.join(" "), list.implicitHeight);
+            Qt.quit();
+        }
+    }
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        Page.add();
+        Page.add();
+        settled.start();
+    }
+}"#,
+    );
+    assert!(output.contains("H2Q_OK_APPEND 2 true true 0 1"), "{output}");
 }

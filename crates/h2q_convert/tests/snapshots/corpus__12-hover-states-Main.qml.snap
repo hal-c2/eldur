@@ -113,139 +113,92 @@ ApplicationWindow {
                             Layout.topMargin: 12
 
                             // <button class="btn btn--primary">
-                            Rectangle {
-                                color: "#3b6fe0"
-                                radius: 8
-                                implicitWidth: btnText.implicitWidth + 42
-                                implicitHeight: btnText.implicitHeight + 22
-                                border.width: 1
-                                border.color: "#00000000"
-                                width: Math.min(Math.ceil(implicitWidth), parent.width)
-
-                                Text {
-                                    id: btnText
-                                    text: "Primary"
-                                    textFormat: Text.PlainText
-                                    color: "#ffffff"
-                                    font.family: "sans-serif"
-                                    font.pixelSize: 15
-                                    font.weight: 600
-                                    lineHeight: 22.5
-                                    lineHeightMode: Text.FixedHeight
-                                    transform: Translate {
-                                        y: 2.63
-                                    }
-                                    horizontalAlignment: Text.AlignHCenter
-                                    wrapMode: Text.WordWrap
-                                    anchors.left: parent.left
-                                    anchors.right: parent.right
-                                    anchors.top: parent.top
-                                    anchors.leftMargin: 21
-                                    anchors.rightMargin: 21
-                                    anchors.topMargin: 11
+                            Button {
+                                id: buttonControl
+                                text: "Primary"
+                                palette.buttonText: "#ffffff"
+                                font.family: "sans-serif"
+                                font.pixelSize: 15
+                                font.weight: 600
+                                background: Rectangle {
+                                    color: "#3b6fe0"
+                                    radius: 8
+                                    border.width: 1
+                                    border.color: "#00000000"
                                 }
+                                topPadding: 11
+                                rightPadding: 21
+                                bottomPadding: 11
+                                leftPadding: 21
+                                implicitHeight: 44.5
+                                width: Math.min(Math.ceil(implicitWidth), parent.width)
                             }
 
                             // <button class="btn btn--secondary">
-                            Rectangle {
-                                color: "#ffffff"
-                                radius: 8
-                                implicitWidth: btnText2.implicitWidth + 42
-                                implicitHeight: btnText2.implicitHeight + 22
-                                border.width: 1
-                                border.color: "#cfd6e4"
-                                width: Math.min(Math.ceil(implicitWidth), parent.width)
-
-                                Text {
-                                    id: btnText2
-                                    text: "Secondary"
-                                    textFormat: Text.PlainText
-                                    color: "#1f2937"
-                                    font.family: "sans-serif"
-                                    font.pixelSize: 15
-                                    font.weight: 600
-                                    lineHeight: 22.5
-                                    lineHeightMode: Text.FixedHeight
-                                    transform: Translate {
-                                        y: 2.63
-                                    }
-                                    horizontalAlignment: Text.AlignHCenter
-                                    wrapMode: Text.WordWrap
-                                    anchors.left: parent.left
-                                    anchors.right: parent.right
-                                    anchors.top: parent.top
-                                    anchors.leftMargin: 21
-                                    anchors.rightMargin: 21
-                                    anchors.topMargin: 11
+                            Button {
+                                id: buttonControl2
+                                text: "Secondary"
+                                palette.buttonText: "#1f2937"
+                                font.family: "sans-serif"
+                                font.pixelSize: 15
+                                font.weight: 600
+                                background: Rectangle {
+                                    color: "#ffffff"
+                                    radius: 8
+                                    border.width: 1
+                                    border.color: "#cfd6e4"
                                 }
+                                topPadding: 11
+                                rightPadding: 21
+                                bottomPadding: 11
+                                leftPadding: 21
+                                implicitHeight: 44.5
+                                width: Math.min(Math.ceil(implicitWidth), parent.width)
                             }
 
                             // <button class="btn btn--ghost">
-                            Rectangle {
-                                color: "#00000000"
-                                radius: 8
-                                implicitWidth: btnText3.implicitWidth + 42
-                                implicitHeight: btnText3.implicitHeight + 22
-                                border.width: 1
-                                border.color: "#00000000"
-                                width: Math.min(Math.ceil(implicitWidth), parent.width)
-
-                                Text {
-                                    id: btnText3
-                                    text: "Ghost"
-                                    textFormat: Text.PlainText
-                                    color: "#3b6fe0"
-                                    font.family: "sans-serif"
-                                    font.pixelSize: 15
-                                    font.weight: 600
-                                    lineHeight: 22.5
-                                    lineHeightMode: Text.FixedHeight
-                                    transform: Translate {
-                                        y: 2.63
-                                    }
-                                    horizontalAlignment: Text.AlignHCenter
-                                    wrapMode: Text.WordWrap
-                                    anchors.left: parent.left
-                                    anchors.right: parent.right
-                                    anchors.top: parent.top
-                                    anchors.leftMargin: 21
-                                    anchors.rightMargin: 21
-                                    anchors.topMargin: 11
+                            Button {
+                                id: buttonControl3
+                                text: "Ghost"
+                                palette.buttonText: "#3b6fe0"
+                                font.family: "sans-serif"
+                                font.pixelSize: 15
+                                font.weight: 600
+                                background: Rectangle {
+                                    color: "#00000000"
+                                    radius: 8
+                                    border.width: 1
+                                    border.color: "#00000000"
                                 }
+                                topPadding: 11
+                                rightPadding: 21
+                                bottomPadding: 11
+                                leftPadding: 21
+                                implicitHeight: 44.5
+                                width: Math.min(Math.ceil(implicitWidth), parent.width)
                             }
 
                             // <button class="btn btn--primary">
-                            Rectangle {
-                                color: "#e5e7eb"
-                                radius: 8
-                                implicitWidth: btnText4.implicitWidth + 42
-                                implicitHeight: btnText4.implicitHeight + 22
-                                border.width: 1
-                                border.color: "#e5e7eb"
-                                width: Math.min(Math.ceil(implicitWidth), parent.width)
-
-                                Text {
-                                    id: btnText4
-                                    text: "Disabled"
-                                    textFormat: Text.PlainText
-                                    color: "#9ca3af"
-                                    font.family: "sans-serif"
-                                    font.pixelSize: 15
-                                    font.weight: 600
-                                    lineHeight: 22.5
-                                    lineHeightMode: Text.FixedHeight
-                                    transform: Translate {
-                                        y: 2.63
-                                    }
-                                    horizontalAlignment: Text.AlignHCenter
-                                    wrapMode: Text.WordWrap
-                                    anchors.left: parent.left
-                                    anchors.right: parent.right
-                                    anchors.top: parent.top
-                                    anchors.leftMargin: 21
-                                    anchors.rightMargin: 21
-                                    anchors.topMargin: 11
+                            Button {
+                                id: buttonControl4
+                                text: "Disabled"
+                                palette.buttonText: "#9ca3af"
+                                font.family: "sans-serif"
+                                font.pixelSize: 15
+                                font.weight: 600
+                                background: Rectangle {
+                                    color: "#e5e7eb"
+                                    radius: 8
+                                    border.width: 1
+                                    border.color: "#e5e7eb"
                                 }
+                                topPadding: 11
+                                rightPadding: 21
+                                bottomPadding: 11
+                                leftPadding: 21
+                                implicitHeight: 44.5
+                                enabled: false
+                                width: Math.min(Math.ceil(implicitWidth), parent.width)
                             }
                         }
                     }

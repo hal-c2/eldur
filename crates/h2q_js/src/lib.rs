@@ -163,6 +163,10 @@ pub struct JsOutput {
     /// Static event bindings (handler attributes, `addEventListener` and
     /// `onX =` on resolved targets).
     pub bindings: Vec<EventBinding>,
+    /// The `bindings` functions that hand the event to listeners added with
+    /// `H2Q.listen`, which can also connect the signal itself: their QML
+    /// handler must check `H2Q.connected(<qml_id>, <event>)`.
+    pub redispatching_slots: Vec<String>,
     /// Syntax errors and unsupported-feature warnings encountered during rewrite.
     pub diagnostics: Vec<Diagnostic>,
 }
