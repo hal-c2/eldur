@@ -67,6 +67,37 @@ impl LengthPercentage {
         }
     }
 
+    #[must_use]
+    pub const fn vw(vw: f32) -> Self {
+        Self {
+            px: 0.0,
+            percent: 0.0,
+            vw,
+            vh: 0.0,
+        }
+    }
+
+    #[must_use]
+    pub const fn vh(vh: f32) -> Self {
+        Self {
+            px: 0.0,
+            percent: 0.0,
+            vw: 0.0,
+            vh,
+        }
+    }
+
+    /// Multiplies every component by a scalar factor.
+    #[must_use]
+    pub fn scale(self, factor: f32) -> Self {
+        Self {
+            px: self.px * factor,
+            percent: self.percent * factor,
+            vw: self.vw * factor,
+            vh: self.vh * factor,
+        }
+    }
+
     /// `Some(px)` when the value is a plain length.
     #[must_use]
     pub fn as_px(&self) -> Option<f32> {
@@ -76,6 +107,19 @@ impl LengthPercentage {
     #[must_use]
     pub fn is_zero(&self) -> bool {
         self.as_px() == Some(0.0)
+    }
+}
+
+impl std::ops::Add for LengthPercentage {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self {
+            px: self.px + other.px,
+            percent: self.percent + other.percent,
+            vw: self.vw + other.vw,
+            vh: self.vh + other.vh,
+        }
     }
 }
 
