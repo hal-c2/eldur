@@ -306,14 +306,10 @@ function init(rootItem, baseUrl) {
     }
     if (typeof baseUrl === "string" && baseUrl !== "") {
         _explicitBaseUrl = baseUrl;
-        if (!_locState.href) {
-            _updateLocationFromHref(baseUrl, false);
-        }
+        _updateLocationFromHref(baseUrl, false);
     } else if (_root && typeof _root.baseUrl === "string" && _root.baseUrl !== "") {
         _explicitBaseUrl = _root.baseUrl;
-        if (!_locState.href) {
-            _updateLocationFromHref(_root.baseUrl, false);
-        }
+        _updateLocationFromHref(_root.baseUrl, false);
     }
     _startTime = Date.now();
 }
@@ -911,9 +907,9 @@ function unsupported(feature) {
 //   on bare origins and collapsing `.` / `..` path segments, which Qt 6.11's
 //   built-in `new URL()` does not do).
 // - When `rawHref` is a relative URL and a base URL is available via
-//   `location.href` (or `_root.baseUrl`), `_resolveUrl` resolves `rawHref`
+//   `H2Q.init(rootItem, baseUrl)` or `_root.baseUrl`, `_resolveUrl` resolves `rawHref`
 //   against that base URL.
-// - When `rawHref` is a relative URL and no base URL is known (`location.href === ""`),
+// - When `rawHref` is a relative URL and no base URL is known,
 //   `_resolveUrl` returns the raw attribute value unchanged because the runtime
 //   has no document base URL to resolve against.
 function _normalizeUrlPath(path) {
@@ -966,9 +962,6 @@ function _parseHierarchicalUrl(urlStr) {
 }
 
 function _getDocumentBaseUrl() {
-    if (location && typeof location.href === "string" && location.href !== "") {
-        return location.href;
-    }
     if (_explicitBaseUrl !== "") {
         return _explicitBaseUrl;
     }
@@ -997,7 +990,7 @@ function _resolveUrl(rawHref) {
     var base = baseStr ? _parseHierarchicalUrl(baseStr) : null;
     if (!base) {
         // Runtime has no document base URL when converted statically unless
-        // `location.href` (or `root.baseUrl`) was populated; return the raw
+        // `H2Q.init(root, baseUrl)` or `root.baseUrl` was populated; return the raw
         // relative attribute unchanged.
         return String(rawHref);
     }
@@ -1080,24 +1073,30 @@ function _updateLocationFromHref(newHref, fireHashChange) {
     }
 }
 
+function _warnUnsupportedNavigation(method, targetUrl) {
+    var s = String(targetUrl === undefined ? "" : targetUrl);
+    if (s.charAt(0) === "#") {
+        location.hash = s;
+        return;
+    }
+    console.warn("H2Q: " + method + " navigation is unsupported in QML: " + s);
+}
+
 var location = {
     get href() { return _locState.href; },
-    set href(v) { _updateLocationFromHref(v, true); },
+    set href(v) { _warnUnsupportedNavigation("location.href", v); },
     get protocol() { return _locState.protocol; },
-    set protocol(v) { _locState.protocol = String(v); },
+    set protocol(v) { _warnUnsupportedNavigation("location.protocol", v); },
     get host() { return _locState.host; },
-    set host(v) { _locState.host = String(v); },
+    set host(v) { _warnUnsupportedNavigation("location.host", v); },
     get hostname() { return _locState.hostname; },
-    set hostname(v) { _locState.hostname = String(v); },
+    set hostname(v) { _warnUnsupportedNavigation("location.hostname", v); },
     get port() { return _locState.port; },
-    set port(v) { _locState.port = String(v); },
+    set port(v) { _warnUnsupportedNavigation("location.port", v); },
     get pathname() { return _locState.pathname; },
-    set pathname(v) { _locState.pathname = String(v); },
+    set pathname(v) { _warnUnsupportedNavigation("location.pathname", v); },
     get search() { return _locState.search; },
-    set search(v) {
-        var s = String(v);
-        _locState.search = s === "" || s.charAt(0) === "?" ? s : "?" + s;
-    },
+    set search(v) { _warnUnsupportedNavigation("location.search", v); },
     get hash() { return _locState.hash; },
     set hash(v) {
         var s = String(v);
@@ -1114,10 +1113,10 @@ var location = {
     },
     get origin() { return _locState.origin; },
     assign: function(url) {
-        _updateLocationFromHref(url, true);
+        _warnUnsupportedNavigation("location.assign()", url);
     },
     replace: function(url) {
-        _updateLocationFromHref(url, true);
+        _warnUnsupportedNavigation("location.replace()", url);
     },
     reload: function() {
         console.warn("H2Q: location.reload() is unsupported");

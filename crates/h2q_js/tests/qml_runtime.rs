@@ -2517,23 +2517,35 @@ fn qml6_anchor_href_resolves_against_document_base_and_preserves_raw_attribute()
     let (output, _) = run_page_allowing_unsupported(
         &resolver,
         r##"
-function verifyHref() {
+function verifyBeforeBase() {
     const abs = document.getElementById("abs");
     const norm = document.getElementById("norm");
     const rel = document.getElementById("rel");
-    const rich = document.getElementById("rich");
 
     abs.setAttribute("href", "https://example.com");
     norm.setAttribute("href", "https://example.com/a/b/../c?q=1#top");
     rel.setAttribute("href", "/docs/guide.html");
 
-    // Before location.href is set, relative URLs return the raw attribute because
-    // the runtime has no document base URL.
+    // Before a document base URL is configured via init(root, baseUrl) or root.baseUrl,
+    // relative URLs return the raw attribute. Assigning location.href warns and does
+    // not configure the base URL.
+    location.href = "https://ignored.example/should-not-become-base.html";
     const relWithoutBase = rel.href;
     const relRawBefore = rel.getAttribute("href");
 
-    // Once location.href provides a document base URL, relative URLs resolve against it.
-    location.href = "https://example.com/app/sub/index.html?v=1";
+    return [
+        abs.href,
+        abs.getAttribute("href"),
+        norm.href,
+        relWithoutBase,
+        relRawBefore
+    ].join("|");
+}
+
+function verifyWithBase() {
+    const rel = document.getElementById("rel");
+    const rich = document.getElementById("rich");
+
     const relRootResolved = rel.href;
 
     rel.href = "../about.html#team";
@@ -2550,11 +2562,6 @@ function verifyHref() {
     const mailtoHref = rel.href;
 
     return [
-        abs.href,
-        abs.getAttribute("href"),
-        norm.href,
-        relWithoutBase,
-        relRawBefore,
         relRootResolved,
         relDotDotResolved,
         relDotDotRaw,
@@ -2568,13 +2575,18 @@ function verifyHref() {
 "##,
         r#"Item {
     id: root
+    property string baseUrl: ""
     Text { id: absLink; objectName: "abs"; text: "Abs" }
     Text { id: normLink; objectName: "norm"; text: "Norm" }
     Text { id: relLink; objectName: "rel"; text: "Rel" }
     Text { id: richLink; objectName: "rich"; text: "<a href=\"https://example.org\">Rich</a>" }
     Component.onCompleted: {
         (Page.__h2q_init || H2Q.init)(root);
-        console.log("H2Q_OK_HREF", Page.verifyHref());
+        const beforeBase = Page.verifyBeforeBase();
+        root.baseUrl = "https://example.com/app/sub/index.html?v=1";
+        H2Q.init(root, root.baseUrl);
+        const withBase = Page.verifyWithBase();
+        console.log("H2Q_OK_HREF", beforeBase + "|" + withBase);
         Qt.quit();
     }
 }"#,
@@ -2583,6 +2595,10 @@ function verifyHref() {
         output.contains(
             "H2Q_OK_HREF https://example.com/|https://example.com|https://example.com/a/c?q=1#top|/docs/guide.html|/docs/guide.html|https://example.com/docs/guide.html|https://example.com/app/about.html#team|../about.html#team|https://example.com/app/sub/index.html?page=2|https://example.com/app/sub/index.html?v=1#section|mailto:info@example.com|https://example.org|https://example.org/"
         ),
+        "{output}"
+    );
+    assert!(
+        output.contains("H2Q: location.href navigation is unsupported in QML: https://ignored.example/should-not-become-base.html"),
         "{output}"
     );
 }
