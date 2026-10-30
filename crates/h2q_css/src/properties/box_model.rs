@@ -3,15 +3,14 @@
 use swc_css_ast::ComponentValue;
 
 use crate::{
-    BorderSide, BorderStyle, BoxSizing, Display, Float, Length, LengthAuto, LengthPercentage,
-    Position, Rgba, Size,
+    BorderSide, BorderStyle, BoxSizing, Display, Float, Length, LengthAuto, Position, Rgba, Size,
 };
 
 use super::{
     cursor::Cursor,
     length::{
-        UnitContext, eat_length, eat_number_or_calc, eat_px, length_to_lp, parse_integer_cvs,
-        parse_length_auto_cvs, parse_length_cvs, parse_px_cvs,
+        UnitContext, eat_length, eat_number_or_calc, eat_px, parse_integer_cvs,
+        parse_length_auto_cvs, parse_length_cvs, parse_px_cvs, simplify_length,
     },
 };
 
@@ -330,17 +329,23 @@ pub(crate) fn apply_border_style(
     if matches!(new_style, BorderStyle::None | BorderStyle::Hidden) {
         side.width = 0.0;
     } else if was_unpainted {
-        if side.width == 0.0 {
-            side.width = 3.0;
-        }
-        if side.color == Rgba::TRANSPARENT {
+        side.width = side.explicit_width.unwrap_or(3.0);
+        if let Some(c) = side.explicit_color {
+            side.color = c;
+        } else {
             side.color = current_color;
         }
     }
 }
 
+pub(crate) fn apply_border_color(side: &mut BorderSide, color: Rgba, is_current_color: bool) {
+    side.color = color;
+    side.explicit_color = if is_current_color { None } else { Some(color) };
+}
+
 /// Applies `border-*-width` / `outline-width` to `side` (`0` when `style` is `none`/`hidden`).
 pub(crate) fn apply_border_width(side: &mut BorderSide, parsed_px: f32) {
+    side.explicit_width = Some(parsed_px);
     side.width = if matches!(side.style, BorderStyle::None | BorderStyle::Hidden) {
         0.0
     } else {
@@ -353,7 +358,7 @@ pub(crate) fn apply_border_width(side: &mut BorderSide, parsed_px: f32) {
 pub(crate) fn parse_corner_radius(
     cvs: &[ComponentValue],
     uctx: &UnitContext,
-) -> Result<LengthPercentage, String> {
+) -> Result<Length, String> {
     let mut cur = Cursor::new(cvs);
     let horiz = eat_length(&mut cur, uctx, true)?
         .ok_or_else(|| "expected corner radius <length-percentage>".to_owned())?;
@@ -362,7 +367,7 @@ pub(crate) fn parse_corner_radius(
             .ok_or_else(|| "invalid vertical corner radius".to_owned())?;
     }
     cur.expect_eof()?;
-    length_to_lp(horiz, uctx, true)
+    Ok(simplify_length(horiz, uctx, true))
 }
 
 pub(crate) fn parse_outline_offset(

@@ -473,3 +473,71 @@ pub(crate) fn apply_animation_field<T: Clone>(
         setter(anim, values[i % values.len()].clone());
     }
 }
+
+pub(crate) fn copy_transition_field(
+    dst: &mut ComputedStyle,
+    src: &ComputedStyle,
+    mut copy_fn: impl FnMut(&mut Transition, &Transition),
+) {
+    let init = css_initial_transition();
+    if dst.transitions.is_empty() {
+        if src.transitions.is_empty() {
+            return;
+        }
+        dst.transitions = src
+            .transitions
+            .iter()
+            .map(|s| {
+                let mut tr = init.clone();
+                copy_fn(&mut tr, s);
+                tr
+            })
+            .collect();
+        if dst.transitions.iter().all(|t| *t == init) {
+            dst.transitions.clear();
+        }
+        return;
+    }
+    for (i, tr) in dst.transitions.iter_mut().enumerate() {
+        let s = if src.transitions.is_empty() {
+            &init
+        } else {
+            &src.transitions[i % src.transitions.len()]
+        };
+        copy_fn(tr, s);
+    }
+}
+
+pub(crate) fn copy_animation_field(
+    dst: &mut ComputedStyle,
+    src: &ComputedStyle,
+    mut copy_fn: impl FnMut(&mut Animation, &Animation),
+) {
+    let init = css_initial_animation();
+    if dst.animations.is_empty() {
+        if src.animations.is_empty() {
+            return;
+        }
+        dst.animations = src
+            .animations
+            .iter()
+            .map(|s| {
+                let mut anim = init.clone();
+                copy_fn(&mut anim, s);
+                anim
+            })
+            .collect();
+        if dst.animations.iter().all(|a| *a == init) {
+            dst.animations.clear();
+        }
+        return;
+    }
+    for (i, anim) in dst.animations.iter_mut().enumerate() {
+        let s = if src.animations.is_empty() {
+            &init
+        } else {
+            &src.animations[i % src.animations.len()]
+        };
+        copy_fn(anim, s);
+    }
+}
