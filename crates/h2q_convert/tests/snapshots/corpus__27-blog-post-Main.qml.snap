@@ -159,96 +159,171 @@ ApplicationWindow {
                             Layout.topMargin: 6
                         }
 
-                        // <img class="photo">
                         Item {
-                            clip: true
-                            implicitWidth: 280
-                            implicitHeight: 192.5
-                            Layout.preferredWidth: 280
-                            Layout.alignment: Qt.AlignRight
-                            Layout.leftMargin: 24
+                            Layout.fillWidth: true
+                            implicitWidth: floats.implicitWidth
+                            implicitHeight: Math.max(wrapped.implicitHeight, floats.implicitHeight)
                             Layout.topMargin: 28
 
-                            Image {
-                                source: "assets/harbour.svg"
-                                sourceSize.width: width
-                                sourceSize.height: height
-                                Accessible.name: "The harbour with two hills and a red boat"
-                                anchors.fill: parent
+                            ColumnLayout {
+                                id: wrapped
+                                spacing: 0
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.top: parent.top
+
+                                // <p class="intro">
+                                Text {
+                                    id: wrappedText
+                                    text: "When the ferries stop running in November, the harbour becomes a different town. The cafés close their terraces, the fishing boats come in early, and the few of us who stay learn each other's routines. I went there to write a book and ended up keeping a diary of the weather instead."
+                                    textFormat: Text.PlainText
+                                    color: "#2e2a26"
+                                    font.family: "serif"
+                                    font.pixelSize: 18
+                                    lineHeight: 28.8
+                                    lineHeightMode: Text.FixedHeight
+                                    transform: Translate {
+                                        y: 4.05
+                                    }
+                                    wrapMode: Text.WordWrap
+                                    Layout.fillWidth: true
+
+                                    onLineLaidOut: (line) => {
+                                        const fixed = lineHeightMode === Text.FixedHeight;
+                                        const top = y + (fixed ? line.number * lineHeight : line.y);
+                                        const bottom = top + (fixed ? lineHeight : line.height);
+                                        if (top < floats.childrenRect.y + floats.childrenRect.height && bottom > floats.childrenRect.y) {
+                                            const cut = x + width - floats.childrenRect.x;
+                                            if (cut > 0) {
+                                                line.width -= cut;
+                                            }
+                                        }
+                                    }
+                                    onYChanged: Qt.callLater(forceLayout)
+                                }
+
+                                // <p>
+                                Text {
+                                    id: wrappedText2
+                                    text: "The mornings are dark until ten. I would walk to the end of the breakwater with a thermos and watch the light come up behind the hills, first grey, then a thin band of orange that never quite made it to yellow. Most days the wind decided everything: whether the boats went out, whether the shop got its delivery, whether anyone bothered to talk."
+                                    textFormat: Text.PlainText
+                                    color: "#2e2a26"
+                                    font.family: "serif"
+                                    font.pixelSize: 18
+                                    lineHeight: 28.8
+                                    lineHeightMode: Text.FixedHeight
+                                    transform: Translate {
+                                        y: 4.05
+                                    }
+                                    wrapMode: Text.WordWrap
+                                    Layout.fillWidth: true
+                                    Layout.topMargin: 18
+
+                                    onLineLaidOut: (line) => {
+                                        const fixed = lineHeightMode === Text.FixedHeight;
+                                        const top = y + (fixed ? line.number * lineHeight : line.y);
+                                        const bottom = top + (fixed ? lineHeight : line.height);
+                                        if (top < floats.childrenRect.y + floats.childrenRect.height && bottom > floats.childrenRect.y) {
+                                            const cut = x + width - floats.childrenRect.x;
+                                            if (cut > 0) {
+                                                line.width -= cut;
+                                            }
+                                        }
+                                    }
+                                    onYChanged: Qt.callLater(forceLayout)
+                                }
+
+                                // <p>
+                                Text {
+                                    id: wrappedText3
+                                    text: "By January I knew which gulls belonged to which roof."
+                                    textFormat: Text.PlainText
+                                    color: "#2e2a26"
+                                    font.family: "serif"
+                                    font.pixelSize: 18
+                                    lineHeight: 28.8
+                                    lineHeightMode: Text.FixedHeight
+                                    transform: Translate {
+                                        y: 4.05
+                                    }
+                                    wrapMode: Text.WordWrap
+                                    Layout.fillWidth: true
+                                    Layout.topMargin: 18
+
+                                    onLineLaidOut: (line) => {
+                                        const fixed = lineHeightMode === Text.FixedHeight;
+                                        const top = y + (fixed ? line.number * lineHeight : line.y);
+                                        const bottom = top + (fixed ? lineHeight : line.height);
+                                        if (top < floats.childrenRect.y + floats.childrenRect.height && bottom > floats.childrenRect.y) {
+                                            const cut = x + width - floats.childrenRect.x;
+                                            if (cut > 0) {
+                                                line.width -= cut;
+                                            }
+                                        }
+                                    }
+                                    onYChanged: Qt.callLater(forceLayout)
+                                }
                             }
 
-                            Shape {
-                                id: photoCorners
-                                anchors.fill: parent
+                            Flow {
+                                id: floats
+                                layoutDirection: Qt.RightToLeft
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.top: parent.top
 
-                                ShapePath {
-                                    strokeWidth: -1
-                                    fillColor: "#fffdf8"
-                                    fillRule: ShapePath.OddEvenFill
+                                onChildrenRectChanged: {
+                                    Qt.callLater(wrappedText.forceLayout);
+                                    Qt.callLater(wrappedText2.forceLayout);
+                                    Qt.callLater(wrappedText3.forceLayout);
+                                }
 
-                                    PathRectangle {
-                                        width: photoCorners.width
-                                        height: photoCorners.height
-                                    }
+                                // <img class="photo">
+                                Item {
+                                    width: photoBox.width + 24
+                                    height: photoBox.height + 4 + 12
 
-                                    PathRectangle {
-                                        width: photoCorners.width
-                                        height: photoCorners.height
-                                        radius: 4
+                                    Item {
+                                        id: photoBox
+                                        clip: true
+                                        implicitWidth: 280
+                                        implicitHeight: 192.5
+                                        width: 280
+                                        x: 24
+                                        y: 4
+
+                                        Image {
+                                            source: "assets/harbour.svg"
+                                            sourceSize.width: width
+                                            sourceSize.height: height
+                                            Accessible.name: "The harbour with two hills and a red boat"
+                                            anchors.fill: parent
+                                        }
+
+                                        Shape {
+                                            id: photoCorners
+                                            anchors.fill: parent
+
+                                            ShapePath {
+                                                strokeWidth: -1
+                                                fillColor: "#fffdf8"
+                                                fillRule: ShapePath.OddEvenFill
+
+                                                PathRectangle {
+                                                    width: photoCorners.width
+                                                    height: photoCorners.height
+                                                }
+
+                                                PathRectangle {
+                                                    width: photoCorners.width
+                                                    height: photoCorners.height
+                                                    radius: 4
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
-                        }
-
-                        // <p class="intro">
-                        Text {
-                            text: "When the ferries stop running in November, the harbour becomes a different town. The cafés close their terraces, the fishing boats come in early, and the few of us who stay learn each other's routines. I went there to write a book and ended up keeping a diary of the weather instead."
-                            textFormat: Text.PlainText
-                            color: "#2e2a26"
-                            font.family: "serif"
-                            font.pixelSize: 18
-                            lineHeight: 28.8
-                            lineHeightMode: Text.FixedHeight
-                            transform: Translate {
-                                y: 4.05
-                            }
-                            wrapMode: Text.WordWrap
-                            Layout.fillWidth: true
-                            Layout.topMargin: 12
-                        }
-
-                        // <p>
-                        Text {
-                            text: "The mornings are dark until ten. I would walk to the end of the breakwater with a thermos and watch the light come up behind the hills, first grey, then a thin band of orange that never quite made it to yellow. Most days the wind decided everything: whether the boats went out, whether the shop got its delivery, whether anyone bothered to talk."
-                            textFormat: Text.PlainText
-                            color: "#2e2a26"
-                            font.family: "serif"
-                            font.pixelSize: 18
-                            lineHeight: 28.8
-                            lineHeightMode: Text.FixedHeight
-                            transform: Translate {
-                                y: 4.05
-                            }
-                            wrapMode: Text.WordWrap
-                            Layout.fillWidth: true
-                            Layout.topMargin: 18
-                        }
-
-                        // <p>
-                        Text {
-                            text: "By January I knew which gulls belonged to which roof."
-                            textFormat: Text.PlainText
-                            color: "#2e2a26"
-                            font.family: "serif"
-                            font.pixelSize: 18
-                            lineHeight: 28.8
-                            lineHeightMode: Text.FixedHeight
-                            transform: Translate {
-                                y: 4.05
-                            }
-                            wrapMode: Text.WordWrap
-                            Layout.fillWidth: true
-                            Layout.topMargin: 18
                         }
 
                         // <nav class="toc">
