@@ -249,6 +249,16 @@ pub enum Float {
     Right,
 }
 
+/// `clear`; `inline-start`/`inline-end` are the left/right of `ltr` text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Clear {
+    #[default]
+    None,
+    Left,
+    Right,
+    Both,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BoxSizing {
     #[default]
@@ -751,6 +761,7 @@ pub struct ComputedStyle {
     /// `None` = `auto`.
     pub z_index: Option<i32>,
     pub float: Float,
+    pub clear: Clear,
     pub box_sizing: BoxSizing,
 
     // Sizing
@@ -900,6 +911,7 @@ impl Default for ComputedStyle {
             left: LengthAuto::Auto,
             z_index: None,
             float: Float::None,
+            clear: Clear::None,
             box_sizing: BoxSizing::ContentBox,
             width: Size::Auto,
             height: Size::Auto,

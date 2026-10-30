@@ -924,7 +924,7 @@ pub(crate) fn compute(
             style.float = parse_float(cvs)?;
         }
         Longhand::Clear => {
-            let _ = parse_clear(cvs)?;
+            style.clear = parse_clear(cvs)?;
         }
 
         // Box model & sizing
@@ -1427,7 +1427,7 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
         Longhand::Left => dst.left.clone_from(&src.left),
         Longhand::ZIndex => dst.z_index = src.z_index,
         Longhand::Float => dst.float = src.float,
-        Longhand::Clear => {}
+        Longhand::Clear => dst.clear = src.clear,
 
         Longhand::BoxSizing => dst.box_sizing = src.box_sizing,
         Longhand::Width => dst.width.clone_from(&src.width),
@@ -1687,15 +1687,17 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
 // Small helpers for `clear`, `-webkit-line-clamp`, and individual transforms
 // ---------------------------------------------------------------------------
 
-fn parse_clear(cvs: &[swc_css_ast::ComponentValue]) -> Result<bool, String> {
+fn parse_clear(cvs: &[swc_css_ast::ComponentValue]) -> Result<crate::Clear, String> {
     let mut cur = cursor::Cursor::new(cvs);
     let id = cur
         .eat_ident()
         .ok_or_else(|| "expected clear keyword".to_owned())?;
     cur.expect_eof()?;
     match id.to_ascii_lowercase().as_str() {
-        "none" => Ok(false),
-        "left" | "right" | "both" | "inline-start" | "inline-end" => Ok(true),
+        "none" => Ok(crate::Clear::None),
+        "left" | "inline-start" => Ok(crate::Clear::Left),
+        "right" | "inline-end" => Ok(crate::Clear::Right),
+        "both" => Ok(crate::Clear::Both),
         _ => Err(format!("invalid clear keyword '{id}'")),
     }
 }

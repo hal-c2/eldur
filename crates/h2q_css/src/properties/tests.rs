@@ -1287,3 +1287,20 @@ fn counter_properties_and_counters_function() {
         ])
     );
 }
+
+#[test]
+fn clear_keeps_its_side() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    let mut s = ComputedStyle::default();
+    for (value, expected) in [
+        ("left", crate::Clear::Left),
+        ("inline-end", crate::Clear::Right),
+        ("both", crate::Clear::Both),
+        ("none", crate::Clear::None),
+    ] {
+        compute(&mut s, Longhand::Clear, value, &ctx).expect("clear");
+        assert_eq!(s.clear, expected);
+    }
+    assert!(!is_inherited(Longhand::Clear));
+}
