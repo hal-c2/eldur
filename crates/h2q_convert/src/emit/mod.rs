@@ -88,6 +88,8 @@ pub(crate) struct Emitter<'a, 'd> {
     fragments: BTreeMap<String, String>,
     /// A link on the page goes to a fragment (`href="#…"`).
     fragment_links: bool,
+    /// The box being emitted is one of a run of floats that share a line.
+    in_float_run: bool,
     /// QML modules the emitted objects need beyond the default imports.
     pub imports: std::collections::BTreeSet<&'static str>,
 }
@@ -125,6 +127,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             backdrop: None,
             fragments: BTreeMap::new(),
             fragment_links: false,
+            in_float_run: false,
             imports: std::collections::BTreeSet::new(),
         }
     }
@@ -597,7 +600,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             b.node
                 .map_or_else(|| "a generated box".to_owned(), |n| describe(self.doc, n))
         };
-        if style.float != Float::None {
+        if style.float != Float::None && !self.in_float_run {
             self.diags.warning(
                 "css",
                 line,

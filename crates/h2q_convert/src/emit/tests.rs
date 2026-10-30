@@ -1434,3 +1434,28 @@ fn a_blurred_inset_shadow_fades_in_bands() {
     // Deep outside the hole edge it is the full colour.
     assert!(coverage(-30.0) > 0.95, "{bands:?}");
 }
+
+#[test]
+fn a_float_run_shares_a_line_and_reports_what_follows() {
+    let (qml, diags) = convert(&page(
+        ".f{float:left;width:100px;height:20px}",
+        "<div><div class=f>a</div><div class=f>b</div><p>after</p></div>\
+         <div><div class=f>alone</div></div>",
+    ));
+    assert_eq!(qml.matches("Flow {").count(), 1, "{qml}");
+    // Only the lone float is stacked as a block.
+    assert_eq!(
+        diags
+            .iter()
+            .filter(|d| d.contains("floats do not share a line"))
+            .count(),
+        1,
+        "{diags:?}"
+    );
+    assert!(
+        diags
+            .iter()
+            .any(|d| d.contains("<p> is placed below the floats before it")),
+        "{diags:?}"
+    );
+}
