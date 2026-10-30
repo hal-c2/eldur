@@ -957,16 +957,32 @@ pub(crate) fn compute(
             style.padding.left = parse_padding_side(cvs, &uctx_pct)?;
         }
         Longhand::BorderTopLeftRadius => {
-            style.border_radius.top_left = parse_corner_radius(cvs, &uctx_pct)?;
+            set_corner_radius(
+                &mut style.border_radius.top_left,
+                &mut style.border_radius_calc.top_left,
+                parse_corner_radius(cvs, &uctx_pct)?,
+            );
         }
         Longhand::BorderTopRightRadius => {
-            style.border_radius.top_right = parse_corner_radius(cvs, &uctx_pct)?;
+            set_corner_radius(
+                &mut style.border_radius.top_right,
+                &mut style.border_radius_calc.top_right,
+                parse_corner_radius(cvs, &uctx_pct)?,
+            );
         }
         Longhand::BorderBottomRightRadius => {
-            style.border_radius.bottom_right = parse_corner_radius(cvs, &uctx_pct)?;
+            set_corner_radius(
+                &mut style.border_radius.bottom_right,
+                &mut style.border_radius_calc.bottom_right,
+                parse_corner_radius(cvs, &uctx_pct)?,
+            );
         }
         Longhand::BorderBottomLeftRadius => {
-            style.border_radius.bottom_left = parse_corner_radius(cvs, &uctx_pct)?;
+            set_corner_radius(
+                &mut style.border_radius.bottom_left,
+                &mut style.border_radius_calc.bottom_left,
+                parse_corner_radius(cvs, &uctx_pct)?,
+            );
         }
 
         // Flexbox & alignment
@@ -1386,13 +1402,29 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
         Longhand::PaddingRight => dst.padding.right.clone_from(&src.padding.right),
         Longhand::PaddingBottom => dst.padding.bottom.clone_from(&src.padding.bottom),
         Longhand::PaddingLeft => dst.padding.left.clone_from(&src.padding.left),
-        Longhand::BorderTopLeftRadius => dst.border_radius.top_left = src.border_radius.top_left,
-        Longhand::BorderTopRightRadius => dst.border_radius.top_right = src.border_radius.top_right,
+        Longhand::BorderTopLeftRadius => {
+            dst.border_radius.top_left = src.border_radius.top_left;
+            dst.border_radius_calc
+                .top_left
+                .clone_from(&src.border_radius_calc.top_left);
+        }
+        Longhand::BorderTopRightRadius => {
+            dst.border_radius.top_right = src.border_radius.top_right;
+            dst.border_radius_calc
+                .top_right
+                .clone_from(&src.border_radius_calc.top_right);
+        }
         Longhand::BorderBottomRightRadius => {
-            dst.border_radius.bottom_right = src.border_radius.bottom_right
+            dst.border_radius.bottom_right = src.border_radius.bottom_right;
+            dst.border_radius_calc
+                .bottom_right
+                .clone_from(&src.border_radius_calc.bottom_right);
         }
         Longhand::BorderBottomLeftRadius => {
-            dst.border_radius.bottom_left = src.border_radius.bottom_left
+            dst.border_radius.bottom_left = src.border_radius.bottom_left;
+            dst.border_radius_calc
+                .bottom_left
+                .clone_from(&src.border_radius_calc.bottom_left);
         }
 
         Longhand::FlexDirection => dst.flex_direction = src.flex_direction,
@@ -1655,4 +1687,21 @@ fn rebuild_transforms(style: &mut ComputedStyle, tail: Vec<TransformFn>) {
     }
     out.extend(tail);
     style.transform = out;
+}
+
+fn set_corner_radius(
+    lp_slot: &mut LengthPercentage,
+    calc_slot: &mut Option<crate::CalcNode>,
+    len: crate::Length,
+) {
+    match len {
+        crate::Length::Linear(lp) => {
+            *lp_slot = lp;
+            *calc_slot = None;
+        }
+        crate::Length::Calc(node) => {
+            *lp_slot = LengthPercentage::ZERO;
+            *calc_slot = Some(node);
+        }
+    }
 }

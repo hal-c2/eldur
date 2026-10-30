@@ -3,14 +3,14 @@
 
 use swc_css_ast::ComponentValue;
 
-use crate::{LengthPercentage, TransformFn};
+use crate::{Length, LengthPercentage, TransformFn};
 
 use super::{
     background::parse_position_2d,
     cursor::{Cursor, is_ws, serialize_cv, serialize_cvs, split_comma_separated},
     length::{
         UnitContext, eat_angle_deg, eat_length, eat_number_or_calc, eat_number_or_percentage,
-        eat_px, length_to_lp, parse_number_cvs, parse_px_cvs,
+        eat_px, parse_number_cvs, parse_px_cvs, simplify_length,
     },
 };
 
@@ -54,40 +54,40 @@ fn parse_transform_fn(
             if !(1..=2).contains(&parts.len()) {
                 return Err("translate() takes 1 or 2 arguments".to_owned());
             }
-            let tx = parse_lp_arg(parts[0], uctx)?;
+            let tx = parse_len_arg(parts[0], uctx)?;
             let ty = if parts.len() == 2 {
-                parse_lp_arg(parts[1], uctx)?
+                parse_len_arg(parts[1], uctx)?
             } else {
-                LengthPercentage::ZERO
+                Length::Linear(LengthPercentage::ZERO)
             };
-            Ok(TransformFn::Translate(tx, ty))
+            Ok(make_translate(tx, ty))
         }
         "translatex" => {
             let parts = split_comma_separated(fargs)?;
             if parts.len() != 1 {
                 return Err("translateX() takes 1 argument".to_owned());
             }
-            let tx = parse_lp_arg(parts[0], uctx)?;
-            Ok(TransformFn::Translate(tx, LengthPercentage::ZERO))
+            let tx = parse_len_arg(parts[0], uctx)?;
+            Ok(make_translate(tx, Length::Linear(LengthPercentage::ZERO)))
         }
         "translatey" => {
             let parts = split_comma_separated(fargs)?;
             if parts.len() != 1 {
                 return Err("translateY() takes 1 argument".to_owned());
             }
-            let ty = parse_lp_arg(parts[0], uctx)?;
-            Ok(TransformFn::Translate(LengthPercentage::ZERO, ty))
+            let ty = parse_len_arg(parts[0], uctx)?;
+            Ok(make_translate(Length::Linear(LengthPercentage::ZERO), ty))
         }
         "translate3d" => {
             let parts = split_comma_separated(fargs)?;
             if parts.len() != 3 {
                 return Err("translate3d() takes 3 arguments".to_owned());
             }
-            let tx = parse_lp_arg(parts[0], uctx)?;
-            let ty = parse_lp_arg(parts[1], uctx)?;
+            let tx = parse_len_arg(parts[0], uctx)?;
+            let ty = parse_len_arg(parts[1], uctx)?;
             // Z translation must be a `<length>` (no `%`), then flattened away.
             let _tz = parse_px_cvs(parts[2], uctx, false)?;
-            Ok(TransformFn::Translate(tx, ty))
+            Ok(make_translate(tx, ty))
         }
         "scale" => {
             let parts = split_comma_separated(fargs)?;
@@ -240,12 +240,19 @@ fn parse_transform_fn(
     }
 }
 
-fn parse_lp_arg(cvs: &[ComponentValue], uctx: &UnitContext) -> Result<LengthPercentage, String> {
+fn make_translate(tx: Length, ty: Length) -> TransformFn {
+    match (tx, ty) {
+        (Length::Linear(lx), Length::Linear(ly)) => TransformFn::Translate(lx, ly),
+        (tx, ty) => TransformFn::TranslateCalc(tx, ty),
+    }
+}
+
+fn parse_len_arg(cvs: &[ComponentValue], uctx: &UnitContext) -> Result<Length, String> {
     let mut cur = Cursor::new(cvs);
     let len = eat_length(&mut cur, uctx, false)?
         .ok_or_else(|| "expected <length-percentage> in transform".to_owned())?;
     cur.expect_eof()?;
-    length_to_lp(len, uctx, false)
+    Ok(simplify_length(len, uctx, false))
 }
 
 fn parse_scale_arg(cvs: &[ComponentValue]) -> Result<f32, String> {
@@ -277,22 +284,25 @@ pub(crate) fn parse_individual_translate(
 
     let tx_len = eat_length(&mut cur, uctx, false)?
         .ok_or_else(|| "expected <length-percentage> for translate".to_owned())?;
-    let tx = length_to_lp(tx_len, uctx, false)?;
+    let tx = simplify_length(tx_len, uctx, false);
 
     if cur.is_eof() {
-        return Ok(Some(TransformFn::Translate(tx, LengthPercentage::ZERO)));
+        return Ok(Some(make_translate(
+            tx,
+            Length::Linear(LengthPercentage::ZERO),
+        )));
     }
 
     let ty_len = eat_length(&mut cur, uctx, false)?
         .ok_or_else(|| "expected second <length-percentage> for translate".to_owned())?;
-    let ty = length_to_lp(ty_len, uctx, false)?;
+    let ty = simplify_length(ty_len, uctx, false);
 
     if !cur.is_eof() {
         let _tz = eat_px(&mut cur, uctx, false)?
             .ok_or_else(|| "expected <length> for 3rd translate component".to_owned())?;
     }
     cur.expect_eof()?;
-    Ok(Some(TransformFn::Translate(tx, ty)))
+    Ok(Some(make_translate(tx, ty)))
 }
 
 /// Parses the individual `rotate` property (`none | <angle> | [ x | y | z | <number>{3} ] && <angle>`).

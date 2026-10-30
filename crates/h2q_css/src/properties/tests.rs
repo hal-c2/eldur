@@ -1,10 +1,10 @@
 use crate::{
-    Align, Animation, BackgroundRepeat, BackgroundSize, BorderStyle, BoxSizing, ColorStop,
-    ComputedStyle, ContentItem, Cursor, Direction, Display, Easing, FlexDirection, FlexWrap, Float,
-    FontStyle, GridLine, Image, Length, LengthAuto, LengthPercentage, LineHeight, ListStyleType,
-    ObjectFit, Overflow, PointerEvents, Position, Rgba, Shadow, Size, TextAlign, TextOverflow,
-    TextTransform, Track, TransformFn, Transition, VerticalAlign, Viewport, Visibility, WhiteSpace,
-    WordBreak,
+    Align, Animation, BackgroundRepeat, BackgroundSize, BorderStyle, BoxSizing, CalcNode,
+    ColorStop, ComputedStyle, ContentItem, Cursor, Direction, Display, Easing, FlexDirection,
+    FlexWrap, Float, FontStyle, GridLine, Image, Length, LengthAuto, LengthPercentage, LineHeight,
+    ListStyleType, ObjectFit, Overflow, PointerEvents, Position, Rgba, Shadow, Size, TextAlign,
+    TextOverflow, TextTransform, Track, TransformFn, Transition, VerticalAlign, Viewport,
+    Visibility, WhiteSpace, WordBreak,
 };
 
 use super::{
@@ -928,5 +928,46 @@ fn transform_replaces_and_keeps_individual_transforms_independent() {
     assert_eq!(
         s4.transform,
         vec![TransformFn::Rotate(10.0), TransformFn::Rotate(20.0)]
+    );
+}
+
+#[test]
+fn min_max_clamp_with_percentages_preserved_as_calc_tree() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    let mut s = ComputedStyle::default();
+
+    compute(
+        &mut s,
+        Longhand::BorderTopLeftRadius,
+        "min(50%, 20px)",
+        &ctx,
+    )
+    .expect("border-top-left-radius with min()");
+    assert_eq!(
+        s.border_radius_calc.top_left,
+        Some(CalcNode::Min(vec![
+            CalcNode::Leaf(LengthPercentage::percent(50.0)),
+            CalcNode::Leaf(LengthPercentage::px(20.0)),
+        ]))
+    );
+
+    compute(
+        &mut s,
+        Longhand::Transform,
+        "translateX(clamp(10px, 50%, 100px))",
+        &ctx,
+    )
+    .expect("transform translateX with clamp()");
+    assert_eq!(
+        s.transform,
+        vec![TransformFn::TranslateCalc(
+            Length::Calc(CalcNode::Clamp(
+                Box::new(CalcNode::Leaf(LengthPercentage::px(10.0))),
+                Box::new(CalcNode::Leaf(LengthPercentage::percent(50.0))),
+                Box::new(CalcNode::Leaf(LengthPercentage::px(100.0))),
+            )),
+            Length::Linear(LengthPercentage::ZERO),
+        )]
     );
 }

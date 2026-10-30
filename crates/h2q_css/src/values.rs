@@ -333,11 +333,11 @@ impl<T: PartialEq> Sides<T> {
 /// Top-left, top-right, bottom-right, bottom-left. Elliptical radii are
 /// approximated by their horizontal radius (QML Rectangle has no ellipses).
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct Corners {
-    pub top_left: LengthPercentage,
-    pub top_right: LengthPercentage,
-    pub bottom_right: LengthPercentage,
-    pub bottom_left: LengthPercentage,
+pub struct Corners<T = LengthPercentage> {
+    pub top_left: T,
+    pub top_right: T,
+    pub bottom_right: T,
+    pub bottom_left: T,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -574,6 +574,7 @@ pub struct BackgroundLayer {
 #[derive(Debug, Clone, PartialEq)]
 pub enum TransformFn {
     Translate(LengthPercentage, LengthPercentage),
+    TranslateCalc(Length, Length),
     Scale(f32, f32),
     /// Degrees, clockwise.
     Rotate(f32),
@@ -727,6 +728,7 @@ pub struct ComputedStyle {
     pub padding: Sides<Length>,
     pub border: Sides<BorderSide>,
     pub border_radius: Corners,
+    pub border_radius_calc: Corners<Option<CalcNode>>,
     pub outline: BorderSide,
     pub outline_offset: f32,
 
@@ -849,6 +851,7 @@ impl Default for ComputedStyle {
             padding: Sides::all(Length::px(0.0)),
             border: Sides::all(BorderSide::default()),
             border_radius: Corners::default(),
+            border_radius_calc: Corners::default(),
             outline: BorderSide::default(),
             outline_offset: 0.0,
             flex_direction: FlexDirection::Row,
