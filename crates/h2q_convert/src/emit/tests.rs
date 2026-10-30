@@ -1185,3 +1185,75 @@ fn a_layout_with_a_width_does_not_fill_its_column() {
     let g = own_lines(object_after(&qml, "<main class=\"g\">"));
     assert!(g.contains(&"Layout.fillWidth: false"), "{g:?}");
 }
+
+#[test]
+fn rounded_overflow_clip_masks_the_corners_with_the_backdrop() {
+    // Chromium (11-positioning): at the bottom-left corner of a 12px
+    // rounded `overflow: hidden` box, the absolutely placed caption is
+    // clipped and the page's #f3f4f6 shows. QML's `clip` is square and the
+    // software renderer has no masking, so the corners outside the
+    // rounded rect are painted over in the colour behind the box.
+    let (qml, diags) = convert(&page(
+        "body{background:#f3f4f6} .m{position:relative;width:320px;height:220px;\
+         border-radius:12px;overflow:hidden;background:#7f9cf5} \
+         .c{position:absolute;bottom:0;left:0;right:0;background:#000}",
+        "<figure class=m><figcaption class=c>Studio</figcaption></figure>",
+    ));
+    let m = object_after(&qml, "<figure class=\"m\">");
+    let caption = m.find("Studio").expect("caption");
+    let mask = m.rfind("Shape {").expect("corner mask");
+    assert!(caption < mask, "the mask is drawn over the content: {m}");
+    let mask = &m[mask..];
+    assert!(mask.contains("fillRule: ShapePath.OddEvenFill"), "{m}");
+    assert!(mask.contains("fillColor: \"#f3f4f6\""), "{m}");
+    assert!(mask.contains("radius: 12"), "{m}");
+    assert!(qml.contains("import QtQuick.Shapes"), "{qml}");
+    assert!(!diags.iter().any(|d| d.contains("square")), "{diags:?}");
+}
+
+#[test]
+fn rounded_clip_mask_composites_a_translucent_backdrop() {
+    // Behind the box: rgba(0,0,0,0.5) over white; Chromium paints
+    // rgb(127, 127, 127) there.
+    let (qml, _) = convert(&page(
+        ".p{background:rgba(0,0,0,0.5);padding:10px} \
+         .m{width:100px;height:50px;border-radius:8px;overflow:hidden}",
+        "<div class=p><div class=m><p>x</p></div></div>",
+    ));
+    let m = object_after(&qml, "<div class=\"m\">");
+    assert!(m.contains("fillColor: \"#7f7f7f\""), "{m}");
+}
+
+#[test]
+fn rounded_clip_redraws_the_border_over_the_content() {
+    let (qml, _) = convert(&page(
+        ".m{width:100px;height:50px;border:3px solid #123456;border-radius:8px;\
+         overflow:hidden} .m p{margin:0;background:#f00;height:50px}",
+        "<div class=m><p>x</p></div>",
+    ));
+    let m = object_after(&qml, "<div class=\"m\">");
+    let content = m.find("\"x\"").expect("content");
+    let after = &m[content..];
+    assert!(after.contains("fillColor: \"#ffffff\""), "{m}");
+    assert!(
+        after.contains("border.width: 3") && after.contains("border.color: \"#123456\""),
+        "the border is drawn again over the content: {m}"
+    );
+}
+
+#[test]
+fn rounded_clip_over_a_gradient_stays_square_with_a_diagnostic() {
+    let (qml, diags) = convert(&page(
+        ".p{background:linear-gradient(red,blue)} \
+         .m{width:100px;height:50px;border-radius:8px;overflow:hidden}",
+        "<div class=p><div class=m><p>x</p></div></div>",
+    ));
+    let m = object_after(&qml, "<div class=\"m\">");
+    assert!(!m.contains("OddEvenFill"), "{m}");
+    assert!(
+        diags
+            .iter()
+            .any(|d| d.contains("rounded") && d.contains("square")),
+        "{diags:?}"
+    );
+}

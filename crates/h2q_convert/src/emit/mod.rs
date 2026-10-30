@@ -79,6 +79,9 @@ pub(crate) struct Emitter<'a, 'd> {
     /// `position: fixed` boxes, placed over the window outside the
     /// `Flickable` so they do not scroll.
     fixed: Vec<(Option<String>, Object)>,
+    /// The plain colour painted behind the box being emitted, when it is
+    /// one (a gradient or image makes it unknown).
+    backdrop: Option<h2q_css::Rgba>,
     /// QML modules the emitted objects need beyond the default imports.
     pub imports: std::collections::BTreeSet<&'static str>,
 }
@@ -113,6 +116,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             positioned_child: false,
             percent_height_base: None,
             fixed: Vec::new(),
+            backdrop: None,
             imports: std::collections::BTreeSet::new(),
         }
     }
@@ -139,6 +143,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             },
         };
 
+        self.backdrop = Some(canvas);
         let mut root = match self.options.root {
             RootKind::Window => {
                 let mut window = Object::new("ApplicationWindow").with_id(ROOT_ID);
@@ -316,6 +321,14 @@ impl<'a, 'd> Emitter<'a, 'd> {
 
         let mut escaped_top = MarginSet::default();
         let mut escaped_bottom = MarginSet::default();
+        let outer_backdrop = self.backdrop;
+        self.backdrop = if deco.gradients {
+            None
+        } else if paint_background {
+            outer_backdrop.map(|under| over(style.background_color, under))
+        } else {
+            outer_backdrop
+        };
         let lists::Positioned {
             flow: in_flow,
             overlays,
@@ -365,6 +378,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             }
             Content::Empty => None,
         };
+        let inner_backdrop = std::mem::replace(&mut self.backdrop, outer_backdrop);
         if inner.is_none() && (wanted || b.marker.is_some()) {
             // Scripts write text into it; a marker still has its line.
             inner = Some((self.text(style, decoration, &[], line), "Text"));
@@ -427,15 +441,16 @@ impl<'a, 'd> Emitter<'a, 'd> {
             // `height`, `min-height` or a stretching parent) among their
             // items, so they fill it; block flow keeps its content height.
             let fill = matches!(b.kind, BoxKind::Flex | BoxKind::Grid);
-            let mut wrapper = self.wrap(style, &deco, paint_background, inner, fill, line);
+            let mut extra = Vec::new();
             if let Some(marker) = &b.marker {
-                let marker = self.marker(b, marker);
-                wrapper.push_child(marker);
+                extra.push(self.marker(b, marker));
             }
+            self.backdrop = inner_backdrop;
             for overlay in overlays {
-                let overlay = self.overlay(style, overlay);
-                wrapper.push_child(overlay);
+                extra.push(self.overlay(style, overlay));
             }
+            self.backdrop = outer_backdrop;
+            let wrapper = self.wrap_with(style, &deco, paint_background, inner, extra, fill, line);
             (wrapper, TargetKind::Box)
         } else {
             let (obj, suffix) = inner.unwrap_or((Object::new("Item"), "Content"));
@@ -738,4 +753,17 @@ fn place_anonymous_item(text: &mut Object, style: &ComputedStyle, kind: BoxKind)
     if let Some(flag) = flag {
         text.set("verticalAlignment", Value::expr(flag));
     }
+}
+
+/// `top` composited over the opaque `under` (source-over, 8-bit as
+/// Chromium paints it).
+fn over(top: h2q_css::Rgba, under: h2q_css::Rgba) -> h2q_css::Rgba {
+    let a = u32::from(top.a);
+    let mix = |t: u8, u: u8| ((u32::from(t) * a + u32::from(u) * (255 - a)) / 255) as u8;
+    h2q_css::Rgba::new(
+        mix(top.r, under.r),
+        mix(top.g, under.g),
+        mix(top.b, under.b),
+        255,
+    )
 }

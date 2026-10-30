@@ -4,5 +4,8 @@ expression: "diagnostics.join(\"\\n\")"
 ---
 warning[css]: index.html:428: `position: sticky` on <header class="navbar"> is laid out in normal flow (not implemented yet)
 info[qml]: index.html:445: `fr` columns 1.1:0.9 on <div class="container hero-grid"> are split into equal sub-columns as 5:4
+info[css]: index.html:463: rounded `overflow` clip is square: what is behind the box is not a plain colour
+info[css]: index.html:465: rounded `overflow` clip is square: what is behind the box is not a plain colour
+info[css]: index.html:467: rounded `overflow` clip is square: what is behind the box is not a plain colour
 info[qml]: index.html:509: <span class="author-role">: font size 15.2px inside 16px text is approximated with <small>
 info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

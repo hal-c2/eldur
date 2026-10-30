@@ -143,6 +143,30 @@ impl Emitter<'_, '_> {
         fill_height: bool,
         line: Option<u32>,
     ) -> Object {
+        self.wrap_with(
+            style,
+            deco,
+            paint_background,
+            inner,
+            Vec::new(),
+            fill_height,
+            line,
+        )
+    }
+
+    /// [`Self::wrap`], with `extra` children (markers, overlays) after the
+    /// content, inside the clipping item.
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn wrap_with(
+        &mut self,
+        style: &ComputedStyle,
+        deco: &Decoration,
+        paint_background: bool,
+        inner: Option<(Object, String)>,
+        extra: Vec<Object>,
+        fill_height: bool,
+        line: Option<u32>,
+    ) -> Object {
         let mut wrapper = Object::new(if deco.paints { "Rectangle" } else { "Item" });
         let insets = deco.insets;
         if deco.paints {
@@ -256,6 +280,12 @@ impl Emitter<'_, '_> {
             }
             wrapper.push_child(inner);
         }
+        for child in extra {
+            wrapper.push_child(child);
+        }
+        if deco.clips {
+            self.clip_edges(&mut wrapper, style, &deco.hint, line);
+        }
         if deco.shadows && deco.clips {
             // `overflow` clips the content, not the box's own shadow, and a
             // QML clip takes children with it: the shadow goes on an item
@@ -277,6 +307,78 @@ impl Emitter<'_, '_> {
             return outer;
         }
         wrapper
+    }
+
+    /// What QML's square `clip` cannot do for `overflow`: round the clip
+    /// with the box's corners, and keep the content inside the border
+    /// (CSS clips to the padding box). No masking renders under the
+    /// software backend (`MultiEffect` masks and `ShapePath.fillItem` draw
+    /// nothing there), so the corners outside the rounded rect are painted
+    /// over in the colour behind the box, and the border is drawn again on
+    /// top. Over anything but a plain colour the clip stays square.
+    fn clip_edges(
+        &mut self,
+        wrapper: &mut Object,
+        style: &ComputedStyle,
+        hint: &str,
+        line: Option<u32>,
+    ) {
+        let r = &style.border_radius;
+        let rounded = [&r.top_left, &r.top_right, &r.bottom_right, &r.bottom_left]
+            .iter()
+            .any(|c| !c.is_zero());
+        let above = wrapper
+            .children()
+            .filter_map(|c| match c.get("z") {
+                Some(Value::Number(z)) => Some(*z + 1.0),
+                _ => None,
+            })
+            .fold(0.0_f64, f64::max);
+        if rounded {
+            match self.backdrop {
+                Some(backdrop) => {
+                    self.imports.insert("QtQuick.Shapes");
+                    let id = self.ids.claim(&format!("{hint} corners"));
+                    let mut path = Object::new("ShapePath");
+                    path.set("strokeWidth", Value::Number(-1.0));
+                    path.set("fillColor", color(backdrop));
+                    path.set("fillRule", Value::expr("ShapePath.OddEvenFill"));
+                    let mut outer = Object::new("PathRectangle");
+                    outer.set("width", Value::expr(format!("{id}.width")));
+                    outer.set("height", Value::expr(format!("{id}.height")));
+                    let mut inner = outer.clone();
+                    self.radius(&mut inner, style, line);
+                    path.push_child(outer);
+                    path.push_child(inner);
+                    let mut shape = Object::new("Shape").with_id(id);
+                    shape.set("anchors.fill", Value::expr("parent"));
+                    if above > 0.0 {
+                        shape.set("z", above);
+                    }
+                    shape.push_child(path);
+                    wrapper.push_child(shape);
+                }
+                None => self.diags.info(
+                    "css",
+                    line,
+                    "rounded `overflow` clip is square: what is behind the box is not a plain colour"
+                        .to_owned(),
+                ),
+            }
+        }
+        let borders = sides(style);
+        if borders.iter().all(|s| *s == borders[0]) && is_visible(borders[0]) {
+            let mut outline = Object::new("Rectangle");
+            outline.set("anchors.fill", Value::expr("parent"));
+            outline.set("color", Value::string("transparent"));
+            self.radius(&mut outline, style, line);
+            outline.set("border.width", number(borders[0].width));
+            outline.set("border.color", color(borders[0].color));
+            if above > 0.0 {
+                outline.set("z", above);
+            }
+            wrapper.push_child(outline);
+        }
     }
 
     /// Outer shadows as `RectangularShadow`s below the box (negative `z`

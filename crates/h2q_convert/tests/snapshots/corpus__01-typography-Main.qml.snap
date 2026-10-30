@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Shapes
 
 ApplicationWindow {
     id: root
@@ -562,6 +563,28 @@ ApplicationWindow {
                                 anchors.leftMargin: 20
                                 anchors.rightMargin: 20
                                 anchors.topMargin: 16
+                            }
+
+                            Shape {
+                                id: preCorners
+                                anchors.fill: parent
+
+                                ShapePath {
+                                    strokeWidth: -1
+                                    fillColor: "#fdfcf8"
+                                    fillRule: ShapePath.OddEvenFill
+
+                                    PathRectangle {
+                                        width: preCorners.width
+                                        height: preCorners.height
+                                    }
+
+                                    PathRectangle {
+                                        width: preCorners.width
+                                        height: preCorners.height
+                                        radius: 6
+                                    }
+                                }
                             }
                         }
 
