@@ -8,11 +8,12 @@
 
 use h2q_css::{
     BoxSizing, ComputedStyle, Display, Length, LengthAuto, Size, TextAlign, TextDecorationLine,
+    Visibility,
 };
 use h2q_qml::{Member, Object, Value};
 
 use super::Emitter;
-use super::units::{length_expr, number, px_part};
+use super::units::{fmt_number, length_expr, number, px_part, round};
 use crate::boxes::{LayoutBox, describe};
 
 /// A set of adjoining margins: the largest positive and the most negative
@@ -78,6 +79,13 @@ impl Emitter<'_, '_> {
         let mut pending = MarginSet::default();
         let mut escaped_top = None;
         let mut last: Option<usize> = None;
+        // The last item was a hidden box a script can show (`display:
+        // none`, kept invisible): its id and the margins before it, which
+        // reach past it while it is hidden.
+        let mut hidden: Option<(String, MarginSet)> = None;
+        // The item before the hidden one, which keeps its bottom margin
+        // while the hidden one ends the column.
+        let mut before_hidden: Option<usize> = None;
         for child in children {
             let emitted = self.block(child, decoration);
             if emitted.collapse_through {
@@ -85,13 +93,35 @@ impl Emitter<'_, '_> {
                 pending.join(emitted.bottom);
                 continue;
             }
-            pending.join(emitted.top);
+            let collapsed = child.style.visibility == Visibility::Collapse;
             let mut obj = emitted.obj;
             self.flow_item(&mut obj, child);
-            if last.is_none() && top_open {
-                escaped_top = Some(pending);
-            } else {
-                self.set_margin(&mut obj, "Layout.topMargin", pending.value());
+            let mut skipped = None;
+            match hidden.take() {
+                // Shown, it separates its neighbours' margins; hidden, the
+                // margins before it collapse with this item's.
+                Some((id, mut before)) if !collapsed => {
+                    pending.join(emitted.top);
+                    before.join(emitted.top);
+                    self.set_hidden_margin(&mut obj, &id, pending, before);
+                    before_hidden = None;
+                }
+                previous => {
+                    let before = previous.map(|(_, b)| b);
+                    if collapsed && obj.id.is_some() && before.is_none() {
+                        skipped = Some(pending);
+                        before_hidden = last;
+                    }
+                    pending.join(emitted.top);
+                    if last.is_none() && top_open {
+                        escaped_top = Some(pending);
+                    } else {
+                        self.set_margin(&mut obj, "Layout.topMargin", pending.value());
+                    }
+                }
+            }
+            if let (Some(before), Some(id)) = (skipped, &obj.id) {
+                hidden = Some((id.clone(), before));
             }
             if self.options.source_comments
                 && let Some(node) = child.node
@@ -112,10 +142,25 @@ impl Emitter<'_, '_> {
             };
         };
         let escaped_bottom = if bottom_open {
-            pending
+            // The page as loaded: a hidden last box passes on the margins
+            // before it.
+            hidden.map_or(pending, |(_, before)| before)
         } else {
             if let Some(Member::Child(obj)) = layout.members.get_mut(last) {
                 self.set_margin(obj, "Layout.bottomMargin", pending.value());
+            }
+            if let Some((id, before)) = &hidden
+                && let Some(i) = before_hidden
+                && let Some(Member::Child(obj)) = layout.members.get_mut(i)
+                && before.value() > 0.0
+            {
+                obj.set(
+                    "Layout.bottomMargin",
+                    Value::expr(format!(
+                        "{id}.visible ? 0 : {}",
+                        fmt_number(round(before.value()))
+                    )),
+                );
             }
             MarginSet::default()
         };
@@ -244,6 +289,30 @@ impl Emitter<'_, '_> {
             && let Some(px) = max.as_px()
         {
             obj.set("Layout.maximumHeight", number(px + extra_h));
+        }
+    }
+
+    /// `Layout.topMargin` of the item after a hidden box `id`: `shown`
+    /// while that is visible, else `hidden`.
+    fn set_hidden_margin(
+        &mut self,
+        obj: &mut Object,
+        id: &str,
+        shown: MarginSet,
+        hidden: MarginSet,
+    ) {
+        let (shown, hidden) = (shown.value().max(0.0), hidden.value().max(0.0));
+        if shown == hidden {
+            self.set_margin(obj, "Layout.topMargin", shown);
+        } else {
+            obj.set(
+                "Layout.topMargin",
+                Value::expr(format!(
+                    "{id}.visible ? {} : {}",
+                    fmt_number(round(shown)),
+                    fmt_number(round(hidden))
+                )),
+            );
         }
     }
 

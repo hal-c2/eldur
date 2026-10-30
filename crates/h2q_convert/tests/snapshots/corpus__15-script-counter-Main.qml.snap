@@ -319,6 +319,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
                                 Layout.topMargin: 24
+                                Layout.bottomMargin: details.visible ? 0 : 16
 
                                 // <input id="details-toggle">
                                 CheckBox {
