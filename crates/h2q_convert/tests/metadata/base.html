@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html><head><base href="../api/v2/"></head><body>
+<p class="note">Note</p>
+<script>
+function probe() {
+  var r = {};
+  var a = document.createElement('a');
+  a.setAttribute('href', 'sub/page.html');
+  r.relativeHref = a.href;
+  var up = document.createElement('a');
+  up.setAttribute('href', '../up.html');
+  r.parentHref = up.href;
+  var abs = document.createElement('a');
+  abs.setAttribute('href', '/root.html');
+  r.rootHref = abs.href;
+  return JSON.stringify(r);
+}
+</script></body></html>

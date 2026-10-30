@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html><body>
+<p id="out" class="note">Note</p>
+<script>
+// Only a literal id query: no runtime DOM access, so no element metadata,
+// but the page has a script, so `location` still has its base.
+function probe() {
+  var r = {};
+  r.text = document.getElementById('out').textContent;
+  r.locationHref = location.href;
+  return JSON.stringify(r);
+}
+</script></body></html>
