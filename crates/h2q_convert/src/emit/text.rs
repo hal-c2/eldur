@@ -200,16 +200,7 @@ impl Emitter<'_, '_> {
                 );
             }
         }
-        let rtl = style.direction == Direction::Rtl;
-        let align = match style.text_align {
-            TextAlign::Start if rtl => Some("Text.AlignRight"),
-            TextAlign::End if !rtl => Some("Text.AlignRight"),
-            TextAlign::Start | TextAlign::End | TextAlign::Left => None,
-            TextAlign::Right => Some("Text.AlignRight"),
-            TextAlign::Center => Some("Text.AlignHCenter"),
-            TextAlign::Justify => Some("Text.AlignJustify"),
-        };
-        if let Some(a) = align {
+        if let Some(a) = text_align(style) {
             text.set("horizontalAlignment", Value::expr(a));
         }
         let wrap = match style.white_space {
@@ -455,4 +446,17 @@ pub(crate) fn font_family(families: &[String]) -> String {
         return generic.to_owned();
     }
     "serif".to_owned()
+}
+
+/// `text-align` as a Qt flag; `None` for the left edge, Qt's default.
+pub(super) fn text_align(style: &ComputedStyle) -> Option<&'static str> {
+    let rtl = style.direction == Direction::Rtl;
+    match style.text_align {
+        TextAlign::Start if rtl => Some("Text.AlignRight"),
+        TextAlign::End if !rtl => Some("Text.AlignRight"),
+        TextAlign::Start | TextAlign::End | TextAlign::Left => None,
+        TextAlign::Right => Some("Text.AlignRight"),
+        TextAlign::Center => Some("Text.AlignHCenter"),
+        TextAlign::Justify => Some("Text.AlignJustify"),
+    }
 }

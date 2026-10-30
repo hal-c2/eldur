@@ -1051,3 +1051,52 @@ fn percentage_height_resolves_against_a_definite_parent() {
         "{diags:?}"
     );
 }
+
+#[test]
+fn text_of_a_flex_or_grid_box_is_placed_as_its_one_item() {
+    // Chromium (getBoundingClientRect): .a's "SK" at (10.7, 12) in a 40×40
+    // box, centred both ways; .b centred in 200×52; .c's "x" at the bottom
+    // right of 100×60; .d's text wraps to the full 100px, lines at x 0.
+    let (qml, _) = convert(&page(
+        "div{background:#eee;font:14px sans-serif} \
+         .a{display:grid;place-items:center;width:40px;height:40px} \
+         .b{display:flex;align-items:center;justify-content:center;height:52px;width:200px} \
+         .c{display:flex;flex-direction:column;justify-content:flex-end;\
+            align-items:flex-end;height:60px;width:100px} \
+         .d{display:flex;justify-content:center;width:100px}",
+        "<div class=a>SK</div><div class=b>Sign in</div><div class=c>x</div>\
+         <div class=d>one two three four five six</div>",
+    ));
+    let text = |class: &str| {
+        let obj = object_after(&qml, &format!("<div class=\"{class}\">"));
+        obj.split("Text {")
+            .nth(1)
+            .unwrap_or_else(|| panic!("no Text in {obj}"))
+            .to_owned()
+    };
+    let a = text("a");
+    assert!(a.contains("verticalAlignment: Text.AlignVCenter"), "{a}");
+    assert!(
+        a.contains("horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter"),
+        "{a}"
+    );
+    let b = text("b");
+    assert!(b.contains("verticalAlignment: Text.AlignVCenter"), "{b}");
+    assert!(
+        b.contains("horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter"),
+        "{b}"
+    );
+    let c = text("c");
+    assert!(c.contains("verticalAlignment: Text.AlignBottom"), "{c}");
+    assert!(
+        c.contains("horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignRight"),
+        "{c}"
+    );
+    // Wrapped, the item is the box's width and `text-align` places the lines.
+    let d = text("d");
+    assert!(
+        d.contains("horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter"),
+        "{d}"
+    );
+    assert!(!d.contains("verticalAlignment"), "{d}");
+}

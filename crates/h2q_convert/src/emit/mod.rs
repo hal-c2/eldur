@@ -23,8 +23,8 @@ mod tests;
 use std::collections::{BTreeMap, HashSet};
 
 use h2q_css::{
-    BoxSizing, ComputedStyle, Display, Float, LengthAuto, Overflow, Position, Size, StyleMap,
-    TextDecorationLine, Visibility,
+    Align, BoxSizing, ComputedStyle, Direction, Display, FlexDirection, Float, LengthAuto,
+    Overflow, Position, Size, StyleMap, TextDecorationLine, Visibility,
 };
 use h2q_dom::{Document, NodeId};
 use h2q_js::TargetKind;
@@ -356,7 +356,13 @@ impl<'a, 'd> Emitter<'a, 'd> {
             Content::Inline(items) if inline::has_atomic(items) => {
                 Some((self.inline_flow(b, decoration, items, line), "Content"))
             }
-            Content::Inline(items) => Some((self.text(style, decoration, items, line), "Text")),
+            Content::Inline(items) => {
+                let mut text = self.text(style, decoration, items, line);
+                if matches!(b.kind, BoxKind::Flex | BoxKind::Grid) {
+                    place_anonymous_item(&mut text, style, b.kind);
+                }
+                Some((text, "Text"))
+            }
             Content::Empty => None,
         };
         if inner.is_none() && (wanted || b.marker.is_some()) {
@@ -647,4 +653,89 @@ fn hint(doc: &Document, b: &LayoutBox<'_>) -> String {
         .and_then(|e| e.classes().next().map(str::to_owned))
         .or_else(|| element.map(|e| e.local_name().to_owned()))
         .unwrap_or_else(|| "block".to_owned())
+}
+
+/// Where along one axis a lone item sits in its flex or grid container.
+#[derive(Clone, Copy, PartialEq)]
+enum Place {
+    Start,
+    Center,
+    End,
+    /// The item is as long as the container.
+    Stretch,
+}
+
+/// Text directly in a flex or grid container is one anonymous item
+/// (CSS Flexbox 1 §4, CSS Grid 1 §6.1) that the container's alignment
+/// places, and the Text fills the container, so the item's place becomes
+/// the Text's alignment. A line shorter than the container is the whole
+/// item, so `text-align` does not move it; wrapped lines make the item as
+/// wide as the container and `text-align` places them.
+fn place_anonymous_item(text: &mut Object, style: &ComputedStyle, kind: BoxKind) {
+    let content = |a: Align| match a {
+        Align::Center | Align::SpaceAround | Align::SpaceEvenly => Place::Center,
+        Align::End | Align::FlexEnd | Align::Right => Place::End,
+        _ => Place::Start,
+    };
+    let item = |a: Align, stretch: Place| match a {
+        Align::Center => Place::Center,
+        Align::End | Align::FlexEnd | Align::Right => Place::End,
+        Align::Normal | Align::Stretch | Align::Auto => stretch,
+        _ => Place::Start,
+    };
+    let (horizontal, vertical) = if kind == BoxKind::Grid {
+        // A lone auto track fills the container under `normal` content
+        // alignment, and the item then fills the track.
+        let track = |a: Align| match a {
+            Align::Normal | Align::Stretch => Place::Stretch,
+            other => content(other),
+        };
+        let h = match item(style.justify_items, Place::Stretch) {
+            Place::Stretch => track(style.justify_content),
+            p => p,
+        };
+        let v = match item(style.align_items, Place::Stretch) {
+            Place::Stretch => track(style.align_content),
+            p => p,
+        };
+        (h, v)
+    } else {
+        let main = content(style.justify_content);
+        let cross = item(style.align_items, Place::Stretch);
+        let flip = |p: Place| match p {
+            Place::Start => Place::End,
+            Place::End => Place::Start,
+            p => p,
+        };
+        match style.flex_direction {
+            FlexDirection::Row => (main, cross),
+            FlexDirection::RowReverse => (flip(main), cross),
+            FlexDirection::Column => (cross, main),
+            FlexDirection::ColumnReverse => (cross, flip(main)),
+        }
+    };
+    let rtl = style.direction == Direction::Rtl;
+    let single = match horizontal {
+        Place::Stretch => None,
+        Place::Center => Some("Text.AlignHCenter"),
+        Place::Start if rtl => Some("Text.AlignRight"),
+        Place::End if !rtl => Some("Text.AlignRight"),
+        Place::Start | Place::End => Some("Text.AlignLeft"),
+    };
+    // When both agree, `text-align` has already set it.
+    let wrapped = text::text_align(style).unwrap_or("Text.AlignLeft");
+    if let Some(single) = single.filter(|s| *s != wrapped) {
+        text.set(
+            "horizontalAlignment",
+            Value::expr(format!("lineCount > 1 ? {wrapped} : {single}")),
+        );
+    }
+    let flag = match vertical {
+        Place::Center => Some("Text.AlignVCenter"),
+        Place::End => Some("Text.AlignBottom"),
+        Place::Start | Place::Stretch => None,
+    };
+    if let Some(flag) = flag {
+        text.set("verticalAlignment", Value::expr(flag));
+    }
 }

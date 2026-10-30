@@ -350,6 +350,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             font.weight: 500
                                             wrapMode: Text.WordWrap
+                                            verticalAlignment: Text.AlignVCenter
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
@@ -376,6 +377,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             font.weight: 500
                                             wrapMode: Text.WordWrap
+                                            verticalAlignment: Text.AlignVCenter
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
@@ -402,6 +404,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             font.weight: 500
                                             wrapMode: Text.WordWrap
+                                            verticalAlignment: Text.AlignVCenter
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
@@ -511,6 +514,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             font.weight: 500
                                             wrapMode: Text.WordWrap
+                                            verticalAlignment: Text.AlignVCenter
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
@@ -537,6 +541,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             font.weight: 500
                                             wrapMode: Text.WordWrap
+                                            verticalAlignment: Text.AlignVCenter
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
@@ -581,6 +586,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             font.weight: 500
                                             wrapMode: Text.WordWrap
+                                            verticalAlignment: Text.AlignVCenter
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
@@ -607,6 +613,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             font.weight: 500
                                             wrapMode: Text.WordWrap
+                                            verticalAlignment: Text.AlignVCenter
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
@@ -782,6 +789,8 @@ ApplicationWindow {
                                                 font.pixelSize: 14
                                                 font.weight: 600
                                                 wrapMode: Text.WordWrap
+                                                horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter
+                                                verticalAlignment: Text.AlignVCenter
                                                 anchors.left: parent.left
                                                 anchors.right: parent.right
                                                 anchors.top: parent.top

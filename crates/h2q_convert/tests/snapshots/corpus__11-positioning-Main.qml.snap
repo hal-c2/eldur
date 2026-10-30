@@ -282,6 +282,8 @@ ApplicationWindow {
                                             font.pixelSize: 13
                                             font.weight: 700
                                             wrapMode: Text.WordWrap
+                                            horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
