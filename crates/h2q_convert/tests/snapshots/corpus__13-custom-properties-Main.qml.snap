@@ -201,7 +201,7 @@ ApplicationWindow {
                 // <main class="layout">
                 ColumnLayout {
                     spacing: 0
-                    Layout.preferredWidth: parent.width - 32
+                    Layout.preferredWidth: Math.max(0, parent.width - 32)
                     Layout.alignment: Qt.AlignHCenter
                     Layout.maximumWidth: Number.POSITIVE_INFINITY
                     Layout.topMargin: 32
@@ -669,7 +669,7 @@ ApplicationWindow {
                     radius: 12
                     implicitWidth: statsContent.implicitWidth + 32
                     implicitHeight: statsContent.implicitHeight + 32
-                    Layout.preferredWidth: parent.width - 32
+                    Layout.preferredWidth: Math.max(0, parent.width - 32)
                     Layout.alignment: Qt.AlignHCenter
                     Layout.topMargin: 32
 
