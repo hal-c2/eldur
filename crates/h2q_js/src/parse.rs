@@ -496,33 +496,16 @@ impl<'a> Visit<'a> for UnsupportedChecker<'_> {
         if !it.is_global_reference(self.scoping) {
             return;
         }
-        match it.name.as_str() {
-            "BigInt" => self.report(it.span, "BigInt is not supported by QML's JS engine"),
-            "Intl" => self.report(it.span, "Intl is not supported by QML's JS engine"),
-            "MutationObserver" => {
-                self.report(it.span, "MutationObserver is not supported in QML");
-            }
-            "IntersectionObserver" => {
-                self.report(it.span, "IntersectionObserver is not supported in QML");
-            }
-            "location" => self.report(it.span, "'location' is only stubbed in QML"),
-            "history" => self.report(it.span, "'history' is only stubbed in QML"),
-            "navigator" => self.report(it.span, "'navigator' is only stubbed in QML"),
-            _ => {}
+        if let Some(msg) = unsupported_global_diagnostic(it.name.as_str(), false) {
+            self.report(it.span, msg);
         }
     }
 
     fn visit_static_member_expression(&mut self, it: &oxc_ast::ast::StaticMemberExpression<'a>) {
-        if is_global_window(&it.object, self.scoping) {
-            match it.property.name.as_str() {
-                "location" => self.report(it.span, "'window.location' is only stubbed in QML"),
-                "history" => self.report(it.span, "'window.history' is only stubbed in QML"),
-                "navigator" => self.report(it.span, "'window.navigator' is only stubbed in QML"),
-                "Intl" => self.report(it.span, "Intl is not supported by QML's JS engine"),
-                _ => {}
-            }
-            // Skip walking `it.object` as bare `window` if handled, but still walk other children.
-            return;
+        if is_global_window(&it.object, self.scoping)
+            && let Some(msg) = unsupported_global_diagnostic(it.property.name.as_str(), true)
+        {
+            self.report(it.span, msg);
         }
         walk::walk_static_member_expression(self, it);
     }
@@ -543,74 +526,64 @@ impl<'a> Visit<'a> for UnsupportedChecker<'_> {
 
     fn visit_call_expression(&mut self, it: &CallExpression<'a>) {
         let callee = unwrap_parens(&it.callee);
-        match callee {
-            Expression::Identifier(id) if id.is_global_reference(self.scoping) => {
-                match id.name.as_str() {
-                    "eval" => {
-                        self.report(it.span, "'eval' bypasses static DOM rewriting in QML");
-                    }
-                    "Function" => {
-                        self.report(
-                            it.span,
-                            "'Function' constructor bypasses static DOM rewriting",
-                        );
-                    }
-                    "confirm" => {
-                        self.report(it.span, "synchronous 'confirm()' cannot block in QML");
-                    }
-                    "prompt" => {
-                        self.report(it.span, "synchronous 'prompt()' cannot block in QML");
-                    }
-                    "RegExp" => {
-                        check_regexp_ctor_args(self, it.span, &it.arguments);
-                    }
-                    _ => {}
-                }
-            }
-            Expression::StaticMemberExpression(member) => {
-                if is_global_document(&member.object, self.scoping)
-                    && (member.property.name == "write" || member.property.name == "writeln")
-                {
-                    self.report(it.span, "document.write() is not supported in QML");
-                } else if is_global_window(&member.object, self.scoping) {
-                    match member.property.name.as_str() {
-                        "eval" => {
-                            self.report(it.span, "'eval' bypasses static DOM rewriting in QML");
-                        }
-                        "confirm" => {
-                            self.report(it.span, "synchronous 'confirm()' cannot block in QML");
-                        }
-                        "prompt" => {
-                            self.report(it.span, "synchronous 'prompt()' cannot block in QML");
-                        }
-                        _ => {}
-                    }
-                }
-            }
-            _ => {}
+        if is_global_or_window_member(callee, "RegExp", self.scoping) {
+            check_regexp_ctor_args(self, it.span, &it.arguments);
+        } else if let Expression::StaticMemberExpression(member) = callee
+            && is_global_document(&member.object, self.scoping)
+            && (member.property.name == "write" || member.property.name == "writeln")
+        {
+            self.report(it.span, "document.write() is not supported in QML");
         }
         walk::walk_call_expression(self, it);
     }
 
     fn visit_new_expression(&mut self, it: &NewExpression<'a>) {
         let callee = unwrap_parens(&it.callee);
-        if let Expression::Identifier(id) = callee
-            && id.is_global_reference(self.scoping)
-        {
-            match id.name.as_str() {
-                "Function" => {
-                    self.report(
-                        it.span,
-                        "'new Function' bypasses static DOM rewriting in QML",
-                    );
-                }
-                "RegExp" => {
-                    check_regexp_ctor_args(self, it.span, &it.arguments);
-                }
-                _ => {}
-            }
+        if is_global_or_window_member(callee, "RegExp", self.scoping) {
+            check_regexp_ctor_args(self, it.span, &it.arguments);
         }
         walk::walk_new_expression(self, it);
+    }
+}
+
+fn unsupported_global_diagnostic(name: &str, window_qualified: bool) -> Option<&'static str> {
+    match name {
+        "BigInt" => Some("BigInt is not supported by QML's JS engine"),
+        "Intl" => Some("Intl is not supported by QML's JS engine"),
+        "MutationObserver" => Some("MutationObserver is not supported in QML"),
+        "IntersectionObserver" => Some("IntersectionObserver is not supported in QML"),
+        "ResizeObserver" => Some("ResizeObserver is not supported in QML"),
+        "Worker" => Some("Worker is not supported in QML"),
+        "location" => Some(if window_qualified {
+            "'window.location' is only stubbed in QML"
+        } else {
+            "'location' is only stubbed in QML"
+        }),
+        "history" => Some(if window_qualified {
+            "'window.history' is only stubbed in QML"
+        } else {
+            "'history' is only stubbed in QML"
+        }),
+        "navigator" => Some(if window_qualified {
+            "'window.navigator' is only stubbed in QML"
+        } else {
+            "'navigator' is only stubbed in QML"
+        }),
+        "eval" => Some("'eval' bypasses static DOM rewriting in QML"),
+        "Function" => Some("'Function' constructor bypasses static DOM rewriting in QML"),
+        "confirm" => Some("synchronous 'confirm()' cannot block in QML"),
+        "prompt" => Some("synchronous 'prompt()' cannot block in QML"),
+        _ => None,
+    }
+}
+
+fn is_global_or_window_member(expr: &Expression<'_>, name: &str, scoping: &Scoping) -> bool {
+    match unwrap_parens(expr) {
+        Expression::Identifier(id) => id.name == name && id.is_global_reference(scoping),
+        Expression::StaticMemberExpression(member) => {
+            member.property.name == name && is_global_window(&member.object, scoping)
+        }
+        _ => false,
     }
 }
 

@@ -351,3 +351,185 @@ fn reports_unsupported_js_and_browser_features() {
         );
     }
 }
+
+#[test]
+fn reports_window_qualified_unsupported_globals_and_nested_arguments() {
+    let bare = classic(
+        "bare.js",
+        r#"
+        BigInt(10);
+        eval("1 + 1");
+        confirm("sure?");
+        prompt("name?");
+        Function("return 1")();
+        RegExp("(?<=a)b");
+        new MutationObserver(() => {});
+        new IntersectionObserver(() => {});
+        new ResizeObserver(() => {});
+        new Worker("worker.js");
+        new Function("return 2");
+        new Intl.NumberFormat("en-US");
+        new RegExp("foo", "s");
+        const mBig = BigInt;
+        const mEval = eval;
+        const mConfirm = confirm;
+        const mPrompt = prompt;
+        const mFunc = Function;
+        const mMo = MutationObserver;
+        const mIo = IntersectionObserver;
+        const mRo = ResizeObserver;
+        const mWorker = Worker;
+        const mIntl = Intl;
+        const mLoc = location.href;
+        const mHist = history.state;
+        const mNav = navigator.userAgent;
+        "#,
+    );
+
+    let win = classic(
+        "win.js",
+        r#"
+        window.BigInt(10);
+        window.eval("1 + 1");
+        window.confirm("sure?");
+        window.prompt("name?");
+        window.Function("return 1")();
+        window.RegExp("(?<=a)b");
+        new window.MutationObserver(() => {});
+        new window.IntersectionObserver(() => {});
+        new window.ResizeObserver(() => {});
+        new window.Worker("worker.js");
+        new window.Function("return 2");
+        new window.Intl.NumberFormat("en-US");
+        new window.RegExp("foo", "s");
+        const mBig = window.BigInt;
+        const mEval = window.eval;
+        const mConfirm = window.confirm;
+        const mPrompt = window.prompt;
+        const mFunc = window.Function;
+        const mMo = window.MutationObserver;
+        const mIo = window.IntersectionObserver;
+        const mRo = window.ResizeObserver;
+        const mWorker = window.Worker;
+        const mIntl = window.Intl;
+        const mLoc = window.location.href;
+        const mHist = window.history.state;
+        const mNav = window.navigator.userAgent;
+        "#,
+    );
+
+    let bare_res = analyze(&[bare]);
+    let win_res = analyze(&[win]);
+    assert_eq!(
+        bare_res.diagnostics.len(),
+        26,
+        "unexpected bare diagnostics: {:#?}",
+        bare_res.diagnostics
+    );
+    assert_eq!(
+        win_res.diagnostics.len(),
+        bare_res.diagnostics.len(),
+        "window-qualified diagnostics should match bare count without duplicates: {:#?}",
+        win_res.diagnostics
+    );
+    assert!(
+        win_res
+            .diagnostics
+            .iter()
+            .all(|d| d.severity == Severity::Unsupported)
+    );
+
+    let nested = classic(
+        "nested.js",
+        r#"
+        window.setTimeout(() => window.BigInt(1), 10);
+        window.alert(window.location.href);
+        window.eval(window.navigator.userAgent);
+        window.BigInt(2).toString();
+        new window.MutationObserver(() => window.confirm("ok?"));
+        "#,
+    );
+    let nested_res = analyze(&[nested]);
+    assert_eq!(
+        nested_res.diagnostics.len(),
+        7,
+        "expected 7 diagnostics across nested constructs, got: {:#?}",
+        nested_res.diagnostics
+    );
+}
+
+#[test]
+fn ignores_shadowed_window_and_supported_window_apis() {
+    let script = classic(
+        "supported_and_shadowed.js",
+        r#"
+        function useShadowed(window, self, globalThis) {
+            window.BigInt(1);
+            window.eval("1 + 1");
+            window.confirm("ok?");
+            window.prompt("name?");
+            window.Function("return 1")();
+            window.RegExp("(?<=a)b");
+            new window.MutationObserver(() => {});
+            new window.IntersectionObserver(() => {});
+            new window.ResizeObserver(() => {});
+            new window.Worker("w.js");
+            new window.Function("return 2");
+            new window.Intl.NumberFormat("en-US");
+            new window.RegExp("foo", "s");
+            const a = [
+                window.BigInt,
+                window.eval,
+                window.confirm,
+                window.prompt,
+                window.MutationObserver,
+                window.ResizeObserver,
+                window.Worker,
+                window.location.href,
+                window.history.state,
+                window.navigator.userAgent,
+                self.BigInt(2),
+                globalThis.eval("2"),
+            ];
+            return a;
+        }
+
+        function useShadowedGlobals(BigInt, Intl, MutationObserver, ResizeObserver, Worker, eval, confirm, prompt, Function, location, history, navigator) {
+            BigInt(1);
+            eval("1");
+            confirm("ok");
+            prompt("p");
+            new Function("return 1");
+            new MutationObserver(() => {});
+            new ResizeObserver(() => {});
+            new Worker("w.js");
+            return [Intl, location.href, history.state, navigator.userAgent];
+        }
+
+        const id = window.setTimeout(() => window.alert("tick"), 50);
+        window.clearTimeout(id);
+        const iv = window.setInterval(() => {}, 100);
+        window.clearInterval(iv);
+        const raf = window.requestAnimationFrame(() => {});
+        window.cancelAnimationFrame(raf);
+        window.localStorage.setItem("k", "v");
+        window.sessionStorage.getItem("k");
+        const now = window.performance.now();
+        const encoded = window.btoa("abc");
+        const decoded = window.atob(encoded);
+        const mql = window.matchMedia("(min-width: 600px)");
+        const dims = [window.innerWidth, window.innerHeight];
+        const re1 = window.RegExp("abc", "gi");
+        const re2 = new window.RegExp("xyz", "m");
+        window.addEventListener("load", () => {});
+        window.fetch("/api").then((r) => r.json());
+        "#,
+    );
+
+    let res = analyze(&[script]);
+    assert!(
+        res.diagnostics.is_empty(),
+        "expected no diagnostics for shadowed window or supported window APIs, got: {:#?}",
+        res.diagnostics
+    );
+}

@@ -1331,3 +1331,67 @@ document.getElementById("out").textContent = readFromTopFn() + "|" + trueBranch 
         out.page_js
     );
 }
+
+#[test]
+fn diagnoses_window_qualified_unsupported_features_without_duplicates_and_keeps_supported_window_clean()
+ {
+    let resolver = FakeResolver::default();
+    let unsupported_script = classic(
+        "win_unsupported.js",
+        r#"
+function runUnsupported() {
+    const a = window.BigInt(1);
+    const b = window.eval("1 + 1");
+    const c = window.confirm("ok?");
+    const d = window.prompt("name?");
+    const obs = new window.MutationObserver(() => {});
+    const ro = new window.ResizeObserver(() => {});
+    const worker = new window.Worker("w.js");
+    const fnRef = window.eval;
+    window.setTimeout(() => window.location.href, 10);
+    return [a, b, c, d, obs, ro, worker, fnRef];
+}
+"#,
+    );
+    let out = run_rewrite(&[unsupported_script], &resolver);
+    assert_eq!(
+        out.diagnostics.len(),
+        9,
+        "expected 9 unsupported diagnostics without duplicates, got: {:#?}",
+        out.diagnostics
+    );
+    assert!(
+        out.diagnostics
+            .iter()
+            .all(|d| d.severity == Severity::Unsupported)
+    );
+
+    let clean_script = classic(
+        "win_clean.js",
+        r#"
+function shadowed(window) {
+    return [
+        window.BigInt(1),
+        window.eval("1"),
+        window.confirm("ok"),
+        new window.MutationObserver(() => {}),
+        new window.ResizeObserver(() => {}),
+        new window.Worker("w.js"),
+        window.location.href,
+    ];
+}
+function supported() {
+    const id = window.setTimeout(() => window.alert("hi"), 10);
+    window.clearTimeout(id);
+    window.localStorage.setItem("k", "v");
+    return [window.innerWidth, window.performance.now()];
+}
+"#,
+    );
+    let clean_out = run_rewrite(&[clean_script], &resolver);
+    assert!(
+        clean_out.diagnostics.is_empty(),
+        "expected no diagnostics for shadowed or supported window uses, got: {:#?}",
+        clean_out.diagnostics
+    );
+}
