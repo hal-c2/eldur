@@ -11,7 +11,7 @@ done < <(find "$dir" -name '*.qml' -print0)
 while IFS= read -r -d '' f; do
   # qml6 has no "load and quit"; run it for 3 s. Any QML warning or error
   # during load and the first frames is printed.
-  out=$(cd "$(dirname "$f")" && QT_QPA_PLATFORM=offscreen timeout 3 qml6 "$(basename "$f")" 2>&1 || true)
+  out=$(cd "$(dirname "$f")" && QT_QPA_PLATFORM=offscreen QT_FORCE_STDERR_LOGGING=1 timeout 3 qml6 "$(basename "$f")" 2>&1 || true)
   if [[ -n "$out" ]]; then echo "qml6: $f"; echo "$out"; status=1; fi
 done < <(find "$dir" -name 'Main.qml' -print0)
 exit $status
