@@ -402,6 +402,12 @@ impl Emitter<'_, '_> {
                 Some(m) => format!("Math.min({cap}, {})", value_text(&m)),
                 None => cap,
             };
+            // `min-width` beats the natural size and `max-width`, but a Qt
+            // layout lets the maximum win.
+            let cap = match limit(min_main, row, main_extra) {
+                Some(m) => format!("Math.max({cap}, {})", value_text(&m)),
+                None => cap,
+            };
             obj.set(&format!("Layout.maximum{main}"), Value::expr(cap));
         } else {
             if let Some(v) = &basis {
