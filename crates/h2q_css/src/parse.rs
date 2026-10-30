@@ -4,13 +4,13 @@
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use swc_common::{BytePos, FileName, SourceMap, Span, Spanned, sync::Lrc};
+use swc_common::{BytePos, FileName, SourceMap, Span, Spanned, input::StringInput, sync::Lrc};
 use swc_css_ast as ast;
 use swc_css_codegen::{
     CodeGenerator, CodegenConfig, Emit,
     writer::basic::{BasicCssWriter, BasicCssWriterConfig},
 };
-use swc_css_parser::parser::ParserConfig;
+use swc_css_parser::{lexer::Lexer, parser::ParserConfig};
 
 use crate::media::MediaQueryList;
 use crate::properties::{self, ComputeContext, CssWide, Longhand, PropertyKind};
@@ -252,6 +252,54 @@ impl<'a> ParseCtx<'a> {
     }
 }
 
+/// Replaces stray top-level closing braces (`}`) with whitespace while preserving byte
+/// offsets and line numbers.
+///
+/// `swc_css_parser` does not implement the CSS Syntax 3 §5.4.3 / CSS 2.1 §4.2 amendment
+/// that discards an unmatched `}` during qualified-rule prelude consumption instead of
+/// absorbing the following rule's selector into the broken prelude.
+fn strip_stray_closing_braces(text: &str) -> std::borrow::Cow<'_, str> {
+    let Ok(len) = u32::try_from(text.len()) else {
+        return std::borrow::Cow::Borrowed(text);
+    };
+    let mut lexer = Lexer::new(
+        StringInput::new(text, BytePos(1), BytePos(1 + len)),
+        None,
+        ParserConfig::default(),
+    );
+    let mut brace_depth = 0usize;
+    let mut stray_ranges: Vec<(usize, usize)> = Vec::new();
+    while let Some(ts) = lexer.next() {
+        match ts.token {
+            ast::Token::LBrace => brace_depth += 1,
+            ast::Token::RBrace => {
+                if brace_depth > 0 {
+                    brace_depth -= 1;
+                } else {
+                    let lo = (ts.span.lo.0 - 1) as usize;
+                    let hi = (ts.span.hi.0 - 1) as usize;
+                    stray_ranges.push((lo, hi));
+                }
+            }
+            _ => {}
+        }
+    }
+    if stray_ranges.is_empty() {
+        return std::borrow::Cow::Borrowed(text);
+    }
+    let mut bytes = text.as_bytes().to_vec();
+    for (lo, hi) in stray_ranges {
+        for b in &mut bytes[lo..hi] {
+            if *b != b'\n' && *b != b'\r' {
+                *b = b' ';
+            }
+        }
+    }
+    std::borrow::Cow::Owned(
+        String::from_utf8(bytes).unwrap_or_else(|_| text.to_owned()),
+    )
+}
+
 /// Parses a full CSS stylesheet into [`Stylesheet`] and recoverable [`Diagnostic`]s.
 pub(crate) fn parse_stylesheet(
     text: &str,
@@ -259,6 +307,8 @@ pub(crate) fn parse_stylesheet(
     source_name: &str,
     base_url: Option<&str>,
 ) -> (Stylesheet, Vec<Diagnostic>) {
+    let sanitized = strip_stray_closing_braces(text);
+    let text = sanitized.as_ref();
     let cm: Lrc<SourceMap> = Lrc::default();
     let fm = cm.new_source_file(FileName::Anon.into(), text.to_owned());
     let config = ParserConfig {
