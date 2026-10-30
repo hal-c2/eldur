@@ -756,3 +756,11 @@ fn transitions_and_animations_parsing() {
     assert_eq!(s2.animations[1].name, "pulse");
     assert_eq!(s2.animations[1].duration_ms, 400.0);
 }
+
+#[test]
+fn atomic_shorthand_validation() {
+    assert!(expand("margin", "10px bogus").is_err());
+    assert!(expand("padding", "12px -4px").is_err());
+    assert!(expand("margin", "10px inherit").is_err());
+    assert!(expand("margin", "1px 2px 3px 4px").is_ok());
+}

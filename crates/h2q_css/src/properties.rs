@@ -645,7 +645,21 @@ pub(crate) fn expand(name: &str, value: &str) -> Result<Vec<(Longhand, String)>,
         return Err(format!("empty value for '{name}'"));
     }
     if shorthand::shorthand_longhands(&lower).is_some() {
-        return shorthand::expand_shorthand(&lower, cvs);
+        let pairs = shorthand::expand_shorthand(&lower, cvs)?;
+        let vp = Viewport::default();
+        let ctx = ComputeContext {
+            parent: None,
+            root_font_size: 16.0,
+            viewport: &vp,
+        };
+        let mut style = ComputedStyle::default();
+        for (l, v) in &pairs {
+            if CssWide::parse(v).is_some() {
+                return Err(format!("CSS-wide keyword in shorthand '{name}'"));
+            }
+            compute(&mut style, *l, v, &ctx)?;
+        }
+        return Ok(pairs);
     }
     if let PropertyKind::Longhand(l) = kind(&lower) {
         return Ok(vec![(l, value.trim().to_owned())]);
