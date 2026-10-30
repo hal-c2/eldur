@@ -1771,12 +1771,16 @@ mod tests {
         );
         let css = r#"
             @keyframes inline-kf {
-                to { display: inline; position: absolute; float: left; }
+                to { display: inline; }
+            }
+            @keyframes abs-kf {
+                to { position: absolute; }
             }
         "#;
         let (sheet, _) = Stylesheet::parse(css, Origin::Author, "kf_box.css", None);
         let mut map = compute_styles(&doc, &[sheet], &Viewport::default());
         let kf = map.keyframes["inline-kf"][0].clone();
+        let abs_kf_rule = map.keyframes["abs-kf"][0].clone();
 
         let root = doc.element_by_id("root").expect("root");
         let abs_el = doc.element_by_id("abs-el").expect("abs-el");
@@ -1837,6 +1841,13 @@ mod tests {
         let float_kf = map.keyframe_style(float_el, &kf).expect("float kf");
         assert_eq!(float_kf.display, Display::Block);
         assert_eq!(float_kf.float, Float::Left);
+
+        // 3b. float: left (static) + keyframe position: absolute -> float: none (CSS 2.1 §9.7)
+        let float_abs_kf = map
+            .keyframe_style(float_el, &abs_kf_rule)
+            .expect("float abs kf");
+        assert_eq!(float_abs_kf.position, Position::Absolute);
+        assert_eq!(float_abs_kf.float, Float::None);
 
         // 4. Root element + keyframe display: inline -> blockified
         let root_kf = map.keyframe_style(root, &kf).expect("root kf");
