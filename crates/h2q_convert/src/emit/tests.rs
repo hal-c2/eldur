@@ -889,13 +889,16 @@ fn box_shadows_are_rectangular_shadows_behind_the_box() {
 }
 
 #[test]
-fn inset_box_shadows_are_reported() {
+fn inset_box_shadows_are_drawn_inside_the_box() {
     let (qml, diags) = convert(&page(
         ".s{box-shadow:inset 0 1px 2px #000}",
         "<div class=s>x</div>",
     ));
+    // An outer shadow's `RectangularShadow` would draw outside the box.
     assert!(!qml.contains("RectangularShadow"), "{qml}");
-    assert!(diags.iter().any(|d| d.contains("inset")), "{diags:?}");
+    assert!(qml.contains("Inset\n"), "{qml}");
+    assert!(qml.contains("ShapePath.OddEvenFill"), "{qml}");
+    assert!(!diags.iter().any(|d| d.contains("box-shadow")), "{diags:?}");
 }
 
 #[test]
@@ -1306,4 +1309,70 @@ fn a_page_without_fragment_links_has_no_scroll_function() {
     let (qml, _) = convert(&page("", "<p><a href=\"https://x.org/\">x</a> y</p>"));
     assert!(!qml.contains("scrollToFragment"), "{qml}");
     assert!(qml.contains("onLinkActivated"), "{qml}");
+}
+
+#[test]
+fn an_unblurred_inset_shadow_is_a_ring_inside_the_padding_box() {
+    // Chromium (18-dashboard): `inset 3px 0 0` on an 8px rounded box is a
+    // 3px bar of the shadow colour along the left edge, curved with the
+    // corners, over the background and under the text.
+    let (qml, diags) = convert(&page(
+        ".a{padding:9px 12px;border-radius:8px;background:#1f2937;\
+         box-shadow:inset 3px 0 0 #6366f1}",
+        "<div class=a>Overview</div>",
+    ));
+    let a = object_after(&qml, "<div class=\"a\">");
+    let shadow = a.find("Shape {").expect("inset shadow shape");
+    let text = a.find("Overview").expect("text");
+    assert!(shadow < text, "under the content: {a}");
+    let shape = &a[shadow..text];
+    assert!(shape.contains("fillColor: \"#6366f1\""), "{a}");
+    assert!(shape.contains("fillRule: ShapePath.OddEvenFill"), "{a}");
+    // The hole: shifted right by 3, cut off at the right edge.
+    assert!(shape.contains("x: 3"), "{a}");
+    assert!(shape.contains(".width - 3"), "{a}");
+    assert!(shape.contains("radius: 8"), "{a}");
+    assert!(!diags.iter().any(|d| d.contains("inset")), "{diags:?}");
+}
+
+#[test]
+fn an_inset_spread_is_a_ring_of_its_width() {
+    // `inset 0 0 0 1px` (13-custom-properties): a 1px ring; the hole's
+    // corners are the padding box's, less the spread.
+    let (qml, _) = convert(&page(
+        ".s{width:56px;height:56px;border-radius:6px;background:#2563eb;\
+         box-shadow:inset 0 0 0 1px rgba(0,0,0,0.08)}",
+        "<div class=s></div>",
+    ));
+    let s = object_after(&qml, "<div class=\"s\">");
+    assert!(s.contains("fillColor: \"#14000000\""), "{s}");
+    assert!(s.contains("x: 1") && s.contains("y: 1"), "{s}");
+    assert!(s.contains(".width - 2") && s.contains(".height - 2"), "{s}");
+    assert!(s.contains("radius: 5"), "{s}");
+}
+
+#[test]
+fn a_blurred_inset_shadow_fades_in_bands() {
+    // Chromium: `inset 0 0 20px #000` on a white box is, 0.5px in from the
+    // edge, alpha 119/255, and 20px in, 4/255: 1 - Φ(d / 10). The bands
+    // are nested rings whose alphas compose to it.
+    use super::shadow::inset_bands;
+    let bands = inset_bands(20.0, 1.0);
+    assert!(bands.len() > 1 && bands.len() <= 13, "{bands:?}");
+    let coverage = |depth: f32| {
+        1.0 - bands
+            .iter()
+            .filter(|b| depth < b.depth)
+            .map(|b| 1.0 - b.alpha)
+            .product::<f32>()
+    };
+    for (depth, chromium) in [(0.5, 119.0), (5.5, 74.0), (10.5, 42.0), (20.5, 3.0)] {
+        let got = coverage(depth) * 255.0;
+        assert!(
+            (got - chromium).abs() <= 16.0,
+            "depth {depth}: {got} vs {chromium} in {bands:?}"
+        );
+    }
+    // Deep outside the hole edge it is the full colour.
+    assert!(coverage(-30.0) > 0.95, "{bands:?}");
 }

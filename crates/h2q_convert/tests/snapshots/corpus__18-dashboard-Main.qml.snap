@@ -341,6 +341,30 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.topMargin: 8
 
+                                        Shape {
+                                            id: navItemInset
+                                            anchors.fill: parent
+
+                                            ShapePath {
+                                                strokeWidth: -1
+                                                fillColor: "#4f46e5"
+                                                fillRule: ShapePath.OddEvenFill
+
+                                                PathRectangle {
+                                                    width: navItemInset.width
+                                                    height: navItemInset.height
+                                                    radius: 8
+                                                }
+
+                                                PathRectangle {
+                                                    x: 3
+                                                    width: Math.max(0, navItemInset.width - 3)
+                                                    height: navItemInset.height
+                                                    radius: 8
+                                                }
+                                            }
+                                        }
+
                                         Text {
                                             id: navItemText
                                             text: "Dashboard"

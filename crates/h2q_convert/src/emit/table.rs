@@ -756,6 +756,7 @@ impl<'a> Emitter<'a, '_> {
             clips: base.clips,
             gradients: base.gradients,
             shadows: base.shadows,
+            inset_shadows: base.inset_shadows,
             hint: hint(self.doc, b),
         };
         let insets = deco.insets;

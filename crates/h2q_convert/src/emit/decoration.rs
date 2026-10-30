@@ -53,13 +53,20 @@ pub(crate) struct Decoration {
     pub gradients: bool,
     /// Outer `box-shadow`s to draw behind the box.
     pub shadows: bool,
+    /// Inset `box-shadow`s to draw inside the padding box.
+    pub inset_shadows: bool,
     /// Base for the ids of generated parts (gradient shapes).
     pub hint: String,
 }
 
 impl Decoration {
     pub(crate) fn needed(&self) -> bool {
-        self.paints || self.gradients || self.shadows || self.clips || !self.insets.is_zero()
+        self.paints
+            || self.gradients
+            || self.shadows
+            || self.inset_shadows
+            || self.clips
+            || !self.insets.is_zero()
     }
 }
 
@@ -107,10 +114,7 @@ impl Emitter<'_, '_> {
         // The canvas propagation only takes the colour; gradients stay on
         // the box, which is close for the body of a page.
         let gradients = style.background_layers.iter().any(|l| l.image.is_some());
-        if style.box_shadow.iter().any(|s| s.inset) {
-            self.diags
-                .info("css", line, "inset `box-shadow` is not drawn".to_owned());
-        }
+        let inset_shadows = style.box_shadow.iter().any(|s| s.inset);
         let shadows = style.box_shadow.iter().any(|s| !s.inset);
         if matches!(style.overflow_x, Overflow::Auto | Overflow::Scroll)
             || matches!(style.overflow_y, Overflow::Auto | Overflow::Scroll)
@@ -127,6 +131,7 @@ impl Emitter<'_, '_> {
             clips,
             gradients,
             shadows,
+            inset_shadows,
             hint: "box".to_owned(),
         }
     }
@@ -207,6 +212,10 @@ impl Emitter<'_, '_> {
         };
         let painted = !gradients.is_empty();
         for shape in gradients {
+            wrapper.push_child(shape);
+        }
+        if deco.inset_shadows {
+            let shape = self.inset_shadows(style, &deco.hint, line);
             wrapper.push_child(shape);
         }
         let borders: Vec<&BorderSide> = sides(style).to_vec();
@@ -420,40 +429,34 @@ impl Emitter<'_, '_> {
         style: &ComputedStyle,
         line: Option<u32>,
     ) {
+        let px = self.corner_radii(style, line);
+        set_radii(wrapper, px);
+    }
+
+    /// The outer radius of each corner in px: top left, top right, bottom
+    /// right, bottom left.
+    pub(super) fn corner_radii(&mut self, style: &ComputedStyle, line: Option<u32>) -> [f32; 4] {
         let r = &style.border_radius;
-        let corners = [
-            ("topLeftRadius", &r.top_left),
-            ("topRightRadius", &r.top_right),
-            ("bottomRightRadius", &r.bottom_right),
-            ("bottomLeftRadius", &r.bottom_left),
-        ];
+        let corners = [&r.top_left, &r.top_right, &r.bottom_right, &r.bottom_left];
         // A percentage is of the box, known here when the box is sized. Qt has
         // one radius per corner, so an uneven box uses its shorter side.
         let side = self.definite_side(style, line);
-        let mut px = Vec::new();
-        for (name, c) in corners {
-            match (c.as_px(), side) {
-                (Some(v), _) => px.push((name, v)),
-                (None, Some(side)) => px.push((name, c.px + c.percent / 100.0 * side)),
+        let mut px = [0.0; 4];
+        for (out, c) in px.iter_mut().zip(corners) {
+            *out = match (c.as_px(), side) {
+                (Some(v), _) => v,
+                (None, Some(side)) => c.px + c.percent / 100.0 * side,
                 (None, None) => {
                     self.diags.info(
                         "css",
                         line,
                         "percentage `border-radius` uses its px part only".to_owned(),
                     );
-                    px.push((name, c.px));
+                    c.px
                 }
-            }
+            };
         }
-        if px.iter().all(|(_, v)| *v == px[0].1) {
-            if px[0].1 > 0.0 {
-                wrapper.set("radius", number(px[0].1));
-            }
-        } else {
-            for (name, v) in px {
-                wrapper.set(name, number(v));
-            }
-        }
+        px
     }
 
     /// The shorter side of a box whose width and height are lengths.
@@ -507,6 +510,25 @@ impl Emitter<'_, '_> {
                 line,
                 "rounded corners with uneven borders: the borders are drawn square".to_owned(),
             );
+        }
+    }
+}
+
+/// `radius`, or one radius per corner when they differ.
+pub(super) fn set_radii(obj: &mut Object, px: [f32; 4]) {
+    let names = [
+        "topLeftRadius",
+        "topRightRadius",
+        "bottomRightRadius",
+        "bottomLeftRadius",
+    ];
+    if px.iter().all(|v| *v == px[0]) {
+        if px[0] > 0.0 {
+            obj.set("radius", number(px[0]));
+        }
+    } else {
+        for (name, v) in names.into_iter().zip(px) {
+            obj.set(name, number(v));
         }
     }
 }

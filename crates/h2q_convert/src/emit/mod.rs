@@ -13,6 +13,7 @@ mod ids;
 mod inline;
 mod links;
 mod lists;
+mod shadow;
 mod table;
 mod text;
 mod transform;
