@@ -1911,3 +1911,92 @@ Item {
         out.page_js
     );
 }
+
+#[test]
+fn qml6_executes_module_exports_of_block_nested_var() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 module block-nested var export test: qml6 not on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("module_block_var_export");
+    let resolver = FakeResolver::default();
+
+    let c = ScriptInput {
+        name: "c.js".to_string(),
+        kind: ScriptKind::Classic,
+        line_offset: 1,
+        source: "var count = 'classic';\n".to_string(),
+    };
+    let a = ScriptInput {
+        name: "a.js".to_string(),
+        kind: ScriptKind::Module,
+        line_offset: 1,
+        source: r#"
+{ var count = 10; }
+if (false) { var skipped = 1; }
+export { count, skipped as renamedSkipped };
+"#
+        .to_string(),
+    };
+    let b = ScriptInput {
+        name: "b.js".to_string(),
+        kind: ScriptKind::Module,
+        line_offset: 1,
+        source: r#"
+import { count, renamedSkipped } from "./a.js";
+import * as ns from "./a.js";
+console.log("H2Q_OK_MOD_BLOCK_VAR", count, renamedSkipped, ns.count, typeof ns.renamedSkipped);
+"#
+        .to_string(),
+    };
+
+    let scripts = [c, a, b];
+    let analysis = analyze(&scripts);
+    let out = rewrite(&scripts, &analysis, &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+
+    let runtime_path = dir.write_file("h2q_runtime.js", RUNTIME_JS);
+    let page_path = dir.write_file("page.js", &out.page_js);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import "page.js" as Page
+
+Item {
+    id: root
+    width: 100
+    height: 100
+
+    Component.onCompleted: {
+        Page.__h2q_init(root);
+        Qt.quit();
+    }
+}
+"#,
+    );
+
+    if has_binary("qmllint") {
+        for path in [&runtime_path, &page_path, &main_qml] {
+            let lint = Command::new("qmllint")
+                .arg(path)
+                .output()
+                .expect("failed to run qmllint");
+            assert!(
+                lint.status.success(),
+                "qmllint failed on {}: {}{}\npage.js:\n{}",
+                path.display(),
+                String::from_utf8_lossy(&lint.stdout),
+                String::from_utf8_lossy(&lint.stderr),
+                out.page_js
+            );
+        }
+    }
+
+    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    assert!(
+        output.contains("H2Q_OK_MOD_BLOCK_VAR 10 undefined 10 undefined"),
+        "unexpected qml6 module block-nested var output:\n{output}\npage.js:\n{}",
+        out.page_js
+    );
+}
