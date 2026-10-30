@@ -145,70 +145,47 @@ ApplicationWindow {
                                     anchors.bottomMargin: 5
 
                                     // <button class="toggle-btn active">
-                                    Rectangle {
-                                        color: "#0f172a"
-                                        radius: 999
-                                        implicitWidth: toggleBtnText.implicitWidth + 44
-                                        implicitHeight: toggleBtnText.implicitHeight
+                                    Button {
+                                        id: buttonControl
+                                        text: "Monthly"
+                                        palette.buttonText: "#ffffff"
+                                        font.family: "sans-serif"
+                                        font.pixelSize: 15
+                                        font.weight: 600
+                                        background: Rectangle {
+                                            color: "#0f172a"
+                                            radius: 999
+                                        }
+                                        topPadding: 0
+                                        rightPadding: 22
+                                        bottomPadding: 0
+                                        leftPadding: 22
+                                        implicitHeight: 24.32
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Math.ceil(implicitWidth)
                                         Layout.preferredHeight: 40
                                         Layout.alignment: Qt.AlignTop
-
-                                        Text {
-                                            id: toggleBtnText
-                                            text: "Monthly"
-                                            textFormat: Text.PlainText
-                                            color: "#ffffff"
-                                            font.family: "sans-serif"
-                                            font.pixelSize: 15
-                                            font.weight: 600
-                                            lineHeight: 24.32
-                                            lineHeightMode: Text.FixedHeight
-                                            transform: Translate {
-                                                y: 3.42
-                                            }
-                                            horizontalAlignment: Text.AlignHCenter
-                                            wrapMode: Text.WordWrap
-                                            anchors.left: parent.left
-                                            anchors.right: parent.right
-                                            anchors.top: parent.top
-                                            anchors.leftMargin: 22
-                                            anchors.rightMargin: 22
-                                        }
                                     }
 
                                     // <button class="toggle-btn">
-                                    Item {
-                                        implicitWidth: toggleBtnText2.implicitWidth + 44
-                                        implicitHeight: toggleBtnText2.implicitHeight
+                                    Button {
+                                        id: buttonControl2
+                                        text: "Yearly Save 20%"
+                                        palette.buttonText: "#64748b"
+                                        font.family: "sans-serif"
+                                        font.pixelSize: 15
+                                        font.weight: 600
+                                        background: Item {}
+                                        topPadding: 0
+                                        rightPadding: 22
+                                        bottomPadding: 0
+                                        leftPadding: 22
+                                        implicitHeight: 24.32
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Math.ceil(implicitWidth)
                                         Layout.preferredHeight: 40
                                         Layout.alignment: Qt.AlignTop
                                         Layout.leftMargin: 4
-
-                                        Text {
-                                            id: toggleBtnText2
-                                            text: "Yearly <font color=\"#166534\"><small>Save 20%</small></font>"
-                                            textFormat: Text.StyledText
-                                            color: "#64748b"
-                                            font.family: "sans-serif"
-                                            font.pixelSize: 15
-                                            font.weight: 600
-                                            lineHeight: 24.32
-                                            lineHeightMode: Text.FixedHeight
-                                            transform: Translate {
-                                                y: 3.42
-                                            }
-                                            horizontalAlignment: Text.AlignHCenter
-                                            wrapMode: Text.WordWrap
-                                            anchors.left: parent.left
-                                            anchors.right: parent.right
-                                            anchors.top: parent.top
-                                            anchors.leftMargin: 22
-                                            anchors.rightMargin: 22
-                                        }
                                     }
 
                                     Item {
@@ -560,39 +537,27 @@ ApplicationWindow {
                                     }
 
                                     // <button class="plan-btn">
-                                    Rectangle {
-                                        color: "#00000000"
-                                        radius: 12
-                                        implicitWidth: planBtnText.implicitWidth + 4
-                                        implicitHeight: planBtnText.implicitHeight + 4
-                                        border.width: 2
-                                        border.color: "#2563eb"
+                                    Button {
+                                        id: buttonControl3
+                                        text: "Start for free"
+                                        palette.buttonText: "#2563eb"
+                                        font.family: "sans-serif"
+                                        font.pixelSize: 16
+                                        font.weight: 600
+                                        background: Rectangle {
+                                            color: "#00000000"
+                                            radius: 12
+                                            border.width: 2
+                                            border.color: "#2563eb"
+                                        }
+                                        topPadding: 2
+                                        rightPadding: 2
+                                        bottomPadding: 2
+                                        leftPadding: 2
+                                        implicitHeight: 29.6
                                         Layout.preferredHeight: 50
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
-
-                                        Text {
-                                            id: planBtnText
-                                            text: "Start for free"
-                                            textFormat: Text.PlainText
-                                            color: "#2563eb"
-                                            font.family: "sans-serif"
-                                            font.pixelSize: 16
-                                            font.weight: 600
-                                            lineHeight: 25.6
-                                            lineHeightMode: Text.FixedHeight
-                                            transform: Translate {
-                                                y: 3.6
-                                            }
-                                            horizontalAlignment: Text.AlignHCenter
-                                            wrapMode: Text.WordWrap
-                                            anchors.left: parent.left
-                                            anchors.right: parent.right
-                                            anchors.top: parent.top
-                                            anchors.leftMargin: 2
-                                            anchors.rightMargin: 2
-                                            anchors.topMargin: 2
-                                        }
                                     }
                                 }
                             }
@@ -1013,39 +978,27 @@ ApplicationWindow {
                                     }
 
                                     // <button class="plan-btn solid">
-                                    Rectangle {
-                                        color: "#2563eb"
-                                        radius: 12
-                                        implicitWidth: planBtnText2.implicitWidth + 4
-                                        implicitHeight: planBtnText2.implicitHeight + 4
-                                        border.width: 2
-                                        border.color: "#2563eb"
+                                    Button {
+                                        id: buttonControl4
+                                        text: "Start 14-day trial"
+                                        palette.buttonText: "#ffffff"
+                                        font.family: "sans-serif"
+                                        font.pixelSize: 16
+                                        font.weight: 600
+                                        background: Rectangle {
+                                            color: "#2563eb"
+                                            radius: 12
+                                            border.width: 2
+                                            border.color: "#2563eb"
+                                        }
+                                        topPadding: 2
+                                        rightPadding: 2
+                                        bottomPadding: 2
+                                        leftPadding: 2
+                                        implicitHeight: 29.6
                                         Layout.preferredHeight: 50
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
-
-                                        Text {
-                                            id: planBtnText2
-                                            text: "Start 14-day trial"
-                                            textFormat: Text.PlainText
-                                            color: "#ffffff"
-                                            font.family: "sans-serif"
-                                            font.pixelSize: 16
-                                            font.weight: 600
-                                            lineHeight: 25.6
-                                            lineHeightMode: Text.FixedHeight
-                                            transform: Translate {
-                                                y: 3.6
-                                            }
-                                            horizontalAlignment: Text.AlignHCenter
-                                            wrapMode: Text.WordWrap
-                                            anchors.left: parent.left
-                                            anchors.right: parent.right
-                                            anchors.top: parent.top
-                                            anchors.leftMargin: 2
-                                            anchors.rightMargin: 2
-                                            anchors.topMargin: 2
-                                        }
                                     }
                                 }
                             }
@@ -1435,39 +1388,27 @@ ApplicationWindow {
                                     }
 
                                     // <button class="plan-btn">
-                                    Rectangle {
-                                        color: "#00000000"
-                                        radius: 12
-                                        implicitWidth: planBtnText3.implicitWidth + 4
-                                        implicitHeight: planBtnText3.implicitHeight + 4
-                                        border.width: 2
-                                        border.color: "#2563eb"
+                                    Button {
+                                        id: buttonControl5
+                                        text: "Talk to sales"
+                                        palette.buttonText: "#2563eb"
+                                        font.family: "sans-serif"
+                                        font.pixelSize: 16
+                                        font.weight: 600
+                                        background: Rectangle {
+                                            color: "#00000000"
+                                            radius: 12
+                                            border.width: 2
+                                            border.color: "#2563eb"
+                                        }
+                                        topPadding: 2
+                                        rightPadding: 2
+                                        bottomPadding: 2
+                                        leftPadding: 2
+                                        implicitHeight: 29.6
                                         Layout.preferredHeight: 50
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
-
-                                        Text {
-                                            id: planBtnText3
-                                            text: "Talk to sales"
-                                            textFormat: Text.PlainText
-                                            color: "#2563eb"
-                                            font.family: "sans-serif"
-                                            font.pixelSize: 16
-                                            font.weight: 600
-                                            lineHeight: 25.6
-                                            lineHeightMode: Text.FixedHeight
-                                            transform: Translate {
-                                                y: 3.6
-                                            }
-                                            horizontalAlignment: Text.AlignHCenter
-                                            wrapMode: Text.WordWrap
-                                            anchors.left: parent.left
-                                            anchors.right: parent.right
-                                            anchors.top: parent.top
-                                            anchors.leftMargin: 2
-                                            anchors.rightMargin: 2
-                                            anchors.topMargin: 2
-                                        }
                                     }
                                 }
                             }

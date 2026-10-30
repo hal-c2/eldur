@@ -179,7 +179,7 @@ impl<'a> Builder<'a, '_> {
     /// Appends the boxes of `node`'s children (and its `::before` /
     /// `::after`) to `out`.
     fn children_of(&mut self, node: NodeId, out: &mut Vec<Child<'a>>) {
-        let element_style = self.styles.get(node);
+        let element_style = self.styles.computed(node);
         if let Some(before) = element_style.and_then(|s| s.before.as_deref()) {
             self.pseudo(node, before, out);
         }
@@ -188,8 +188,8 @@ impl<'a> Builder<'a, '_> {
                 NodeData::Text(text) => {
                     let white_space = self
                         .styles
-                        .style(node)
-                        .map(|s| s.white_space)
+                        .computed(node)
+                        .map(|s| s.style.white_space)
                         .unwrap_or_default();
                     out.push(Child::Inline(whitespace::Raw::Text {
                         text: text.clone(),
@@ -206,9 +206,9 @@ impl<'a> Builder<'a, '_> {
     }
 
     fn element(&mut self, node: NodeId, out: &mut Vec<Child<'a>>) {
-        let style = self.styles.style(node);
+        let style = self.styles.computed(node).map(|s| &s.style);
         let hidden = style.is_none_or(|s| s.display == Display::None);
-        if hidden && self.keep.is_some_and(|k| k.contains(&node)) {
+        if hidden && self.keeps_descendant(node) {
             if let Some(b) = self.hidden_box(node) {
                 out.push(Child::Block(Box::new(b)));
             }
@@ -245,33 +245,37 @@ impl<'a> Builder<'a, '_> {
         }
     }
 
-    /// A `display: none` element as an invisible block of its text, styled
-    /// like an anonymous child of its parent: its own styles were not
-    /// computed (the cascade skips `display: none` subtrees).
+    /// Whether a script can reach `node` or something inside it.
+    fn keeps_descendant(&self, node: NodeId) -> bool {
+        self.keep
+            .is_some_and(|k| self.doc.descendants(node).any(|n| k.contains(&n)))
+    }
+
+    /// A `display: none` element a script can reach, with its real subtree
+    /// and styles, invisible: Layouts skip invisible items, so it takes no
+    /// space until a script shows it. What it would display as is unknown
+    /// (`display` computed to `none`), so it is a block, or its control.
     fn hidden_box(&mut self, node: NodeId) -> Option<LayoutBox<'a>> {
-        let parent = self.doc.parent_element(node)?;
-        let mut style = anonymous_style(self.styles.style(parent)?);
-        style.visibility = h2q_css::Visibility::Collapse;
+        let computed = &self.styles.computed(node)?.style;
         self.diags.info(
             "css",
             node_line(self.doc, node),
             format!(
-                "{} is `display: none` and used by a script: it is kept invisible, as its text in its parent's style",
+                "{} is `display: none` and used by a script: it is kept invisible, as a block when shown",
                 describe(self.doc, node)
             ),
         );
-        let text = h2q_dom::collapse_whitespace(&self.doc.text_content(node));
-        let content = if text.is_empty() {
-            Content::Empty
+        let kind = if is_replaced(self.doc, node) {
+            BoxKind::Replaced
         } else {
-            Content::Inline(vec![Inline::Text(text)])
+            BoxKind::Block
         };
-        Some(LayoutBox {
-            node: Some(node),
-            style: Cow::Owned(style),
-            kind: BoxKind::Block,
-            content,
-        })
+        let mut built = self.block_box(node, computed, kind);
+        let mut style = computed.clone();
+        style.display = Display::Block;
+        style.visibility = h2q_css::Visibility::Collapse;
+        built.style = Cow::Owned(style);
+        Some(built)
     }
 
     fn pseudo(&mut self, node: NodeId, style: &'a ComputedStyle, out: &mut Vec<Child<'a>>) {
@@ -403,7 +407,7 @@ impl<'a> Builder<'a, '_> {
     /// box in CSS.
     fn has_block_descendant(&self, node: NodeId) -> bool {
         self.doc.element_children(node).any(|child| {
-            let Some(style) = self.styles.style(child) else {
+            let Some(style) = self.styles.computed(child).map(|s| &s.style) else {
                 return false;
             };
             if style.display == Display::None {
@@ -589,6 +593,7 @@ fn is_replaced(doc: &Document, node: NodeId) -> bool {
                 | "embed"
                 | "object"
                 | "input"
+                | "button"
                 | "textarea"
                 | "select"
                 | "meter"

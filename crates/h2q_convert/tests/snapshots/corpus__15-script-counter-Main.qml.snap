@@ -125,124 +125,91 @@ ApplicationWindow {
                                 }
 
                                 // <button id="dec" class="btn">
-                                Rectangle {
+                                Button {
                                     id: dec
-                                    color: "#f7f9fc"
-                                    radius: 8
-                                    implicitWidth: decText.implicitWidth + 38
-                                    implicitHeight: decText.implicitHeight + 22
-                                    border.width: 1
-                                    border.color: "#c9d1e0"
+                                    text: "−"
+                                    palette.buttonText: "#1f2430"
+                                    font.family: "sans-serif"
+                                    font.pixelSize: 18
+                                    font.weight: 600
+                                    background: Rectangle {
+                                        color: "#f7f9fc"
+                                        radius: 8
+                                        border.width: 1
+                                        border.color: "#c9d1e0"
+                                    }
+                                    topPadding: 11
+                                    rightPadding: 19
+                                    bottomPadding: 11
+                                    leftPadding: 19
                                     objectName: "dec"
                                     Layout.fillWidth: true
-                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                    Layout.maximumWidth: Math.max(Math.ceil(implicitWidth), 64)
                                     Layout.minimumWidth: 64
                                     Layout.fillHeight: true
 
-                                    Text {
-                                        id: decText
-                                        text: "−"
-                                        textFormat: Text.PlainText
-                                        color: "#1f2430"
-                                        font.family: "sans-serif"
-                                        font.pixelSize: 18
-                                        font.weight: 600
-                                        horizontalAlignment: Text.AlignHCenter
-                                        wrapMode: Text.WordWrap
-                                        anchors.left: parent.left
-                                        anchors.right: parent.right
-                                        anchors.top: parent.top
-                                        anchors.leftMargin: 19
-                                        anchors.rightMargin: 19
-                                        anchors.topMargin: 11
-                                    }
-
-                                    TapHandler {
-                                        onTapped: (eventPoint, button) => {
-                                            Page.__h2q_on_click_dec(H2Q.event("click", dec, eventPoint));
-                                        }
+                                    onClicked: {
+                                        Page.__h2q_on_click_dec(H2Q.event("click", dec, null));
                                     }
                                 }
 
                                 // <button id="inc" class="btn btn-primary">
-                                Rectangle {
+                                Button {
                                     id: inc
-                                    color: "#1d4ed8"
-                                    radius: 8
-                                    implicitWidth: incText.implicitWidth + 38
-                                    implicitHeight: incText.implicitHeight + 22
-                                    border.width: 1
-                                    border.color: "#1d4ed8"
+                                    text: "+"
+                                    palette.buttonText: "#ffffff"
+                                    font.family: "sans-serif"
+                                    font.pixelSize: 18
+                                    font.weight: 600
+                                    background: Rectangle {
+                                        color: "#1d4ed8"
+                                        radius: 8
+                                        border.width: 1
+                                        border.color: "#1d4ed8"
+                                    }
+                                    topPadding: 11
+                                    rightPadding: 19
+                                    bottomPadding: 11
+                                    leftPadding: 19
                                     objectName: "inc"
                                     Layout.fillWidth: true
-                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                    Layout.maximumWidth: Math.max(Math.ceil(implicitWidth), 64)
                                     Layout.minimumWidth: 64
                                     Layout.fillHeight: true
                                     Layout.leftMargin: 12
 
-                                    Text {
-                                        id: incText
-                                        text: "+"
-                                        textFormat: Text.PlainText
-                                        color: "#ffffff"
-                                        font.family: "sans-serif"
-                                        font.pixelSize: 18
-                                        font.weight: 600
-                                        horizontalAlignment: Text.AlignHCenter
-                                        wrapMode: Text.WordWrap
-                                        anchors.left: parent.left
-                                        anchors.right: parent.right
-                                        anchors.top: parent.top
-                                        anchors.leftMargin: 19
-                                        anchors.rightMargin: 19
-                                        anchors.topMargin: 11
-                                    }
-
-                                    TapHandler {
-                                        onTapped: (eventPoint, button) => {
-                                            Page.__h2q_on_click_inc(H2Q.event("click", inc, eventPoint));
-                                        }
+                                    onClicked: {
+                                        Page.__h2q_on_click_inc(H2Q.event("click", inc, null));
                                     }
                                 }
 
                                 // <button id="reset" class="btn btn-reset">
-                                Rectangle {
+                                Button {
                                     id: reset
-                                    color: "#f7f9fc"
-                                    radius: 8
-                                    implicitWidth: resetText.implicitWidth + 38
-                                    implicitHeight: resetText.implicitHeight + 22
-                                    border.width: 1
-                                    border.color: "#c9d1e0"
+                                    text: "Reset"
+                                    palette.buttonText: "#5c6578"
+                                    font.family: "sans-serif"
+                                    font.pixelSize: 16
+                                    font.weight: 500
+                                    background: Rectangle {
+                                        color: "#f7f9fc"
+                                        radius: 8
+                                        border.width: 1
+                                        border.color: "#c9d1e0"
+                                    }
+                                    topPadding: 11
+                                    rightPadding: 19
+                                    bottomPadding: 11
+                                    leftPadding: 19
                                     objectName: "reset"
                                     Layout.fillWidth: true
-                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                    Layout.maximumWidth: Math.max(Math.ceil(implicitWidth), 64)
                                     Layout.minimumWidth: 64
                                     Layout.fillHeight: true
                                     Layout.leftMargin: 12
 
-                                    Text {
-                                        id: resetText
-                                        text: "Reset"
-                                        textFormat: Text.PlainText
-                                        color: "#5c6578"
-                                        font.family: "sans-serif"
-                                        font.pixelSize: 16
-                                        font.weight: 500
-                                        horizontalAlignment: Text.AlignHCenter
-                                        wrapMode: Text.WordWrap
-                                        anchors.left: parent.left
-                                        anchors.right: parent.right
-                                        anchors.top: parent.top
-                                        anchors.leftMargin: 19
-                                        anchors.rightMargin: 19
-                                        anchors.topMargin: 11
-                                    }
-
-                                    TapHandler {
-                                        onTapped: (eventPoint, button) => {
-                                            Page.__h2q_on_click_reset(H2Q.event("click", reset, eventPoint));
-                                        }
+                                    onClicked: {
+                                        Page.__h2q_on_click_reset(H2Q.event("click", reset, null));
                                     }
                                 }
 
@@ -262,14 +229,42 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.topMargin: 32
+
+                                TapHandler {
+                                    onTapped: (eventPoint, button) => {
+                                        if (mirrorInput.enabled) { mirrorInput.forceActiveFocus(); }
+                                    }
+                                }
                             }
 
                             // <input id="mirror-input" class="text-input">
-                            Item {
+                            TextField {
                                 id: mirrorInput
+                                color: "#1f2430"
+                                font.family: "sans-serif"
+                                font.pixelSize: 16
+                                verticalAlignment: TextInput.AlignVCenter
+                                background: Rectangle {
+                                    color: "#ffffff"
+                                    radius: 8
+                                    border.width: 1
+                                    border.color: "#c9d1e0"
+                                }
+                                topPadding: 11
+                                rightPadding: 13
+                                bottomPadding: 11
+                                leftPadding: 13
+                                implicitWidth: 202
+                                placeholderText: "Start typing…"
+                                placeholderTextColor: "#757575"
+                                Accessible.name: "Live text"
                                 objectName: "mirror-input"
                                 Layout.preferredWidth: parent.width
                                 Layout.topMargin: 8
+
+                                onTextEdited: {
+                                    Page.__h2q_on_input_mirrorInput(H2Q.event("input", mirrorInput, null));
+                                }
                             }
 
                             // <p id="mirror-output" class="mirror">
@@ -309,16 +304,42 @@ ApplicationWindow {
                                 Layout.topMargin: 24
 
                                 // <input id="details-toggle">
-                                Item {
+                                CheckBox {
                                     id: detailsToggle
-                                    implicitWidth: 18
-                                    implicitHeight: 18
+                                    property string value: "on"
+
+                                    implicitWidth: 13
+                                    implicitHeight: 13
+                                    padding: 0
+                                    spacing: 0
+                                    contentItem: Item {}
+                                    indicator: Rectangle {
+                                        width: detailsToggle.width
+                                        height: detailsToggle.height
+                                        border.width: 1
+                                        radius: 2
+                                        color: detailsToggle.checked ? "#0075ff" : "#ffffff"
+                                        border.color: detailsToggle.checked ? "#0075ff" : "#767676"
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "✓"
+                                            color: "#ffffff"
+                                            font.pixelSize: Math.max(1, detailsToggle.height - 2)
+                                            visible: detailsToggle.checked
+                                        }
+                                    }
+                                    Accessible.name: "Show details"
                                     objectName: "details-toggle"
                                     Layout.fillWidth: true
                                     Layout.preferredWidth: 18
                                     Layout.maximumWidth: 18
                                     Layout.preferredHeight: 18
                                     Layout.alignment: Qt.AlignVCenter
+
+                                    onToggled: {
+                                        Page.__h2q_on_change_detailsToggle(H2Q.event("change", detailsToggle, null));
+                                    }
                                 }
 
                                 // <span>
@@ -338,21 +359,81 @@ ApplicationWindow {
                                 Item {
                                     Layout.fillWidth: true
                                 }
+
+                                TapHandler {
+                                    onTapped: (eventPoint, button) => {
+                                        if (detailsToggle.enabled) { detailsToggle.click(); }
+                                    }
+                                }
                             }
 
                             // <section id="details" class="panel">
-                            Text {
+                            Rectangle {
                                 id: details
-                                text: "About this widget The counter goes negative below zero and turns red. Text typed above is mirrored as you type."
-                                textFormat: Text.PlainText
-                                color: "#1f2430"
-                                font.family: "sans-serif"
-                                font.pixelSize: 16
-                                wrapMode: Text.WordWrap
+                                color: "#f1f5ff"
+                                topLeftRadius: 0
+                                topRightRadius: 8
+                                bottomRightRadius: 8
+                                bottomLeftRadius: 0
+                                implicitWidth: detailsContent.implicitWidth + 36
+                                implicitHeight: detailsContent.implicitHeight + 32
                                 objectName: "details"
                                 visible: false
                                 Layout.fillWidth: true
                                 Layout.topMargin: 16
+
+                                Rectangle {
+                                    anchors.top: parent.top
+                                    anchors.bottom: parent.bottom
+                                    anchors.left: parent.left
+                                    width: 4
+                                    color: "#1d4ed8"
+                                }
+
+                                ColumnLayout {
+                                    id: detailsContent
+                                    spacing: 0
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.top: parent.top
+                                    anchors.leftMargin: 20
+                                    anchors.rightMargin: 16
+                                    anchors.topMargin: 16
+
+                                    // <h2>
+                                    Text {
+                                        text: "About this widget"
+                                        textFormat: Text.PlainText
+                                        color: "#3a4256"
+                                        font.family: "sans-serif"
+                                        font.pixelSize: 15
+                                        font.weight: 700
+                                        lineHeight: 24
+                                        lineHeightMode: Text.FixedHeight
+                                        transform: Translate {
+                                            y: 3.38
+                                        }
+                                        wrapMode: Text.WordWrap
+                                        Layout.fillWidth: true
+                                    }
+
+                                    // <p>
+                                    Text {
+                                        text: "The counter goes negative below zero and turns red. Text typed above is mirrored as you type."
+                                        textFormat: Text.PlainText
+                                        color: "#3a4256"
+                                        font.family: "sans-serif"
+                                        font.pixelSize: 14
+                                        lineHeight: 22.4
+                                        lineHeightMode: Text.FixedHeight
+                                        transform: Translate {
+                                            y: 3.15
+                                        }
+                                        wrapMode: Text.WordWrap
+                                        Layout.fillWidth: true
+                                        Layout.topMargin: 8
+                                    }
+                                }
                             }
                         }
                     }

@@ -12,7 +12,7 @@ use h2q_qml::{Member, Object};
 use crate::Resources;
 use crate::boxes::{describe, node_line};
 use crate::diag::Diagnostics;
-use crate::emit::Target;
+use crate::emit::{Form, Target};
 
 /// The scripts of a page and what they refer to.
 pub(crate) struct Scripts {
@@ -29,6 +29,12 @@ pub(crate) struct Scripts {
 impl Scripts {
     pub(crate) fn is_empty(&self) -> bool {
         self.inputs.is_empty()
+    }
+
+    /// The node of a key: `keys` holds handler-attribute elements, `wanted`
+    /// everything scripts can reach.
+    fn keys_to_node(&self, key: ElementKey) -> Option<NodeId> {
+        self.wanted.iter().copied().find(|&n| key_of(n) == key)
     }
 }
 
@@ -230,45 +236,162 @@ pub(crate) fn report_missing(
 }
 
 /// Adds the signal handlers of `js.bindings` to the objects they target.
-pub(crate) fn wire(root: &mut Object, js: &JsOutput, diags: &mut Diagnostics) {
+pub(crate) fn wire(
+    root: &mut Object,
+    js: &JsOutput,
+    forms: &BTreeMap<NodeId, Form>,
+    scripts: &Scripts,
+    diags: &mut Diagnostics,
+) {
     for binding in &js.bindings {
         let id = &binding.target.qml_id;
-        let handler = match binding.event.as_str() {
-            "click" => {
+        let call = |event: &str, arg: &str| {
+            let fire = format!(
+                "Page.{}(H2Q.event({event:?}, {id}, {arg}));",
+                binding.function
+            );
+            if js.redispatching_slots.contains(&binding.function) {
+                format!("if (!H2Q.connected({id}, {event:?})) {{ {fire} }}")
+            } else {
+                fire
+            }
+        };
+        let event = binding.event.as_str();
+        if event == "submit" {
+            let form = scripts
+                .keys_to_node(binding.target.key)
+                .and_then(|n| forms.get(&n));
+            let submitters = form.map_or(0, |f| f.accepting.len() + f.submitters.len());
+            if submitters == 0 {
+                diags.warning(
+                    "js",
+                    None,
+                    format!("`submit` listeners on `{id}` have no field or button to fire them"),
+                );
+            }
+            if let Some(form) = form {
+                for (ids, signal) in [
+                    (&form.accepting, "onAccepted"),
+                    (&form.submitters, "onClicked"),
+                ] {
+                    for submitter in ids {
+                        if let Some(obj) = find_mut(root, submitter) {
+                            add_handler(obj, signal, &[], vec![call("submit", "null")]);
+                        }
+                    }
+                }
+            }
+            continue;
+        }
+        let Some(obj) = find_mut(root, id) else {
+            diags.error(
+                "qml",
+                None,
+                format!("event binding targets `{id}`, which is not in Main.qml"),
+            );
+            continue;
+        };
+        let handler = signal_for(&obj.type_name, event);
+        match (event, handler) {
+            ("click", None) => {
                 let mut tap = Object::new("TapHandler");
                 tap.members.push(Member::Handler {
                     name: "onTapped".to_owned(),
                     params: vec!["eventPoint".to_owned(), "button".to_owned()],
-                    body: vec![format!(
-                        "Page.{}(H2Q.event(\"click\", {id}, eventPoint));",
-                        binding.function
-                    )],
+                    body: vec![call("click", "eventPoint")],
                 });
-                tap
+                obj.push_child(tap);
             }
-            other => {
-                diags.warning(
-                    "js",
-                    None,
-                    format!("`{other}` listeners on `{id}` are not wired to QML yet"),
+            ("keydown" | "keyup", _) => {
+                let name = if event == "keydown" {
+                    "Keys.onPressed"
+                } else {
+                    "Keys.onReleased"
+                };
+                // Qt accepts a key event with a handler unless told not to,
+                // and an accepted key never reaches the field's own editing.
+                add_handler(
+                    obj,
+                    name,
+                    &["event"],
+                    vec![
+                        format!("const dom = H2Q.event({event:?}, {id}, event);"),
+                        format!("Page.{}(dom);", binding.function),
+                        "event.accepted = dom.defaultPrevented;".to_owned(),
+                    ],
                 );
-                continue;
             }
-        };
-        match find_mut(root, id) {
-            Some(obj) => {
-                obj.push_child(handler);
+            ("focus" | "focusin" | "blur" | "focusout", _) => {
+                let test = if matches!(event, "focus" | "focusin") {
+                    "activeFocus"
+                } else {
+                    "!activeFocus"
+                };
+                add_handler(
+                    obj,
+                    "onActiveFocusChanged",
+                    &[],
+                    vec![format!("if ({test}) {{ {} }}", call(event, "null"))],
+                );
             }
-            None => diags.error(
-                "qml",
+            (_, Some(signal)) => {
+                let mut body = call(event, "null");
+                // TextArea has no "edited by the user" signal.
+                if signal == "onTextChanged" {
+                    body = format!("if (activeFocus) {{ {body} }}");
+                }
+                if signal == "onPressedChanged" {
+                    body = format!("if (!pressed) {{ {body} }}");
+                }
+                add_handler(obj, signal, &[], vec![body]);
+            }
+            (other, None) => diags.warning(
+                "js",
                 None,
-                format!("event binding targets `{id}`, which is not in Main.qml"),
+                format!("`{other}` listeners on `{id}` are not wired to QML yet"),
             ),
         }
     }
 }
 
-fn find_mut<'o>(obj: &'o mut Object, id: &str) -> Option<&'o mut Object> {
+/// The signal of a Qt Quick Control that is the DOM's `event` (dom-api.md §4).
+fn signal_for(type_name: &str, event: &str) -> Option<&'static str> {
+    Some(match (type_name, event) {
+        ("Button" | "CheckBox" | "RadioButton", "click") => "onClicked",
+        ("TextField", "input") => "onTextEdited",
+        ("TextArea", "input") => "onTextChanged",
+        ("TextField" | "TextArea", "change") => "onEditingFinished",
+        ("CheckBox" | "RadioButton", "input" | "change") => "onToggled",
+        ("ComboBox", "input" | "change") => "onActivated",
+        ("Slider", "input") => "onMoved",
+        ("Slider", "change") => "onPressedChanged",
+        ("SpinBox", "input" | "change") => "onValueModified",
+        _ => return None,
+    })
+}
+
+/// Appends to `name`'s handler: QML allows one per signal.
+pub(crate) fn add_handler(obj: &mut Object, name: &str, params: &[&str], body: Vec<String>) {
+    for member in &mut obj.members {
+        if let Member::Handler {
+            name: existing,
+            body: lines,
+            ..
+        } = member
+            && existing == name
+        {
+            lines.extend(body);
+            return;
+        }
+    }
+    obj.members.push(Member::Handler {
+        name: name.to_owned(),
+        params: params.iter().map(|p| (*p).to_owned()).collect(),
+        body,
+    });
+}
+
+pub(crate) fn find_mut<'o>(obj: &'o mut Object, id: &str) -> Option<&'o mut Object> {
     if obj.id.as_deref() == Some(id) {
         return Some(obj);
     }

@@ -4,6 +4,7 @@
 //! own submodule. Table containers have no emitter yet and are laid out as
 //! block flow, with a diagnostic.
 
+mod controls;
 mod decoration;
 mod flex;
 mod flow;
@@ -18,8 +19,8 @@ mod tests;
 use std::collections::{BTreeMap, HashSet};
 
 use h2q_css::{
-    ComputedStyle, Display, Float, LengthAuto, Overflow, Position, Size, TextDecorationLine,
-    Visibility,
+    ComputedStyle, Display, Float, LengthAuto, Overflow, Position, Size, StyleMap,
+    TextDecorationLine, Visibility,
 };
 use h2q_dom::{Document, NodeId};
 use h2q_js::TargetKind;
@@ -35,6 +36,8 @@ use units::{ROOT_ID, color, number};
 const FLICKABLE_ID: &str = "flickable";
 const PAGE_ID: &str = "page";
 
+pub(crate) use controls::Form;
+
 /// A converted element scripts can address.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Target {
@@ -44,12 +47,18 @@ pub(crate) struct Target {
 
 pub(crate) struct Emitter<'a, 'd> {
     doc: &'a Document,
+    styles: &'a StyleMap,
     options: &'a Options,
     diags: &'d mut Diagnostics,
     ids: Ids,
     /// Elements scripts refer to: they get ids and keep a `Text` to write to.
     wanted: &'a HashSet<NodeId>,
     pub targets: BTreeMap<NodeId, Target>,
+    /// Forms with controls, by `<form>` node.
+    pub forms: BTreeMap<NodeId, controls::Form>,
+    control_ids: BTreeMap<NodeId, String>,
+    radio_groups: controls::RadioGroups,
+    tapped_labels: HashSet<NodeId>,
     /// The element whose background became the window's (CSS Backgrounds 3
     /// §2.11.2); it is not painted again.
     canvas_node: Option<NodeId>,
@@ -59,6 +68,7 @@ pub(crate) struct Emitter<'a, 'd> {
 impl<'a, 'd> Emitter<'a, 'd> {
     pub(crate) fn new(
         doc: &'a Document,
+        styles: &'a StyleMap,
         options: &'a Options,
         diags: &'d mut Diagnostics,
         wanted: &'a HashSet<NodeId>,
@@ -69,11 +79,16 @@ impl<'a, 'd> Emitter<'a, 'd> {
         }
         Self {
             doc,
+            styles,
             options,
             diags,
             ids,
             wanted,
             targets: BTreeMap::new(),
+            forms: BTreeMap::new(),
+            control_ids: BTreeMap::new(),
+            radio_groups: BTreeMap::new(),
+            tapped_labels: HashSet::new(),
             canvas_node: None,
             root_node: None,
         }
@@ -197,6 +212,11 @@ impl<'a, 'd> Emitter<'a, 'd> {
         }
         flickable.set("contentHeight", Value::expr(content_height));
         root.push_child(flickable);
+        for group in self.radio_groups.values() {
+            root.push_child(Object::new("ButtonGroup").with_id(group.clone()));
+        }
+        self.finish_resets(&mut root);
+        self.report_inline_labels();
         root
     }
 
@@ -222,10 +242,22 @@ impl<'a, 'd> Emitter<'a, 'd> {
         let line = b.node.and_then(|n| node_line(self.doc, n));
         match b.kind {
             BoxKind::Block | BoxKind::Flex | BoxKind::Grid => {}
-            BoxKind::Replaced => return self.replaced(b, line),
+            BoxKind::Replaced => {
+                if let Some(node) = b.node
+                    && let Some(control) = controls::classify(self.doc, node)
+                {
+                    return self.control(b, node, control, line);
+                }
+                return self.replaced(b, line);
+            }
             BoxKind::Table => self.unsupported_layout(b, line),
         }
         self.out_of_flow(b, line);
+        if let Some(node) = b.node
+            && let Some((legend, rest)) = fieldset_parts(self.doc, b)
+        {
+            return self.fieldset(b, node, legend, rest, inherited, line);
+        }
         let decoration = TextDecorationLine {
             underline: inherited.underline || style.text_decoration_line.underline,
             overline: inherited.overline || style.text_decoration_line.overline,
@@ -347,6 +379,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 );
             }
         }
+        self.label_tap(&mut obj, b.node);
         self.visibility(&mut obj, style);
         Emitted {
             obj,
@@ -508,6 +541,26 @@ fn is_unmoved(style: &ComputedStyle) -> bool {
 }
 
 /// A readable base for a generated id: the first class, else the tag.
+/// The first child `<legend>` of a `<fieldset>` and the boxes after it. A
+/// legend later in the fieldset is not "the" legend, so it stays a block.
+fn fieldset_parts<'b, 'l>(
+    doc: &Document,
+    b: &'b LayoutBox<'l>,
+) -> Option<(&'b LayoutBox<'l>, &'b [LayoutBox<'l>])> {
+    let is = |n: Option<NodeId>, name: &str| {
+        n.and_then(|n| doc.element(n))
+            .is_some_and(|e| e.is_html() && e.local_name() == name)
+    };
+    if !is(b.node, "fieldset") {
+        return None;
+    }
+    let Content::Blocks(children) = &b.content else {
+        return None;
+    };
+    let (first, rest) = children.split_first()?;
+    is(first.node, "legend").then_some((first, rest))
+}
+
 fn hint(doc: &Document, b: &LayoutBox<'_>) -> String {
     let element = b.node.and_then(|n| doc.element(n));
     element
