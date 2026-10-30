@@ -869,7 +869,7 @@ impl<'a> Emitter<'a, '_> {
             .and_then(|e| e.id())
             .map(str::to_owned);
         let id = match (&html_id, wanted) {
-            (Some(id), _) => self.ids.claim(id),
+            (Some(id), _) => self.claim_html_id(id),
             (None, true) => self.ids.claim(&hint(self.doc, b)),
             (None, false) => return,
         };

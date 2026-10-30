@@ -88,6 +88,7 @@ impl Emitter<'_, '_> {
             },
         };
         self.markup(items, &state, &mut markup);
+        let fragments = markup.styled.contains("<a href=\"#");
 
         if markup.rich {
             text.set("text", Value::String(markup.styled));
@@ -107,23 +108,20 @@ impl Emitter<'_, '_> {
                         .to_owned(),
                 );
             }
-            text.members.push(Member::Handler {
-                name: "onLinkActivated".to_owned(),
-                params: vec!["link".to_owned()],
-                body: vec!["Qt.openUrlExternally(link)".to_owned()],
-            });
+            self.link_handler(&mut text, fragments);
         }
         if let Some((_, href)) = markup.bare_link {
             let mut tap = Object::new("TapHandler");
+            let follow = self.follow(&href);
             tap.members.push(Member::Handler {
                 name: "onTapped".to_owned(),
                 params: Vec::new(),
-                body: vec![format!(
-                    "Qt.openUrlExternally({})",
-                    super::controls::js_string(&href)
-                )],
+                body: vec![follow],
             });
             text.push_child(tap);
+            let mut hover = Object::new("HoverHandler");
+            hover.set("cursorShape", Value::expr("Qt.PointingHandCursor"));
+            text.push_child(hover);
         }
         text
     }

@@ -17,6 +17,18 @@ ApplicationWindow {
     width: 1280
     height: 800
 
+    function scrollToFragment(link) {
+        const name = decodeURIComponent(link.slice(1));
+        const targets = {};
+        const target = targets[name];
+        if (target) {
+            const y = target.mapToItem(flickable.contentItem, 0, 0).y;
+            flickable.contentY = Math.max(0, Math.min(y, flickable.contentHeight - flickable.height));
+        } else if (name === "" || name.toLowerCase() === "top") {
+            flickable.contentY = 0;
+        }
+    }
+
     Flickable {
         id: flickable
         anchors.fill: parent
@@ -168,7 +180,14 @@ ApplicationWindow {
                             Layout.topMargin: 14
 
                             onLinkActivated: (link) => {
-                                Qt.openUrlExternally(link)
+                                if (link.startsWith("#"))
+                                    root.scrollToFragment(link);
+                                else
+                                    Qt.openUrlExternally(link);
+                            }
+
+                            HoverHandler {
+                                cursorShape: parent.linkAt(point.position.x, point.position.y) !== "" ? Qt.PointingHandCursor : Qt.ArrowCursor
                             }
                         }
 

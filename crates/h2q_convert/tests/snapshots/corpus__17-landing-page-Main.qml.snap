@@ -17,6 +17,21 @@ ApplicationWindow {
     width: 1280
     height: 800
 
+    function scrollToFragment(link) {
+        const name = decodeURIComponent(link.slice(1));
+        const targets = {
+            "customers": customers,
+            "features": features
+        };
+        const target = targets[name];
+        if (target) {
+            const y = target.mapToItem(flickable.contentItem, 0, 0).y;
+            flickable.contentY = Math.max(0, Math.min(y, flickable.contentHeight - flickable.height));
+        } else if (name === "" || name.toLowerCase() === "top") {
+            flickable.contentY = 0;
+        }
+    }
+
     Flickable {
         id: flickable
         anchors.fill: parent
@@ -134,7 +149,11 @@ ApplicationWindow {
                                             Layout.fillHeight: true
 
                                             TapHandler {
-                                                onTapped: Qt.openUrlExternally("#features")
+                                                onTapped: root.scrollToFragment("#features")
+                                            }
+
+                                            HoverHandler {
+                                                cursorShape: Qt.PointingHandCursor
                                             }
                                         }
 
@@ -157,7 +176,11 @@ ApplicationWindow {
                                             Layout.leftMargin: 32
 
                                             TapHandler {
-                                                onTapped: Qt.openUrlExternally("#pricing")
+                                                onTapped: root.scrollToFragment("#pricing")
+                                            }
+
+                                            HoverHandler {
+                                                cursorShape: Qt.PointingHandCursor
                                             }
                                         }
 
@@ -180,7 +203,11 @@ ApplicationWindow {
                                             Layout.leftMargin: 32
 
                                             TapHandler {
-                                                onTapped: Qt.openUrlExternally("#customers")
+                                                onTapped: root.scrollToFragment("#customers")
+                                            }
+
+                                            HoverHandler {
+                                                cursorShape: Qt.PointingHandCursor
                                             }
                                         }
 
@@ -203,7 +230,11 @@ ApplicationWindow {
                                             Layout.leftMargin: 32
 
                                             TapHandler {
-                                                onTapped: Qt.openUrlExternally("#docs")
+                                                onTapped: root.scrollToFragment("#docs")
+                                            }
+
+                                            HoverHandler {
+                                                cursorShape: Qt.PointingHandCursor
                                             }
                                         }
 
@@ -1816,7 +1847,11 @@ ApplicationWindow {
                                                 Layout.fillHeight: true
 
                                                 TapHandler {
-                                                    onTapped: Qt.openUrlExternally("#features")
+                                                    onTapped: root.scrollToFragment("#features")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
 
@@ -1837,7 +1872,11 @@ ApplicationWindow {
                                                 Layout.fillHeight: true
 
                                                 TapHandler {
-                                                    onTapped: Qt.openUrlExternally("#pricing")
+                                                    onTapped: root.scrollToFragment("#pricing")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
 
@@ -1858,7 +1897,11 @@ ApplicationWindow {
                                                 Layout.fillHeight: true
 
                                                 TapHandler {
-                                                    onTapped: Qt.openUrlExternally("#changelog")
+                                                    onTapped: root.scrollToFragment("#changelog")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
 
@@ -1879,7 +1922,11 @@ ApplicationWindow {
                                                 Layout.fillHeight: true
 
                                                 TapHandler {
-                                                    onTapped: Qt.openUrlExternally("#security")
+                                                    onTapped: root.scrollToFragment("#security")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
                                         }
@@ -1944,7 +1991,11 @@ ApplicationWindow {
                                                 Layout.fillHeight: true
 
                                                 TapHandler {
-                                                    onTapped: Qt.openUrlExternally("#about")
+                                                    onTapped: root.scrollToFragment("#about")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
 
@@ -1965,7 +2016,11 @@ ApplicationWindow {
                                                 Layout.fillHeight: true
 
                                                 TapHandler {
-                                                    onTapped: Qt.openUrlExternally("#careers")
+                                                    onTapped: root.scrollToFragment("#careers")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
 
@@ -1986,7 +2041,11 @@ ApplicationWindow {
                                                 Layout.fillHeight: true
 
                                                 TapHandler {
-                                                    onTapped: Qt.openUrlExternally("#blog")
+                                                    onTapped: root.scrollToFragment("#blog")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
 
@@ -2007,7 +2066,11 @@ ApplicationWindow {
                                                 Layout.fillHeight: true
 
                                                 TapHandler {
-                                                    onTapped: Qt.openUrlExternally("#press")
+                                                    onTapped: root.scrollToFragment("#press")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
                                         }
@@ -2071,7 +2134,11 @@ ApplicationWindow {
                                                 Layout.fillHeight: true
 
                                                 TapHandler {
-                                                    onTapped: Qt.openUrlExternally("#docs")
+                                                    onTapped: root.scrollToFragment("#docs")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
 
@@ -2092,7 +2159,11 @@ ApplicationWindow {
                                                 Layout.fillHeight: true
 
                                                 TapHandler {
-                                                    onTapped: Qt.openUrlExternally("#guides")
+                                                    onTapped: root.scrollToFragment("#guides")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
 
@@ -2113,7 +2184,11 @@ ApplicationWindow {
                                                 Layout.fillHeight: true
 
                                                 TapHandler {
-                                                    onTapped: Qt.openUrlExternally("#status")
+                                                    onTapped: root.scrollToFragment("#status")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
 
@@ -2134,7 +2209,11 @@ ApplicationWindow {
                                                 Layout.fillHeight: true
 
                                                 TapHandler {
-                                                    onTapped: Qt.openUrlExternally("#community")
+                                                    onTapped: root.scrollToFragment("#community")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
                                             }
                                         }

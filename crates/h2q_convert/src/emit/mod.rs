@@ -11,6 +11,7 @@ mod flow;
 mod grid;
 mod ids;
 mod inline;
+mod links;
 mod lists;
 mod table;
 mod text;
@@ -82,6 +83,10 @@ pub(crate) struct Emitter<'a, 'd> {
     /// The plain colour painted behind the box being emitted, when it is
     /// one (a gradient or image makes it unknown).
     backdrop: Option<h2q_css::Rgba>,
+    /// The QML id of each element with an HTML id, for fragment links.
+    fragments: BTreeMap<String, String>,
+    /// A link on the page goes to a fragment (`href="#…"`).
+    fragment_links: bool,
     /// QML modules the emitted objects need beyond the default imports.
     pub imports: std::collections::BTreeSet<&'static str>,
 }
@@ -117,6 +122,8 @@ impl<'a, 'd> Emitter<'a, 'd> {
             percent_height_base: None,
             fixed: Vec::new(),
             backdrop: None,
+            fragments: BTreeMap::new(),
+            fragment_links: false,
             imports: std::collections::BTreeSet::new(),
         }
     }
@@ -251,6 +258,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
         }
         if self.has_table {
             Self::table_solver(&mut root);
+        }
+        if self.fragment_links {
+            self.scroll_to_fragment(&mut root);
         }
         self.finish_resets(&mut root);
         self.report_inline_labels();
@@ -411,7 +421,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             .and_then(|e| e.id())
             .map(str::to_owned);
         let outer_id = match (&html_id, wanted) {
-            (Some(id), _) => Some(self.ids.claim(id)),
+            (Some(id), _) => Some(self.claim_html_id(id)),
             (None, true) => Some(self.ids.claim(&hint(self.doc, b))),
             (None, false) => None,
         };
@@ -523,7 +533,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             obj.set("implicitHeight", number(h));
         }
         if let Some(id) = element.and_then(|e| e.id()) {
-            obj.id = Some(self.ids.claim(id));
+            obj.id = Some(self.claim_html_id(id));
             if b.node.is_some_and(|n| self.wanted.contains(&n)) {
                 // Not a script target (it has none of the control's
                 // properties), but the runtime's `getElementById` finds it.

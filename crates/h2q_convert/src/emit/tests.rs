@@ -1138,7 +1138,7 @@ fn a_text_that_is_one_link_without_underline_is_not_underlined() {
     );
     assert!(!nav.contains("<a "), "{nav}");
     assert!(
-        nav.contains("TapHandler {") && nav.contains("Qt.openUrlExternally(\"#f\")"),
+        nav.contains("TapHandler {") && nav.contains("root.scrollToFragment(\"#f\")"),
         "{nav}"
     );
     // A link inside other text stays a StyledText link, underlined.
@@ -1256,4 +1256,54 @@ fn rounded_clip_over_a_gradient_stays_square_with_a_diagnostic() {
             .any(|d| d.contains("rounded") && d.contains("square")),
         "{diags:?}"
     );
+}
+
+#[test]
+fn a_fragment_link_scrolls_the_page_to_its_target() {
+    // Chromium: following `#b` scrolls the border-box top of #b to the top
+    // of the viewport, clamped to the page's end; `#` and `#top` scroll to
+    // the top; an unknown fragment does nothing. Other links open outside.
+    let (qml, _) = convert(&page(
+        ".n a{text-decoration:none}",
+        "<ul class=n><li><a href=\"#b\">B</a></li><li><a href=\"https://x.org/\">X</a></li></ul>\
+         <p>See <a href=\"#b\">b</a> or <a href=\"https://x.org/\">x</a>.</p>\
+         <h2 id=b>B</h2>",
+    ));
+    let f = qml
+        .find("function scrollToFragment(")
+        .map(|i| &qml[i..])
+        .expect("scrollToFragment on the root");
+    assert!(f.contains("\"b\": b"), "{f}");
+    assert!(
+        f.contains("mapToItem(flickable.contentItem, 0, 0).y"),
+        "{f}"
+    );
+    assert!(
+        f.contains("flickable.contentHeight - flickable.height"),
+        "{f}"
+    );
+    assert!(f.contains("\"top\""), "{f}");
+
+    let bare = object_after(&qml, "<li>");
+    assert!(bare.contains("root.scrollToFragment(\"#b\")"), "{bare}");
+    assert!(!bare.contains("openUrlExternally"), "{bare}");
+    assert!(
+        bare.contains("cursorShape: Qt.PointingHandCursor"),
+        "{bare}"
+    );
+    let external = qml.find("Qt.openUrlExternally(\"https://x.org/\")");
+    assert!(external.is_some(), "{qml}");
+
+    let p = object_after(&qml, "<p>");
+    assert!(p.contains("link.startsWith(\"#\")"), "{p}");
+    assert!(p.contains("root.scrollToFragment(link)"), "{p}");
+    assert!(p.contains("Qt.openUrlExternally(link)"), "{p}");
+    assert!(p.contains("linkAt("), "a pointing hand over links: {p}");
+}
+
+#[test]
+fn a_page_without_fragment_links_has_no_scroll_function() {
+    let (qml, _) = convert(&page("", "<p><a href=\"https://x.org/\">x</a> y</p>"));
+    assert!(!qml.contains("scrollToFragment"), "{qml}");
+    assert!(qml.contains("onLinkActivated"), "{qml}");
 }

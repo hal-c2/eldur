@@ -408,6 +408,9 @@ impl Emitter<'_, '_> {
         if outer.id.is_none() {
             outer.id = Some(id.clone());
         }
+        if let Some(html_id) = element.and_then(|e| e.id()) {
+            self.fragment_target(html_id, &id);
+        }
         if wanted {
             if let Some(html_id) = element.and_then(|e| e.id()) {
                 outer.set("objectName", Value::string(html_id));
@@ -1173,7 +1176,10 @@ impl Emitter<'_, '_> {
             .element(node)
             .and_then(|e| e.id())
             .map(str::to_owned);
-        let id = self.ids.claim(html_id.as_deref().unwrap_or("fieldset"));
+        let id = match html_id.as_deref() {
+            Some(html_id) => self.claim_html_id(html_id),
+            None => self.ids.claim("fieldset"),
+        };
         let mut obj = Object::new("GroupBox").with_id(id.clone());
         let deco = self.decoration(style, true, line);
         let insets = deco.insets;
