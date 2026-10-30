@@ -59,7 +59,7 @@ use self::{
         parse_grid_auto_flow, parse_grid_auto_tracks, parse_grid_line, parse_grid_template_areas,
         parse_grid_template_tracks,
     },
-    length::{UnitContext, parse_integer_cvs},
+    length::{UnitContext, parse_integer_cvs, parse_length_auto_cvs, parse_length_cvs},
     text::{
         compose_white_space, decompose_white_space, parse_content, parse_cursor, parse_direction,
         parse_list_style_image, parse_list_style_position, parse_list_style_type,
@@ -221,6 +221,8 @@ pub(crate) enum Longhand {
     TextDecorationLine,
     TextDecorationStyle,
     TextDecorationColor,
+    TextDecorationThickness,
+    TextUnderlineOffset,
     TextOverflow,
     WebkitLineClamp,
     WhiteSpaceCollapse,
@@ -316,6 +318,8 @@ pub(crate) fn kind(name: &str) -> PropertyKind {
         "text-decoration-line" => PropertyKind::Longhand(Longhand::TextDecorationLine),
         "text-decoration-style" => PropertyKind::Longhand(Longhand::TextDecorationStyle),
         "text-decoration-color" => PropertyKind::Longhand(Longhand::TextDecorationColor),
+        "text-decoration-thickness" => PropertyKind::Longhand(Longhand::TextDecorationThickness),
+        "text-underline-offset" => PropertyKind::Longhand(Longhand::TextUnderlineOffset),
         "text-overflow" => PropertyKind::Longhand(Longhand::TextOverflow),
         "-webkit-line-clamp" | "line-clamp" => PropertyKind::Longhand(Longhand::WebkitLineClamp),
         "white-space-collapse" => PropertyKind::Longhand(Longhand::WhiteSpaceCollapse),
@@ -1179,6 +1183,12 @@ pub(crate) fn compute(
         Longhand::TextDecorationColor => {
             style.text_decoration_color = parse_text_decoration_color(cvs, style.color)?;
         }
+        Longhand::TextDecorationThickness => {
+            parse_text_decoration_thickness(cvs, &uctx_pct)?;
+        }
+        Longhand::TextUnderlineOffset => {
+            let _ = parse_length_auto_cvs(cvs, &uctx_pct, false)?;
+        }
         Longhand::TextOverflow => {
             style.text_overflow = parse_text_overflow(cvs)?;
         }
@@ -1547,6 +1557,7 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
         Longhand::TextDecorationLine => dst.text_decoration_line = src.text_decoration_line,
         Longhand::TextDecorationStyle => dst.text_decoration_style = src.text_decoration_style,
         Longhand::TextDecorationColor => dst.text_decoration_color = src.text_decoration_color,
+        Longhand::TextDecorationThickness | Longhand::TextUnderlineOffset => {}
         Longhand::TextOverflow => dst.text_overflow = src.text_overflow,
         Longhand::WebkitLineClamp => {}
         Longhand::WhiteSpaceCollapse => {
@@ -1646,6 +1657,18 @@ fn parse_clear(cvs: &[swc_css_ast::ComponentValue]) -> Result<bool, String> {
         "left" | "right" | "both" | "inline-start" | "inline-end" => Ok(true),
         _ => Err(format!("invalid clear keyword '{id}'")),
     }
+}
+
+fn parse_text_decoration_thickness(
+    cvs: &[swc_css_ast::ComponentValue],
+    uctx: &UnitContext,
+) -> Result<(), String> {
+    let mut cur = cursor::Cursor::new(cvs);
+    if cur.eat_ident_eq("auto") || cur.eat_ident_eq("from-font") {
+        return cur.expect_eof();
+    }
+    let _ = parse_length_cvs(cvs, uctx, false)?;
+    Ok(())
 }
 
 fn parse_line_clamp(cvs: &[swc_css_ast::ComponentValue]) -> Result<Option<u32>, String> {
