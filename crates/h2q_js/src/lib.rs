@@ -87,6 +87,66 @@ pub struct Analysis {
     pub writes: Vec<(DomQuery, String)>,
     /// Syntax errors and unsupported-feature warnings discovered during analysis.
     pub diagnostics: Vec<Diagnostic>,
+    /// Every class write site, in source order (`docs/design/dynamic-styles.md` §9.1).
+    pub class_writes: Vec<ClassWrite>,
+    /// Every `document.createElement("<literal>")` site, in source order.
+    pub created: Vec<CreatedElement>,
+    /// Scripts reach elements by runtime selectors, traversal, `matches`/`closest`,
+    /// event targets, or mutate the DOM: every element needs `h2qTag`/`h2qClasses`.
+    pub runtime_dom: bool,
+}
+
+/// A created element (`document.createElement` call site) as analysis predicts it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct CreatedId(pub u32);
+
+/// An element a script refers to.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ElementRef {
+    /// A static element found by a literal query.
+    Query(DomQuery),
+    /// An element created by script at a known site.
+    Created(CreatedId),
+    /// `event.target`, `this`, untracked variables.
+    Unknown,
+}
+
+/// Classes a script adds, removes or assigns.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ClassWrite {
+    /// The element whose classes change.
+    pub target: ElementRef,
+    /// Literal class names involved (each may end up present or absent), sorted.
+    pub names: Vec<String>,
+    /// Part of the value is not a literal (`'chat ' + role`, `` `toast ${t}` ``, a variable).
+    pub open: bool,
+    /// `className =` / `setAttribute("class")`: replaces the whole set.
+    pub assigns: bool,
+    /// Originating [`ScriptInput::name`].
+    pub source: String,
+    /// 1-based line in the HTML.
+    pub line: Option<u32>,
+}
+
+/// An element a script creates, with what it is like when inserted.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CreatedElement {
+    /// The call site's id; [`ElementRef::Created`] refers to it.
+    pub id: CreatedId,
+    /// Lower-case tag name.
+    pub tag: String,
+    /// `<input>` type set by the script, if literal.
+    pub input_type: Option<String>,
+    /// Every complete class set the element can have when inserted (sorted, deduplicated).
+    pub class_sets: Vec<Vec<String>>,
+    /// Part of some class value is not a literal.
+    pub open_classes: bool,
+    /// Where it is inserted.
+    pub parents: Vec<ElementRef>,
+    /// Originating [`ScriptInput::name`].
+    pub source: String,
+    /// 1-based line in the HTML of the `createElement` call.
+    pub line: Option<u32>,
 }
 
 /// What the converter made of an element.

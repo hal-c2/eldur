@@ -1,4 +1,7 @@
-use h2q_js::{Analysis, DomQuery, ElementKey, ScriptInput, ScriptKind, Severity, analyze};
+use h2q_js::{
+    Analysis, ClassWrite, CreatedElement, CreatedId, DomQuery, ElementKey, ElementRef, ScriptInput,
+    ScriptKind, Severity, analyze,
+};
 
 fn classic(name: &str, source: &str) -> ScriptInput {
     ScriptInput {
@@ -87,7 +90,25 @@ fn tracks_listeners_and_property_writes_across_variables_functions_and_loops() {
         mutates_dom,
         writes,
         diagnostics,
+        class_writes,
+        created,
+        runtime_dom,
     } = analyze(&[s1, s2]);
+
+    assert!(created.is_empty(), "{created:?}");
+    // `toggle` without a force argument depends on the initial classes.
+    assert!(runtime_dom);
+    let saved = ElementRef::Query(DomQuery::ById("save".to_string()));
+    assert_eq!(
+        class_writes
+            .iter()
+            .map(|w| (&w.target, w.names.clone(), w.open, w.assigns))
+            .collect::<Vec<_>>(),
+        vec![
+            (&saved, names(&["is-saved"]), false, false),
+            (&saved, names(&["btn", "primary"]), false, true),
+        ]
+    );
 
     assert!(diagnostics.is_empty(), "{diagnostics:?}");
     assert!(!mutates_dom);
@@ -532,4 +553,532 @@ fn ignores_shadowed_window_and_supported_window_apis() {
         "expected no diagnostics for shadowed window or supported window APIs, got: {:#?}",
         res.diagnostics
     );
+}
+
+// ---------------------------------------------------------------------------
+// Dynamic styles (docs/design/dynamic-styles.md §9.1): class writes, created
+// elements and `runtime_dom`.
+// ---------------------------------------------------------------------------
+
+fn names(list: &[&str]) -> Vec<String> {
+    list.iter().map(ToString::to_string).collect()
+}
+
+fn sets(list: &[&[&str]]) -> Vec<Vec<String>> {
+    list.iter().map(|s| names(s)).collect()
+}
+
+fn by_id(id: &str) -> ElementRef {
+    ElementRef::Query(DomQuery::ById(id.to_string()))
+}
+
+/// The inline `<script>` elements of a corpus page, as the converter extracts
+/// them: source after the start tag, `line_offset` the line of that tag.
+fn corpus_scripts(case: &str) -> Vec<ScriptInput> {
+    let path = format!(
+        "{}/../../tests/corpus/{case}/index.html",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let html = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
+    let mut out = Vec::new();
+    let mut rest = html.as_str();
+    let mut consumed = 0usize;
+    while let Some(start) = rest.find("<script>") {
+        let body_start = start + "<script>".len();
+        let end = rest[body_start..]
+            .find("</script>")
+            .expect("unclosed script")
+            + body_start;
+        let line = html[..consumed + start].matches('\n').count() + 1;
+        out.push(ScriptInput {
+            source: rest[body_start..end].to_string(),
+            name: format!("inline script #{}", out.len() + 1),
+            kind: ScriptKind::Classic,
+            line_offset: u32::try_from(line).expect("line fits u32"),
+        });
+        consumed += end;
+        rest = &rest[end..];
+    }
+    out
+}
+
+fn line_of(case: &str, needle: &str) -> u32 {
+    let path = format!(
+        "{}/../../tests/corpus/{case}/index.html",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let html = std::fs::read_to_string(path).expect("corpus page");
+    let at = html.find(needle).expect("needle in page");
+    u32::try_from(html[..at].matches('\n').count() + 1).expect("line fits u32")
+}
+
+fn write_summary(w: &ClassWrite) -> (ElementRef, Vec<String>, bool, bool) {
+    (w.target.clone(), w.names.clone(), w.open, w.assigns)
+}
+
+#[test]
+fn corpus_12_hover_states_has_no_scripts_and_no_runtime_dom() {
+    let scripts = corpus_scripts("12-hover-states");
+    assert!(scripts.is_empty());
+    let res = analyze(&scripts);
+    assert!(res.class_writes.is_empty());
+    assert!(res.created.is_empty());
+    assert!(!res.runtime_dom);
+}
+
+#[test]
+fn corpus_15_counter_toggles_negative_on_count() {
+    let case = "15-script-counter";
+    let res = analyze(&corpus_scripts(case));
+    assert!(res.diagnostics.is_empty(), "{:?}", res.diagnostics);
+    assert_eq!(
+        res.class_writes,
+        vec![ClassWrite {
+            target: by_id("count"),
+            names: names(&["negative"]),
+            open: false,
+            assigns: false,
+            source: "inline script #1".to_string(),
+            line: Some(line_of(case, "count.classList.toggle")),
+        }]
+    );
+    assert!(res.created.is_empty());
+    // The input and change listeners read `event.target`.
+    assert!(res.runtime_dom);
+    // The pre-existing summary is unchanged.
+    assert!(
+        res.writes
+            .contains(&(DomQuery::ById("count".to_string()), "classList".to_string()))
+    );
+}
+
+#[test]
+fn corpus_16_todo_predicts_every_created_element() {
+    let case = "16-script-todo";
+    let res = analyze(&corpus_scripts(case));
+    assert!(res.diagnostics.is_empty(), "{:?}", res.diagnostics);
+    assert!(res.mutates_dom);
+    assert!(res.runtime_dom);
+
+    let li = CreatedId(0);
+    let src = "inline script #1".to_string();
+    assert_eq!(
+        res.created,
+        vec![
+            CreatedElement {
+                id: li,
+                tag: "li".to_string(),
+                input_type: None,
+                class_sets: sets(&[&["done", "todo-item"], &["todo-item"]]),
+                open_classes: false,
+                parents: vec![by_id("todo-list")],
+                source: src.clone(),
+                line: Some(line_of(case, "document.createElement('li')")),
+            },
+            CreatedElement {
+                id: CreatedId(1),
+                tag: "input".to_string(),
+                input_type: Some("checkbox".to_string()),
+                class_sets: sets(&[&[]]),
+                open_classes: false,
+                parents: vec![ElementRef::Created(li)],
+                source: src.clone(),
+                line: Some(line_of(case, "document.createElement('input')")),
+            },
+            CreatedElement {
+                id: CreatedId(2),
+                tag: "span".to_string(),
+                input_type: None,
+                class_sets: sets(&[&["todo-text"]]),
+                open_classes: false,
+                parents: vec![ElementRef::Created(li)],
+                source: src.clone(),
+                line: Some(line_of(case, "document.createElement('span')")),
+            },
+            CreatedElement {
+                id: CreatedId(3),
+                tag: "button".to_string(),
+                input_type: None,
+                class_sets: sets(&[&["delete"]]),
+                open_classes: false,
+                parents: vec![ElementRef::Created(li)],
+                source: src.clone(),
+                line: Some(line_of(case, "document.createElement('button')")),
+            },
+        ]
+    );
+    assert_eq!(
+        res.class_writes
+            .iter()
+            .map(write_summary)
+            .collect::<Vec<_>>(),
+        vec![
+            (
+                ElementRef::Created(li),
+                names(&["done", "todo-item"]),
+                false,
+                true
+            ),
+            (
+                ElementRef::Created(CreatedId(2)),
+                names(&["todo-text"]),
+                false,
+                true
+            ),
+            (
+                ElementRef::Created(CreatedId(3)),
+                names(&["delete"]),
+                false,
+                true
+            ),
+        ]
+    );
+    assert_eq!(
+        res.class_writes[0].line,
+        Some(line_of(case, "li.className ="))
+    );
+}
+
+#[test]
+fn class_values_enumerate_literals_and_mark_open_parts() {
+    let res = analyze(&[classic(
+        "values.js",
+        r#"
+        const el = document.getElementById("el");
+        const base = "card";
+        let later = "x";
+        later = pick();
+        el.className = "a  b";
+        el.className = "item" + (on ? " on" : "");
+        el.className = `tab ${active ? "active" : "idle"}`;
+        el.className = "chat-message " + role;
+        el.className = `toast ${type}`;
+        el.className = "btn-" + kind;
+        el.className = base + " big";
+        el.className = later;
+        el.setAttribute("class", flag ? "p" : "q r");
+        el.removeAttribute("class");
+        el.className = (on && "lit") || "dflt";
+        "#,
+    )]);
+    let el = by_id("el");
+    assert_eq!(
+        res.class_writes
+            .iter()
+            .map(write_summary)
+            .collect::<Vec<_>>(),
+        vec![
+            (el.clone(), names(&["a", "b"]), false, true),
+            (el.clone(), names(&["item", "on"]), false, true),
+            (el.clone(), names(&["active", "idle", "tab"]), false, true),
+            (el.clone(), names(&["chat-message"]), true, true),
+            (el.clone(), names(&["toast"]), true, true),
+            // `btn-` is only part of a name.
+            (el.clone(), names(&[]), true, true),
+            (el.clone(), names(&["big", "card"]), false, true),
+            // Reassigned: its value is not known.
+            (el.clone(), names(&[]), true, true),
+            (el.clone(), names(&["p", "q", "r"]), false, true),
+            (el.clone(), names(&[]), false, true),
+            // `on && "lit"` can be `false`.
+            (el, names(&["dflt", "lit"]), true, true),
+        ]
+    );
+    assert!(res.created.is_empty());
+}
+
+#[test]
+fn class_list_methods_record_each_name() {
+    let res = analyze(&[classic(
+        "classlist.js",
+        r#"
+        const el = document.querySelector(".menu");
+        el.classList.add("open", "wide");
+        el.classList.remove("closed");
+        el.classList.replace("old", "new");
+        el.classList.toggle("dark", true);
+        el.classList.toggle("is-" + state, x);
+        el.classList.add(...extra);
+        el.classList.contains("open");
+        "#,
+    )]);
+    let el = ElementRef::Query(DomQuery::Selector(".menu".to_string()));
+    assert_eq!(
+        res.class_writes
+            .iter()
+            .map(write_summary)
+            .collect::<Vec<_>>(),
+        vec![
+            (el.clone(), names(&["open", "wide"]), false, false),
+            (el.clone(), names(&["closed"]), false, false),
+            (el.clone(), names(&["new", "old"]), false, false),
+            (el.clone(), names(&["dark"]), false, false),
+            (el.clone(), names(&[]), true, false),
+            (el, names(&[]), true, false),
+        ]
+    );
+}
+
+#[test]
+fn class_write_targets_follow_locals_returns_and_foreach_parameters() {
+    let res = analyze(&[classic(
+        "targets.js",
+        r#"
+        function panel() { return document.getElementById("panel"); }
+        const getTab = () => document.querySelector(".tab");
+        function twoLevels() { return panel(); }
+        function either(x) { return x ? document.getElementById("a") : document.getElementById("b"); }
+
+        panel().classList.add("open");
+        getTab().classList.add("current");
+        twoLevels().classList.add("deep");
+        either(1).classList.add("ab");
+
+        document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+        const items = document.querySelectorAll(".item");
+        items.forEach(function (it) { it.classList.add("seen"); });
+
+        document.addEventListener("click", function (event) {
+            event.target.classList.toggle("hit", true);
+            this.classList.add("clicked");
+        });
+        function style(node) { node.classList.add("styled"); }
+        let moving = document.getElementById("m");
+        moving = other();
+        moving.classList.add("moved");
+        "#,
+    )]);
+    assert_eq!(
+        res.class_writes
+            .iter()
+            .map(|w| (w.target.clone(), w.names.clone()))
+            .collect::<Vec<_>>(),
+        vec![
+            (by_id("panel"), names(&["open"])),
+            (
+                ElementRef::Query(DomQuery::Selector(".tab".to_string())),
+                names(&["current"])
+            ),
+            // Only one level of return is followed.
+            (ElementRef::Unknown, names(&["deep"])),
+            // Two different elements: never one of them.
+            (ElementRef::Unknown, names(&["ab"])),
+            (
+                ElementRef::Query(DomQuery::SelectorAll(".tab".to_string())),
+                names(&["active"])
+            ),
+            (
+                ElementRef::Query(DomQuery::SelectorAll(".item".to_string())),
+                names(&["seen"])
+            ),
+            (ElementRef::Unknown, names(&["hit"])),
+            (ElementRef::Unknown, names(&["clicked"])),
+            (ElementRef::Unknown, names(&["styled"])),
+            (ElementRef::Unknown, names(&["moved"])),
+        ]
+    );
+    assert!(res.runtime_dom);
+}
+
+#[test]
+fn created_elements_record_class_sets_type_and_parents() {
+    let res = analyze(&[classic(
+        "created.js",
+        r#"
+        const list = document.getElementById("list");
+        function toast(kind, urgent) {
+            const t = document.createElement("DIV");
+            t.className = `toast ${kind}`;
+            if (urgent) {
+                t.classList.add("urgent");
+            }
+            document.body.appendChild(t);
+            setTimeout(() => t.classList.add("show"), 10);
+            t.classList.remove("toast");
+            return t;
+        }
+        function field() {
+            const box = document.createElement("input");
+            box.setAttribute("type", "Range");
+            box.classList.add("slider");
+            box.classList.toggle("big", wide);
+            list.append("label", box);
+            list.prepend(box);
+            list.insertBefore(box, list.firstChild);
+            list.replaceChildren(box);
+            list.append(box);
+            mystery().appendChild(box);
+        }
+        const hr = document.createElement("hr");
+        hr.className = "rule";
+        // No force: flips, so a fresh element gains it.
+        hr.classList.toggle("thin");
+        list.insertAdjacentElement("beforeend", hr);
+        list.insertAdjacentElement("afterend", hr);
+        const kind = pickTag();
+        document.createElement(kind);
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        list.appendChild(document.createElement("p"));
+        "#,
+    )]);
+    let t = &res.created[0];
+    assert_eq!(t.tag, "div");
+    // Only the classes set before the first insertion; `show` comes later.
+    assert_eq!(t.class_sets, sets(&[&["toast"], &["toast", "urgent"]]));
+    assert!(t.open_classes);
+    assert_eq!(
+        t.parents,
+        vec![ElementRef::Query(DomQuery::Selector("body".to_string()))]
+    );
+
+    let b = &res.created[1];
+    assert_eq!(b.tag, "input");
+    assert_eq!(b.input_type, Some("range".to_string()));
+    assert_eq!(b.class_sets, sets(&[&["big", "slider"], &["slider"]]));
+    assert!(!b.open_classes);
+    assert_eq!(b.parents, vec![by_id("list"), ElementRef::Unknown]);
+
+    let hr = &res.created[2];
+    assert_eq!(hr.tag, "hr");
+    assert_eq!(hr.class_sets, sets(&[&["rule", "thin"]]));
+    assert_eq!(hr.parents, vec![by_id("list"), ElementRef::Unknown]);
+
+    let p = &res.created[3];
+    assert_eq!(p.tag, "p");
+    assert_eq!(p.class_sets, sets(&[&[]]));
+    assert_eq!(p.parents, vec![by_id("list")]);
+    // Non-literal tags and namespaced elements are not predicted.
+    assert_eq!(res.created.len(), 4);
+    assert_eq!(
+        res.created.iter().map(|c| c.id).collect::<Vec<_>>(),
+        vec![CreatedId(0), CreatedId(1), CreatedId(2), CreatedId(3)]
+    );
+
+    let toast_writes: Vec<_> = res
+        .class_writes
+        .iter()
+        .filter(|w| w.target == ElementRef::Created(CreatedId(0)))
+        .map(|w| (w.names.clone(), w.open, w.assigns))
+        .collect();
+    assert_eq!(
+        toast_writes,
+        vec![
+            (names(&["toast"]), true, true),
+            (names(&["urgent"]), false, false),
+            (names(&["show"]), false, false),
+            (names(&["toast"]), false, false),
+        ]
+    );
+    assert!(res.runtime_dom);
+}
+
+#[test]
+fn created_element_through_two_returns_is_not_attributed() {
+    let res = analyze(&[classic(
+        "returns.js",
+        r#"
+        function make() { return document.createElement("li"); }
+        function wrap() { return make(); }
+        document.getElementById("a").appendChild(make());
+        document.getElementById("b").appendChild(wrap());
+        "#,
+    )]);
+    assert_eq!(res.created.len(), 1);
+    assert_eq!(res.created[0].parents, vec![by_id("a")]);
+}
+
+#[test]
+fn created_element_with_unknown_class_value_is_open() {
+    let res = analyze(&[classic(
+        "opaque.js",
+        r#"
+        const row = document.createElement("tr");
+        row.className = severityClass;
+        document.getElementById("t").appendChild(row);
+        "#,
+    )]);
+    assert_eq!(res.created[0].class_sets, sets(&[&[]]));
+    assert!(res.created[0].open_classes);
+}
+
+#[test]
+fn runtime_dom_is_false_for_literal_queries_only() {
+    let res = analyze(&[classic(
+        "static.js",
+        r#"
+        const count = document.getElementById("count");
+        const all = document.querySelectorAll(".row");
+        let n = 0;
+        document.getElementById("inc").addEventListener("click", () => {
+            n += 1;
+            count.textContent = String(n);
+            count.classList.toggle("negative", n < 0);
+            all.forEach((r) => { r.hidden = n > 3; });
+        });
+        const config = { title: "x" };
+        console.log(config.title);
+        "#,
+    )]);
+    assert!(!res.runtime_dom);
+    assert!(!res.mutates_dom);
+}
+
+#[test]
+fn runtime_dom_is_set_by_each_dynamic_access() {
+    for snippet in [
+        r#"document.getElementById(name).hidden = true;"#,
+        r#"document.querySelector(sel);"#,
+        r#"document.getElementById("a").querySelector(".b");"#,
+        r#"document.getElementById("a").parentElement.hidden = true;"#,
+        r#"document.getElementById("a").children[0];"#,
+        r#"document.getElementById("a").nextElementSibling;"#,
+        r#"document.getElementById("a").closest(".card");"#,
+        r#"document.getElementById("a").matches(".on");"#,
+        r#"document.getElementById("a").tagName;"#,
+        r#"document.getElementById("a").classList.contains("on");"#,
+        r#"const c = document.getElementById("a").className;"#,
+        r#"document.activeElement.blur();"#,
+        r#"document.addEventListener("click", (e) => e.target.focus());"#,
+        r#"document.getElementById("a").onclick = function () { this.hidden = true; };"#,
+        r#"document.createElement("div");"#,
+        r#"document.getElementById("a").remove();"#,
+    ] {
+        let res = analyze(&[classic("snippet.js", snippet)]);
+        assert!(res.runtime_dom, "expected runtime_dom for: {snippet}");
+    }
+}
+
+#[test]
+fn runtime_dom_ignores_this_in_methods_and_top_level_scripts() {
+    let res = analyze(&[classic(
+        "this.js",
+        r#"
+        class Counter { constructor() { this.n = 0; } inc() { this.n += 1; } }
+        const store = { items: [], add(x) { this.items.push(x); } };
+        const top = this;
+        "#,
+    )]);
+    assert!(!res.runtime_dom);
+}
+
+#[test]
+fn handler_attribute_this_is_a_runtime_element() {
+    let res = analyze(&[ScriptInput {
+        source: "this.classList.add('pressed')".to_string(),
+        name: "onclick of <button>".to_string(),
+        kind: ScriptKind::HandlerAttribute {
+            element: ElementKey(3),
+            event: "click".to_string(),
+        },
+        line_offset: 4,
+    }]);
+    assert!(res.runtime_dom);
+    assert_eq!(
+        res.class_writes
+            .iter()
+            .map(write_summary)
+            .collect::<Vec<_>>(),
+        vec![(ElementRef::Unknown, names(&["pressed"]), false, false)]
+    );
+    assert_eq!(res.class_writes[0].line, Some(4));
 }
