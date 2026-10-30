@@ -239,22 +239,11 @@ pub fn query_selector_all(doc: &Document, selector: &str) -> Option<Vec<NodeId>>
     if list.invalid {
         return None;
     }
-    let ctx = selectors::MatchContext {
-        doc,
-        active_state: None,
-    };
-    let mut out = Vec::new();
-    for node in doc.descendants(doc.root()) {
-        if doc.element(node).is_some()
-            && list
-                .selectors
-                .iter()
-                .any(|sel| selectors::matches_selector(sel, node, &ctx))
-        {
-            out.push(node);
-        }
-    }
-    Some(out)
+    Some(
+        doc.descendants(doc.root())
+            .filter(|&node| doc.element(node).is_some() && matches_any(doc, node, &list))
+            .collect(),
+    )
 }
 
 /// Whether `node` matches `selector` (initial state). `None` when it does not parse.
@@ -264,15 +253,20 @@ pub fn element_matches(doc: &Document, node: NodeId, selector: &str) -> Option<b
     if list.invalid {
         return None;
     }
+    Some(matches_any(doc, node, &list))
+}
+
+fn matches_any(doc: &Document, node: NodeId, list: &selectors::ConvertedSelectorList) -> bool {
     let ctx = selectors::MatchContext {
         doc,
         active_state: None,
     };
-    Some(
-        list.selectors
-            .iter()
-            .any(|sel| selectors::matches_selector(sel, node, &ctx)),
-    )
+    // A selector ending in a pseudo-element selects that pseudo-element,
+    // never an element (Selectors API: `p::before` matches nothing).
+    list.selectors
+        .iter()
+        .filter(|sel| sel.pseudo_element.is_none())
+        .any(|sel| selectors::matches_selector(sel, node, &ctx))
 }
 
 mod cascade;

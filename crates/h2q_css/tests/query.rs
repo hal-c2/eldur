@@ -119,3 +119,15 @@ fn query_hover_matches_nothing_in_initial_state() {
     assert!(hovered.is_empty());
     assert_eq!(element_matches(&doc, p1, "p:hover"), Some(false));
 }
+
+#[test]
+fn query_pseudo_element_selectors_match_no_elements() {
+    let doc = Document::parse("<div><p>x</p><span>y</span></div>");
+    assert_eq!(h2q_css::query_selector_all(&doc, "p::before"), Some(vec![]));
+    let p = doc.first_element_by_name("p").expect("p");
+    assert_eq!(h2q_css::element_matches(&doc, p, "p::after"), Some(false));
+    assert_eq!(
+        h2q_css::query_selector_all(&doc, "p::before, span").map(|v| v.len()),
+        Some(1)
+    );
+}
