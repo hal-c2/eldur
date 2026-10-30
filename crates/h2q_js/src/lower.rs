@@ -402,9 +402,9 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
             "value" => match target.kind {
                 TargetKind::ComboBox => format!("{id}.currentValue"),
                 TargetKind::Range => format!("String({id}.value)"),
-                TargetKind::Progress
-                | TargetKind::CheckBox
-                | TargetKind::RadioButton => format!("{id}.value"),
+                TargetKind::Progress | TargetKind::CheckBox | TargetKind::RadioButton => {
+                    format!("{id}.value")
+                }
                 _ => format!("{id}.text"),
             },
             "selectedIndex" => format!("{id}.currentIndex"),
@@ -550,13 +550,10 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
                         if op == AssignmentOperator::Assign
                             && rhs_str.trim().parse::<f64>().is_err() =>
                     {
-                        let inner = rhs_str
-                            .trim()
-                            .strip_prefix("String(")
-                            .and_then(|s| s.strip_suffix(')'))
-                            .filter(|s| !s.contains(['(', ')']))
-                            .unwrap_or(&rhs_str);
-                        format!("{id}.value = Number({inner})")
+                        format!("{id}.value = Number({rhs_str})")
+                    }
+                    TargetKind::Range if op == AssignmentOperator::Addition => {
+                        format!("{id}.value = Number(String({id}.value) + ({rhs_str}))")
                     }
                     TargetKind::Range | TargetKind::Progress => {
                         format_assignment(&format!("{id}.value"), op, &rhs_str)

@@ -2164,6 +2164,61 @@ function wrap(rawItem) {
                 rawItem.placeholderText = String(v);
             }
         },
+        get name() {
+            if (typeof rawItem.name === "string") {
+                return rawItem.name;
+            }
+            return getAttribute(rawItem, "name") || "";
+        },
+        set name(v) {
+            var s = String(v);
+            if (typeof rawItem.name === "string") {
+                rawItem.name = s;
+            }
+            setAttribute(rawItem, "name", s);
+        },
+        get title() { return getAttribute(rawItem, "title") || ""; },
+        set title(v) { setAttribute(rawItem, "title", String(v)); },
+        get href() { return getAttribute(rawItem, "href") || ""; },
+        set href(v) { setAttribute(rawItem, "href", String(v)); },
+        get alt() { return getAttribute(rawItem, "alt") || ""; },
+        set alt(v) { setAttribute(rawItem, "alt", String(v)); },
+        get min() { return getAttribute(rawItem, "min") || ""; },
+        set min(v) { setAttribute(rawItem, "min", String(v)); },
+        get max() { return getAttribute(rawItem, "max") || ""; },
+        set max(v) { setAttribute(rawItem, "max", String(v)); },
+        get step() { return getAttribute(rawItem, "step") || ""; },
+        set step(v) { setAttribute(rawItem, "step", String(v)); },
+        get htmlFor() { return getAttribute(rawItem, "for") || ""; },
+        set htmlFor(v) { setAttribute(rawItem, "for", String(v)); },
+        get lang() { return getAttribute(rawItem, "lang") || ""; },
+        set lang(v) { setAttribute(rawItem, "lang", String(v)); },
+        get width() {
+            if (typeof rawItem.width === "number") {
+                return rawItem.width;
+            }
+            return Number(getAttribute(rawItem, "width")) || 0;
+        },
+        set width(v) {
+            var n = Number(v) || 0;
+            if (typeof rawItem.width === "number") {
+                rawItem.width = n;
+            }
+            setAttribute(rawItem, "width", String(n));
+        },
+        get height() {
+            if (typeof rawItem.height === "number") {
+                return rawItem.height;
+            }
+            return Number(getAttribute(rawItem, "height")) || 0;
+        },
+        set height(v) {
+            var n = Number(v) || 0;
+            if (typeof rawItem.height === "number") {
+                rawItem.height = n;
+            }
+            setAttribute(rawItem, "height", String(n));
+        },
         get className() { return getClassName(rawItem); },
         set className(v) { setClassName(rawItem, v); },
         get classList() { return classList(rawItem); },

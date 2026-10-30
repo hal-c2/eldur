@@ -2264,7 +2264,6 @@ function clear() {
     assert!(output.contains("H2Q_OK_APPEND 2 true true 0 1"), "{output}");
 }
 
-
 #[test]
 fn qml6_unmapped_dom_members_use_wrapper_and_skip_box_text_child() {
     if !has_binary("qml6") {
@@ -2390,7 +2389,15 @@ function verify() {
     const pType = typeof prog.value;
     const pAdd = prog.value + 1;
 
-    return [r1, dr1, r2, r2Concat, dr2, sBefore, sAfterInc, dsAfterInc, sAfterDynInc, sAfterDec, pType, pAdd].join("|");
+    range.value = 2;
+    range.value += 1;
+    const rCompound = range.value;
+
+    spin.value = 2;
+    spin.value += 1;
+    const sCompound = spin.value;
+
+    return [r1, dr1, r2, r2Concat, dr2, sBefore, sAfterInc, dsAfterInc, sAfterDynInc, sAfterDec, pType, pAdd, rCompound, sCompound].join("|");
 }
 "##,
         r#"Item {
@@ -2406,7 +2413,59 @@ function verify() {
 }"#,
     );
     assert!(
-        output.contains("H2Q_OK_RANGE_STR 21|21|2.5|2.51|2.5|21|3|3|4|3|number|5"),
+        output.contains("H2Q_OK_RANGE_STR 21|21|2.5|2.51|2.5|21|3|3|4|3|number|5|10|21"),
+        "{output}"
+    );
+}
+
+#[test]
+fn qml6_reflected_attributes_and_control_name_property() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default()
+        .with_id("seats", 1, "seatsInput", TargetKind::TextField)
+        .with_id("link", 2, "navLink", TargetKind::Text)
+        .with_id("pic", 3, "heroImg", TargetKind::Image);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verify() {
+    const input = document.getElementById("seats");
+    const a = document.getElementById("link");
+    const img = document.getElementById("pic");
+
+    const initialName = input.name;
+    input.name = "passengers";
+    const updatedName = input.name;
+
+    const missingTitle = a.title;
+    a.setAttribute("title", "Go home");
+    const attrTitle = a.title;
+    a.title = "Updated title";
+    const getAttrTitle = a.getAttribute("title");
+
+    const w = img.width;
+    const h = img.height;
+
+    return [initialName, updatedName, missingTitle, attrTitle, getAttrTitle, w, h].join("|");
+}
+"##,
+        r#"Item {
+    id: root
+    TextField { id: seatsInput; objectName: "seats"; property string name: "seats" }
+    Text { id: navLink; objectName: "link"; text: "Home" }
+    Image { id: heroImg; objectName: "pic"; width: 120; height: 80 }
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        console.log("H2Q_OK_REFLECTED", Page.verify());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains("H2Q_OK_REFLECTED seats|passengers||Go home|Updated title|120|80"),
         "{output}"
     );
 }

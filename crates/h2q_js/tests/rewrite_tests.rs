@@ -163,7 +163,7 @@ function syncForm() {
     roleCombo.currentIndex = 1;
     volSlider.value = 75;
     volSlider.value++;
-    loadBar.value = Number(volSlider.value);
+    loadBar.value = Number(String(volSlider.value));
     avatarImg.source = "icon.png";
     !(saveBtn.enabled = false);
     !(saveBtn.visible = true);
@@ -2170,7 +2170,6 @@ console.log(count, renamedSkipped, ns.count);
     assert!(!js.contains("__h2q_m1_inner"), "{js}");
 }
 
-
 #[test]
 fn routes_unmapped_dom_members_through_wrapper_and_coerces_range_value_to_string() {
     let resolver = FakeResolver::default()
@@ -2218,24 +2217,54 @@ function inspectDom() {
     let out = run_rewrite(&[script], &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
     let js = &out.page_js;
-    assert!(js.contains("const len = H2Q.wrap(list_).children.length;"), "{js}");
-    assert!(js.contains("const count = H2Q.wrap(list_).childElementCount;"), "{js}");
-    assert!(js.contains("const first = H2Q.wrap(list_).firstElementChild;"), "{js}");
-    assert!(js.contains("const last = H2Q.wrap(list_).lastElementChild;"), "{js}");
-    assert!(js.contains("const parent = H2Q.wrap(list_).parentElement;"), "{js}");
-    assert!(js.contains("const next = H2Q.wrap(list_).nextElementSibling;"), "{js}");
-    assert!(js.contains("const prev = H2Q.wrap(list_).previousElementSibling;"), "{js}");
+    assert!(
+        js.contains("const len = H2Q.wrap(list_).children.length;"),
+        "{js}"
+    );
+    assert!(
+        js.contains("const count = H2Q.wrap(list_).childElementCount;"),
+        "{js}"
+    );
+    assert!(
+        js.contains("const first = H2Q.wrap(list_).firstElementChild;"),
+        "{js}"
+    );
+    assert!(
+        js.contains("const last = H2Q.wrap(list_).lastElementChild;"),
+        "{js}"
+    );
+    assert!(
+        js.contains("const parent = H2Q.wrap(list_).parentElement;"),
+        "{js}"
+    );
+    assert!(
+        js.contains("const next = H2Q.wrap(list_).nextElementSibling;"),
+        "{js}"
+    );
+    assert!(
+        js.contains("const prev = H2Q.wrap(list_).previousElementSibling;"),
+        "{js}"
+    );
     assert!(js.contains("const curId = H2Q.wrap(list_).id;"), "{js}");
     assert!(js.contains("const tag = H2Q.wrap(list_).tagName;"), "{js}");
-    assert!(js.contains("const attr = H2Q.getAttribute(list_, \"data-role\");"), "{js}");
+    assert!(
+        js.contains("const attr = H2Q.getAttribute(list_, \"data-role\");"),
+        "{js}"
+    );
     assert!(js.contains("H2Q.wrap(list_).id = \"main-list\";"), "{js}");
-    assert!(js.contains("H2Q.wrap(fieldInput).type = \"checkbox\";"), "{js}");
+    assert!(
+        js.contains("H2Q.wrap(fieldInput).type = \"checkbox\";"),
+        "{js}"
+    );
     assert!(
         js.contains("H2Q.wrap(list_).customProp || (H2Q.wrap(list_).customProp = 1);"),
         "{js}"
     );
     assert!(js.contains("H2Q.wrap(list_).customProp++;"), "{js}");
-    assert!(js.contains("const rangeConcat = String(volSlider.value) + 1;"), "{js}");
+    assert!(
+        js.contains("const rangeConcat = String(volSlider.value) + 1;"),
+        "{js}"
+    );
     assert!(js.contains("const progAdd = loadBar.value + 1;"), "{js}");
     assert!(js.contains("spinBox.value++;"), "{js}");
     assert!(js.contains("--spinBox.value;"), "{js}");
