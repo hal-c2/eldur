@@ -59,6 +59,18 @@ Reports what Chromium's `getComputedStyle()` gives for each case
 expected values in h2q_css tests, so that they assert browser behaviour:
 error recovery in particular is easy to misread from the spec.
 
+### Geometry oracle: `geometry.mjs`
+
+```bash
+node tools/visual/geometry.mjs page.html '.card' 'h1'
+node tools/visual/geometry.mjs --html '<p>x</p>' 'p'
+```
+
+Reports Chromium's `getBoundingClientRect()` for every element each selector
+matches, one JSON line per element, at the harness viewport (1280×800,
+`deviceScaleFactor: 1`). Use it for the expected positions and sizes in
+converter tests.
+
 ### 2. `Shot.qml` + `render_qml.py`
 
 ```bash
