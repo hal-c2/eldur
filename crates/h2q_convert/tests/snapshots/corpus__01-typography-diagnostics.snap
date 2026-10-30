@@ -2,7 +2,6 @@
 source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-info[css]: <style>#1:79: unknown property `text-underline-offset`
 info[qml]: index.html:198: <code>: font size 15.3px inside 17px text is approximated with <small>
 info[qml]: index.html:198: <code>: font family `monospace` inside `serif` text is not converted
 info[qml]: index.html:198: <code>: inline background is not converted

@@ -187,6 +187,9 @@ pub struct StyleMap {
     /// Indexed by `NodeId::index()`; `None` for non-elements and for
     /// elements under a `display: none` ancestor (they have no box).
     pub(crate) styles: Vec<Option<ElementStyle>>,
+    /// Styles of the elements `styles` leaves out because they are or are
+    /// inside `display: none`; see [`StyleMap::computed`].
+    pub(crate) hidden: Vec<Option<ElementStyle>>,
     pub(crate) parent_elements: Vec<Option<NodeId>>,
     pub(crate) element_cascades: Vec<Option<cascade::ElementCascade>>,
     pub(crate) root_font_size: f32,
@@ -203,6 +206,16 @@ impl StyleMap {
     #[must_use]
     pub fn get(&self, node: NodeId) -> Option<&ElementStyle> {
         self.styles.get(node.index()).and_then(Option::as_ref)
+    }
+
+    /// Computed styles of any element, including those that are or are
+    /// inside `display: none` (as CSSOM `getComputedStyle` reports them), so
+    /// that elements a script shows later can be styled. `None` only for
+    /// non-elements. For rendered elements this is [`StyleMap::get`].
+    #[must_use]
+    pub fn computed(&self, node: NodeId) -> Option<&ElementStyle> {
+        self.get(node)
+            .or_else(|| self.hidden.get(node.index()).and_then(Option::as_ref))
     }
 
     #[must_use]
@@ -228,6 +241,45 @@ impl StyleMap {
 #[must_use]
 pub fn compute_styles(doc: &Document, sheets: &[Stylesheet], viewport: &Viewport) -> StyleMap {
     cascade::compute_styles(doc, sheets, viewport)
+}
+
+/// Elements matching `selector` in document order, as `querySelectorAll`
+/// would return them for a page in its initial state (no hover/focus/active).
+/// `None` when the selector does not parse.
+#[must_use]
+pub fn query_selector_all(doc: &Document, selector: &str) -> Option<Vec<NodeId>> {
+    let list = selectors::parse_selector_list_str(selector);
+    if list.invalid {
+        return None;
+    }
+    Some(
+        doc.descendants(doc.root())
+            .filter(|&node| doc.element(node).is_some() && matches_any(doc, node, &list))
+            .collect(),
+    )
+}
+
+/// Whether `node` matches `selector` (initial state). `None` when it does not parse.
+#[must_use]
+pub fn element_matches(doc: &Document, node: NodeId, selector: &str) -> Option<bool> {
+    let list = selectors::parse_selector_list_str(selector);
+    if list.invalid {
+        return None;
+    }
+    Some(matches_any(doc, node, &list))
+}
+
+fn matches_any(doc: &Document, node: NodeId, list: &selectors::ConvertedSelectorList) -> bool {
+    let ctx = selectors::MatchContext {
+        doc,
+        active_state: None,
+    };
+    // A selector ending in a pseudo-element selects that pseudo-element,
+    // never an element (Selectors API: `p::before` matches nothing).
+    list.selectors
+        .iter()
+        .filter(|sel| sel.pseudo_element.is_none())
+        .any(|sel| selectors::matches_selector(sel, node, &ctx))
 }
 
 mod cascade;
