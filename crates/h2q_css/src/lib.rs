@@ -187,6 +187,9 @@ pub struct StyleMap {
     /// Indexed by `NodeId::index()`; `None` for non-elements and for
     /// elements under a `display: none` ancestor (they have no box).
     pub(crate) styles: Vec<Option<ElementStyle>>,
+    /// Styles of the elements `styles` leaves out because they are or are
+    /// inside `display: none`; see [`StyleMap::computed`].
+    pub(crate) hidden: Vec<Option<ElementStyle>>,
     pub(crate) parent_elements: Vec<Option<NodeId>>,
     pub(crate) element_cascades: Vec<Option<cascade::ElementCascade>>,
     pub(crate) root_font_size: f32,
@@ -203,6 +206,16 @@ impl StyleMap {
     #[must_use]
     pub fn get(&self, node: NodeId) -> Option<&ElementStyle> {
         self.styles.get(node.index()).and_then(Option::as_ref)
+    }
+
+    /// Computed styles of any element, including those that are or are
+    /// inside `display: none` (as CSSOM `getComputedStyle` reports them), so
+    /// that elements a script shows later can be styled. `None` only for
+    /// non-elements. For rendered elements this is [`StyleMap::get`].
+    #[must_use]
+    pub fn computed(&self, node: NodeId) -> Option<&ElementStyle> {
+        self.get(node)
+            .or_else(|| self.hidden.get(node.index()).and_then(Option::as_ref))
     }
 
     #[must_use]

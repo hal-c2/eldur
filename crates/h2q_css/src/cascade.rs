@@ -490,6 +490,7 @@ pub(crate) fn compute_styles(
 
     // 4. Base cascade traversal in document pre-order.
     let mut styles: Vec<Option<ElementStyle>> = vec![None; doc.len()];
+    let mut hidden: Vec<Option<ElementStyle>> = vec![None; doc.len()];
     let mut element_cascades: Vec<Option<ElementCascade>> = vec![None; doc.len()];
     let mut root_font_size: f32 = engine.initial_style.font_size;
     let mut variant_candidates: BTreeSet<(NodeId, PseudoState)> = BTreeSet::new();
@@ -501,6 +502,7 @@ pub(crate) fn compute_styles(
             None,
             &mut root_font_size,
             &mut styles,
+            &mut hidden,
             &mut element_cascades,
             &mut variant_candidates,
         );
@@ -543,6 +545,7 @@ pub(crate) fn compute_styles(
 
     StyleMap {
         styles,
+        hidden,
         parent_elements,
         element_cascades,
         root_font_size,
@@ -738,6 +741,7 @@ impl<'a> CascadeEngine<'a> {
         enclosing_box_display: Option<Display>,
         root_font_size: &mut f32,
         styles: &mut [Option<ElementStyle>],
+        hidden: &mut [Option<ElementStyle>],
         element_cascades: &mut [Option<ElementCascade>],
         variant_candidates: &mut BTreeSet<(NodeId, PseudoState)>,
     ) {
@@ -754,8 +758,11 @@ impl<'a> CascadeEngine<'a> {
         let mut elem_cascade = ElementCascade::default();
         let elem_style = {
             let parent_style = parent_node
-                .and_then(|pid| styles.get(pid.index()))
-                .and_then(Option::as_ref)
+                .and_then(|pid| {
+                    styles[pid.index()]
+                        .as_ref()
+                        .or(hidden[pid.index()].as_ref())
+                })
                 .map(|es| &es.style);
             self.compute_single_element(
                 node,
@@ -769,10 +776,26 @@ impl<'a> CascadeEngine<'a> {
             )
         };
 
-        // An element with `display: none` and its entire subtree get `None` in `StyleMap`.
-        if elem_style.style.display == Display::None {
+        // An element with `display: none` and its entire subtree have no box
+        // (`None` in `styles`) but keep their computed values in `hidden`.
+        let parent_hidden = parent_node.is_some_and(|pid| hidden[pid.index()].is_some());
+        if parent_hidden || elem_style.style.display == Display::None {
             styles[node.index()] = None;
             element_cascades[node.index()] = None;
+            let child_box_display = Some(elem_style.style.display);
+            hidden[node.index()] = Some(elem_style);
+            for child in self.doc.element_children(node) {
+                self.compute_base_subtree(
+                    child,
+                    Some(node),
+                    child_box_display,
+                    root_font_size,
+                    styles,
+                    hidden,
+                    element_cascades,
+                    variant_candidates,
+                );
+            }
             return;
         }
 
@@ -801,6 +824,7 @@ impl<'a> CascadeEngine<'a> {
                 child_box_display,
                 root_font_size,
                 styles,
+                hidden,
                 element_cascades,
                 variant_candidates,
             );
