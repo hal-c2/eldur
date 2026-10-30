@@ -27,16 +27,17 @@ use crate::{BackgroundRepeat, ComputedStyle, LengthPercentage, Size, TransformFn
 use self::{
     animation::{
         apply_animation_field, apply_animation_names, apply_transition_field,
-        apply_transition_properties, parse_animation_direction_list,
-        parse_animation_fill_mode_list, parse_animation_iteration_list, parse_animation_name_list,
-        parse_animation_play_state_list, parse_easing_list, parse_time_list,
-        parse_transition_property_list,
+        apply_transition_properties, copy_animation_field, copy_transition_field,
+        parse_animation_direction_list, parse_animation_fill_mode_list,
+        parse_animation_iteration_list, parse_animation_name_list, parse_animation_play_state_list,
+        parse_easing_list, parse_time_list, parse_transition_property_list,
     },
     background::{
-        apply_background_images, apply_background_prop, parse_background_color,
-        parse_background_image_list, parse_bg_position_axis_list, parse_bg_repeat_list,
-        parse_bg_size_list, parse_filter, parse_object_fit, parse_opacity, parse_overflow,
-        parse_position_2d, parse_shadow_list, validate_bg_attachment_list, validate_bg_box_list,
+        apply_background_images, apply_background_prop, copy_background_field,
+        parse_background_color, parse_background_image_list, parse_bg_position_axis_list,
+        parse_bg_repeat_list, parse_bg_size_list, parse_filter, parse_object_fit, parse_opacity,
+        parse_overflow, parse_position_2d, parse_shadow_list, validate_bg_attachment_list,
+        validate_bg_box_list,
     },
     box_model::{
         apply_border_color, apply_border_style, apply_border_width, parse_aspect_ratio,
@@ -1423,12 +1424,55 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
         Longhand::GridColumnEnd => dst.grid_column_end.clone_from(&src.grid_column_end),
 
         Longhand::BackgroundColor => dst.background_color = src.background_color,
-        Longhand::BackgroundImage
-        | Longhand::BackgroundPositionX
-        | Longhand::BackgroundPositionY
-        | Longhand::BackgroundSize
-        | Longhand::BackgroundRepeat => {
-            dst.background_layers.clone_from(&src.background_layers);
+        Longhand::BackgroundImage => {
+            if src.background_layers.is_empty()
+                || src.background_layers.iter().all(|l| l.image.is_none())
+            {
+                apply_background_images(dst, vec![None]);
+            } else {
+                let imgs = src
+                    .background_layers
+                    .iter()
+                    .map(|l| l.image.clone())
+                    .collect();
+                apply_background_images(dst, imgs);
+            }
+        }
+        Longhand::BackgroundPositionX => {
+            copy_background_field(
+                dst,
+                src,
+                LengthPercentage::ZERO,
+                |l| l.position_x,
+                |l, x| l.position_x = x,
+            );
+        }
+        Longhand::BackgroundPositionY => {
+            copy_background_field(
+                dst,
+                src,
+                LengthPercentage::ZERO,
+                |l| l.position_y,
+                |l, y| l.position_y = y,
+            );
+        }
+        Longhand::BackgroundSize => {
+            copy_background_field(
+                dst,
+                src,
+                crate::BackgroundSize::Auto,
+                |l| l.size.clone(),
+                |l, sz| l.size = sz,
+            );
+        }
+        Longhand::BackgroundRepeat => {
+            copy_background_field(
+                dst,
+                src,
+                BackgroundRepeat::Repeat,
+                |l| l.repeat,
+                |l, r| l.repeat = r,
+            );
         }
         Longhand::BackgroundAttachment | Longhand::BackgroundOrigin | Longhand::BackgroundClip => {}
         Longhand::BoxShadow => dst.box_shadow.clone_from(&src.box_shadow),
@@ -1440,7 +1484,31 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
         Longhand::ObjectPosition => {}
         Longhand::Filter => dst.filter.clone_from(&src.filter),
 
-        Longhand::Translate | Longhand::Rotate | Longhand::Scale | Longhand::Transform => {
+        Longhand::Translate => {
+            let tr = src
+                .transform
+                .iter()
+                .find(|tf| matches_individual_kind(tf, IndividualTransformKind::Translate))
+                .cloned();
+            upsert_individual_transform(&mut dst.transform, IndividualTransformKind::Translate, tr);
+        }
+        Longhand::Rotate => {
+            let rot = src
+                .transform
+                .iter()
+                .find(|tf| matches_individual_kind(tf, IndividualTransformKind::Rotate))
+                .cloned();
+            upsert_individual_transform(&mut dst.transform, IndividualTransformKind::Rotate, rot);
+        }
+        Longhand::Scale => {
+            let sc = src
+                .transform
+                .iter()
+                .find(|tf| matches_individual_kind(tf, IndividualTransformKind::Scale))
+                .cloned();
+            upsert_individual_transform(&mut dst.transform, IndividualTransformKind::Scale, sc);
+        }
+        Longhand::Transform => {
             dst.transform.clone_from(&src.transform);
         }
         Longhand::TransformOrigin => dst.transform_origin = src.transform_origin,
@@ -1478,21 +1546,61 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
         Longhand::ListStyleImage => dst.list_style_image.clone_from(&src.list_style_image),
         Longhand::Content => dst.content.clone_from(&src.content),
 
-        Longhand::TransitionProperty
-        | Longhand::TransitionDuration
-        | Longhand::TransitionTimingFunction
-        | Longhand::TransitionDelay => {
-            dst.transitions.clone_from(&src.transitions);
+        Longhand::TransitionProperty => {
+            if src.transitions.is_empty() {
+                apply_transition_properties(dst, None);
+            } else {
+                let props = src.transitions.iter().map(|t| t.property.clone()).collect();
+                apply_transition_properties(dst, Some(props));
+            }
         }
-        Longhand::AnimationName
-        | Longhand::AnimationDuration
-        | Longhand::AnimationTimingFunction
-        | Longhand::AnimationDelay
-        | Longhand::AnimationIterationCount
-        | Longhand::AnimationDirection
-        | Longhand::AnimationFillMode
-        | Longhand::AnimationPlayState => {
-            dst.animations.clone_from(&src.animations);
+        Longhand::TransitionDuration => {
+            copy_transition_field(dst, src, |d, s| d.duration_ms = s.duration_ms);
+        }
+        Longhand::TransitionTimingFunction => {
+            copy_transition_field(dst, src, |d, s| d.easing.clone_from(&s.easing));
+        }
+        Longhand::TransitionDelay => {
+            copy_transition_field(dst, src, |d, s| d.delay_ms = s.delay_ms);
+        }
+        Longhand::AnimationName => {
+            if src.animations.is_empty() {
+                dst.animations.clear();
+            } else {
+                let names = src
+                    .animations
+                    .iter()
+                    .map(|a| Some(a.name.clone()))
+                    .collect();
+                apply_animation_names(dst, names);
+            }
+        }
+        Longhand::AnimationDuration => {
+            copy_animation_field(dst, src, |d, s| d.duration_ms = s.duration_ms);
+        }
+        Longhand::AnimationTimingFunction => {
+            copy_animation_field(dst, src, |d, s| d.easing.clone_from(&s.easing));
+        }
+        Longhand::AnimationDelay => {
+            copy_animation_field(dst, src, |d, s| d.delay_ms = s.delay_ms);
+        }
+        Longhand::AnimationIterationCount => {
+            copy_animation_field(dst, src, |d, s| d.iteration_count = s.iteration_count);
+        }
+        Longhand::AnimationDirection => {
+            copy_animation_field(dst, src, |d, s| {
+                d.alternate = s.alternate;
+                d.reverse = s.reverse;
+            });
+        }
+        Longhand::AnimationFillMode => {
+            copy_animation_field(dst, src, |d, s| {
+                d.fill_forwards = s.fill_forwards;
+                d.fill_backwards = s.fill_backwards;
+            });
+        }
+        Longhand::AnimationPlayState => {
+            copy_animation_field(dst, src, |d, s| d.paused = s.paused);
         }
     }
 }

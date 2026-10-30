@@ -849,3 +849,49 @@ fn inherited_color_updates_current_color_borders_but_not_explicit_ones() {
     assert_eq!(s.border.top.color, Rgba::new(0, 0, 255, 255));
     assert_eq!(s.border.left.color, Rgba::new(0, 128, 0, 255));
 }
+
+#[test]
+fn copy_sub_properties_preserves_siblings() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    let default_style = ComputedStyle::default();
+
+    let mut bg = ComputedStyle::default();
+    compute(&mut bg, Longhand::BackgroundImage, "url(hero.png)", &ctx).expect("bg image");
+    compute(&mut bg, Longhand::BackgroundRepeat, "no-repeat", &ctx).expect("bg repeat");
+    copy(&mut bg, &default_style, Longhand::BackgroundRepeat);
+    assert_eq!(bg.background_layers.len(), 1);
+    assert_eq!(
+        bg.background_layers[0].image,
+        Some(Image::Url("hero.png".to_owned()))
+    );
+    assert_eq!(bg.background_layers[0].repeat, BackgroundRepeat::Repeat);
+
+    let mut tf = ComputedStyle::default();
+    compute(&mut tf, Longhand::Translate, "10px 20px", &ctx).expect("translate");
+    compute(&mut tf, Longhand::Rotate, "45deg", &ctx).expect("rotate");
+    copy(&mut tf, &default_style, Longhand::Rotate);
+    assert_eq!(
+        tf.transform,
+        vec![TransformFn::Translate(
+            LengthPercentage::px(10.0),
+            LengthPercentage::px(20.0),
+        )]
+    );
+
+    let mut tr = ComputedStyle::default();
+    compute(&mut tr, Longhand::TransitionProperty, "opacity", &ctx).expect("transition-property");
+    compute(&mut tr, Longhand::TransitionDuration, "200ms", &ctx).expect("transition-duration");
+    copy(&mut tr, &default_style, Longhand::TransitionDuration);
+    assert_eq!(tr.transitions.len(), 1);
+    assert_eq!(tr.transitions[0].property, "opacity");
+    assert_eq!(tr.transitions[0].duration_ms, 0.0);
+
+    let mut anim = ComputedStyle::default();
+    compute(&mut anim, Longhand::AnimationName, "fade", &ctx).expect("animation-name");
+    compute(&mut anim, Longhand::AnimationDuration, "300ms", &ctx).expect("animation-duration");
+    copy(&mut anim, &default_style, Longhand::AnimationDuration);
+    assert_eq!(anim.animations.len(), 1);
+    assert_eq!(anim.animations[0].name, "fade");
+    assert_eq!(anim.animations[0].duration_ms, 0.0);
+}

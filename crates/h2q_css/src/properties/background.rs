@@ -985,6 +985,33 @@ pub(crate) fn apply_background_prop<T: Clone + PartialEq>(
     for (i, layer) in style.background_layers.iter_mut().enumerate() {
         setter(layer, values[i % values.len()].clone());
     }
+    if style
+        .background_layers
+        .iter()
+        .all(|l| *l == BackgroundLayer::default())
+    {
+        style.background_layers.clear();
+    }
+}
+
+pub(crate) fn copy_background_field<T: Clone + PartialEq>(
+    dst: &mut ComputedStyle,
+    src: &ComputedStyle,
+    default_val: T,
+    getter: impl Fn(&BackgroundLayer) -> T,
+    setter: impl FnMut(&mut BackgroundLayer, T),
+) {
+    if src.background_layers.is_empty() {
+        apply_background_prop(
+            dst,
+            std::slice::from_ref(&default_val),
+            &default_val,
+            setter,
+        );
+    } else {
+        let vals: Vec<T> = src.background_layers.iter().map(getter).collect();
+        apply_background_prop(dst, &vals, &default_val, setter);
+    }
 }
 
 // ---------------------------------------------------------------------------
