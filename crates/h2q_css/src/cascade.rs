@@ -3,6 +3,8 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::sync::OnceLock;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 
 use h2q_dom::{Document, Element, NodeId};
 
@@ -490,6 +492,7 @@ pub(crate) fn compute_styles(
 
     // 4. Base cascade traversal in document pre-order.
     let mut styles: Vec<Option<ElementStyle>> = vec![None; doc.len()];
+    let mut element_cascades: Vec<Option<ElementCascade>> = vec![None; doc.len()];
     let mut root_font_size: f32 = engine.initial_style.font_size;
     let mut variant_candidates: BTreeSet<(NodeId, PseudoState)> = BTreeSet::new();
 
@@ -500,6 +503,7 @@ pub(crate) fn compute_styles(
             None,
             &mut root_font_size,
             &mut styles,
+            &mut element_cascades,
             &mut variant_candidates,
         );
     }
@@ -539,6 +543,8 @@ pub(crate) fn compute_styles(
         }
     }
 
+    register_element_cascades(&mut parent_elements, doc.root(), element_cascades);
+
     StyleMap {
         styles,
         parent_elements,
@@ -551,6 +557,77 @@ pub(crate) fn compute_styles(
     }
 }
 
+#[derive(Debug, Clone, Default)]
+struct ElementCascade {
+    /// Winning action from the full base cascade for each longhand that had
+    /// at least one matching declaration on this element.
+    base_actions: BTreeMap<Longhand, ResolvedAction>,
+    /// Winning action from `Origin::UserAgent` declarations on this element,
+    /// used when a keyframe rolls back author + animation origins via `revert`.
+    ua_actions: BTreeMap<Longhand, ResolvedAction>,
+}
+
+static NEXT_CASCADE_ID: AtomicU64 = AtomicU64::new(1);
+static CASCADE_REGISTRY: Mutex<BTreeMap<u64, Arc<Vec<Option<ElementCascade>>>>> =
+    Mutex::new(BTreeMap::new());
+
+fn register_element_cascades(
+    parent_elements: &mut Vec<Option<NodeId>>,
+    marker_node: NodeId,
+    cascades: Vec<Option<ElementCascade>>,
+) {
+    let id = NEXT_CASCADE_ID.fetch_add(1, Ordering::Relaxed);
+    for i in 0..64 {
+        if ((id >> i) & 1) == 1 {
+            parent_elements.push(Some(marker_node));
+        } else {
+            parent_elements.push(None);
+        }
+    }
+    if let Ok(mut reg) = CASCADE_REGISTRY.lock() {
+        if reg.len() >= 512 {
+            reg.pop_first();
+        }
+        reg.insert(id, Arc::new(cascades));
+    }
+}
+
+fn parent_element_of(map: &StyleMap, node: NodeId) -> Option<NodeId> {
+    if node.index() >= map.styles.len() {
+        return None;
+    }
+    map.parent_elements.get(node.index()).copied().flatten()
+}
+
+fn enclosing_box_display_of(map: &StyleMap, node: NodeId) -> Option<Display> {
+    let mut cur = parent_element_of(map, node);
+    while let Some(pid) = cur {
+        let pstyle = map.style(pid)?;
+        if pstyle.display != Display::Contents {
+            return Some(pstyle.display);
+        }
+        cur = parent_element_of(map, pid);
+    }
+    None
+}
+
+fn element_cascade_of(map: &StyleMap, node: NodeId) -> Option<ElementCascade> {
+    let base_len = map.styles.len();
+    if map.parent_elements.len() < base_len + 64 {
+        return None;
+    }
+    let mut id = 0u64;
+    for i in 0..64 {
+        if map.parent_elements[base_len + i].is_some() {
+            id |= 1u64 << i;
+        }
+    }
+    let reg = CASCADE_REGISTRY.lock().ok()?;
+    reg.get(&id)
+        .and_then(|v| v.get(node.index()))
+        .and_then(Option::clone)
+}
+
 /// Applies a [`Keyframe`]'s declarations on top of `node`'s base [`ComputedStyle`].
 pub(crate) fn keyframe_style(
     map: &StyleMap,
@@ -558,15 +635,18 @@ pub(crate) fn keyframe_style(
     keyframe: &Keyframe,
 ) -> Option<ComputedStyle> {
     let base = map.style(node)?;
+    let parent_id = parent_element_of(map, node);
+    let is_root = parent_id.is_none();
+    let enclosing_box_display = enclosing_box_display_of(map, node);
+
     if keyframe.declarations.is_empty() {
-        return Some(base.clone());
+        let mut style = base.clone();
+        apply_box_fixups(&mut style, is_root, enclosing_box_display);
+        return Some(style);
     }
 
-    let parent_style = map
-        .parent_elements
-        .get(node.index())
-        .and_then(|p| *p)
-        .and_then(|pid| map.style(pid));
+    let parent_style = parent_id.and_then(|pid| map.style(pid));
+    let elem_cascade = element_cascade_of(map, node);
 
     let mut style = base.clone();
     let initial = ComputedStyle::default();
@@ -579,8 +659,15 @@ pub(crate) fn keyframe_style(
                     CssWide::Initial => {
                         style.custom_properties.remove(name);
                     }
-                    CssWide::Inherit | CssWide::Unset | CssWide::Revert | CssWide::RevertLayer => {
+                    CssWide::Inherit | CssWide::Unset | CssWide::Revert => {
                         if let Some(v) = parent_style.and_then(|p| p.custom_properties.get(name)) {
+                            style.custom_properties.insert(name.clone(), v.clone());
+                        } else {
+                            style.custom_properties.remove(name);
+                        }
+                    }
+                    CssWide::RevertLayer => {
+                        if let Some(v) = base.custom_properties.get(name) {
                             style.custom_properties.insert(name.clone(), v.clone());
                         } else {
                             style.custom_properties.remove(name);
@@ -589,6 +676,8 @@ pub(crate) fn keyframe_style(
                 }
             } else if let Some(resolved) = substitute_from_map(raw_val, &style.custom_properties) {
                 style.custom_properties.insert(name.clone(), resolved);
+            } else {
+                style.custom_properties.remove(name);
             }
         }
     }
@@ -611,15 +700,25 @@ pub(crate) fn keyframe_style(
                 };
 
                 if let Some(kw) = CssWide::parse(&effective) {
-                    let act = match kw {
-                        CssWide::Initial => ResolvedAction::Initial,
-                        CssWide::Inherit => ResolvedAction::Inherit,
-                        CssWide::Unset | CssWide::Revert | CssWide::RevertLayer => {
-                            ResolvedAction::Unset
-                        }
-                    };
                     for l in properties::longhands_of(name) {
-                        winners.insert(l, act.clone());
+                        let act = match kw {
+                            CssWide::Initial => ResolvedAction::Initial,
+                            CssWide::Inherit => ResolvedAction::Inherit,
+                            CssWide::Unset => ResolvedAction::Unset,
+                            // CSS Cascade 5 §7.3.4 & §7.3.5 Note: `revert` in `@keyframes`
+                            // collapses the animation and author origins, rolling back to UA.
+                            CssWide::Revert => elem_cascade
+                                .as_ref()
+                                .and_then(|c| c.ua_actions.get(&l).cloned())
+                                .unwrap_or(ResolvedAction::Unset),
+                            // CSS Cascade 5 §7.3.5: the animation origin forms its own cascade
+                            // layer for `revert-layer`, rolling back to the element's base cascade.
+                            CssWide::RevertLayer => elem_cascade
+                                .as_ref()
+                                .and_then(|c| c.base_actions.get(&l).cloned())
+                                .unwrap_or(ResolvedAction::Unset),
+                        };
+                        winners.insert(l, act);
                     }
                 } else if let Ok(expanded) = properties::expand(name, &effective) {
                     for (l, val) in expanded {
@@ -631,27 +730,41 @@ pub(crate) fn keyframe_style(
         }
     }
 
-    let mut ordered: Vec<(Longhand, ResolvedAction)> = winners.into_iter().collect();
+    let mut combined: BTreeMap<Longhand, ResolvedAction> =
+        elem_cascade.map(|c| c.base_actions).unwrap_or_default();
+    for (l, act) in winners {
+        combined.insert(l, act);
+    }
+
+    let mut ordered: Vec<(Longhand, ResolvedAction)> = combined.into_iter().collect();
     ordered.sort_by_key(|(l, _)| (properties::priority(*l), *l));
 
-    let ctx = ComputeContext {
-        parent: parent_style,
-        root_font_size: if map.root_font_size > 0.0 {
-            map.root_font_size
-        } else {
-            16.0
-        },
-        viewport: &map.viewport,
+    let mut effective_root_fs = if map.root_font_size > 0.0 {
+        map.root_font_size
+    } else {
+        16.0
     };
+    let mut root_fs_updated = !is_root;
 
     for (l, action) in ordered {
+        if !root_fs_updated && properties::priority(l) > 0 {
+            effective_root_fs = style.font_size;
+            root_fs_updated = true;
+        }
+        let ctx = ComputeContext {
+            parent: parent_style,
+            root_font_size: effective_root_fs,
+            viewport: &map.viewport,
+        };
         apply_resolved_action(&mut style, l, action, parent_style, &initial, &ctx);
     }
+
+    apply_box_fixups(&mut style, is_root, enclosing_box_display);
 
     Some(style)
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum ResolvedAction {
     Initial,
     Inherit,
@@ -660,6 +773,7 @@ enum ResolvedAction {
 }
 
 impl<'a> CascadeEngine<'a> {
+    #[allow(clippy::too_many_arguments)]
     fn compute_base_subtree(
         &self,
         node: NodeId,
@@ -667,6 +781,7 @@ impl<'a> CascadeEngine<'a> {
         enclosing_box_display: Option<Display>,
         root_font_size: &mut f32,
         styles: &mut [Option<ElementStyle>],
+        element_cascades: &mut [Option<ElementCascade>],
         variant_candidates: &mut BTreeSet<(NodeId, PseudoState)>,
     ) {
         let Some(elem) = self.doc.element(node) else {
@@ -679,6 +794,7 @@ impl<'a> CascadeEngine<'a> {
             active_state: None,
         };
 
+        let mut elem_cascade = ElementCascade::default();
         let elem_style = {
             let parent_style = parent_node
                 .and_then(|pid| styles.get(pid.index()))
@@ -692,12 +808,14 @@ impl<'a> CascadeEngine<'a> {
                 enclosing_box_display,
                 root_font_size,
                 &match_ctx,
+                Some(&mut elem_cascade),
             )
         };
 
         // An element with `display: none` and its entire subtree get `None` in `StyleMap`.
         if elem_style.style.display == Display::None {
             styles[node.index()] = None;
+            element_cascades[node.index()] = None;
             return;
         }
 
@@ -717,6 +835,7 @@ impl<'a> CascadeEngine<'a> {
         };
 
         styles[node.index()] = Some(elem_style);
+        element_cascades[node.index()] = Some(elem_cascade);
 
         for child in self.doc.element_children(node) {
             self.compute_base_subtree(
@@ -725,6 +844,7 @@ impl<'a> CascadeEngine<'a> {
                 child_box_display,
                 root_font_size,
                 styles,
+                element_cascades,
                 variant_candidates,
             );
         }
@@ -759,6 +879,7 @@ impl<'a> CascadeEngine<'a> {
             enclosing_box_display,
             root_font_size,
             &match_ctx,
+            None,
         );
 
         let base_computed = base_styles
@@ -813,6 +934,7 @@ impl<'a> CascadeEngine<'a> {
         enclosing_box_display: Option<Display>,
         root_font_size: &mut f32,
         match_ctx: &MatchContext<'_>,
+        cascade_out: Option<&mut ElementCascade>,
     ) -> ElementStyle {
         let bloom = self.ancestor_blooms[node.index()];
         let mut matched_decls: Vec<(CascadeKey, &DeclValue)> = Vec::new();
@@ -852,6 +974,7 @@ impl<'a> CascadeEngine<'a> {
             parent_style,
             enclosing_box_display,
             root_font_size,
+            cascade_out,
         );
 
         if style.display == Display::None {
@@ -910,6 +1033,7 @@ impl<'a> CascadeEngine<'a> {
                 Some(&style),
                 pseudo_enclosing,
                 &mut fs,
+                None,
             );
             (ps.content.is_some() && ps.display != Display::None).then(|| Box::new(ps))
         };
@@ -924,6 +1048,7 @@ impl<'a> CascadeEngine<'a> {
                 Some(&style),
                 pseudo_enclosing,
                 &mut fs,
+                None,
             );
             (ps.content.is_some() && ps.display != Display::None).then(|| Box::new(ps))
         };
@@ -938,6 +1063,7 @@ impl<'a> CascadeEngine<'a> {
                 Some(&style),
                 None,
                 &mut fs,
+                None,
             );
             (ps.display != Display::None).then(|| Box::new(ps))
         };
@@ -961,6 +1087,7 @@ impl<'a> CascadeEngine<'a> {
         parent_style: Option<&ComputedStyle>,
         enclosing_box_display: Option<Display>,
         root_font_size: &mut f32,
+        mut cascade_out: Option<&mut ElementCascade>,
     ) -> ComputedStyle {
         let mut style = self.initial_style.clone();
 
@@ -1036,6 +1163,19 @@ impl<'a> CascadeEngine<'a> {
             if let Some(mut cands) = longhand_candidates.remove(&l) {
                 cands.sort_by(|(ka, _), (kb, _)| ka.cmp(kb));
                 let action = select_winning_longhand_action(l, &cands, &style.custom_properties);
+                if let Some(casc) = cascade_out.as_deref_mut() {
+                    casc.base_actions.insert(l, action.clone());
+                    let ua_cands: Vec<(CascadeKey, LonghandCandidate<'_>)> = cands
+                        .iter()
+                        .filter(|(k, _)| k.tier.origin() == Origin::UserAgent)
+                        .cloned()
+                        .collect();
+                    if !ua_cands.is_empty() {
+                        let ua_action =
+                            select_winning_longhand_action(l, &ua_cands, &style.custom_properties);
+                        casc.ua_actions.insert(l, ua_action);
+                    }
+                }
                 let compute_ctx = ComputeContext {
                     parent: parent_style,
                     root_font_size: *root_font_size,
@@ -1656,5 +1796,105 @@ mod tests {
             card_variants[0].changed[0].1.color,
             Rgba::new(255, 100, 0, 255)
         );
+    }
+
+    #[test]
+    fn keyframe_style_box_fixups_positioned_floated_root_flex_and_grid_items() {
+        let doc = Document::parse(
+            r#"<!doctype html><html id="root"><body>
+                <div id="abs-el"></div>
+                <div id="fixed-el"></div>
+                <div id="float-el"></div>
+                <div id="flex-parent" style="display: flex"><span id="flex-item"></span></div>
+                <div id="grid-parent">
+                    <span id="grid-item"></span>
+                    <div id="contents-wrap"><span id="contents-grid-item"></span></div>
+                </div>
+            </body></html>"#,
+        );
+        let css = r#"
+            @keyframes inline-kf {
+                to { display: inline; position: absolute; float: left; }
+            }
+        "#;
+        let (sheet, _) = Stylesheet::parse(css, Origin::Author, "kf_box.css", None);
+        let mut map = compute_styles(&doc, &[sheet], &Viewport::default());
+        let kf = map.keyframes["inline-kf"][0].clone();
+
+        let root = doc.element_by_id("root").expect("root");
+        let abs_el = doc.element_by_id("abs-el").expect("abs-el");
+        let fixed_el = doc.element_by_id("fixed-el").expect("fixed-el");
+        let float_el = doc.element_by_id("float-el").expect("float-el");
+        let flex_item = doc.element_by_id("flex-item").expect("flex-item");
+        let grid_parent = doc.element_by_id("grid-parent").expect("grid-parent");
+        let grid_item = doc.element_by_id("grid-item").expect("grid-item");
+        let contents_wrap = doc.element_by_id("contents-wrap").expect("contents-wrap");
+        let contents_grid_item = doc
+            .element_by_id("contents-grid-item")
+            .expect("contents-grid-item");
+
+        // Configure position/float/grid states supported on ComputedStyle in Part A.
+        let abs_base = &mut map.styles[abs_el.index()]
+            .as_mut()
+            .expect("element style")
+            .style;
+        abs_base.position = Position::Absolute;
+        abs_base.float = Float::Left;
+
+        let fixed_base = &mut map.styles[fixed_el.index()]
+            .as_mut()
+            .expect("element style")
+            .style;
+        fixed_base.position = Position::Fixed;
+        fixed_base.float = Float::Left;
+
+        let float_base = &mut map.styles[float_el.index()]
+            .as_mut()
+            .expect("element style")
+            .style;
+        float_base.position = Position::Static;
+        float_base.float = Float::Left;
+
+        map.styles[grid_parent.index()]
+            .as_mut()
+            .expect("element style")
+            .style
+            .display = Display::Grid;
+        map.styles[contents_wrap.index()]
+            .as_mut()
+            .expect("element style")
+            .style
+            .display = Display::Contents;
+
+        // 1. position: absolute + float: left + keyframe display: inline -> blockified, float: none
+        let abs_kf = map.keyframe_style(abs_el, &kf).expect("abs kf");
+        assert_eq!(abs_kf.display, Display::Block);
+        assert_eq!(abs_kf.float, Float::None);
+
+        // 2. position: fixed + float: left + keyframe display: inline -> blockified, float: none
+        let fixed_kf = map.keyframe_style(fixed_el, &kf).expect("fixed kf");
+        assert_eq!(fixed_kf.display, Display::Block);
+        assert_eq!(fixed_kf.float, Float::None);
+
+        // 3. float: left (static) + keyframe display: inline -> blockified, float stays left
+        let float_kf = map.keyframe_style(float_el, &kf).expect("float kf");
+        assert_eq!(float_kf.display, Display::Block);
+        assert_eq!(float_kf.float, Float::Left);
+
+        // 4. Root element + keyframe display: inline -> blockified
+        let root_kf = map.keyframe_style(root, &kf).expect("root kf");
+        assert_eq!(root_kf.display, Display::Block);
+
+        // 5. Flex item + keyframe display: inline -> blockified
+        let flex_kf = map.keyframe_style(flex_item, &kf).expect("flex kf");
+        assert_eq!(flex_kf.display, Display::Block);
+
+        // 6. Grid item (direct and via display: contents) + keyframe display: inline -> blockified
+        let grid_kf = map.keyframe_style(grid_item, &kf).expect("grid kf");
+        assert_eq!(grid_kf.display, Display::Block);
+        let contents_grid_kf = map
+            .keyframe_style(contents_grid_item, &kf)
+            .expect("contents grid kf");
+        assert_eq!(contents_grid_kf.display, Display::Block);
     }
 }

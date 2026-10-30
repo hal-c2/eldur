@@ -1423,3 +1423,292 @@ fn atomic_invalid_layer_statement_ignored() {
     let x = doc.element_by_id("x").expect("x");
     assert_eq!(map.style(x).expect("x").margin.top, px(20.0));
 }
+
+#[test]
+fn keyframe_style_box_fixups_root_and_flex_items() {
+    let doc = Document::parse(
+        r#"<!doctype html><html id="root"><body>
+            <div id="flex-parent" style="display: flex">
+                <span id="flex-span">item</span>
+                <div id="flex-div">item2</div>
+            </div>
+            <div id="plain-div">plain</div>
+        </body></html>"#,
+    );
+    let css = r#"
+        @keyframes make-inline {
+            from { display: inline; }
+            to { display: unset; }
+        }
+    "#;
+    let (sheet, diags) = Stylesheet::parse(css, Origin::Author, "kf_fixup.css", None);
+    assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
+
+    let map = compute_styles(&doc, &[sheet], &Viewport::default());
+    let kfs = map
+        .keyframes
+        .get("make-inline")
+        .expect("make-inline keyframes");
+    assert_eq!(kfs.len(), 2);
+
+    let root = doc.element_by_id("root").expect("root");
+    let flex_span = doc.element_by_id("flex-span").expect("flex-span");
+    let flex_div = doc.element_by_id("flex-div").expect("flex-div");
+    let plain_div = doc.element_by_id("plain-div").expect("plain-div");
+
+    // Root element must remain blockified even when keyframe sets display:inline or unset.
+    assert_eq!(
+        map.keyframe_style(root, &kfs[0]).expect("root kf0").display,
+        Display::Block
+    );
+    assert_eq!(
+        map.keyframe_style(root, &kfs[1]).expect("root kf1").display,
+        Display::Block
+    );
+
+    // Flex items must remain blockified when keyframe sets display:inline or unset.
+    assert_eq!(
+        map.keyframe_style(flex_span, &kfs[0])
+            .expect("flex-span kf0")
+            .display,
+        Display::Block
+    );
+    assert_eq!(
+        map.keyframe_style(flex_span, &kfs[1])
+            .expect("flex-span kf1")
+            .display,
+        Display::Block
+    );
+    assert_eq!(
+        map.keyframe_style(flex_div, &kfs[0])
+            .expect("flex-div kf0")
+            .display,
+        Display::Block
+    );
+
+    // Non-root, non-flex block element becomes inline in keyframe while base stays block.
+    assert_eq!(
+        map.keyframe_style(plain_div, &kfs[0])
+            .expect("plain kf0")
+            .display,
+        Display::Inline
+    );
+    assert_eq!(
+        map.style(plain_div).expect("plain base").display,
+        Display::Block
+    );
+}
+
+#[test]
+fn keyframe_style_revert_and_revert_layer_rollback() {
+    let doc = Document::parse(
+        r#"<!doctype html><html><body style="font-size: 20px; color: rgb(10, 20, 30); --inherited: body-token">
+            <h1 id="heading" class="title">Heading</h1>
+            <div id="layered" class="card">Layered</div>
+        </body></html>"#,
+    );
+    let css = r#"
+        @layer base, theme;
+        @layer base {
+            #heading {
+                display: inline;
+                font-size: 12px;
+                margin-top: 6px;
+                color: rgb(100, 100, 100);
+            }
+            .card {
+                margin-top: 8px;
+                color: rgb(40, 50, 60);
+            }
+        }
+        @layer theme {
+            .title {
+                display: flex;
+                font-size: 14px;
+                margin-top: 10px;
+                color: rgb(200, 100, 50);
+                --custom: theme-val;
+                --inherited: author-token;
+            }
+            #layered {
+                margin-top: 24px;
+                color: rgb(70, 80, 90);
+                --custom: layered-val;
+            }
+        }
+        @keyframes kf-revert {
+            to {
+                display: revert;
+                font-size: revert;
+                margin-top: revert;
+                color: revert;
+                --custom: revert;
+                --inherited: revert;
+            }
+        }
+        @keyframes kf-revert-layer {
+            to {
+                display: inline;
+                display: revert-layer;
+                font-size: 99px;
+                font-size: revert-layer;
+                margin-top: 99px;
+                margin-top: revert-layer;
+                color: rgb(255, 0, 0);
+                color: revert-layer;
+                --custom: overridden;
+                --custom: revert-layer;
+            }
+        }
+    "#;
+    let (sheet, diags) = Stylesheet::parse(css, Origin::Author, "kf_revert.css", None);
+    assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
+
+    let map = compute_styles(&doc, &[sheet], &Viewport::default());
+    let heading = doc.element_by_id("heading").expect("heading");
+    let layered = doc.element_by_id("layered").expect("layered");
+
+    // Base style on #heading comes from @layer theme.
+    let heading_base = map.style(heading).expect("heading base");
+    assert_eq!(heading_base.display, Display::Flex);
+    assert_eq!(heading_base.font_size, 14.0);
+    assert_eq!(heading_base.margin.top, px(10.0));
+    assert_eq!(heading_base.color, Rgba::new(200, 100, 50, 255));
+
+    // CSS Cascade 5 §7.3.4 & §7.3.5 Note: `revert` in `@keyframes` collapses animation
+    // and author origins, rolling back to the User-Agent origin (`h1 { display: block;
+    // font-size: 2em; margin: 0.67em 0 }`), not `initial` or `unset`.
+    let kf_rev = &map.keyframes["kf-revert"][0];
+    let heading_rev = map.keyframe_style(heading, kf_rev).expect("heading revert");
+    assert_eq!(heading_rev.display, Display::Block);
+    assert_eq!(heading_rev.font_size, 40.0); // 2em of body's 20px
+    assert_eq!(heading_rev.margin.top, px(0.67 * 40.0)); // UA 0.67em of 40px
+    assert_eq!(heading_rev.color, Rgba::new(10, 20, 30, 255)); // no UA color -> inherited
+    assert!(!heading_rev.custom_properties.contains_key("--custom"));
+    assert_eq!(
+        heading_rev
+            .custom_properties
+            .get("--inherited")
+            .map(String::as_str),
+        Some("body-token")
+    );
+
+    // CSS Cascade 5 §7.3.5: the animation origin is not collapsed with the author
+    // origin for `revert-layer` and forms its own cascade layer, so `revert-layer` in
+    // `@keyframes` rolls back the keyframe layer to the element's normal cascaded value.
+    let kf_rev_layer = &map.keyframes["kf-revert-layer"][0];
+    let heading_rl = map
+        .keyframe_style(heading, kf_rev_layer)
+        .expect("heading revert-layer");
+    assert_eq!(heading_rl.display, Display::Flex);
+    assert_eq!(heading_rl.font_size, 14.0);
+    assert_eq!(heading_rl.margin.top, px(10.0));
+    assert_eq!(heading_rl.color, Rgba::new(200, 100, 50, 255));
+    assert_eq!(
+        heading_rl
+            .custom_properties
+            .get("--custom")
+            .map(String::as_str),
+        Some("theme-val")
+    );
+
+    let layered_rl = map
+        .keyframe_style(layered, kf_rev_layer)
+        .expect("layered revert-layer");
+    assert_eq!(layered_rl.margin.top, px(24.0));
+    assert_eq!(layered_rl.color, Rgba::new(70, 80, 90, 255));
+    assert_eq!(
+        layered_rl
+            .custom_properties
+            .get("--custom")
+            .map(String::as_str),
+        Some("layered-val")
+    );
+}
+
+#[test]
+fn keyframe_style_font_size_updates_em_dependent_properties() {
+    let doc = Document::parse(
+        r#"<!doctype html><html><body style="font-size: 16px">
+            <div id="em-box">Box</div>
+            <div id="em-shorthand">Shorthand</div>
+            <h1 id="em-ua">Heading</h1>
+        </body></html>"#,
+    );
+    let css = r#"
+        #em-box {
+            font-size: 16px;
+            margin-top: 2em;
+        }
+        #em-shorthand {
+            font-size: 10px;
+            margin: 1.5em 0;
+        }
+        #em-ua {
+            font-size: 10px;
+        }
+        @keyframes scale-font {
+            from { font-size: 20px; }
+            50% { font-size: 2.5em; }
+            to { font-size: 30px; margin-top: 3em; }
+        }
+        @keyframes reverse-order-em {
+            to { margin-top: 2.5em; font-size: 24px; }
+        }
+        @keyframes revert-font {
+            to { font-size: revert; }
+        }
+    "#;
+    let (sheet, diags) = Stylesheet::parse(css, Origin::Author, "kf_em.css", None);
+    assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
+
+    let map = compute_styles(&doc, &[sheet], &Viewport::default());
+    let em_box = doc.element_by_id("em-box").expect("em-box");
+    let em_shorthand = doc.element_by_id("em-shorthand").expect("em-shorthand");
+    let em_ua = doc.element_by_id("em-ua").expect("em-ua");
+
+    let scale_kfs = &map.keyframes["scale-font"];
+    assert_eq!(scale_kfs.len(), 3);
+
+    // Base style is 16px font-size and 32px margin-top.
+    assert_eq!(map.style(em_box).expect("base").font_size, 16.0);
+    assert_eq!(map.style(em_box).expect("base").margin.top, px(32.0));
+
+    // Keyframe changing only font-size to 20px recomputes base margin-top: 2em -> 40px.
+    let kf0 = map.keyframe_style(em_box, &scale_kfs[0]).expect("kf0");
+    assert_eq!(kf0.font_size, 20.0);
+    assert_eq!(kf0.margin.top, px(40.0));
+
+    // Keyframe changing font-size to 2.5em (40px) recomputes base margin-top: 2em -> 80px.
+    let kf1 = map.keyframe_style(em_box, &scale_kfs[1]).expect("kf1");
+    assert_eq!(kf1.font_size, 40.0);
+    assert_eq!(kf1.margin.top, px(80.0));
+
+    // Keyframe changing both font-size (30px) and margin-top (3em) -> 90px.
+    let kf2 = map.keyframe_style(em_box, &scale_kfs[2]).expect("kf2");
+    assert_eq!(kf2.font_size, 30.0);
+    assert_eq!(kf2.margin.top, px(90.0));
+
+    // Keyframe declaring margin-top: 2.5em before font-size: 24px -> 60px.
+    let rev_kf = &map.keyframes["reverse-order-em"][0];
+    let kf_rev = map.keyframe_style(em_box, rev_kf).expect("kf_rev");
+    assert_eq!(kf_rev.font_size, 24.0);
+    assert_eq!(kf_rev.margin.top, px(60.0));
+
+    // Shorthand margin: 1.5em 0 in base style updates when keyframe changes font-size to 20px -> 30px.
+    let kf_short = map
+        .keyframe_style(em_shorthand, &scale_kfs[0])
+        .expect("kf_short");
+    assert_eq!(kf_short.font_size, 20.0);
+    assert_eq!(kf_short.margin.top, px(30.0));
+
+    // UA margin: 0.67em 0 on <h1> updates when keyframe reverts font-size to UA 2em (32px).
+    let revert_font_kf = &map.keyframes["revert-font"][0];
+    let kf_ua = map.keyframe_style(em_ua, revert_font_kf).expect("kf_ua");
+    assert_eq!(kf_ua.font_size, 32.0);
+    assert_eq!(kf_ua.margin.top, px(0.67 * 32.0));
+
+    // Base styles remain intact after all keyframe evaluations.
+    assert_eq!(map.style(em_box).expect("base after").font_size, 16.0);
+    assert_eq!(map.style(em_box).expect("base after").margin.top, px(32.0));
+}
