@@ -709,8 +709,19 @@ impl Emitter<'_, '_> {
         );
         // The Basic style's +/- buttons take the field's space; a browser
         // shows only small spinners on hover, and arrow keys step here too.
-        obj.set("up.indicator", object_value(Object::new("Item")));
-        obj.set("down.indicator", object_value(Object::new("Item")));
+        // They are hidden in place: replacing the deferred indicators (even
+        // with null) while `value` is set leaves Qt 6.11's defaults
+        // incubating at engine destruction, which it warns about. SpinBox
+        // hit-tests indicators whether visible or enabled, so they also get
+        // no size; otherwise a click at the field's edge steps the value.
+        for indicator in ["up", "down"] {
+            obj.set(
+                &format!("{indicator}.indicator.visible"),
+                Value::Bool(false),
+            );
+            obj.set(&format!("{indicator}.indicator.width"), Value::Number(0.0));
+            obj.set(&format!("{indicator}.indicator.height"), Value::Number(0.0));
+        }
         let mut input = Object::new("TextInput");
         input.set("text", Value::expr(format!("{id}.displayText")));
         input.set("font", Value::expr(format!("{id}.font")));

@@ -806,8 +806,12 @@ ApplicationWindow {
                                             leftPadding: 13
                                             implicitHeight: 41
                                             implicitWidth: 191
-                                            up.indicator: Item {}
-                                            down.indicator: Item {}
+                                            up.indicator.visible: false
+                                            up.indicator.width: 0
+                                            up.indicator.height: 0
+                                            down.indicator.visible: false
+                                            down.indicator.width: 0
+                                            down.indicator.height: 0
                                             contentItem: TextInput {
                                                 text: seats.displayText
                                                 font: seats.font
