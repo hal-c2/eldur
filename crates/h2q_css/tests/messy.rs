@@ -30,9 +30,9 @@ fn p_style(css: &str) -> h2q_css::ComputedStyle {
     style_for(css, r#"<p id="t">hello</p>"#, "t")
 }
 
-/// 1. A missing semicolon: `p { color: red background: blue; margin-top: 5px }`.
-/// The `color: red background: blue` declaration is invalid and dropped; a
-/// preceding declaration and `margin-top: 5px` after it still apply.
+// 1. A missing semicolon: `p { color: red background: blue; margin-top: 5px }`.
+// The `color: red background: blue` declaration is invalid and dropped; a
+// preceding declaration and `margin-top: 5px` after it still apply.
 #[test]
 fn case1_missing_semicolon() {
     let s = p_style("p { padding-top: 4px; color: red background: blue; margin-top: 5px }");
@@ -42,7 +42,7 @@ fn case1_missing_semicolon() {
     assert_eq!(s.margin.top, LengthAuto::Length(Length::px(5.0)));
 }
 
-/// 2. An unclosed block at EOF: `p { color: red` applies red.
+// 2. An unclosed block at EOF: `p { color: red` applies red.
 #[test]
 fn case2_unclosed_block_at_eof() {
     let s = p_style("p { padding-top: 4px; color: rgb(255, 0, 0)");
@@ -50,20 +50,20 @@ fn case2_unclosed_block_at_eof() {
     assert_eq!(s.color, Rgba::new(255, 0, 0, 255));
 }
 
-/// 3. An unclosed string, `content: "abc` followed by a newline and then
-/// `color: red;`.
-///
-/// Per CSS Syntax 3 §4.3.4 ("Consume a string token"), an unescaped newline
-/// inside a string ends the string token immediately as `<bad-string-token>`
-/// and reconsumes the newline as whitespace (so later quotes on following
-/// lines are not swallowed). However, per CSS Syntax 3 §5.5.2 ("Consume a
-/// declaration"), a newline is whitespace rather than a declaration
-/// terminator: without a `;` before the newline, `content: <bad-string> color: red`
-/// is consumed as a single declaration up to the `;` after `red`, and that
-/// entire declaration is dropped because it contains `<bad-string-token>`,
-/// while declarations after that `;` still apply. If `;` follows the bad
-/// string on the next token, `color: red;` is a separate declaration and
-/// applies.
+// 3. An unclosed string, `content: "abc` followed by a newline and then
+// `color: red;`.
+//
+// Per CSS Syntax 3 §4.3.4 ("Consume a string token"), an unescaped newline
+// inside a string ends the string token immediately as `<bad-string-token>`
+// and reconsumes the newline as whitespace (so later quotes on following
+// lines are not swallowed). However, per CSS Syntax 3 §5.5.2 ("Consume a
+// declaration"), a newline is whitespace rather than a declaration
+// terminator: without a `;` before the newline, `content: <bad-string> color: red`
+// is consumed as a single declaration up to the `;` after `red`, and that
+// entire declaration is dropped because it contains `<bad-string-token>`,
+// while declarations after that `;` still apply. If `;` follows the bad
+// string on the next token, `color: red;` is a separate declaration and
+// applies.
 #[test]
 fn case3_unclosed_string_newline() {
     // Without `;` after `"abc`: the bad string ends at `\n`, the declaration
@@ -80,7 +80,7 @@ fn case3_unclosed_string_newline() {
     assert_eq!(s.font_family, vec!["Custom".to_owned()]);
 }
 
-/// 4. A stray `}` at top level before a valid rule: the next rule still applies.
+// 4. A stray `}` at top level before a valid rule: the next rule still applies.
 #[test]
 fn case4_stray_closing_brace_at_top_level() {
     let s = p_style("p { padding-top: 4px; } } p { color: rgb(255, 0, 0); }");
@@ -88,8 +88,8 @@ fn case4_stray_closing_brace_at_top_level() {
     assert_eq!(s.color, Rgba::new(255, 0, 0, 255));
 }
 
-/// 5. An unknown at-rule with a block, `@foo bar { p { color: red } }`, is
-/// skipped. A following rule applies, and the inner rule does NOT apply.
+// 5. An unknown at-rule with a block, `@foo bar { p { color: red } }`, is
+// skipped. A following rule applies, and the inner rule does NOT apply.
 #[test]
 fn case5_unknown_at_rule_with_block() {
     let s = p_style(
@@ -100,8 +100,8 @@ fn case5_unknown_at_rule_with_block() {
     assert_eq!(s.margin.top, LengthAuto::Length(Length::px(7.0)));
 }
 
-/// 6. A garbage selector, `p[[ { color: red } p { margin-top: 3px }`. The
-/// first rule is dropped and the second applies.
+// 6. A garbage selector, `p[[ { color: red } p { margin-top: 3px }`. The
+// first rule is dropped and the second applies.
 #[test]
 fn case6_garbage_selector() {
     let s = p_style("p { padding-top: 4px } p[[ { color: rgb(255, 0, 0) } p { margin-top: 3px }");
@@ -110,7 +110,7 @@ fn case6_garbage_selector() {
     assert_eq!(s.margin.top, LengthAuto::Length(Length::px(3.0)));
 }
 
-/// 7. `!important` misspelt as `! importantt` drops that declaration.
+// 7. `!important` misspelt as `! importantt` drops that declaration.
 #[test]
 fn case7_misspelt_important() {
     let s = p_style(
@@ -121,10 +121,10 @@ fn case7_misspelt_important() {
     assert_eq!(s.margin.top, LengthAuto::Length(Length::px(8.0)));
 }
 
-/// 8. Vendor hacks: `*zoom: 1`, `_height: 1px`,
-/// `filter: progid:DXImageTransform.Microsoft.gradient(...)`,
-/// `-webkit-box-shadow: ...`, `expression()`. None of these may break the
-/// neighbouring declarations.
+// 8. Vendor hacks: `*zoom: 1`, `_height: 1px`,
+// `filter: progid:DXImageTransform.Microsoft.gradient(...)`,
+// `-webkit-box-shadow: ...`, `expression()`. None of these may break the
+// neighbouring declarations.
 #[test]
 fn case8_vendor_hacks() {
     let s = p_style(
@@ -146,15 +146,15 @@ fn case8_vendor_hacks() {
     assert_eq!(s.margin.top, LengthAuto::Length(Length::px(9.0)));
 }
 
-/// 9. IE hacks: `color: red\9` and `width: 100px\0/`. Assert what the computed
-/// `color` and `width` are.
-///
-/// Per CSS Syntax 3 §4.3.7, `\9` is not a hex digit so it unescapes to `U+0039`
-/// (`'9'`), producing identifier `red9` (not a valid color), and `\0` followed
-/// by `/` unescapes `\0` to `U+FFFD` in unit `px\u{FFFD}` followed by delim `/`.
-/// Both declarations are invalid in standards-compliant browsers and dropped,
-/// leaving `color` and `width` at their prior/initial values while surrounding
-/// declarations apply.
+// 9. IE hacks: `color: red\9` and `width: 100px\0/`. Assert what the computed
+// `color` and `width` are.
+//
+// Per CSS Syntax 3 §4.3.7, `\9` is not a hex digit so it unescapes to `U+0039`
+// (`'9'`), producing identifier `red9` (not a valid color), and `\0` followed
+// by `/` unescapes `\0` to `U+FFFD` in unit `px\u{FFFD}` followed by delim `/`.
+// Both declarations are invalid in standards-compliant browsers and dropped,
+// leaving `color` and `width` at their prior/initial values while surrounding
+// declarations apply.
 #[test]
 fn case9_ie_backslash_hacks() {
     let s = p_style(
@@ -166,9 +166,9 @@ fn case9_ie_backslash_hacks() {
     assert_eq!(s.margin.top, LengthAuto::Length(Length::px(10.0)));
 }
 
-/// 10. Unbalanced brackets inside a value: `width: calc(100% - (10px)` with
-/// the closing paren missing, inside a block that is then closed. Also
-/// `background: url(foo.png` with no closing paren.
+// 10. Unbalanced brackets inside a value: `width: calc(100% - (10px)` with
+// the closing paren missing, inside a block that is then closed. Also
+// `background: url(foo.png` with no closing paren.
 #[test]
 fn case10_unbalanced_brackets_in_value() {
     let s1 = p_style(
@@ -187,8 +187,8 @@ fn case10_unbalanced_brackets_in_value() {
     assert!(s2.background_layers.is_empty());
 }
 
-/// 11. Null bytes and the BOM (`\u{FEFF}` at the start of the sheet), CRLF
-/// line endings, and form feeds.
+// 11. Null bytes and the BOM (`\u{FEFF}` at the start of the sheet), CRLF
+// line endings, and form feeds.
 #[test]
 fn case11_null_bytes_bom_crlf_form_feeds() {
     // BOM at start of stylesheet, CRLF (`\r\n`) and form feed (`\u{000C}`) whitespace,
@@ -202,13 +202,13 @@ fn case11_null_bytes_bom_crlf_form_feeds() {
     assert_eq!(s.font_family, vec!["a\u{FFFD}b".to_owned()]);
 }
 
-/// 12. Huge input:
-/// - A 2 MB sheet of 20 000 rules.
-/// - Selectors nested 2000 levels deep, `div div div ...`.
-/// - `calc()` nested 500 levels deep.
-/// - A 100 000-character identifier.
-/// Each must finish in under 2 s in release-independent terms (< 10 s in debug)
-/// and must not overflow a 2 MB thread stack.
+// 12. Huge input:
+// - A 2 MB sheet of 20 000 rules.
+// - Selectors nested 2000 levels deep, `div div div ...`.
+// - `calc()` nested 500 levels deep.
+// - A 100 000-character identifier.
+// Each must finish in under 2 s in release-independent terms (< 10 s in debug)
+// and must not overflow a 2 MB thread stack.
 #[test]
 fn case12_huge_inputs() {
     fn run_on_2mb_stack<F: FnOnce() + Send + 'static>(name: &str, f: F) {
@@ -228,13 +228,13 @@ fn case12_huge_inputs() {
 
     // (a) 2 MB sheet of 20 000 rules.
     run_on_2mb_stack("20k_rules", || {
-        let mut css = String::with_capacity(2_100_000);
+        let mut css = String::with_capacity(2_300_000);
         for i in 0..19_999 {
-            // ~105 bytes per rule -> ~2.1 MB total.
+            // ~112 bytes per rule -> ~2.08 MB total across 20 000 rules.
             use std::fmt::Write;
             let _ = writeln!(
                 css,
-                ".unused-rule-number-{i:05} {{ padding-left: 1px; padding-right: 2px; padding-bottom: 3px; }}"
+                ".unused-rule-selector-item-number-{i:05} {{ padding-left: 1px; padding-right: 2px; padding-bottom: 3px; }}"
             );
         }
         css.push_str("p { padding-top: 4px; color: rgb(12, 34, 56); margin-top: 14px; }\n");
@@ -289,9 +289,9 @@ fn case12_huge_inputs() {
     });
 }
 
-/// 13. `@media` with garbage, `@media screen and (min-width: ) { p { color: red } }`.
-/// Per Media Queries 4 §3.2, an invalid media query evaluates to `not all`,
-/// so the rule inside does not apply while surrounding rules do.
+// 13. `@media` with garbage, `@media screen and (min-width: ) { p { color: red } }`.
+// Per Media Queries 4 §3.2, an invalid media query evaluates to `not all`,
+// so the rule inside does not apply while surrounding rules do.
 #[test]
 fn case13_media_with_garbage() {
     let s = p_style(
@@ -302,7 +302,7 @@ fn case13_media_with_garbage() {
     assert_eq!(s.margin.top, LengthAuto::Length(Length::px(18.0)));
 }
 
-/// 14. Comments in odd places: `p/**/{color/**/:/**/red}`, and an unclosed `/*` at EOF.
+// 14. Comments in odd places: `p/**/{color/**/:/**/red}`, and an unclosed `/*` at EOF.
 #[test]
 fn case14_comments_in_odd_places_and_unclosed_at_eof() {
     let s = p_style(

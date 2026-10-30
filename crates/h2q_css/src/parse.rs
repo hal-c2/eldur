@@ -252,8 +252,15 @@ impl<'a> ParseCtx<'a> {
     }
 }
 
-/// Sanitizes stray top-level closing braces (`}`) and unclosed `[` / `(` across rule
-/// boundaries while preserving byte offsets and line numbers.
+/// Maximum `(` / `[` nesting depth passed to `swc_css_parser` before excess inner
+/// pairs are neutralized. `h2q_css` already rejects property values nested deeper
+/// than `MAX_NESTING_DEPTH = 32`, while `swc_css_parser`'s recursive descent can
+/// overflow a 2 MB thread stack in unoptimized debug builds around ~150 nested frames.
+const MAX_SWC_PAREN_DEPTH: usize = 48;
+
+/// Sanitizes stray top-level closing braces (`}`), unclosed `[` / `(` across rule
+/// boundaries, and deeply nested `(` / `[` pairs while preserving byte offsets and
+/// line numbers.
 ///
 /// - `swc_css_parser` does not implement the CSS Syntax 3 §5.4.3 / CSS 2.1 §4.2 amendment
 ///   that discards an unmatched `}` during qualified-rule prelude consumption instead of
@@ -264,11 +271,15 @@ impl<'a> ParseCtx<'a> {
 ///   subsequent rules. Replacing the unclosed opener's bracket character with `.` keeps
 ///   the prelude or declaration value invalid so it is dropped while allowing the rest of
 ///   the stylesheet to be parsed.
+/// - When `(` / `[` nesting exceeds [`MAX_SWC_PAREN_DEPTH`], neutralizing the excess
+///   openers (`.` for `(`, `' '` for `]`) and their matching closers (`' '`) prevents
+///   `swc_css_parser` from overflowing a 2 MB thread stack while keeping nesting > 32
+///   so the value parser rejects the declaration.
 fn sanitize_rule_boundaries(text: &str) -> std::borrow::Cow<'_, str> {
     let Ok(len) = u32::try_from(text.len()) else {
         return std::borrow::Cow::Borrowed(text);
     };
-    let mut lexer = Lexer::new(
+    let lexer = Lexer::new(
         StringInput::new(text, BytePos(1), BytePos(1 + len)),
         None,
         ParserConfig::default(),
@@ -278,8 +289,9 @@ fn sanitize_rule_boundaries(text: &str) -> std::borrow::Cow<'_, str> {
     let mut prelude_openers: Vec<(char, usize, usize)> = Vec::new();
     let mut block_openers: Vec<Vec<(char, usize, usize)>> = Vec::new();
     let mut broken_openers: Vec<(usize, usize)> = Vec::new();
+    let mut blank_closers: Vec<(usize, usize)> = Vec::new();
 
-    while let Some(ts) = lexer.next() {
+    for ts in lexer {
         let lo = (ts.span.lo.0 - 1) as usize;
         let hi = (ts.span.hi.0 - 1) as usize;
         match ts.token {
@@ -335,6 +347,11 @@ fn sanitize_rule_boundaries(text: &str) -> std::borrow::Cow<'_, str> {
                 if let Some(s) = stack
                     && let Some(pos) = s.iter().rposition(|(c, _, _)| *c == ']')
                 {
+                    if pos >= MAX_SWC_PAREN_DEPTH {
+                        let (_, o_lo, o_hi) = s[pos];
+                        broken_openers.push((o_lo, o_hi));
+                        blank_closers.push((lo, hi));
+                    }
                     s.truncate(pos);
                 }
             }
@@ -347,6 +364,11 @@ fn sanitize_rule_boundaries(text: &str) -> std::borrow::Cow<'_, str> {
                 if let Some(s) = stack
                     && let Some(pos) = s.iter().rposition(|(c, _, _)| *c == ')')
                 {
+                    if pos >= MAX_SWC_PAREN_DEPTH {
+                        let (_, o_lo, o_hi) = s[pos];
+                        broken_openers.push((o_lo, o_hi));
+                        blank_closers.push((lo, hi));
+                    }
                     s.truncate(pos);
                 }
             }
@@ -354,11 +376,11 @@ fn sanitize_rule_boundaries(text: &str) -> std::borrow::Cow<'_, str> {
         }
     }
 
-    if stray_rbraces.is_empty() && broken_openers.is_empty() {
+    if stray_rbraces.is_empty() && broken_openers.is_empty() && blank_closers.is_empty() {
         return std::borrow::Cow::Borrowed(text);
     }
     let mut bytes = text.as_bytes().to_vec();
-    for (lo, hi) in stray_rbraces {
+    for (lo, hi) in stray_rbraces.into_iter().chain(blank_closers) {
         for b in &mut bytes[lo..hi] {
             if *b != b'\n' && *b != b'\r' {
                 *b = b' ';
@@ -441,6 +463,8 @@ pub(crate) fn parse_inline_style(
     if text.trim().is_empty() {
         return (Vec::new(), Vec::new());
     }
+    let sanitized = sanitize_rule_boundaries(text);
+    let text = sanitized.as_ref();
     let cm: Lrc<SourceMap> = Lrc::default();
     let fm = cm.new_source_file(FileName::Anon.into(), text.to_owned());
     let mut swc_errors = Vec::new();
