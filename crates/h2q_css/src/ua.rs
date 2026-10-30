@@ -340,6 +340,13 @@ input[type="radio" i] {
     margin: 3px;
 }
 
+select,
+input[type="color" i],
+progress,
+meter {
+    box-sizing: border-box;
+}
+
 textarea {
     white-space: pre-wrap;
 }
