@@ -1,5 +1,6 @@
 //! Robustness tests for broken, messy, or adversarial CSS inputs (CSS Syntax 3
 //! error recovery and CSS 2.1 §4.2 rules for handling parsing errors).
+//! Expected values verified with tools/visual/computed.mjs (Chromium).
 
 use std::time::{Duration, Instant};
 
@@ -80,12 +81,15 @@ fn case3_unclosed_string_newline() {
     assert_eq!(s.font_family, vec!["Custom".to_owned()]);
 }
 
-// 4. A stray `}` at top level before a valid rule: the next rule still applies.
+// 4. A stray `}` at top level before a valid rule: per CSS Syntax 3 §5.4.3
+// ("Consume a qualified rule"), an unmatched `}` at top level is appended to
+// the next rule's prelude (`} p`), making its selector list invalid so that
+// rule is dropped.
 #[test]
 fn case4_stray_closing_brace_at_top_level() {
     let s = p_style("p { padding-top: 4px; } } p { color: rgb(255, 0, 0); }");
     assert_eq!(s.padding.top, Length::px(4.0));
-    assert_eq!(s.color, Rgba::new(255, 0, 0, 255));
+    assert_eq!(s.color, Rgba::BLACK);
 }
 
 // 5. An unknown at-rule with a block, `@foo bar { p { color: red } }`, is
@@ -100,14 +104,16 @@ fn case5_unknown_at_rule_with_block() {
     assert_eq!(s.margin.top, LengthAuto::Length(Length::px(7.0)));
 }
 
-// 6. A garbage selector, `p[[ { color: red } p { margin-top: 3px }`. The
-// first rule is dropped and the second applies.
+// 6. A garbage selector, `p[[ { color: red } p { margin-top: 3px }`.
+// Per CSS Syntax 3 §5.4.8 ("Consume a simple block"), the unclosed `[` consumes
+// tokens up to its matching `]` or EOF, swallowing the rest of the stylesheet;
+// `margin-top` remains at the `<p>` UA default of `1em` (`16px`).
 #[test]
 fn case6_garbage_selector() {
     let s = p_style("p { padding-top: 4px } p[[ { color: rgb(255, 0, 0) } p { margin-top: 3px }");
     assert_eq!(s.padding.top, Length::px(4.0));
     assert_eq!(s.color, Rgba::BLACK);
-    assert_eq!(s.margin.top, LengthAuto::Length(Length::px(3.0)));
+    assert_eq!(s.margin.top, LengthAuto::Length(Length::px(16.0)));
 }
 
 // 7. `!important` misspelt as `! importantt` drops that declaration.
@@ -169,22 +175,31 @@ fn case9_ie_backslash_hacks() {
 // 10. Unbalanced brackets inside a value: `width: calc(100% - (10px)` with
 // the closing paren missing, inside a block that is then closed. Also
 // `background: url(foo.png` with no closing paren.
+//
+// Per CSS Syntax 3 §5.4.8 ("Consume a simple block") and §5.4.9 ("Consume a
+// function"), the unclosed `calc(` function consumes tokens up to its matching
+// `)` or EOF, swallowing the closing `}` of the first rule and the following
+// `p { margin-top: 11px; }` rule. `padding-top: 4px` before `width` still
+// applies, while `margin-top` stays at the `<p>` UA default (`16px`).
 #[test]
 fn case10_unbalanced_brackets_in_value() {
     let s1 = p_style(
         "p { padding-top: 4px; width: calc(100% - (10px); color: rgb(255, 0, 0); } p { margin-top: 11px; }",
     );
     assert_eq!(s1.padding.top, Length::px(4.0));
+    assert_eq!(s1.color, Rgba::BLACK);
     assert_eq!(s1.width, Size::Auto);
-    assert_eq!(s1.margin.top, LengthAuto::Length(Length::px(11.0)));
+    assert_eq!(s1.margin.top, LengthAuto::Length(Length::px(16.0)));
 
     // Unquoted `url(foo.png` with no closing paren inside a closed block: per CSS
     // Syntax 3 §4.3.6 & §4.3.14, whitespace after `foo.png` causes the tokenizer to
     // consume `<bad-url-token>` remnants up to `)` or EOF, dropping the invalid
-    // `background` declaration while preceding declarations in the rule still apply.
+    // `background` declaration and swallowing the rest of the sheet while preceding
+    // declarations in the rule still apply.
     let s2 = p_style("p { padding-top: 4px; background: url(foo.png } p { margin-top: 12px; }");
     assert_eq!(s2.padding.top, Length::px(4.0));
     assert!(s2.background_layers.is_empty());
+    assert_eq!(s2.margin.top, LengthAuto::Length(Length::px(16.0)));
 }
 
 // 11. Null bytes and the BOM (`\u{FEFF}` at the start of the sheet), CRLF
@@ -268,12 +283,12 @@ fn case12_huge_inputs() {
         let open = "calc(".repeat(500);
         let close = ")".repeat(500);
         let css = format!(
-            "p {{ padding-top: 4px; width: {open}10px{close}; margin-top: 16px; }}"
+            "p {{ padding-top: 4px; width: {open}10px{close}; margin-top: 20px; }}"
         );
         let s = p_style(&css);
         assert_eq!(s.padding.top, Length::px(4.0));
         assert_eq!(s.width, Size::Auto);
-        assert_eq!(s.margin.top, LengthAuto::Length(Length::px(16.0)));
+        assert_eq!(s.margin.top, LengthAuto::Length(Length::px(20.0)));
     });
 
     // (d) A 100 000-character identifier.

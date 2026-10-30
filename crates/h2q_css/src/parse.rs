@@ -4,13 +4,13 @@
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use swc_common::{BytePos, FileName, SourceMap, Span, Spanned, input::StringInput, sync::Lrc};
+use swc_common::{BytePos, FileName, SourceMap, Span, Spanned, sync::Lrc};
 use swc_css_ast as ast;
 use swc_css_codegen::{
     CodeGenerator, CodegenConfig, Emit,
     writer::basic::{BasicCssWriter, BasicCssWriterConfig},
 };
-use swc_css_parser::{lexer::Lexer, parser::ParserConfig};
+use swc_css_parser::parser::ParserConfig;
 
 use crate::media::MediaQueryList;
 use crate::properties::{self, ComputeContext, CssWide, Longhand, PropertyKind};
@@ -252,151 +252,6 @@ impl<'a> ParseCtx<'a> {
     }
 }
 
-/// Maximum `(` / `[` nesting depth passed to `swc_css_parser` before excess inner
-/// pairs are neutralized. `h2q_css` already rejects property values nested deeper
-/// than `MAX_NESTING_DEPTH = 32`, while `swc_css_parser`'s recursive descent can
-/// overflow a 2 MB thread stack in unoptimized debug builds around ~150 nested frames.
-const MAX_SWC_PAREN_DEPTH: usize = 48;
-
-/// Sanitizes stray top-level closing braces (`}`), unclosed `[` / `(` across rule
-/// boundaries, and deeply nested `(` / `[` pairs while preserving byte offsets and
-/// line numbers.
-///
-/// - `swc_css_parser` does not implement the CSS Syntax 3 §5.4.3 / CSS 2.1 §4.2 amendment
-///   that discards an unmatched `}` during qualified-rule prelude consumption instead of
-///   absorbing the following rule's selector into the broken prelude.
-/// - When `[` or `(` in a rule prelude is not closed before `{`, or when `[` or `(` inside
-///   a declaration value is not closed before the enclosing block's `}`, `swc_css_parser`
-///   consumes a simple block or function to `]`/`)` or EOF, swallowing the rule block or
-///   subsequent rules. Replacing the unclosed opener's bracket character with `.` keeps
-///   the prelude or declaration value invalid so it is dropped while allowing the rest of
-///   the stylesheet to be parsed.
-/// - When `(` / `[` nesting exceeds [`MAX_SWC_PAREN_DEPTH`], neutralizing the excess
-///   openers (`.` for `(`, `' '` for `]`) and their matching closers (`' '`) prevents
-///   `swc_css_parser` from overflowing a 2 MB thread stack while keeping nesting > 32
-///   so the value parser rejects the declaration.
-fn sanitize_rule_boundaries(text: &str) -> std::borrow::Cow<'_, str> {
-    let Ok(len) = u32::try_from(text.len()) else {
-        return std::borrow::Cow::Borrowed(text);
-    };
-    let lexer = Lexer::new(
-        StringInput::new(text, BytePos(1), BytePos(1 + len)),
-        None,
-        ParserConfig::default(),
-    );
-    let mut brace_depth = 0usize;
-    let mut stray_rbraces: Vec<(usize, usize)> = Vec::new();
-    let mut prelude_openers: Vec<(char, usize, usize)> = Vec::new();
-    let mut block_openers: Vec<Vec<(char, usize, usize)>> = Vec::new();
-    let mut broken_openers: Vec<(usize, usize)> = Vec::new();
-    let mut blank_closers: Vec<(usize, usize)> = Vec::new();
-
-    for ts in lexer {
-        let lo = (ts.span.lo.0 - 1) as usize;
-        let hi = (ts.span.hi.0 - 1) as usize;
-        match ts.token {
-            ast::Token::LBrace => {
-                if brace_depth == 0 {
-                    for (_, o_lo, o_hi) in prelude_openers.drain(..) {
-                        broken_openers.push((o_lo, o_hi));
-                    }
-                } else if let Some(top) = block_openers.last_mut() {
-                    for (_, o_lo, o_hi) in top.drain(..) {
-                        broken_openers.push((o_lo, o_hi));
-                    }
-                }
-                brace_depth += 1;
-                block_openers.push(Vec::new());
-            }
-            ast::Token::RBrace => {
-                prelude_openers.clear();
-                if brace_depth > 0 {
-                    brace_depth -= 1;
-                    if let Some(unclosed) = block_openers.pop() {
-                        for (_, o_lo, o_hi) in unclosed {
-                            broken_openers.push((o_lo, o_hi));
-                        }
-                    }
-                } else {
-                    stray_rbraces.push((lo, hi));
-                }
-            }
-            ast::Token::Semi if brace_depth == 0 => {
-                prelude_openers.clear();
-            }
-            ast::Token::LBracket => {
-                if brace_depth == 0 {
-                    prelude_openers.push((']', lo, hi));
-                } else if let Some(top) = block_openers.last_mut() {
-                    top.push((']', lo, hi));
-                }
-            }
-            ast::Token::LParen | ast::Token::Function { .. } => {
-                if brace_depth == 0 {
-                    prelude_openers.push((')', lo, hi));
-                } else if let Some(top) = block_openers.last_mut() {
-                    top.push((')', lo, hi));
-                }
-            }
-            ast::Token::RBracket => {
-                let stack = if brace_depth == 0 {
-                    Some(&mut prelude_openers)
-                } else {
-                    block_openers.last_mut()
-                };
-                if let Some(s) = stack
-                    && let Some(pos) = s.iter().rposition(|(c, _, _)| *c == ']')
-                {
-                    if pos >= MAX_SWC_PAREN_DEPTH {
-                        let (_, o_lo, o_hi) = s[pos];
-                        broken_openers.push((o_lo, o_hi));
-                        blank_closers.push((lo, hi));
-                    }
-                    s.truncate(pos);
-                }
-            }
-            ast::Token::RParen => {
-                let stack = if brace_depth == 0 {
-                    Some(&mut prelude_openers)
-                } else {
-                    block_openers.last_mut()
-                };
-                if let Some(s) = stack
-                    && let Some(pos) = s.iter().rposition(|(c, _, _)| *c == ')')
-                {
-                    if pos >= MAX_SWC_PAREN_DEPTH {
-                        let (_, o_lo, o_hi) = s[pos];
-                        broken_openers.push((o_lo, o_hi));
-                        blank_closers.push((lo, hi));
-                    }
-                    s.truncate(pos);
-                }
-            }
-            _ => {}
-        }
-    }
-
-    if stray_rbraces.is_empty() && broken_openers.is_empty() && blank_closers.is_empty() {
-        return std::borrow::Cow::Borrowed(text);
-    }
-    let mut bytes = text.as_bytes().to_vec();
-    for (lo, hi) in stray_rbraces.into_iter().chain(blank_closers) {
-        for b in &mut bytes[lo..hi] {
-            if *b != b'\n' && *b != b'\r' {
-                *b = b' ';
-            }
-        }
-    }
-    for (lo, hi) in broken_openers {
-        if hi > lo {
-            bytes[hi - 1] = b'.';
-        }
-    }
-    std::borrow::Cow::Owned(
-        String::from_utf8(bytes).unwrap_or_else(|_| text.to_owned()),
-    )
-}
-
 /// Parses a full CSS stylesheet into [`Stylesheet`] and recoverable [`Diagnostic`]s.
 pub(crate) fn parse_stylesheet(
     text: &str,
@@ -404,8 +259,6 @@ pub(crate) fn parse_stylesheet(
     source_name: &str,
     base_url: Option<&str>,
 ) -> (Stylesheet, Vec<Diagnostic>) {
-    let sanitized = sanitize_rule_boundaries(text);
-    let text = sanitized.as_ref();
     let cm: Lrc<SourceMap> = Lrc::default();
     let fm = cm.new_source_file(FileName::Anon.into(), text.to_owned());
     let config = ParserConfig {
@@ -463,8 +316,6 @@ pub(crate) fn parse_inline_style(
     if text.trim().is_empty() {
         return (Vec::new(), Vec::new());
     }
-    let sanitized = sanitize_rule_boundaries(text);
-    let text = sanitized.as_ref();
     let cm: Lrc<SourceMap> = Lrc::default();
     let fm = cm.new_source_file(FileName::Anon.into(), text.to_owned());
     let mut swc_errors = Vec::new();
