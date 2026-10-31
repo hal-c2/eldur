@@ -4559,3 +4559,198 @@ Item {
     assert!(!output.contains("no style template"), "{output}");
     assert!(!output.contains("unsupported"), "{output}");
 }
+
+// What `glyphs` in these pages reads: every item below that has a `renderType`.
+const GLYPHS_QML: &str = r#"
+    function glyphs(item) {
+        var out = typeof item.renderType === "number" ? [item.renderType] : [];
+        for (var i = 0; i < item.children.length; ++i) {
+            out = out.concat(glyphs(item.children[i]));
+        }
+        return out;
+    }
+"#;
+
+fn glyph_page(script: &str, body: &str, report: &str) -> String {
+    let resolver = FakeResolver::default().with_id("box", 1, "box", TargetKind::Box);
+    let main = format!(
+        r#"Item {{
+    id: root
+    {GLYPHS_QML}
+    Item {{ id: box; objectName: "box" }}
+    {body}
+    Component.onCompleted: {{
+        (Page.__eldur_init || Eldur.init)(root);
+        Page.start();
+        {report}
+        Qt.quit();
+    }}
+}}"#
+    );
+    run_page(&resolver, script, &main).0
+}
+
+#[test]
+fn created_text_asks_for_native_glyphs() {
+    if !has_binary("qml6") {
+        eprintln!("skipping created text test: qml6 not on PATH");
+        return;
+    }
+    let output = glyph_page(
+        r#"
+function make(tag, type) {
+    var el = document.createElement(tag);
+    if (type) { el.type = type; }
+    document.querySelector('#box').appendChild(el);
+    return el;
+}
+function start() {
+    ["span", "p", "label", "h1", "h2", "h3", "a", "textarea", "button"].forEach(function(t) { make(t); });
+    ["text", "number", "submit", "button", "reset", "checkbox"].forEach(function(t) { make("input", t); });
+    var box = document.querySelector('#box');
+    box.appendChild(document.createTextNode("node"));
+    box.insertAdjacentHTML("beforeend", "<span>a</span><button>b</button><input type=\"text\">");
+    box.appendChild(make("span").cloneNode(true));
+    var inner = document.createElement("div");
+    box.appendChild(inner);
+    inner.innerHTML = "<p>c</p><button>d</button>";
+}
+"#,
+        "",
+        r#"var seen = [];
+        for (var i = 0; i < box.children.length; ++i) {
+            seen.push(glyphs(box.children[i]).join("+"));
+        }
+        console.log("ELDUR_GLYPHS", seen.join(","));"#,
+    );
+    // In the order made. A field or area counts twice: its placeholder is a
+    // text item of its own. The `<div>` holds its `<p>` and `<button>`.
+    let expected = [
+        "1,1,1,1,1,1,1", // span p label h1 h2 h3 a
+        "1+1,1",         // textarea button
+        "1+1,1,1,1,1,1", // input: text number submit button reset checkbox
+        "1",             // text node
+        "1,1,1+1",       // insertAdjacentHTML: span button input
+        "1,1",           // span and its clone
+        "1+1",           // innerHTML
+    ]
+    .join(",");
+    assert!(
+        output.contains(&format!("ELDUR_GLYPHS {expected}\n")),
+        "{output}"
+    );
+    assert!(!output.contains("Error"), "{output}");
+}
+
+#[test]
+fn created_button_label_follows_the_button() {
+    if !has_binary("qml6") {
+        eprintln!("skipping created button test: qml6 not on PATH");
+        return;
+    }
+    let output = glyph_page(
+        r#"
+var button;
+var input;
+function start() {
+    var box = document.querySelector('#box');
+    button = document.createElement("button");
+    box.appendChild(button);
+    button.textContent = "Go";
+    input = document.createElement("input");
+    input.type = "submit";
+    box.appendChild(input);
+    input.value = "Send";
+}
+function setLong() { button.textContent = "A much longer label"; }
+function disable() { button.disabled = true; }
+function red() { button.style.color = "red"; }
+"#,
+        "",
+        r#"var made = box.children[0];
+        var label = made.contentItem;
+        var before = made.implicitWidth;
+        var first = label.text;
+        Page.setLong();
+        var longer = made.implicitWidth > before;
+        var enabledColor = String(label.color);
+        Page.disable();
+        console.log("ELDUR_LABEL", first, label.text, longer, made.enabled, enabledColor,
+            Qt.colorEqual(label.color, made.palette.buttonText),
+            box.children[1].contentItem.text, label.renderType,
+            label.horizontalAlignment === Text.AlignHCenter);
+        Page.red();
+        console.log("ELDUR_RED", String(label.color));"#,
+    );
+    assert!(
+        output.contains("ELDUR_LABEL Go A much longer label true false #000000 true Send 1 true"),
+        "{output}"
+    );
+    assert!(output.contains("ELDUR_RED #ff0000"), "{output}");
+}
+
+#[test]
+fn text_inserted_under_a_scale_or_rotation_keeps_qt_glyphs() {
+    if !has_binary("qml6") {
+        eprintln!("skipping turned text test: qml6 not on PATH");
+        return;
+    }
+    let resolver = FakeResolver::default()
+        .with_id("box", 1, "box", TargetKind::Box)
+        .with_id("rotated", 2, "rotated", TargetKind::Box)
+        .with_id("scaled", 3, "scaled", TargetKind::Box)
+        .with_id("turned", 4, "turned", TargetKind::Box)
+        .with_id("moved", 5, "moved", TargetKind::Box)
+        .with_id("still", 6, "still", TargetKind::Box)
+        .with_id("typed", 7, "typed", TargetKind::Box);
+    let script = r#"
+var built;
+function start() {
+    document.querySelector('#rotated').appendChild(document.createElement("span"));
+    document.querySelector('#scaled').appendChild(document.createElement("button"));
+    document.querySelector('#turned').appendChild(document.createTextNode("x"));
+    // Built whole, then connected: the check sees it only at the last step.
+    built = document.createElement("div");
+    built.appendChild(document.createElement("textarea"));
+    document.querySelector('#rotated').appendChild(built);
+    document.querySelector('#moved').appendChild(document.createElement("p"));
+    document.querySelector('#still').appendChild(document.createElement("span"));
+    // Connected first: a new type makes a new control in its place.
+    var input = document.createElement("input");
+    document.querySelector('#typed').appendChild(input);
+    input.type = "number";
+}
+function moveOut() { document.querySelector('#box').appendChild(built); }
+"#;
+    let main = format!(
+        r#"Item {{
+    id: root
+    {GLYPHS_QML}
+    Item {{ id: box; objectName: "box" }}
+    Item {{ rotation: 30; Item {{ id: rotated; objectName: "rotated" }} }}
+    Item {{ id: scaled; objectName: "scaled"; scale: 1.5 }}
+    Item {{ id: turned; objectName: "turned"; transform: Rotation {{ angle: 10 }} }}
+    Item {{
+        transform: Scale {{ xScale: 2 }}
+        Item {{ id: moved; objectName: "moved" }}
+    }}
+    Item {{
+        transform: Translate {{ y: 1 }}
+        Item {{ id: still; objectName: "still" }}
+    }}
+    Item {{ scale: 2; Item {{ id: typed; objectName: "typed" }} }}
+    Component.onCompleted: {{
+        (Page.__eldur_init || Eldur.init)(root);
+        Page.start();
+        console.log("ELDUR_TURNED", glyphs(rotated).join("+"), glyphs(scaled).join("+"),
+            glyphs(turned).join("+"), glyphs(moved).join("+"), glyphs(still).join("+"), glyphs(typed).join("+"));
+        Page.moveOut();
+        console.log("ELDUR_MOVED", glyphs(box).join("+"));
+        Qt.quit();
+    }}
+}}"#
+    );
+    let (output, _) = run_page(&resolver, script, &main);
+    assert!(output.contains("ELDUR_TURNED 0+0+0 0 0 0 1 0"), "{output}");
+    assert!(output.contains("ELDUR_MOVED 1+1"), "{output}");
+}
