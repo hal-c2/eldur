@@ -1614,6 +1614,8 @@ function classList(item) {
                 var idx = m.classes.indexOf(cls);
                 if (idx !== -1) {
                     m.classes.splice(idx, 1);
+                    // The attribute stays, empty; one that was never there does not come.
+                    m.classAttr = true;
                 }
                 _syncClassProp(curRaw, cls, false);
             }
@@ -1630,6 +1632,7 @@ function classList(item) {
                 }
             } else if (idx !== -1) {
                 m.classes.splice(idx, 1);
+                m.classAttr = true;
             }
             _syncClassProp(curRaw, cls, shouldHave);
             _afterClassMutation(curRaw, m);
@@ -3371,7 +3374,7 @@ function getAttribute(item, attrName) {
     if (name === "id" && typeof raw.objectName === "string" && raw.objectName.length > 0) {
         return raw.objectName;
     }
-    if (name === "class" && m.classes.length > 0) {
+    if (name === "class" && (m.classes.length > 0 || m.classAttr)) {
         return m.classes.join(" ");
     }
     if (name === "src" && raw.source !== undefined && String(raw.source) !== "") {
@@ -3459,6 +3462,18 @@ function toggleAttribute(item, attrName, force) {
         removeAttribute(item, name);
     }
     return false;
+}
+
+// A browser takes focus off what stops being rendered. Qt only moves activeFocus and
+// leaves `focus` set, which would hand it back when the element shows again.
+function _focusGone(raw) {
+    if (raw.visible !== false || !_root || _root.visible !== true) {
+        return false;
+    }
+    if (raw.focus === true) {
+        raw.focus = false;
+    }
+    return true;
 }
 
 function focus(item) {
@@ -9018,13 +9033,16 @@ var document = {
     get hidden() { return false; },
     get visibilityState() { return "visible"; },
     get activeElement() {
+        if (_activeElement && _focusGone(_activeElement)) {
+            _activeElement = null;
+        }
         if (_activeElement && (_activeElement.activeFocus || _activeElement.focus)) {
             return wrap(_activeElement);
         }
         var focused = null;
         if (_root) {
             _walkItems(_root, function(node) {
-                if (node !== _root && (node.activeFocus || node.focus)) {
+                if (node !== _root && (node.activeFocus || node.focus) && !_focusGone(node)) {
                     focused = node;
                 }
                 return false;
@@ -11862,6 +11880,8 @@ function _gSettle() {
         _gDirty = false;
         ++_gGen;
         _gMarginPass();
+        // Templates paint the states, but what a script reads comes from the rules.
+        _gWatchStates();
         _gRunning = false;
         return;
     }

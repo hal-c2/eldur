@@ -214,13 +214,14 @@ ApplicationWindow {
                                     anchors.topMargin: 5
 
                                     // <li id="m-profile">
-                                    Item {
+                                    Rectangle {
                                         id: mProfile
                                         property var eldurAttrs: ({ "data-action": "profile" })
                                         property string eldurTag: "li"
                                         property string eldurWs: "\n      "
                                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
+                                        color: mProfileHover.hovered ? "#0366d6" : "#00000000"
                                         implicitWidth: mProfileText.implicitWidth + 24
                                         implicitHeight: mProfileText.implicitHeight + 12
                                         objectName: "m-profile"
@@ -231,7 +232,7 @@ ApplicationWindow {
                                             id: mProfileText
                                             text: "Your profile"
                                             textFormat: Text.PlainText
-                                            color: "#24292e"
+                                            color: mProfileHover.hovered ? "#ffffff" : "#24292e"
                                             font.family: "Arial"
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
@@ -243,16 +244,21 @@ ApplicationWindow {
                                             anchors.topMargin: 6
                                             renderType: Text.NativeRendering
                                         }
+
+                                        HoverHandler {
+                                            id: mProfileHover
+                                        }
                                     }
 
                                     // <li id="m-settings">
-                                    Item {
+                                    Rectangle {
                                         id: mSettings
                                         property var eldurAttrs: ({ "data-action": "settings" })
                                         property string eldurTag: "li"
                                         property string eldurWs: "\n      "
                                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : mProfile.eldurCarry
 
+                                        color: mSettingsHover.hovered ? "#0366d6" : "#00000000"
                                         implicitWidth: mSettingsText.implicitWidth + 24
                                         implicitHeight: mSettingsText.implicitHeight + 12
                                         objectName: "m-settings"
@@ -264,7 +270,7 @@ ApplicationWindow {
                                             id: mSettingsText
                                             text: "Settings"
                                             textFormat: Text.PlainText
-                                            color: "#24292e"
+                                            color: mSettingsHover.hovered ? "#ffffff" : "#24292e"
                                             font.family: "Arial"
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
@@ -276,6 +282,10 @@ ApplicationWindow {
                                             anchors.topMargin: 6
                                             renderType: Text.NativeRendering
                                         }
+
+                                        HoverHandler {
+                                            id: mSettingsHover
+                                        }
                                     }
 
                                     // <li class="sep">
@@ -286,21 +296,26 @@ ApplicationWindow {
                                         property string eldurWs: "\n      "
                                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 1) - Layout.topMargin - 1 + 0.000001) : mSettings.eldurCarry
 
-                                        color: "#e1e4e8"
+                                        color: sepHover.hovered ? "#0366d6" : "#e1e4e8"
                                         implicitWidth: 0
                                         implicitHeight: 0
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: 1
                                         Layout.topMargin: 4 - mSettings.eldurCarry
+
+                                        HoverHandler {
+                                            id: sepHover
+                                        }
                                     }
 
                                     // <li id="m-logout">
-                                    Item {
+                                    Rectangle {
                                         id: mLogout
                                         property var eldurAttrs: ({ "data-action": "logout" })
                                         property string eldurTag: "li"
                                         property string eldurWs: "\n      "
 
+                                        color: mLogoutHover.hovered ? "#0366d6" : "#00000000"
                                         implicitWidth: mLogoutText.implicitWidth + 24
                                         implicitHeight: mLogoutText.implicitHeight + 12
                                         objectName: "m-logout"
@@ -312,7 +327,7 @@ ApplicationWindow {
                                             id: mLogoutText
                                             text: "Sign out"
                                             textFormat: Text.PlainText
-                                            color: "#24292e"
+                                            color: mLogoutHover.hovered ? "#ffffff" : "#24292e"
                                             font.family: "Arial"
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
@@ -323,6 +338,10 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 6
                                             renderType: Text.NativeRendering
+                                        }
+
+                                        HoverHandler {
+                                            id: mLogoutHover
                                         }
                                     }
                                 }

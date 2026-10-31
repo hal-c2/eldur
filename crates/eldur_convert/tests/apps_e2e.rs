@@ -28,8 +28,10 @@ const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 /// between the two text engines.
 const GEOMETRY_TOLERANCE: f64 = 2.0;
 
-const UA: &str = "static controls lack the UA 2px border and 13.33px Arial; adding them changes script-less pages";
-const UAFOLLOW: &str = "follows from static controls being smaller than Chromium's";
+const COMPACT: &str = "the button sits 2px left of Chromium's; cause not isolated";
+const ROWS: &str =
+    "table rows are whole pixels: 33 against Chromium's 32.59, adding up down the table";
+const CONTROLROW: &str = "13.4px lower than Chromium from the fields above; cause not isolated";
 const INLINE: &str =
     "a checkbox beside inline text is block-level: no inline replaced elements (boxes/mod.rs)";
 const STRUT: &str = "a control alone in a line box sits on the line's baseline, here at its top: no inline replaced elements (boxes/mod.rs)";
@@ -46,16 +48,13 @@ const NEVER_SCRIPT: &str =
 const CREATED_P: &str =
     "a paragraph's bottom margin, made by innerHTML, does not collapse through its empty parent";
 const NO_ROW: &str = "a static table's row has no QML object, so a query does not find it";
-const CLASS: &str = "classList.remove on an element with no class attribute leaves no attribute, Chromium an empty one";
-const HOVER: &str = "li:hover under a list that starts display:none gets no hover tracking";
-const FOCUS: &str = "hiding the form leaves focus on its hidden button";
 
 /// `(page, what differs, why)`. `what` starts a difference's name, as printed by a
 /// failing test, `<step> <selector>[<row>] <field>:`; `*` stands for any text.
 const KNOWN: &[(&str, &str, &str)] = &[
     ("controls", "* *[*] y:", STRUT),
     ("created_controls", "* *[*] y:", STRUT),
-    ("theme", "* #compact[*] x:", UA),
+    ("theme", "* #compact[*] x:", COMPACT),
     ("cards", "* #cart[*] height:", FONT),
     ("cards", "* .buy[*] y:", FONTFOLLOW),
     ("cards", "* .card[*] y:", FONTFOLLOW),
@@ -86,20 +85,16 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("table", "filter th[*] width:", AFTER),
     ("table", "filter tbody td[*] x:", AFTER),
     ("table", "filter tbody td[*] width:", AFTER),
-    ("table", "* #people[*] height:", UAFOLLOW),
-    ("table", "* #summary[*] y:", UAFOLLOW),
-    ("table", "* td[*] y:", UAFOLLOW),
-    ("table", "* tr[*] y:", UAFOLLOW),
-    ("table", "* th[*] class:", CLASS),
-    ("dropdown", "* #m-settings[*] background-color:", HOVER),
-    ("dropdown", "* #m-settings[*] color:", HOVER),
-    ("form", "* #go[*] y:", UAFOLLOW),
+    ("table", "* #people[*] height:", ROWS),
+    ("table", "* #summary[*] y:", ROWS),
+    ("table", "* td[*] y:", ROWS),
+    ("table", "* tr[*] y:", ROWS),
+    ("form", "* #go[*] y:", CONTROLROW),
     ("form", "* #signup[*] height:", INLINE),
     ("form", "* #terms[*] y:", INLINE),
     ("form", "* .field[*] height:", INLINE),
-    ("form", "* .error[*] y:", UAFOLLOW),
-    ("form", "* (focus):", FOCUS),
-    ("form", "* #done[*] y:", UAFOLLOW),
+    ("form", "* .error[*] y:", CONTROLROW),
+    ("form", "* #done[*] y:", CONTROLROW),
 ];
 
 const TEST: &str = r##"
@@ -392,6 +387,11 @@ fn tabs() {
 #[test]
 fn accordion() {
     page("accordion");
+}
+
+#[test]
+fn hidden_focus() {
+    page("hidden_focus");
 }
 
 #[test]

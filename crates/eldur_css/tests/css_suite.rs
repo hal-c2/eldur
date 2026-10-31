@@ -873,6 +873,19 @@ fn state_variants_hover_focus_within_visited_and_multi_dynamic_rejection() {
     assert_eq!(link_vars[0].changed[0].1.color, Rgba::new(120, 0, 180, 255));
 }
 
+// A script can show the list, so the hover condition has to exist from the start.
+#[test]
+fn state_variants_list_conditions_under_a_display_none_ancestor() {
+    let doc = Document::parse(r#"<ul id="list"><li id="item">x</li></ul>"#);
+    let (sheet, _) = parse_author("ul { display: none; } li:hover { color: rgb(1, 2, 3); }");
+    let map = compute_styles(&doc, &[sheet], &Viewport::default());
+    let item = doc.element_by_id("item").expect("item");
+    let variants: Vec<_> = map.variants_of(item).collect();
+    assert_eq!(variants.len(), 1);
+    assert_eq!(variants[0].state, PseudoState::Hover);
+    assert!(variants[0].changed.is_empty());
+}
+
 #[test]
 fn state_variants_nested_has_nth_child_of_and_logical_combinations() {
     let doc = Document::parse(

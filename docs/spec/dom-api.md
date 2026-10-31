@@ -500,5 +500,4 @@ Known gaps these pages show:
 
 - Rows created in a `<tbody>` do not share the table's auto column sizes: they
   sort and filter, but their cells do not line up with the header.
-- `:hover` under a list that starts `display: none` has no hover tracking.
 - Hiding a form does not move focus off the hidden control.

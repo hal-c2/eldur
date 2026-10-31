@@ -7497,6 +7497,204 @@
    }
   }
  ],
+ "hidden_focus": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#f": [
+     {
+      "box": [
+       8,
+       8,
+       1264,
+       21
+      ],
+      "shown": true,
+      "text": "hide"
+     }
+    ],
+    "#t": [
+     {
+      "box": [
+       8,
+       71,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "toggled",
+      "attrs": {
+       "class": "a"
+      }
+     }
+    ],
+    "#never": [
+     {
+      "box": [
+       8,
+       89,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "never",
+      "attrs": {
+       "class": null
+      }
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "hide",
+   "log": [],
+   "state": {
+    "#f": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "hide"
+     }
+    ],
+    "#t": [
+     {
+      "box": [
+       8,
+       50,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "toggled",
+      "attrs": {
+       "class": "a"
+      }
+     }
+    ],
+    "#never": [
+     {
+      "box": [
+       8,
+       68,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "never",
+      "attrs": {
+       "class": null
+      }
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "show",
+   "log": [],
+   "state": {
+    "#f": [
+     {
+      "box": [
+       8,
+       8,
+       1264,
+       21
+      ],
+      "shown": true,
+      "text": "hide"
+     }
+    ],
+    "#t": [
+     {
+      "box": [
+       8,
+       71,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "toggled",
+      "attrs": {
+       "class": "a"
+      }
+     }
+    ],
+    "#never": [
+     {
+      "box": [
+       8,
+       89,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "never",
+      "attrs": {
+       "class": null
+      }
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "off",
+   "log": [],
+   "state": {
+    "#f": [
+     {
+      "box": [
+       8,
+       8,
+       1264,
+       21
+      ],
+      "shown": true,
+      "text": "hide"
+     }
+    ],
+    "#t": [
+     {
+      "box": [
+       8,
+       71,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "toggled",
+      "attrs": {
+       "class": ""
+      }
+     }
+    ],
+    "#never": [
+     {
+      "box": [
+       8,
+       89,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "never",
+      "attrs": {
+       "class": null
+      }
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
  "modal": [
   {
    "name": "load",
