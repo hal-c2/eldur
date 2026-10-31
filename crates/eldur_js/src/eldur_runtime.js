@@ -2062,6 +2062,11 @@ function setStyle(item, prop, value) {
         if (!isNaN(op) && typeof raw.opacity === "number") {
             raw.opacity = op;
         }
+    } else if (name === "position") {
+        // A template holds the box's form, and layouts place what is in them.
+        if (str === "absolute" || str === "fixed") {
+            console.warn("eldur: style.position = \"" + str + "\" from a script is not applied; use a class");
+        }
     } else if (name === "left" || name === "top" || name === "right" || name === "bottom") {
         _setOffset(raw, name, str);
     } else if (name === "zIndex") {

@@ -557,6 +557,7 @@ An inline box that is absolute does not split its line. Its `y` is the top of th
 | Opacity of an ancestor up to the containing block | Not done | The box leaves that item: warning. |
 | Stacking across containing blocks | Approx | `z` orders siblings only. A positioned box's overlay stays under the initial block's boxes, whatever its `z-index` (warning), and under later in-flow siblings of its containing block. |
 | A class switching `position` between static and absolute | Not done | `dynamic-form` warning: worlds must share a shape, so it keeps its first form. |
+| A script setting `style.position` | Not done | The box stays in flow; the runtime warns on the console. A class on a created box works. |
 
 ### 5.3 `position: fixed`
 
