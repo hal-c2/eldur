@@ -129,3 +129,66 @@ fn without_state_variants_the_document_is_all_there_is() {
     );
     assert!(!qml.contains(" ? "), "{qml}");
 }
+
+fn convert(html: &str) -> h2q_convert::Output {
+    h2q_convert::convert(
+        &Input {
+            html: html.to_owned(),
+            url: "index.html".to_owned(),
+        },
+        &Options {
+            root: RootKind::Item,
+            source_comments: false,
+            ..Options::default()
+        },
+        &mut NoResources,
+    )
+}
+
+/// A list of `n` items and a list scripts never change, each styled by
+/// position, with a script that removes the first item of `#list`.
+fn positions_page(n: usize) -> String {
+    let items: String = (0..n).map(|i| format!("<li>{i}</li>")).collect();
+    format!(
+        "<style>li {{ background: white }} li:first-child {{ color: red }} \
+         li:nth-child(even) {{ background: silver }}</style>\
+         <ul id='list'>{items}</ul><ul id='fixed'><li>a</li><li>b</li></ul>\
+         <script>var list = document.getElementById('list');\
+         list.removeChild(list.firstElementChild);</script>"
+    )
+}
+
+#[test]
+fn positions_in_a_changing_list_are_bindings() {
+    let out = convert(&positions_page(3));
+    let qml = out.main_qml().expect("Main.qml");
+    // Only `#list`'s items read their place; `#fixed` keeps the document's.
+    assert_eq!(lines_with(qml, "property int h2qIndex").len(), 3, "{qml}");
+    assert_eq!(lines_with(qml, "property int h2qCount").len(), 3, "{qml}");
+    assert_eq!(
+        lines_with(qml, "% 2 === 0 ?").len(),
+        3,
+        "each item's background reads its place: {qml}"
+    );
+    assert!(
+        !out.diagnostics
+            .iter()
+            .any(|d| d.to_string().contains("dynamic-structural")),
+        "{:?}",
+        out.diagnostics
+    );
+}
+
+#[test]
+fn a_changing_list_with_too_many_items_keeps_the_document_places() {
+    let out = convert(&positions_page(33));
+    let qml = out.main_qml().expect("Main.qml");
+    assert!(lines_with(qml, "h2qIndex").is_empty(), "{qml}");
+    assert!(
+        out.diagnostics
+            .iter()
+            .any(|d| d.to_string().contains("dynamic-structural")),
+        "{:?}",
+        out.diagnostics
+    );
+}

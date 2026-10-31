@@ -30,4 +30,12 @@ for (const set of [[], [1,2,3,4,5,6], [2,5], [1,2,3,4,5,6,7]]) add(`cap ${set.jo
 for (const on of [0,1]) add(`checked on=${on}`, "input:checked + label{color:rgb(0,128,0)}", `<input id=cb type=checkbox${on?" checked":""}><label id=lb>l</label>`, "#lb");
 // 10 var() under a toggled class
 for (const dark of [0,1]) add(`var dark=${dark}`, ".dark{--fg:rgb(9,9,9)} p{color:var(--fg, rgb(1,1,1))}", `<div id=box${dark?" class=dark":""}><p id=t>x</p></div>`, "#t");
+// 11 structural pseudo-classes: #x (and its #s) at each place among its siblings
+const t11css = "li{color:rgb(1,1,1);margin-bottom:4px} li:first-child{color:rgb(200,0,0)} li:last-child{margin-bottom:0}"
+  + " li:nth-child(even){padding-left:10px} li:nth-last-child(2){font-size:20px} li:only-child{font-weight:700}"
+  + " li:first-of-type{padding-top:3px} li:nth-of-type(3n){padding-right:6px} li:first-child span{opacity:0.5}";
+for (const layout of ["x", "x,li,li", "li,x,li", "li,li,x", "li,li,x,li,li", "p,x,li", "p,li,x", "li,li,p,x"]) {
+  const body = layout.split(",").map((t) => t === "x" ? "<li id=x><span id=s>x</span></li>" : `<${t}>${t}</${t}>`).join("");
+  for (const sel of ["#x", "#s"]) add(`pos ${layout} ${sel}`, t11css, `<div>${body}</div>`, sel);
+}
 fs.writeFileSync(process.argv[2], JSON.stringify(cases, null, 1));

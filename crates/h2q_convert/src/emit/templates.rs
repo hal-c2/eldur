@@ -13,7 +13,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
-use h2q_css::{Condition, PseudoState};
+use h2q_css::{Condition, PseudoState, Structural};
 use h2q_dom::{Document, LocalName, NodeId, QualName, ns};
 use h2q_js::{CreatedElement, ElementRef};
 use h2q_qml::{Member, Object, Value};
@@ -254,6 +254,31 @@ fn decl(ty: &str, name: &str, value: Value, readonly: bool) -> Member {
         value: Some(value),
         readonly,
         required: false,
+    }
+}
+
+/// The property a created ancestor exports a structural test as (§8.1):
+/// `h2qIsFirstChild`, `h2qIsNthChild2n1`, `h2qIsNthLastOfTypem1n3`.
+fn structural_export(test: Structural) -> String {
+    let num = |v: i32| {
+        if v < 0 {
+            format!("m{}", -i64::from(v))
+        } else {
+            v.to_string()
+        }
+    };
+    let nth = |kind: &str, a: i32, b: i32| format!("h2qIs{kind}{}n{}", num(a), num(b));
+    match test {
+        Structural::FirstChild => "h2qIsFirstChild".to_owned(),
+        Structural::LastChild => "h2qIsLastChild".to_owned(),
+        Structural::OnlyChild => "h2qIsOnlyChild".to_owned(),
+        Structural::FirstOfType => "h2qIsFirstOfType".to_owned(),
+        Structural::LastOfType => "h2qIsLastOfType".to_owned(),
+        Structural::OnlyOfType => "h2qIsOnlyOfType".to_owned(),
+        Structural::NthChild { a, b } => nth("NthChild", a, b),
+        Structural::NthLastChild { a, b } => nth("NthLastChild", a, b),
+        Structural::NthOfType { a, b } => nth("NthOfType", a, b),
+        Structural::NthLastOfType { a, b } => nth("NthLastOfType", a, b),
     }
 }
 
@@ -516,6 +541,7 @@ pub(crate) fn add(
         classes,
         reserved,
         relevant,
+        nodes: probe_nodes.clone(),
     };
     let styles = h2q_css::compute_styles(&doc, cx.sheets, &cx.options.viewport);
     let mut wanted = cx.wanted.clone();
@@ -548,8 +574,9 @@ pub(crate) fn add(
     // Each probe's template, before names.
     let mut objects: Vec<Option<Object>> = Vec::with_capacity(insts.len());
     let mut ups: Vec<BTreeSet<usize>> = vec![BTreeSet::new(); insts.len()];
-    let mut exports: Vec<BTreeMap<&'static str, String>> = vec![BTreeMap::new(); insts.len()];
+    let mut exports: Vec<BTreeMap<String, String>> = vec![BTreeMap::new(); insts.len()];
     let mut static_classes: BTreeMap<String, (NodeId, BTreeSet<String>)> = BTreeMap::new();
+    let mut static_positions: BTreeMap<String, (NodeId, bool)> = BTreeMap::new();
     let mut unreachable: BTreeSet<(usize, u16)> = BTreeSet::new();
     let mut reported: HashSet<usize> = HashSet::new();
     for (i, inst) in insts.iter().enumerate() {
@@ -595,7 +622,9 @@ pub(crate) fn add(
             let (cond, initial) = &out.conditions[usize::from(c)];
             let local = out.locals.get(&c).cloned().unwrap_or_default();
             let node = match cond {
-                Condition::Class { node, .. } | Condition::State { node, .. } => *node,
+                Condition::Class { node, .. }
+                | Condition::State { node, .. }
+                | Condition::Structural { node, .. } => *node,
             };
             let distance = std::iter::successors(Some(inst.node), |&n| doc.parent_element(n))
                 .position(|n| n == node);
@@ -605,9 +634,14 @@ pub(crate) fn add(
                     let name = match cond {
                         Condition::Class { class, .. } => Some(class_prop(class)),
                         Condition::State { state, .. } => export_name(*state).map(|name| {
-                            exports[inst_of[&node]].insert(name, local.clone());
+                            exports[inst_of[&node]].insert(name.to_owned(), local.clone());
                             name.to_owned()
                         }),
+                        Condition::Structural { test, .. } => {
+                            let name = structural_export(*test);
+                            exports[inst_of[&node]].insert(name.clone(), local.clone());
+                            Some(name)
+                        }
                     };
                     if let Some(name) = name {
                         ups[i].insert(d);
@@ -622,6 +656,16 @@ pub(crate) fn add(
                             .1
                             .insert(class.clone());
                         return format!("{}.{}", t.qml_id, class_prop(class));
+                    }
+                }
+                (Some(_), Condition::Structural { test, .. }) => {
+                    if let Some(t) = targets.get(&node) {
+                        let of_type = &mut static_positions
+                            .entry(t.qml_id.clone())
+                            .or_insert((node, false))
+                            .1;
+                        *of_type |= test.of_type();
+                        return format!("({})", dynamic::structural_expr(*test, &t.qml_id));
                     }
                 }
                 _ => {}
@@ -642,6 +686,11 @@ pub(crate) fn add(
                 format!("class `{class}` of {}", describe(&doc, *node))
             }
             Condition::State { node, .. } => format!("a state of {}", describe(&doc, *node)),
+            Condition::Structural { node, test } => format!(
+                "`{}` of {}",
+                dynamic::structural_name(*test),
+                describe(&doc, *node)
+            ),
         };
         diags.info(
             "css",
@@ -797,6 +846,11 @@ pub(crate) fn add(
     for (qml_id, (node, classes)) in &static_classes {
         if let Some(obj) = find_mut(root, qml_id) {
             crate::metadata::declare_classes(obj, cx.doc, *node, classes);
+        }
+    }
+    for (qml_id, &(node, of_type)) in &static_positions {
+        if let Some(obj) = find_mut(root, qml_id) {
+            crate::metadata::declare_position(obj, cx.doc, node, of_type);
         }
     }
     let contexts: BTreeSet<&str> = insts

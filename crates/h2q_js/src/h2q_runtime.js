@@ -1601,10 +1601,62 @@ function _polishSubtree(item) {
     }
 }
 
+// Structural pseudo-classes (`:first-child`, `:nth-child()`, …) read an
+// element's place among its siblings from `h2qIndex`/`h2qCount` (and the
+// same-tag `h2qTypeIndex`/`h2qTypeCount`), which the converter declares
+// only on the children of containers scripts change.
+function _renumber(container) {
+    if (!container || typeof container !== "object" || !container.children) {
+        return;
+    }
+    var kids = _rawElementChildren(container).filter(function(kid) {
+        return _meta(kid).createdTag !== "#text";
+    });
+    var tags = [];
+    var typeCounts = {};
+    for (var i = 0; i < kids.length; ++i) {
+        tags.push(_inferTagName(kids[i]));
+        typeCounts[tags[i]] = (typeCounts[tags[i]] || 0) + 1;
+    }
+    var seen = {};
+    for (var k = 0; k < kids.length; ++k) {
+        var kid = kids[k];
+        seen[tags[k]] = (seen[tags[k]] || 0) + 1;
+        if (typeof kid.h2qIndex === "number") {
+            if (kid.h2qIndex !== k + 1) {
+                kid.h2qIndex = k + 1;
+            }
+            if (kid.h2qCount !== kids.length) {
+                kid.h2qCount = kids.length;
+            }
+        }
+        if (typeof kid.h2qTypeIndex === "number") {
+            if (kid.h2qTypeIndex !== seen[tags[k]]) {
+                kid.h2qTypeIndex = seen[tags[k]];
+            }
+            if (kid.h2qTypeCount !== typeCounts[tags[k]]) {
+                kid.h2qTypeCount = typeCounts[tags[k]];
+            }
+        }
+    }
+}
+
 function _settleLayouts() {
     var dirty = _layoutDirty;
     _layoutDirty = [];
     var done = [];
+    var numbered = [];
+    for (var n = 0; n < dirty.length; ++n) {
+        // A dirty item is a container that lost or gained children, or an
+        // item that was swapped or refilled in its own container.
+        var pair = [dirty[n], dirty[n].parent];
+        for (var q = 0; q < pair.length; ++q) {
+            if (pair[q] && numbered.indexOf(pair[q]) < 0) {
+                numbered.push(pair[q]);
+                _renumber(pair[q]);
+            }
+        }
+    }
     for (var i = 0; i < dirty.length; ++i) {
         if (dirty[i].parent) {
             _polishSubtree(dirty[i]);
@@ -1627,6 +1679,21 @@ function _clearAppended(raw) {
         var child = flow.children[0];
         child.parent = null;
         child.destroy();
+    }
+    // The page's own elements in a laid-out container (a list's items) go
+    // too; spacers, decoration and text runs are not elements.
+    var container = _childContainer(raw);
+    if (container && container !== flow
+        && (typeof container.spacing === "number" || typeof container.columnSpacing === "number")) {
+        var kids = _rawElementChildren(raw);
+        for (var i = 0; i < kids.length; ++i) {
+            var kid = kids[i];
+            // Detached as `removeChild` does: destroying a static item
+            // would leave its own bindings reading a null id.
+            if (typeof kid.h2qTag === "string" || _meta(kid).createdTag) {
+                kid.parent = null;
+            }
+        }
     }
 }
 
@@ -1680,6 +1747,21 @@ function _childContainer(raw) {
     return base;
 }
 
+// The spacers a flex layout packs its items with (h2q_convert flex.rs):
+// bare `Item`s (no declared properties, so no `h2qTag`) without children.
+// They are not elements, and appended elements go before the trailing
+// ones. `Layout.fillWidth` cannot be read here: this library does not
+// import QtQuick.Layouts.
+function _isLayoutSpacer(item) {
+    return Boolean(
+        item
+        && String(item).indexOf("QQuickItem(") === 0
+        && !item.objectName
+        && item.children && item.children.length === 0
+        && !_meta(item).createdTag
+    );
+}
+
 function _rawElementChildren(raw) {
     var container = _childContainer(raw);
     if (!container || !container.children) {
@@ -1699,6 +1781,9 @@ function _rawElementChildren(raw) {
             continue;
         }
         if (!isLayout && _isPlainTextItem(child) && !child.objectName && !_meta(child).createdTag) {
+            continue;
+        }
+        if (isLayout && _isLayoutSpacer(child)) {
             continue;
         }
         out.push(child);
@@ -3089,6 +3174,12 @@ function _insertRawNodesBefore(container, rawNodes, rawRef) {
         return;
     }
     _layoutChanged(container);
+    if (!rawRef && container.children
+        && (typeof container.spacing === "number" || typeof container.columnSpacing === "number")) {
+        for (var s = container.children.length - 1; s >= 0 && _isLayoutSpacer(container.children[s]); --s) {
+            rawRef = container.children[s];
+        }
+    }
     if (!rawRef || !container.children) {
         for (var a = 0; a < rawNodes.length; ++a) {
             if (rawNodes[a] && rawNodes[a].parent !== undefined) {
@@ -3135,6 +3226,8 @@ function _insertRawNodesBefore(container, rawNodes, rawRef) {
             _materializeSubtree(rawNodes[mIdx]);
         }
     }
+    // Before the script reads styles back; removals settle with the layouts.
+    _renumber(container);
 }
 
 function _genericElementSource(tag, inputType) {
@@ -3406,6 +3499,8 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
         m._setRaw(next);
     }
     oldRaw.destroy();
+    // A new item starts with its template's place.
+    _renumber(parentContainer);
 
     if (typeof next.h2qClasses === "string" && next.h2qClasses !== m.classes.join(" ")) {
         next.h2qClasses = m.classes.join(" ");
@@ -3424,13 +3519,8 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
     }
 
     if (childElements.length > 0) {
-        var nextTarget = _appendTarget(next);
-        for (var c = 0; c < childElements.length; ++c) {
-            if (childElements[c] && childElements[c].parent !== undefined) {
-                childElements[c].parent = null;
-                childElements[c].parent = nextTarget;
-            }
-        }
+        // Before the template's trailing spacers, renumbered.
+        _insertRawNodesBefore(_appendTarget(next), childElements, null);
     }
 
     var attrNames = Object.keys(m.attrs);

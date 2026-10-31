@@ -230,6 +230,7 @@ pub(crate) struct MatchContext<'a> {
 pub(crate) enum DynamicFact {
     Class(String),
     State(PseudoState),
+    Structural(crate::Structural),
 }
 
 #[derive(Debug, Clone)]
@@ -298,6 +299,10 @@ impl DynamicFacts {
     fn state(&self, node: NodeId, state: PseudoState) -> Option<bool> {
         self.lookup(node, |f| *f == DynamicFact::State(state))
     }
+
+    fn structural(&self, node: NodeId, test: crate::Structural) -> Option<bool> {
+        self.lookup(node, |f| *f == DynamicFact::Structural(test))
+    }
 }
 
 impl MatchContext<'_> {
@@ -309,6 +314,30 @@ impl MatchContext<'_> {
 
     fn state(&self, node: NodeId, state: PseudoState) -> Option<bool> {
         self.dynamic.and_then(|d| d.state(node, state))
+    }
+
+    fn structural(&self, node: NodeId, test: crate::Structural) -> Option<bool> {
+        self.dynamic.and_then(|d| d.structural(node, test))
+    }
+}
+
+impl PseudoClass {
+    /// The structural test this is, when it has no `of S` filter.
+    pub(crate) fn structural(&self) -> Option<crate::Structural> {
+        use crate::Structural as P;
+        Some(match self {
+            Self::FirstChild => P::FirstChild,
+            Self::LastChild => P::LastChild,
+            Self::OnlyChild => P::OnlyChild,
+            Self::NthChild(f, None) => P::NthChild { a: f.a, b: f.b },
+            Self::NthLastChild(f, None) => P::NthLastChild { a: f.a, b: f.b },
+            Self::FirstOfType => P::FirstOfType,
+            Self::LastOfType => P::LastOfType,
+            Self::OnlyOfType => P::OnlyOfType,
+            Self::NthOfType(f) => P::NthOfType { a: f.a, b: f.b },
+            Self::NthLastOfType(f) => P::NthLastOfType { a: f.a, b: f.b },
+            _ => return None,
+        })
     }
 }
 
@@ -2034,6 +2063,9 @@ fn matches_pseudo_class(
     ctx: &MatchContext<'_>,
 ) -> bool {
     let doc = ctx.doc;
+    if let Some(held) = pc.structural().and_then(|t| ctx.structural(node, t)) {
+        return held;
+    }
     match pc {
         PseudoClass::Root => doc.parent(node) == Some(doc.root()),
         PseudoClass::FirstChild => {

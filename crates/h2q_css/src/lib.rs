@@ -155,6 +155,72 @@ pub enum Condition {
     Class { node: NodeId, class: String },
     /// `node` is in `state`.
     State { node: NodeId, state: PseudoState },
+    /// `node`'s place among its siblings matches `position`; for the
+    /// children of containers scripts insert into or remove from.
+    Structural { node: NodeId, test: Structural },
+}
+
+/// A structural pseudo-class without an `of S` filter: a test on an
+/// element's place among its parent's element children.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Structural {
+    FirstChild,
+    LastChild,
+    OnlyChild,
+    /// `:nth-child(An+B)`.
+    NthChild {
+        a: i32,
+        b: i32,
+    },
+    /// `:nth-last-child(An+B)`.
+    NthLastChild {
+        a: i32,
+        b: i32,
+    },
+    FirstOfType,
+    LastOfType,
+    OnlyOfType,
+    NthOfType {
+        a: i32,
+        b: i32,
+    },
+    NthLastOfType {
+        a: i32,
+        b: i32,
+    },
+}
+
+impl Structural {
+    /// Whether the test counts only siblings with the element's tag.
+    #[must_use]
+    pub fn of_type(self) -> bool {
+        matches!(
+            self,
+            Self::FirstOfType
+                | Self::LastOfType
+                | Self::OnlyOfType
+                | Self::NthOfType { .. }
+                | Self::NthLastOfType { .. }
+        )
+    }
+
+    /// Whether an element at 1-based `index` of `count` siblings passes
+    /// (both counted among same-tag siblings when [`Self::of_type`]).
+    #[must_use]
+    pub fn matches(self, index: u32, count: u32) -> bool {
+        let index = i64::from(index);
+        let last = i64::from(count) - index + 1;
+        let nth = |a: i32, b: i32, idx: i64| {
+            selectors::NthFormula { a, b }.matches(i32::try_from(idx).unwrap_or(i32::MAX))
+        };
+        match self {
+            Self::FirstChild | Self::FirstOfType => index == 1,
+            Self::LastChild | Self::LastOfType => last == 1,
+            Self::OnlyChild | Self::OnlyOfType => index == 1 && last == 1,
+            Self::NthChild { a, b } | Self::NthOfType { a, b } => nth(a, b, index),
+            Self::NthLastChild { a, b } | Self::NthLastOfType { a, b } => nth(a, b, last),
+        }
+    }
 }
 
 /// The styles of every element some condition affects, for each combination of the
@@ -356,6 +422,13 @@ pub fn conditional_styles(
 #[must_use]
 pub fn styled_classes(sheets: &[Stylesheet]) -> BTreeSet<String> {
     conditional::styled_classes(sheets)
+}
+
+/// The structural pseudo-classes (without `of S`) some selector in `sheets`
+/// uses: the [`Condition::Structural`]s worth asking about.
+#[must_use]
+pub fn structural_pseudos(sheets: &[Stylesheet]) -> BTreeSet<Structural> {
+    conditional::structural_pseudos(sheets)
 }
 
 /// Elements on which having `class` would change which rules match (§2.2), and,
