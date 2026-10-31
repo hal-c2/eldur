@@ -104,6 +104,7 @@ ApplicationWindow {
                                 radius: 6
                                 border.width: 1
                                 border.color: "#c5cad8"
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                             }
                             topPadding: 7
                             rightPadding: 15
@@ -133,6 +134,7 @@ ApplicationWindow {
                                 radius: 6
                                 border.width: 1
                                 border.color: "#c5cad8"
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                             }
                             topPadding: 7
                             rightPadding: 15
@@ -163,6 +165,7 @@ ApplicationWindow {
                                 radius: 6
                                 border.width: 1
                                 border.color: "#c5cad8"
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                             }
                             topPadding: 7
                             rightPadding: 15
@@ -193,6 +196,7 @@ ApplicationWindow {
                                 radius: 6
                                 border.width: 1
                                 border.color: "#c5cad8"
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                             }
                             topPadding: 7
                             rightPadding: 15
@@ -351,7 +355,7 @@ ApplicationWindow {
                         property string eldurTag: "div"
                         property string eldurClasses: "list"
                         property bool cls_compact: false
-                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin) - Layout.topMargin + item3.eldurCarry + 0.000001) : tabs.eldurCarry
+                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin - (item3.eldurCarry)) - Layout.topMargin + item3.eldurCarry + 0.000001) : tabs.eldurCarry
 
                         color: "#ffffff"
                         implicitWidth: listContent.implicitWidth + 2
@@ -361,6 +365,7 @@ ApplicationWindow {
                         objectName: "list"
                         Layout.preferredWidth: 422
                         Layout.topMargin: 20 - tabs.eldurCarry
+                        Layout.preferredHeight: implicitHeight - item3.eldurCarry
 
                         ColumnLayout {
                             id: listContent

@@ -144,7 +144,48 @@ The rules:
 - `GridLayout`. It does not round rows: its positions are fractional, and top margins behave differently (measured). A column inside a grid cell is still rounded once (09-forms: 65.59 → 66 per field).
 - `RowLayout` and flex rows along x.
 
-**Painting.** Exact positions put boxes on half pixels where Chromium snaps a box's painted origin to the nearest pixel. Qt draws a border at y = 124.5 across two rows, and rasterises text a pixel row away from Chromium's. Pixel scores for such pages can drop while their geometry gets better (08-table: max |dy| 0.5 → 0).
+**Painting.** Exact positions leave boxes and lines on fractions of a pixel. Layout stays fractional; §1.2 covers how they paint.
+
+### 1.2 Painting at fractional positions
+
+Measured at `deviceScaleFactor: 1` by `tools/visual/paint/gen.mjs`, which writes `page.html`, `chromium.json` and `shifts.txt` there. Regenerating them leaves `git status` clean. `PaintSnapTests` in `tools/visual/test_visual.py` converts that page and compares it with the recording pixel by pixel on the default gl backend. The results below were measured in Chromium through Playwright and Qt Quick 6.11.
+
+**Chromium**
+- Positions are in 1/64 px, rounded down: `top: 100.49px` is 100.484375, and `100.51px` is 100.5.
+- A box's painted edges are its exact edges rounded half up: top `round(y)`, bottom `round(y + h)`. This also holds for x. No row is partial.
+- A border keeps its whole width inside those edges, so a 1 px border is one solid row at any fraction.
+- A line's baseline is `round(ascent) + floor((line-height − round(ascent) − round(descent)) / 2)` below the line's top, a whole number. The glyph row is therefore the line's top rounded half up, plus that number.
+
+**Qt Quick, boxes** (`Rectangle` with fill, or with `border.width` 1 or 2; 10 fractions)
+
+| Rectangle | gl | software |
+|---|---|---|
+| No radius, `antialiasing` unset or false | Same pixels as Chromium, except below | Top edge and borders the same. A fractional height can leave the bottom edge a row low (`height: 20.25` at y = 50 ends at 71, Chromium's at 70) |
+| No radius, `antialiasing: true` | Partial rows at both edges | Same as with it false |
+| With a radius (`antialiasing` defaults to true) | Partial rows along every straight edge, as at y = 124.5 in 08-table | not measured separately |
+| With a radius, `antialiasing: false` | Straight edges the same as Chromium, corners aliased | not measured separately |
+
+The exception on gl: an edge at exactly x.5 in **x** takes the column whose centre is on the edge, one to the left of Chromium's (`left: 510.5px`). y.5 agrees. Fixing it would take a paint offset; it stays a known difference, pinned by its own test.
+
+**Qt Quick, text.** A fixed-height line's baseline is the font's ascent, rounded, below the line's top. On gl the whole row follows the rounded position as in Chromium, so a whole `Translate` lands every probed line on Chromium's rows (6 fonts × 10 fractions). `shifts.txt` holds each font's numbers. On software 22 of those 60 lines are a row off in either direction, because it rounds differently. Only gl is matched.
+
+**What the converter does**
+- **Boxes without a radius** need no paint mechanism on gl, only their exact height. A box around a carried column (§1.1) is laid out at `Layout.preferredHeight: implicitHeight - <excess>`, and a fractional fixed height stays as it is. The carry keeps the cell whole. Before this, the excess made the bottom edge up to a row low (02-block-flow's hero, 187 vs 188).
+- **Rounded boxes** (`emit/paint.rs`) bind `antialiasing` to "x, y, width and height are whole to 1/64 px". On whole boxes the corners stay smooth like Chromium's. On fractional ones the edges are crisp and the corners aliased. Boxes under a transform or a layer keep Qt's default.
+- **Glyphs** (`emit/text.rs`): the `Translate` is Chromium's baseline less Qt's.
+
+**Alternatives scored** (corpus mean on gl, from 90.19 before any rounded-box change):
+- `antialiasing: false` on every rounded box: 90.35, but it aliases every corner and pill, including whole ones (20-pricing −0.37, 07-lists −0.18).
+- The binding on x and y only: 90.25.
+- The binding on all four, as chosen: 90.29.
+
+Snapping a rounded box's position instead (`Translate` or margins) needs its scene position, which no binding can follow cheaply, and would have to spare its children.
+
+**Known limits**
+- A rounded box whole in a fractional parent looks whole to its own binding and stays soft on its edges.
+- `font_extents` is a stopgap: it knows Liberation Sans and Liberation Serif by the names that resolve to them here, and gives anything else Liberation Sans's numbers, so such glyphs can land a row off. It is one function, so it can be replaced when font metrics are decided, also for `line-height: normal`.
+- Text anchored in a table cell whose insets differ sits half a pixel below Chromium's line (`anchors.verticalCenterOffset: 0.5`, 21-table-model). The whole baseline now rounds that half up where a fractional shift hid it: −0.73 there, and removing the offset by hand gives the score back (98.29).
+- Flex rows and grid cells round heights their own way (§1.1, not carried).
 
 ## 2. Inline formatting context
 

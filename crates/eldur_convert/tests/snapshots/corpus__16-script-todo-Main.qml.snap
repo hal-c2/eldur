@@ -67,7 +67,7 @@ ApplicationWindow {
                         id: app
                         property string eldurTag: "main"
                         property string eldurClasses: "app"
-                        property real eldurCarry: visible ? footerNote.eldurCarry : 0
+                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin - (footerNote.eldurCarry)) - Layout.topMargin + footerNote.eldurCarry + 0.000001) : 0
 
                         color: "#ffffff"
                         radius: 16
@@ -76,6 +76,8 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignHCenter
                         Layout.maximumWidth: 560
+                        Layout.preferredHeight: implicitHeight - footerNote.eldurCarry
+                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                         RectangularShadow {
                             anchors.fill: parent
@@ -168,6 +170,7 @@ ApplicationWindow {
                                         radius: 8
                                         border.width: 1
                                         border.color: todoInput.activeFocus ? "#00000000" : "#c9d1e0"
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                     }
                                     topPadding: 11
                                     rightPadding: 13
@@ -202,6 +205,7 @@ ApplicationWindow {
                                     background: Rectangle {
                                         color: addBtn.hovered ? "#1a44c2" : "#1d4ed8"
                                         radius: 8
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                     }
                                     topPadding: 10
                                     rightPadding: 18
@@ -365,6 +369,7 @@ ApplicationWindow {
                 radius: 2
                 color: inputControl.checked ? "#0075ff" : "#ffffff"
                 border.color: inputControl.checked ? "#0075ff" : "#767676"
+                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                 Text {
                     anchors.centerIn: parent
@@ -424,6 +429,7 @@ ApplicationWindow {
                 radius: 6
                 border.width: 1
                 border.color: "#e3b5b5"
+                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
             }
             topPadding: 5
             rightPadding: 11
@@ -459,6 +465,7 @@ ApplicationWindow {
                 radius: 2
                 color: inputControl3.checked ? "#0075ff" : "#ffffff"
                 border.color: inputControl3.checked ? "#0075ff" : "#767676"
+                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                 Text {
                     anchors.centerIn: parent
@@ -513,6 +520,7 @@ ApplicationWindow {
                 radius: 6
                 border.width: 1
                 border.color: "#e3b5b5"
+                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
             }
             topPadding: 5
             rightPadding: 11

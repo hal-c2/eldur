@@ -65,7 +65,7 @@ ApplicationWindow {
                             lineHeight: 42
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 4.9
+                                y: 5
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
@@ -81,7 +81,7 @@ ApplicationWindow {
                             lineHeight: 24
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2.8
+                                y: 3
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
@@ -116,6 +116,7 @@ ApplicationWindow {
                                     border.width: 1
                                     border.color: "#e1e5ee"
                                     Layout.fillWidth: true
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                     ColumnLayout {
                                         id: cardContent
@@ -138,7 +139,7 @@ ApplicationWindow {
                                             lineHeight: 27
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 3.15
+                                                y: 3
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
@@ -182,7 +183,7 @@ ApplicationWindow {
                                                             lineHeight: 24
                                                             lineHeightMode: Text.FixedHeight
                                                             transform: Translate {
-                                                                y: 2.8
+                                                                y: 3
                                                             }
                                                             wrapMode: Text.WordWrap
                                                             Layout.fillWidth: true
@@ -225,7 +226,7 @@ ApplicationWindow {
                                                                             lineHeight: 24
                                                                             lineHeightMode: Text.FixedHeight
                                                                             transform: Translate {
-                                                                                y: 2.8
+                                                                                y: 3
                                                                             }
                                                                             wrapMode: Text.WordWrap
                                                                             Layout.fillWidth: true
@@ -261,7 +262,7 @@ ApplicationWindow {
                                                                                         lineHeight: 24
                                                                                         lineHeightMode: Text.FixedHeight
                                                                                         transform: Translate {
-                                                                                            y: 2.8
+                                                                                            y: 3
                                                                                         }
                                                                                         wrapMode: Text.WordWrap
                                                                                         Layout.fillWidth: true
@@ -277,6 +278,7 @@ ApplicationWindow {
                                                                                     height: 6
                                                                                     x: 0
                                                                                     y: 9.6
+                                                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                                                 }
                                                                             }
 
@@ -303,7 +305,7 @@ ApplicationWindow {
                                                                                         lineHeight: 24
                                                                                         lineHeightMode: Text.FixedHeight
                                                                                         transform: Translate {
-                                                                                            y: 2.8
+                                                                                            y: 3
                                                                                         }
                                                                                         wrapMode: Text.WordWrap
                                                                                         Layout.fillWidth: true
@@ -319,6 +321,7 @@ ApplicationWindow {
                                                                                     height: 6
                                                                                     x: 0
                                                                                     y: 9.6
+                                                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                                                 }
                                                                             }
                                                                         }
@@ -333,7 +336,7 @@ ApplicationWindow {
                                                                         lineHeight: 24
                                                                         lineHeightMode: Text.FixedHeight
                                                                         transform: Translate {
-                                                                            y: 2.8
+                                                                            y: 3
                                                                         }
                                                                         wrapMode: Text.NoWrap
                                                                         anchors.right: parent.left
@@ -357,7 +360,7 @@ ApplicationWindow {
                                                                         lineHeight: 24
                                                                         lineHeightMode: Text.FixedHeight
                                                                         transform: Translate {
-                                                                            y: 2.8
+                                                                            y: 3
                                                                         }
                                                                         wrapMode: Text.WordWrap
                                                                         anchors.left: parent.left
@@ -374,7 +377,7 @@ ApplicationWindow {
                                                                         lineHeight: 24
                                                                         lineHeightMode: Text.FixedHeight
                                                                         transform: Translate {
-                                                                            y: 2.8
+                                                                            y: 3
                                                                         }
                                                                         wrapMode: Text.NoWrap
                                                                         anchors.right: parent.left
@@ -410,7 +413,7 @@ ApplicationWindow {
                                                         lineHeight: 24
                                                         lineHeightMode: Text.FixedHeight
                                                         transform: Translate {
-                                                            y: 2.8
+                                                            y: 3
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         anchors.left: parent.left
@@ -444,7 +447,7 @@ ApplicationWindow {
                                                         lineHeight: 24
                                                         lineHeightMode: Text.FixedHeight
                                                         transform: Translate {
-                                                            y: 2.8
+                                                            y: 3
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         anchors.left: parent.left
@@ -475,6 +478,7 @@ ApplicationWindow {
                                     border.color: "#e1e5ee"
                                     Layout.fillWidth: true
                                     Layout.topMargin: 24
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                     ColumnLayout {
                                         id: cardContent2
@@ -497,7 +501,7 @@ ApplicationWindow {
                                             lineHeight: 27
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 3.15
+                                                y: 3
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
@@ -535,7 +539,7 @@ ApplicationWindow {
                                                         lineHeight: 24
                                                         lineHeightMode: Text.FixedHeight
                                                         transform: Translate {
-                                                            y: 2.8
+                                                            y: 3
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         anchors.left: parent.left
@@ -552,7 +556,7 @@ ApplicationWindow {
                                                         lineHeight: 24
                                                         lineHeightMode: Text.FixedHeight
                                                         transform: Translate {
-                                                            y: 2.8
+                                                            y: 3
                                                         }
                                                         wrapMode: Text.NoWrap
                                                         anchors.right: parent.left
@@ -576,7 +580,7 @@ ApplicationWindow {
                                                         lineHeight: 24
                                                         lineHeightMode: Text.FixedHeight
                                                         transform: Translate {
-                                                            y: 2.8
+                                                            y: 3
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         anchors.left: parent.left
@@ -593,7 +597,7 @@ ApplicationWindow {
                                                         lineHeight: 24
                                                         lineHeightMode: Text.FixedHeight
                                                         transform: Translate {
-                                                            y: 2.8
+                                                            y: 3
                                                         }
                                                         wrapMode: Text.NoWrap
                                                         anchors.right: parent.left
@@ -617,7 +621,7 @@ ApplicationWindow {
                                                         lineHeight: 24
                                                         lineHeightMode: Text.FixedHeight
                                                         transform: Translate {
-                                                            y: 2.8
+                                                            y: 3
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         anchors.left: parent.left
@@ -634,7 +638,7 @@ ApplicationWindow {
                                                         lineHeight: 24
                                                         lineHeightMode: Text.FixedHeight
                                                         transform: Translate {
-                                                            y: 2.8
+                                                            y: 3
                                                         }
                                                         wrapMode: Text.NoWrap
                                                         anchors.right: parent.left
@@ -658,7 +662,7 @@ ApplicationWindow {
                                                         lineHeight: 24
                                                         lineHeightMode: Text.FixedHeight
                                                         transform: Translate {
-                                                            y: 2.8
+                                                            y: 3
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         anchors.left: parent.left
@@ -675,7 +679,7 @@ ApplicationWindow {
                                                         lineHeight: 24
                                                         lineHeightMode: Text.FixedHeight
                                                         transform: Translate {
-                                                            y: 2.8
+                                                            y: 3
                                                         }
                                                         wrapMode: Text.NoWrap
                                                         anchors.right: parent.left
@@ -706,6 +710,7 @@ ApplicationWindow {
                                     border.width: 1
                                     border.color: "#e1e5ee"
                                     Layout.fillWidth: true
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                     ColumnLayout {
                                         id: cardContent3
@@ -728,7 +733,7 @@ ApplicationWindow {
                                             lineHeight: 27
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 3.15
+                                                y: 3
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
@@ -754,7 +759,7 @@ ApplicationWindow {
                                                 lineHeight: 24
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: 2.8
+                                                    y: 3
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.preferredWidth: 200
@@ -773,7 +778,7 @@ ApplicationWindow {
                                                 lineHeight: 22.5
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: 2.63
+                                                    y: 2
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
@@ -792,7 +797,7 @@ ApplicationWindow {
                                                 lineHeight: 24
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: 2.8
+                                                    y: 3
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.preferredWidth: 200
@@ -811,7 +816,7 @@ ApplicationWindow {
                                                 lineHeight: 22.5
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: 2.63
+                                                    y: 2
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
@@ -830,7 +835,7 @@ ApplicationWindow {
                                                 lineHeight: 24
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: 2.8
+                                                    y: 3
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.preferredWidth: 200
@@ -849,7 +854,7 @@ ApplicationWindow {
                                                 lineHeight: 22.5
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: 2.63
+                                                    y: 2
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
@@ -868,7 +873,7 @@ ApplicationWindow {
                                                 lineHeight: 24
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: 2.8
+                                                    y: 3
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.preferredWidth: 200
@@ -887,7 +892,7 @@ ApplicationWindow {
                                                 lineHeight: 22.5
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: 2.63
+                                                    y: 2
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
@@ -908,6 +913,8 @@ ApplicationWindow {
                                     border.color: "#e1e5ee"
                                     Layout.fillWidth: true
                                     Layout.topMargin: 24
+                                    Layout.preferredHeight: implicitHeight - tags.eldurCarry
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                     ColumnLayout {
                                         id: cardContent4
@@ -930,7 +937,7 @@ ApplicationWindow {
                                             lineHeight: 27
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 3.15
+                                                y: 3
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
@@ -958,6 +965,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText.implicitWidth + 28
                                                     implicitHeight: aText.implicitHeight + 12
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {
                                                         id: aText
@@ -970,7 +978,7 @@ ApplicationWindow {
                                                         lineHeight: 21
                                                         lineHeightMode: Text.FixedHeight
                                                         transform: Translate {
-                                                            y: 2.45
+                                                            y: 2
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         anchors.left: parent.left
@@ -999,6 +1007,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText2.implicitWidth + 28
                                                     implicitHeight: aText2.implicitHeight + 12
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {
                                                         id: aText2
@@ -1011,7 +1020,7 @@ ApplicationWindow {
                                                         lineHeight: 21
                                                         lineHeightMode: Text.FixedHeight
                                                         transform: Translate {
-                                                            y: 2.45
+                                                            y: 2
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         anchors.left: parent.left
@@ -1040,6 +1049,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText3.implicitWidth + 28
                                                     implicitHeight: aText3.implicitHeight + 12
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {
                                                         id: aText3
@@ -1052,7 +1062,7 @@ ApplicationWindow {
                                                         lineHeight: 21
                                                         lineHeightMode: Text.FixedHeight
                                                         transform: Translate {
-                                                            y: 2.45
+                                                            y: 2
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         anchors.left: parent.left
@@ -1081,6 +1091,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText4.implicitWidth + 28
                                                     implicitHeight: aText4.implicitHeight + 12
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {
                                                         id: aText4
@@ -1093,7 +1104,7 @@ ApplicationWindow {
                                                         lineHeight: 21
                                                         lineHeightMode: Text.FixedHeight
                                                         transform: Translate {
-                                                            y: 2.45
+                                                            y: 2
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         anchors.left: parent.left
@@ -1122,6 +1133,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText5.implicitWidth + 28
                                                     implicitHeight: aText5.implicitHeight + 12
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {
                                                         id: aText5
@@ -1134,7 +1146,7 @@ ApplicationWindow {
                                                         lineHeight: 21
                                                         lineHeightMode: Text.FixedHeight
                                                         transform: Translate {
-                                                            y: 2.45
+                                                            y: 2
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         anchors.left: parent.left
@@ -1163,6 +1175,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText6.implicitWidth + 28
                                                     implicitHeight: aText6.implicitHeight + 12
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {
                                                         id: aText6
@@ -1175,7 +1188,7 @@ ApplicationWindow {
                                                         lineHeight: 21
                                                         lineHeightMode: Text.FixedHeight
                                                         transform: Translate {
-                                                            y: 2.45
+                                                            y: 2
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         anchors.left: parent.left
@@ -1204,6 +1217,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText7.implicitWidth + 28
                                                     implicitHeight: aText7.implicitHeight + 12
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {
                                                         id: aText7
@@ -1216,7 +1230,7 @@ ApplicationWindow {
                                                         lineHeight: 21
                                                         lineHeightMode: Text.FixedHeight
                                                         transform: Translate {
-                                                            y: 2.45
+                                                            y: 2
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         anchors.left: parent.left

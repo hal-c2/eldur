@@ -97,6 +97,7 @@ ApplicationWindow {
                                     Layout.preferredWidth: 340
                                     Layout.maximumWidth: 340
                                     Layout.alignment: Qt.AlignTop
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                     RectangularShadow {
                                         anchors.fill: parent
@@ -145,7 +146,7 @@ ApplicationWindow {
                                             lineHeight: 24
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 2.8
+                                                y: 3
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
@@ -187,6 +188,7 @@ ApplicationWindow {
                                                             background: Rectangle {
                                                                 color: "#3b6fe0"
                                                                 radius: 8
+                                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                             }
                                                             topPadding: 10
                                                             rightPadding: 18
@@ -287,6 +289,7 @@ ApplicationWindow {
                                         anchors.right: parent.right
                                         anchors.rightMargin: -8
                                         y: -8
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                         Text {
                                             id: badgeText
@@ -364,6 +367,7 @@ ApplicationWindow {
                                         height: 80
                                         x: parent.width * 0.5 + -40
                                         y: 48
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                     }
 
                                     Rectangle {
@@ -438,6 +442,7 @@ ApplicationWindow {
                                         height: 120
                                         x: 60
                                         y: 50
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                         Text {
                                             id: layerText
@@ -467,6 +472,7 @@ ApplicationWindow {
                                         height: 120
                                         x: 0
                                         y: 0
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                         Text {
                                             id: layerText2

@@ -1021,7 +1021,8 @@ fn a_transformed_text_keeps_its_baseline_shift_first() {
         "<p>x</p>",
     ));
     let text = object_after(&qml, "<p>");
-    let nudge = text.find("y: 2.8").expect("nudge");
+    // Chromium's baseline is 14 + floor((24 - 17) / 2) = 17 down, Qt's 14.
+    let nudge = text.find("y: 3\n").expect("nudge");
     let moved = text.find("x: 10").expect("translate");
     assert!(nudge < moved, "{text}");
 }
@@ -1052,6 +1053,38 @@ fn fixed_box_leaves_the_flow_for_the_window() {
         !diags.iter().any(|d| d.contains("position: fixed")),
         "{diags:?}"
     );
+}
+
+#[test]
+fn glyphs_sit_on_chromiums_whole_pixel_baseline() {
+    // The shifts are what tools/visual/paint/gen.mjs measured: Chromium's
+    // baseline below the line's top less the row Qt paints a fixed line's
+    // on (layout.md §1.2). `.a` .. `.f` are the fonts it probes.
+    let (qml, _) = convert(&page(
+        "p{margin:0} .a{font:15px/1.5 sans-serif} .b{font:17px/1.5 sans-serif} \
+         .c{font:bold 28px/1.5 sans-serif} .d{font:16px/1.5 serif} \
+         .e{font:16px/1.1 sans-serif} .f{font:13px/1 sans-serif}",
+        "<p class=a>a</p><p class=b>b</p><p class=c>c</p><p class=d>d</p>\
+         <p class=e>e</p><p class=f>f</p>",
+    ));
+    let measured = include_str!("../../../../tools/visual/paint/shifts.txt");
+    let mut seen = 0;
+    for line in measured.lines().filter(|l| !l.starts_with('#')) {
+        let fields: Vec<&str> = line.split(' ').collect();
+        let [class, _, _, shift] = fields[..] else {
+            panic!("{line}");
+        };
+        let p = object_after(&qml, &format!("<p class=\"{class}\">"));
+        match p.find("transform: Translate {") {
+            Some(t) => {
+                let y = p[t..].lines().nth(1).map(str::trim);
+                assert_eq!(y, Some(format!("y: {shift}").as_str()), "{p}");
+            }
+            None => assert_eq!(shift, "0", "{p}"),
+        }
+        seen += 1;
+    }
+    assert_eq!(seen, 6, "{measured}");
 }
 
 #[test]
@@ -1504,6 +1537,61 @@ fn a_fractional_line_height_hands_its_rounding_to_the_next_item() {
         c.contains(&"Layout.preferredHeight: implicitHeight"),
         "{c:?}"
     );
+}
+
+#[test]
+fn a_box_around_a_carried_column_paints_its_css_height() {
+    // 02-block-flow's hero: a column's excess is in its implicit height for
+    // the column above to take back, but the box's bottom edge is Chromium's
+    // only at the box's exact height (layout.md §1.2, tools/visual/paint).
+    let (qml, _) = convert(&page(
+        ".c{padding:10px;background:#eee;margin-bottom:9.3px} p{margin:0;font:16px/27.2px sans-serif}",
+        r#"<div id="a" class="c"><p>One</p><p>Two</p></div><div id="b" class="c"><p>Three</p></div>"#,
+    ));
+    let a = own_lines(object_after(&qml, r#"<div id="a" class="c">"#));
+    let height = a
+        .iter()
+        .find(|l| l.starts_with("Layout.preferredHeight: implicitHeight - "))
+        .unwrap_or_else(|| panic!("{a:?}"));
+    assert!(height.ends_with(".eldurCarry"), "{a:?}");
+    assert!(
+        a.iter()
+            .any(|l| l.starts_with("property real eldurCarry: Math.ceil(Layout.topMargin - (")),
+        "{a:?}"
+    );
+    let b = own_lines(object_after(&qml, r#"<div id="b" class="c">"#));
+    assert!(
+        b.iter()
+            .any(|l| l.ends_with(".eldurCarry") && l.starts_with("Layout.topMargin: 9.3 - ")),
+        "{b:?}"
+    );
+}
+
+#[test]
+fn a_rounded_box_antialiases_only_while_it_sits_whole() {
+    // Its straight edges would spread over two rows otherwise, where
+    // Chromium's are one (layout.md §1.2, tools/visual/paint).
+    let (qml, _) = convert(&page(
+        ".r{border-radius:4px;height:10px;background:#eee} .t{transform:rotate(10deg)} \
+         .s{height:10px;background:#eee}",
+        r#"<div class="r"></div><div class="r t"></div><div class="s"></div>"#,
+    ));
+    let line = own_lines(object_after(&qml, r#"<div class="r">"#))
+        .into_iter()
+        .find(|l| l.starts_with("antialiasing: "))
+        .map(str::to_owned);
+    assert_eq!(
+        line.as_deref(),
+        Some(
+            "antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 \
+             && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0"
+        ),
+        "{qml}"
+    );
+    for plain in [r#"<div class="r t">"#, r#"<div class="s">"#] {
+        let o = object_after(&qml, plain);
+        assert!(!o.contains("antialiasing"), "{o}");
+    }
 }
 
 #[test]

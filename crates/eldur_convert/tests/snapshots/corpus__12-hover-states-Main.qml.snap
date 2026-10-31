@@ -77,7 +77,7 @@ ApplicationWindow {
                         lineHeight: 39
                         lineHeightMode: Text.FixedHeight
                         transform: Translate {
-                            y: 4.55
+                            y: 4
                         }
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
@@ -96,7 +96,7 @@ ApplicationWindow {
                         lineHeight: 22.5
                         lineHeightMode: Text.FixedHeight
                         transform: Translate {
-                            y: 2.63
+                            y: 2
                         }
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
@@ -129,7 +129,7 @@ ApplicationWindow {
                             lineHeight: 19.5
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2.28
+                                y: 2
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
@@ -344,6 +344,7 @@ ApplicationWindow {
                                     radius: 8
                                     border.width: 1
                                     border.color: "#e5e7eb"
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                     RectangularShadow {
                                         anchors.fill: parent
@@ -392,7 +393,7 @@ ApplicationWindow {
                             lineHeight: 19.5
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2.28
+                                y: 2
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
@@ -480,7 +481,7 @@ ApplicationWindow {
                                         lineHeight: 25.5
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 2.98
+                                            y: 3
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
@@ -496,7 +497,7 @@ ApplicationWindow {
                                         lineHeight: 22.5
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 2.63
+                                            y: 2
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
@@ -580,7 +581,7 @@ ApplicationWindow {
                                         lineHeight: 25.5
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 2.98
+                                            y: 3
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
@@ -596,7 +597,7 @@ ApplicationWindow {
                                         lineHeight: 22.5
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 2.63
+                                            y: 2
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
@@ -680,7 +681,7 @@ ApplicationWindow {
                                         lineHeight: 25.5
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 2.98
+                                            y: 3
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
@@ -696,7 +697,7 @@ ApplicationWindow {
                                         lineHeight: 22.5
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 2.63
+                                            y: 2
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
@@ -748,7 +749,7 @@ ApplicationWindow {
                                 lineHeight: 19.5
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2.28
+                                    y: 2
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
@@ -768,7 +769,7 @@ ApplicationWindow {
                                 lineHeight: 22.5
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2.63
+                                    y: 2
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
@@ -797,7 +798,7 @@ ApplicationWindow {
                                 lineHeight: 22.5
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2.63
+                                    y: 2
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
@@ -823,7 +824,7 @@ ApplicationWindow {
                                 lineHeight: 22.5
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2.63
+                                    y: 2
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
@@ -866,7 +867,7 @@ ApplicationWindow {
                                 lineHeight: 19.5
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2.28
+                                    y: 2
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
@@ -880,6 +881,7 @@ ApplicationWindow {
                                 implicitHeight: menuContent.implicitHeight + 16
                                 Layout.fillWidth: true
                                 Layout.topMargin: 12 - sectionTitle4.eldurCarry
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                 RectangularShadow {
                                     anchors.fill: parent
@@ -908,6 +910,7 @@ ApplicationWindow {
                                         implicitWidth: itemContent.implicitWidth + 24
                                         implicitHeight: itemContent.implicitHeight + 20
                                         Layout.fillWidth: true
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                         Behavior on color {
                                             ColorAnimation {
@@ -940,6 +943,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: 16
                                                 Layout.preferredHeight: 16
                                                 Layout.alignment: Qt.AlignVCenter
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 Behavior on color {
                                                     ColorAnimation {
@@ -960,7 +964,7 @@ ApplicationWindow {
                                                 lineHeight: 22.5
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: 2.63
+                                                    y: 2
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
@@ -987,6 +991,7 @@ ApplicationWindow {
                                         implicitWidth: itemContent2.implicitWidth + 24
                                         implicitHeight: itemContent2.implicitHeight + 20
                                         Layout.fillWidth: true
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                         Behavior on color {
                                             ColorAnimation {
@@ -1019,6 +1024,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: 16
                                                 Layout.preferredHeight: 16
                                                 Layout.alignment: Qt.AlignVCenter
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 Behavior on color {
                                                     ColorAnimation {
@@ -1039,7 +1045,7 @@ ApplicationWindow {
                                                 lineHeight: 22.5
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: 2.63
+                                                    y: 2
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
@@ -1066,6 +1072,7 @@ ApplicationWindow {
                                         implicitWidth: itemContent3.implicitWidth + 24
                                         implicitHeight: itemContent3.implicitHeight + 20
                                         Layout.fillWidth: true
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                         Behavior on color {
                                             ColorAnimation {
@@ -1098,6 +1105,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: 16
                                                 Layout.preferredHeight: 16
                                                 Layout.alignment: Qt.AlignVCenter
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 Behavior on color {
                                                     ColorAnimation {
@@ -1118,7 +1126,7 @@ ApplicationWindow {
                                                 lineHeight: 22.5
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: 2.63
+                                                    y: 2
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
@@ -1145,6 +1153,7 @@ ApplicationWindow {
                                         implicitWidth: itemContent4.implicitWidth + 24
                                         implicitHeight: itemContent4.implicitHeight + 20
                                         Layout.fillWidth: true
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                         Behavior on color {
                                             ColorAnimation {
@@ -1177,6 +1186,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: 16
                                                 Layout.preferredHeight: 16
                                                 Layout.alignment: Qt.AlignVCenter
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 Behavior on color {
                                                     ColorAnimation {
@@ -1197,7 +1207,7 @@ ApplicationWindow {
                                                 lineHeight: 22.5
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: 2.63
+                                                    y: 2
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true

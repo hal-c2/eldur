@@ -77,7 +77,7 @@ ApplicationWindow {
                             lineHeight: 33
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 3.85
+                                y: 4
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
@@ -107,7 +107,7 @@ ApplicationWindow {
                                 lineHeight: 22.5
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2.63
+                                    y: 2
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
@@ -125,7 +125,7 @@ ApplicationWindow {
                                 lineHeight: 22.5
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2.63
+                                    y: 2
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
@@ -144,7 +144,7 @@ ApplicationWindow {
                                 lineHeight: 22.5
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2.63
+                                    y: 2
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
@@ -163,7 +163,7 @@ ApplicationWindow {
                                 lineHeight: 22.5
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2.63
+                                    y: 2
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
@@ -206,7 +206,7 @@ ApplicationWindow {
                             lineHeight: 42
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 4.9
+                                y: 5
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
@@ -222,7 +222,7 @@ ApplicationWindow {
                             lineHeight: 24
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2.8
+                                y: 3
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
@@ -262,6 +262,7 @@ ApplicationWindow {
                                     implicitWidth: cardContent.implicitWidth
                                     implicitHeight: cardContent.implicitHeight
                                     anchors.fill: parent
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                     ColumnLayout {
                                         id: cardContent
@@ -339,7 +340,7 @@ ApplicationWindow {
                                                     lineHeight: 27
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 3.15
+                                                        y: 3
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
@@ -356,7 +357,7 @@ ApplicationWindow {
                                                     lineHeight: 30
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 3.5
+                                                        y: 4
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
@@ -373,7 +374,7 @@ ApplicationWindow {
                                                     lineHeight: 21
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.45
+                                                        y: 2
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
@@ -395,6 +396,7 @@ ApplicationWindow {
                                                     background: Rectangle {
                                                         color: buttonControl.hovered ? "#2b43b8" : "#3550d6"
                                                         radius: 8
+                                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                     }
                                                     topPadding: 12
                                                     rightPadding: 16
@@ -457,6 +459,7 @@ ApplicationWindow {
                                     implicitWidth: cardContent2.implicitWidth
                                     implicitHeight: cardContent2.implicitHeight
                                     anchors.fill: parent
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                     ColumnLayout {
                                         id: cardContent2
@@ -534,7 +537,7 @@ ApplicationWindow {
                                                     lineHeight: 27
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 3.15
+                                                        y: 3
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
@@ -551,7 +554,7 @@ ApplicationWindow {
                                                     lineHeight: 30
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 3.5
+                                                        y: 4
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
@@ -568,7 +571,7 @@ ApplicationWindow {
                                                     lineHeight: 21
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.45
+                                                        y: 2
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
@@ -590,6 +593,7 @@ ApplicationWindow {
                                                     background: Rectangle {
                                                         color: buttonControl2.hovered ? "#2b43b8" : "#3550d6"
                                                         radius: 8
+                                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                     }
                                                     topPadding: 12
                                                     rightPadding: 16
@@ -652,6 +656,7 @@ ApplicationWindow {
                                     implicitWidth: cardContent3.implicitWidth
                                     implicitHeight: cardContent3.implicitHeight
                                     anchors.fill: parent
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                     ColumnLayout {
                                         id: cardContent3
@@ -729,7 +734,7 @@ ApplicationWindow {
                                                     lineHeight: 27
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 3.15
+                                                        y: 3
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
@@ -746,7 +751,7 @@ ApplicationWindow {
                                                     lineHeight: 30
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 3.5
+                                                        y: 4
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
@@ -763,7 +768,7 @@ ApplicationWindow {
                                                     lineHeight: 21
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.45
+                                                        y: 2
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
@@ -785,6 +790,7 @@ ApplicationWindow {
                                                     background: Rectangle {
                                                         color: buttonControl3.hovered ? "#2b43b8" : "#3550d6"
                                                         radius: 8
+                                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                     }
                                                     topPadding: 12
                                                     rightPadding: 16
@@ -847,6 +853,7 @@ ApplicationWindow {
                                     implicitWidth: cardContent4.implicitWidth
                                     implicitHeight: cardContent4.implicitHeight
                                     anchors.fill: parent
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                     ColumnLayout {
                                         id: cardContent4
@@ -924,7 +931,7 @@ ApplicationWindow {
                                                     lineHeight: 27
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 3.15
+                                                        y: 3
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
@@ -941,7 +948,7 @@ ApplicationWindow {
                                                     lineHeight: 30
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 3.5
+                                                        y: 4
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
@@ -958,7 +965,7 @@ ApplicationWindow {
                                                     lineHeight: 21
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.45
+                                                        y: 2
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
@@ -980,6 +987,7 @@ ApplicationWindow {
                                                     background: Rectangle {
                                                         color: buttonControl4.hovered ? "#2b43b8" : "#3550d6"
                                                         radius: 8
+                                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                     }
                                                     topPadding: 12
                                                     rightPadding: 16
@@ -1042,6 +1050,7 @@ ApplicationWindow {
                                     implicitWidth: cardContent5.implicitWidth
                                     implicitHeight: cardContent5.implicitHeight
                                     anchors.fill: parent
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                     ColumnLayout {
                                         id: cardContent5
@@ -1119,7 +1128,7 @@ ApplicationWindow {
                                                     lineHeight: 27
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 3.15
+                                                        y: 3
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
@@ -1136,7 +1145,7 @@ ApplicationWindow {
                                                     lineHeight: 30
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 3.5
+                                                        y: 4
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
@@ -1153,7 +1162,7 @@ ApplicationWindow {
                                                     lineHeight: 21
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.45
+                                                        y: 2
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
@@ -1175,6 +1184,7 @@ ApplicationWindow {
                                                     background: Rectangle {
                                                         color: buttonControl5.hovered ? "#2b43b8" : "#3550d6"
                                                         radius: 8
+                                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                     }
                                                     topPadding: 12
                                                     rightPadding: 16
@@ -1237,6 +1247,7 @@ ApplicationWindow {
                                     implicitWidth: cardContent6.implicitWidth
                                     implicitHeight: cardContent6.implicitHeight
                                     anchors.fill: parent
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                     ColumnLayout {
                                         id: cardContent6
@@ -1314,7 +1325,7 @@ ApplicationWindow {
                                                     lineHeight: 27
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 3.15
+                                                        y: 3
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
@@ -1331,7 +1342,7 @@ ApplicationWindow {
                                                     lineHeight: 30
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 3.5
+                                                        y: 4
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
@@ -1348,7 +1359,7 @@ ApplicationWindow {
                                                     lineHeight: 21
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.45
+                                                        y: 2
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
@@ -1370,6 +1381,7 @@ ApplicationWindow {
                                                     background: Rectangle {
                                                         color: buttonControl6.hovered ? "#2b43b8" : "#3550d6"
                                                         radius: 8
+                                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                     }
                                                     topPadding: 12
                                                     rightPadding: 16

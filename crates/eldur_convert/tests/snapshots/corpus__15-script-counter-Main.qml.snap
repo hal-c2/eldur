@@ -80,6 +80,7 @@ ApplicationWindow {
                         Layout.preferredWidth: parent.width
                         Layout.maximumWidth: Math.min(parent.width, 520)
                         Layout.alignment: Qt.AlignTop
+                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                         RectangularShadow {
                             anchors.fill: parent
@@ -139,7 +140,7 @@ ApplicationWindow {
                                 lineHeight: 96
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: -7.2
+                                    y: -6
                                 }
                                 bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
                                 horizontalAlignment: Text.AlignHCenter
@@ -181,6 +182,7 @@ ApplicationWindow {
                                         radius: 8
                                         border.width: 1
                                         border.color: "#c9d1e0"
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                     }
                                     topPadding: 11
                                     rightPadding: 19
@@ -214,6 +216,7 @@ ApplicationWindow {
                                         radius: 8
                                         border.width: 1
                                         border.color: "#1d4ed8"
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                     }
                                     topPadding: 11
                                     rightPadding: 19
@@ -248,6 +251,7 @@ ApplicationWindow {
                                         radius: 8
                                         border.width: 1
                                         border.color: "#c9d1e0"
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                     }
                                     topPadding: 11
                                     rightPadding: 19
@@ -311,6 +315,7 @@ ApplicationWindow {
                                     radius: 8
                                     border.width: 1
                                     border.color: mirrorInput.activeFocus ? "#00000000" : "#c9d1e0"
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                 }
                                 topPadding: 11
                                 rightPadding: 13
@@ -344,6 +349,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.minimumHeight: 24
                                 Layout.topMargin: 12 - mirrorInput.eldurCarry
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                 Text {
                                     id: mirrorOutputText
@@ -391,6 +397,7 @@ ApplicationWindow {
                                         radius: 2
                                         color: detailsToggle.checked ? "#0075ff" : "#ffffff"
                                         border.color: detailsToggle.checked ? "#0075ff" : "#767676"
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                         Text {
                                             anchors.centerIn: parent
@@ -457,6 +464,8 @@ ApplicationWindow {
                                 visible: false
                                 Layout.fillWidth: true
                                 Layout.topMargin: 16
+                                Layout.preferredHeight: implicitHeight - p.eldurCarry
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                 Rectangle {
                                     anchors.top: parent.top
@@ -489,7 +498,7 @@ ApplicationWindow {
                                         lineHeight: 24
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 3.38
+                                            y: 3
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
@@ -509,7 +518,7 @@ ApplicationWindow {
                                         lineHeight: 22.4
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 3.15
+                                            y: 3
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true

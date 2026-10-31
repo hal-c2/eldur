@@ -117,6 +117,7 @@ enum Height {
     Other,
     /// A carried column's (or a box around one, `extra` being what Qt
     /// rounds the box's insets up by): whole, `excess` over its CSS height.
+    /// A painted box is laid out at its CSS height all the same.
     Excess { key: usize, extra: f64 },
     /// Not its implicit height (it fills, or is clamped): the chain starts
     /// again after it.
@@ -185,6 +186,16 @@ impl Emitter<'_, '_> {
                 _ => {}
             }
             let mut h = height(obj, &self.excess);
+            // A box paints its height, and Chromium's bottom edge is that of
+            // its exact one: what rounds a cell must stay out of its height.
+            let painted = obj.type_name == "Rectangle";
+            if let (true, Height::Static { qt, css }) = (painted, &h)
+                && qt != css
+            {
+                let css = *css;
+                obj.set("Layout.preferredHeight", Value::Number(css));
+                h = Height::Static { qt: css, css };
+            }
             // The last cell is rounded once, not its height first and
             // then the cell.
             if next.is_none() && h == Height::Text {
@@ -201,8 +212,48 @@ impl Emitter<'_, '_> {
                     set_top(obj, &top);
                 }
             }
+            let exact = match h {
+                Height::Excess { key, extra } if painted => {
+                    let e = self.read_excess(obj, key, 0.0);
+                    obj.set(
+                        "Layout.preferredHeight",
+                        Value::expr(format!("implicitHeight - {}", carry_text(&e))),
+                    );
+                    // The cell is now whole less `over`; see the check above.
+                    if let (Gap::Static(t), Carry::Static(e)) = (&top, &e) {
+                        let cell = t + last_bottom - round(e + extra);
+                        if cell > cell.round() && cell - cell.round() < 1e-9 {
+                            top = Gap::Static(((t - NUDGE) * 1e6).round() / 1e6);
+                            set_top(obj, &top);
+                        }
+                    }
+                    Some((e, extra))
+                }
+                _ => None,
+            };
             let own = match (h, &top) {
                 (Height::Unknown, _) => None,
+                (Height::Excess { .. }, top) if exact.is_some() => {
+                    let (e, extra) = exact.expect("checked");
+                    match (top, e) {
+                        (Gap::Static(t), Carry::Static(e)) => {
+                            let t = t + last_bottom;
+                            let over = round(e + extra);
+                            Some(Carry::Static((t - over).ceil() - t + over))
+                        }
+                        _ if last_bottom != 0.0 => None,
+                        (_, e) => {
+                            let over = if round(extra) == 0.0 {
+                                carry_text(&e)
+                            } else {
+                                format!("{} + {}", carry_text(&e), fmt_carry(extra))
+                            };
+                            Some(Carry::Binding(format!(
+                                "Math.ceil(Layout.topMargin - ({over})) - Layout.topMargin + {over} + {NUDGE}"
+                            )))
+                        }
+                    }
+                }
                 (Height::Static { qt, css }, Gap::Static(t)) => Some(Carry::Static(
                     (t + qt + last_bottom).ceil() - t - css - last_bottom,
                 )),

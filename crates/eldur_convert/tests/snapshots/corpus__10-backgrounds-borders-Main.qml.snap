@@ -184,6 +184,7 @@ ApplicationWindow {
                                 Layout.preferredHeight: 130
                                 Layout.preferredWidth: 200
                                 Layout.alignment: Qt.AlignHCenter
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                             }
 
                             // <p class="caption">
@@ -227,6 +228,7 @@ ApplicationWindow {
                                 Layout.preferredHeight: 130
                                 Layout.preferredWidth: 130
                                 Layout.alignment: Qt.AlignHCenter
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                             }
 
                             // <p class="caption">
@@ -404,6 +406,7 @@ ApplicationWindow {
                                 Layout.preferredHeight: 130
                                 Layout.preferredWidth: 200
                                 Layout.alignment: Qt.AlignHCenter
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                 RectangularShadow {
                                     anchors.fill: parent
@@ -851,6 +854,7 @@ ApplicationWindow {
                                         border.color: "#33000000"
                                         Layout.preferredWidth: 200
                                         Layout.preferredHeight: 130
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                     }
                                 }
                             }

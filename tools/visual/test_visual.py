@@ -317,6 +317,91 @@ def _assert_delayed_final_state(test: unittest.TestCase, png: Path) -> None:
     test.assertEqual(arr[80, 165].tolist(), [255, 255, 255], "bar is wider than its final width")
 
 
+class PaintSnapTests(unittest.TestCase):
+    """A conversion of paint/page.html paints as Chromium did (layout.md §1.2).
+
+    The expected colours and inked rows are Chromium's, recorded by
+    paint/gen.mjs. Layout stays fractional; only painting snaps.
+    """
+
+    FUZZ = 2
+    maxDiff = None
+    # The probe at exactly half a pixel. The one at 0.51 is 0.5 to Chromium,
+    # in 1/64 px units, and 0.51 to Qt; both come out on the same column.
+    HALF_X = 510.5
+    tmp: tempfile.TemporaryDirectory[str]
+    measured: dict
+    pixels: dict[str, np.ndarray]
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        here = Path(visual_run.__file__).resolve().parent / "paint"
+        cls.measured = json.loads((here / "chromium.json").read_text())
+        cls.tmp = tempfile.TemporaryDirectory()
+        qml = Path(cls.tmp.name) / "qml"
+        ok, err = visual_run.run_converter(
+            "cargo run -q -p eldur_cli -- convert", here / "page.html", qml, timeout=600.0
+        )
+        if not ok:
+            raise AssertionError(err)
+        png = Path(cls.tmp.name) / "gl.png"
+        warnings = render_qml.render_qml(qml, png, backend="gl")
+        if warnings:
+            raise AssertionError(warnings)
+        cls.pixels = {"gl": np.asarray(Image.open(png).convert("RGB")).astype(int)}
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.tmp.cleanup()
+
+    def _differences(self, expected: list[str], got: np.ndarray, start: int) -> list[str]:
+        out = []
+        for i, colour in enumerate(expected):
+            want = [int(c) for c in colour.split(",")]
+            if abs(got[i] - want).max() > self.FUZZ:
+                out.append(f"{start + i}: chromium {colour}, qt {got[i].tolist()}")
+        return out
+
+    def test_box_edges_land_on_chromiums_pixels(self) -> None:
+        image = self.pixels["gl"]
+        wrong = {}
+        for box in self.measured["boxes"]:
+            x, y0, rows = box["column"], box["from"], box["rows"]
+            diff = self._differences(rows, image[y0 : y0 + len(rows), x], y0)
+            if "cols" in box:
+                y, x0, cols = box["row"], box["fromX"], box["cols"]
+                if box["x"] != self.HALF_X:
+                    diff += self._differences(cols, image[y, x0 : x0 + len(cols)], x0)
+            if diff:
+                wrong[f"{box['x']},{box['y']} {box['width']}x{box['height']}"] = diff[:4]
+        self.assertEqual(wrong, {})
+
+    def test_a_box_at_exactly_half_a_pixel_in_x_is_one_column_left_of_chromium(self) -> None:
+        # Known difference (layout.md §1.2): the GPU's fill rule takes the
+        # column whose centre is on the edge, Chromium rounds half up. This
+        # fails when that changes; move the case into the test above then.
+        image = self.pixels["gl"]
+        box = next(b for b in self.measured["boxes"] if b["x"] == self.HALF_X)
+        y, x0, cols = box["row"], box["fromX"], box["cols"]
+        left = int(np.floor(box["x"]))
+        self.assertEqual(cols[left - x0], "255,255,255")
+        self.assertEqual(image[y, left].tolist(), [0, 0, 0])
+        self.assertEqual(cols[left + 1 - x0], "0,0,0")
+
+    def test_glyphs_land_on_chromiums_rows(self) -> None:
+        image = self.pixels["gl"]
+        wrong = {}
+        for line in self.measured["lines"]:
+            y0 = int(np.floor(line["y"])) - 4
+            y1 = int(np.ceil(line["y"] + line["height"])) + 4
+            x0 = int(np.floor(line["x"]))
+            ink = np.nonzero((image[y0:y1, x0 : x0 + 50, 1] < 128).any(axis=1))[0]
+            got = [y0 + int(ink[0]), y0 + int(ink[-1])] if len(ink) else None
+            if got != line["ink"]:
+                wrong[f"{line['font']} {line['y']}"] = (line["ink"], got)
+        self.assertEqual(wrong, {})
+
+
 class RenderQmlSettleTests(unittest.TestCase):
     def test_software_capture_waits_for_delayed_changes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
