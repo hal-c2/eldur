@@ -334,6 +334,22 @@ impl AnalysisVisitor<'_, '_> {
         });
     }
 
+    /// `object`'s children change (`sibling`: its parent's do).
+    fn record_mutated(&mut self, object: &Expression<'_>, sibling: bool) {
+        let target = self.target(object);
+        if target == ElementRef::Unknown {
+            return;
+        }
+        let list = if sibling {
+            &mut self.analysis.mutated_siblings
+        } else {
+            &mut self.analysis.mutated_parents
+        };
+        if !list.contains(&target) {
+            list.push(target);
+        }
+    }
+
     fn record_inserts<'x, 'y: 'x>(
         &mut self,
         parent: &ElementRef,
@@ -514,26 +530,35 @@ impl AnalysisVisitor<'_, '_> {
                 }
             }
             "appendChild" | "insertBefore" | "replaceChild" => {
+                self.record_mutated(&member.object, false);
                 let parent = self.target(&member.object);
                 self.record_inserts(&parent, args.first(), it.span);
             }
+            "removeChild" => self.record_mutated(&member.object, false),
             "append" | "prepend" | "replaceChildren" if dom_receiver => {
+                self.record_mutated(&member.object, false);
                 let parent = self.target(&member.object);
                 self.record_inserts(&parent, args.iter(), it.span);
             }
             "insertAdjacentHTML" => {
                 let parent = self.adjacent_parent(&member.object, literal_arg(0));
+                self.record_mutated(&member.object, parent == ElementRef::Unknown);
                 if let Some(markup) = args.get(1).and_then(|a| a.as_expression()) {
                     self.record_markup(&parent, markup, it.span);
                 }
             }
             "insertAdjacentElement" => {
                 let parent = self.adjacent_parent(&member.object, literal_arg(0));
+                self.record_mutated(&member.object, parent == ElementRef::Unknown);
                 self.record_inserts(&parent, args.get(1), it.span);
             }
             // The parent is the receiver's parent, which analysis does not know.
             "before" | "after" | "replaceWith" if dom_receiver => {
+                self.record_mutated(&member.object, true);
                 self.record_inserts(&ElementRef::Unknown, args.iter(), it.span);
+            }
+            "remove" if dom_receiver && args.is_empty() => {
+                self.record_mutated(&member.object, true);
             }
             "closest"
             | "matches"
@@ -581,8 +606,15 @@ impl AnalysisVisitor<'_, '_> {
             }
             // `+=` keeps the old children and parses the new markup after them.
             ("innerHTML", AssignmentOperator::Assign | AssignmentOperator::Addition) => {
+                self.record_mutated(&member.object, false);
                 let parent = self.target(&member.object);
                 self.record_markup(&parent, &it.right, it.span);
+            }
+            ("textContent" | "innerText", AssignmentOperator::Assign) => {
+                self.record_mutated(&member.object, false);
+            }
+            ("outerHTML" | "outerText", AssignmentOperator::Assign) => {
+                self.record_mutated(&member.object, true);
             }
             _ => {}
         }

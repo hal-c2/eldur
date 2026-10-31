@@ -93,7 +93,18 @@ fn tracks_listeners_and_property_writes_across_variables_functions_and_loops() {
         class_writes,
         created,
         runtime_dom,
+        mutated_parents,
+        mutated_siblings,
     } = analyze(&[s1, s2]);
+    // `textContent` replaces the children of the elements it is written to.
+    assert_eq!(
+        mutated_parents,
+        vec![
+            ElementRef::Query(DomQuery::ById("save".to_string())),
+            ElementRef::Query(DomQuery::SelectorAll(".row".to_string())),
+        ]
+    );
+    assert!(mutated_siblings.is_empty(), "{mutated_siblings:?}");
 
     assert!(created.is_empty(), "{created:?}");
     // `toggle` without a force argument depends on the initial classes.
@@ -1335,4 +1346,40 @@ fn markup_elements_the_runtime_does_not_create_are_left_out() {
         shapes(&res),
         vec![shape("p", &[&["x"]], false, vec![by_id("box")])]
     );
+}
+
+#[test]
+fn containers_whose_children_scripts_change() {
+    let res = analyze(&[classic(
+        "lists.js",
+        r##"
+        const list = document.getElementById("list");
+        const done = document.querySelector("#done");
+        const log = document.getElementById("log");
+        const first = document.getElementById("first");
+        const gone = document.getElementById("gone");
+        function render() {
+            list.textContent = "";
+            const li = document.createElement("li");
+            li.appendChild(document.createTextNode("x"));
+            list.appendChild(li);
+        }
+        done.removeChild(done.firstElementChild);
+        log.insertAdjacentHTML("beforeend", "<p>hi</p>");
+        first.before(document.createElement("hr"));
+        gone.remove();
+        document.querySelector(".x").classList.remove("y");
+        event.target.closest("li").remove();
+        "##,
+    )]);
+    assert_eq!(
+        res.mutated_parents,
+        vec![
+            by_id("list"),
+            created(0),
+            ElementRef::Query(DomQuery::Selector("#done".to_string())),
+            by_id("log")
+        ]
+    );
+    assert_eq!(res.mutated_siblings, vec![by_id("first"), by_id("gone")]);
 }

@@ -96,6 +96,15 @@ pub struct Analysis {
     /// Scripts reach elements by runtime selectors, traversal, `matches`/`closest`,
     /// event targets, or mutate the DOM: every element needs `h2qTag`/`h2qClasses`.
     pub runtime_dom: bool,
+    /// Elements whose children scripts insert, remove, replace or reorder
+    /// (the receiver of `appendChild`, `insertBefore`, `removeChild`,
+    /// `append`, `replaceChildren`, `innerHTML =`, `textContent =`, …), in
+    /// first-seen order. Elements the analysis cannot follow are left out.
+    pub mutated_parents: Vec<ElementRef>,
+    /// Elements scripts remove or put siblings beside (`remove()`,
+    /// `before`, `after`, `replaceWith`, `outerHTML =`): their parents'
+    /// children change.
+    pub mutated_siblings: Vec<ElementRef>,
 }
 
 /// A created element (`document.createElement` call site) as analysis predicts it.
