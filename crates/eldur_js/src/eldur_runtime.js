@@ -2439,7 +2439,10 @@ function setInnerHTML(item, html) {
             return;
         }
     }
-    if (_markupMakesElements(raw)) {
+    // A box the converter gave an empty line of text holds elements as any other.
+    var blockInBox = typeof raw.text !== "string" && _gHasCascade() && _G_BLOCK_MARKUP.test(str)
+        && typeof raw.eldurTag === "string" && !_G_CONTROL.test(raw.eldurTag);
+    if (blockInBox || _markupMakesElements(raw)) {
         _replaceWithMarkup(raw, str);
         _rememberMarkup(raw, str);
         return;
@@ -9582,6 +9585,10 @@ function _gPlace(raw, avail, opts, heightBasis) {
 
 function _gPlaceLeaf(raw, s, e, used, fixedH, margins, frameH) {
     _gPaintControl(raw, s, e);
+    // A created inline element with only text is a `Text` itself.
+    if (_meta(raw).createdTag && _isPlainTextItem(raw)) {
+        _gPaintText(raw, s, used);
+    }
     var height = fixedH;
     if (height === null) {
         height = raw.implicitHeight;
@@ -10728,6 +10735,12 @@ function _gPaintControl(raw, s, e) {
         if (s.won["border-top-color"] && raw.background.border !== undefined) {
             raw.background.border.color = _gQtColor(s["border-top-color"]);
         }
+        if (s.won["border-top-width"] && raw.background.border !== undefined) {
+            raw.background.border.width = e.bt;
+        }
+        if (s.won["border-top-left-radius"] && typeof raw.background.radius === "number") {
+            raw.background.radius = _gPx(s["border-top-left-radius"], raw.width, s.fontSize, s.rootSize) || 0;
+        }
     }
 }
 
@@ -10740,7 +10753,7 @@ function _gControlLine(s) {
 function _gPaintFontOnly(raw, s) {
     raw.font = _gFontOf(s);
     if (raw.palette && s.won["color"]) {
-        raw.palette.buttonText = s["color"];
+        raw.palette.buttonText = _gQtColor(s["color"]);
     }
 }
 

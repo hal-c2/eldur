@@ -225,3 +225,16 @@ fn margins_hair() {
 fn margins_empty() {
     page("margins_empty");
 }
+
+/// Text a stylesheet colours, in markup a script builds: logged values alone
+/// said white and red over text painted black.
+#[test]
+fn paint_text() {
+    page("paint_text");
+}
+
+/// A created control's corners and border, read from the pixels.
+#[test]
+fn paint_control() {
+    page("paint_control");
+}

@@ -476,6 +476,11 @@ What they brought:
 - `el.style.display` on a page with a cascade goes through `setStyle`, so the
   next restyle keeps it. A bare `visible` write was undone by it.
 - `template.content` reads the template's markup, declared as `eldurHtmlTemplates`.
+- `palette.buttonText` silently ignores an `rgb(...)` string, so a control's colour
+  goes through `_gQtColor`. A created text leaf is painted from its cascade like a
+  box, and `innerHTML` with block markup on a box holding only an empty `Text`
+  replaces the box.
+- A created control takes its border width and corner radius.
 - `<details>`: the summary toggles it, `open` is a property and an attribute,
   `toggle` is sent, and the summary takes focus.
 - `innerHTML` with block markup on a `Text` adopts it into a box.
@@ -489,5 +494,4 @@ Known gaps these pages show:
 - Rows created in a `<tbody>` do not share the table's auto column sizes: they
   sort and filter, but their cells do not line up with the header.
 - `:hover` under a list that starts `display: none` has no hover tracking.
-- A created inline element as a flex item ignores an inherited `line-height`.
 - Hiding a form does not move focus off the hidden control.

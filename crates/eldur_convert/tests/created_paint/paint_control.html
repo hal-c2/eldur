@@ -1,0 +1,9 @@
+<!doctype html><html><head><style>
+body{margin:0;background:#fff;font:16px/20px sans-serif}
+.card button{display:block;width:100px;height:60px;padding:0;margin:10px;background:#0a0;color:#000;border:4px solid #00f;border-radius:20px}
+</style></head><body><div id="l"></div><script>
+var c=['card'][0];
+document.getElementById('l').innerHTML='<div class="'+c+'"><button id="bt">x</button></div>';
+document.getElementById('bt').setAttribute('data-pixel','2,2 50,2 12,30');
+var r=document.getElementById('bt').getBoundingClientRect();console.log('CS bt '+r.left+' '+r.top+' '+r.width+' '+r.height+' '+getComputedStyle(document.getElementById('bt')).borderTopLeftRadius);
+</script></body></html>

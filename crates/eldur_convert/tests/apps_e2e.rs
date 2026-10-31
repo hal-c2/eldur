@@ -39,9 +39,6 @@ const FONTFOLLOW: &str = "follows from the Helvetica line height and width diffe
 const TABLE: &str = "created rows do not take part in the table's auto column sizing";
 const CLASS: &str = "classList.remove on an element with no class attribute leaves no attribute, Chromium an empty one";
 const HOVER: &str = "li:hover under a list that starts display:none gets no hover tracking";
-const LABEL: &str =
-    "a created span as a flex item ignores the inherited line-height; root cause not found";
-const LABELFOLLOW: &str = "follows from the created flex item's line height";
 const FOCUS: &str = "hiding the form leaves focus on its hidden button";
 
 /// `(page, what differs, why)`. `what` starts a difference's name, as printed by a
@@ -62,6 +59,7 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("cards", "* .desc[*] y:", FONTFOLLOW),
     ("cards", "* .desc[*] height:", FONTFOLLOW),
     ("cards", "* .price[*] y:", FONTFOLLOW),
+    ("cards", "* .price[*] height:", FONT),
     ("cards", "* .price[*] width:", FONT),
     ("cards", "* #cart[*] x:", FONT),
     ("cards", "* #cart[*] width:", FONT),
@@ -100,17 +98,8 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("form", "* .error[*] y:", UAFOLLOW),
     ("form", "* (focus):", FOCUS),
     ("form", "* #done[*] y:", UAFOLLOW),
-    ("todo", "* #count[*] y:", LABELFOLLOW),
-    ("todo", "* .app[*] height:", LABELFOLLOW),
     ("todo", "* .app[*] text:", WS),
-    ("todo", "* button[*] y:", LABELFOLLOW),
-    ("todo", "* li.item[*] height:", LABELFOLLOW),
     ("todo", "* li.item[*] text:", WS),
-    ("todo", "* li.item[*] y:", LABELFOLLOW),
-    ("todo", "* .check[*] y:", LABELFOLLOW),
-    ("todo", "* .del[*] y:", LABELFOLLOW),
-    ("todo", "* .label[*] height:", LABEL),
-    ("todo", "* .label[*] y:", LABELFOLLOW),
 ];
 
 const TEST: &str = r##"
