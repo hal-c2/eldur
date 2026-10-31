@@ -43,8 +43,12 @@ ApplicationWindow {
 
                 // <div class="grid">
                 Flow {
+                    id: grid
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                     spacing: 16
                     Layout.fillWidth: true
+                    Layout.preferredHeight: implicitHeight
 
                     // <div class="tile down">
                     Item {
@@ -795,10 +799,13 @@ ApplicationWindow {
 
                 // <div class="hero">
                 Item {
+                    id: hero
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                     implicitWidth: heroContent.implicitWidth + 64
                     implicitHeight: heroContent.implicitHeight + 64
                     Layout.fillWidth: true
-                    Layout.topMargin: 16
+                    Layout.topMargin: 16 - grid.eldurCarry
 
                     Shape {
                         id: heroGradient

@@ -318,6 +318,9 @@ ApplicationWindow {
 
                                     // <p class="nav-label">
                                     Text {
+                                        id: navLabel
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                         text: "Overview"
                                         textFormat: Text.PlainText
                                         color: "#6b7280"
@@ -334,12 +337,16 @@ ApplicationWindow {
 
                                     // <a class="nav-item active">
                                     Rectangle {
+                                        id: navItem
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                         color: "#1f2937"
                                         radius: 8
                                         implicitWidth: navItemText.implicitWidth + 24
                                         implicitHeight: navItemText.implicitHeight + 18
                                         Layout.fillWidth: true
-                                        Layout.topMargin: 8
+                                        Layout.topMargin: 8 - navLabel.eldurCarry
+                                        Layout.preferredHeight: implicitHeight
 
                                         Shape {
                                             id: navItemInset
@@ -388,50 +395,20 @@ ApplicationWindow {
 
                                     // <a class="nav-item">
                                     Rectangle {
-                                        id: navItem
-                                        color: navItemHover.hovered ? "#1f2937" : "#00000000"
+                                        id: navItem2
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
+                                        color: navItem2Hover.hovered ? "#1f2937" : "#00000000"
                                         radius: 8
                                         implicitWidth: navItemText2.implicitWidth + 24
                                         implicitHeight: navItemText2.implicitHeight + 18
                                         Layout.fillWidth: true
+                                        Layout.topMargin: -navItem.eldurCarry
+                                        Layout.preferredHeight: implicitHeight
 
                                         Text {
                                             id: navItemText2
                                             text: "Analytics"
-                                            textFormat: Text.PlainText
-                                            color: navItemHover.hovered ? "#ffffff" : "#9ca3af"
-                                            font.family: "sans-serif"
-                                            font.pixelSize: 14
-                                            font.weight: 500
-                                            wrapMode: Text.WordWrap
-                                            verticalAlignment: Text.AlignVCenter
-                                            anchors.left: parent.left
-                                            anchors.right: parent.right
-                                            anchors.top: parent.top
-                                            anchors.bottom: parent.bottom
-                                            anchors.leftMargin: 12
-                                            anchors.rightMargin: 12
-                                            anchors.topMargin: 9
-                                            anchors.bottomMargin: 9
-                                        }
-
-                                        HoverHandler {
-                                            id: navItemHover
-                                        }
-                                    }
-
-                                    // <a class="nav-item">
-                                    Rectangle {
-                                        id: navItem2
-                                        color: navItem2Hover.hovered ? "#1f2937" : "#00000000"
-                                        radius: 8
-                                        implicitWidth: navItemText3.implicitWidth + 24
-                                        implicitHeight: navItemText3.implicitHeight + 18
-                                        Layout.fillWidth: true
-
-                                        Text {
-                                            id: navItemText3
-                                            text: "Reports"
                                             textFormat: Text.PlainText
                                             color: navItem2Hover.hovered ? "#ffffff" : "#9ca3af"
                                             font.family: "sans-serif"
@@ -454,8 +431,49 @@ ApplicationWindow {
                                         }
                                     }
 
+                                    // <a class="nav-item">
+                                    Rectangle {
+                                        id: navItem3
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
+                                        color: navItem3Hover.hovered ? "#1f2937" : "#00000000"
+                                        radius: 8
+                                        implicitWidth: navItemText3.implicitWidth + 24
+                                        implicitHeight: navItemText3.implicitHeight + 18
+                                        Layout.fillWidth: true
+                                        Layout.topMargin: -navItem2.eldurCarry
+                                        Layout.preferredHeight: implicitHeight
+
+                                        Text {
+                                            id: navItemText3
+                                            text: "Reports"
+                                            textFormat: Text.PlainText
+                                            color: navItem3Hover.hovered ? "#ffffff" : "#9ca3af"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 14
+                                            font.weight: 500
+                                            wrapMode: Text.WordWrap
+                                            verticalAlignment: Text.AlignVCenter
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
+                                            anchors.leftMargin: 12
+                                            anchors.rightMargin: 12
+                                            anchors.topMargin: 9
+                                            anchors.bottomMargin: 9
+                                        }
+
+                                        HoverHandler {
+                                            id: navItem3Hover
+                                        }
+                                    }
+
                                     // <p class="nav-label">
                                     Text {
+                                        id: navLabel2
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                         text: "Sales"
                                         textFormat: Text.PlainText
                                         color: "#6b7280"
@@ -468,18 +486,20 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.leftMargin: 12
                                         Layout.rightMargin: 12
-                                        Layout.topMargin: 24
+                                        Layout.topMargin: 24 - navItem3.eldurCarry
                                     }
 
                                     // <a class="nav-item">
                                     Rectangle {
-                                        id: navItem3
-                                        color: navItem3Hover.hovered ? "#1f2937" : "#00000000"
+                                        id: navItem4
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
+                                        color: navItem4Hover.hovered ? "#1f2937" : "#00000000"
                                         radius: 8
                                         implicitWidth: navItemContent.implicitWidth + 24
                                         implicitHeight: navItemContent.implicitHeight + 18
                                         Layout.fillWidth: true
-                                        Layout.topMargin: 8
+                                        Layout.topMargin: 8 - navLabel2.eldurCarry
 
                                         RowLayout {
                                             id: navItemContent
@@ -496,7 +516,7 @@ ApplicationWindow {
                                             Text {
                                                 text: "Orders"
                                                 textFormat: Text.PlainText
-                                                color: navItem3Hover.hovered ? "#ffffff" : "#9ca3af"
+                                                color: navItem4Hover.hovered ? "#ffffff" : "#9ca3af"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 14
                                                 font.weight: 500
@@ -540,40 +560,6 @@ ApplicationWindow {
                                         }
 
                                         HoverHandler {
-                                            id: navItem3Hover
-                                        }
-                                    }
-
-                                    // <a class="nav-item">
-                                    Rectangle {
-                                        id: navItem4
-                                        color: navItem4Hover.hovered ? "#1f2937" : "#00000000"
-                                        radius: 8
-                                        implicitWidth: navItemText4.implicitWidth + 24
-                                        implicitHeight: navItemText4.implicitHeight + 18
-                                        Layout.fillWidth: true
-
-                                        Text {
-                                            id: navItemText4
-                                            text: "Customers"
-                                            textFormat: Text.PlainText
-                                            color: navItem4Hover.hovered ? "#ffffff" : "#9ca3af"
-                                            font.family: "sans-serif"
-                                            font.pixelSize: 14
-                                            font.weight: 500
-                                            wrapMode: Text.WordWrap
-                                            verticalAlignment: Text.AlignVCenter
-                                            anchors.left: parent.left
-                                            anchors.right: parent.right
-                                            anchors.top: parent.top
-                                            anchors.bottom: parent.bottom
-                                            anchors.leftMargin: 12
-                                            anchors.rightMargin: 12
-                                            anchors.topMargin: 9
-                                            anchors.bottomMargin: 9
-                                        }
-
-                                        HoverHandler {
                                             id: navItem4Hover
                                         }
                                     }
@@ -581,15 +567,19 @@ ApplicationWindow {
                                     // <a class="nav-item">
                                     Rectangle {
                                         id: navItem5
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                         color: navItem5Hover.hovered ? "#1f2937" : "#00000000"
                                         radius: 8
-                                        implicitWidth: navItemText5.implicitWidth + 24
-                                        implicitHeight: navItemText5.implicitHeight + 18
+                                        implicitWidth: navItemText4.implicitWidth + 24
+                                        implicitHeight: navItemText4.implicitHeight + 18
                                         Layout.fillWidth: true
+                                        Layout.topMargin: -navItem4.eldurCarry
+                                        Layout.preferredHeight: implicitHeight
 
                                         Text {
-                                            id: navItemText5
-                                            text: "Products"
+                                            id: navItemText4
+                                            text: "Customers"
                                             textFormat: Text.PlainText
                                             color: navItem5Hover.hovered ? "#ffffff" : "#9ca3af"
                                             font.family: "sans-serif"
@@ -612,36 +602,22 @@ ApplicationWindow {
                                         }
                                     }
 
-                                    // <p class="nav-label">
-                                    Text {
-                                        text: "Settings"
-                                        textFormat: Text.PlainText
-                                        color: "#6b7280"
-                                        font.family: "sans-serif"
-                                        font.pixelSize: 11
-                                        font.weight: 600
-                                        font.letterSpacing: 0.88
-                                        font.capitalization: Font.AllUppercase
-                                        wrapMode: Text.WordWrap
-                                        Layout.fillWidth: true
-                                        Layout.leftMargin: 12
-                                        Layout.rightMargin: 12
-                                        Layout.topMargin: 24
-                                    }
-
                                     // <a class="nav-item">
                                     Rectangle {
                                         id: navItem6
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                         color: navItem6Hover.hovered ? "#1f2937" : "#00000000"
                                         radius: 8
-                                        implicitWidth: navItemText6.implicitWidth + 24
-                                        implicitHeight: navItemText6.implicitHeight + 18
+                                        implicitWidth: navItemText5.implicitWidth + 24
+                                        implicitHeight: navItemText5.implicitHeight + 18
                                         Layout.fillWidth: true
-                                        Layout.topMargin: 8
+                                        Layout.topMargin: -navItem5.eldurCarry
+                                        Layout.preferredHeight: implicitHeight
 
                                         Text {
-                                            id: navItemText6
-                                            text: "Team"
+                                            id: navItemText5
+                                            text: "Products"
                                             textFormat: Text.PlainText
                                             color: navItem6Hover.hovered ? "#ffffff" : "#9ca3af"
                                             font.family: "sans-serif"
@@ -664,18 +640,42 @@ ApplicationWindow {
                                         }
                                     }
 
+                                    // <p class="nav-label">
+                                    Text {
+                                        id: navLabel3
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
+                                        text: "Settings"
+                                        textFormat: Text.PlainText
+                                        color: "#6b7280"
+                                        font.family: "sans-serif"
+                                        font.pixelSize: 11
+                                        font.weight: 600
+                                        font.letterSpacing: 0.88
+                                        font.capitalization: Font.AllUppercase
+                                        wrapMode: Text.WordWrap
+                                        Layout.fillWidth: true
+                                        Layout.leftMargin: 12
+                                        Layout.rightMargin: 12
+                                        Layout.topMargin: 24 - navItem6.eldurCarry
+                                    }
+
                                     // <a class="nav-item">
                                     Rectangle {
                                         id: navItem7
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                         color: navItem7Hover.hovered ? "#1f2937" : "#00000000"
                                         radius: 8
-                                        implicitWidth: navItemText7.implicitWidth + 24
-                                        implicitHeight: navItemText7.implicitHeight + 18
+                                        implicitWidth: navItemText6.implicitWidth + 24
+                                        implicitHeight: navItemText6.implicitHeight + 18
                                         Layout.fillWidth: true
+                                        Layout.topMargin: 8 - navLabel3.eldurCarry
+                                        Layout.preferredHeight: implicitHeight
 
                                         Text {
-                                            id: navItemText7
-                                            text: "Billing"
+                                            id: navItemText6
+                                            text: "Team"
                                             textFormat: Text.PlainText
                                             color: navItem7Hover.hovered ? "#ffffff" : "#9ca3af"
                                             font.family: "sans-serif"
@@ -695,6 +695,44 @@ ApplicationWindow {
 
                                         HoverHandler {
                                             id: navItem7Hover
+                                        }
+                                    }
+
+                                    // <a class="nav-item">
+                                    Rectangle {
+                                        id: navItem8
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
+                                        color: navItem8Hover.hovered ? "#1f2937" : "#00000000"
+                                        radius: 8
+                                        implicitWidth: navItemText7.implicitWidth + 24
+                                        implicitHeight: navItemText7.implicitHeight + 18
+                                        Layout.fillWidth: true
+                                        Layout.topMargin: -navItem7.eldurCarry
+                                        Layout.preferredHeight: implicitHeight
+
+                                        Text {
+                                            id: navItemText7
+                                            text: "Billing"
+                                            textFormat: Text.PlainText
+                                            color: navItem8Hover.hovered ? "#ffffff" : "#9ca3af"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 14
+                                            font.weight: 500
+                                            wrapMode: Text.WordWrap
+                                            verticalAlignment: Text.AlignVCenter
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
+                                            anchors.leftMargin: 12
+                                            anchors.rightMargin: 12
+                                            anchors.topMargin: 9
+                                            anchors.bottomMargin: 9
+                                        }
+
+                                        HoverHandler {
+                                            id: navItem8Hover
                                         }
                                     }
                                 }
@@ -748,6 +786,9 @@ ApplicationWindow {
 
                                         // <h1>
                                         Text {
+                                            id: h1
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Dashboard"
                                             textFormat: Text.PlainText
                                             color: "#111827"
@@ -768,7 +809,8 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
-                                            Layout.topMargin: 4
+                                            Layout.topMargin: 4 - h1.eldurCarry
+                                            Layout.preferredHeight: implicitHeight
                                         }
                                     }
 
@@ -932,6 +974,9 @@ ApplicationWindow {
 
                                                 // <p class="stat-label">
                                                 Text {
+                                                    id: statLabel
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     text: "Revenue"
                                                     textFormat: Text.PlainText
                                                     color: "#6b7280"
@@ -944,6 +989,9 @@ ApplicationWindow {
 
                                                 // <p class="stat-value">
                                                 Text {
+                                                    id: statValue
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     text: "$48,290"
                                                     textFormat: Text.PlainText
                                                     color: "#111827"
@@ -953,7 +1001,7 @@ ApplicationWindow {
                                                     font.letterSpacing: -0.64
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.topMargin: 8
+                                                    Layout.topMargin: 8 - statLabel.eldurCarry
                                                 }
 
                                                 // <p class="stat-delta up">
@@ -966,7 +1014,8 @@ ApplicationWindow {
                                                     font.weight: 600
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.topMargin: 6
+                                                    Layout.topMargin: 6 - statValue.eldurCarry
+                                                    Layout.preferredHeight: implicitHeight
                                                 }
                                             }
                                         }
@@ -995,6 +1044,9 @@ ApplicationWindow {
 
                                                 // <p class="stat-label">
                                                 Text {
+                                                    id: statLabel2
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     text: "Orders"
                                                     textFormat: Text.PlainText
                                                     color: "#6b7280"
@@ -1007,6 +1059,9 @@ ApplicationWindow {
 
                                                 // <p class="stat-value">
                                                 Text {
+                                                    id: statValue2
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     text: "1,284"
                                                     textFormat: Text.PlainText
                                                     color: "#111827"
@@ -1016,7 +1071,7 @@ ApplicationWindow {
                                                     font.letterSpacing: -0.64
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.topMargin: 8
+                                                    Layout.topMargin: 8 - statLabel2.eldurCarry
                                                 }
 
                                                 // <p class="stat-delta down">
@@ -1029,7 +1084,8 @@ ApplicationWindow {
                                                     font.weight: 600
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.topMargin: 6
+                                                    Layout.topMargin: 6 - statValue2.eldurCarry
+                                                    Layout.preferredHeight: implicitHeight
                                                 }
                                             }
                                         }
@@ -1058,6 +1114,9 @@ ApplicationWindow {
 
                                                 // <p class="stat-label">
                                                 Text {
+                                                    id: statLabel3
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     text: "New customers"
                                                     textFormat: Text.PlainText
                                                     color: "#6b7280"
@@ -1070,6 +1129,9 @@ ApplicationWindow {
 
                                                 // <p class="stat-value">
                                                 Text {
+                                                    id: statValue3
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     text: "356"
                                                     textFormat: Text.PlainText
                                                     color: "#111827"
@@ -1079,7 +1141,7 @@ ApplicationWindow {
                                                     font.letterSpacing: -0.64
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.topMargin: 8
+                                                    Layout.topMargin: 8 - statLabel3.eldurCarry
                                                 }
 
                                                 // <p class="stat-delta up">
@@ -1092,7 +1154,8 @@ ApplicationWindow {
                                                     font.weight: 600
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.topMargin: 6
+                                                    Layout.topMargin: 6 - statValue3.eldurCarry
+                                                    Layout.preferredHeight: implicitHeight
                                                 }
                                             }
                                         }
@@ -1121,6 +1184,9 @@ ApplicationWindow {
 
                                                 // <p class="stat-label">
                                                 Text {
+                                                    id: statLabel4
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     text: "Refund rate"
                                                     textFormat: Text.PlainText
                                                     color: "#6b7280"
@@ -1133,6 +1199,9 @@ ApplicationWindow {
 
                                                 // <p class="stat-value">
                                                 Text {
+                                                    id: statValue4
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     text: "1.8%"
                                                     textFormat: Text.PlainText
                                                     color: "#111827"
@@ -1142,7 +1211,7 @@ ApplicationWindow {
                                                     font.letterSpacing: -0.64
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.topMargin: 8
+                                                    Layout.topMargin: 8 - statLabel4.eldurCarry
                                                 }
 
                                                 // <p class="stat-delta down">
@@ -1155,7 +1224,8 @@ ApplicationWindow {
                                                     font.weight: 600
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.topMargin: 6
+                                                    Layout.topMargin: 6 - statValue4.eldurCarry
+                                                    Layout.preferredHeight: implicitHeight
                                                 }
                                             }
                                         }
@@ -1199,6 +1269,9 @@ ApplicationWindow {
 
                                                 // <h2 class="card-title">
                                                 Text {
+                                                    id: cardTitle
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     text: "Sales by region"
                                                     textFormat: Text.PlainText
                                                     color: "#111827"
@@ -1211,12 +1284,15 @@ ApplicationWindow {
 
                                                 // <div class="bar-row">
                                                 GridLayout {
+                                                    id: barRow
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     columns: 3
                                                     columnSpacing: 12
                                                     rowSpacing: 12
                                                     Layout.fillWidth: true
                                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                                    Layout.topMargin: 16
+                                                    Layout.topMargin: 16 - cardTitle.eldurCarry
 
                                                     // <span class="bar-name">
                                                     Text {
@@ -1305,12 +1381,15 @@ ApplicationWindow {
 
                                                 // <div class="bar-row">
                                                 GridLayout {
+                                                    id: barRow2
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     columns: 3
                                                     columnSpacing: 12
                                                     rowSpacing: 12
                                                     Layout.fillWidth: true
                                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                                    Layout.topMargin: 14
+                                                    Layout.topMargin: 14 - barRow.eldurCarry
 
                                                     // <span class="bar-name">
                                                     Text {
@@ -1399,12 +1478,15 @@ ApplicationWindow {
 
                                                 // <div class="bar-row">
                                                 GridLayout {
+                                                    id: barRow3
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     columns: 3
                                                     columnSpacing: 12
                                                     rowSpacing: 12
                                                     Layout.fillWidth: true
                                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                                    Layout.topMargin: 14
+                                                    Layout.topMargin: 14 - barRow2.eldurCarry
 
                                                     // <span class="bar-name">
                                                     Text {
@@ -1493,12 +1575,15 @@ ApplicationWindow {
 
                                                 // <div class="bar-row">
                                                 GridLayout {
+                                                    id: barRow4
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     columns: 3
                                                     columnSpacing: 12
                                                     rowSpacing: 12
                                                     Layout.fillWidth: true
                                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                                    Layout.topMargin: 14
+                                                    Layout.topMargin: 14 - barRow3.eldurCarry
 
                                                     // <span class="bar-name">
                                                     Text {
@@ -1592,7 +1677,7 @@ ApplicationWindow {
                                                     rowSpacing: 12
                                                     Layout.fillWidth: true
                                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                                    Layout.topMargin: 14
+                                                    Layout.topMargin: 14 - barRow4.eldurCarry
                                                     Layout.bottomMargin: 14
 
                                                     // <span class="bar-name">
@@ -1709,6 +1794,9 @@ ApplicationWindow {
 
                                                 // <h2 class="card-title">
                                                 Text {
+                                                    id: cardTitle2
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     text: "Targets"
                                                     textFormat: Text.PlainText
                                                     color: "#111827"
@@ -1721,10 +1809,13 @@ ApplicationWindow {
 
                                                 // <div class="progress-group">
                                                 ColumnLayout {
+                                                    id: progressGroup
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + 0.9 + 0.000001
+
                                                     spacing: 0
                                                     Layout.fillWidth: true
                                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                                    Layout.topMargin: 16
+                                                    Layout.topMargin: 16 - cardTitle2.eldurCarry
 
                                                     // <div class="progress-label">
                                                     RowLayout {
@@ -1802,7 +1893,7 @@ ApplicationWindow {
                                                     spacing: 0
                                                     Layout.fillWidth: true
                                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                                    Layout.topMargin: 20
+                                                    Layout.topMargin: 20 - progressGroup.eldurCarry
 
                                                     // <div class="progress-label">
                                                     RowLayout {
@@ -1937,6 +2028,9 @@ ApplicationWindow {
 
                                             // <h2 class="card-title">
                                             Text {
+                                                id: cardTitle3
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                 text: "Recent orders"
                                                 textFormat: Text.PlainText
                                                 color: "#111827"
@@ -1953,7 +2047,7 @@ ApplicationWindow {
                                                 implicitHeight: tableGrid.implicitHeight
                                                 Layout.minimumWidth: tableGrid.minContentWidth
                                                 Layout.fillWidth: true
-                                                Layout.topMargin: 16
+                                                Layout.topMargin: 16 - cardTitle3.eldurCarry
 
                                                 GridLayout {
                                                     id: tableGrid
@@ -2318,6 +2412,7 @@ ApplicationWindow {
                                                                 radius: 999
                                                                 implicitWidth: pillText.implicitWidth + 20
                                                                 implicitHeight: pillText.implicitHeight + 6
+                                                                Layout.preferredHeight: implicitHeight
 
                                                                 Text {
                                                                     id: pillText
@@ -2524,6 +2619,7 @@ ApplicationWindow {
                                                                 radius: 999
                                                                 implicitWidth: pillText2.implicitWidth + 20
                                                                 implicitHeight: pillText2.implicitHeight + 6
+                                                                Layout.preferredHeight: implicitHeight
 
                                                                 Text {
                                                                     id: pillText2
@@ -2730,6 +2826,7 @@ ApplicationWindow {
                                                                 radius: 999
                                                                 implicitWidth: pillText3.implicitWidth + 20
                                                                 implicitHeight: pillText3.implicitHeight + 6
+                                                                Layout.preferredHeight: implicitHeight
 
                                                                 Text {
                                                                     id: pillText3
@@ -2936,6 +3033,7 @@ ApplicationWindow {
                                                                 radius: 999
                                                                 implicitWidth: pillText4.implicitWidth + 20
                                                                 implicitHeight: pillText4.implicitHeight + 6
+                                                                Layout.preferredHeight: implicitHeight
 
                                                                 Text {
                                                                     id: pillText4
@@ -3177,6 +3275,7 @@ ApplicationWindow {
                                                                 radius: 999
                                                                 implicitWidth: pillText5.implicitWidth + 20
                                                                 implicitHeight: pillText5.implicitHeight + 6
+                                                                Layout.preferredHeight: implicitHeight
 
                                                                 Text {
                                                                     id: pillText5

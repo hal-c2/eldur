@@ -231,9 +231,13 @@ ApplicationWindow {
 
                         // <section class="product-grid">
                         Flow {
+                            id: productGrid
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                             spacing: 24
                             Layout.fillWidth: true
                             Layout.topMargin: 24
+                            Layout.preferredHeight: implicitHeight
 
                             // <article class="card">
                             Item {
@@ -339,7 +343,6 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.bottomMargin: 4
                                                 }
 
                                                 // <p class="card-price">
@@ -357,7 +360,7 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.bottomMargin: 8
+                                                    Layout.topMargin: 4
                                                 }
 
                                                 // <p class="card-text">
@@ -374,7 +377,7 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.bottomMargin: 16
+                                                    Layout.topMargin: 8
                                                 }
 
                                                 Item {
@@ -400,6 +403,7 @@ ApplicationWindow {
                                                     implicitHeight: 46.5
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
+                                                    Layout.topMargin: 16
                                                     hoverEnabled: true
                                                 }
                                             }
@@ -534,7 +538,6 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.bottomMargin: 4
                                                 }
 
                                                 // <p class="card-price">
@@ -552,7 +555,7 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.bottomMargin: 8
+                                                    Layout.topMargin: 4
                                                 }
 
                                                 // <p class="card-text">
@@ -569,7 +572,7 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.bottomMargin: 16
+                                                    Layout.topMargin: 8
                                                 }
 
                                                 Item {
@@ -595,6 +598,7 @@ ApplicationWindow {
                                                     implicitHeight: 46.5
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
+                                                    Layout.topMargin: 16
                                                     hoverEnabled: true
                                                 }
                                             }
@@ -729,7 +733,6 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.bottomMargin: 4
                                                 }
 
                                                 // <p class="card-price">
@@ -747,7 +750,7 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.bottomMargin: 8
+                                                    Layout.topMargin: 4
                                                 }
 
                                                 // <p class="card-text">
@@ -764,7 +767,7 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.bottomMargin: 16
+                                                    Layout.topMargin: 8
                                                 }
 
                                                 Item {
@@ -790,6 +793,7 @@ ApplicationWindow {
                                                     implicitHeight: 46.5
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
+                                                    Layout.topMargin: 16
                                                     hoverEnabled: true
                                                 }
                                             }
@@ -924,7 +928,6 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.bottomMargin: 4
                                                 }
 
                                                 // <p class="card-price">
@@ -942,7 +945,7 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.bottomMargin: 8
+                                                    Layout.topMargin: 4
                                                 }
 
                                                 // <p class="card-text">
@@ -959,7 +962,7 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.bottomMargin: 16
+                                                    Layout.topMargin: 8
                                                 }
 
                                                 Item {
@@ -985,6 +988,7 @@ ApplicationWindow {
                                                     implicitHeight: 46.5
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
+                                                    Layout.topMargin: 16
                                                     hoverEnabled: true
                                                 }
                                             }
@@ -1119,7 +1123,6 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.bottomMargin: 4
                                                 }
 
                                                 // <p class="card-price">
@@ -1137,7 +1140,7 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.bottomMargin: 8
+                                                    Layout.topMargin: 4
                                                 }
 
                                                 // <p class="card-text">
@@ -1154,7 +1157,7 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.bottomMargin: 16
+                                                    Layout.topMargin: 8
                                                 }
 
                                                 Item {
@@ -1180,6 +1183,7 @@ ApplicationWindow {
                                                     implicitHeight: 46.5
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
+                                                    Layout.topMargin: 16
                                                     hoverEnabled: true
                                                 }
                                             }
@@ -1314,7 +1318,6 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.bottomMargin: 4
                                                 }
 
                                                 // <p class="card-price">
@@ -1332,7 +1335,7 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.bottomMargin: 8
+                                                    Layout.topMargin: 4
                                                 }
 
                                                 // <p class="card-text">
@@ -1349,7 +1352,7 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
-                                                    Layout.bottomMargin: 16
+                                                    Layout.topMargin: 8
                                                 }
 
                                                 Item {
@@ -1375,6 +1378,7 @@ ApplicationWindow {
                                                     implicitHeight: 46.5
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
+                                                    Layout.topMargin: 16
                                                     hoverEnabled: true
                                                 }
                                             }

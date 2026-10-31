@@ -127,7 +127,14 @@ fn without_state_variants_the_document_is_all_there_is() {
             ..Options::default()
         },
     );
-    assert!(!qml.contains(" ? "), "{qml}");
+    // The carry (layout.md §1.1) follows `visible`, which scripts can set
+    // whatever the options; that is layout, not a state variant.
+    assert!(
+        qml.lines()
+            .filter(|l| !l.contains("eldurCarry"))
+            .all(|l| !l.contains(" ? ")),
+        "{qml}"
+    );
 }
 
 fn convert(html: &str) -> eldur_convert::Output {

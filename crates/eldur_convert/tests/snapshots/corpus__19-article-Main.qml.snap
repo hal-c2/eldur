@@ -225,6 +225,9 @@ ApplicationWindow {
 
                             // <p class="category">
                             Text {
+                                id: category
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Engineering"
                                 textFormat: Text.PlainText
                                 color: "#b4442c"
@@ -244,11 +247,13 @@ ApplicationWindow {
 
                             // <h1>
                             Text {
+                                id: h1
                                 readonly property FontMetrics metrics: FontMetrics {
                                     font.family: "sans-serif"
                                     font.pixelSize: 44
                                     font.weight: 700
                                 }
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
 
                                 text: "Why we stopped rewriting our build system every two years"
                                 textFormat: Text.PlainText
@@ -262,16 +267,20 @@ ApplicationWindow {
                                 bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 16
+                                Layout.topMargin: 16 - category.eldurCarry
                             }
 
                             // <p class="byline">
                             Rectangle {
+                                id: byline
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                 color: "#00000000"
                                 implicitWidth: bylineText.implicitWidth
                                 implicitHeight: bylineText.implicitHeight + 25
                                 Layout.fillWidth: true
-                                Layout.topMargin: 24
+                                Layout.topMargin: 24 - h1.eldurCarry
+                                Layout.preferredHeight: implicitHeight
 
                                 Rectangle {
                                     anchors.left: parent.left
@@ -303,6 +312,9 @@ ApplicationWindow {
 
                         // <p class="lead">
                         Text {
+                            id: lead
+                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "Every few years our team felt the same itch: the build was slow, the configuration had grown brittle, and someone had found a newer tool that promised to fix everything. We rewrote it three times before we understood the real problem."
                             textFormat: Text.PlainText
                             color: "#3a3731"
@@ -315,18 +327,24 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
-                            Layout.topMargin: 40
+                            Layout.topMargin: 40 - byline.eldurCarry
                         }
 
                         // <div class="prose">
                         ColumnLayout {
+                            id: prose
+                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + p5.eldurCarry + 0.000001
+
                             spacing: 0
                             Layout.fillWidth: true
                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                            Layout.topMargin: 27.04
+                            Layout.topMargin: 27.04 - lead.eldurCarry
 
                             // <p>
                             Text {
+                                id: p
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "<div style=\"line-height:33.25px\">The first rewrite moved us from a set of hand-written scripts to a single orchestrator. It worked for a while. Then the scripts came back in the form of <span style=\"font-size:16px;font-family:'monospace';background-color:#f0ebe0\"><span style=\"letter-spacing:6px\">&#8288;</span>pre-build.sh<span style=\"letter-spacing:6px\">&#8288;</span></span> hooks, one for each team, each with its own idea of what a clean checkout means.</div>"
                                 textFormat: Text.RichText
                                 color: "#1f1d1a"
@@ -341,6 +359,9 @@ ApplicationWindow {
 
                             // <p>
                             Text {
+                                id: p2
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "The second rewrite replaced the orchestrator with a faster one. Builds dropped from eleven minutes to four, and everyone celebrated. Six months later, the cache was returning stale artifacts for about one change in fifty, and nobody could say which change."
                                 textFormat: Text.PlainText
                                 color: "#1f1d1a"
@@ -353,18 +374,22 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 24.7
+                                Layout.topMargin: 24.7 - p.eldurCarry
                             }
 
                             // <blockquote class="pull-quote">
                             Rectangle {
+                                id: pullQuote
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                 color: "#00000000"
                                 implicitWidth: pullQuoteText.implicitWidth + 32
                                 implicitHeight: pullQuoteText.implicitHeight + 16
                                 Layout.fillWidth: true
                                 Layout.leftMargin: 0
                                 Layout.rightMargin: 0
-                                Layout.topMargin: 52.8
+                                Layout.topMargin: 52.8 - p2.eldurCarry
+                                Layout.preferredHeight: implicitHeight
 
                                 Rectangle {
                                     anchors.top: parent.top
@@ -398,6 +423,9 @@ ApplicationWindow {
 
                             // <p>
                             Text {
+                                id: p3
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "The third time we started with a question instead of a tool: what must be true about an artifact before we are allowed to ship it? The answer was short. A build must be reproducible from its inputs, and every input must be declared."
                                 textFormat: Text.PlainText
                                 color: "#1f1d1a"
@@ -410,15 +438,18 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 52.8
+                                Layout.topMargin: 52.8 - pullQuote.eldurCarry
                             }
 
                             // <figure class="figure">
                             ColumnLayout {
+                                id: figure
+                                property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + figcaption.eldurCarry + 0.000001
+
                                 spacing: 0
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                Layout.topMargin: 45.6
+                                Layout.topMargin: 45.6 - p3.eldurCarry
 
                                 // <div class="figure-art">
                                 Item {
@@ -497,6 +528,9 @@ ApplicationWindow {
 
                                 // <figcaption>
                                 Text {
+                                    id: figcaption
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                     text: "Figure 1. Build time per commit before and after the declared-inputs change, sampled across four weeks."
                                     textFormat: Text.PlainText
                                     color: "#6e675e"
@@ -510,16 +544,20 @@ ApplicationWindow {
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.topMargin: 12
+                                    Layout.preferredHeight: implicitHeight
                                 }
                             }
 
                             // <aside class="note">
                             Rectangle {
+                                id: note
+                                property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + p4.eldurCarry + 0.000001
+
                                 color: "#eef3f2"
                                 implicitWidth: noteContent.implicitWidth + 52
                                 implicitHeight: noteContent.implicitHeight + 36
                                 Layout.fillWidth: true
-                                Layout.topMargin: 45.6
+                                Layout.topMargin: 45.6 - figure.eldurCarry
 
                                 Rectangle {
                                     anchors.top: parent.top
@@ -541,6 +579,9 @@ ApplicationWindow {
 
                                     // <p>
                                     Text {
+                                        id: p4
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                         text: "<div style=\"line-height:31.59px\"><b><font color=\"#2f5558\"><span style=\"font-family:'sans-serif'\">Note.</span></font></b> Declared inputs are not the same as fast builds. The speedup came from the cache finally being trustworthy, which let us stop disabling it on CI.</div>"
                                         textFormat: Text.RichText
                                         color: "#1f1d1a"
@@ -551,12 +592,16 @@ ApplicationWindow {
                                             y: -5.41
                                         }
                                         Layout.fillWidth: true
+                                        Layout.preferredHeight: implicitHeight
                                     }
                                 }
                             }
 
                             // <h2>
                             Text {
+                                id: h2
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "The steps we took"
                                 textFormat: Text.PlainText
                                 color: "#1f1d1a"
@@ -570,15 +615,18 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 54.56
+                                Layout.topMargin: 54.56 - note.eldurCarry
                             }
 
                             // <ol class="steps">
                             ColumnLayout {
+                                id: steps
+                                property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + li3.eldurCarry + 0.000001
+
                                 spacing: 0
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                Layout.topMargin: 14.88
+                                Layout.topMargin: 14.88 - h2.eldurCarry
 
                                 // <li>
                                 Item {
@@ -595,6 +643,9 @@ ApplicationWindow {
                                         anchors.leftMargin: 44
 
                                         Text {
+                                            id: text
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Listed every file, environment variable and tool version that a build reads, and removed the ones nobody could justify."
                                             textFormat: Text.PlainText
                                             color: "#1f1d1a"
@@ -607,6 +658,7 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            Layout.preferredHeight: implicitHeight
                                         }
                                     }
 
@@ -646,10 +698,13 @@ ApplicationWindow {
 
                                 // <li>
                                 Item {
+                                    id: li
+                                    property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + text2.eldurCarry + 0.000001
+
                                     implicitWidth: liContent2.implicitWidth + 44
                                     implicitHeight: liContent2.implicitHeight
                                     Layout.fillWidth: true
-                                    Layout.topMargin: 14
+                                    Layout.topMargin: 14 - text.eldurCarry
 
                                     ColumnLayout {
                                         id: liContent2
@@ -660,6 +715,9 @@ ApplicationWindow {
                                         anchors.leftMargin: 44
 
                                         Text {
+                                            id: text2
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Hashed those inputs and used the hash as the only cache key, with no timestamps involved."
                                             textFormat: Text.PlainText
                                             color: "#1f1d1a"
@@ -672,6 +730,7 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            Layout.preferredHeight: implicitHeight
                                         }
                                     }
 
@@ -711,10 +770,13 @@ ApplicationWindow {
 
                                 // <li>
                                 Item {
+                                    id: li2
+                                    property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + text3.eldurCarry + 0.000001
+
                                     implicitWidth: liContent3.implicitWidth + 44
                                     implicitHeight: liContent3.implicitHeight
                                     Layout.fillWidth: true
-                                    Layout.topMargin: 14
+                                    Layout.topMargin: 14 - li.eldurCarry
 
                                     ColumnLayout {
                                         id: liContent3
@@ -725,6 +787,9 @@ ApplicationWindow {
                                         anchors.leftMargin: 44
 
                                         Text {
+                                            id: text3
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Ran each build twice on separate machines and failed the pipeline if the outputs differed."
                                             textFormat: Text.PlainText
                                             color: "#1f1d1a"
@@ -737,6 +802,7 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            Layout.preferredHeight: implicitHeight
                                         }
                                     }
 
@@ -776,10 +842,13 @@ ApplicationWindow {
 
                                 // <li>
                                 Item {
+                                    id: li3
+                                    property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + text4.eldurCarry + 0.000001
+
                                     implicitWidth: liContent4.implicitWidth + 44
                                     implicitHeight: liContent4.implicitHeight
                                     Layout.fillWidth: true
-                                    Layout.topMargin: 14
+                                    Layout.topMargin: 14 - li2.eldurCarry
 
                                     ColumnLayout {
                                         id: liContent4
@@ -790,6 +859,9 @@ ApplicationWindow {
                                         anchors.leftMargin: 44
 
                                         Text {
+                                            id: text4
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Moved the per-team hooks into the repository as declared steps, so they show up in review like any other change."
                                             textFormat: Text.PlainText
                                             color: "#1f1d1a"
@@ -802,6 +874,7 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            Layout.preferredHeight: implicitHeight
                                         }
                                     }
 
@@ -842,6 +915,9 @@ ApplicationWindow {
 
                             // <p>
                             Text {
+                                id: p5
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "None of these steps is novel. The discipline was in refusing to skip the first one when the tooling made it tempting to jump straight to the second."
                                 textFormat: Text.PlainText
                                 color: "#1f1d1a"
@@ -854,17 +930,21 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 38
+                                Layout.topMargin: 38 - steps.eldurCarry
+                                Layout.preferredHeight: implicitHeight
                             }
                         }
 
                         // <section class="related">
                         Rectangle {
+                            id: related
+                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + relatedGrid.eldurCarry + 0.000001
+
                             color: "#00000000"
                             implicitWidth: relatedContent.implicitWidth
                             implicitHeight: relatedContent.implicitHeight + 41
                             Layout.fillWidth: true
-                            Layout.topMargin: 72
+                            Layout.topMargin: 72 - prose.eldurCarry
 
                             Rectangle {
                                 anchors.left: parent.left
@@ -884,6 +964,9 @@ ApplicationWindow {
 
                                 // <h2 class="related-title">
                                 Text {
+                                    id: relatedTitle
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                     text: "Related posts"
                                     textFormat: Text.PlainText
                                     color: "#1f1d1a"
@@ -901,12 +984,15 @@ ApplicationWindow {
 
                                 // <div class="related-grid">
                                 GridLayout {
+                                    id: relatedGrid
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                     columns: 3
                                     columnSpacing: 24
                                     rowSpacing: 24
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                    Layout.topMargin: 24
+                                    Layout.topMargin: 24 - relatedTitle.eldurCarry
 
                                     // <article class="related-card">
                                     ColumnLayout {
@@ -920,6 +1006,9 @@ ApplicationWindow {
 
                                         // <h3>
                                         Text {
+                                            id: h3
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Caching is a contract, not an optimisation"
                                             textFormat: Text.PlainText
                                             color: "#1f1d1a"
@@ -949,7 +1038,8 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
-                                            Layout.topMargin: 6
+                                            Layout.topMargin: 6 - h3.eldurCarry
+                                            Layout.preferredHeight: implicitHeight
                                         }
                                     }
 
@@ -965,6 +1055,9 @@ ApplicationWindow {
 
                                         // <h3>
                                         Text {
+                                            id: h32
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Reproducible builds for small teams"
                                             textFormat: Text.PlainText
                                             color: "#1f1d1a"
@@ -994,7 +1087,8 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
-                                            Layout.topMargin: 6
+                                            Layout.topMargin: 6 - h32.eldurCarry
+                                            Layout.preferredHeight: implicitHeight
                                         }
                                     }
 
@@ -1010,6 +1104,9 @@ ApplicationWindow {
 
                                         // <h3>
                                         Text {
+                                            id: h33
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Reviewing infrastructure changes"
                                             textFormat: Text.PlainText
                                             color: "#1f1d1a"
@@ -1039,7 +1136,8 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
-                                            Layout.topMargin: 6
+                                            Layout.topMargin: 6 - h33.eldurCarry
+                                            Layout.preferredHeight: implicitHeight
                                         }
                                     }
                                 }

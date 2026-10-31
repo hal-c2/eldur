@@ -40,6 +40,43 @@ use super::units::fmt_number;
 /// to be whole, is not a hair over (module docs).
 const NUDGE: f64 = 1e-6;
 
+/// The comment an element's outermost object carries while its column is
+/// built, so an id the carry gives it is named after the element as other
+/// ids are, not after its QML type.
+const HINT: &str = "\u{1}eldur-hint:";
+
+/// The comment a carried column carries until its parent is built: the key
+/// of its excess in `Emitter::excess`. Its id is not chosen yet (a wrapper
+/// names it after the element).
+const EXCESS: &str = "\u{1}eldur-excess:";
+
+/// What [`HINT`] and [`EXCESS`] start with.
+const CARRY_COMMENT: &str = "\u{1}eldur-";
+
+pub(super) fn hint_comment(hint: &str) -> Member {
+    Member::Comment(format!("{HINT}{hint}"))
+}
+
+pub(super) fn strip_hints(obj: &mut Object) {
+    obj.members
+        .retain(|m| !matches!(m, Member::Comment(c) if c.starts_with(CARRY_COMMENT)));
+    for m in &mut obj.members {
+        match m {
+            Member::Child(c) => strip_hints(c),
+            Member::Property { value, .. } => strip_value(value),
+            _ => {}
+        }
+    }
+}
+
+fn strip_value(value: &mut Value) {
+    match value {
+        Value::Object(o) => strip_hints(o),
+        Value::List(items) => items.iter_mut().for_each(strip_value),
+        _ => {}
+    }
+}
+
 /// A carried column's last rounding (`Emitter::carry`), by its id.
 #[derive(Debug, Clone, PartialEq)]
 pub(super) enum Excess {
@@ -80,7 +117,7 @@ enum Height {
     Other,
     /// A carried column's (or a box around one, `extra` being what Qt
     /// rounds the box's insets up by): whole, `excess` over its CSS height.
-    Excess { id: String, extra: f64 },
+    Excess { key: usize, extra: f64 },
     /// Not its implicit height (it fills, or is clamped): the chain starts
     /// again after it.
     Unknown,
@@ -172,8 +209,8 @@ impl Emitter<'_, '_> {
                 (Height::Whole, Gap::Static(t)) => {
                     Some(Carry::Static((t + last_bottom).ceil() - t - last_bottom))
                 }
-                (Height::Excess { id, extra }, top) => {
-                    let e = self.read_excess(obj, &id, extra);
+                (Height::Excess { key, extra }, top) => {
+                    let e = self.read_excess(obj, key, extra);
                     match (top, e) {
                         (Gap::Static(t), Carry::Static(e)) => Some(Carry::Static(
                             (t + last_bottom).ceil() - t - last_bottom + e,
@@ -242,16 +279,19 @@ impl Emitter<'_, '_> {
             Some((item, Carry::Binding(binding))) => Excess::Pending { item, binding },
             None => return,
         };
-        let id = self.item_id(layout);
-        self.excess.insert(id, excess);
+        let key = self.excess.len();
+        self.excess.insert(key, excess);
+        layout
+            .members
+            .push(Member::Comment(format!("{EXCESS}{key}")));
     }
 
     /// A carried column's excess, plus `extra`; the last item declares
     /// its `eldurCarry` when it is first read.
-    fn read_excess(&mut self, obj: &mut Object, id: &str, extra: f64) -> Carry {
-        let excess = match self.excess.get(id).cloned() {
+    fn read_excess(&mut self, obj: &mut Object, key: usize, extra: f64) -> Carry {
+        let excess = match self.excess.get(&key).cloned() {
             Some(Excess::Pending { item, binding }) => {
-                let layout = find_mut(obj, id).expect("the excess of a column inside");
+                let layout = find_mut(obj, key).expect("the excess of a column inside");
                 let last = layout
                     .members
                     .iter_mut()
@@ -262,7 +302,7 @@ impl Emitter<'_, '_> {
                     .nth(item)
                     .expect("the column's last item");
                 let e = self.declare_carry(last, binding);
-                self.excess.insert(id.to_owned(), Excess::Expr(e.clone()));
+                self.excess.insert(key, Excess::Expr(e.clone()));
                 Excess::Expr(e)
             }
             Some(e) => e,
@@ -314,10 +354,18 @@ impl Emitter<'_, '_> {
         if let Some(id) = &obj.id {
             return id.clone();
         }
-        let hint = match obj.get("objectName") {
-            Some(Value::String(name)) => name.clone(),
-            _ => obj.type_name.to_lowercase(),
-        };
+        let hint = obj
+            .members
+            .iter()
+            .find_map(|m| match m {
+                Member::Comment(c) => c.strip_prefix(HINT).map(str::to_owned),
+                _ => None,
+            })
+            .or_else(|| match obj.get("objectName") {
+                Some(Value::String(name)) => Some(name.clone()),
+                _ => None,
+            })
+            .unwrap_or_else(|| obj.type_name.to_lowercase());
         let id = self.ids.claim(&hint);
         obj.id = Some(id.clone());
         id
@@ -412,7 +460,7 @@ fn hideable(obj: &Object) -> bool {
             .any(|m| matches!(m, Member::PropertyDecl { name, .. } if name == "eldurTag"))
 }
 
-fn height(obj: &Object, excess: &HashMap<String, Excess>) -> Height {
+fn height(obj: &Object, excess: &HashMap<usize, Excess>) -> Height {
     if matches!(obj.get("Layout.fillHeight"), Some(Value::Bool(true)))
         || obj.get("Layout.minimumHeight").is_some()
         || obj
@@ -429,13 +477,10 @@ fn height(obj: &Object, excess: &HashMap<String, Excess>) -> Height {
     implicit_height(obj, excess)
 }
 
-fn implicit_height(obj: &Object, excess: &HashMap<String, Excess>) -> Height {
+fn implicit_height(obj: &Object, excess: &HashMap<usize, Excess>) -> Height {
     if is_layout(&obj.type_name) {
-        return match &obj.id {
-            Some(id) if excess.contains_key(id) => Height::Excess {
-                id: id.clone(),
-                extra: 0.0,
-            },
+        return match excess_key(obj) {
+            Some(key) if excess.contains_key(&key) => Height::Excess { key, extra: 0.0 },
             _ => Height::Whole,
         };
     }
@@ -463,7 +508,7 @@ fn implicit_height(obj: &Object, excess: &HashMap<String, Excess>) -> Height {
 
 /// `inner.implicitHeight + 12`: whole when the inner item's is and the
 /// insets are.
-fn expr_height(obj: &Object, expr: &str, excess: &HashMap<String, Excess>) -> Height {
+fn expr_height(obj: &Object, expr: &str, excess: &HashMap<usize, Excess>) -> Height {
     let mut terms = expr.split(" + ");
     let Some(id) = terms.next().and_then(|t| t.strip_suffix(".implicitHeight")) else {
         return Height::Other;
@@ -480,8 +525,8 @@ fn expr_height(obj: &Object, expr: &str, excess: &HashMap<String, Excess>) -> He
     };
     match implicit_height(inner, excess) {
         Height::Whole if insets.fract() == 0.0 => Height::Whole,
-        Height::Excess { id, extra } => Height::Excess {
-            id,
+        Height::Excess { key, extra } => Height::Excess {
+            key,
             extra: extra + insets.ceil() - insets,
         },
         Height::Static { css, .. } => {
@@ -505,12 +550,20 @@ fn is_spacer(obj: &Object) -> bool {
         })
 }
 
-fn find_mut<'o>(obj: &'o mut Object, id: &str) -> Option<&'o mut Object> {
-    if obj.id.as_deref() == Some(id) {
+fn excess_key(obj: &Object) -> Option<usize> {
+    obj.members.iter().find_map(|m| match m {
+        Member::Comment(c) => c.strip_prefix(EXCESS).and_then(|k| k.parse().ok()),
+        _ => None,
+    })
+}
+
+/// The carried column with excess `key`: `obj` or one inside it.
+fn find_mut(obj: &mut Object, key: usize) -> Option<&mut Object> {
+    if excess_key(obj) == Some(key) {
         return Some(obj);
     }
     obj.members.iter_mut().find_map(|m| match m {
-        Member::Child(c) => find_mut(c, id),
+        Member::Child(c) => find_mut(c, key),
         _ => None,
     })
 }

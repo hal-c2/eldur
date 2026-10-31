@@ -212,11 +212,13 @@ ApplicationWindow {
 
                             // <h1>
                             Text {
+                                id: h1
                                 readonly property FontMetrics metrics: FontMetrics {
                                     font.family: "sans-serif"
                                     font.pixelSize: 28
                                     font.weight: 700
                                 }
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
 
                                 text: "Morning on the lake"
                                 textFormat: Text.PlainText
@@ -249,7 +251,8 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 opacity: 0.9
                                 Layout.fillWidth: true
-                                Layout.topMargin: 6
+                                Layout.topMargin: 6 - h1.eldurCarry
+                                Layout.preferredHeight: implicitHeight
                             }
                         }
                     }
@@ -340,6 +343,9 @@ ApplicationWindow {
 
                                 // <p class="author-name">
                                 Text {
+                                    id: authorName
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                     text: "Maren Holt"
                                     textFormat: Text.PlainText
                                     color: "#1f2430"
@@ -369,7 +375,8 @@ ApplicationWindow {
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
-                                    Layout.topMargin: 4
+                                    Layout.topMargin: 4 - authorName.eldurCarry
+                                    Layout.preferredHeight: implicitHeight
                                 }
                             }
 
@@ -456,6 +463,7 @@ ApplicationWindow {
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
                                         Layout.topMargin: 10
+                                        Layout.preferredHeight: implicitHeight
                                     }
                                 }
                             }
@@ -472,6 +480,9 @@ ApplicationWindow {
 
                                 // <h2>
                                 Text {
+                                    id: h2
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                     text: "Working before dawn"
                                     textFormat: Text.PlainText
                                     color: "#1f2430"
@@ -489,6 +500,9 @@ ApplicationWindow {
 
                                 // <p>
                                 Text {
+                                    id: p
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                     text: "The best light arrives in the few minutes before the sun clears the ridge. Planning the walk in the dark is most of the work."
                                     textFormat: Text.PlainText
                                     color: "#3a4256"
@@ -501,7 +515,7 @@ ApplicationWindow {
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
-                                    Layout.topMargin: 12
+                                    Layout.topMargin: 12 - h2.eldurCarry
                                 }
 
                                 // <p>
@@ -518,7 +532,7 @@ ApplicationWindow {
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
-                                    Layout.topMargin: 12
+                                    Layout.topMargin: 12 - p.eldurCarry
                                     Layout.bottomMargin: 12
                                 }
                             }
@@ -591,10 +605,14 @@ ApplicationWindow {
 
                 // <footer class="site-footer">
                 Rectangle {
+                    id: siteFooter
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                     color: "#00000000"
                     implicitWidth: siteFooterText.implicitWidth + 64
                     implicitHeight: siteFooterText.implicitHeight + 49
                     Layout.fillWidth: true
+                    Layout.preferredHeight: implicitHeight
 
                     Rectangle {
                         anchors.left: parent.left

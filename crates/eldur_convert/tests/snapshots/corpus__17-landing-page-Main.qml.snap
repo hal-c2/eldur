@@ -410,7 +410,10 @@ ApplicationWindow {
 
                                         Flow {
                                             id: blockFlow
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                             Layout.fillWidth: true
+                                            Layout.preferredHeight: implicitHeight
 
                                             Rectangle {
                                                 color: "#2effffff"
@@ -447,11 +450,13 @@ ApplicationWindow {
 
                                         // <h1>
                                         Text {
+                                            id: h1
                                             readonly property FontMetrics metrics: FontMetrics {
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 68
                                                 font.weight: 700
                                             }
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
 
                                             text: "Ship faster with less overhead"
                                             textFormat: Text.PlainText
@@ -468,11 +473,14 @@ ApplicationWindow {
                                             bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
-                                            Layout.topMargin: 24
+                                            Layout.topMargin: 24 - blockFlow.eldurCarry
                                         }
 
                                         // <p class="lead">
                                         Text {
+                                            id: lead
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Flowbase connects your tools, automates the busywork and gives every team one clear view of what is shipping next."
                                             textFormat: Text.PlainText
                                             color: "#ffffff"
@@ -487,14 +495,15 @@ ApplicationWindow {
                                             opacity: 0.92
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: 620
-                                            Layout.topMargin: 24
+                                            Layout.topMargin: 24 - h1.eldurCarry
                                         }
 
                                         // <div class="cta-row">
                                         Flow {
                                             spacing: 16
                                             Layout.fillWidth: true
-                                            Layout.topMargin: 40
+                                            Layout.topMargin: 40 - lead.eldurCarry
+                                            Layout.preferredHeight: implicitHeight
 
                                             // <a class="btn btn-primary">
                                             Rectangle {
@@ -1062,6 +1071,9 @@ ApplicationWindow {
 
                                         // <p>
                                         Text {
+                                            id: p
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Three building blocks that replace a dozen point tools."
                                             textFormat: Text.PlainText
                                             color: "#5c6378"
@@ -1076,17 +1088,21 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
                                             Layout.topMargin: 12
+                                            Layout.preferredHeight: implicitHeight
                                         }
                                     }
 
                                     // <div class="features-grid">
                                     GridLayout {
+                                        id: featuresGrid
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                         columns: 3
                                         columnSpacing: 24
                                         rowSpacing: 24
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.topMargin: 56
+                                        Layout.topMargin: 56 - p.eldurCarry
 
                                         // <article class="feature-card">
                                         Rectangle {
@@ -1205,6 +1221,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 8
+                                                    Layout.preferredHeight: implicitHeight
                                                 }
                                             }
                                         }
@@ -1326,6 +1343,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 8
+                                                    Layout.preferredHeight: implicitHeight
                                                 }
                                             }
                                         }
@@ -1447,6 +1465,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 8
+                                                    Layout.preferredHeight: implicitHeight
                                                 }
                                             }
                                         }
@@ -1459,10 +1478,13 @@ ApplicationWindow {
                     // <section id="customers" class="section testimonial">
                     Rectangle {
                         id: customers
+                        property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + quoteAuthor.eldurCarry + 0.000001
+
                         color: "#f5f6fb"
                         implicitWidth: customersContent.implicitWidth
                         implicitHeight: customersContent.implicitHeight + 192
                         Layout.fillWidth: true
+                        Layout.topMargin: -featuresGrid.eldurCarry
 
                         ColumnLayout {
                             id: customersContent
@@ -1498,6 +1520,9 @@ ApplicationWindow {
 
                                         // <blockquote>
                                         Text {
+                                            id: blockquote
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "“Flowbase cut our release checklist from two hours to ten minutes. It is the first tool our whole team actually likes.”"
                                             textFormat: Text.PlainText
                                             color: "#1d2233"
@@ -1515,10 +1540,13 @@ ApplicationWindow {
 
                                         // <figcaption class="quote-author">
                                         RowLayout {
+                                            id: quoteAuthor
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                            Layout.topMargin: 28
+                                            Layout.topMargin: 28 - blockquote.eldurCarry
 
                                             Item {
                                                 Layout.fillWidth: true
@@ -1570,6 +1598,9 @@ ApplicationWindow {
 
                                                 // <span class="author-name">
                                                 Text {
+                                                    id: authorName
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     text: "Jonas Aldridge"
                                                     textFormat: Text.PlainText
                                                     color: "#1d2233"
@@ -1600,6 +1631,8 @@ ApplicationWindow {
                                                     horizontalAlignment: Text.AlignHCenter
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    Layout.topMargin: -authorName.eldurCarry
+                                                    Layout.preferredHeight: implicitHeight
                                                 }
                                             }
 
@@ -1615,10 +1648,14 @@ ApplicationWindow {
 
                     // <section class="section-tight">
                     Rectangle {
+                        id: sectionTight
+                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                         color: "#f5f6fb"
                         implicitWidth: sectionTightContent.implicitWidth
                         implicitHeight: sectionTightContent.implicitHeight + 96
                         Layout.fillWidth: true
+                        Layout.topMargin: -customers.eldurCarry
 
                         ColumnLayout {
                             id: sectionTightContent
@@ -1674,6 +1711,9 @@ ApplicationWindow {
 
                                                 // <h2>
                                                 Text {
+                                                    id: h2
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     text: "Start your 14-day free trial"
                                                     textFormat: Text.PlainText
                                                     color: "#ffffff"
@@ -1704,7 +1744,8 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     opacity: 0.75
                                                     Layout.fillWidth: true
-                                                    Layout.topMargin: 8
+                                                    Layout.topMargin: 8 - h2.eldurCarry
+                                                    Layout.preferredHeight: implicitHeight
                                                 }
                                             }
 
@@ -1778,10 +1819,14 @@ ApplicationWindow {
 
                 // <footer class="site-footer">
                 Rectangle {
+                    id: siteFooter
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                     color: "#111527"
                     implicitWidth: siteFooterContent.implicitWidth
                     implicitHeight: siteFooterContent.implicitHeight + 112
                     Layout.fillWidth: true
+                    Layout.topMargin: -sectionTight.eldurCarry
 
                     ColumnLayout {
                         id: siteFooterContent
@@ -1832,6 +1877,9 @@ ApplicationWindow {
 
                                         // <p class="footer-brand">
                                         Text {
+                                            id: footerBrand
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Flowbase"
                                             textFormat: Text.PlainText
                                             color: "#ffffff"
@@ -1861,7 +1909,7 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
-                                            Layout.topMargin: 16
+                                            Layout.topMargin: 16 - footerBrand.eldurCarry
                                             Layout.bottomMargin: 16
                                         }
                                     }
@@ -1882,6 +1930,9 @@ ApplicationWindow {
 
                                         // <h4>
                                         Text {
+                                            id: h4
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Product"
                                             textFormat: Text.PlainText
                                             color: "#ffffff"
@@ -1906,7 +1957,7 @@ ApplicationWindow {
                                             rowSpacing: 10
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                            Layout.topMargin: 16
+                                            Layout.topMargin: 16 - h4.eldurCarry
 
                                             // <li>
                                             Text {
@@ -2026,6 +2077,9 @@ ApplicationWindow {
 
                                         // <h4>
                                         Text {
+                                            id: h42
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Company"
                                             textFormat: Text.PlainText
                                             color: "#ffffff"
@@ -2050,7 +2104,7 @@ ApplicationWindow {
                                             rowSpacing: 10
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                            Layout.topMargin: 16
+                                            Layout.topMargin: 16 - h42.eldurCarry
 
                                             // <li>
                                             Text {
@@ -2169,6 +2223,9 @@ ApplicationWindow {
 
                                         // <h4>
                                         Text {
+                                            id: h43
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Resources"
                                             textFormat: Text.PlainText
                                             color: "#ffffff"
@@ -2193,7 +2250,7 @@ ApplicationWindow {
                                             rowSpacing: 10
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                            Layout.topMargin: 16
+                                            Layout.topMargin: 16 - h43.eldurCarry
 
                                             // <li>
                                             Text {

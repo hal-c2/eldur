@@ -63,6 +63,9 @@ ApplicationWindow {
 
                             // <p class="eyebrow">
                             Text {
+                                id: eyebrow
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Pricing"
                                 textFormat: Text.PlainText
                                 color: "#64748b"
@@ -85,6 +88,9 @@ ApplicationWindow {
 
                             // <h1>
                             Text {
+                                id: h1
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Simple plans that grow with you"
                                 textFormat: Text.PlainText
                                 color: "#0f172a"
@@ -100,10 +106,14 @@ ApplicationWindow {
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                Layout.topMargin: -eyebrow.eldurCarry
                             }
 
                             // <p>
                             Text {
+                                id: p
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Start free, upgrade when your data grows, and cancel any time without a support ticket."
                                 textFormat: Text.PlainText
                                 color: "#64748b"
@@ -119,13 +129,17 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.maximumWidth: 560
-                                Layout.topMargin: 16
+                                Layout.topMargin: 16 - h1.eldurCarry
                             }
 
                             Flow {
                                 id: blockFlow
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                 leftPadding: { const used = Array.from(children).reduce((sum, item) => sum + item.width, 0); return Math.max(0, Math.floor((width - used) / 2)); }
                                 Layout.fillWidth: true
+                                Layout.topMargin: -p.eldurCarry
+                                Layout.preferredHeight: implicitHeight
 
                                 Item {
                                     width: billingToggleBox.width
@@ -209,9 +223,13 @@ ApplicationWindow {
 
                         // <section class="pricing-grid">
                         RowLayout {
+                            id: pricingGrid
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                             spacing: 28
                             Layout.fillWidth: true
                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                            Layout.topMargin: -blockFlow.eldurCarry
 
                             // <article class="plan">
                             Rectangle {
@@ -252,7 +270,6 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
-                                        Layout.bottomMargin: 8
                                     }
 
                                     // <p class="plan-desc">
@@ -261,7 +278,7 @@ ApplicationWindow {
                                         implicitHeight: planDescText.implicitHeight
                                         Layout.minimumHeight: 44
                                         Layout.fillWidth: true
-                                        Layout.bottomMargin: 24
+                                        Layout.topMargin: 8
 
                                         Text {
                                             id: planDescText
@@ -287,7 +304,7 @@ ApplicationWindow {
                                         spacing: 0
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.bottomMargin: 28
+                                        Layout.topMargin: 24
 
                                         // <span class="amount">
                                         Text {
@@ -340,7 +357,7 @@ ApplicationWindow {
                                         rowSpacing: 12
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.bottomMargin: 32
+                                        Layout.topMargin: 28
 
                                         // <li>
                                         RowLayout {
@@ -577,6 +594,7 @@ ApplicationWindow {
                                         Layout.preferredHeight: 50
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
+                                        Layout.topMargin: 32
                                         hoverEnabled: true
                                     }
                                 }
@@ -637,7 +655,6 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
-                                        Layout.bottomMargin: 8
                                     }
 
                                     // <p class="plan-desc">
@@ -646,7 +663,7 @@ ApplicationWindow {
                                         implicitHeight: planDescText2.implicitHeight
                                         Layout.minimumHeight: 44
                                         Layout.fillWidth: true
-                                        Layout.bottomMargin: 24
+                                        Layout.topMargin: 8
 
                                         Text {
                                             id: planDescText2
@@ -672,7 +689,7 @@ ApplicationWindow {
                                         spacing: 0
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.bottomMargin: 28
+                                        Layout.topMargin: 24
 
                                         // <span class="amount">
                                         Text {
@@ -725,7 +742,7 @@ ApplicationWindow {
                                         rowSpacing: 12
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.bottomMargin: 32
+                                        Layout.topMargin: 28
 
                                         // <li>
                                         RowLayout {
@@ -1004,6 +1021,7 @@ ApplicationWindow {
                                         Layout.preferredHeight: 50
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
+                                        Layout.topMargin: 32
                                     }
                                 }
 
@@ -1082,7 +1100,6 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
-                                        Layout.bottomMargin: 8
                                     }
 
                                     // <p class="plan-desc">
@@ -1091,7 +1108,7 @@ ApplicationWindow {
                                         implicitHeight: planDescText3.implicitHeight
                                         Layout.minimumHeight: 44
                                         Layout.fillWidth: true
-                                        Layout.bottomMargin: 24
+                                        Layout.topMargin: 8
 
                                         Text {
                                             id: planDescText3
@@ -1117,7 +1134,7 @@ ApplicationWindow {
                                         spacing: 0
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.bottomMargin: 28
+                                        Layout.topMargin: 24
 
                                         // <span class="amount">
                                         Text {
@@ -1170,7 +1187,7 @@ ApplicationWindow {
                                         rowSpacing: 12
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.bottomMargin: 32
+                                        Layout.topMargin: 28
 
                                         // <li>
                                         RowLayout {
@@ -1457,6 +1474,7 @@ ApplicationWindow {
                                         Layout.preferredHeight: 50
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
+                                        Layout.topMargin: 32
                                         hoverEnabled: true
                                     }
                                 }
@@ -1465,6 +1483,9 @@ ApplicationWindow {
 
                         // <p class="fine-print">
                         Text {
+                            id: finePrint
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "All prices in USD. Taxes are calculated at checkout."
                             textFormat: Text.PlainText
                             color: "#64748b"
@@ -1478,7 +1499,8 @@ ApplicationWindow {
                             horizontalAlignment: Text.AlignHCenter
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
-                            Layout.topMargin: 24
+                            Layout.topMargin: 24 - pricingGrid.eldurCarry
+                            Layout.preferredHeight: implicitHeight
                         }
                     }
                 }

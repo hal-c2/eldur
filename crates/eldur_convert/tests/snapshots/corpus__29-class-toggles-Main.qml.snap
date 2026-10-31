@@ -64,7 +64,9 @@ ApplicationWindow {
 
                     // <h1>
                     Text {
+                        id: h1
                         property string eldurTag: "h1"
+                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                         text: "Class toggles"
                         textFormat: Text.PlainText
@@ -78,13 +80,15 @@ ApplicationWindow {
 
                     // <div class="toolbar">
                     RowLayout {
+                        id: toolbar
                         property string eldurTag: "div"
                         property string eldurClasses: "toolbar"
+                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h1.eldurCarry
 
                         spacing: 0
                         Layout.fillWidth: true
                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                        Layout.topMargin: 20
+                        Layout.topMargin: 20 - h1.eldurCarry
 
                         // <button id="compact">
                         Button {
@@ -212,13 +216,15 @@ ApplicationWindow {
 
                     // <div class="tabs">
                     RowLayout {
+                        id: tabs
                         property string eldurTag: "div"
                         property string eldurClasses: "tabs"
+                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : toolbar.eldurCarry
 
                         spacing: 0
                         Layout.fillWidth: true
                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                        Layout.topMargin: 20
+                        Layout.topMargin: 20 - toolbar.eldurCarry
 
                         // <div id="tab1" class="tab">
                         Rectangle {
@@ -345,6 +351,7 @@ ApplicationWindow {
                         property string eldurTag: "div"
                         property string eldurClasses: "list"
                         property bool cls_compact: false
+                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin) - Layout.topMargin + item3.eldurCarry + 0.000001) : tabs.eldurCarry
 
                         color: "#ffffff"
                         implicitWidth: listContent.implicitWidth + 2
@@ -353,7 +360,7 @@ ApplicationWindow {
                         border.color: "#dde1ea"
                         objectName: "list"
                         Layout.preferredWidth: 422
-                        Layout.topMargin: 20
+                        Layout.topMargin: 20 - tabs.eldurCarry
 
                         ColumnLayout {
                             id: listContent
@@ -371,12 +378,14 @@ ApplicationWindow {
                                 property string eldurTag: "div"
                                 property string eldurClasses: "item"
                                 property bool cls_done: false
+                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                                 color: item1Hover.hovered ? "#eef2ff" : "#00000000"
                                 implicitWidth: item1Text.implicitWidth + 28
                                 implicitHeight: list.cls_compact ? (item1Text.implicitHeight + 4) : (item1Text.implicitHeight + 20)
                                 objectName: "item1"
                                 Layout.fillWidth: true
+                                Layout.preferredHeight: implicitHeight
                                 opacity: item1.cls_done ? (item1Hover.hovered ? 0.8 : 0.5) : 1
 
                                 Behavior on opacity {
@@ -420,12 +429,15 @@ ApplicationWindow {
                                 property string eldurTag: "div"
                                 property string eldurClasses: "item"
                                 property bool cls_done: false
+                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : item1.eldurCarry
 
                                 color: item2Hover.hovered ? "#eef2ff" : "#00000000"
                                 implicitWidth: item2Text.implicitWidth + 28
                                 implicitHeight: list.cls_compact ? (item2Text.implicitHeight + 4) : (item2Text.implicitHeight + 20)
                                 objectName: "item2"
                                 Layout.fillWidth: true
+                                Layout.topMargin: -item1.eldurCarry
+                                Layout.preferredHeight: implicitHeight
                                 opacity: item2.cls_done ? (item2Hover.hovered ? 0.8 : 0.5) : 1
 
                                 Behavior on opacity {
@@ -469,12 +481,15 @@ ApplicationWindow {
                                 property string eldurTag: "div"
                                 property string eldurClasses: "item"
                                 property bool cls_done: false
+                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : item2.eldurCarry
 
                                 color: item3Hover.hovered ? "#eef2ff" : "#00000000"
                                 implicitWidth: item3Text.implicitWidth + 28
                                 implicitHeight: list.cls_compact ? (item3Text.implicitHeight + 4) : (item3Text.implicitHeight + 20)
                                 objectName: "item3"
                                 Layout.fillWidth: true
+                                Layout.topMargin: -item2.eldurCarry
+                                Layout.preferredHeight: implicitHeight
                                 opacity: item3.cls_done ? (item3Hover.hovered ? 0.8 : 0.5) : 1
 
                                 Behavior on opacity {
@@ -521,13 +536,15 @@ ApplicationWindow {
                         property string eldurClasses: "status"
                         property bool cls_ok: false
                         property bool cls_warn: false
+                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : list.eldurCarry
 
                         color: "#ffffff"
                         implicitWidth: statusText.implicitWidth + 28
                         implicitHeight: statusText.implicitHeight + 20
                         objectName: "status"
                         Layout.preferredWidth: 448
-                        Layout.topMargin: 20
+                        Layout.topMargin: 20 - list.eldurCarry
+                        Layout.preferredHeight: implicitHeight
 
                         Text {
                             id: statusText
@@ -552,6 +569,7 @@ ApplicationWindow {
                         property string eldurTag: "div"
                         property string eldurClasses: "panel d-none"
                         property bool cls_d_none: true
+                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : status.eldurCarry
 
                         color: "#fff3bf"
                         implicitWidth: panelText.implicitWidth + 28
@@ -559,7 +577,8 @@ ApplicationWindow {
                         objectName: "panel"
                         visible: !panel.cls_d_none
                         Layout.preferredWidth: 448
-                        Layout.topMargin: 20
+                        Layout.topMargin: 20 - status.eldurCarry
+                        Layout.preferredHeight: implicitHeight
 
                         Text {
                             id: panelText

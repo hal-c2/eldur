@@ -85,6 +85,9 @@ ApplicationWindow {
 
                             // <h1 class="card__title">
                             Text {
+                                id: cardTitle
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Create your account"
                                 textFormat: Text.PlainText
                                 color: "#1d2433"
@@ -102,6 +105,9 @@ ApplicationWindow {
 
                             // <p class="card__subtitle">
                             Text {
+                                id: cardSubtitle
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Start with a free workspace. No credit card needed."
                                 textFormat: Text.PlainText
                                 color: "#5b6478"
@@ -114,7 +120,7 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 4
+                                Layout.topMargin: 4 - cardTitle.eldurCarry
                             }
 
                             // <form class="form">
@@ -124,7 +130,7 @@ ApplicationWindow {
                                 rowSpacing: 14
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                Layout.topMargin: 20
+                                Layout.topMargin: 20 - cardSubtitle.eldurCarry
 
                                 // <div class="field">
                                 ColumnLayout {
@@ -136,6 +142,9 @@ ApplicationWindow {
 
                                     // <label class="field__label">
                                     Text {
+                                        id: fieldLabel
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                         text: "Full name"
                                         textFormat: Text.PlainText
                                         color: "#1d2433"
@@ -149,7 +158,6 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
-                                        Layout.bottomMargin: 5
 
                                         TapHandler {
                                             onTapped: (eventPoint, button) => {
@@ -194,6 +202,7 @@ ApplicationWindow {
                                         Accessible.name: "Full name"
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
+                                        Layout.topMargin: 5 - fieldLabel.eldurCarry
                                     }
 
                                     Item {
@@ -211,6 +220,9 @@ ApplicationWindow {
 
                                     // <label class="field__label">
                                     Text {
+                                        id: fieldLabel2
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                         text: "Email"
                                         textFormat: Text.PlainText
                                         color: "#1d2433"
@@ -224,7 +236,6 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
-                                        Layout.bottomMargin: 5
 
                                         TapHandler {
                                             onTapped: (eventPoint, button) => {
@@ -270,6 +281,7 @@ ApplicationWindow {
                                         Accessible.name: "Email"
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
+                                        Layout.topMargin: 5 - fieldLabel2.eldurCarry
                                     }
 
                                     Item {
@@ -287,6 +299,9 @@ ApplicationWindow {
 
                                     // <label class="field__label">
                                     Text {
+                                        id: fieldLabel3
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                         text: "Password"
                                         textFormat: Text.PlainText
                                         color: "#1d2433"
@@ -300,7 +315,6 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
-                                        Layout.bottomMargin: 5
 
                                         TapHandler {
                                             onTapped: (eventPoint, button) => {
@@ -346,6 +360,7 @@ ApplicationWindow {
                                         Accessible.name: "Password"
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
+                                        Layout.topMargin: 5 - fieldLabel3.eldurCarry
                                     }
 
                                     Item {
@@ -363,6 +378,9 @@ ApplicationWindow {
 
                                     // <label class="field__label">
                                     Text {
+                                        id: fieldLabel4
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                         text: "Team size"
                                         textFormat: Text.PlainText
                                         color: "#1d2433"
@@ -376,7 +394,6 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
-                                        Layout.bottomMargin: 5
 
                                         TapHandler {
                                             onTapped: (eventPoint, button) => {
@@ -435,6 +452,7 @@ ApplicationWindow {
                                         Accessible.name: "Team size"
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
+                                        Layout.topMargin: 5 - fieldLabel4.eldurCarry
                                     }
 
                                     Item {
@@ -452,6 +470,9 @@ ApplicationWindow {
 
                                     // <label class="field__label">
                                     Text {
+                                        id: fieldLabel5
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                         text: "About you"
                                         textFormat: Text.PlainText
                                         color: "#1d2433"
@@ -465,7 +486,6 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
-                                        Layout.bottomMargin: 5
 
                                         TapHandler {
                                             onTapped: (eventPoint, button) => {
@@ -482,6 +502,7 @@ ApplicationWindow {
                                         Layout.minimumHeight: 76
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
+                                        Layout.topMargin: 5 - fieldLabel5.eldurCarry
 
                                         TextArea {
                                             property string name: "bio"
@@ -823,6 +844,9 @@ ApplicationWindow {
 
                                         // <label class="field__label">
                                         Text {
+                                            id: fieldLabel6
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Seats"
                                             textFormat: Text.PlainText
                                             color: "#1d2433"
@@ -836,7 +860,6 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
-                                            Layout.bottomMargin: 5
 
                                             TapHandler {
                                                 onTapped: (eventPoint, button) => {
@@ -896,6 +919,7 @@ ApplicationWindow {
                                             Accessible.name: "Seats"
                                             Layout.preferredWidth: parent.width
                                             Layout.alignment: Qt.AlignLeft
+                                            Layout.topMargin: 5 - fieldLabel6.eldurCarry
                                         }
 
                                         Item {
@@ -914,6 +938,9 @@ ApplicationWindow {
 
                                         // <label class="field__label">
                                         Text {
+                                            id: fieldLabel7
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Notification volume"
                                             textFormat: Text.PlainText
                                             color: "#1d2433"
@@ -927,7 +954,6 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
-                                            Layout.bottomMargin: 5
 
                                             TapHandler {
                                                 onTapped: (eventPoint, button) => {
@@ -940,6 +966,7 @@ ApplicationWindow {
                                         Slider {
                                             id: volume
                                             property string name: "volume"
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + 16) - Layout.topMargin - 16 + 0.000001
 
                                             from: 0
                                             to: 100
@@ -974,6 +1001,7 @@ ApplicationWindow {
                                             }
                                             Accessible.name: "Notification volume"
                                             Layout.fillWidth: true
+                                            Layout.topMargin: 5 - fieldLabel7.eldurCarry
                                         }
 
                                         // <p class="hint">
@@ -990,7 +1018,8 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
-                                            Layout.topMargin: 4
+                                            Layout.topMargin: 4 - volume.eldurCarry
+                                            Layout.preferredHeight: implicitHeight
                                         }
 
                                         Item {

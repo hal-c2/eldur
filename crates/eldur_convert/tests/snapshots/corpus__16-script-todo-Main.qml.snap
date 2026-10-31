@@ -64,8 +64,10 @@ ApplicationWindow {
 
                     // <main class="app">
                     Rectangle {
+                        id: app
                         property string eldurTag: "main"
                         property string eldurClasses: "app"
+                        property real eldurCarry: visible ? footerNote.eldurCarry : 0
 
                         color: "#ffffff"
                         radius: 16
@@ -223,6 +225,7 @@ ApplicationWindow {
                                 property string eldurTag: "ul"
                                 property string eldurClasses: "todo-list"
                                 property string eldurKey: "todoList"
+                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                                 color: "#00000000"
                                 implicitWidth: todoListText.implicitWidth
@@ -230,6 +233,7 @@ ApplicationWindow {
                                 objectName: "todo-list"
                                 Layout.fillWidth: true
                                 Layout.topMargin: 20
+                                Layout.preferredHeight: implicitHeight
 
                                 Rectangle {
                                     anchors.left: parent.left
@@ -259,6 +263,7 @@ ApplicationWindow {
                                 id: empty
                                 property string eldurTag: "p"
                                 property string eldurClasses: "empty"
+                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : todoList.eldurCarry
 
                                 text: "Nothing here yet."
                                 textFormat: Text.PlainText
@@ -270,13 +275,15 @@ ApplicationWindow {
                                 objectName: "empty"
                                 visible: false
                                 Layout.fillWidth: true
-                                Layout.topMargin: 16
+                                Layout.topMargin: 16 - todoList.eldurCarry
                             }
 
                             // <p class="footer-note">
                             Text {
+                                id: footerNote
                                 property string eldurTag: "p"
                                 property string eldurClasses: "footer-note"
+                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : empty.eldurCarry
 
                                 text: "Saved in this browser."
                                 textFormat: Text.PlainText
@@ -286,7 +293,8 @@ ApplicationWindow {
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 24
+                                Layout.topMargin: 24 - empty.eldurCarry
+                                Layout.preferredHeight: implicitHeight
                             }
                         }
                     }
@@ -511,6 +519,7 @@ ApplicationWindow {
             bottomPadding: 5
             leftPadding: 11
             Layout.alignment: Qt.AlignHCenter
+            Layout.preferredHeight: implicitHeight
             hoverEnabled: true
         }
     }
