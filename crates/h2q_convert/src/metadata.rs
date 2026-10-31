@@ -73,7 +73,20 @@ pub(crate) fn declare_classes(
         .element(node)
         .map(|e| e.classes().map(class_prop).collect())
         .unwrap_or_default();
-    let props: BTreeSet<String> = classes.iter().map(|c| class_prop(c)).collect();
+    // A class a condition binds to may be declared already.
+    let declared: BTreeSet<&str> = obj
+        .members
+        .iter()
+        .filter_map(|m| match m {
+            Member::PropertyDecl { name, .. } => Some(name.as_str()),
+            _ => None,
+        })
+        .collect();
+    let props: BTreeSet<String> = classes
+        .iter()
+        .map(|c| class_prop(c))
+        .filter(|p| !declared.contains(p.as_str()))
+        .collect();
     let decls = props.into_iter().map(|prop| {
         let initial = has.contains(&prop);
         decl("bool", &prop, initial.into())

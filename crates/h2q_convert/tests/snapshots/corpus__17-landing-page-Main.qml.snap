@@ -257,12 +257,24 @@ ApplicationWindow {
 
                                 // <a class="btn btn-small">
                                 Rectangle {
+                                    id: btn
                                     color: "#1d2233"
                                     radius: 10
                                     implicitWidth: btnText.implicitWidth + 40
                                     implicitHeight: btnText.implicitHeight + 4
                                     border.width: 2
                                     border.color: "#00000000"
+                                    transform: Translate {
+                                        y: btnHover.hovered ? -2 : 0
+
+                                        Behavior on y {
+                                            NumberAnimation {
+                                                duration: 150
+                                                easing.type: Easing.BezierSpline
+                                                easing.bezierCurve: [0.25, 0.1, 0.25, 1, 1, 1]
+                                            }
+                                        }
+                                    }
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.preferredHeight: 40
@@ -292,6 +304,10 @@ ApplicationWindow {
                                         anchors.rightMargin: 20
                                         anchors.topMargin: 2
                                         anchors.bottomMargin: 2
+                                    }
+
+                                    HoverHandler {
+                                        id: btnHover
                                     }
                                 }
                             }
@@ -478,12 +494,24 @@ ApplicationWindow {
 
                                             // <a class="btn btn-primary">
                                             Rectangle {
+                                                id: btn2
                                                 color: "#ffffff"
                                                 radius: 12
                                                 implicitWidth: btnText2.implicitWidth + 60
                                                 implicitHeight: btnText2.implicitHeight + 4
                                                 border.width: 2
                                                 border.color: "#00000000"
+                                                transform: Translate {
+                                                    y: btn2Hover.hovered ? -2 : 0
+
+                                                    Behavior on y {
+                                                        NumberAnimation {
+                                                            duration: 150
+                                                            easing.type: Easing.BezierSpline
+                                                            easing.bezierCurve: [0.25, 0.1, 0.25, 1, 1, 1]
+                                                        }
+                                                    }
+                                                }
                                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
                                                 height: 52
 
@@ -512,16 +540,32 @@ ApplicationWindow {
                                                     anchors.topMargin: 2
                                                     anchors.bottomMargin: 2
                                                 }
+
+                                                HoverHandler {
+                                                    id: btn2Hover
+                                                }
                                             }
 
                                             // <a class="btn btn-ghost">
                                             Rectangle {
+                                                id: btn3
                                                 color: "#00000000"
                                                 radius: 12
                                                 implicitWidth: btnText3.implicitWidth + 60
                                                 implicitHeight: btnText3.implicitHeight + 4
                                                 border.width: 2
                                                 border.color: "#99ffffff"
+                                                transform: Translate {
+                                                    y: btn3Hover.hovered ? -2 : 0
+
+                                                    Behavior on y {
+                                                        NumberAnimation {
+                                                            duration: 150
+                                                            easing.type: Easing.BezierSpline
+                                                            easing.bezierCurve: [0.25, 0.1, 0.25, 1, 1, 1]
+                                                        }
+                                                    }
+                                                }
                                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
                                                 height: 52
 
@@ -549,6 +593,10 @@ ApplicationWindow {
                                                     anchors.rightMargin: 30
                                                     anchors.topMargin: 2
                                                     anchors.bottomMargin: 2
+                                                }
+
+                                                HoverHandler {
+                                                    id: btn3Hover
                                                 }
                                             }
                                         }
@@ -1662,12 +1710,24 @@ ApplicationWindow {
 
                                             // <a class="btn btn-accent">
                                             Rectangle {
+                                                id: btn4
                                                 color: "#ff7a59"
                                                 radius: 12
                                                 implicitWidth: btnText4.implicitWidth + 60
                                                 implicitHeight: btnText4.implicitHeight + 4
                                                 border.width: 2
                                                 border.color: "#00000000"
+                                                transform: Translate {
+                                                    y: btn4Hover.hovered ? -2 : 0
+
+                                                    Behavior on y {
+                                                        NumberAnimation {
+                                                            duration: 150
+                                                            easing.type: Easing.BezierSpline
+                                                            easing.bezierCurve: [0.25, 0.1, 0.25, 1, 1, 1]
+                                                        }
+                                                    }
+                                                }
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.preferredHeight: 52
@@ -1698,6 +1758,10 @@ ApplicationWindow {
                                                     anchors.rightMargin: 30
                                                     anchors.topMargin: 2
                                                     anchors.bottomMargin: 2
+                                                }
+
+                                                HoverHandler {
+                                                    id: btn4Hover
                                                 }
                                             }
                                         }

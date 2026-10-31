@@ -249,12 +249,21 @@ ApplicationWindow {
 
                                         // <a class="btn btn-primary nav-cta">
                                         Rectangle {
-                                            color: "#0b5cad"
+                                            id: btn
+                                            color: btnHover.hovered ? "#094a8a" : "#0b5cad"
                                             radius: 8
                                             implicitWidth: btnText.implicitWidth + 34
                                             implicitHeight: btnText.implicitHeight + 18
                                             border.width: 1
-                                            border.color: "#0b5cad"
+                                            border.color: btnHover.hovered ? "#094a8a" : "#0b5cad"
+
+                                            Behavior on color {
+                                                ColorAnimation {
+                                                    duration: 150
+                                                    easing.type: Easing.BezierSpline
+                                                    easing.bezierCurve: [0, 0, 0.58, 1, 1, 1]
+                                                }
+                                            }
 
                                             Text {
                                                 id: btnText
@@ -266,7 +275,7 @@ ApplicationWindow {
 
                                                 text: "Sign up"
                                                 textFormat: Text.PlainText
-                                                color: "#3d4659"
+                                                color: btnHover.hovered ? "#0b5cad" : "#3d4659"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 15
                                                 font.weight: 500
@@ -280,6 +289,10 @@ ApplicationWindow {
                                                 anchors.leftMargin: 17
                                                 anchors.rightMargin: 17
                                                 anchors.topMargin: 9
+                                            }
+
+                                            HoverHandler {
+                                                id: btnHover
                                             }
                                         }
                                     }
@@ -470,15 +483,24 @@ ApplicationWindow {
 
                                 // <a class="btn btn-primary">
                                 Rectangle {
-                                    color: "#0b5cad"
+                                    id: btn2
+                                    color: btn2Hover.hovered ? "#094a8a" : "#0b5cad"
                                     radius: 8
                                     implicitWidth: btnText2.implicitWidth + 58
                                     implicitHeight: btnText2.implicitHeight + 30
                                     border.width: 1
-                                    border.color: "#0b5cad"
+                                    border.color: btn2Hover.hovered ? "#094a8a" : "#0b5cad"
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.alignment: Qt.AlignVCenter
+
+                                    Behavior on color {
+                                        ColorAnimation {
+                                            duration: 150
+                                            easing.type: Easing.BezierSpline
+                                            easing.bezierCurve: [0, 0, 0.58, 1, 1, 1]
+                                        }
+                                    }
 
                                     Text {
                                         id: btnText2
@@ -506,11 +528,16 @@ ApplicationWindow {
                                         anchors.rightMargin: 29
                                         anchors.topMargin: 15
                                     }
+
+                                    HoverHandler {
+                                        id: btn2Hover
+                                    }
                                 }
 
                                 // <a class="btn btn-outline">
                                 Rectangle {
-                                    color: "#ffffff"
+                                    id: btn3
+                                    color: btn3Hover.hovered ? "#eef5fc" : "#ffffff"
                                     radius: 8
                                     implicitWidth: btnText3.implicitWidth + 58
                                     implicitHeight: btnText3.implicitHeight + 30
@@ -546,6 +573,10 @@ ApplicationWindow {
                                         anchors.leftMargin: 29
                                         anchors.rightMargin: 29
                                         anchors.topMargin: 15
+                                    }
+
+                                    HoverHandler {
+                                        id: btn3Hover
                                     }
                                 }
 

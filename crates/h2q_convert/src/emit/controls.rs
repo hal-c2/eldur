@@ -356,6 +356,7 @@ impl Emitter<'_, '_> {
         let style = native.as_ref().unwrap_or(&*b.style);
         let id = self.control_id(node);
         let reset = form_owner(self.doc, node);
+        self.force_paint = self.sticky.contains(&node);
         let mut obj = match control {
             Control::Text => self.text_field(node, style, &id, reset, line),
             Control::TextArea => self.text_area(node, style, &id, reset, line),
@@ -366,6 +367,7 @@ impl Emitter<'_, '_> {
             Control::Select => self.combo_box(node, style, &id, reset, line),
             Control::Progress | Control::Meter => self.progress(node, style, control, &id, line),
         };
+        self.force_paint = false;
         if let Control::Button {
             submit,
             reset: is_reset,

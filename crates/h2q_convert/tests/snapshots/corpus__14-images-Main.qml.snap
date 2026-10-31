@@ -89,9 +89,10 @@ ApplicationWindow {
 
                             // <a>
                             Text {
+                                id: a
                                 text: "Journal"
                                 textFormat: Text.PlainText
-                                color: "#3a4256"
+                                color: aHover.hovered ? "#1d4ed8" : "#3a4256"
                                 font.family: "sans-serif"
                                 font.pixelSize: 15
                                 lineHeight: 23.25
@@ -103,13 +104,19 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.fillHeight: true
+                                font.underline: aHover.hovered
+
+                                HoverHandler {
+                                    id: aHover
+                                }
                             }
 
                             // <a>
                             Text {
+                                id: a2
                                 text: "Gallery"
                                 textFormat: Text.PlainText
-                                color: "#3a4256"
+                                color: a2Hover.hovered ? "#1d4ed8" : "#3a4256"
                                 font.family: "sans-serif"
                                 font.pixelSize: 15
                                 lineHeight: 23.25
@@ -122,13 +129,19 @@ ApplicationWindow {
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.fillHeight: true
                                 Layout.leftMargin: 24
+                                font.underline: a2Hover.hovered
+
+                                HoverHandler {
+                                    id: a2Hover
+                                }
                             }
 
                             // <a>
                             Text {
+                                id: a3
                                 text: "About"
                                 textFormat: Text.PlainText
-                                color: "#3a4256"
+                                color: a3Hover.hovered ? "#1d4ed8" : "#3a4256"
                                 font.family: "sans-serif"
                                 font.pixelSize: 15
                                 lineHeight: 23.25
@@ -141,6 +154,11 @@ ApplicationWindow {
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.fillHeight: true
                                 Layout.leftMargin: 24
+                                font.underline: a3Hover.hovered
+
+                                HoverHandler {
+                                    id: a3Hover
+                                }
                             }
 
                             Item {

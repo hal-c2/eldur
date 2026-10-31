@@ -1,0 +1,152 @@
+{
+ "29 initial item1": {
+  "opacity": "0.5"
+ },
+ "29 initial tab1": {
+  "color": "rgb(255, 255, 255)",
+  "background-color": "rgb(59, 91, 219)"
+ },
+ "29 initial tab2": {
+  "color": "rgb(59, 91, 219)",
+  "background-color": "rgb(228, 231, 239)"
+ },
+ "29 initial tab3": {
+  "color": "rgb(90, 98, 117)"
+ },
+ "29 initial status": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "29 initial panel": {
+  "display": "none"
+ },
+ "29 tab2 tab1": {
+  "color": "rgb(90, 98, 117)",
+  "background-color": "rgb(228, 231, 239)"
+ },
+ "29 tab2 tab2": {
+  "color": "rgb(255, 255, 255)",
+  "background-color": "rgb(59, 91, 219)"
+ },
+ "29 tab2 tab3": {
+  "color": "rgb(59, 91, 219)"
+ },
+ "29 ok": {
+  "color": "rgb(43, 138, 62)"
+ },
+ "29 warn": {
+  "color": "rgb(230, 119, 0)"
+ },
+ "29 ok warn": {
+  "color": "rgb(230, 119, 0)"
+ },
+ "29 ok twice": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "29 more": {
+  "display": "block"
+ },
+ "29 hover item2": {
+  "opacity": "1",
+  "background-color": "rgb(238, 242, 255)"
+ },
+ "29 hover item1": {
+  "opacity": "0.8"
+ },
+ "29 click item2": {
+  "opacity": "0.8"
+ },
+ "29 click item2 leave": {
+  "opacity": "0.5"
+ },
+ "12 hover primary": {
+  "background-color": "rgb(45, 91, 196)"
+ },
+ "12 hover secondary": {
+  "background-color": "rgb(233, 238, 248)"
+ },
+ "12 hover disabled": {
+  "background-color": "rgb(229, 231, 235)"
+ },
+ "12 focus primary": {
+  "box-shadow": "rgba(59, 111, 224, 0.35) 0px 0px 0px 3px"
+ },
+ "12 hover card": {
+  "transform": "matrix(1, 0, 0, 1, 0, -4)"
+ },
+ "12 hover item": {
+  "background-color": "rgb(241, 245, 255)"
+ },
+ "12 hover item icon": {
+  "background-color": "rgb(59, 111, 224)"
+ },
+ "12 initial item icon": {
+  "background-color": "rgb(154, 163, 181)"
+ },
+ "15 dec": {
+  "color": "rgb(214, 40, 40)"
+ },
+ "15 dec inc": {
+  "color": "rgb(29, 78, 216)"
+ },
+ "15 hover inc": {
+  "background-color": "rgb(26, 68, 194)"
+ },
+ "15 hover dec": {
+  "background-color": "rgb(233, 238, 248)"
+ },
+ "15 focus input": {
+  "border-top-color": "rgba(0, 0, 0, 0)"
+ },
+ "29 initial geometry": {
+  "#list": {
+   "x": 32,
+   "y": 186,
+   "width": 422,
+   "height": 116
+  },
+  "#item2": {
+   "x": 33,
+   "y": 225,
+   "width": 420,
+   "height": 38
+  }
+ },
+ "29 compact geometry": {
+  "#list": {
+   "x": 32,
+   "y": 186,
+   "width": 422,
+   "height": 68
+  },
+  "#item2": {
+   "x": 33,
+   "y": 209,
+   "width": 420,
+   "height": 22
+  }
+ },
+ "29 more geometry": {
+  "#panel": {
+   "x": 32,
+   "y": 380,
+   "width": 448,
+   "height": 42
+  }
+ },
+ "12 card geometry": {
+  ".lift-card": {
+   "x": 40,
+   "y": 275,
+   "width": 386.65625,
+   "height": 120.5
+  }
+ },
+ "12 hover card geometry": {
+  ".lift-card": {
+   "x": 40,
+   "y": 271,
+   "width": 386.65625,
+   "height": 120.5
+  }
+ }
+}

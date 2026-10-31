@@ -2,4 +2,6 @@
 source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet
+info[css]: index.html:229: styles under `:hover` of <a class="link"> are left out: it has no item of its own
+info[css]: index.html:230: styles under `:hover` of <a class="link"> are left out: it has no item of its own
+info[css]: index.html:231: styles under `:hover` of <a class="link"> are left out: it has no item of its own

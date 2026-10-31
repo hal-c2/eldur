@@ -180,7 +180,10 @@ ApplicationWindow {
                                             }
 
                                             // <a class="menu-item">
-                                            Item {
+                                            Rectangle {
+                                                id: menuItem
+                                                color: menuItemHover.hovered ? "#252e46" : "#00000000"
+                                                radius: 6
                                                 implicitWidth: menuItemText2.implicitWidth + 24
                                                 implicitHeight: menuItemText2.implicitHeight + 20
                                                 Layout.fillWidth: true
@@ -190,7 +193,7 @@ ApplicationWindow {
                                                     id: menuItemText2
                                                     text: "Projects"
                                                     textFormat: Text.PlainText
-                                                    color: "#c9d1e3"
+                                                    color: menuItemHover.hovered ? "#ffffff" : "#c9d1e3"
                                                     font.family: "sans-serif"
                                                     font.pixelSize: 15
                                                     font.weight: 500
@@ -207,10 +210,17 @@ ApplicationWindow {
                                                     anchors.rightMargin: 12
                                                     anchors.topMargin: 10
                                                 }
+
+                                                HoverHandler {
+                                                    id: menuItemHover
+                                                }
                                             }
 
                                             // <a class="menu-item">
-                                            Item {
+                                            Rectangle {
+                                                id: menuItem2
+                                                color: menuItem2Hover.hovered ? "#252e46" : "#00000000"
+                                                radius: 6
                                                 implicitWidth: menuItemText3.implicitWidth + 24
                                                 implicitHeight: menuItemText3.implicitHeight + 20
                                                 Layout.fillWidth: true
@@ -220,7 +230,7 @@ ApplicationWindow {
                                                     id: menuItemText3
                                                     text: "Tasks"
                                                     textFormat: Text.PlainText
-                                                    color: "#c9d1e3"
+                                                    color: menuItem2Hover.hovered ? "#ffffff" : "#c9d1e3"
                                                     font.family: "sans-serif"
                                                     font.pixelSize: 15
                                                     font.weight: 500
@@ -237,10 +247,17 @@ ApplicationWindow {
                                                     anchors.rightMargin: 12
                                                     anchors.topMargin: 10
                                                 }
+
+                                                HoverHandler {
+                                                    id: menuItem2Hover
+                                                }
                                             }
 
                                             // <a class="menu-item">
-                                            Item {
+                                            Rectangle {
+                                                id: menuItem3
+                                                color: menuItem3Hover.hovered ? "#252e46" : "#00000000"
+                                                radius: 6
                                                 implicitWidth: menuItemText4.implicitWidth + 24
                                                 implicitHeight: menuItemText4.implicitHeight + 20
                                                 Layout.fillWidth: true
@@ -250,7 +267,7 @@ ApplicationWindow {
                                                     id: menuItemText4
                                                     text: "Calendar"
                                                     textFormat: Text.PlainText
-                                                    color: "#c9d1e3"
+                                                    color: menuItem3Hover.hovered ? "#ffffff" : "#c9d1e3"
                                                     font.family: "sans-serif"
                                                     font.pixelSize: 15
                                                     font.weight: 500
@@ -267,10 +284,17 @@ ApplicationWindow {
                                                     anchors.rightMargin: 12
                                                     anchors.topMargin: 10
                                                 }
+
+                                                HoverHandler {
+                                                    id: menuItem3Hover
+                                                }
                                             }
 
                                             // <a class="menu-item">
-                                            Item {
+                                            Rectangle {
+                                                id: menuItem4
+                                                color: menuItem4Hover.hovered ? "#252e46" : "#00000000"
+                                                radius: 6
                                                 implicitWidth: menuItemText5.implicitWidth + 24
                                                 implicitHeight: menuItemText5.implicitHeight + 20
                                                 Layout.fillWidth: true
@@ -280,7 +304,7 @@ ApplicationWindow {
                                                     id: menuItemText5
                                                     text: "Messages"
                                                     textFormat: Text.PlainText
-                                                    color: "#c9d1e3"
+                                                    color: menuItem4Hover.hovered ? "#ffffff" : "#c9d1e3"
                                                     font.family: "sans-serif"
                                                     font.pixelSize: 15
                                                     font.weight: 500
@@ -296,6 +320,10 @@ ApplicationWindow {
                                                     anchors.leftMargin: 12
                                                     anchors.rightMargin: 12
                                                     anchors.topMargin: 10
+                                                }
+
+                                                HoverHandler {
+                                                    id: menuItem4Hover
                                                 }
                                             }
 
@@ -334,7 +362,10 @@ ApplicationWindow {
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
 
                                             // <a class="menu-item">
-                                            Item {
+                                            Rectangle {
+                                                id: menuItem5
+                                                color: menuItem5Hover.hovered ? "#252e46" : "#00000000"
+                                                radius: 6
                                                 implicitWidth: menuItemText6.implicitWidth + 24
                                                 implicitHeight: menuItemText6.implicitHeight + 20
                                                 Layout.fillWidth: true
@@ -343,7 +374,7 @@ ApplicationWindow {
                                                     id: menuItemText6
                                                     text: "Members"
                                                     textFormat: Text.PlainText
-                                                    color: "#c9d1e3"
+                                                    color: menuItem5Hover.hovered ? "#ffffff" : "#c9d1e3"
                                                     font.family: "sans-serif"
                                                     font.pixelSize: 15
                                                     font.weight: 500
@@ -360,10 +391,17 @@ ApplicationWindow {
                                                     anchors.rightMargin: 12
                                                     anchors.topMargin: 10
                                                 }
+
+                                                HoverHandler {
+                                                    id: menuItem5Hover
+                                                }
                                             }
 
                                             // <a class="menu-item">
-                                            Item {
+                                            Rectangle {
+                                                id: menuItem6
+                                                color: menuItem6Hover.hovered ? "#252e46" : "#00000000"
+                                                radius: 6
                                                 implicitWidth: menuItemText7.implicitWidth + 24
                                                 implicitHeight: menuItemText7.implicitHeight + 20
                                                 Layout.fillWidth: true
@@ -373,7 +411,7 @@ ApplicationWindow {
                                                     id: menuItemText7
                                                     text: "Billing"
                                                     textFormat: Text.PlainText
-                                                    color: "#c9d1e3"
+                                                    color: menuItem6Hover.hovered ? "#ffffff" : "#c9d1e3"
                                                     font.family: "sans-serif"
                                                     font.pixelSize: 15
                                                     font.weight: 500
@@ -390,10 +428,17 @@ ApplicationWindow {
                                                     anchors.rightMargin: 12
                                                     anchors.topMargin: 10
                                                 }
+
+                                                HoverHandler {
+                                                    id: menuItem6Hover
+                                                }
                                             }
 
                                             // <a class="menu-item">
-                                            Item {
+                                            Rectangle {
+                                                id: menuItem7
+                                                color: menuItem7Hover.hovered ? "#252e46" : "#00000000"
+                                                radius: 6
                                                 implicitWidth: menuItemText8.implicitWidth + 24
                                                 implicitHeight: menuItemText8.implicitHeight + 20
                                                 Layout.fillWidth: true
@@ -403,7 +448,7 @@ ApplicationWindow {
                                                     id: menuItemText8
                                                     text: "Settings"
                                                     textFormat: Text.PlainText
-                                                    color: "#c9d1e3"
+                                                    color: menuItem7Hover.hovered ? "#ffffff" : "#c9d1e3"
                                                     font.family: "sans-serif"
                                                     font.pixelSize: 15
                                                     font.weight: 500
@@ -419,6 +464,10 @@ ApplicationWindow {
                                                     anchors.leftMargin: 12
                                                     anchors.rightMargin: 12
                                                     anchors.topMargin: 10
+                                                }
+
+                                                HoverHandler {
+                                                    id: menuItem7Hover
                                                 }
                                             }
 
