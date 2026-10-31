@@ -1,6 +1,0 @@
----
-source: crates/h2q_convert/tests/corpus.rs
-expression: "diagnostics.join(\"\\n\")"
----
-info[css]: <style>#1:85: unknown property `resize`
-info[css]: <style>#1:105: unknown property `accent-color`

@@ -1,0 +1,6 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[css]: <style>#1:42: unknown property `font-variant-numeric`
+info[css]: index.html:190: <p id="empty" class="empty"> is `display: none` and used by a script: it is kept invisible, as a block when shown

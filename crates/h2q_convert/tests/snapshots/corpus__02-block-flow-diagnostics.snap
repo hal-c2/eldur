@@ -1,6 +1,0 @@
----
-source: crates/h2q_convert/tests/corpus.rs
-expression: "diagnostics.join(\"\\n\")"
----
-warning[css]: index.html:181: `float` on <div class="half"> is laid out as a block at its side: floats do not share a line with other boxes yet
-warning[css]: index.html:184: `float` on <div class="half"> is laid out as a block at its side: floats do not share a line with other boxes yet

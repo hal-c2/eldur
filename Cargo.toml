@@ -11,12 +11,12 @@ repository = "https://github.com/olafura/html-2-qml"
 
 [workspace.dependencies]
 # Ours
-h2q_dom = { path = "crates/h2q_dom" }
-h2q_css = { path = "crates/h2q_css" }
-h2q_js = { path = "crates/h2q_js" }
-h2q_qml = { path = "crates/h2q_qml" }
-h2q_convert = { path = "crates/h2q_convert" }
-h2q_cache = { path = "crates/h2q_cache" }
+eldur_dom = { path = "crates/eldur_dom" }
+eldur_css = { path = "crates/eldur_css" }
+eldur_js = { path = "crates/eldur_js" }
+eldur_qml = { path = "crates/eldur_qml" }
+eldur_convert = { path = "crates/eldur_convert" }
+eldur_cache = { path = "crates/eldur_cache" }
 
 # Parsers. All permissively licensed (no MPL: no servo `selectors`,
 # `cssparser`, `stylo` or `lightningcss`).

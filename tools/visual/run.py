@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Visual parity harness runner for html-2-qml.
+"""Visual parity harness runner for Eldur.
 
 Usage:
     python3 tools/visual/run.py [--corpus tests/corpus] [--out target/visual]
-                                [--convert-cmd "cargo run -q -p h2q_cli -- convert"]
+                                [--convert-cmd "cargo run -q -p eldur_cli -- convert"]
                                 [--cases a,b] [--baseline tools/visual/baseline.json]
                                 [--update-baseline] [--strict | --no-strict]
                                 [--width 1280] [--height 800]
@@ -49,7 +49,7 @@ SELFTEST_DIR = SCRIPT_DIR / "selftest"
 
 DEFAULT_CORPUS_DIR = Path("tests/corpus")
 DEFAULT_OUT_DIR = Path("target/visual")
-DEFAULT_CONVERT_CMD = "cargo run -q -p h2q_cli -- convert"
+DEFAULT_CONVERT_CMD = "cargo run -q -p eldur_cli -- convert"
 REGRESSION_THRESHOLD_POINTS = 2.0
 SELFTEST_MIN_GOOD_SCORE = 85.0
 SELFTEST_MIN_NEAR_MISS_GAP = 10.0

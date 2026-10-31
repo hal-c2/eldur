@@ -2,9 +2,9 @@
 #MISE description="Convert every tests/corpus case into target/corpus/<case>/ (then: mise run qml:check target/corpus)"
 set -euo pipefail
 out="${1:-target/corpus}"
-cargo build -q -p h2q_cli
+cargo build -q -p eldur_cli
 for dir in tests/corpus/*/; do
   case=$(basename "$dir")
   rm -rf "${out:?}/$case"
-  cargo run -q -p h2q_cli -- convert -q "$dir/index.html" -o "$out/$case" 2>/dev/null
+  cargo run -q -p eldur_cli -- convert -q "$dir/index.html" -o "$out/$case" 2>/dev/null
 done

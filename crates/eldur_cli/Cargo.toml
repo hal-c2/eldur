@@ -1,0 +1,22 @@
+[package]
+name = "eldur_cli"
+description = "eldur: convert HTML5 + CSS + JS pages to QML"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "eldur"
+path = "src/main.rs"
+
+[dependencies]
+eldur_convert.workspace = true
+eldur_cache.workspace = true
+anyhow.workspace = true
+blake3.workspace = true
+clap.workspace = true
+notify.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

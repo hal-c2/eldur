@@ -322,6 +322,93 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e9c71c2167ca323c882b99918929403426e2373ea17242ff5653e0d5e1058be"
 
 [[package]]
+name = "eldur_cache"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "eldur_cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "blake3",
+ "clap",
+ "eldur_cache",
+ "eldur_convert",
+ "notify",
+ "serde_json",
+]
+
+[[package]]
+name = "eldur_convert"
+version = "0.1.0"
+dependencies = [
+ "eldur_css",
+ "eldur_dom",
+ "eldur_js",
+ "eldur_qml",
+ "imagesize",
+ "insta",
+ "thiserror",
+ "url",
+]
+
+[[package]]
+name = "eldur_css"
+version = "0.1.0"
+dependencies = [
+ "csscolorparser",
+ "eldur_dom",
+ "insta",
+ "serde_json",
+ "swc_atoms",
+ "swc_common",
+ "swc_css_ast",
+ "swc_css_codegen",
+ "swc_css_parser",
+ "swc_css_visit",
+ "thiserror",
+]
+
+[[package]]
+name = "eldur_dom"
+version = "0.1.0"
+dependencies = [
+ "html5ever",
+ "insta",
+ "thiserror",
+]
+
+[[package]]
+name = "eldur_js"
+version = "0.1.0"
+dependencies = [
+ "eldur_dom",
+ "insta",
+ "oxc_allocator",
+ "oxc_ast",
+ "oxc_ast_visit",
+ "oxc_codegen",
+ "oxc_parser",
+ "oxc_semantic",
+ "oxc_span",
+ "oxc_syntax",
+ "thiserror",
+]
+
+[[package]]
+name = "eldur_qml"
+version = "0.1.0"
+dependencies = [
+ "insta",
+]
+
+[[package]]
 name = "encode_unicode"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -383,93 +470,6 @@ dependencies = [
  "cfg-if",
  "libc",
  "r-efi",
-]
-
-[[package]]
-name = "h2q_cache"
-version = "0.1.0"
-dependencies = [
- "blake3",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
-name = "h2q_cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "blake3",
- "clap",
- "h2q_cache",
- "h2q_convert",
- "notify",
- "serde_json",
-]
-
-[[package]]
-name = "h2q_convert"
-version = "0.1.0"
-dependencies = [
- "h2q_css",
- "h2q_dom",
- "h2q_js",
- "h2q_qml",
- "imagesize",
- "insta",
- "thiserror",
- "url",
-]
-
-[[package]]
-name = "h2q_css"
-version = "0.1.0"
-dependencies = [
- "csscolorparser",
- "h2q_dom",
- "insta",
- "serde_json",
- "swc_atoms",
- "swc_common",
- "swc_css_ast",
- "swc_css_codegen",
- "swc_css_parser",
- "swc_css_visit",
- "thiserror",
-]
-
-[[package]]
-name = "h2q_dom"
-version = "0.1.0"
-dependencies = [
- "html5ever",
- "insta",
- "thiserror",
-]
-
-[[package]]
-name = "h2q_js"
-version = "0.1.0"
-dependencies = [
- "h2q_dom",
- "insta",
- "oxc_allocator",
- "oxc_ast",
- "oxc_ast_visit",
- "oxc_codegen",
- "oxc_parser",
- "oxc_semantic",
- "oxc_span",
- "oxc_syntax",
- "thiserror",
-]
-
-[[package]]
-name = "h2q_qml"
-version = "0.1.0"
-dependencies = [
- "insta",
 ]
 
 [[package]]

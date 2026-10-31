@@ -1,7 +1,0 @@
----
-source: crates/h2q_convert/tests/corpus.rs
-expression: "diagnostics.join(\"\\n\")"
----
-info[html]: index.html:270: inline <progress id="stock"> is laid out as a block (no inline replaced elements yet)
-info[html]: index.html:277: inline <select id="colour"> is laid out as a block (no inline replaced elements yet)
-info[html]: index.html:286: inline <input id="qty"> is laid out as a block (no inline replaced elements yet)

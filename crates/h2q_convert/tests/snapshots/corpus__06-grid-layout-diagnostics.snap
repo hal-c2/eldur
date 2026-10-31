@@ -1,5 +1,0 @@
----
-source: crates/h2q_convert/tests/corpus.rs
-expression: "diagnostics.join(\"\\n\")"
----
-info[css]: index.html:208: percentage height on <body> is treated as `auto`

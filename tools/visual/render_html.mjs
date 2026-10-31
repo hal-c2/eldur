@@ -125,7 +125,7 @@ async function main() {
         const root = document.head || document.documentElement;
         if (!root) return;
         const style = document.createElement("style");
-        style.setAttribute("data-h2q-visual", "disable-motion");
+        style.setAttribute("data-eldur-visual", "disable-motion");
         style.textContent = cssText;
         root.appendChild(style);
       };

@@ -1,0 +1,21 @@
+[package]
+name = "eldur_convert"
+description = "HTML + CSS + JS to QML conversion"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+eldur_dom.workspace = true
+eldur_css.workspace = true
+eldur_js.workspace = true
+eldur_qml.workspace = true
+thiserror.workspace = true
+imagesize.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+insta.workspace = true
+
+[lints]
+workspace = true

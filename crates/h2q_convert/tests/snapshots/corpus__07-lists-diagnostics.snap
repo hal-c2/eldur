@@ -1,5 +1,0 @@
----
-source: crates/h2q_convert/tests/corpus.rs
-expression: "diagnostics.join(\"\\n\")"
----
-info[qml]: index.html:224: items of the wrapping <ul class="tags"> are not stretched to their line's height
