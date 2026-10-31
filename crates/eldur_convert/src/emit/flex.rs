@@ -324,6 +324,62 @@ impl Emitter<'_, '_> {
         layout
     }
 
+    /// An empty flex container a script fills. Where the free space goes
+    /// depends on how many items it comes to hold, so the runtime places the
+    /// spacers, and the gap cannot be left for spacers to replace.
+    pub(super) fn flex_to_fill(
+        &mut self,
+        b: &LayoutBox<'_>,
+        decoration: TextDecorationLine,
+        line: Option<u32>,
+    ) -> Object {
+        let mut layout = self.flex(b, &[], decoration, line);
+        let style = &*b.style;
+        let row = matches!(
+            style.flex_direction,
+            FlexDirection::Row | FlexDirection::RowReverse
+        );
+        if row && style.flex_wrap != FlexWrap::NoWrap {
+            return layout;
+        }
+        let reverse = matches!(
+            style.flex_direction,
+            FlexDirection::RowReverse | FlexDirection::ColumnReverse
+        );
+        let gap_len = if row {
+            &style.column_gap
+        } else {
+            &style.row_gap
+        };
+        let gap = self.gap_px(gap_len.as_ref(), line);
+        let mut decl = |ty: &str, name: &str, value: Value| {
+            layout.members.push(Member::PropertyDecl {
+                ty: ty.to_owned(),
+                name: name.to_owned(),
+                value: Some(value),
+                readonly: false,
+                required: false,
+            });
+        };
+        // A column as tall as its items has no free space to hold.
+        let auto_column = !row && !super::flow::has_height(style);
+        let name = match pack(style.justify_content, reverse) {
+            _ if auto_column => "none",
+            Pack::Start => "start",
+            Pack::End => "end",
+            Pack::Center => "center",
+            Pack::Between => "between",
+            Pack::Around => "around",
+            Pack::Evenly => "evenly",
+        };
+        decl("string", "eldurPack", Value::String(name.to_owned()));
+        decl("bool", "eldurPackRow", Value::Bool(row));
+        decl("real", "eldurPackGap", number(gap));
+        let between = matches!(name, "between" | "around" | "evenly");
+        layout.set("spacing", number(if between { 0.0 } else { gap }));
+        layout
+    }
+
     /// `Layout.*` sizing and margins of one item of a single-line flex
     /// container. `lead_gap` is the gap before it, when spacers replace
     /// `spacing`.

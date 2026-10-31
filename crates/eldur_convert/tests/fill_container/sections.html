@@ -1,0 +1,7 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.row{height:30px;background:#def}#end{height:10px;background:red}
+</style></head><body><section id="s"></section><article id="a">  </article><header id="h"></header><main id="m"></main><div id="end"></div>
+<script>function g(id){var r=document.getElementById(id).getBoundingClientRect();return id+":"+[r.left,r.top,r.width,r.height].map(Math.round).join(",")}
+function all(){return Array.prototype.map.call(arguments,g).join(" ")}
+function row(id,t){var d=document.createElement('div');d.id=id;d.className='row';d.textContent=t;return d}
+['s','a','h','m'].forEach(function(n){var e=document.getElementById(n);e.appendChild(row(n+'0','x'));e.appendChild(row(n+'1','y'));});
+console.log('LC '+all('s','s0','s1','a','a1','h','h1','m','m1','end'));</script></body></html>

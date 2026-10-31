@@ -1,0 +1,9 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.row{height:30px;background:#def}#end{height:10px;background:red}
+table{border-collapse:collapse} td{height:30px;width:50px;padding:0}</style></head><body><table id="t"><tbody id="b"></tbody></table><div id="end"></div>
+<script>function g(id){var r=document.getElementById(id).getBoundingClientRect();return id+":"+[r.left,r.top,r.width,r.height].map(Math.round).join(",")}
+function all(){return Array.prototype.map.call(arguments,g).join(" ")}
+function tr(id){var d=document.createElement('tr');d.id=id;return d}
+function td(id,t){var d=document.createElement('td');d.id=id;d.textContent=t;return d}
+var b=document.getElementById('b');
+for(var i=0;i<2;i++){var rw=tr('tr'+i);rw.appendChild(td('c'+i,'x'));rw.appendChild(td('d'+i,'y'));b.appendChild(rw);}
+console.log('LC '+all('t','tr0','tr1','c0','d0','c1','d1','end'));</script></body></html>

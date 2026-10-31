@@ -100,6 +100,7 @@ fn tracks_listeners_and_property_writes_across_variables_functions_and_loops() {
         reads_attributes,
         dispatch_by_path: _,
         listens_unresolved: _,
+        opaque_inserts: _,
     } = analyze(&[s1, s2]);
     // Nothing here can add, remove or rename an element, but
     // `setAttribute("class", …)` can take any class off one.
@@ -1404,4 +1405,25 @@ fn containers_whose_children_scripts_change() {
         ]
     );
     assert_eq!(res.mutated_siblings, vec![by_id("first"), by_id("gone")]);
+}
+
+#[test]
+fn inserting_what_analysis_cannot_name_records_the_receiver() {
+    let analysis = analyze(&[classic(
+        "inline script #1",
+        r#"
+        const a = document.getElementById("a");
+        a.appendChild(make());
+        document.getElementById("b").innerHTML = "<div>x</div>" + name;
+        document.getElementById("c").appendChild(document.createTextNode("t"));
+        document.getElementById("d").textContent = "only text";
+        document.getElementById("e").innerHTML = "plain words";
+        "#,
+    )]);
+    let by_id = |id: &str| ElementRef::Query(DomQuery::ById(id.to_owned()));
+    assert!(analysis.opaque_inserts.contains(&by_id("a")));
+    assert!(analysis.opaque_inserts.contains(&by_id("b")));
+    for only_text in ["c", "d", "e"] {
+        assert!(!analysis.opaque_inserts.contains(&by_id(only_text)));
+    }
 }

@@ -1,0 +1,9 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.row{height:30px;background:#def}#end{height:10px;background:red}
+</style></head><body><div id="list"></div><div id="end"></div>
+<script>function g(id){var r=document.getElementById(id).getBoundingClientRect();return id+":"+[r.left,r.top,r.width,r.height].map(Math.round).join(",")}
+function all(){return Array.prototype.map.call(arguments,g).join(" ")}
+function row(id,t){var d=document.createElement('div');d.id=id;d.className='row';d.textContent=t;return d}
+var l=document.getElementById('list');console.log('LC '+document.documentElement.scrollHeight);
+for(var i=0;i<60;i++){l.appendChild(row('r'+i,'x'));}
+console.log('LC '+all('r59','end')+' '+document.documentElement.scrollHeight+' '+document.body.getBoundingClientRect().height);
+window.scrollTo(0,500);console.log('LC '+window.scrollY+' '+g('r20'));window.scrollTo(0,0);</script></body></html>

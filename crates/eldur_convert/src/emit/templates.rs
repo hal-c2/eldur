@@ -157,6 +157,29 @@ impl Builder<'_> {
     }
 }
 
+/// A created cell joins a row, not the document's one grid, whose slots and
+/// column widths its probe was given: it takes the size its own style says.
+fn leave_table_grid(obj: &mut Object, style: Option<&eldur_css::ComputedStyle>) {
+    let is_cell = obj
+        .members
+        .iter()
+        .any(|m| matches!(m, Member::PropertyDecl { name, .. } if name == "tableSlot"));
+    if !is_cell {
+        return;
+    }
+    obj.members.retain(|m| match m {
+        Member::PropertyDecl { name, .. } => name != "tableSlot" && name != "minContentWidth",
+        Member::Property { name, .. } => !matches!(
+            name.as_str(),
+            "Layout.row" | "Layout.column" | "Layout.preferredWidth" | "Layout.preferredHeight"
+        ),
+        _ => true,
+    });
+    if let Some(eldur_css::Size::Length(width)) = style.map(|s| &s.width) {
+        obj.set("Layout.preferredWidth", super::flow::size_value(width, 0.0));
+    }
+}
+
 /// A template has no slot to read a static position or visibility from, and
 /// says where the runtime is to put it instead of its DOM parent.
 fn leave_flow(
@@ -514,7 +537,7 @@ fn tag_part(e: &CreatedElement) -> String {
 /// `Component`s, `root.eldurTemplates`, and `eldurKey` and `cls_` properties on
 /// the static elements they read. `None` when there are none.
 /// The tags the runtime keeps as nodes in a line (`_vStaysInline`).
-fn stays_inline(tag: &str) -> bool {
+pub(crate) fn stays_inline(tag: &str) -> bool {
     matches!(
         tag,
         "a" | "abbr"
@@ -617,6 +640,18 @@ pub(crate) fn add(
                     ),
                 ),
                 ElementRef::Created(_) => {}
+            }
+        }
+        // Made in a helper and handed to an insert analysis cannot pair it
+        // with: it may go in any box a script gives such a node.
+        if e.parents
+            .iter()
+            .all(|parent| matches!(parent, ElementRef::Unknown))
+        {
+            for node in scripts.gains.nodes.iter().copied().collect::<BTreeSet<_>>() {
+                if let Some(t) = targets.get(&node) {
+                    builder.place(i, node, Context::Static(t.qml_id.clone()), 0);
+                }
             }
         }
         if e.open_classes {
@@ -859,6 +894,7 @@ pub(crate) fn add(
             *e = dynamic::replace_tokens(e, &mut expr_of);
         });
         dynamic::remove_markers(&mut obj);
+        leave_table_grid(&mut obj, styles.computed(inst.node).map(|s| &s.style));
         if styles
             .computed(inst.node)
             .is_some_and(|s| is_out_of_flow(&s.style))

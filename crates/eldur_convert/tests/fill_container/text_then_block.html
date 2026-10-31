@@ -1,0 +1,10 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.row{height:30px;background:#def}#end{height:10px;background:red}
+p{margin:0}</style></head><body><div id="a">hello</div><p id="p">para</p><div id="c"><b>bold</b> text</div><div id="end"></div>
+<script>function g(id){var r=document.getElementById(id).getBoundingClientRect();return id+":"+[r.left,r.top,r.width,r.height].map(Math.round).join(",")}
+function all(){return Array.prototype.map.call(arguments,g).join(" ")}
+function row(id,t){var d=document.createElement('div');d.id=id;d.className='row';d.textContent=t;return d}
+console.log('LC '+all('a','p','c','end'));
+document.getElementById('a').appendChild(row('a0','x'));
+document.getElementById('p').appendChild(row('p0','x'));
+document.getElementById('c').appendChild(row('c0','x'));
+console.log('LC '+all('a','a0','p','p0','c','c0','end'));</script></body></html>

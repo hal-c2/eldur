@@ -178,7 +178,6 @@ ApplicationWindow {
                         renderType: Text.NativeRendering
                     }
                     objectName: "b"
-                    Layout.alignment: Qt.AlignHCenter
                     Layout.topMargin: 18 - below.eldurCarry
                     Layout.preferredHeight: implicitHeight
                 }

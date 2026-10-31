@@ -1,0 +1,8 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.row{height:30px;background:#def}#end{height:10px;background:red}
+</style></head><body><div id="a"></div><div id="b">old text</div><div id="c">  </div><div id="end"></div>
+<script>function g(id){var r=document.getElementById(id).getBoundingClientRect();return id+":"+[r.left,r.top,r.width,r.height].map(Math.round).join(",")}
+function all(){return Array.prototype.map.call(arguments,g).join(" ")}
+document.getElementById('a').innerHTML='<div id="a0" class="row">x</div><div id="a1" class="row">y</div>';
+document.getElementById('b').innerHTML='<div id="b0" class="row">x</div>';
+var c=document.getElementById('c');c.innerHTML='<div id="c0" class="row">x</div>';c.innerHTML+='<div id="c1" class="row">y</div>';
+console.log('LC '+all('a','a0','a1','b','b0','c','c0','c1','end'));</script></body></html>

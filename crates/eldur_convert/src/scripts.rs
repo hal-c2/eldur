@@ -25,6 +25,7 @@ pub(crate) struct Scripts {
     matches: HashMap<DomQuery, Vec<NodeId>>,
     /// Every element a script can reach statically.
     pub wanted: HashSet<NodeId>,
+    pub(crate) gains: Gains,
 }
 
 impl Scripts {
@@ -139,12 +140,65 @@ pub(crate) fn collect(
         analysis.dispatch_by_path = true;
         analysis.runtime_dom = true;
     }
+    let gains = Gains::of(doc, &analysis, &matches, &wanted);
     Scripts {
         inputs,
         analysis,
         keys,
         matches,
         wanted,
+        gains,
+    }
+}
+
+/// The boxes a script may put block children in. An element's form follows
+/// what it holds in the document, so one that holds no blocks there needs a
+/// layout of its own for them.
+#[derive(Debug, Default)]
+pub(crate) struct Gains {
+    /// Named by a script's query, or looked up and handed on where analysis
+    /// cannot follow.
+    pub(crate) nodes: HashSet<NodeId>,
+    /// A script inserts into something it finds at run time, which may be
+    /// any empty element.
+    pub(crate) any_empty: bool,
+}
+
+impl Gains {
+    fn of(
+        doc: &Document,
+        analysis: &eldur_js::Analysis,
+        matches: &HashMap<DomQuery, Vec<NodeId>>,
+        wanted: &HashSet<NodeId>,
+    ) -> Self {
+        let mut receivers: Vec<&ElementRef> = analysis
+            .created
+            .iter()
+            .filter(|e| !crate::emit::templates::stays_inline(&e.tag))
+            .flat_map(|e| &e.parents)
+            .collect();
+        receivers.extend(&analysis.opaque_inserts);
+        let mut gains = Self::default();
+        for receiver in receivers {
+            match receiver {
+                ElementRef::Query(query) => {
+                    gains
+                        .nodes
+                        .extend(matches.get(query).into_iter().flatten().copied());
+                }
+                ElementRef::Unknown => gains.any_empty = true,
+                ElementRef::Created(_) => {}
+            }
+        }
+        if gains.any_empty {
+            gains.nodes.extend(
+                wanted
+                    .iter()
+                    .copied()
+                    .filter(|&n| doc.element_children(n).next().is_none()),
+            );
+        }
+        gains
     }
 }
 

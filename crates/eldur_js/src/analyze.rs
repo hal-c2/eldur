@@ -484,12 +484,23 @@ impl AnalysisVisitor<'_, '_> {
         span: Span,
     ) {
         for arg in children {
-            if let Some(e) = arg.as_expression()
-                && let ElementRef::Created(id) = self.target(e)
-            {
-                let pos = self.pos(span);
-                self.dynamic.inserts.push((id, parent.clone(), pos));
+            match arg.as_expression() {
+                Some(e) => {
+                    if let ElementRef::Created(id) = self.target(e) {
+                        let pos = self.pos(span);
+                        self.dynamic.inserts.push((id, parent.clone(), pos));
+                    } else if !is_text_node(e, self.scoping) {
+                        self.record_opaque(parent);
+                    }
+                }
+                None => self.record_opaque(parent),
             }
+        }
+    }
+
+    fn record_opaque(&mut self, parent: &ElementRef) {
+        if !self.analysis.opaque_inserts.contains(parent) {
+            self.analysis.opaque_inserts.push(parent.clone());
         }
     }
 
@@ -517,18 +528,25 @@ impl AnalysisVisitor<'_, '_> {
         let line = Some(line_for_span(self.input, span));
         let mut shapes = MarkupShapes::default();
         let mut opaque = false;
+        let mut unread = false;
         for alt in &alts {
             let mut text = String::new();
             for piece in alt {
                 match piece {
                     Piece::Lit(s) => text.push_str(&s.replace(SENTINEL, "")),
-                    Piece::Open | Piece::Sym(_) => text.push(SENTINEL),
+                    Piece::Open | Piece::Sym(_) => {
+                        unread = true;
+                        text.push(SENTINEL);
+                    }
                 }
             }
             let doc = eldur_dom::Document::parse_fragment(&text);
             if let Some(top) = doc.html() {
                 opaque |= shapes.walk(&doc, top, None, true);
             }
+        }
+        if unread || opaque {
+            self.record_opaque(parent);
         }
         if opaque {
             self.analysis.diagnostics.push(Diagnostic {
@@ -1799,6 +1817,20 @@ impl DynState {
         }
         out
     }
+}
+
+/// A string or a text node made in place: an insert that adds no element.
+fn is_text_node(expr: &Expression<'_>, scoping: &Scoping) -> bool {
+    if extract_string_literal(expr).is_some() {
+        return true;
+    }
+    let Expression::CallExpression(call) = unwrap_parens(expr) else {
+        return false;
+    };
+    let Expression::StaticMemberExpression(member) = unwrap_parens(&call.callee) else {
+        return false;
+    };
+    member.property.name == "createTextNode" && is_global_document(&member.object, scoping)
 }
 
 /// Element properties that walk the tree from an element.

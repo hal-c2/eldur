@@ -1,0 +1,10 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.row{height:30px;background:#def}#end{height:10px;background:red}
+#list{background:#eee;padding:5px;margin:7px 0}</style></head><body><div id="list">
+   </div><div id="plain">   </div><div id="end"></div>
+<script>function g(id){var r=document.getElementById(id).getBoundingClientRect();return id+":"+[r.left,r.top,r.width,r.height].map(Math.round).join(",")}
+function all(){return Array.prototype.map.call(arguments,g).join(" ")}
+function row(id,t){var d=document.createElement('div');d.id=id;d.className='row';d.textContent=t;return d}
+var l=document.getElementById('list'),q=document.getElementById('plain');
+console.log('LC '+all('list','plain','end'));
+for(var i=0;i<2;i++){l.appendChild(row('a'+i,'a'));q.appendChild(row('b'+i,'b'));}
+console.log('LC '+all('list','a0','a1','plain','b0','b1','end'));</script></body></html>

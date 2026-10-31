@@ -614,6 +614,49 @@ impl<'a> Emitter<'a, '_> {
     }
 
     /// A `display: table`/`inline-table` box and its captions.
+    /// A table with no rows that a script is seen to fill. Cells are placed
+    /// on one grid worked out from the document's rows, so one with none has
+    /// nothing to work from: its sections stack, and rows lay out their cells.
+    pub(super) fn table_to_fill(&self, b: &LayoutBox<'_>) -> bool {
+        let gains = |n: &LayoutBox<'_>| n.node.is_some_and(|n| self.gains.contains(&n));
+        let parts = boxes(b);
+        (gains(b) || parts.iter().any(gains))
+            && parts.iter().all(|p| {
+                boxes(p).is_empty()
+                    && !matches!(
+                        p.style.display,
+                        Display::TableRow
+                            | Display::TableCaption
+                            | Display::TableColumn
+                            | Display::TableColumnGroup
+                    )
+            })
+    }
+
+    pub(super) fn column_to_fill(
+        &mut self,
+        b: &LayoutBox<'_>,
+        inherited: TextDecorationLine,
+        line: Option<u32>,
+    ) -> Emitted {
+        let mt = self.vertical_margin(&b.style.margin.top, line);
+        let mb = self.vertical_margin(&b.style.margin.bottom, line);
+        let mut column = Object::new("ColumnLayout");
+        column.set("spacing", 0.0);
+        // Shrink-to-fit, as a table with `width: auto` is (CSS 2.1 §17.5.2).
+        column.set("Layout.maximumWidth", Value::expr("implicitWidth"));
+        for part in boxes(b) {
+            let obj = self.item(part, inherited).obj;
+            column.push_child(obj);
+        }
+        Emitted {
+            obj: column,
+            top: MarginSet::of(mt),
+            bottom: MarginSet::of(mb),
+            collapse_through: false,
+        }
+    }
+
     pub(super) fn table(
         &mut self,
         b: &LayoutBox<'_>,

@@ -210,7 +210,6 @@ ApplicationWindow {
                                                                 verticalAlignment: Text.AlignVCenter
                                                                 renderType: Text.NativeRendering
                                                             }
-                                                            Layout.alignment: Qt.AlignHCenter
                                                             Layout.preferredHeight: implicitHeight
                                                         }
                                                     }

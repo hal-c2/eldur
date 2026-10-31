@@ -1,0 +1,7 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.row{height:30px;background:#def}#end{height:10px;background:red}
+button{box-sizing:border-box;width:40px;height:21px}</style></head><body data-clicks=#go #go><button id="go">go</button><div id="list"></div><div id="end"></div>
+<script>function g(id){var r=document.getElementById(id).getBoundingClientRect();return id+":"+[r.left,r.top,r.width,r.height].map(Math.round).join(",")}
+function all(){return Array.prototype.map.call(arguments,g).join(" ")}
+function row(id,t){var d=document.createElement('div');d.id=id;d.className='row';d.textContent=t;return d}
+var l=document.getElementById('list');console.log('LC '+all('list','end'));
+document.getElementById('go').addEventListener('click',function(){l.appendChild(row('r'+l.children.length,'x'));console.log('LC '+all('r'+(l.children.length-1),'list','end'));});</script></body></html>

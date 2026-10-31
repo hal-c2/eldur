@@ -178,6 +178,26 @@ Mapping depends on the `TargetKind` of the resolved `QmlTarget`:
 
 ---
 
+### 5.1 Containers a script fills
+
+An element's form follows what it holds in the document, so the converter
+looks for the boxes a script may put block children in (`Gains` in
+`scripts.rs`): the parents of created non-inline elements, and receivers of a
+node or markup analysis cannot name. A receiver analysis cannot name makes
+every queried element without element children a candidate.
+
+- A box with text or nothing gets a `ColumnLayout` below its `Text`; both take
+  no height while empty, as an empty CSS box takes none.
+- An empty flex container places its spacers at run time (`eldurPack`), and an
+  empty grid gives each item its cell and column size (`eldurTracks`).
+- A table with no rows stacks its sections, and created rows lay out their
+  cells in a `RowLayout`. Column widths come from each cell's own `width`, not
+  from the table's column solver.
+- Elsewhere the runtime makes the column when a block arrives (`_appendTarget`).
+
+Reading geometry (`getBoundingClientRect`, `offset*`, `client*`, `scroll*`,
+`window.scrollX/Y`) first lays out what changed, as a browser does.
+
 ## 6. Focus, Blur, and Scrolling APIs
 
 | Browser API | Static Lowering (on resolved `QmlTarget`) | Runtime Support (`eldur_runtime.js`) |
