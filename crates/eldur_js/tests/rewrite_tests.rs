@@ -92,6 +92,15 @@ fn run_rewrite(scripts: &[ScriptInput], resolver: &FakeResolver) -> JsOutput {
     rewrite(scripts, &analysis, resolver)
 }
 
+/// The resolved lowering, which these tests pin, on a page whose writes would
+/// otherwise send its lookups to the runtime. `live_lookups_*` below pin that
+/// decision for the same kinds of write.
+fn run_rewrite_resolved(scripts: &[ScriptInput], resolver: &FakeResolver) -> JsOutput {
+    let mut analysis = analyze(scripts);
+    analysis.live_queries.clear();
+    rewrite(scripts, &analysis, resolver)
+}
+
 #[test]
 fn maps_properties_by_target_kind_for_text_box_and_controls() {
     let resolver = FakeResolver::default()
@@ -208,7 +217,7 @@ const chips = document.querySelectorAll(".chip");
 "##,
     );
 
-    let out = run_rewrite(&[script], &resolver);
+    let out = run_rewrite_resolved(&[script], &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
     assert_eq!(out.init_function.as_deref(), Some("__eldur_init"));
     insta::assert_snapshot!(out.page_js, @r###"
@@ -234,7 +243,7 @@ function __eldur_init(rootItem) {
     Eldur.setAttribute(panel, "aria-expanded", "true");
     expanded = Eldur.getAttribute(panel, "aria-expanded");
     ((__v) => (Eldur.setInnerHTML(panel, __v), __v))("<b>Hello</b>");
-    chips = [chip0, chip1];
+    chips = Eldur.staticNodeList([chip0, chip1]);
 }
 "###);
 }
@@ -446,7 +455,7 @@ document.getElementById("once").addEventListener("click", () => {
         "if (!ready) return false;\nnavigate(this, event);\nreturn false;",
     );
 
-    let out = run_rewrite(&[main_js, attr], &resolver);
+    let out = run_rewrite_resolved(&[main_js, attr], &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
     assert_eq!(out.init_function, None);
     assert_eq!(
@@ -484,7 +493,7 @@ function handleGo(e) {
 var __eldur_once_0 = false;
 
 function __eldur_on_click_goBtn(event) {
-    handleGo.call(goBtn, event);
+    handleGo.call(Eldur.wrap(goBtn), event);
 }
 
 function __eldur_on_mouseenter_goBtn(event) {
@@ -505,7 +514,7 @@ function __eldur_on_click_onceBtn(event) {
 
 function __eldur_on_click_linkItem(event) {
     if (!ready) { event.preventDefault(); return; }
-    navigate(linkItem, event);
+    navigate(Eldur.wrap(linkItem), event);
     event.preventDefault();
 }
 "###);
@@ -539,7 +548,7 @@ function disableClick() {
 var __eldur_prop_click_btn = null;
 function __eldur_on_click_btn_prop(event) {
     if (__eldur_prop_click_btn) {
-        __eldur_prop_click_btn.call(btn, event);
+        __eldur_prop_click_btn.call(Eldur.wrap(btn), event);
     }
 }
 
@@ -570,7 +579,7 @@ function realAccess() {
 "#,
     );
 
-    let out = run_rewrite(&[script], &resolver);
+    let out = run_rewrite_resolved(&[script], &resolver);
     assert!(out.diagnostics.is_empty());
     insta::assert_snapshot!(out.page_js, @r###"
 .import "eldur_runtime.js" as Eldur
@@ -1111,7 +1120,7 @@ function updateDom(suffix, extraClass, htmlChunk, fallbackRole, node, state) {
 "##,
     );
 
-    let out = run_rewrite(&[script], &resolver);
+    let out = run_rewrite_resolved(&[script], &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
     assert!(
         !out.page_js.contains(".innerHTML"),
@@ -1209,7 +1218,7 @@ function captureAssigned(rhs, pickNode) {
 "#,
     );
 
-    let out = run_rewrite(&[script], &resolver);
+    let out = run_rewrite_resolved(&[script], &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
     assert_eq!(out.init_function, None);
     insta::assert_snapshot!(out.page_js, @r###"
@@ -2063,24 +2072,25 @@ let modTarget = 0;
 "#,
     );
 
-    let out = run_rewrite(&[s1, m1, m2], &resolver);
+    let out = run_rewrite_resolved(&[s1, m1, m2], &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
 
     // 1. Elided DOM binding shorthand in classic top-level and function scope preserves `btn: save_btn` and `hdr: main_hdr`
     assert!(
-        out.page_js
-            .contains("state = { btn: save_btn, count, explicit: save_btn };"),
+        out.page_js.contains(
+            "state = { btn: Eldur.wrap(save_btn), count, explicit: Eldur.wrap(save_btn) };"
+        ),
         "expected classic top-level shorthand `{{ btn }}` to preserve key `btn: save_btn` and leave `count` / `explicit: save_btn` intact:\n{}",
         out.page_js
     );
     assert!(
-        !out.page_js.contains("{ save_btn") && !out.page_js.contains(", save_btn,"),
+        !out.page_js.contains("{ save_btn") && !out.page_js.contains(", Eldur.wrap(save_btn),"),
         "elided DOM shorthand must not collapse `{{ btn }}` into `{{ save_btn }}`:\n{}",
         out.page_js
     );
     assert!(
         out.page_js.contains(
-            "Object.assign({ btn: save_btn, hdr: main_hdr, count, localPick, plainLocal, fnAssigned, explicitHdr: main_hdr }, restLocal)"
+            "Object.assign({ btn: Eldur.wrap(save_btn), hdr: Eldur.wrap(main_hdr), count, localPick, plainLocal, fnAssigned, explicitHdr: Eldur.wrap(main_hdr) }, restLocal)"
         ),
         "expected function-scope object literal with spread to preserve shorthand keys for `btn` and `hdr` while keeping ordinary shorthand unchanged:\n{}",
         out.page_js
@@ -2088,12 +2098,12 @@ let modTarget = 0;
 
     // 2. Shorthand binding declarations + rest + defaults with elided DOM bindings
     assert!(
-        out.page_js.contains("({ picked = save_btn, count: renamedCount = 0 } = __eldur_obj_0); restTop = Eldur.objectRest(__eldur_obj_0, [\"picked\", \"count\"]);"),
+        out.page_js.contains("({ picked = Eldur.wrap(save_btn), count: renamedCount = 0 } = __eldur_obj_0); restTop = Eldur.objectRest(__eldur_obj_0, [\"picked\", \"count\"]);"),
         "expected top-level destructuring with default and object rest to preserve shorthand key `picked = save_btn`:\n{}",
         out.page_js
     );
     assert!(
-        out.page_js.contains("{ localPick = main_hdr, plainLocal } = __eldur_obj_1, restLocal = Eldur.objectRest(__eldur_obj_1, [\"localPick\", \"plainLocal\"])"),
+        out.page_js.contains("{ localPick = Eldur.wrap(main_hdr), plainLocal } = __eldur_obj_1, restLocal = Eldur.objectRest(__eldur_obj_1, [\"localPick\", \"plainLocal\"])"),
         "expected function-local destructuring with default and object rest to preserve `localPick = main_hdr` and `plainLocal`:\n{}",
         out.page_js
     );
@@ -2101,26 +2111,28 @@ let modTarget = 0;
     // 3. Shorthand destructuring assignment with default referencing elided DOM binding
     assert!(
         out.page_js
-            .contains("({ assigned = save_btn, plainAssign } = { plainAssign: 11 });")
-            && out.page_js.contains("({ fnAssigned = save_btn } = extra);"),
+            .contains("({ assigned = Eldur.wrap(save_btn), plainAssign } = { plainAssign: 11 });")
+            && out
+                .page_js
+                .contains("({ fnAssigned = Eldur.wrap(save_btn) } = extra);"),
         "expected shorthand destructuring assignments to preserve key and rewrite default to `save_btn`:\n{}",
         out.page_js
     );
 
     // 4. Module symbol_renames alongside elided DOM bindings in m2.js
     assert!(
-        out.page_js.contains("modState = { btn: save_btn, shared: __eldur_m2_shared, plainMod: __eldur_m2_plainMod, explicitBtn: save_btn };"),
+        out.page_js.contains("modState = { btn: Eldur.wrap(save_btn), shared: __eldur_m2_shared, plainMod: __eldur_m2_plainMod, explicitBtn: Eldur.wrap(save_btn) };"),
         "expected module object literal to preserve keys for both elided DOM `btn: save_btn` and renamed module symbols:\n{}",
         out.page_js
     );
     assert!(
-        out.page_js.contains("({ modPick: __eldur_m2_modPick = save_btn, shared: __eldur_m2_modShared = 0 } = __eldur_obj_2); __eldur_m2_modRest = Eldur.objectRest(__eldur_obj_2, [\"modPick\", \"shared\"]);") && out.page_js.contains("return { btn: save_btn, shared: __eldur_m2_shared, aliased, fallback, restMod, modPick: __eldur_m2_modPick, modShared: __eldur_m2_modShared, modRest: __eldur_m2_modRest };"),
+        out.page_js.contains("({ modPick: __eldur_m2_modPick = Eldur.wrap(save_btn), shared: __eldur_m2_modShared = 0 } = __eldur_obj_2); __eldur_m2_modRest = Eldur.objectRest(__eldur_obj_2, [\"modPick\", \"shared\"]);") && out.page_js.contains("return { btn: Eldur.wrap(save_btn), shared: __eldur_m2_shared, aliased, fallback, restMod, modPick: __eldur_m2_modPick, modShared: __eldur_m2_modShared, modRest: __eldur_m2_modRest };"),
         "expected module function return object to preserve `btn: save_btn` and `shared: __eldur_m2_shared` while keeping local shorthand unchanged:\n{}",
         out.page_js
     );
     assert!(
         out.page_js
-            .contains("({ modTarget: __eldur_m2_modTarget = save_btn } = {});"),
+            .contains("({ modTarget: __eldur_m2_modTarget = Eldur.wrap(save_btn) } = {});"),
         "expected module destructuring assignment to preserve `modTarget: __eldur_m2_modTarget = save_btn`:\n{}",
         out.page_js
     );
@@ -2214,7 +2226,7 @@ function inspectDom() {
 "#,
     );
 
-    let out = run_rewrite(&[script], &resolver);
+    let out = run_rewrite_resolved(&[script], &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
     let js = &out.page_js;
     assert!(
@@ -2333,7 +2345,7 @@ function testExtended(dynEl) {
 "##,
     );
 
-    let out = run_rewrite(&[script], &resolver);
+    let out = run_rewrite_resolved(&[script], &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
     let js = &out.page_js;
     assert!(
@@ -2356,7 +2368,10 @@ function testExtended(dynEl) {
         js.contains("Eldur.wrap(cardBox).style.removeProperty(\"--gap\");"),
         "{js}"
     );
-    assert!(js.contains("Eldur.getComputedStyle(cardBox);"), "{js}");
+    assert!(
+        js.contains("Eldur.getComputedStyle(Eldur.wrap(cardBox));"),
+        "{js}"
+    );
     assert!(
         js.contains("Eldur.wrap(actBtn).matches(\".primary\");"),
         "{js}"
@@ -2365,7 +2380,10 @@ function testExtended(dynEl) {
         js.contains("Eldur.wrap(actBtn).closest(\"#card\");"),
         "{js}"
     );
-    assert!(js.contains("Eldur.wrap(cardBox).contains(actBtn);"), "{js}");
+    assert!(
+        js.contains("Eldur.wrap(cardBox).contains(Eldur.wrap(actBtn));"),
+        "{js}"
+    );
     assert!(
         js.contains("Eldur.wrap(cardBox).getElementsByClassName(\"item\");"),
         "{js}"
@@ -2383,23 +2401,37 @@ function testExtended(dynEl) {
         "{js}"
     );
     assert!(
-        js.contains("Eldur.wrap(cardBox).insertAdjacentElement(\"beforebegin\", actBtn);"),
-        "{js}"
-    );
-    assert!(js.contains("Eldur.wrap(cardBox).append(actBtn);"), "{js}");
-    assert!(js.contains("Eldur.wrap(cardBox).prepend(actBtn);"), "{js}");
-    assert!(js.contains("Eldur.wrap(cardBox).before(actBtn);"), "{js}");
-    assert!(js.contains("Eldur.wrap(cardBox).after(actBtn);"), "{js}");
-    assert!(
-        js.contains("Eldur.wrap(cardBox).replaceWith(actBtn);"),
+        js.contains(
+            "Eldur.wrap(cardBox).insertAdjacentElement(\"beforebegin\", Eldur.wrap(actBtn));"
+        ),
         "{js}"
     );
     assert!(
-        js.contains("Eldur.wrap(cardBox).replaceChildren(actBtn);"),
+        js.contains("Eldur.wrap(cardBox).append(Eldur.wrap(actBtn));"),
         "{js}"
     );
     assert!(
-        js.contains("Eldur.wrap(cardBox).replaceChild(actBtn, dynEl);"),
+        js.contains("Eldur.wrap(cardBox).prepend(Eldur.wrap(actBtn));"),
+        "{js}"
+    );
+    assert!(
+        js.contains("Eldur.wrap(cardBox).before(Eldur.wrap(actBtn));"),
+        "{js}"
+    );
+    assert!(
+        js.contains("Eldur.wrap(cardBox).after(Eldur.wrap(actBtn));"),
+        "{js}"
+    );
+    assert!(
+        js.contains("Eldur.wrap(cardBox).replaceWith(Eldur.wrap(actBtn));"),
+        "{js}"
+    );
+    assert!(
+        js.contains("Eldur.wrap(cardBox).replaceChildren(Eldur.wrap(actBtn));"),
+        "{js}"
+    );
+    assert!(
+        js.contains("Eldur.wrap(cardBox).replaceChild(Eldur.wrap(actBtn), dynEl);"),
         "{js}"
     );
     assert!(js.contains("Eldur.wrap(cardBox).cloneNode(true);"), "{js}");
@@ -2526,5 +2558,91 @@ fn compares_a_resolved_element_with_a_dom_read_as_wrappers() {
             .contains("Eldur.wrap(m.parentNode) === Eldur.wrap(hostBox)"),
         "{}",
         out.page_js
+    );
+}
+
+fn live_page(source: &str) -> String {
+    let resolver = FakeResolver::default()
+        .with_id("a", 1, "aBox", TargetKind::Box)
+        .with_id("b", 2, "bBox", TargetKind::Box)
+        .with_selector(".x", vec![FakeResolver::target(1, "aBox", TargetKind::Box)]);
+    run_rewrite(&[classic("live.js", source)], &resolver).page_js
+}
+
+#[test]
+fn live_lookups_stay_resolved_when_nothing_can_change_their_answer() {
+    let js = live_page(
+        r#"const a = document.getElementById("a"); a.style.color = "red"; console.log(a.id);"#,
+    );
+    assert!(!js.contains("getElementById"), "{js}");
+    assert!(js.contains("aBox"), "{js}");
+}
+
+#[test]
+fn live_lookups_go_through_the_runtime_for_each_write_that_can_change_an_id_lookup() {
+    for write in [
+        r#"a.remove();"#,
+        r#"a.id = "b";"#,
+        r#"a.setAttribute("id", "b");"#,
+        r#"a.innerHTML = "<div id=b></div>";"#,
+        r#"a.parentNode.removeChild(a);"#,
+        r#"a.parentNode.appendChild(a);"#,
+        r#"function w(n) { n.textContent = ""; }"#,
+    ] {
+        let js = live_page(&format!(
+            r#"const a = document.getElementById("a"); {write}"#
+        ));
+        assert!(
+            js.contains(r#"Eldur.document.getElementById("a")"#),
+            "{write}: {js}"
+        );
+    }
+}
+
+#[test]
+fn live_lookups_keep_an_id_lookup_resolved_when_only_new_idless_elements_arrive() {
+    let js = live_page(
+        r#"const a = document.getElementById("a");
+           a.appendChild(document.createElement("div"));"#,
+    );
+    assert!(!js.contains("getElementById"), "{js}");
+}
+
+#[test]
+fn live_lookups_send_selectors_to_the_runtime_when_the_tree_or_their_class_changes() {
+    for write in [
+        r#"document.body.appendChild(document.createElement("div"));"#,
+        r#"document.getElementById("b").classList.add("x");"#,
+        r#"document.getElementById("b").className = "y";"#,
+    ] {
+        let js = live_page(&format!(
+            r#"console.log(document.querySelectorAll(".x").length); {write}"#
+        ));
+        assert!(
+            js.contains(r#"Eldur.document.querySelectorAll(".x")"#),
+            "{write}: {js}"
+        );
+    }
+    let js = live_page(
+        r#"console.log(document.querySelectorAll(".x").length);
+           document.getElementById("b").classList.add("other");"#,
+    );
+    assert!(!js.contains("Eldur.document.querySelectorAll"), "{js}");
+}
+
+#[test]
+fn live_lookups_hand_scripts_a_wrapper_wherever_a_resolved_element_escapes() {
+    let js = live_page(
+        r#"const a = document.getElementById("a");
+           const o = { a };
+           function f(x) { return x; }
+           f(a);
+           a.onclick = function () { f(this); };"#,
+    );
+    assert!(js.contains("a: Eldur.wrap(aBox)"), "{js}");
+    assert!(js.contains("f(Eldur.wrap(aBox))"), "{js}");
+    assert!(
+        js.contains("(function () { f(Eldur.wrap(aBox)); })"),
+        "{js}"
     );
 }

@@ -10,7 +10,7 @@ function q(s){L(s,ids(document.querySelectorAll(s)))}
 var n=document.createElement("li");n.id="l5";document.getElementById("u").appendChild(n);
 q("li:first-child");q("li:last-child");q("li:nth-child(2)");q("li:nth-child(odd)");q("li:nth-child(2n+1)");q("li:nth-last-child(1)");
 q("li + li");q("#l1 + li");q("#l1 ~ .i");q("#l2 ~ li");q("ul > li.i");q("ul li");q("div > p");q("em + p");q("div p");
-q("li:not(.i)");q("li:not(.i):not(#l2)");q(":not(li):not(p):not(em):not(html):not(body):not(head):not(meta):not(title):not(script)");
+q("li:not(.i)");q("li:not(.i):not(#l2)");q(":not(li):not(p):not(em):not(html):not(body):not(head):not(meta):not(title):not(script):not(style)");
 q("li:is(.i,#l2)");q("p, em");q("em, p, #u");q("*.i");
 q("[data-k]");q("[data-k=ab-cd]");q("[data-k^=ab]");q("[data-k$=cd]");q("[data-k*=\"b-c\"]");q("[data-k|=ab]");q("[data-k~=ab-cd]");
 q("li:only-child");q("em:first-of-type");q("p:last-of-type");q("p:nth-of-type(2)");q("div:empty");q("LI");q("LI.i");

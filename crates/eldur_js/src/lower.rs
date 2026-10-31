@@ -40,6 +40,8 @@ pub(crate) struct SharedRewriteState {
     /// `Eldur.listen` rather than single top-level static hoisting because the script
     /// registers multiple listeners, removes listeners, or dispatches events dynamically.
     pub dynamic_listener_events: HashSet<(String, String)>,
+    /// `Analysis::reads_attributes`.
+    pub reads_attributes: bool,
     /// Tracks which `(qml_id, event)` pairs already have a forwarding `EventBinding`
     /// registered for `Eldur.listen` / `Eldur.dispatchEvent`.
     pub dynamic_listener_slots: HashSet<(String, String)>,
@@ -79,7 +81,7 @@ impl SharedRewriteState {
         let fn_name = self.alloc_fn_name(&format!("__eldur_on_{safe_ev}_{}_prop", target.qml_id));
         self.generated_decls.push(format!("var {slot_var} = null;"));
         self.generated_decls.push(format!(
-            "function {fn_name}(event) {{\n    if ({slot_var}) {{\n        {slot_var}.call({}, event);\n    }}\n}}",
+            "function {fn_name}(event) {{\n    if ({slot_var}) {{\n        {slot_var}.call(Eldur.wrap({}), event);\n    }}\n}}",
             target.qml_id
         ));
         self.bindings.push(EventBinding {
@@ -269,6 +271,14 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
             .map_or(id.name.as_str(), String::as_str)
     }
 
+    /// What `expr` finds in the document as written, live or not.
+    fn original_single_target(&self, expr: &Expression<'_>) -> Option<QmlTarget> {
+        let query = self.bindings.resolve_expr(unwrap_parens(expr))?;
+        let mut found = self.resolver.original(&query);
+        let single = matches!(query, DomQuery::Selector(_)) || found.len() == 1;
+        (single && !found.is_empty()).then(|| found.swap_remove(0))
+    }
+
     pub(crate) fn resolve_single_target(&self, expr: &Expression<'_>) -> Option<QmlTarget> {
         let e = unwrap_parens(expr);
         if matches!(e, Expression::ThisExpression(_)) {
@@ -404,8 +414,9 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
         let id = &target.qml_id;
         match prop {
             "textContent" | "innerText" => {
+                // A box has a `<id>Text` only when it has text of its own.
                 if target.kind == TargetKind::Box {
-                    format!("{id}Text.text")
+                    format!("Eldur.getText({id})")
                 } else {
                     format!("{id}.text")
                 }
@@ -575,6 +586,10 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
                 },
                 "selectedIndex" => format_assignment(&format!("{id}.currentIndex"), op, &rhs_str),
                 "checked" => format_assignment(&format!("{id}.checked"), op, &rhs_str),
+                // These are attributes too, and only the runtime keeps those.
+                "disabled" | "hidden" if self.shared.reads_attributes => {
+                    format_assignment(&format!("Eldur.wrap({id}).{prop}"), op, &rhs_str)
+                }
                 "disabled" => {
                     format_inverted_bool_assignment(&format!("{id}.enabled"), op, right, &rhs_str)
                 }
@@ -635,7 +650,8 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
 impl<'a> Visit<'a> for AstLowerer<'a, '_> {
     fn visit_this_expression(&mut self, it: &oxc_ast::ast::ThisExpression) {
         if let Some(Some(target)) = self.this_stack.last() {
-            self.editor.replace(it.span, target.qml_id.clone());
+            self.editor
+                .replace(it.span, format!("Eldur.wrap({})", target.qml_id));
         }
     }
 
@@ -732,7 +748,11 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
         if let Some(query) = self.bindings.resolve_ident(it, false)
             && let Some(target) = resolve_query_to_single_target(&query, self.resolver)
         {
-            self.editor.replace(it.span, target.qml_id);
+            // A value a script can keep or pass on: scripts see one kind of
+            // element, however it was found. Direct accesses take the fast
+            // paths and never reach here.
+            self.editor
+                .replace(it.span, format!("Eldur.wrap({})", target.qml_id));
             return;
         }
 
@@ -1013,6 +1033,10 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
         {
             for side in [&it.left, &it.right] {
                 self.visit_expression(side);
+                // Visiting a resolved element already gave its wrapper.
+                if self.resolve_single_target(side).is_some() {
+                    continue;
+                }
                 let inner = self.editor.extract_and_consume(side.span());
                 self.editor
                     .replace(side.span(), format!("Eldur.wrap({inner})"));
@@ -1046,14 +1070,16 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                 DomQuery::ById(_) => {
                     let matches = self.resolver.resolve(&query);
                     if matches.len() == 1 {
-                        self.editor.replace(it.span, matches[0].qml_id.clone());
+                        self.editor
+                            .replace(it.span, format!("Eldur.wrap({})", matches[0].qml_id));
                         return;
                     }
                 }
                 DomQuery::Selector(_) => {
                     let matches = self.resolver.resolve(&query);
                     if let Some(first) = matches.first() {
-                        self.editor.replace(it.span, first.qml_id.clone());
+                        self.editor
+                            .replace(it.span, format!("Eldur.wrap({})", first.qml_id));
                         return;
                     }
                 }
@@ -1065,7 +1091,18 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                             .map(|t| t.qml_id.as_str())
                             .collect::<Vec<_>>()
                             .join(", ");
-                        self.editor.replace(it.span, format!("[{joined}]"));
+                        // No write can change these, but the script still
+                        // expects the kind of list the method returns.
+                        let kind = match unwrap_parens(&it.callee) {
+                            Expression::StaticMemberExpression(m)
+                                if m.property.name == "querySelectorAll" =>
+                            {
+                                "staticNodeList"
+                            }
+                            _ => "staticCollection",
+                        };
+                        self.editor
+                            .replace(it.span, format!("Eldur.{kind}([{joined}])"));
                         return;
                     }
                 }
@@ -1314,11 +1351,29 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                         | "toggleAttribute"
                 )
             {
+                // A live lookup still needs the generated handler on the
+                // element it finds in the document, as a resolved one has.
+                let bound_event = if method == "addEventListener" {
+                    it.arguments
+                        .first()
+                        .and_then(|a| a.as_expression())
+                        .and_then(extract_string_literal)
+                        .filter(|ev| {
+                            let Some(target) = self.original_single_target(&member.object) else {
+                                return false;
+                            };
+                            self.shared.register_dynamic_listener_slot(&target, ev);
+                            matches!(ev.as_str(), "keydown" | "keyup" | "submit")
+                        })
+                } else {
+                    None
+                };
                 self.visit_expression(&member.object);
                 let obj_str = self.editor.extract_and_consume(member.object.span());
                 let args_str = self.render_call_args(&it.arguments);
                 let sep = if args_str.is_empty() { "" } else { ", " };
                 let runtime_fn = match method {
+                    "addEventListener" if bound_event.is_some() => "listenBound",
                     "addEventListener" => "listen",
                     "removeEventListener" => "unlisten",
                     other => other,

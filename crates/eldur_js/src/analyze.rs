@@ -73,6 +73,7 @@ pub(crate) fn analyze(scripts: &[ScriptInput]) -> Analysis {
     let mut seen_listened: HashSet<(DomQuery, String)> = HashSet::new();
     let mut seen_writes: HashSet<(DomQuery, String)> = HashSet::new();
     let mut dynamic = DynState::default();
+    let mut lookups = LookupFacts::default();
 
     for (_, input, parsed) in &valid_scripts {
         let scoping = &parsed.scoping;
@@ -113,6 +114,7 @@ pub(crate) fn analyze(scripts: &[ScriptInput]) -> Analysis {
             eval: &eval,
             facts: &facts,
             dynamic: &mut dynamic,
+            lookups: &mut lookups,
             path: Vec::new(),
             this_is_element: vec![matches!(input.kind, ScriptKind::HandlerAttribute { .. })],
             pending_method: false,
@@ -123,7 +125,128 @@ pub(crate) fn analyze(scripts: &[ScriptInput]) -> Analysis {
 
     analysis.created = dynamic.finish();
     analysis.runtime_dom |= analysis.mutates_dom;
+    for write in &analysis.class_writes {
+        lookups.written_classes.extend(write.names.iter().cloned());
+        lookups.any_class_changes |= write.open || write.assigns;
+    }
+    lookups.attrs_change |= !analysis.class_writes.is_empty();
+    lookups.tree_changes = analysis.mutates_dom;
+    analysis.live_queries = analysis
+        .queries
+        .iter()
+        .filter(|q| lookups.is_live(q))
+        .cloned()
+        .collect();
+    analysis.runtime_dom |= !analysis.live_queries.is_empty();
+    analysis.reads_attributes |= analysis.queries.iter().any(|q| match q {
+        DomQuery::ById(_) => false,
+        DomQuery::Selector(s) | DomQuery::SelectorAll(s) => s.contains('['),
+    });
+    analysis.runtime_dom |= analysis.reads_attributes;
     analysis
+}
+
+/// What scripts do anywhere on the page that can change a lookup's answer.
+///
+/// Deliberately flow-insensitive: a handler can run at any time, and a value
+/// passed around cannot be followed, so the question is whether a write exists
+/// at all, not whether it precedes the lookup. Static resolution survives only
+/// when no such write exists, which is what makes it equivalent.
+#[derive(Default)]
+struct LookupFacts {
+    /// An element with an id can appear, disappear or change id: id writes,
+    /// removals, parsed markup, clones, and moves of elements analysis cannot
+    /// tell were created by script.
+    ids_change: bool,
+    /// Elements appear or move at all.
+    tree_changes: bool,
+    /// Class names scripts write, when that is all a class write can do.
+    written_classes: HashSet<String>,
+    /// A class write could change any class: a `className =` drops what it
+    /// does not name, and a name may not be literal.
+    any_class_changes: bool,
+    /// Any property or attribute is written, which `[attr]` and pseudo-classes
+    /// may read.
+    attrs_change: bool,
+}
+
+impl LookupFacts {
+    fn is_live(&self, query: &DomQuery) -> bool {
+        match query {
+            DomQuery::ById(_) => self.ids_change,
+            DomQuery::Selector(s) | DomQuery::SelectorAll(s) => self.selector_is_live(s),
+        }
+    }
+
+    fn selector_is_live(&self, selector: &str) -> bool {
+        if has_state_pseudo(selector) || self.ids_change {
+            return true;
+        }
+        // An element created without an id cannot match `#id`.
+        if is_plain_id_selector(selector) {
+            return false;
+        }
+        self.tree_changes
+            || self.classes_in(selector)
+            || (self.attrs_change && (selector.contains('[') || selector.contains(':')))
+    }
+}
+
+impl LookupFacts {
+    /// Whether a class write can affect a `.class` of `selector`. Reading it
+    /// loosely only errs towards live: a `.` inside `[href=".x"]` looks like a
+    /// class, and an escape does not match the name it stands for, so an
+    /// escape counts as any class.
+    fn classes_in(&self, selector: &str) -> bool {
+        if !selector.contains('.') {
+            return false;
+        }
+        self.any_class_changes
+            || selector.contains('\\')
+            || selector.split('.').skip(1).any(|rest| {
+                let name: String = rest
+                    .chars()
+                    .take_while(|c| c.is_alphanumeric() || matches!(c, '-' | '_'))
+                    .collect();
+                self.written_classes.contains(&name)
+            })
+    }
+}
+
+/// `#name`, with nothing after it.
+fn is_plain_id_selector(selector: &str) -> bool {
+    selector.trim().strip_prefix('#').is_some_and(|name| {
+        !name.is_empty()
+            && name
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+    })
+}
+
+/// Pseudo-classes that follow the user as well as scripts, so no absence of
+/// writes makes them static.
+fn has_state_pseudo(selector: &str) -> bool {
+    [
+        ":checked",
+        ":hover",
+        ":focus",
+        ":active",
+        ":disabled",
+        ":enabled",
+        ":indeterminate",
+        ":default",
+        ":valid",
+        ":invalid",
+        ":placeholder-shown",
+        ":read-only",
+        ":read-write",
+        ":target",
+        ":visited",
+        ":link",
+        ":any-link",
+    ]
+    .iter()
+    .any(|p| selector.contains(p))
 }
 
 pub(crate) fn collect_unresolvable_module_diagnostics(
@@ -183,13 +306,14 @@ struct AnalysisVisitor<'a, 'b> {
     eval: &'b Eval<'a, 'b>,
     facts: &'b Facts,
     dynamic: &'b mut DynState,
+    lookups: &'b mut LookupFacts,
     /// Enclosing functions and conditional constructs (`true` = function).
     path: Vec<(u32, bool)>,
     /// Whether `this` may be an element, per enclosing function.
     this_is_element: Vec<bool>,
     /// The next function visited is a class or object method.
     pending_method: bool,
-    /// `className`/`classList` member expressions that only write classes.
+    /// `className`/`classList`/`dataset` member expressions that only write.
     class_reads_ok: HashSet<SpanKey>,
 }
 
@@ -444,6 +568,122 @@ impl AnalysisVisitor<'_, '_> {
         }
     }
 
+    /// Facts for [`LookupFacts`] from a method call.
+    fn inspect_lookup_call(
+        &mut self,
+        it: &CallExpression<'_>,
+        member: &StaticMemberExpression<'_>,
+    ) {
+        let method = member.property.name.as_str();
+        let args = &it.arguments;
+        let dom_receiver = !is_non_dom_collection_receiver(&member.object, self.scoping);
+        // Inserting what analysis knows a script just created adds elements
+        // without ids of their own; anything else may be a page element moving.
+        let inserts_unknown = |me: &Self, args: &[&Argument<'_>]| {
+            args.iter().any(|a| {
+                a.as_expression()
+                    .is_none_or(|e| !matches!(me.target(e), ElementRef::Created(_)))
+            })
+        };
+        if matches!(
+            method,
+            "getAttribute"
+                | "hasAttribute"
+                | "getAttributeNode"
+                | "getAttributeNames"
+                | "cloneNode"
+                | "matches"
+                | "closest"
+        ) || (matches!(method, "querySelector" | "querySelectorAll")
+            && extract_dom_query_from_call(it, self.scoping).is_none())
+        {
+            self.analysis.reads_attributes = true;
+        }
+        match method {
+            "setAttribute" | "removeAttribute" | "toggleAttribute" if dom_receiver => {
+                self.lookups.attrs_change = true;
+                let names_id = args
+                    .first()
+                    .and_then(|a| a.as_expression())
+                    .and_then(extract_string_literal)
+                    .is_none_or(|name| name.eq_ignore_ascii_case("id"));
+                self.lookups.ids_change |= names_id;
+            }
+            "remove" if !dom_receiver || !args.is_empty() => {}
+            "remove" | "removeChild" | "replaceChild" | "replaceWith" | "replaceChildren"
+            | "insertAdjacentHTML" | "cloneNode" | "insertAdjacentText" => {
+                self.lookups.ids_change = true;
+            }
+            "appendChild" | "insertBefore" => {
+                let first: Vec<_> = args.iter().take(1).collect();
+                self.lookups.ids_change |= inserts_unknown(self, &first);
+            }
+            "append" | "prepend" | "before" | "after" if dom_receiver => {
+                let all: Vec<_> = args.iter().collect();
+                self.lookups.ids_change |= inserts_unknown(self, &all);
+            }
+            "insertAdjacentElement" => {
+                let second: Vec<_> = args.iter().skip(1).take(1).collect();
+                self.lookups.ids_change |= inserts_unknown(self, &second);
+            }
+            "createDocumentFragment" if is_global_document(&member.object, self.scoping) => {
+                self.lookups.ids_change = true;
+            }
+            "assign"
+                if matches!(unwrap_parens(&member.object), Expression::Identifier(id) if id.name == "Object")
+                    && args
+                        .first()
+                        .and_then(|a| a.as_expression())
+                        .is_some_and(|e| self.target(e) != ElementRef::Unknown) =>
+            {
+                self.lookups.ids_change = true;
+            }
+            _ => {}
+        }
+    }
+
+    /// Facts for [`LookupFacts`] from an assignment to a member.
+    fn inspect_lookup_write(&mut self, it: &AssignmentExpression<'_>) {
+        let (object, prop) = match &it.left {
+            AssignmentTarget::StaticMemberExpression(m) => {
+                (&m.object, Some(m.property.name.to_string()))
+            }
+            AssignmentTarget::ComputedMemberExpression(m) => {
+                (&m.object, extract_string_literal(&m.expression))
+            }
+            _ => return,
+        };
+        self.lookups.attrs_change = true;
+        // Writing `el.dataset.x` reads nothing the markup said.
+        if let Expression::StaticMemberExpression(inner) = unwrap_parens(object)
+            && inner.property.name == "dataset"
+        {
+            self.class_reads_ok.insert(span_key(inner.span));
+        }
+        let target = self.target(object);
+        match prop.as_deref() {
+            Some("id" | "innerHTML" | "outerHTML" | "outerText") => {
+                self.lookups.ids_change = true;
+            }
+            Some("textContent" | "innerText") => match target {
+                // Whether this removes elements depends on the document.
+                ElementRef::Query(_) => {
+                    if !self.analysis.text_writes.contains(&target) {
+                        self.analysis.text_writes.push(target);
+                    }
+                }
+                // Nothing with an id can be inside it without a move, which
+                // is a fact of its own.
+                ElementRef::Created(_) => {}
+                ElementRef::Unknown => self.lookups.ids_change = true,
+            },
+            // `el[key] = v` could be `id`, but `list[i] = v` is everywhere;
+            // only a receiver known to be an element counts.
+            None => self.lookups.ids_change |= target != ElementRef::Unknown,
+            Some(_) => {}
+        }
+    }
+
     fn inspect_dynamic_call(
         &mut self,
         it: &CallExpression<'_>,
@@ -648,6 +888,7 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
             site.path = self.path.clone();
         }
         if let Expression::StaticMemberExpression(member) = unwrap_parens(&it.callee) {
+            self.inspect_lookup_call(it, member);
             self.inspect_dynamic_call(it, member);
         }
 
@@ -725,6 +966,7 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
     }
 
     fn visit_assignment_expression(&mut self, it: &AssignmentExpression<'a>) {
+        self.inspect_lookup_write(it);
         self.inspect_dynamic_assignment(it);
         match &it.left {
             AssignmentTarget::StaticMemberExpression(member) => {
@@ -814,6 +1056,8 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
 
     fn visit_static_member_expression(&mut self, it: &StaticMemberExpression<'a>) {
         let prop = it.property.name.as_str();
+        self.analysis.reads_attributes |= prop == "attributes"
+            || (prop == "dataset" && !self.class_reads_ok.contains(&span_key(it.span)));
         let reads_classes = matches!(prop, "className" | "classList")
             && !self.class_reads_ok.contains(&span_key(it.span));
         if reads_classes

@@ -105,6 +105,26 @@ pub struct Analysis {
     /// `before`, `after`, `replaceWith`, `outerHTML =`): their parents'
     /// children change.
     pub mutated_siblings: Vec<ElementRef>,
+    /// Queries whose answer can change while the page runs, so `rewrite` sends
+    /// them to the runtime rather than answering from the original document.
+    pub live_queries: Vec<DomQuery>,
+    /// Elements whose text scripts assign (`textContent =`, `innerText =`).
+    /// That removes an element's element children, which only the converter,
+    /// holding the document, can see: it calls
+    /// [`Analysis::mark_all_queries_live`] if one has any.
+    pub text_writes: Vec<ElementRef>,
+    /// Scripts can read attributes the markup wrote (`getAttribute`, `dataset`,
+    /// `[attr]` selectors, `matches`): every element needs `eldurAttrs`.
+    pub reads_attributes: bool,
+}
+
+impl Analysis {
+    /// Every query becomes live: the converter found a mutation the script
+    /// alone does not show.
+    pub fn mark_all_queries_live(&mut self) {
+        self.live_queries.clone_from(&self.queries);
+        self.runtime_dom |= !self.live_queries.is_empty();
+    }
 }
 
 /// A created element (`document.createElement` call site) as analysis predicts it.
@@ -207,6 +227,12 @@ pub trait DomResolver {
     fn resolve(&self, query: &DomQuery) -> Vec<QmlTarget>;
     /// The target for a handler attribute's element (`this` in handler code).
     fn element(&self, key: ElementKey) -> Option<QmlTarget>;
+    /// What a query matches in the document as written, even when `resolve`
+    /// declines to answer because the query is live. For wiring that has to
+    /// exist before the page runs, such as a generated event handler.
+    fn original(&self, query: &DomQuery) -> Vec<QmlTarget> {
+        self.resolve(query)
+    }
 }
 
 /// A function in `page.js` the converter wires to a QML signal handler.

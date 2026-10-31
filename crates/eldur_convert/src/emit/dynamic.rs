@@ -205,6 +205,7 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
     let mut emitter = Emitter::new(cx.doc, cx.styles, cx.options, diags, cx.wanted);
     emitter.images = cx.images.clone();
     emitter.runtime_dom = cx.runtime_dom;
+    emitter.script_attrs = cx.scripts.is_some_and(|s| s.analysis.reads_attributes);
     if let Some(probe) = cx.probe {
         emitter.markers = true;
         emitter.no_carry = true;
@@ -995,6 +996,7 @@ impl Dynamic<'_, '_> {
         let mut emitter = Emitter::new(cx.doc, styles, cx.options, diags, cx.wanted);
         emitter.images = cx.images.clone();
         emitter.runtime_dom = cx.runtime_dom;
+        emitter.script_attrs = cx.scripts.is_some_and(|s| s.analysis.reads_attributes);
         emitter.markers = true;
         if let Some(probe) = cx.probe {
             emitter.no_carry = true;

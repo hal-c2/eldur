@@ -122,6 +122,8 @@ pub(crate) struct Emitter<'a, 'd> {
     /// Scripts reach elements at run time, so every element object says
     /// what it is (`eldurTag`, `eldurClasses`).
     pub runtime_dom: bool,
+    /// Scripts read attributes, so elements carry `eldurAttrs`.
+    pub script_attrs: bool,
     /// Each element's outermost object carries a marker comment naming its
     /// node, so [`dynamic`] can tell whose properties differ.
     markers: bool,
@@ -190,6 +192,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             imports: std::collections::BTreeSet::new(),
             images: BTreeMap::new(),
             runtime_dom: false,
+            script_attrs: false,
             markers: false,
             no_carry: false,
             excess: HashMap::new(),
@@ -714,6 +717,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
             && let Some(node) = b.node
         {
             crate::metadata::tag(&mut e.obj, self.doc, node);
+            if self.script_attrs {
+                crate::metadata::declare_attrs(&mut e.obj, self.doc, node);
+            }
         }
         if !self.no_carry && e.obj.id.is_none() && b.node.is_some() {
             e.obj.members.push(carry::hint_comment(&hint(self.doc, b)));

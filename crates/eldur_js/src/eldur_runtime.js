@@ -365,6 +365,94 @@ function _isDomTarget(obj) {
     return _isQObject(obj);
 }
 
+// An `HTMLCollection` follows the document: every read asks again. The cost is
+// one tree walk per read, so an indexed loop over one is quadratic, where a
+// browser caches; a script that holds one across a mutation needs the answer
+// more than the speed.
+function _liveCollection(elements) {
+    function items() {
+        return elements();
+    }
+    function index(key) {
+        if (typeof key !== "string" || !/^(0|[1-9][0-9]*)$/.test(key)) {
+            return -1;
+        }
+        return Number(key);
+    }
+    var methods = {
+        item: function(idx) {
+            var n = Number(idx);
+            var list = items();
+            return (n >= 0 && n < list.length) ? wrap(list[n]) : null;
+        },
+        namedItem: function(name) {
+            var key = String(name);
+            if (!key) {
+                return null;
+            }
+            var list = items();
+            for (var i = 0; i < list.length; ++i) {
+                if (_nodeId(list[i]) === key || getAttribute(list[i], "name") === key) {
+                    return wrap(list[i]);
+                }
+            }
+            return null;
+        }
+    };
+    return new Proxy({}, {
+        get: function(_target, key) {
+            if (key === "length") {
+                return items().length;
+            }
+            if (key === Symbol.iterator) {
+                return function() {
+                    return items().map(wrap)[Symbol.iterator]();
+                };
+            }
+            if (Object.prototype.hasOwnProperty.call(methods, key)) {
+                return methods[key];
+            }
+            var i = index(key);
+            if (i >= 0) {
+                var list = items();
+                return i < list.length ? wrap(list[i]) : undefined;
+            }
+            // `col.name` is `col.namedItem("name")`.
+            if (typeof key === "string") {
+                var named = methods.namedItem(key);
+                return named === null ? undefined : named;
+            }
+            return undefined;
+        },
+        has: function(_target, key) {
+            var i = index(key);
+            return key === "length" || Object.prototype.hasOwnProperty.call(methods, key)
+                || (i >= 0 && i < items().length);
+        },
+        ownKeys: function() {
+            return items().map(function(_e, i) { return String(i); });
+        },
+        getOwnPropertyDescriptor: function(_target, key) {
+            var i = index(key);
+            var list = items();
+            if (i >= 0 && i < list.length) {
+                return { value: wrap(list[i]), writable: false, enumerable: true, configurable: true };
+            }
+            return undefined;
+        }
+    });
+}
+
+// What compile-time resolution found, in the shape the method returns. The
+// analysis proved the list cannot change.
+function staticNodeList(items) {
+    return _asNodeList(items.map(function(item) { return wrap(item); }));
+}
+
+function staticCollection(items) {
+    return _asHTMLCollection(items.map(function(item) { return wrap(item); }));
+}
+
 function _asNodeList(arr) {
     Object.defineProperty(arr, "item", {
         configurable: true,
@@ -1354,10 +1442,22 @@ function _meta(item) {
                 }
             }
         }
+        var initialAttrs = {};
+        var initialData = {};
+        if (raw.eldurAttrs) {
+            var attrNames = Object.keys(raw.eldurAttrs);
+            for (var n = 0; n < attrNames.length; ++n) {
+                var attrName = attrNames[n];
+                initialAttrs[attrName] = raw.eldurAttrs[attrName];
+                if (attrName.indexOf("data-") === 0 && attrName.length > 5) {
+                    initialData[_kebabToCamel(attrName.slice(5))] = raw.eldurAttrs[attrName];
+                }
+            }
+        }
         entry = {
             classes: initialClasses,
-            attrs: {},
-            dataset: {},
+            attrs: initialAttrs,
+            dataset: initialData,
             styles: {},
             listeners: {},
             onceListeners: {},
@@ -1368,6 +1468,15 @@ function _meta(item) {
         _itemMeta.set(raw, entry);
     }
     return entry;
+}
+
+// A boolean property is its attribute's presence, which `[hidden]` reads.
+function _reflectFlag(m, name, on) {
+    if (on) {
+        m.attrs[name] = "";
+    } else {
+        delete m.attrs[name];
+    }
 }
 
 function _kebabToCamel(attrName) {
@@ -1962,7 +2071,11 @@ function getText(item) {
         return String(textChild.text);
     }
     var m = _meta(raw);
-    return m.explicitText !== undefined ? String(m.explicitText) : "";
+    if (m.explicitText !== undefined) {
+        return String(m.explicitText);
+    }
+    // `textContent` is the text of everything inside.
+    return _rawElementChildren(raw).map(getText).join("");
 }
 
 function setText(item, value) {
@@ -2005,7 +2118,7 @@ function setInnerHTML(item, html) {
     }
     if (_markupMakesElements(raw)) {
         _replaceWithMarkup(raw, str);
-        _meta(raw).innerHTML = str;
+        _rememberMarkup(raw, str);
         return;
     }
     var target = typeof raw.text === "string" ? raw : _findTextChild(raw);
@@ -2015,7 +2128,7 @@ function setInnerHTML(item, html) {
             target.textFormat = 4;
         }
         target.text = str;
-        _meta(raw).innerHTML = str;
+        _rememberMarkup(raw, str);
         return;
     }
     console.warn("eldur: innerHTML assignment on non-text QML item is unsupported");
@@ -2073,12 +2186,46 @@ function _replaceWithMarkup(raw, str) {
     _insertRawNodesBefore(_appendTarget(raw), nodes, null);
 }
 
+function _rememberMarkup(raw, str) {
+    var m = _meta(raw);
+    m.innerHTML = str;
+    m.innerHTMLKids = _rawElementChildren(raw);
+}
+
 function getInnerHTML(item) {
-    var m = _meta(item);
-    if (m.innerHTML !== undefined) {
+    var raw = _unwrap(item);
+    var m = _meta(raw);
+    var kids = raw ? _rawElementChildren(raw) : [];
+    // What was assigned reads back as written, until the children change.
+    if (m.innerHTML !== undefined && m.innerHTMLKids.length === kids.length
+        && kids.every(function(k, i) { return k === m.innerHTMLKids[i]; })) {
         return m.innerHTML;
     }
-    return getText(item);
+    return kids.length > 0 ? kids.map(_serializeElement).join("") : getText(raw);
+}
+
+// Elements written back as markup, for `innerHTML` to be read after the tree
+// changed and for `+=`, which parses what it read.
+function _serializeElement(raw) {
+    var m = _meta(raw);
+    var tag = _nodeTag(raw);
+    var attrs = {};
+    var id = _nodeId(raw);
+    if (id) {
+        attrs.id = id;
+    }
+    if (m.classes.length > 0) {
+        attrs["class"] = m.classes.join(" ");
+    }
+    Object.keys(m.attrs).forEach(function(k) { attrs[k] = m.attrs[k]; });
+    Object.keys(m.dataset).forEach(function(k) {
+        attrs["data-" + k.replace(/[A-Z]/g, function(c) { return "-" + c.toLowerCase(); })] = m.dataset[k];
+    });
+    var open = "<" + tag;
+    Object.keys(attrs).forEach(function(k) {
+        open += " " + k + "=\"" + String(attrs[k]).replace(/&/g, "&amp;").replace(/"/g, "&quot;") + "\"";
+    });
+    return open + ">" + getInnerHTML(raw) + "</" + tag + ">";
 }
 
 function setStyle(item, prop, value) {
@@ -2446,6 +2593,8 @@ function removeAttribute(item, attrName) {
     delete m.attrs[name];
     if (name.indexOf("data-") === 0 && name.length > 5) {
         delete m.dataset[_kebabToCamel(name.slice(5))];
+    } else if (name === "id" && typeof raw.objectName === "string") {
+        raw.objectName = "";
     } else if (name === "disabled" && typeof raw.enabled === "boolean") {
         raw.enabled = true;
     } else if (name === "hidden" && typeof raw.visible === "boolean") {
@@ -2845,7 +2994,7 @@ function IntersectionObserver(_callback) {
 
 function _dispatchDynamic(raw, type, qtEv) {
     var m = _meta(raw);
-    var target = m.wrapper || raw;
+    var target = wrap(raw);
     var domEv = qtEv && qtEv.preventDefault ? qtEv : event(type, target, qtEv);
     domEv.currentTarget = target;
     if (!domEv.target) {
@@ -3103,9 +3252,9 @@ function listen(item, eventType, handler, options) {
     if (item && !_isDomTarget(item) && typeof item.addEventListener === "function") {
         return item.addEventListener(eventType, handler, options);
     }
-    if (_addListener(item, eventType, handler, options)
-        && !_connectSignalOnce(_unwrap(item), String(eventType))) {
-        console.warn("eldur: dynamic listener for '" + eventType + "' cannot bind to a QML signal");
+    // An event no signal delivers (a custom one, say) can still be dispatched.
+    if (_addListener(item, eventType, handler, options)) {
+        _connectSignalOnce(_unwrap(item), String(eventType));
     }
 }
 
@@ -4253,6 +4402,10 @@ function wrap(rawItem) {
         set textContent(v) { setText(rawItem, v); },
         get innerText() { return getText(rawItem); },
         set innerText(v) { setText(rawItem, v); },
+        get outerHTML() { return _serializeElement(rawItem); },
+        set outerHTML(v) {
+            this.replaceWith.apply(this, _parseHtmlFragmentNodes(v));
+        },
         get innerHTML() { return getInnerHTML(rawItem); },
         set innerHTML(v) { setInnerHTML(rawItem, v); },
         get value() {
@@ -4310,6 +4463,7 @@ function wrap(rawItem) {
         get disabled() { return rawItem.enabled !== undefined ? !rawItem.enabled : Boolean(m.explicitDisabled); },
         set disabled(v) {
             m.explicitDisabled = Boolean(v);
+            _reflectFlag(m, "disabled", v);
             if (typeof rawItem.enabled === "boolean") {
                 rawItem.enabled = !v;
             }
@@ -4329,6 +4483,7 @@ function wrap(rawItem) {
         get hidden() { return rawItem.visible !== undefined ? !rawItem.visible : Boolean(m.explicitHidden); },
         set hidden(v) {
             m.explicitHidden = Boolean(v);
+            _reflectFlag(m, "hidden", v);
             if (typeof rawItem.visible === "boolean") {
                 _setShown(rawItem, !v);
             }
@@ -4474,6 +4629,16 @@ function wrap(rawItem) {
         get scrollHeight() {
             return _computeScrollDimension("y");
         },
+        get isConnected() {
+            var at = rawItem;
+            while (at) {
+                if (at === _root) {
+                    return true;
+                }
+                at = _domUp(at);
+            }
+            return false;
+        },
         get parentNode() {
             var p = _logicalParent(rawItem);
             return p ? wrap(p) : null;
@@ -4483,7 +4648,12 @@ function wrap(rawItem) {
             return p ? wrap(p) : null;
         },
         get children() {
-            return _asHTMLCollection(_rawElementChildren(rawItem).map(wrap));
+            if (!m.childCollection) {
+                m.childCollection = _liveCollection(function() {
+                    return _rawElementChildren(rawItem);
+                });
+            }
+            return m.childCollection;
         },
         get childNodes() {
             return _asNodeList(_rawElementChildren(rawItem).map(wrap));
@@ -4806,14 +4976,10 @@ function wrap(rawItem) {
             return _asNodeList(_queryTree(rawItem, String(sel), false).map(wrap));
         },
         getElementsByClassName: function(classNames) {
-            var parts = String(classNames).trim().split(/\s+/).filter(Boolean);
-            if (parts.length === 0) {
-                return _asHTMLCollection([]);
-            }
-            return _asHTMLCollection(_queryTree(rawItem, "." + parts.join("."), false).map(wrap));
+            return _byClassNames(rawItem, classNames);
         },
         getElementsByTagName: function(tagName) {
-            return _asHTMLCollection(_queryTree(rawItem, String(tagName), false).map(wrap));
+            return _byTagName(rawItem, tagName);
         }
     };
 
@@ -4880,231 +5046,598 @@ function _isInternalHelperNode(node) {
     return false;
 }
 
-function _matchesSimpleSelector(node, sel) {
-    var s = sel.trim();
-    if (!s || _isInternalHelperNode(node)) {
-        return false;
-    }
-    if (s === "*") {
-        return true;
-    }
-    var attrFilters = [];
-    var withoutAttrs = s.replace(/\[\s*([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*(?:([~|^$*]?=)\s*(?:"([^"]*)"|'([^']*)'|([^\]]*?)))?\s*\]/g, function(_all, attrName, op, dq, sq, uq) {
-        var val = dq !== undefined ? dq : (sq !== undefined ? sq : (uq !== undefined ? uq.trim() : ""));
-        attrFilters.push({ name: attrName, op: op || null, val: val });
-        return "";
-    });
-    for (var a = 0; a < attrFilters.length; ++a) {
-        var af = attrFilters[a];
-        var actual = getAttribute(node, af.name);
-        if (af.op === null) {
-            if (actual === null) {
-                return false;
-            }
-        } else if (actual === null) {
-            return false;
-        } else if (af.op === "=" && actual !== af.val) {
-            return false;
-        } else if (af.op === "^=" && actual.indexOf(af.val) !== 0) {
-            return false;
-        } else if (af.op === "$=" && (af.val === "" || actual.slice(-af.val.length) !== af.val)) {
-            return false;
-        } else if (af.op === "*=" && (af.val === "" || actual.indexOf(af.val) === -1)) {
-            return false;
-        } else if (af.op === "~=" && actual.trim().split(/\s+/).indexOf(af.val) === -1) {
-            return false;
-        }
-    }
+var _selectorCache = new Map();
 
-    var rest = withoutAttrs.trim();
-    if (!rest) {
-        return attrFilters.length > 0;
-    }
-
-    var idFilter = null;
-    rest = rest.replace(/#([A-Za-z0-9_-]+)/g, function(_all, idVal) {
-        idFilter = idVal;
-        return "";
-    });
-    if (idFilter !== null) {
-        var nodeId = (typeof node.objectName === "string" && node.objectName !== "")
-            ? node.objectName
-            : (_meta(node).attrs.id || "");
-        if (nodeId !== idFilter) {
-            return false;
-        }
-    }
-
-    var classFilters = [];
-    rest = rest.replace(/\.([A-Za-z0-9_-]+)/g, function(_all, clsVal) {
-        classFilters.push(clsVal);
-        return "";
-    });
-    if (classFilters.length > 0) {
-        var cl = classList(node);
-        for (var i = 0; i < classFilters.length; ++i) {
-            if (!cl.contains(classFilters[i])) {
-                return false;
-            }
-        }
-    }
-
-    var tagPart = rest.trim();
-    if (tagPart && tagPart !== "*") {
-        var nodeTag = (typeof node.eldurTag === "string" && node.eldurTag !== "")
-            ? node.eldurTag.toLowerCase()
-            : _inferTagName(node).toLowerCase();
-        if (nodeTag !== tagPart.toLowerCase()) {
-            return false;
-        }
-    }
-    return true;
+function _selectorError(text) {
+    var e = new Error("'" + text + "' is not a valid selector");
+    e.name = "SyntaxError";
+    return e;
 }
 
-function _splitSelectorList(selector) {
-    var list = [];
-    var cur = "";
-    var depth = 0;
-    var quote = null;
-    for (var i = 0; i < selector.length; ++i) {
-        var ch = selector.charAt(i);
-        if (quote) {
-            if (ch === quote) {
-                quote = null;
+// Pseudo-classes that take no argument; each says whether `node` has it.
+var _plainPseudos = {
+    "first-child": function(n) { return _elementSiblings(n)[0] === n; },
+    "last-child": function(n) { var s = _elementSiblings(n); return s[s.length - 1] === n; },
+    "only-child": function(n) { return _elementSiblings(n).length === 1; },
+    "first-of-type": function(n) { return _siblingsOfType(n)[0] === n; },
+    "last-of-type": function(n) { var s = _siblingsOfType(n); return s[s.length - 1] === n; },
+    "only-of-type": function(n) { return _siblingsOfType(n).length === 1; },
+    "empty": function(n) {
+        return _rawElementChildren(n).length === 0 && !getText(n);
+    },
+    "root": function(n) { return n === (_taggedHtml() || _root); },
+    "scope": function(n) { return n === _selectorScope; },
+    "checked": function(n) {
+        return n.checked === true || _meta(n).explicitChecked === true;
+    },
+    "disabled": function(n) { return _isFormControl(n) && n.enabled === false; },
+    "enabled": function(n) { return _isFormControl(n) && n.enabled !== false; },
+    "focus": function(n) { return n.activeFocus === true; },
+    "focus-visible": function(n) { return n.activeFocus === true; },
+    "focus-within": function(n) {
+        return _walkItems(n, function(d) { return d.activeFocus === true; });
+    },
+    "hover": function(n) { return n.hovered === true; },
+    "active": function(n) { return n.pressed === true || n.down === true; },
+    "link": function(n) { return _isLink(n); },
+    "any-link": function(n) { return _isLink(n); },
+    "visited": function() { return false; },
+    "target": function() { return false; },
+    "defined": function() { return true; },
+    "required": function(n) { return _isFormControl(n) && getAttribute(n, "required") !== null; },
+    "optional": function(n) { return _isFormControl(n) && getAttribute(n, "required") === null; },
+    "read-only": function(n) { return !_isEditable(n); },
+    "read-write": function(n) { return _isEditable(n); },
+    "indeterminate": function(n) { return n.checkState === Qt.PartiallyChecked; },
+    "default": function(n) { return getAttribute(n, "checked") !== null || getAttribute(n, "selected") !== null; },
+    "placeholder-shown": function(n) {
+        return typeof n.placeholderText === "string" && n.placeholderText !== "" && n.text === "";
+    },
+    "valid": function(n) { return _isFormControl(n); },
+    "invalid": function() { return false; }
+};
+
+function _nodeTag(node) {
+    return (typeof node.eldurTag === "string" && node.eldurTag !== ""
+        ? node.eldurTag
+        : _inferTagName(node)).toLowerCase();
+}
+
+function _isFormControl(node) {
+    return ["button", "input", "select", "textarea", "option", "optgroup", "fieldset"]
+        .indexOf(_nodeTag(node)) !== -1;
+}
+
+function _isLink(node) {
+    var tag = _nodeTag(node);
+    return (tag === "a" || tag === "area") && getAttribute(node, "href") !== null;
+}
+
+function _isEditable(node) {
+    var tag = _nodeTag(node);
+    return (tag === "input" || tag === "textarea") && node.readOnly !== true && node.enabled !== false;
+}
+
+// The parent element: what lies between an element and the next one up (a
+// scrolling viewport, the window) is not in a script's DOM.
+function _elementParent(node) {
+    var parent = _logicalParent(node);
+    while (parent && _isInternalHelperNode(parent)) {
+        parent = _logicalParent(parent);
+    }
+    return parent;
+}
+
+function _elementSiblings(node) {
+    var parent = _elementParent(node);
+    return parent ? _rawElementChildren(parent).filter(function(k) {
+        return !_isInternalHelperNode(k);
+    }) : [node];
+}
+
+function _siblingsOfType(node) {
+    var tag = _nodeTag(node);
+    return _elementSiblings(node).filter(function(k) { return _nodeTag(k) === tag; });
+}
+
+// The `html` element, when the converter tagged elements: below the window and
+// the scrolling viewport, which are not elements.
+function _taggedHtml() {
+    var found = null;
+    if (_root) {
+        _walkItems(_root, function(node) {
+            if (node.eldurTag === "html") {
+                found = node;
+                return true;
             }
-            cur += ch;
-        } else if (ch === "\"" || ch === "'") {
-            quote = ch;
-            cur += ch;
-        } else if (ch === "[") {
-            depth += 1;
-            cur += ch;
-        } else if (ch === "]" && depth > 0) {
-            depth -= 1;
-            cur += ch;
-        } else if (ch === "," && depth === 0) {
-            if (cur.trim()) {
-                list.push(cur.trim());
+            return false;
+        });
+    }
+    return found;
+}
+
+function _nodeId(node) {
+    if (typeof node.objectName === "string" && node.objectName !== "") {
+        return node.objectName;
+    }
+    return _meta(node).attrs.id || "";
+}
+
+// A small recursive-descent reader for the Selectors level 4 syntax
+// `querySelector` accepts. Anything it does not know is a `SyntaxError`, as in
+// a browser, rather than a selector that silently matches nothing.
+function _SelectorReader(text) {
+    this.text = text;
+    this.at = 0;
+}
+
+_SelectorReader.prototype.peek = function() {
+    return this.text.charAt(this.at);
+};
+
+_SelectorReader.prototype.skipSpace = function() {
+    var before = this.at;
+    while (/\s/.test(this.peek()) && this.at < this.text.length) {
+        this.at += 1;
+    }
+    return this.at > before;
+};
+
+_SelectorReader.prototype.fail = function() {
+    return _selectorError(this.text);
+};
+
+_SelectorReader.prototype.name = function() {
+    var out = "";
+    while (this.at < this.text.length) {
+        var ch = this.peek();
+        if (ch === "\\") {
+            this.at += 1;
+            var hex = /^[0-9a-fA-F]{1,6}/.exec(this.text.slice(this.at));
+            if (hex) {
+                out += String.fromCodePoint(parseInt(hex[0], 16));
+                this.at += hex[0].length;
+                if (/\s/.test(this.peek())) {
+                    this.at += 1;
+                }
+            } else {
+                if (this.at >= this.text.length) {
+                    throw this.fail();
+                }
+                out += this.peek();
+                this.at += 1;
             }
-            cur = "";
+        } else if (/[-_a-zA-Z0-9]/.test(ch) || ch.charCodeAt(0) >= 0x80) {
+            out += ch;
+            this.at += 1;
         } else {
-            cur += ch;
+            break;
         }
     }
-    if (cur.trim()) {
-        list.push(cur.trim());
+    if (out === "" || /^(-?[0-9]|-$)/.test(out)) {
+        throw this.fail();
     }
+    return out;
+};
+
+_SelectorReader.prototype.string = function() {
+    var quote = this.peek();
+    this.at += 1;
+    var out = "";
+    while (this.at < this.text.length && this.peek() !== quote) {
+        if (this.peek() === "\\") {
+            this.at += 1;
+        }
+        out += this.peek();
+        this.at += 1;
+    }
+    if (this.at >= this.text.length) {
+        throw this.fail();
+    }
+    this.at += 1;
+    return out;
+};
+
+_SelectorReader.prototype.attribute = function() {
+    this.at += 1;
+    this.skipSpace();
+    var test = { kind: "attr", name: this.name().toLowerCase(), op: null, value: "", fold: false };
+    this.skipSpace();
+    var op = /^[~|^$*]?=/.exec(this.text.slice(this.at));
+    if (op) {
+        test.op = op[0];
+        this.at += op[0].length;
+        this.skipSpace();
+        var q = this.peek();
+        test.value = q === "\"" || q === "'" ? this.string() : this.name();
+        this.skipSpace();
+        if (/[iIsS]/.test(this.peek())) {
+            test.fold = this.peek().toLowerCase() === "i";
+            this.at += 1;
+            this.skipSpace();
+        }
+    }
+    if (this.peek() !== "]") {
+        throw this.fail();
+    }
+    this.at += 1;
+    return test;
+};
+
+// `an+b`, with `of <selector list>` in the `-child` forms.
+_SelectorReader.prototype.nth = function(allowOf) {
+    var rest = this.text.slice(this.at);
+    var m = /^\s*(even|odd|([-+]?\d*)n\s*(?:([-+])\s*(\d+))?|[-+]?\d+)\s*/i.exec(rest);
+    if (!m) {
+        throw this.fail();
+    }
+    this.at += m[0].length;
+    var a = 0;
+    var b = 0;
+    var form = m[1].toLowerCase();
+    if (form === "even") {
+        a = 2;
+    } else if (form === "odd") {
+        a = 2;
+        b = 1;
+    } else if (form.indexOf("n") !== -1) {
+        var coef = m[2];
+        a = coef === "" || coef === "+" ? 1 : (coef === "-" ? -1 : parseInt(coef, 10));
+        b = m[4] ? parseInt(m[4], 10) * (m[3] === "-" ? -1 : 1) : 0;
+    } else {
+        b = parseInt(form, 10);
+    }
+    var of_ = null;
+    if (allowOf && /^of\s/i.test(this.text.slice(this.at))) {
+        this.at += 2;
+        of_ = this.list(false, ")");
+    }
+    return { a: a, b: b, of: of_ };
+};
+
+_SelectorReader.prototype.pseudo = function() {
+    this.at += 1;
+    if (this.peek() === ":") {
+        // A pseudo-element is no element: valid, and never found.
+        this.at += 1;
+        this.name();
+        return { kind: "never" };
+    }
+    var name = this.name().toLowerCase();
+    if (this.peek() !== "(") {
+        if (["before", "after", "first-line", "first-letter"].indexOf(name) !== -1) {
+            return { kind: "never" };
+        }
+        if (!Object.prototype.hasOwnProperty.call(_plainPseudos, name)) {
+            throw this.fail();
+        }
+        return { kind: "plain", test: _plainPseudos[name] };
+    }
+    this.at += 1;
+    var test;
+    switch (name) {
+    case "not":
+    case "is":
+    case "where":
+    case "matches":
+        test = { kind: name === "not" ? "not" : "is", list: this.list(false, ")") };
+        break;
+    case "has":
+        test = { kind: "has", list: this.list(true, ")") };
+        break;
+    case "nth-child":
+    case "nth-last-child":
+        test = { kind: "nth", last: name === "nth-last-child", ofType: false, nth: this.nth(true) };
+        break;
+    case "nth-of-type":
+    case "nth-last-of-type":
+        test = { kind: "nth", last: name === "nth-last-of-type", ofType: true, nth: this.nth(false) };
+        break;
+    default:
+        throw this.fail();
+    }
+    this.skipSpace();
+    if (this.peek() !== ")") {
+        throw this.fail();
+    }
+    this.at += 1;
+    return test;
+};
+
+_SelectorReader.prototype.compound = function() {
+    var tests = [];
+    var ch = this.peek();
+    if (ch === "*") {
+        this.at += 1;
+        tests.push({ kind: "any" });
+    } else if (/[-_a-zA-Z\\]/.test(ch) || ch.charCodeAt(0) >= 0x80) {
+        tests.push({ kind: "tag", name: this.name().toLowerCase() });
+    }
+    for (;;) {
+        ch = this.peek();
+        if (ch === "#") {
+            this.at += 1;
+            tests.push({ kind: "id", name: this.name() });
+        } else if (ch === ".") {
+            this.at += 1;
+            tests.push({ kind: "class", name: this.name() });
+        } else if (ch === "[") {
+            tests.push(this.attribute());
+        } else if (ch === ":") {
+            tests.push(this.pseudo());
+        } else {
+            break;
+        }
+    }
+    if (tests.length === 0) {
+        throw this.fail();
+    }
+    return tests;
+};
+
+// A list of complex selectors, up to `end` (the end of the text when empty).
+// `relative` allows the leading combinator of `:has()`.
+_SelectorReader.prototype.list = function(relative, end) {
+    var list = [];
+    for (;;) {
+        var chain = [];
+        var comb = relative ? " " : null;
+        this.skipSpace();
+        for (;;) {
+            if (/[>+~]/.test(this.peek()) && this.peek() !== "") {
+                if (chain.length === 0 && !relative) {
+                    throw this.fail();
+                }
+                comb = this.peek();
+                this.at += 1;
+                this.skipSpace();
+            }
+            chain.push({ comb: comb, tests: this.compound() });
+            var spaced = this.skipSpace();
+            var ch = this.peek();
+            if (this.at >= this.text.length || ch === "," || ch === end) {
+                break;
+            }
+            comb = spaced ? " " : null;
+            if (comb === null && !/[>+~]/.test(ch)) {
+                throw this.fail();
+            }
+        }
+        list.push(chain);
+        if (this.peek() !== ",") {
+            break;
+        }
+        this.at += 1;
+    }
+    return list;
+};
+
+function _parseSelector(selector) {
+    var text = String(selector);
+    var known = _selectorCache.get(text);
+    if (known) {
+        return known;
+    }
+    var reader = new _SelectorReader(text);
+    var list = reader.list(false, "");
+    if (reader.at < text.length) {
+        throw _selectorError(text);
+    }
+    _selectorCache.set(text, list);
     return list;
 }
 
-function _tokenizeCombinators(sel) {
-    var tokens = [];
-    var cur = "";
-    var depth = 0;
-    var quote = null;
-    var pendingComb = " ";
-    for (var i = 0; i < sel.length; ++i) {
-        var ch = sel.charAt(i);
-        if (quote) {
-            if (ch === quote) {
-                quote = null;
-            }
-            cur += ch;
-            continue;
-        }
-        if (ch === "\"" || ch === "'") {
-            quote = ch;
-            cur += ch;
-            continue;
-        }
-        if (ch === "[") {
-            depth += 1;
-            cur += ch;
-            continue;
-        }
-        if (ch === "]" && depth > 0) {
-            depth -= 1;
-            cur += ch;
-            continue;
-        }
-        if (depth === 0 && (ch === ">" || /\s/.test(ch))) {
-            if (cur.trim()) {
-                tokens.push({ comb: pendingComb, compound: cur.trim() });
-                cur = "";
-                pendingComb = ch === ">" ? ">" : " ";
-            } else if (ch === ">") {
-                pendingComb = ">";
-            }
-            continue;
-        }
-        cur += ch;
-    }
-    if (cur.trim()) {
-        tokens.push({ comb: pendingComb, compound: cur.trim() });
-    }
-    return tokens;
-}
-
-function _matchesChain(node, tokens, idx) {
-    if (!_matchesSimpleSelector(node, tokens[idx].compound)) {
+function _matchesAttrTest(node, test) {
+    var actual = getAttribute(node, test.name);
+    if (actual === null) {
         return false;
     }
-    if (idx === 0) {
+    if (test.op === null) {
         return true;
     }
-    var comb = tokens[idx].comb;
-    var p = _logicalParent(node);
-    if (comb === ">") {
-        return p ? _matchesChain(p, tokens, idx - 1) : false;
+    var have = String(actual);
+    var want = test.value;
+    if (test.fold) {
+        have = have.toLowerCase();
+        want = want.toLowerCase();
     }
-    while (p) {
-        if (_matchesChain(p, tokens, idx - 1)) {
-            return true;
-        }
-        p = _logicalParent(p);
+    switch (test.op) {
+    case "=": return have === want;
+    case "^=": return want !== "" && have.indexOf(want) === 0;
+    case "$=": return want !== "" && have.slice(-want.length) === want;
+    case "*=": return want !== "" && have.indexOf(want) !== -1;
+    case "~=": return want !== "" && !/\s/.test(want) && have.trim().split(/\s+/).indexOf(want) !== -1;
+    case "|=": return have === want || have.indexOf(want + "-") === 0;
     }
     return false;
 }
 
-function _matchesSelectorComplex(node, selector) {
-    if (!node || !selector) {
+function _matchesNth(node, test) {
+    var nth = test.nth;
+    var pool = test.ofType ? _siblingsOfType(node) : _elementSiblings(node);
+    if (nth.of) {
+        pool = pool.filter(function(k) { return _matchesList(k, nth.of); });
+    }
+    var index = pool.indexOf(node);
+    if (index === -1) {
         return false;
     }
-    var parts = _splitSelectorList(String(selector));
-    for (var i = 0; i < parts.length; ++i) {
-        var part = parts[i];
-        if (/[+~:]/.test(part.replace(/\[[^\]]*\]/g, ""))) {
-            console.warn("eldur: complex runtime selector is unsupported:", part);
-            continue;
+    var place = test.last ? pool.length - index : index + 1;
+    if (nth.a === 0) {
+        return place === nth.b;
+    }
+    var steps = (place - nth.b) / nth.a;
+    return steps >= 0 && Math.floor(steps) === steps;
+}
+
+function _matchesHas(node, chains) {
+    var found = false;
+    var check = function(candidate) {
+        for (var c = 0; c < chains.length; ++c) {
+            if (_matchesChain(candidate, chains[c], chains[c].length - 1, node)) {
+                found = true;
+                return true;
+            }
         }
-        var tokens = _tokenizeCombinators(part);
-        if (tokens.length > 0 && _matchesChain(node, tokens, tokens.length - 1)) {
+        return false;
+    };
+    var below = function(start) {
+        return _walkItems(start, function(d) { return d !== start && check(d); });
+    };
+    if (below(node)) {
+        return true;
+    }
+    // `+` and `~` look to the right of the element, and then inside.
+    var sibs = _elementSiblings(node);
+    for (var i = sibs.indexOf(node) + 1; i > 0 && i < sibs.length; ++i) {
+        if (check(sibs[i]) || below(sibs[i])) {
+            return true;
+        }
+    }
+    return found;
+}
+
+function _matchesTest(node, test) {
+    switch (test.kind) {
+    case "any": return true;
+    case "never": return false;
+    case "tag": return _nodeTag(node) === test.name;
+    case "id": return _nodeId(node) === test.name;
+    case "class": return classList(node).contains(test.name);
+    case "attr": return _matchesAttrTest(node, test);
+    case "plain": return Boolean(test.test(node));
+    case "not": return !_matchesList(node, test.list);
+    case "is": return _matchesList(node, test.list);
+    case "has": return _matchesHas(node, test.list);
+    case "nth": return _matchesNth(node, test);
+    }
+    return false;
+}
+
+// `anchor` is the element a `:has()` argument is relative to: the chain's
+// first compound must stand in its leading combinator's relation to it.
+function _matchesChain(node, chain, idx, anchor) {
+    if (_isInternalHelperNode(node)) {
+        return false;
+    }
+    var tests = chain[idx].tests;
+    for (var t = 0; t < tests.length; ++t) {
+        if (!_matchesTest(node, tests[t])) {
+            return false;
+        }
+    }
+    var comb = chain[idx].comb;
+    var next = function(other) {
+        if (idx === 0) {
+            return other === anchor;
+        }
+        return _matchesChain(other, chain, idx - 1, anchor);
+    };
+    if (idx === 0 && !anchor) {
+        return true;
+    }
+    if (comb === ">") {
+        var parent = _elementParent(node);
+        return parent ? next(parent) : false;
+    }
+    if (comb === "+" || comb === "~") {
+        var sibs = _elementSiblings(node);
+        for (var i = sibs.indexOf(node) - 1; i >= 0; --i) {
+            if (next(sibs[i])) {
+                return true;
+            }
+            if (comb === "+") {
+                return false;
+            }
+        }
+        return false;
+    }
+    var up = _elementParent(node);
+    while (up) {
+        if (next(up)) {
+            return true;
+        }
+        up = _elementParent(up);
+    }
+    return false;
+}
+
+function _matchesList(node, list) {
+    for (var i = 0; i < list.length; ++i) {
+        if (_matchesChain(node, list[i], list[i].length - 1, null)) {
             return true;
         }
     }
     return false;
 }
 
-function _queryTree(startNode, selector, firstOnly) {
+// What `:scope` means while a selector runs.
+var _selectorScope = null;
+
+function _matchesSelectorComplex(node, selector) {
+    if (!node) {
+        return false;
+    }
+    var list = _parseSelector(selector);
+    if (_isInternalHelperNode(node)) {
+        return false;
+    }
+    var saved = _selectorScope;
+    _selectorScope = node;
+    var result = _matchesList(node, list);
+    _selectorScope = saved;
+    return result;
+}
+
+// The elements under `startNode`, and `startNode` itself when it is the
+// document's root element, in document order.
+function _elementsUnder(startNode, keep, firstOnly) {
     var rootNode = startNode || _root;
     var results = [];
     if (!rootNode) {
         return results;
     }
-    var s = String(selector).trim();
-    if (!s) {
-        return results;
-    }
     _walkItems(rootNode, function(node) {
-        if (node !== rootNode && _matchesSelectorComplex(node, s)) {
+        if ((node !== rootNode || !startNode) && !_isInternalHelperNode(node) && keep(node)) {
             results.push(node);
-            if (firstOnly) {
-                return true;
-            }
+            return firstOnly;
         }
         return false;
     });
     return results;
+}
+
+function _queryTree(startNode, selector, firstOnly) {
+    var list = _parseSelector(selector);
+    var saved = _selectorScope;
+    _selectorScope = startNode || _root;
+    var results = _elementsUnder(startNode, function(node) {
+        return _matchesList(node, list);
+    }, firstOnly);
+    _selectorScope = saved;
+    return results;
+}
+
+function _byClassNames(startNode, classNames) {
+    var names = String(classNames).trim().split(/\s+/).filter(Boolean);
+    return _liveCollection(function() {
+        if (names.length === 0) {
+            return [];
+        }
+        return _elementsUnder(startNode, function(node) {
+            var cl = classList(node);
+            return names.every(function(c) { return cl.contains(c); });
+        }, false);
+    });
+}
+
+function _byTagName(startNode, tagName) {
+    var tag = String(tagName).toLowerCase();
+    return _liveCollection(function() {
+        return _elementsUnder(startNode, function(node) {
+            return tag === "*" || _nodeTag(node) === tag;
+        }, false);
+    });
 }
 
 function _findRootScroller() {
@@ -5214,8 +5747,20 @@ var document = {
     get baseURI() { return _getDocumentBaseUrl(); },
     get URL() { return _locState.href; },
     get documentURI() { return _locState.href; },
-    get body() { return _root ? wrap(_root.contentItem || _root) : null; },
-    get documentElement() { return _root ? wrap(_root) : null; },
+    get body() {
+        var html = _taggedHtml();
+        var kids = html ? _rawElementChildren(html) : [];
+        for (var i = 0; i < kids.length; ++i) {
+            if (kids[i].eldurTag === "body") {
+                return wrap(kids[i]);
+            }
+        }
+        return _root ? wrap(_root.contentItem || _root) : null;
+    },
+    get documentElement() {
+        var html = _taggedHtml();
+        return html ? wrap(html) : (_root ? wrap(_root) : null);
+    },
     get head() { return _root ? wrap(_root) : null; },
     get hidden() { return false; },
     get visibilityState() { return "visible"; },
@@ -5242,35 +5787,26 @@ var document = {
     },
     getElementById: function(id) {
         var targetId = String(id);
-        var found = null;
-        if (_root) {
-            _walkItems(_root, function(node) {
-                if ((typeof node.objectName === "string" && node.objectName === targetId)
-                    || _meta(node).attrs.id === targetId) {
-                    found = node;
-                    return true;
-                }
-                return false;
-            });
+        if (targetId === "") {
+            return null;
         }
-        return found ? wrap(found) : null;
+        var found = _elementsUnder(null, function(node) {
+            return _nodeId(node) === targetId;
+        }, true);
+        return found.length > 0 ? wrap(found[0]) : null;
     },
     querySelector: function(selector) {
-        var matches = _queryTree(_root, selector, true);
+        var matches = _queryTree(null, selector, true);
         return matches.length > 0 ? wrap(matches[0]) : null;
     },
     querySelectorAll: function(selector) {
-        return _asNodeList(_queryTree(_root, selector, false).map(wrap));
+        return _asNodeList(_queryTree(null, selector, false).map(wrap));
     },
     getElementsByClassName: function(classNames) {
-        var parts = String(classNames).trim().split(/\s+/).filter(Boolean);
-        if (parts.length === 0) {
-            return _asHTMLCollection([]);
-        }
-        return _asHTMLCollection(_queryTree(_root, "." + parts.join("."), false).map(wrap));
+        return _byClassNames(null, classNames);
     },
     getElementsByTagName: function(tagName) {
-        return _asHTMLCollection(_queryTree(_root, String(tagName), false).map(wrap));
+        return _byTagName(null, tagName);
     },
     createElement: function(tagName) {
         var tag = String(tagName).toLowerCase();

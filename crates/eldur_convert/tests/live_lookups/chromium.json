@@ -180,7 +180,7 @@
   "LC chain 2 2",
   "LC after 3 1",
   "LC parent true",
-  "LC elements 3"
+  "LC elements 2"
  ],
  "selectors": [
   "LC li:first-child l1",
@@ -200,7 +200,7 @@
   "LC div p p1,p2",
   "LC li:not(.i) l2,l4,l5",
   "LC li:not(.i):not(#l2) l4,l5",
-  "LC :not(li):not(p):not(em):not(html):not(body):not(head):not(meta):not(title):not(script) STYLE,u,w,t",
+  "LC :not(li):not(p):not(em):not(html):not(body):not(head):not(meta):not(title):not(script):not(style) u,w,t",
   "LC li:is(.i,#l2) l1,l2,l3",
   "LC p, em p1,e1,p2",
   "LC em, p, #u u,p1,e1,p2",
@@ -228,7 +228,6 @@
   "LC invalid SyntaxError"
  ],
  "state": [
-  "LC :checked c2,o2",
   "LC input:checked c2",
   "LC input:not(:checked) c1,t",
   "LC :disabled d",
@@ -236,7 +235,6 @@
   "LC [checked] c2",
   "LC [disabled] d",
   "LC [value=v] t",
-  "LC :checked c1,o1",
   "LC input:checked c1",
   "LC input:not(:checked) c2,t",
   "LC :disabled b",

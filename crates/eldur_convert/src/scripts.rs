@@ -115,13 +115,25 @@ pub(crate) fn collect(
         }
     }
 
-    let analysis = eldur_js::analyze(&inputs);
+    let mut analysis = eldur_js::analyze(&inputs);
     let mut matches = HashMap::new();
     let mut wanted: HashSet<NodeId> = keys.values().copied().collect();
     for query in &analysis.queries {
         let found = resolve(doc, query, diags);
         wanted.extend(found.iter().copied());
         matches.insert(query.clone(), found);
+    }
+    // Assigning text removes what was inside, and with it what lookups find.
+    let empties_elements = analysis.text_writes.iter().any(|write| match write {
+        ElementRef::Query(query) => matches.get(query).is_some_and(|found: &Vec<NodeId>| {
+            found
+                .iter()
+                .any(|&n| doc.element_children(n).next().is_some())
+        }),
+        _ => false,
+    });
+    if empties_elements {
+        analysis.mark_all_queries_live();
     }
     Scripts {
         inputs,

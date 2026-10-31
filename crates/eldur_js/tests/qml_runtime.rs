@@ -133,6 +133,16 @@ fn run_qml6_offscreen(main_qml: &PathBuf, timeout: Duration) -> String {
     combined
 }
 
+/// These pages exercise the resolved lowering and its operand order. They also
+/// write through open receivers, so the analysis alone would send their lookups
+/// to the runtime, and their items carry no converter tags to be found by. The
+/// live path has its own end-to-end test (`eldur_convert`'s `live_lookups_e2e`).
+fn analyze_resolved(scripts: &[ScriptInput]) -> eldur_js::Analysis {
+    let mut analysis = analyze(scripts);
+    analysis.live_queries.clear();
+    analysis
+}
+
 #[test]
 fn qmllint_accepts_runtime_and_rewritten_page_js_without_warnings() {
     if !has_binary("qmllint") {
@@ -325,7 +335,7 @@ window.addEventListener("load", () => {
     };
 
     let inputs = vec![s1, s2, handler_attr];
-    let analysis = analyze(&inputs);
+    let analysis = analyze_resolved(&inputs);
     let out = rewrite(&inputs, &analysis, &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
     assert_eq!(out.init_function.as_deref(), Some("__eldur_init"));
@@ -826,7 +836,7 @@ function runChecks() {
     };
 
     let scripts = [script];
-    let analysis = analyze(&scripts);
+    let analysis = analyze_resolved(&scripts);
     let out = rewrite(&scripts, &analysis, &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
 
@@ -1008,7 +1018,7 @@ function runExprChecks() {
     };
 
     let scripts = [script];
-    let analysis = analyze(&scripts);
+    let analysis = analyze_resolved(&scripts);
     let out = rewrite(&scripts, &analysis, &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
 

@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>state</title></head>
 <body>
-<input id="c1" type="checkbox"><input id="c2" type="checkbox" checked><input id="t" type="text" value="v"><button id="b">b</button><button id="d" disabled>d</button><select id="s"><option id="o1">1</option><option id="o2" selected>2</option></select><button id="go">go</button>
+<input id="c1" type="checkbox"><input id="c2" type="checkbox" checked><input id="t" type="text" value="v"><button id="b">b</button><button id="d" disabled>d</button><select id="s"><option>1</option><option selected>2</option></select><button id="go">go</button>
 <script>
 function L(k,v){console.log("LC "+k+" "+v)}
 function ids(l){var r=[];for(var i=0;i<l.length;i++){r.push(l[i].id||l[i].className||l[i].tagName)}return r.join(",")}
 
 function q(s){L(s,ids(document.querySelectorAll(s)))}
-function all(){q(":checked");q("input:checked");q("input:not(:checked)");q(":disabled");q("button:enabled");q("[checked]");q("[disabled]");q("[value=v]");}
+function all(){q("input:checked");q("input:not(:checked)");q(":disabled");q("button:enabled");q("[checked]");q("[disabled]");q("[value=v]");}
 all();
 document.getElementById("c1").checked=true;
 document.getElementById("c2").checked=false;
