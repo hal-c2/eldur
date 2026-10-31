@@ -17,8 +17,11 @@ use super::units::{color, number, round};
 use super::{Emitter, Target};
 use crate::boxes::{LayoutBox, describe};
 
-/// Chromium's default accent. `accent-color` is not in `ComputedStyle`.
+/// Chromium's accent for `accent-color: auto`.
 const ACCENT: Rgba = Rgba::new(0x00, 0x75, 0xff, 0xff);
+/// The border of Chromium's native progress and meter tracks.
+const PROGRESS_BORDER: Rgba = Rgba::new(0xb2, 0xb2, 0xb2, 0xff);
+const METER_BORDER: Rgba = Rgba::new(0xcb, 0xcb, 0xcb, 0xff);
 /// The UA's `::placeholder` colour, which eldur_css's UA sheet does not set.
 const PLACEHOLDER: Rgba = Rgba::new(0x75, 0x75, 0x75, 0xff);
 const NATIVE_BORDER: Rgba = Rgba::new(0x76, 0x76, 0x76, 0xff);
@@ -256,6 +259,11 @@ fn set_font(obj: &mut Object, style: &ComputedStyle) {
     if style.font_style != eldur_css::FontStyle::Normal {
         obj.set("font.italic", true);
     }
+}
+
+/// The colour of a checked or filled control.
+fn accent(style: &ComputedStyle) -> Rgba {
+    style.accent_color.resolve(style.color).unwrap_or(ACCENT)
 }
 
 fn object_value(obj: Object) -> Value {
@@ -844,7 +852,7 @@ impl Emitter<'_, '_> {
                 "border.color",
                 Value::expr(format!(
                     "{id}.checked ? {} : {}",
-                    color_literal(ACCENT),
+                    color_literal(accent(style)),
                     color_literal(NATIVE_BORDER)
                 )),
             );
@@ -853,7 +861,7 @@ impl Emitter<'_, '_> {
             dot.set("width", Value::expr("parent.width * 0.6"));
             dot.set("height", Value::expr("width"));
             dot.set("radius", Value::expr("width / 2"));
-            dot.set("color", color(ACCENT));
+            dot.set("color", color(accent(style)));
             dot.set("visible", Value::expr(format!("{id}.checked")));
             indicator.push_child(dot);
         } else {
@@ -862,7 +870,7 @@ impl Emitter<'_, '_> {
                 "color",
                 Value::expr(format!(
                     "{id}.checked ? {} : {}",
-                    color_literal(ACCENT),
+                    color_literal(accent(style)),
                     color_literal(background)
                 )),
             );
@@ -870,7 +878,7 @@ impl Emitter<'_, '_> {
                 "border.color",
                 Value::expr(format!(
                     "{id}.checked ? {} : {}",
-                    color_literal(ACCENT),
+                    color_literal(accent(style)),
                     color_literal(NATIVE_BORDER)
                 )),
             );
@@ -1099,16 +1107,74 @@ impl Emitter<'_, '_> {
                 );
             }
         }
-        let default_width = if meter { 80.0 } else { 160.0 };
-        if style.width == Size::Auto {
-            obj.set("implicitWidth", Value::Number(default_width));
+        // The UA sheet sizes both in em; this is for a `width: auto` an
+        // author set back.
+        let px = |size: &Size| match size {
+            Size::Length(l) => l.as_px(),
+            _ => None,
+        };
+        let em = if meter { 5.0 } else { 10.0 };
+        if px(&style.width).is_none() {
+            obj.set("implicitWidth", number(em * style.font_size));
         }
-        obj.set("implicitHeight", Value::Number(16.0));
+        obj.set(
+            "implicitHeight",
+            number(px(&style.height).unwrap_or(style.font_size)),
+        );
         let bar = if meter {
             self.meter_color(node, id, from, to)
         } else {
-            color(ACCENT)
+            color(accent(style))
         };
+        // An author background or border turns the native look off.
+        let native = style.background_color.is_transparent()
+            && style.background_layers.is_empty()
+            && [
+                &style.border.top,
+                &style.border.right,
+                &style.border.bottom,
+                &style.border.left,
+            ]
+            .iter()
+            .all(|b| b.width == 0.0 || matches!(b.style, BorderStyle::None | BorderStyle::Hidden));
+        if native {
+            // Chromium draws a pill half as tall as the box, centred in it.
+            let pill = |obj: &mut Object| {
+                obj.set("y", Value::expr("parent.height / 4"));
+                obj.set("height", Value::expr("parent.height / 2"));
+                obj.set("radius", Value::expr("height / 2"));
+            };
+            let border = if meter { METER_BORDER } else { PROGRESS_BORDER };
+            let mut track = Object::new("Rectangle");
+            track.set("width", Value::expr("parent.width"));
+            pill(&mut track);
+            track.set("color", color(TRACK));
+            track.set("border.color", color(border));
+            obj.set(
+                "background",
+                object_value(Object::new("Item").child(track)),
+            );
+            let mut fill = Object::new("Rectangle");
+            fill.set(
+                "width",
+                Value::expr(format!("{id}.visualPosition * parent.width")),
+            );
+            pill(&mut fill);
+            fill.set("color", bar);
+            let mut item = Object::new("Item");
+            item.push_child(fill);
+            if meter {
+                // A meter's border is drawn over its value too.
+                let mut edge = Object::new("Rectangle");
+                edge.set("width", Value::expr("parent.width"));
+                pill(&mut edge);
+                edge.set("color", Value::string("transparent"));
+                edge.set("border.color", color(border));
+                item.push_child(edge);
+            }
+            obj.set("contentItem", object_value(item));
+            return obj;
+        }
         let mut track = Object::new("Rectangle");
         let background = if style.background_color.is_transparent() {
             TRACK
@@ -1485,6 +1551,34 @@ mod tests {
         assert_eq!(q.matches("ProgressBar {").count(), 3, "{q}");
         assert!(q.contains("indeterminate: true"), "{q}");
         assert!(q.contains("value < 2"), "{q}");
+    }
+
+    #[test]
+    fn progress_is_drawn_like_chromium() {
+        // Chromium draws the native bar half as tall as the box and centred
+        // in it (a 10px box: rows 2.5–7.5), a pill with a 1px #b2b2b2
+        // track border, filled with `accent-color`; its default size is
+        // 10em × 1em.
+        let (q, _) = qml("<div style='accent-color:#4f46e5;font-size:14px'>\
+             <progress value=7 max=50 style='width:300px;height:10px'></progress>\
+             <progress value=1></progress></div>");
+        let bars: Vec<&str> = q.split("ProgressBar {").skip(1).collect();
+        assert_eq!(bars.len(), 2, "{q}");
+        assert!(bars[0].contains("y: parent.height / 4"), "{q}");
+        assert!(bars[0].contains("height: parent.height / 2"), "{q}");
+        assert!(bars[0].contains("radius: height / 2"), "{q}");
+        assert!(bars[0].contains("border.color: \"#b2b2b2\""), "{q}");
+        assert!(bars[0].contains("color: \"#4f46e5\""), "{q}");
+        assert!(!bars[0].contains("#0075ff"), "{q}");
+        assert!(bars[1].contains("Layout.preferredWidth: 140\n"), "{q}");
+        assert!(bars[1].contains("implicitHeight: 14\n"), "{q}");
+    }
+
+    #[test]
+    fn checked_controls_use_accent_color() {
+        let (q, _) = qml("<input type=checkbox checked style='accent-color:#4f46e5'>");
+        assert!(q.contains("#4f46e5"), "{q}");
+        assert!(!q.contains("#0075ff"), "{q}");
     }
 
     #[test]

@@ -347,6 +347,18 @@ meter {
     box-sizing: border-box;
 }
 
+progress {
+    width: 10em;
+    height: 1em;
+    vertical-align: -0.2em;
+}
+
+meter {
+    width: 5em;
+    height: 1em;
+    vertical-align: -0.2em;
+}
+
 textarea {
     white-space: pre-wrap;
 }

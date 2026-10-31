@@ -62,7 +62,7 @@ use self::{
     length::{UnitContext, parse_integer_cvs, parse_length_auto_cvs, parse_length_cvs},
     text::{
         compose_white_space, decompose_white_space, parse_border_collapse, parse_border_spacing,
-        parse_caption_side, parse_content, parse_counter_changes, parse_cursor, parse_direction,
+        parse_accent_color, parse_caption_side, parse_content, parse_counter_changes, parse_cursor, parse_direction,
         parse_list_style_image, parse_list_style_position, parse_list_style_type,
         parse_overflow_wrap, parse_pointer_events, parse_spacing, parse_table_layout,
         parse_text_align, parse_text_decoration_color, parse_text_decoration_line,
@@ -247,6 +247,7 @@ pub(crate) enum Longhand {
     BorderCollapse,
     BorderSpacing,
     CaptionSide,
+    AccentColor,
     TableLayout,
 
     // Transitions & animations sub-properties
@@ -502,6 +503,7 @@ pub(crate) fn kind(name: &str) -> PropertyKind {
         "border-collapse" => PropertyKind::Longhand(Longhand::BorderCollapse),
         "border-spacing" => PropertyKind::Longhand(Longhand::BorderSpacing),
         "caption-side" => PropertyKind::Longhand(Longhand::CaptionSide),
+        "accent-color" => PropertyKind::Longhand(Longhand::AccentColor),
         "table-layout" => PropertyKind::Longhand(Longhand::TableLayout),
 
         // Longhands: Transitions & animations
@@ -731,6 +733,7 @@ pub(crate) fn is_inherited(l: Longhand) -> bool {
             | Longhand::BorderCollapse
             | Longhand::BorderSpacing
             | Longhand::CaptionSide
+            | Longhand::AccentColor
     )
 }
 
@@ -1270,6 +1273,9 @@ pub(crate) fn compute(
         Longhand::CaptionSide => {
             style.caption_side = parse_caption_side(cvs)?;
         }
+        Longhand::AccentColor => {
+            style.accent_color = parse_accent_color(cvs, style.color)?;
+        }
         Longhand::TableLayout => {
             style.table_layout = parse_table_layout(cvs)?;
         }
@@ -1622,6 +1628,7 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
         Longhand::BorderCollapse => dst.border_collapse = src.border_collapse,
         Longhand::BorderSpacing => dst.border_spacing = src.border_spacing,
         Longhand::CaptionSide => dst.caption_side = src.caption_side,
+        Longhand::AccentColor => dst.accent_color = src.accent_color,
         Longhand::TableLayout => dst.table_layout = src.table_layout,
 
         Longhand::TransitionProperty => {
