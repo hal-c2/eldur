@@ -190,18 +190,24 @@ ApplicationWindow {
                         rightPadding: 8
                         bottomPadding: 3
                         leftPadding: 8
-                        implicitHeight: 21
+                        implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 15
                         contentItem: Text {
                             text: b.text
                             font: b.font
                             color: b.palette.buttonText
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
+                            wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
                         }
                         implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
                         objectName: "b"
-                        width: Math.min(implicitWidth, blockFlow.width)
+                        width: Math.min(implicitWidth, Math.max(blockFlow.width, Math.ceil(Math.max(...b.text.split(/\s+/).map(w => bWords.advanceWidth(w))) * 1.0256385) + leftPadding + rightPadding))
+
+                        FontMetrics {
+                            id: bWords
+                            font: b.font
+                        }
                     }
                 }
             }

@@ -89,17 +89,23 @@ ApplicationWindow {
                         rightPadding: 8
                         bottomPadding: 3
                         leftPadding: 8
-                        implicitHeight: 26
+                        implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 20
                         contentItem: Text {
                             text: first.text
                             font: first.font
                             color: first.palette.buttonText
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
+                            wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
                         }
                         objectName: "first"
-                        width: Math.min(implicitWidth, blockFlow.width)
+                        width: Math.min(implicitWidth, Math.max(blockFlow.width, Math.ceil(Math.max(...first.text.split(/\s+/).map(w => firstWords.advanceWidth(w))) * 1) + leftPadding + rightPadding))
+
+                        FontMetrics {
+                            id: firstWords
+                            font: first.font
+                        }
                     }
                 }
 
@@ -148,17 +154,23 @@ ApplicationWindow {
                             rightPadding: 8
                             bottomPadding: 3
                             leftPadding: 8
-                            implicitHeight: 26
+                            implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 20
                             contentItem: Text {
                                 text: second.text
                                 font: second.font
                                 color: second.palette.buttonText
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
+                                wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
                             }
                             objectName: "second"
-                            width: Math.min(implicitWidth, divFlow.width)
+                            width: Math.min(implicitWidth, Math.max(divFlow.width, Math.ceil(Math.max(...second.text.split(/\s+/).map(w => secondWords.advanceWidth(w))) * 1) + leftPadding + rightPadding))
+
+                            FontMetrics {
+                                id: secondWords
+                                font: second.font
+                            }
                         }
                     }
                 }

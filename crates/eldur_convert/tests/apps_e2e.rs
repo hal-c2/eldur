@@ -35,8 +35,8 @@ const BUTTONWIDTH: &str = "a button's width is whole pixels (`Math.ceil` in emit
                            five on a line add up to 2.2px against Chromium's fractions";
 const MONOLINE: &str = "a created textarea is 40 high, not 42: the runtime measures monospace in Qt \
                         where the converter's font_extents table has Chromium's; what follows is higher";
-const JUSTIFY: &str = "a justified line with boxes is not spread: its boxes keep their natural x, \
-                       and a Text cut by a box cannot share the line's free space between words";
+const SPANSCAN: &str = "a wrapped span's box comes from scanning its Text in half-font steps, so its height lands on a step: 56 for Chromium's 53";
+const WIDEBLOCK: &str = "a block wider than the viewport widens its column: a non-filling Layout item's preferred width is the column's minimum in Qt, so its siblings grow with it";
 const CONTROLROW: &str = "with the form between them hidden, the heading's bottom margin of 21.44 looks lost, leaving only #done's 16; not confirmed";
 const FONT: &str = "Helvetica: Qt's fontconfig match has line height 23 where Chromium's has 18";
 const FONTFOLLOW: &str = "follows from the Helvetica line height and width difference";
@@ -69,9 +69,13 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("table", "* tr[*] y:", ROWS),
     ("form", "* #done[*] y:", CONTROLROW),
     ("hidden_lines", "* #s4[*] width:", HANGING),
+    ("lines_closed", "* #sp[*] height:", SPANSCAN),
+    ("lines_open", "* #sp[*] height:", SPANSCAN),
+    ("lines_closed", "narrow #v[*] width:", WIDEBLOCK),
+    ("lines_closed", "narrow #w2[*] width:", WIDEBLOCK),
+    ("lines_open", "narrow #v[*] width:", WIDEBLOCK),
+    ("lines_open", "narrow #w2[*] width:", WIDEBLOCK),
     ("created_lines", "* #reset[*] x:", BUTTONWIDTH),
-    ("lines_justify", "* #ja[*] x:", JUSTIFY),
-    ("lines_justify", "* #jc[*] x:", JUSTIFY),
     ("created_controls", "* select[*] y:", MONOLINE),
 ];
 
@@ -485,4 +489,14 @@ fn hidden_created() {
 #[test]
 fn hidden_lines() {
     page("hidden_lines");
+}
+
+#[test]
+fn lines_closed() {
+    page("lines_closed");
+}
+
+#[test]
+fn lines_open() {
+    page("lines_open");
 }

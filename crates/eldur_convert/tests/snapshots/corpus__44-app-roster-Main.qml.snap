@@ -1710,18 +1710,24 @@ ApplicationWindow {
                             rightPadding: 8
                             bottomPadding: 3
                             leftPadding: 8
-                            implicitHeight: 21
+                            implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 15
                             contentItem: Text {
                                 text: prev.text
                                 font: prev.font
                                 color: prev.palette.buttonText
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
+                                wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
                             }
                             implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
                             objectName: "prev"
-                            width: Math.min(implicitWidth, pagerFlow.width - 4)
+                            width: Math.min(implicitWidth, Math.max(pagerFlow.width - 4, Math.ceil(Math.max(...prev.text.split(/\s+/).map(w => prevWords.advanceWidth(w))) * 1.0256385) + leftPadding + rightPadding))
+
+                            FontMetrics {
+                                id: prevWords
+                                font: prev.font
+                            }
                         }
                     }
 
@@ -1764,18 +1770,24 @@ ApplicationWindow {
                             rightPadding: 8
                             bottomPadding: 3
                             leftPadding: 8
-                            implicitHeight: 21
+                            implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 15
                             contentItem: Text {
                                 text: next.text
                                 font: next.font
                                 color: next.palette.buttonText
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
+                                wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
                             }
                             implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
                             objectName: "next"
-                            width: Math.min(implicitWidth, pagerFlow.width - 4)
+                            width: Math.min(implicitWidth, Math.max(pagerFlow.width - 4, Math.ceil(Math.max(...next.text.split(/\s+/).map(w => nextWords.advanceWidth(w))) * 1.0256385) + leftPadding + rightPadding))
+
+                            FontMetrics {
+                                id: nextWords
+                                font: next.font
+                            }
                         }
                     }
                 }

@@ -36,6 +36,10 @@ Item {
         font: lines.font
     }
 
+    FontMetrics {
+        id: runMetrics
+    }
+
     function schedule() {
         if (_running || _scheduled) {
             return;
@@ -92,6 +96,10 @@ Item {
         if (run.place) {
             const at = run.place[line.number];
             if (at) {
+                // Qt spreads a line it justifies to this width.
+                if (at.spread) {
+                    line.width = at.spread;
+                }
                 line.x = at.x;
                 line.y = at.y;
             }
@@ -109,6 +117,53 @@ Item {
     function _plain(item) {
         const text = item.text;
         return item.textFormat === Text.PlainText ? text : text.replace(/<[^>]*>/g, "");
+    }
+
+    // The spaces inside each measured line of a run. Qt says nothing about
+    // which characters a line holds, so its words are walked off by width.
+    function _innerSpaces(item, measured) {
+        runMetrics.font = item.font;
+        const gap = runMetrics.advanceWidth(" ");
+        const words = _plain(item).trim().split(/\s+/);
+        let at = 0;
+        return measured.map(function(m) {
+            let used = 0;
+            let count = 0;
+            while (at < words.length) {
+                const next = used + (count > 0 ? gap : 0) + runMetrics.advanceWidth(words[at]);
+                if (count > 0 && next > m.width + 1) {
+                    break;
+                }
+                used = next;
+                count += 1;
+                at += 1;
+            }
+            return Math.max(0, count - 1);
+        });
+    }
+
+    // Spreads what a justified line has left over across its spaces, those
+    // between its items and those in its text (CSS Text 3 §7.3).
+    function _justify(l, free) {
+        const parts = l.texts.concat(l.boxes).sort(function(a, b) { return a.x - b.x; });
+        let spaces = 0;
+        for (const part of parts) {
+            spaces += (part.gap ? 1 : 0) + (part.inner || 0);
+        }
+        if (spaces === 0) {
+            return;
+        }
+        const extra = free / spaces;
+        let moved = 0;
+        for (const part of parts) {
+            moved += part.gap ? extra : 0;
+            part.x += moved;
+            if (part.inner) {
+                part.spread = part.width + part.inner * extra;
+                part.perSpace = extra;
+                moved += part.inner * extra;
+            }
+        }
     }
 
     // The first line box's edge from the top of `item`, or null with none.
@@ -146,6 +201,10 @@ Item {
             kids.reverse();
         }
         for (const kid of kids) {
+            // A Text with nothing in it has no line, so gives no baseline.
+            if (_isText(kid) && kid.text === "") {
+                continue;
+            }
             const inside = _baselineOf(kid);
             if (inside !== null) {
                 return kid.y + inside;
@@ -195,6 +254,7 @@ Item {
                     start = 0;
                 }
                 line.boxes.push({ item: item, x: start + margin.leftMargin,
+                                  gap: pending && !line.empty,
                                   top: margin.topMargin, bottom: margin.bottomMargin });
                 line.end = start + across + item.width;
                 line.empty = false;
@@ -231,6 +291,10 @@ Item {
             const before = (pending || lead) && !line.empty ? space : 0;
             let start = line.end + before + marginLeft;
 
+            const justified = textAlign === Text.AlignJustify && !noWrap;
+            if (justified && item.font.wordSpacing !== 0) {
+                item.font.wordSpacing = 0;
+            }
             const run = { room: room, measured: [], place: null };
             runs.set(item, run);
             _runs.set(item, run);
@@ -248,13 +312,15 @@ Item {
                 first = run.measured[0];
             }
             const ascent = item.baselineOffset - (first ? first.y : 0);
+            const inner = justified ? _innerSpaces(item, run.measured) : [];
             for (let n = 0; n < run.measured.length; ++n) {
                 const m = run.measured[n];
                 const last = n === run.measured.length - 1;
                 const x = n === 0 ? start : 0;
                 const width = m.width - (n === 0 ? leadWidth : 0) - (last ? trailWidth : 0);
                 line.texts.push({ item: item, run: run, number: n, x: x, width: width,
-                                  height: m.height, ascent: ascent, lead: n === 0 ? leadWidth : 0 });
+                                  height: m.height, ascent: ascent, lead: n === 0 ? leadWidth : 0,
+                                  gap: n === 0 && before > 0, inner: inner[n] || 0 });
                 line.end = x + width + (last ? marginRight : 0);
                 line.empty = false;
                 if (!last) {
@@ -347,6 +413,10 @@ Item {
             }
             let shift = 0;
             const free = width - l.end;
+            // The last line stays as it is, as a browser leaves it.
+            if (free > 0 && textAlign === Text.AlignJustify && !noWrap && index < built.length - 1) {
+                _justify(l, free);
+            }
             if (free > 0 && !(noWrap && textAlign === Text.AlignLeft)) {
                 if (textAlign === Text.AlignHCenter) {
                     shift = free / 2;
@@ -373,7 +443,18 @@ Item {
                 if (!t.run.place) {
                     t.run.place = [];
                 }
-                t.run.place[t.number] = { x: t.x + shift - t.lead, y: baseline - t.ascent, width: t.width + t.lead };
+                t.run.place[t.number] = { x: t.x + shift - t.lead, y: baseline - t.ascent,
+                                          width: (t.spread || t.width) + t.lead };
+                if (t.spread) {
+                    // Qt justifies every line of a Text but its last, whose
+                    // words word-spacing spreads when it is the only one.
+                    if (t.run.measured.length === 1) {
+                        t.item.font.wordSpacing = t.perSpace;
+                    } else {
+                        t.item.horizontalAlignment = Text.AlignJustify;
+                        t.run.place[t.number].spread = t.spread + t.lead;
+                    }
+                }
             }
             top += above + below;
         });

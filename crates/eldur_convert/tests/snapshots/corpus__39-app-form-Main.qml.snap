@@ -586,20 +586,26 @@ ApplicationWindow {
                             rightPadding: 20
                             bottomPadding: 10
                             leftPadding: 20
-                            implicitHeight: 36
+                            implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 16
                             contentItem: Text {
                                 text: go.text
                                 font: go.font
                                 color: go.palette.buttonText
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
+                                wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
                             }
                             objectName: "go"
-                            width: Math.min(implicitWidth, blockFlow5.width)
+                            width: Math.min(implicitWidth, Math.max(blockFlow5.width, Math.ceil(Math.max(...go.text.split(/\s+/).map(w => goWords.advanceWidth(w))) * 1) + leftPadding + rightPadding))
 
                             onClicked: {
                                 Eldur.fire(signup, "submit", null);
+                            }
+
+                            FontMetrics {
+                                id: goWords
+                                font: go.font
                             }
                         }
                     }

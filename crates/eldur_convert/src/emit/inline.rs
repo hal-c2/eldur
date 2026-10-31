@@ -14,6 +14,7 @@ use eldur_dom::NodeId;
 use eldur_qml::{Member, Object, Value};
 
 use super::Emitter;
+use super::controls::{line_box, normal_line, text_scale};
 use super::text::CONTENT_AREA;
 use super::units::{fmt_number, number, round};
 use crate::boxes::{BoxKind, Inline, LayoutBox, Span, node_line};
@@ -302,6 +303,9 @@ impl Emitter<'_, '_> {
             TextAlign::Right | TextAlign::End => {
                 flow.set("textAlign", Value::expr("Text.AlignRight"));
             }
+            TextAlign::Justify => {
+                flow.set("textAlign", Value::expr("Text.AlignJustify"));
+            }
             _ => {}
         }
         if style.white_space == WhiteSpace::NoWrap || style.white_space == WhiteSpace::Pre {
@@ -508,6 +512,13 @@ impl Emitter<'_, '_> {
                     obj.type_name.as_str(),
                     "TextField" | "TextArea" | "ComboBox" | "CheckBox" | "RadioButton" | "Slider"
                 ) && px(&style.max_width).is_none();
+                // A button's label wraps unless the white-space it inherits forbids it.
+                let label_fixed = obj.type_name == "Button"
+                    && matches!(style.white_space, WhiteSpace::NoWrap | WhiteSpace::Pre);
+                if obj.type_name == "Button" && !label_fixed {
+                    limit = self.wrapping_label(&mut obj, style, limit);
+                }
+                let fixed = fixed || label_fixed;
                 obj.set(
                     "width",
                     Value::expr(if fixed {
@@ -527,6 +538,50 @@ impl Emitter<'_, '_> {
             margins,
             own: false,
         }
+    }
+
+    /// Lets a button's label wrap, and returns the width `limit` the button
+    /// can narrow to: never below its widest word, the min-content of CSS
+    /// shrink-to-fit.
+    fn wrapping_label(&mut self, obj: &mut Object, style: &ComputedStyle, limit: String) -> String {
+        let Some(id) = obj.id.clone() else {
+            return limit;
+        };
+        let mut stretch = None;
+        for m in &mut obj.members {
+            if let Member::Property {
+                name,
+                value: Value::Object(label),
+            } = m
+                && name == "contentItem"
+            {
+                label.set("wrapMode", Value::expr("Text.WordWrap"));
+                stretch = Some(());
+            }
+        }
+        if stretch.is_none() {
+            return limit;
+        }
+        if matches!(obj.get("implicitHeight"), Some(Value::Number(_)))
+            && !matches!(style.height, Size::Length(_))
+        {
+            obj.set(
+                "implicitHeight",
+                Value::expr(format!(
+                    "topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * {}",
+                    fmt_number(round(line_box(style).unwrap_or_else(|| normal_line(style))))
+                )),
+            );
+        }
+        let words = self.ids.claim(&format!("{id} words"));
+        let mut measure = Object::new("FontMetrics");
+        measure.id = Some(words.clone());
+        measure.set("font", Value::expr(format!("{id}.font")));
+        obj.push_child(measure);
+        let scale = text_scale(style);
+        format!(
+            "Math.max({limit}, Math.ceil(Math.max(...{id}.text.split(/\\s+/).map(w => {words}.advanceWidth(w))) * {scale}) + leftPadding + rightPadding)"
+        )
     }
 
     /// `obj` in its margin box, moved down by `shift`: a Flow places
