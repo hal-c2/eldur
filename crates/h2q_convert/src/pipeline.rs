@@ -16,20 +16,14 @@ use crate::{
 struct Loader<'r> {
     resources: &'r mut dyn Resources,
     base: &'r str,
-    /// The text of every sheet loaded, for the classes selectors name.
-    texts: Vec<String>,
 }
 
 impl StylesheetLoader for Loader<'_> {
     fn load(&mut self, href: &str) -> Option<LoadedSheet> {
-        let sheet = self.resources.read(href, self.base).map(|r| LoadedSheet {
+        self.resources.read(href, self.base).map(|r| LoadedSheet {
             text: String::from_utf8_lossy(&r.bytes).into_owned(),
             url: r.resolved,
-        });
-        if let Some(sheet) = &sheet {
-            self.texts.push(sheet.text.clone());
-        }
-        sheet
+        })
     }
 }
 
@@ -41,11 +35,9 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     let mut loader = Loader {
         resources,
         base: &input.url,
-        texts: Vec::new(),
     };
     let (sheets, sheet_diags) = h2q_css::collect_stylesheets(&doc, &mut loader, &options.viewport);
     let resources = loader.resources;
-    let mut css_texts = loader.texts;
     let styles = h2q_css::compute_styles(&doc, &sheets, &options.viewport);
     let dense_grid = doc.descendants(doc.root()).any(|n| {
         styles.style(n).is_some_and(|s| {
@@ -119,15 +111,7 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         scripts::declare_classes(&mut root, &doc, &scripts, &targets, &mut diags);
         let mut decls = vec![metadata::base_url_decl(&doc, &input.url)];
         if runtime_dom {
-            css_texts.extend(
-                doc.descendants(doc.root())
-                    .filter(|&n| {
-                        doc.element(n)
-                            .is_some_and(|e| e.is_html() && e.local_name() == "style")
-                    })
-                    .map(|n| doc.text_content(n)),
-            );
-            let classes = metadata::styled_classes(css_texts.iter().map(String::as_str));
+            let classes = h2q_css::styled_classes(&sheets);
             decls.push(metadata::styled_classes_decl(&classes));
         }
         root.members.splice(0..0, decls);
