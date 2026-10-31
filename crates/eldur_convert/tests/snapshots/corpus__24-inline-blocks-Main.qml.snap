@@ -73,11 +73,6 @@ ApplicationWindow {
                                 color: "#1b2231"
                                 font.family: "Liberation Sans"
                                 font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
                                 wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
                             }
@@ -121,11 +116,6 @@ ApplicationWindow {
                                 color: "#1b2231"
                                 font.family: "Liberation Sans"
                                 font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
                                 wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
                             }
@@ -169,11 +159,6 @@ ApplicationWindow {
                                 color: "#1b2231"
                                 font.family: "Liberation Sans"
                                 font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
                                 wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
                             }
@@ -257,11 +242,6 @@ ApplicationWindow {
                             color: "#1b2231"
                             font.family: "Liberation Sans"
                             font.pixelSize: 16
-                            lineHeight: 24
-                            lineHeightMode: Text.FixedHeight
-                            transform: Translate {
-                                y: 3
-                            }
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
                         }
@@ -313,11 +293,6 @@ ApplicationWindow {
                             color: "#1b2231"
                             font.family: "Liberation Sans"
                             font.pixelSize: 16
-                            lineHeight: 24
-                            lineHeightMode: Text.FixedHeight
-                            transform: Translate {
-                                y: 3
-                            }
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
                         }
@@ -369,11 +344,6 @@ ApplicationWindow {
                             color: "#1b2231"
                             font.family: "Liberation Sans"
                             font.pixelSize: 16
-                            lineHeight: 24
-                            lineHeightMode: Text.FixedHeight
-                            transform: Translate {
-                                y: 3
-                            }
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
                         }
@@ -425,11 +395,6 @@ ApplicationWindow {
                             color: "#1b2231"
                             font.family: "Liberation Sans"
                             font.pixelSize: 16
-                            lineHeight: 24
-                            lineHeightMode: Text.FixedHeight
-                            transform: Translate {
-                                y: 3
-                            }
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
                         }
@@ -481,11 +446,6 @@ ApplicationWindow {
                             color: "#1b2231"
                             font.family: "Liberation Sans"
                             font.pixelSize: 16
-                            lineHeight: 24
-                            lineHeightMode: Text.FixedHeight
-                            transform: Translate {
-                                y: 3
-                            }
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
                         }
@@ -599,11 +559,6 @@ ApplicationWindow {
                             color: "#1b2231"
                             font.family: "Liberation Sans"
                             font.pixelSize: 16
-                            lineHeight: 24
-                            lineHeightMode: Text.FixedHeight
-                            transform: Translate {
-                                y: 3
-                            }
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
                         }
@@ -665,11 +620,6 @@ ApplicationWindow {
                         color: "#1b2231"
                         font.family: "Liberation Sans"
                         font.pixelSize: 16
-                        lineHeight: 24
-                        lineHeightMode: Text.FixedHeight
-                        transform: Translate {
-                            y: 3
-                        }
                         wrapMode: Text.WordWrap
                         renderType: Text.NativeRendering
                     }
@@ -742,11 +692,6 @@ ApplicationWindow {
                         color: "#1b2231"
                         font.family: "Liberation Sans"
                         font.pixelSize: 16
-                        lineHeight: 24
-                        lineHeightMode: Text.FixedHeight
-                        transform: Translate {
-                            y: 3
-                        }
                         wrapMode: Text.WordWrap
                         renderType: Text.NativeRendering
                     }

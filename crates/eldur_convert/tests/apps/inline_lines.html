@@ -15,6 +15,8 @@
   .right { text-align: right; }
   .nowrap { white-space: nowrap; }
   .narrow { width: 180px; }
+  .big { display: inline-block; font-size: 12px; line-height: 60px; background: #eee; }
+  .gap { display: inline-block; margin: 0 8px 8px 0; padding: 4px; background: #eee; }
 </style></head><body>
 <div id="mixed"><button id="a">A</button> <span id="page"></span> <button id="b">B</button></div>
 <div id="labelled"><label id="lab"><input id="ok" type="checkbox"> Accept</label></div>
@@ -29,6 +31,8 @@
 <p id="nw" class="narrow nowrap">No wrapping here at all <span id="n1" class="box"></span> keeps on going past it</p>
 <p id="cen" class="center">Centred <span id="c1" class="box"></span> line</p>
 <p id="rig" class="right">Right <span id="r1" class="box"></span> line</p>
+<p id="bl">Before <span id="bigbox" class="big">x</span> after</p>
+<p id="mg">A <span id="gapped" class="gap">m</span> B</p>
 <div id="ctl"><button id="u">more</button> <button id="hide">hide</button> <button id="back">back</button></div>
 <script>
   var page = document.getElementById("page");

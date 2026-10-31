@@ -5662,10 +5662,6 @@ function _dressLineText(lines, node) {
     node.textFormat = 0; // Text.PlainText; a library script has no `Text`
     node.wrapMode = 1; // Text.WordWrap
     node.renderType = 1; // Text.NativeRendering
-    if (lines.lineHeight > 0) {
-        node.lineHeightMode = 1; // Text.FixedHeight
-        node.lineHeight = lines.lineHeight;
-    }
 }
 
 // The text a block already shows starts its first line: from here on the line
@@ -5687,6 +5683,10 @@ function _textStartsLine(raw, column, lines) {
     if (text.lineHeightMode === 1) {
         lines.lineHeight = text.lineHeight;
     }
+    // The line places it now, on its natural height.
+    text.lineHeightMode = 0; // Text.ProportionalHeight
+    text.lineHeight = 1;
+    text.transform = [];
     column.y = top;
     raw.implicitHeight = Qt.binding(function() { return extra + column.implicitHeight; });
     if (model) {
@@ -12821,6 +12821,10 @@ function _gFlowKids(column) {
 
 // What a box's outer edges collapse to, its first and last children's included.
 function _gOuter(kid) {
+    // A line has no margins, and the one before it still has to be paid.
+    if (_isLines(kid) && _isAnonLines(kid)) {
+        return { mt: 0, mb: 0, empty: false };
+    }
     if (!_gIsElement(kid) || _gStyle(kid).display === "inline") {
         var tool = _gMarginTool();
         return { mt: tool.top(kid), mb: tool.bottom(kid), empty: false, foreign: true };

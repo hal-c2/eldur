@@ -44,8 +44,6 @@ const NEVER: &str =
     "a display:none element no script names has no item: it is neither text nor a child node";
 const NEVER_SCRIPT: &str =
     "a script in the body makes no item, so its source is not in the body's textContent";
-const CREATED_P: &str =
-    "a paragraph's bottom margin, made by innerHTML, does not collapse through its empty parent";
 
 /// `(page, what differs, why)`. `what` starts a difference's name, as printed by a
 /// failing test, `<step> <selector>[<row>] <field>:`; `*` stands for any text.
@@ -65,8 +63,6 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("cards", "* #cart[*] x:", FONT),
     ("cards", "* #cart[*] width:", FONT),
     ("text_nodes", "* #never-rendered[*] text:", NEVER),
-    ("text_nodes", "* #never-rendered[*] y:", CREATED_P),
-    ("text_nodes", "* #out[*] y:", CREATED_P),
     ("theme", "* body[*] text:", NEVER_SCRIPT),
     ("table", "* #people[*] height:", ROWS),
     ("table", "* #summary[*] y:", ROWS),

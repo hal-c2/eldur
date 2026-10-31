@@ -130,7 +130,9 @@ Item {
         }
         if (_isText(item)) {
             const count = Math.max(1, item.lineCount);
-            return item.baselineOffset + (count - 1) * item.contentHeight / count;
+            // A box's Text is moved to where a browser puts its half-leading.
+            const moved = item.transform.length === 1 ? item.transform[0].y || 0 : 0;
+            return moved + item.baselineOffset + (count - 1) * item.contentHeight / count;
         }
         // Chromium rounds a font's ascent, so a control's text sits on a whole pixel.
         if (item.contentItem && item.contentItem.baselineOffset > 0) {

@@ -362,11 +362,6 @@ ApplicationWindow {
                                 color: "#1a202c"
                                 font.family: "Arial"
                                 font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
                                 wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
                             }

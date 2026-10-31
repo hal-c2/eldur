@@ -825,6 +825,21 @@ fn overlay_keeps_its_max_width() {
     assert!(qml.contains("width: Math.min(implicitWidth, 480)"), "{qml}");
 }
 
+// The line puts a run's lines on their baselines itself; what the converter
+// does for a lone Text's half-leading would move the words off them.
+#[test]
+fn a_run_on_a_line_keeps_no_half_leading_of_its_own() {
+    let (qml, _) = convert(&page(
+        "p{font:16px/24px sans-serif} .b{display:inline-block}",
+        "<p>Before <span class=b>box</span> after</p>",
+    ));
+    let flow = object_after(&qml, "<p>");
+    let run = flow.split("text: \"Before ").nth(1).expect("the run");
+    let run = &run[..run.find('}').unwrap_or(run.len())];
+    assert!(!run.contains("lineHeightMode"), "{run}");
+    assert!(!run.contains("Translate"), "{run}");
+}
+
 #[test]
 fn a_line_with_an_inline_block_is_laid_out_as_runs_and_boxes() {
     let (qml, diags) = convert(&page(

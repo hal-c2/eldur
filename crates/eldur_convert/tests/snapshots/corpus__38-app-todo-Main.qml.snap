@@ -359,11 +359,6 @@ ApplicationWindow {
                                         color: "#4a5568"
                                         font.family: "Arial"
                                         font.pixelSize: 13
-                                        lineHeight: 18.2
-                                        lineHeightMode: Text.FixedHeight
-                                        transform: Translate {
-                                            y: 1
-                                        }
                                         wrapMode: Text.WordWrap
                                         renderType: Text.NativeRendering
                                     }
@@ -411,11 +406,6 @@ ApplicationWindow {
                                         color: "#4a5568"
                                         font.family: "Arial"
                                         font.pixelSize: 13
-                                        lineHeight: 18.2
-                                        lineHeightMode: Text.FixedHeight
-                                        transform: Translate {
-                                            y: 1
-                                        }
                                         wrapMode: Text.WordWrap
                                         renderType: Text.NativeRendering
                                     }

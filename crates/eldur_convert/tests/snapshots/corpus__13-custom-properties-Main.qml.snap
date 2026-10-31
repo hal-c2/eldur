@@ -795,11 +795,6 @@ ApplicationWindow {
                                     color: "#1c2233"
                                     font.family: "sans-serif"
                                     font.pixelSize: 16
-                                    lineHeight: 24
-                                    lineHeightMode: Text.FixedHeight
-                                    transform: Translate {
-                                        y: 3
-                                    }
                                     wrapMode: Text.WordWrap
                                     renderType: Text.NativeRendering
                                 }
@@ -849,11 +844,6 @@ ApplicationWindow {
                                     color: "#1c2233"
                                     font.family: "sans-serif"
                                     font.pixelSize: 16
-                                    lineHeight: 24
-                                    lineHeightMode: Text.FixedHeight
-                                    transform: Translate {
-                                        y: 3
-                                    }
                                     wrapMode: Text.WordWrap
                                     renderType: Text.NativeRendering
                                 }
@@ -903,11 +893,6 @@ ApplicationWindow {
                                     color: "#1c2233"
                                     font.family: "sans-serif"
                                     font.pixelSize: 16
-                                    lineHeight: 24
-                                    lineHeightMode: Text.FixedHeight
-                                    transform: Translate {
-                                        y: 3
-                                    }
                                     wrapMode: Text.WordWrap
                                     renderType: Text.NativeRendering
                                 }

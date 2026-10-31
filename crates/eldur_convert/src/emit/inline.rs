@@ -215,6 +215,15 @@ fn baseline_kind(a: &LayoutBox<'_>) -> Option<&'static str> {
     (a.kind == BoxKind::Flex || a.kind == BoxKind::Grid).then_some("first")
 }
 
+// The line puts each of a run's lines on its baseline, and Qt spaces fixed-height
+// lines unevenly once they are moved: a run keeps its font's natural height.
+fn drop_own_leading(text: &mut Object) {
+    text.members.retain(|m| {
+        !matches!(m, Member::Property { name, .. }
+            if name == "lineHeight" || name == "lineHeightMode" || name == "transform")
+    });
+}
+
 fn string_property(obj: &mut Object, name: &str, value: &str) {
     obj.members.insert(
         0,
@@ -308,6 +317,7 @@ impl Emitter<'_, '_> {
                 Piece::Run(items) => {
                     let drawn = drop_doubled_spaces(&items, &mut false);
                     let mut text = self.text(style, decoration, &drawn, line);
+                    drop_own_leading(&mut text);
                     let mut spans = Vec::new();
                     each_span(&items, &mut spans);
                     // A label cut by its control still takes a press on its words.
@@ -384,6 +394,7 @@ impl Emitter<'_, '_> {
             // runtime makes each from this, in the block's font and colour.
             let run_id = self.ids.claim(&format!("{flow_id} run"));
             let mut run = self.text(style, decoration, &[], line);
+            drop_own_leading(&mut run);
             run.members.retain(|m| {
                 !matches!(m, Member::Property { name, .. }
                     if name == "horizontalAlignment")

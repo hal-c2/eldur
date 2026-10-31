@@ -6,6 +6,7 @@
   .narrow { width: 150px; }
   .chip { display: inline-block; width: 40px; height: 20px; background: #cde; }
   .m { margin: 0 10px; }
+  .block { height: 10px; margin-bottom: 8px; background: #cde; }
 </style></head><body>
 <div id="static">Static <b>bold</b> text </div>
 <button id="sb">In body</button>
@@ -15,6 +16,7 @@
 <div id="wrap" class="narrow"></div>
 <div id="labels"></div>
 <div id="spans">Lead <span id="fill"></span> tail</div>
+<div id="cards"></div>
 <div id="ctl"><button id="add">add</button> <button id="del">del</button> <button id="hide">hide</button> <button id="text">text</button> <button id="reset">reset</button></div>
 <script>
   function make(tag, id, text, cls) {
@@ -49,6 +51,9 @@
   lab.appendChild(box);
   lab.appendChild(document.createTextNode(" Accept"));
   document.getElementById("labels").appendChild(lab);
+  var cards = document.getElementById("cards");
+  cards.appendChild(make("div", "card", "", "block"));
+  cards.appendChild(make("button", "pill", "Add"));
   var chips = document.getElementById("labels");
   chips.appendChild(make("span", "mm", "", "chip m"));
   console.log("loaded", st.children.length, em.childNodes.length, document.getElementById("cb").previousElementSibling.id);
