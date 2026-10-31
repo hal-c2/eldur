@@ -131,7 +131,7 @@ enum Part {
 }
 
 /// The line height of `style` in px.
-fn line_height(style: &ComputedStyle) -> f32 {
+pub(super) fn line_height(style: &ComputedStyle) -> f32 {
     match style.line_height {
         LineHeight::Normal => CONTENT_AREA * style.font_size,
         LineHeight::Number(n) => n * style.font_size,
@@ -141,7 +141,7 @@ fn line_height(style: &ComputedStyle) -> f32 {
 
 /// The baseline of a line of `style`'s text, from the top of the line box:
 /// the glyphs are centred in it (half-leading).
-fn text_baseline(style: &ComputedStyle) -> f32 {
+pub(super) fn text_baseline(style: &ComputedStyle) -> f32 {
     (line_height(style) - CONTENT_AREA * style.font_size) / 2.0 + ASCENT * style.font_size
 }
 

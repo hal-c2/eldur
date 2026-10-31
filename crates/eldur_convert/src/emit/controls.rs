@@ -1150,10 +1150,7 @@ impl Emitter<'_, '_> {
             pill(&mut track);
             track.set("color", color(TRACK));
             track.set("border.color", color(border));
-            obj.set(
-                "background",
-                object_value(Object::new("Item").child(track)),
-            );
+            obj.set("background", object_value(Object::new("Item").child(track)));
             let mut fill = Object::new("Rectangle");
             fill.set(
                 "width",

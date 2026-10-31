@@ -677,7 +677,8 @@ ApplicationWindow {
                                     Accessible.name: "Only 7 left in stock"
                                     Layout.fillWidth: true
                                     Layout.preferredHeight: 10
-                                    Layout.topMargin: 4
+                                    Layout.topMargin: 11.92
+                                    Layout.bottomMargin: 3.08
                                 }
                             }
 

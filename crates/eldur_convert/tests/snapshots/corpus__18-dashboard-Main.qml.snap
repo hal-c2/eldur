@@ -1792,7 +1792,8 @@ ApplicationWindow {
                                                         }
                                                         Layout.fillWidth: true
                                                         Layout.preferredHeight: 12
-                                                        Layout.topMargin: 8
+                                                        Layout.topMargin: 11.47
+                                                        Layout.bottomMargin: 0.63
                                                     }
                                                 }
 

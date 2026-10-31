@@ -152,8 +152,25 @@ impl Emitter<'_, '_> {
                 continue;
             }
             let collapsed = child.style.visibility == Visibility::Collapse;
-            let mut obj = emitted.obj;
+            let mut emitted = emitted;
+            let mut obj = std::mem::replace(&mut emitted.obj, Object::new("Item"));
             self.flow_item(&mut obj, child);
+            // Its line box separates its margins from its neighbours'.
+            let strut = if hidden.is_none() {
+                line_strut(
+                    self.doc,
+                    child,
+                    &obj,
+                    emitted.top.value(),
+                    emitted.bottom.value(),
+                )
+            } else {
+                None
+            };
+            if strut.is_some() {
+                emitted.top = MarginSet::default();
+                emitted.bottom = MarginSet::default();
+            }
             let mut skipped = None;
             match hidden.take() {
                 // Shown, it separates its neighbours' margins; hidden, the
@@ -177,6 +194,14 @@ impl Emitter<'_, '_> {
                         self.set_margin(&mut obj, "Layout.topMargin", pending.value());
                     }
                 }
+            }
+            if let Some((above, below)) = strut {
+                let set = match obj.get("Layout.topMargin") {
+                    Some(Value::Number(n)) => *n as f32,
+                    _ => 0.0,
+                };
+                self.set_margin(&mut obj, "Layout.topMargin", set + above);
+                self.set_margin(&mut obj, "Layout.bottomMargin", below);
             }
             if let (Some(before), Some(id)) = (skipped, &obj.id) {
                 hidden = Some((id.clone(), before));
@@ -729,4 +754,55 @@ pub(crate) fn length_value_nonneg(l: &Length) -> Value {
         Some(px) => number(px.max(0.0)),
         None => Value::Expr(format!("Math.max(0, {})", length_expr(l, "parent.width"))),
     }
+}
+
+/// The space a block-laid-out inline replaced element `b` (border box
+/// `obj`) keeps above and below it in its line box, margins included: its
+/// bottom margin edge sits on the baseline, raised by `vertical-align`,
+/// and the line is at least `line-height` tall (CSS 2.2 §10.8). `None`
+/// for a block-level box, one whose baseline is its text's, or one whose
+/// height or alignment is not known here.
+fn line_strut(
+    doc: &eldur_dom::Document,
+    b: &LayoutBox<'_>,
+    obj: &Object,
+    mt: f32,
+    mb: f32,
+) -> Option<(f32, f32)> {
+    use eldur_css::VerticalAlign;
+    let style = &*b.style;
+    if b.kind != crate::boxes::BoxKind::Replaced
+        || crate::boxes::is_block_level(style.display)
+        || style.float != Float::None
+    {
+        return None;
+    }
+    // A form control that shows text has that text's baseline.
+    let element = doc.element(b.node?)?;
+    let bottom_baseline = element.is_svg()
+        || (element.is_html()
+            && matches!(
+                element.local_name(),
+                "img" | "video" | "canvas" | "iframe" | "embed" | "object" | "progress" | "meter"
+            ));
+    if !bottom_baseline {
+        return None;
+    }
+    let raise = match style.vertical_align {
+        VerticalAlign::Baseline => 0.0,
+        VerticalAlign::Length(v) => v,
+        _ => return None,
+    };
+    let Some(Value::Number(h)) = obj
+        .get("Layout.preferredHeight")
+        .or_else(|| obj.get("implicitHeight"))
+    else {
+        return None;
+    };
+    let line = super::inline::line_height(style);
+    let bottom_edge = super::inline::text_baseline(style) - raise;
+    let top_edge = bottom_edge - (mt + *h as f32 + mb);
+    let line_top = top_edge.min(0.0);
+    let line_bottom = bottom_edge.max(line);
+    Some((top_edge - line_top + mt, line_bottom - bottom_edge + mb))
 }

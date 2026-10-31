@@ -5,9 +5,9 @@
 use swc_css_ast::ComponentValue;
 
 use crate::{
-    AccentColor, BorderCollapse, BorderStyle, CaptionSide, ComputedStyle, ContentItem, CounterChange,
-    Cursor as CssCursor, Direction, Length, ListStyleType, PointerEvents, Rgba, Shadow,
-    TableLayout, TextAlign, TextDecorationLine, TextOverflow, TextTransform, VerticalAlign,
+    AccentColor, BorderCollapse, BorderStyle, CaptionSide, ComputedStyle, ContentItem,
+    CounterChange, Cursor as CssCursor, Direction, Length, ListStyleType, PointerEvents, Rgba,
+    Shadow, TableLayout, TextAlign, TextDecorationLine, TextOverflow, TextTransform, VerticalAlign,
     Visibility, WhiteSpace, WordBreak,
 };
 
