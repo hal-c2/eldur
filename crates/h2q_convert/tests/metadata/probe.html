@@ -29,6 +29,7 @@ function probe() {
   r.containsOther = btn.classList.contains('card');
   r.querySelectorText = document.querySelector(dot + 'title').textContent;
   r.querySelectorNested = document.querySelector(dot + 'outer ' + dot + 'x').id;
+  r.querySelectorAllCount = document.querySelectorAll('p' + '').length;
   r.tagName = btn.tagName;
   r.className = btn.className;
   btn.classList.toggle('active');
