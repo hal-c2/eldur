@@ -10577,6 +10577,21 @@ function _gMarginTool() {
             + "function size(i, w, h) { i.Layout.preferredWidth = w; i.Layout.minimumWidth = w < 0 ? 0 : w; i.Layout.maximumWidth = w < 0 ? Infinity : w; "
             + "i.Layout.fillWidth = false; i.Layout.preferredHeight = h; i.Layout.minimumHeight = h < 0 ? 0 : h; i.Layout.maximumHeight = h < 0 ? Infinity : h; } "
             + "function shut(i, shut) { i.Layout.maximumHeight = shut ? 0 : Infinity; i.Layout.preferredHeight = shut ? 0 : -1; } "
+            // A cell's rounding goes to the next item, as the converter's own
+            // `eldurCarry` does (`emit/carry.rs`), and a height can change after.
+            // A column's own height is whole: what its last cell was rounded
+            // up by is not the box's. The converter knows that of its own items.
+            + "function column(p) { if (typeof p.spacing === 'number') return p; "
+            + "for (var k = 0; k < p.children.length; ++k) { var c = p.children[k]; "
+            + "if (typeof c.spacing === 'number' && c.eldurTag === undefined) return c; } return null; } "
+            + "function excess(p) { var c = column(p); if (!c) return 0; "
+            + "for (var k = c.children.length - 1; k >= 0; --k) { var i = c.children[k]; "
+            + "if (i.visible && i.eldurSlot === undefined) return i.eldurCarry === undefined ? carry(i) : 0; } return 0; } "
+            + "function carry(p) { if (!p || !p.parent) return 0; if (p.eldurCarry !== undefined) return p.eldurCarry + excess(p); "
+            + "var w = p.Layout.preferredHeight; var fixed = w >= 0 && w !== p.implicitHeight; var h = fixed ? w : p.implicitHeight - excess(p); "
+            + "var m = p.Layout.topMargin + p.Layout.bottomMargin; var c = Math.ceil(m + (fixed ? h : Math.ceil(h))) - m - h; "
+            + "return c > 1e-6 ? c + 1e-6 : 0; } "
+            + "function hold(i, t, b, p) { i.Layout.topMargin = p ? Qt.binding(function() { return t - carry(p); }) : t; i.Layout.bottomMargin = b; } "
             + "function top(i) { return i.Layout.topMargin; } "
             + "function bottom(i) { return i.Layout.bottomMargin; } }", _root, "eldur_margins");
     }
@@ -10689,10 +10704,22 @@ function _gSetMargins(kid, top, bottom) {
         _gSet(kid, "eldurMb", bottom);
         return;
     }
-    var tool = _gMarginTool();
-    if (Math.abs(tool.top(kid) - top) >= 2 || Math.abs(tool.bottom(kid) - bottom) >= 2) {
-        tool.set(kid, top, bottom);
+    _gMarginTool().set(kid, top, bottom);
+}
+
+// A gap a binding keeps, once. What conversion declared stays until a gap is
+// worked out for the kid, as its binding knows only its old neighbour's carry.
+function _gHoldGap(kid, top, bottom, prev) {
+    if (_gIsBox(kid)) {
+        _gSetMargins(kid, top - _gMarginTool().carry(prev), bottom);
+        return;
     }
+    var held = _meta(kid).gHeld;
+    if (held && held.top === top && held.bottom === bottom && held.prev === prev) {
+        return;
+    }
+    _meta(kid).gHeld = { top: top, bottom: bottom, prev: prev };
+    _gMarginTool().hold(kid, top, bottom, prev);
 }
 
 function _gMarginTop(kid) {
@@ -10703,28 +10730,20 @@ function _gMarginBottom(kid) {
     return _gIsBox(kid) ? kid.eldurMb || 0 : _gMarginTool().bottom(kid);
 }
 
-// Only what is two pixels or more off is written. Less is what `eldurCarry` keeps
-// of a fractional height, in a binding worth keeping, and a gap a page's own
-// element already holds as its bottom margin need not move to the next's top.
 function _gApplyGaps(gaps, trailing) {
     var before = 0;
+    var prev = null;
     for (var i = 0; i < gaps.length; ++i) {
         var kid = gaps[i].kid;
         if (gaps[i].want !== null) {
-            var keep = _gIsBox(kid) ? 0 : _gMarginBottom(kid);
-            if (i === gaps.length - 1 || _gIsBox(kid)) {
-                keep = 0;
-            }
-            var top = gaps[i].want - before;
-            if (_gIsBox(kid) || Math.abs(_gMarginTop(kid) - top) >= 2 || Math.abs(_gMarginBottom(kid) - keep) >= 2) {
-                _gSetMargins(kid, top, keep);
-            }
+            var end = i === gaps.length - 1;
+            // A bottom this pass wrote before is no page's own.
+            var keep = gaps[i].net !== undefined ? gaps[i].net
+                : end ? trailing : _gIsBox(kid) || _meta(kid).gHeld ? 0 : _gMarginBottom(kid);
+            _gHoldGap(kid, gaps[i].want - before, keep, prev);
         }
         before = _gMarginBottom(kid);
-    }
-    if (gaps.length > 0 && gaps[gaps.length - 1].want !== null) {
-        var last = gaps[gaps.length - 1].kid;
-        _gSetMargins(last, _gMarginTop(last), trailing);
+        prev = kid;
     }
 }
 
@@ -10766,7 +10785,7 @@ function _gColumnMargins(column, owner) {
     var paid = 0;
     var seen = false;
     var gaps = [];
-    var lastReal = -1;
+    var netted = 0;
     // A column's first: nothing before it can have moved it.
     var lastOwn = true;
     for (var i = 0; i < kids.length; ++i) {
@@ -10781,7 +10800,7 @@ function _gColumnMargins(column, owner) {
         // to the fraction, unless a script's child's margin passes through one.
         var own = !_meta(kid).createdTag && !_gIsBox(kid) && !o.foreign;
         var settled = own && !_gEdgeCreated(kid);
-        var inPlace = settled && lastOwn;
+        var inPlace = settled && lastOwn && !_meta(kid).gHeld;
         lastOwn = settled;
         if (o.foreign) {
             lastOwn = false;
@@ -10789,37 +10808,42 @@ function _gColumnMargins(column, owner) {
             pending = o.mb;
             paid = o.mb;
             seen = true;
-            lastReal = -1;
+            netted = 0;
             continue;
         }
         if (o.empty) {
-            pending = _gMerge(_gMerge(pending, o.mt), o.mb);
-            // Past the last box the margin is the parent's, not a gap in it.
-            var more = kids.slice(i + 1).some(function(k) { return !_gOuter(k).empty; });
+            // It sits where its own bottom would start the next box's gap, so
+            // that margin of its is still to come.
+            var at = _gMerge(pending, o.mt);
+            pending = _gMerge(at, o.mb);
             if (!seen && throughTop) {
                 gaps.push({ kid: kid, want: 0 });
                 paid = pending;
-            } else if (!more && throughBottom) {
-                gaps.push({ kid: kid, want: 0 });
             } else {
-                gaps.push({ kid: kid, want: pending - paid });
-                paid = pending;
+                gaps.push({ kid: kid, want: at - paid });
+                paid = at;
             }
+            netted += 1;
             continue;
         }
         var total = _gMerge(pending, o.mt);
         gaps.push({ kid: kid, want: inPlace ? null : !seen && throughTop ? 0 : total - paid });
         pending = o.mb;
         paid = 0;
+        netted = 0;
         seen = true;
-        lastReal = gaps.length - 1;
     }
-    var after = lastReal === gaps.length - 1 && lastReal >= 0 ? (throughBottom ? 0 : pending - paid) : 0;
-    _gApplyGaps(gaps, after);
-    if (lastReal >= 0 && lastReal < gaps.length - 1 && !throughBottom && gaps[lastReal].want !== null) {
-        var real = gaps[lastReal].kid;
-        _gSetMargins(real, _gMarginTop(real), pending - paid);
+    // Past the last box the margin is the parent's, not a gap in it: a box
+    // margins collapse through still sits past them, without growing the parent.
+    // Qt won't shrink a column by a cell, so each such cell is empty on its own.
+    if (throughBottom) {
+        var sum = 0;
+        for (var n = gaps.length - netted; n < gaps.length; ++n) {
+            sum += gaps[n].want;
+            gaps[n].net = -sum;
+        }
     }
+    _gApplyGaps(gaps, throughBottom ? 0 : pending - paid);
 }
 
 function _gEdgeCreated(kid) {

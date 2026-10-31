@@ -213,3 +213,15 @@ document.getElementById('wf').style.transform='translateX(1px) perspective(9px)'
         );
     }
 }
+
+/// Margins under two pixels, fractional ones and a fractional height in a row.
+#[test]
+fn margins_hair() {
+    page("margins_hair");
+}
+
+/// A box margins collapse through, inside a column and at its end.
+#[test]
+fn margins_empty() {
+    page("margins_empty");
+}

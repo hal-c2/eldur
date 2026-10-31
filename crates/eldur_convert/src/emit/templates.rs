@@ -654,16 +654,6 @@ pub(crate) fn add(
                 }
             }
         }
-        if e.open_classes {
-            diags.info(
-                "css",
-                e.line,
-                format!(
-                    "a created <{}> has a computed class; classes not written literally are not styled (dynamic-context)",
-                    e.tag
-                ),
-            );
-        }
     }
     for i in 0..created.len() {
         builder.place(i, body, Context::Any, 0);

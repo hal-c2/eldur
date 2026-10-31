@@ -437,11 +437,8 @@ container filled with inline-level children (`_gFillsLine`).
 **Known gaps.**
 - A closed page's template keeps the converter's picture, except its margins:
   after a script changes the tree, the runtime works out each changed column's
-  gaps, collapse through parents included. It writes one only when it is 2px or
-  more off, as less is what `eldurCarry` keeps of a fractional height, so a gap
-  wrong by under 2px stays. `var()` in an inline rule is not seen.
-- A trailing empty created box sits where its column ends, not after the margins
-  that collapse through it; what follows it is placed right.
+  gaps, collapse through parents included, and holds each by a binding that keeps
+  the carry of a fractional height. `var()` in an inline rule is not seen.
 - A generic box paints linear and radial gradients (one image over the padding
   box: `background-size`, `-position` and `-repeat` warn), box-shadow as bands of
   a hard or stepped edge, 2-D transforms, opacity and square overflow clips.
