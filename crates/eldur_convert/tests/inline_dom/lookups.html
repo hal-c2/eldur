@@ -1,0 +1,36 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+.k{color:rgb(200,0,0)} .big{font-weight:700} .blue{color:#0000ff} .on span{color:rgb(0,128,0)} .it{font-style:italic}
+</style><script>
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
+function C(e){var s=getComputedStyle(e);return s.color+"/"+s.fontWeight+"/"+s.fontStyle+"/"+s.display}
+
+document.addEventListener("DOMContentLoaded",function(){
+var q=function(s){return document.querySelector(s)},byId=function(s){return document.getElementById(s)};
+var n=byId("count"),p=byId("p1"),d=byId("d");
+L("id",I(n),I(byId("bold")),I(byId("link")),I(q("p span")),I(byId("none")));
+L("same",n===q("#count"),n===document.querySelectorAll("span")[0],n===p.children[0],n===p.firstElementChild);
+L("tag",n.tagName,n.nodeName,n.nodeType,byId("link").tagName);
+L("sel",document.querySelectorAll("span").length,document.querySelectorAll(".k").length,document.querySelectorAll("p b").length,document.querySelectorAll("p > b").length,document.querySelectorAll("b + a").length,document.querySelectorAll("span:not(.k)").length,document.querySelectorAll("a[href]").length);
+L("class",document.getElementsByClassName("k").length,document.getElementsByClassName("e2")[0].tagName,document.getElementsByTagName("b")[0].id,p.getElementsByTagName("span").length,p.querySelector(".k").id);
+L("star",document.body.querySelectorAll("*").length,document.body.children.length,p.querySelectorAll("*").length);
+L("up",I(n.parentNode),I(n.parentElement),I(n.closest("p")),I(n.closest("body")),I(n.closest("span")),I(n.closest("table")));
+L("contains",p.contains(n),n.contains(p),n.contains(n),d.contains(n),document.body.contains(n));
+L("kids",p.children.length,p.childNodes.length,p.childElementCount,I(p.firstElementChild),I(p.lastElementChild),n.children.length,n.childNodes.length);
+L("nodes",p.firstChild.nodeType,p.firstChild.textContent,p.lastChild.nodeType,I(p.lastChild),n.firstChild.nodeType,n.firstChild.textContent);
+L("sib",I(n.nextElementSibling),I(n.previousElementSibling),n.nextSibling.nodeType,n.nextSibling.textContent,n.previousSibling.textContent,I(byId("bold").previousElementSibling));
+L("mixed",d.children.length,I(d.children[0]),I(d.children[1]),I(d.children[2]),d.childNodes.length,I(byId("inner").previousElementSibling),I(byId("anon").nextElementSibling),I(byId("anon").parentNode));
+L("match",n.matches("span"),n.matches("p span.k"),n.matches("#count"),n.matches("b"),n.matches(":first-child"),byId("bold").matches("b:nth-child(2)"),byId("link").matches(":link"));
+L("text",n.textContent,n.innerText,p.textContent,byId("anon").textContent);
+L("html",n.innerHTML,n.outerHTML,byId("bold").outerHTML,p.innerHTML);
+L("attr",n.getAttribute("class"),n.getAttribute("id"),n.hasAttribute("id"),n.getAttribute("nope"),n.className,n.classList.length,n.classList.contains("k"),n.id);
+L("link",byId("link").getAttribute("href"),byId("link").hash===undefined,byId("data").getAttribute("data-v"),byId("data").dataset.v,byId("data").title);
+L("computed",C(n),C(byId("bold")),C(byId("plain")));
+L("connected",n.isConnected,byId("hid").textContent,C(byId("hid")),I(q("#hid")));
+});
+</script></head><body>
+<p id="p1">Count: <span id="count" class="k">0</span> and <b id="bold">y</b> <a id="link" href="#x">link</a><em class="k e2"> em</em></p>
+<p id="p2"><span id="plain">whole</span></p>
+<div id="d">before <span id="anon">inside</span> after<p id="inner">para</p><i>it</i></div>
+<p id="p3">a <span id="data" data-v="7" title="tt">b</span> c <span id="hid" style="display:none">gone</span></p>
+</body></html>

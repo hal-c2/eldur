@@ -1,0 +1,270 @@
+{
+ "clicks": {
+  "log": [
+   "LC count 1",
+   "LC body t=go c=BODY this=BODY click true 0",
+   "LC count 2",
+   "LC body t=go c=BODY this=BODY click true 0",
+   "LC word t=word c=word this=word click true 0",
+   "LC para t=word c=para this=para click true 0",
+   "LC box t=word c=box this=box click true 0",
+   "LC body t=word c=BODY this=BODY click true 0",
+   "LC bold t=bold c=bold this=bold click true 0",
+   "LC para t=bold c=para this=para click true 0",
+   "LC box t=bold c=box this=box click true 0",
+   "LC body t=bold c=BODY this=BODY click true 0",
+   "LC lnk t=lnk c=lnk this=lnk click true 0",
+   "LC hash ",
+   "LC para t=lnk c=para this=para click true 0",
+   "LC box t=lnk c=box this=box click true 0",
+   "LC body t=lnk c=BODY this=BODY click true 0",
+   "LC stop t=stop c=stop this=stop click true 0",
+   "LC inner t=inner c=inner this=inner click true 0",
+   "LC nest t=inner c=nest this=nest click true 0",
+   "LC para t=inner c=para this=para click true 0",
+   "LC box t=inner c=box this=box click true 0",
+   "LC body t=inner c=BODY this=BODY click true 0",
+   "LC nest t=nest c=nest this=nest click true 0",
+   "LC para t=nest c=para this=para click true 0",
+   "LC box t=nest c=box this=box click true 0",
+   "LC body t=nest c=BODY this=BODY click true 0",
+   "LC wide t=wide c=wide this=wide click true 0",
+   "LC box t=wide c=box this=box click true 0",
+   "LC body t=wide c=BODY this=BODY click true 0",
+   "LC tog rgb(200, 0, 0)/400/normal/inline",
+   "LC box t=tog c=box this=box click true 0",
+   "LC body t=tog c=BODY this=BODY click true 0",
+   "LC tog rgb(0, 0, 0)/400/normal/inline",
+   "LC box t=tog c=box this=box click true 0",
+   "LC body t=tog c=BODY this=BODY click true 0",
+   "LC once",
+   "LC box t=once c=box this=box click true 0",
+   "LC body t=once c=BODY this=BODY click true 0",
+   "LC box t=once c=box this=box click true 0",
+   "LC body t=once c=BODY this=BODY click true 0",
+   "LC onclick onc onc",
+   "LC box t=onc c=box this=box click true 0",
+   "LC body t=onc c=BODY this=BODY click true 0",
+   "LC para t=plainpart c=para this=para click true 0",
+   "LC box t=plainpart c=box this=box click true 0",
+   "LC body t=plainpart c=BODY this=BODY click true 0",
+   "LC made t=made c=made this=made click true 0",
+   "LC delegate made made",
+   "LC box t=made c=box this=box click true 0",
+   "LC body t=made c=BODY this=BODY click true 0",
+   "LC delegate SPAN SPAN",
+   "LC box t=SPAN c=box this=box click true 0",
+   "LC body t=SPAN c=BODY this=BODY click true 0",
+   "LC box t=blank c=box this=box click true 0",
+   "LC body t=blank c=BODY this=BODY click true 0",
+   "LC box t=blank c=box this=box click true 0",
+   "LC body t=blank c=BODY this=BODY click true 0"
+  ],
+  "clicks": [
+   {
+    "name": "#go",
+    "x": 28.2265625,
+    "y": 18.5
+   },
+   {
+    "name": "#go",
+    "x": 28.2265625,
+    "y": 18.5
+   },
+   {
+    "name": "#word",
+    "x": 139.0859375,
+    "y": 53.5
+   },
+   {
+    "name": "#bold",
+    "x": 211.984375,
+    "y": 53.5
+   },
+   {
+    "name": "#lnk",
+    "x": 288.875,
+    "y": 53.5
+   },
+   {
+    "name": "#stop",
+    "x": 363.5390625,
+    "y": 53.5
+   },
+   {
+    "name": "#inner",
+    "x": 459.96875,
+    "y": 53.5
+   },
+   {
+    "name": "#nest:tail",
+    "x": 506.1875,
+    "y": 53.5
+   },
+   {
+    "name": "#wide",
+    "x": 48,
+    "y": 87.5
+   },
+   {
+    "name": "#tog",
+    "x": 112,
+    "y": 87.5
+   },
+   {
+    "name": "#tog",
+    "x": 112,
+    "y": 87.5
+   },
+   {
+    "name": "#once",
+    "x": 157.328125,
+    "y": 87.5
+   },
+   {
+    "name": "#once",
+    "x": 157.328125,
+    "y": 87.5
+   },
+   {
+    "name": "#onc",
+    "x": 206.203125,
+    "y": 87.5
+   },
+   {
+    "name": "#plainpart",
+    "x": 61.3203125,
+    "y": 53.5
+   },
+   {
+    "name": "#made",
+    "x": 90.640625,
+    "y": 121.5
+   },
+   {
+    "name": "#para2:start",
+    "x": 21.7734375,
+    "y": 121.5
+   },
+   {
+    "name": "#blank",
+    "x": 24,
+    "y": 155.5
+   },
+   {
+    "name": "#blank:right",
+    "x": 1252,
+    "y": 155.5
+   }
+  ]
+ },
+ "lookups": {
+  "log": [
+   "LC id count bold link count null",
+   "LC same true true true true",
+   "LC tag SPAN SPAN 1 A",
+   "LC sel 5 2 1 1 1 4 1",
+   "LC class 2 EM bold 1 count",
+   "LC star 14 4 4",
+   "LC up p1 p1 p1 BODY count null",
+   "LC contains true false true false true",
+   "LC kids 4 7 4 count EM 0 1",
+   "LC nodes 3 Count:  1 EM 3 0",
+   "LC sib bold null 3  and  Count:  count",
+   "LC mixed 3 anon inner I 5 anon inner d",
+   "LC match true true true false true true true",
+   "LC text 0 0 Count: 0 and y link em inside",
+   "LC html 0 <span id=\"count\" class=\"k\">0</span> <b id=\"bold\">y</b> Count: <span id=\"count\" class=\"k\">0</span> and <b id=\"bold\">y</b> <a id=\"link\" href=\"#x\">link</a><em class=\"k e2\"> em</em>",
+   "LC attr k count true  k 1 true count",
+   "LC link #x false 7 7 tt",
+   "LC computed rgb(200, 0, 0)/400/normal/inline rgb(0, 0, 0)/700/normal/inline rgb(0, 0, 0)/400/normal/inline",
+   "LC connected true gone rgb(0, 0, 0)/400/normal/none hid"
+  ],
+  "clicks": []
+ },
+ "mutate": {
+  "log": [
+   "LC detached true false null",
+   "LC append Start anchor endmade 2 4 p true true rgb(200, 0, 0)/400/normal/inline true",
+   "LC write Start anchor endchanged",
+   "LC before Start bbanchor endchanged B B rgb(0, 0, 0)/700/normal/inline",
+   "LC restyle rgb(200, 0, 0)/700/normal/inline",
+   "LC str Start bbanchor endchanged tail 6",
+   "LC prepend head Start bbanchor endchanged tail",
+   "LC tn head Start bbanchor endchanged tail tn 3",
+   "LC after I 4",
+   "LC before str head Start bbxanchor endchanged tail tn",
+   "LC remove true false null head Start bbx endchanged tail tn anchor 3",
+   "LC reinsert s true a",
+   "LC removeChild false true head Start x endanchorchanged tail tn",
+   "LC clone changed rgb(200, 0, 0)/400/normal/inline true 2",
+   "LC replace p true head Start x endanchorbb tail tnchanged",
+   "LC plain host Plainchanged 1 q rgb(200, 0, 0)/400/normal/inline 2",
+   "LC adj changed+",
+   "LC adjhtml Plainchanged+uu u s",
+   "LC nested Plainchanged+uud EM q",
+   "LC cleared  0 0"
+  ],
+  "clicks": []
+ },
+ "options": {
+  "log": [
+   "LC count 3 3 3 3 o2 null o1",
+   "LC read b B B 1 true OPTION s false c c",
+   "LC sel b 1 o2 1 o2 o1 o3",
+   "LC select a 0 false o1",
+   "LC value true 2",
+   "LC index true b",
+   "LC set value zz zz",
+   "LC set text Bee zz",
+   "LC append 4 s 3 zz n",
+   "LC pick new 3",
+   "LC insert 5 0 4 new First",
+   "LC add 6 optv Opt",
+   "LC remove 5 0 First true true",
+   "LC remove0 4 a 0",
+   "LC class 1 x",
+   "LC inner 2 q 1",
+   "LC truncate 1 p",
+   "LC empty 0  -1"
+  ],
+  "clicks": []
+ },
+ "writes": {
+  "log": [
+   "LC text 12 Count: 12 and other end 12",
+   "LC innerText 13",
+   "LC escape a <b> & c a &lt;b&gt; &amp; c",
+   "LC grew true",
+   "LC shrank true",
+   "LC inner xcy x<b id=\"nb\" class=\"big\">c</b>y 1 3 n c rgb(0, 0, 0)/700/normal/inline",
+   "LC emptied 0 null",
+   "LC class0  rgb(0, 0, 0)/400/normal/inline",
+   "LC class1 k rgb(200, 0, 0)/400/normal/inline true",
+   "LC class2 k big rgb(200, 0, 0)/700/normal/inline 1",
+   "LC class3 big rgb(0, 0, 0)/700/normal/inline",
+   "LC class4  rgb(0, 0, 0)/400/normal/inline",
+   "LC parent rgb(0, 128, 0)/400/normal/inline rgb(0, 128, 0)/400/normal/inline",
+   "LC parent2 rgb(0, 0, 0)/400/normal/inline",
+   "LC attr class it rgb(0, 0, 0)/400/italic/inline",
+   "LC noclass  ",
+   "LC style rgb(1, 2, 3) rgb(1, 2, 3)/400/normal/inline color: rgb(1, 2, 3);",
+   "LC style2 700 rgb(1, 2, 3)/700/normal/inline color: rgb(1, 2, 3); font-weight: 700;",
+   "LC style3  rgb(0, 0, 0)/700/normal/inline",
+   "LC css italic rgb(0, 0, 0)/400/italic/inline",
+   "LC nostyle  rgb(0, 0, 0)/400/normal/inline",
+   "LC attr style rgb(9, 9, 9) rgb(9, 9, 9)/400/normal/inline",
+   "LC attr t t 1 true 1",
+   "LC attr2  false",
+   "LC id renamed null renamed",
+   "LC hidden true true rgb(0, 0, 0)/400/normal/none 0 Count: 6 and other end",
+   "LC shown false rgb(0, 0, 0)/400/normal/inline true",
+   "LC none rgb(0, 0, 0)/400/normal/none 0 0",
+   "LC back rgb(0, 0, 0)/400/normal/inline true",
+   "LC flat flat 0 true false null 6",
+   "LC p inner new run 1 ni rgb(200, 0, 0)/400/italic/inline new <i id=\"ni\" class=\"k\">run</i>",
+   "LC p inner2 new ran"
+  ],
+  "clicks": []
+ }
+}

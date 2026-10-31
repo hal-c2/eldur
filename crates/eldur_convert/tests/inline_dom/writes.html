@@ -1,0 +1,47 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+.k{color:rgb(200,0,0)} .big{font-weight:700} .blue{color:#0000ff} .on span{color:rgb(0,128,0)} .it{font-style:italic}
+</style><script>
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
+function C(e){var s=getComputedStyle(e);return s.color+"/"+s.fontWeight+"/"+s.fontStyle+"/"+s.display}
+
+document.addEventListener("DOMContentLoaded",function(){
+var byId=function(s){return document.getElementById(s)};
+var n=byId("n"),p=byId("p"),o=byId("o");
+var h0=p.offsetHeight;
+n.textContent="12"; L("text",n.textContent,p.textContent,n.innerText);
+n.innerText="13"; L("innerText",n.textContent);
+n.textContent="a <b> & c"; L("escape",n.textContent,n.innerHTML);
+n.textContent="longer words that keep going and wrap the paragraph onto more lines than it had when it started out so that the block has to grow in height to hold every single one of them here on this page in the browser";
+L("grew",p.offsetHeight>h0);
+n.textContent="5"; L("shrank",p.offsetHeight===h0);
+n.innerHTML='x<b id="nb" class="big">c</b>y';
+L("inner",n.textContent,n.innerHTML,n.children.length,n.childNodes.length,I(byId("nb").parentNode),byId("nb").textContent,C(byId("nb")));
+n.textContent="6"; L("emptied",n.children.length,I(byId("nb")));
+L("class0",n.className,C(n));
+n.className="k"; L("class1",n.className,C(n),n.matches(".k"));
+n.classList.add("big"); L("class2",n.className,C(n),document.querySelectorAll(".big").length);
+n.classList.toggle("k"); L("class3",n.className,C(n));
+n.classList.remove("big"); L("class4",n.className,C(n));
+p.classList.add("on"); L("parent",C(n),C(o));
+p.classList.remove("on"); L("parent2",C(n));
+n.setAttribute("class","it"); L("attr class",n.className,C(n)); n.removeAttribute("class"); L("noclass",n.className,n.getAttribute("class"));
+n.style.color="rgb(1, 2, 3)"; L("style",n.style.color,C(n),n.getAttribute("style"));
+n.style.fontWeight="700"; L("style2",n.style.fontWeight,C(n),n.style.cssText);
+n.style.color=""; L("style3",n.style.color,C(n));
+n.style.cssText="font-style: italic"; L("css",n.style.fontStyle,C(n));
+n.removeAttribute("style"); L("nostyle",n.style.fontStyle,C(n));
+n.setAttribute("style","color: rgb(9, 9, 9)"); L("attr style",n.style.color,C(n)); n.removeAttribute("style");
+n.setAttribute("title","t"); n.setAttribute("data-z","1"); L("attr",n.getAttribute("title"),n.title,n.dataset.z,n.hasAttribute("title"),document.querySelectorAll("[data-z]").length);
+n.removeAttribute("title"); L("attr2",n.getAttribute("title"),n.hasAttribute("title"));
+n.id="renamed"; L("id",I(byId("renamed")),I(byId("n")),n.getAttribute("id"));
+n.hidden=true; L("hidden",n.hidden,n.hasAttribute("hidden"),C(n),n.offsetWidth,p.textContent);
+n.hidden=false; L("shown",n.hidden,C(n),n.offsetWidth>0);
+n.style.display="none"; L("none",C(n),n.offsetWidth,n.getClientRects().length); n.style.display=""; L("back",C(n),n.offsetWidth>0);
+p.textContent="flat"; L("flat",p.textContent,p.children.length,n.parentNode===null,n.isConnected,I(byId("renamed")),n.textContent);
+p.innerHTML='new <i id="ni" class="k">run</i>'; L("p inner",p.textContent,p.children.length,I(byId("ni")),C(byId("ni")),p.innerHTML);
+byId("ni").textContent="ran"; L("p inner2",p.textContent);
+});
+</script></head><body>
+<p id="p">Count: <span id="n">0</span> and <span id="o">other</span> end</p>
+</body></html>

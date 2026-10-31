@@ -177,10 +177,23 @@ impl Emitter<'_, '_> {
         if let Some((_, href)) = markup.bare_link {
             let mut tap = Object::new("TapHandler");
             let follow = self.follow(&href);
+            // This handler may hear the tap before the one a listener is on.
+            let (params, body) = if self.runtime_dom {
+                (
+                    vec!["eventPoint".to_owned()],
+                    vec![
+                        "if (Eldur.tapPrevented(eventPoint))".to_owned(),
+                        "    return;".to_owned(),
+                        follow,
+                    ],
+                )
+            } else {
+                (Vec::new(), vec![follow])
+            };
             tap.members.push(Member::Handler {
                 name: "onTapped".to_owned(),
-                params: Vec::new(),
-                body: vec![follow],
+                params,
+                body,
             });
             text.push_child(tap);
             let mut hover = Object::new("HoverHandler");
@@ -624,7 +637,10 @@ fn inline_space(style: &ComputedStyle, side: Side) -> f32 {
 /// from where `font` puts it. Its text is then the block's own, so Qt
 /// applies its `letter-spacing` and `text-transform`; the line box is the
 /// strut and the inline box aligned on their baseline (CSS 2.2 §10.8).
-fn whole_span(block: &ComputedStyle, items: &[Inline<'_>]) -> Option<(ComputedStyle, f32)> {
+pub(super) fn whole_span(
+    block: &ComputedStyle,
+    items: &[Inline<'_>],
+) -> Option<(ComputedStyle, f32)> {
     let [Inline::Span(span)] = items else {
         return None;
     };
@@ -771,7 +787,7 @@ fn text_runs<'a>(items: &'a [Inline<'_>], runs: &mut Vec<&'a ComputedStyle>) {
 
 /// Whether a run in `items` needs RichText: another font family, a
 /// background colour, or horizontal padding or borders.
-fn needs_html(items: &[Inline<'_>], family: &str) -> bool {
+pub(super) fn needs_html(items: &[Inline<'_>], family: &str) -> bool {
     items.iter().any(|item| match item {
         Inline::Span(span) => {
             let style = span.style;
@@ -786,7 +802,7 @@ fn needs_html(items: &[Inline<'_>], family: &str) -> bool {
     })
 }
 
-fn line_height(style: &ComputedStyle) -> Option<f32> {
+pub(super) fn line_height(style: &ComputedStyle) -> Option<f32> {
     match style.line_height {
         LineHeight::Normal => None,
         LineHeight::Number(n) => Some(n * style.font_size),
@@ -847,7 +863,7 @@ pub(super) fn text_align(style: &ComputedStyle) -> Option<&'static str> {
 }
 
 /// The `href` of an `<a>` span.
-fn link_href<'a>(doc: &'a Document, span: &Span<'_>) -> Option<&'a str> {
+pub(super) fn link_href<'a>(doc: &'a Document, span: &Span<'_>) -> Option<&'a str> {
     span.node
         .and_then(|n| doc.element(n))
         .filter(|e| e.is_html() && e.local_name() == "a")

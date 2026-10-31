@@ -1034,6 +1034,7 @@ impl Emitter<'_, '_> {
             );
         }
         let mut obj = Object::new("ComboBox");
+        self.declare_select_model(&mut obj, node);
         obj.set("model", Value::expr(format!("[{}]", options.join(", "))));
         obj.set("textRole", Value::string("text"));
         obj.set("valueRole", Value::string("value"));

@@ -47,6 +47,17 @@ impl Emitter<'_, '_> {
         } else {
             vec!["Qt.openUrlExternally(link)".to_owned()]
         };
+        // `preventDefault` in a listener on the link, whose tap comes first.
+        let body = if self.runtime_dom {
+            let mut guarded = vec![
+                "if (Eldur.linkPrevented())".to_owned(),
+                "    return;".to_owned(),
+            ];
+            guarded.extend(body);
+            guarded
+        } else {
+            body
+        };
         text.members.push(Member::Handler {
             name: "onLinkActivated".to_owned(),
             params: vec!["link".to_owned()],

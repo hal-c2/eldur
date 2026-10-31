@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Inline counter</title>
+<style>
+body { font-family: sans-serif; font-size: 18px; color: #222; margin: 24px; }
+.done { color: rgb(0, 128, 0); font-weight: 700; }
+.warn { color: rgb(190, 30, 30); font-style: italic; }
+.on em { color: rgb(0, 0, 200); }
+</style>
+</head>
+<body>
+<p>Count: <span id="count">0</span> of <b id="total">ten</b></p>
+<p id="status">Status: <span id="state" class="warn">waiting</span>, <em>as usual</em> <span id="gone">removed text</span></p>
+<p id="list">Tags:</p>
+<p>A long line follows <span id="long">short</span> and the block below it moves down.</p>
+<p id="below">Below the growing paragraph.</p>
+<button id="b">+</button>
+<script>
+var count = document.getElementById('count');
+count.textContent = String(Number(count.textContent) + 7);
+document.getElementById('total').textContent = 'twenty';
+var state = document.getElementById('state');
+state.className = 'done';
+state.textContent = 'finished';
+document.getElementById('status').classList.add('on');
+document.getElementById('gone').remove();
+var list = document.getElementById('list');
+['one', 'two'].forEach(function (name) {
+  var tag = document.createElement('span');
+  tag.className = 'warn';
+  tag.textContent = ' ' + name;
+  list.appendChild(tag);
+});
+document.getElementById('long').textContent =
+  'a good deal longer than it was when the page was written, long enough that the paragraph has to wrap onto another line and push what is below it further down the page, as a browser would';
+document.getElementById('b').addEventListener('click', function () {
+  count.textContent = String(Number(count.textContent) + 1);
+});
+</script>
+</body>
+</html>

@@ -163,6 +163,8 @@ pub(crate) struct Emission {
     pub gated: bool,
     /// Set for a probe emission; its tree keeps the markers.
     pub probe: ProbeOut,
+    /// Inline elements and options scripts reach through `eldurInline`.
+    pub inline_covered: std::collections::BTreeSet<NodeId>,
 }
 
 /// The QML tree of the page, with conditional bindings when
@@ -222,6 +224,7 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
         imports: std::mem::take(&mut emitter.imports),
         gated: false,
         probe: ProbeOut::default(),
+        inline_covered: std::mem::take(&mut emitter.inline_covered),
     }
 }
 
@@ -759,6 +762,7 @@ struct Emitted {
     forms: BTreeMap<NodeId, Form>,
     imports: BTreeSet<&'static str>,
     ids: Ids,
+    inline_covered: BTreeSet<NodeId>,
 }
 
 impl Dynamic<'_, '_> {
@@ -795,6 +799,7 @@ impl Dynamic<'_, '_> {
             mut root,
             targets,
             forms,
+            inline_covered,
             mut imports,
             mut ids,
         } = Self::emit_world(self.cx, &styles, &sticky, &strips, collapsed, self.diags);
@@ -902,6 +907,7 @@ impl Dynamic<'_, '_> {
             imports,
             gated: gated && gate,
             probe,
+            inline_covered,
         }
     }
 
@@ -1015,6 +1021,7 @@ impl Dynamic<'_, '_> {
             forms: std::mem::take(&mut emitter.forms),
             imports: std::mem::take(&mut emitter.imports),
             ids: std::mem::take(&mut emitter.ids),
+            inline_covered: std::mem::take(&mut emitter.inline_covered),
         };
         drop(emitter);
         drop(tree);

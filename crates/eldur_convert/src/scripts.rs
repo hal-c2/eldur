@@ -232,13 +232,14 @@ pub(crate) fn report_missing(
     doc: &Document,
     scripts: &Scripts,
     targets: &BTreeMap<NodeId, Target>,
+    inline_covered: &std::collections::BTreeSet<NodeId>,
     diags: &mut Diagnostics,
 ) {
     let mut missing: Vec<NodeId> = scripts
         .wanted
         .iter()
         .copied()
-        .filter(|n| !targets.contains_key(n))
+        .filter(|n| !targets.contains_key(n) && !inline_covered.contains(n))
         .collect();
     missing.sort_by_key(|n| n.index());
     for node in missing {

@@ -325,6 +325,13 @@ function init(rootItem, baseUrl, documentUrl) {
     if (docUrl !== "") {
         _updateLocationFromHref(docUrl, false);
     }
+    _vModels = [];
+    _vRules = null;
+    if (_vHasRules() && _root) {
+        // What the converter wrote for a `Text` holds until the rules that
+        // match its nodes change, so they must be read before any write.
+        _walkItems(_root, function() { return false; });
+    }
     _startTime = Date.now();
 }
 
@@ -369,7 +376,7 @@ function _isDomTarget(obj) {
 // one tree walk per read, so an indexed loop over one is quadratic, where a
 // browser caches; a script that holds one across a mutation needs the answer
 // more than the speed.
-function _liveCollection(elements) {
+function _liveCollection(elements, truncate) {
     function items() {
         return elements();
     }
@@ -400,6 +407,13 @@ function _liveCollection(elements) {
         }
     };
     return new Proxy({}, {
+        set: function(_target, key, value) {
+            if (key === "length" && truncate) {
+                truncate(Number(value));
+                return true;
+            }
+            return false;
+        },
         get: function(_target, key) {
             if (key === "length") {
                 return items().length;
@@ -1510,6 +1524,14 @@ function _syncEldurClasses(raw, m) {
 
 function _afterClassMutation(raw, m) {
     var curRaw = (m && m.raw) ? m.raw : raw;
+    if (curRaw && curRaw.__eldurInline) {
+        if (curRaw.attrOrder.indexOf("class") === -1) {
+            curRaw.attrOrder.push("class");
+        }
+        _vChanged(curRaw.model);
+        return;
+    }
+    _vChanged(null);
     _layoutChanged(curRaw);
     _syncEldurClasses(curRaw, m);
     if (_isCreatedElement(curRaw) && _isConnected(curRaw)) {
@@ -1694,6 +1716,10 @@ function _layoutChanged(item) {
     if (!item || typeof item !== "object") {
         return;
     }
+    if (item.__eldurInline) {
+        _layoutChanged(item.model && item.model.text);
+        return;
+    }
     if (_layoutDirty.length === 0) {
         Qt.callLater(_settleLayouts);
     }
@@ -1807,6 +1833,10 @@ function _settleLayouts() {
 // Takes a node out of the DOM. Never destroys it: a script may hold it and put
 // it back, as with a modal, and bindings of the page may read it by id.
 function _detachNode(raw) {
+    if (raw.__eldurInline) {
+        _vRemove(raw);
+        return;
+    }
     var box = raw.eldurBox || raw;
     var place = box.eldurSlot || box;
     if (place.parent) {
@@ -1922,6 +1952,17 @@ function _isLayoutSpacer(item) {
 }
 
 function _rawElementChildren(raw) {
+    if (raw && raw.__eldurInline) {
+        return raw.children;
+    }
+    var own = raw ? _vModelOf(raw) : null;
+    if (own && (own.select || _vIsTagged(raw))) {
+        return own.kids.filter(_vIsElement);
+    }
+    return _rawKids(raw, false);
+}
+
+function _rawKids(raw, withText) {
     var container = _childContainer(raw);
     if (!container || !container.children) {
         return [];
@@ -1950,7 +1991,17 @@ function _rawElementChildren(raw) {
             || child === container.indicator) {
             continue;
         }
+        if (_vAnonText(child)) {
+            var runKids = _vModelOf(child).kids.filter(withText ? _vIsRendered : _vIsElement);
+            for (var r = 0; r < runKids.length; ++r) {
+                out.push(runKids[r]);
+            }
+            continue;
+        }
         if (!isLayout && _isPlainTextItem(child) && !child.objectName && !_meta(child).createdTag) {
+            if (withText && _vHasRules()) {
+                out.push(child);
+            }
             continue;
         }
         if (isLayout && _isLayoutSpacer(child)) {
@@ -1980,6 +2031,9 @@ function _domUp(raw) {
 }
 
 function _logicalParent(raw) {
+    if (raw && raw.__eldurInline) {
+        return raw.parent;
+    }
     if (raw && raw.eldurSlot) {
         raw = raw.eldurSlot;
     }
@@ -2056,6 +2110,17 @@ function getText(item) {
     if (!raw) {
         return "";
     }
+    if (raw.__eldurInline) {
+        return _vText(raw);
+    }
+    var vOwn = _vModelOf(raw);
+    if (vOwn) {
+        return _vText(vOwn);
+    }
+    var vRun = _findTextChild(raw);
+    if (vRun && _vAnonText(vRun)) {
+        return _rawKids(raw, true).map(getText).join("");
+    }
     if (_isPlainJsObject(raw) && ("textContent" in raw || "innerText" in raw)) {
         return raw.textContent !== undefined ? raw.textContent : raw.innerText;
     }
@@ -2081,6 +2146,15 @@ function getText(item) {
 function setText(item, value) {
     var raw = _unwrap(item);
     if (!raw) {
+        return;
+    }
+    if (raw.__eldurInline) {
+        _vSetText(raw, value);
+        return;
+    }
+    var vKnown = _isPlainJsObject(raw) ? null : _vExisting(raw);
+    if (vKnown) {
+        _vSetText(vKnown, value);
         return;
     }
     if (_isPlainJsObject(raw)) {
@@ -2114,6 +2188,14 @@ function setInnerHTML(item, html) {
     var str = html === null || html === undefined ? "" : String(html);
     if (/<\s*(script|style)\b/i.test(str)) {
         console.warn("eldur: <script> and <style> inside innerHTML are unsupported");
+        return;
+    }
+    var vHtml = raw.__eldurInline ? raw : _vExisting(raw);
+    if (!vHtml && _vHasRules() && !_markupMakesElements(raw) && typeof raw.text === "string") {
+        vHtml = _vOwnModel(raw);
+    }
+    if (vHtml) {
+        _vSetInnerHTML(vHtml, str);
         return;
     }
     if (_markupMakesElements(raw)) {
@@ -2194,6 +2276,10 @@ function _rememberMarkup(raw, str) {
 
 function getInnerHTML(item) {
     var raw = _unwrap(item);
+    var vInner = !raw ? null : raw.__eldurInline ? raw : _vExisting(raw);
+    if (vInner) {
+        return vInner.vtext ? "" : _vInner(vInner);
+    }
     var m = _meta(raw);
     var kids = raw ? _rawElementChildren(raw) : [];
     // What was assigned reads back as written, until the children change.
@@ -2207,6 +2293,9 @@ function getInnerHTML(item) {
 // Elements written back as markup, for `innerHTML` to be read after the tree
 // changed and for `+=`, which parses what it read.
 function _serializeElement(raw) {
+    if (raw.__eldurInline) {
+        return _vSerialize(raw);
+    }
     var m = _meta(raw);
     var tag = _nodeTag(raw);
     var attrs = {};
@@ -2231,6 +2320,10 @@ function _serializeElement(raw) {
 function setStyle(item, prop, value) {
     var raw = _unwrap(item);
     if (!raw) {
+        return;
+    }
+    if (raw.__eldurInline) {
+        _vSetStyle(raw, prop, value);
         return;
     }
     var rawName = String(prop);
@@ -2354,6 +2447,10 @@ function _camelToKebab(propName) {
 }
 
 function getStyle(item, prop) {
+    var vRaw = _unwrap(item);
+    if (vRaw && vRaw.__eldurInline) {
+        return _vGetStyle(vRaw, prop);
+    }
     var m = _meta(item);
     var rawName = String(prop);
     if (rawName === "cssText") {
@@ -2386,6 +2483,9 @@ function getStyle(item, prop) {
 
 function getComputedStyle(item) {
     var raw = _unwrap(item);
+    if (raw && raw.__eldurInline) {
+        return _vComputedStyle(raw);
+    }
     function computeProp(prop) {
         var p = String(prop);
         var explicit = getStyle(raw, p);
@@ -2481,6 +2581,10 @@ function setAttribute(item, attrName, attrValue) {
     if (!raw) {
         return;
     }
+    if (raw.__eldurInline) {
+        _vSetAttr(raw, attrName, attrValue);
+        return;
+    }
     var name = String(attrName);
     var val = String(attrValue);
     var m = _meta(raw);
@@ -2527,6 +2631,9 @@ function getAttribute(item, attrName) {
     var raw = _unwrap(item);
     if (!raw) {
         return null;
+    }
+    if (raw.__eldurInline) {
+        return raw.vtext ? null : _vGetAttr(raw, attrName);
     }
     var name = String(attrName);
     var m = _meta(raw);
@@ -2586,6 +2693,10 @@ function removeAttribute(item, attrName) {
     }
     var raw = _unwrap(item);
     if (!raw) {
+        return;
+    }
+    if (raw.__eldurInline) {
+        _vRemoveAttr(raw, attrName);
         return;
     }
     var name = String(attrName);
@@ -2684,6 +2795,9 @@ function blur(item) {
 
 function getBoundingClientRect(item) {
     var raw = _unwrap(item);
+    if (raw && raw.__eldurInline) {
+        return _vClientRect(raw);
+    }
     if (!raw) {
         return { x: 0, y: 0, top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0 };
     }
@@ -2785,6 +2899,13 @@ function _mapKey(qtKey, text, shiftKey) {
 }
 
 function event(type, targetItem, qtEvent) {
+    if (type === "click" && qtEvent && qtEvent.scenePosition && _vHasRules()) {
+        var shared = _beginTap(qtEvent);
+        if (shared.ev) {
+            shared.ev.currentTarget = targetItem;
+            return shared.ev;
+        }
+    }
     var rawTarget = _unwrap(targetItem);
     var ev = qtEvent || {};
     var mods = typeof ev.modifiers === "number" ? ev.modifiers : 0;
@@ -2993,6 +3114,15 @@ function IntersectionObserver(_callback) {
 }
 
 function _dispatchDynamic(raw, type, qtEv) {
+    // A real item's turn in a tap: see `_beginTap`.
+    if (type === "click" && !raw.__eldurInline && qtEv && qtEv.scenePosition && _vHasRules()) {
+        var t = _beginTap(qtEv);
+        if (t.control || t.ran.indexOf(raw) !== -1 || t.ev._propagationStopped) {
+            return !t.ev.defaultPrevented;
+        }
+        t.ran.push(raw);
+        qtEv = t.ev;
+    }
     var m = _meta(raw);
     var target = wrap(raw);
     var domEv = qtEv && qtEv.preventDefault ? qtEv : event(type, target, qtEv);
@@ -3044,6 +3174,10 @@ function _connectSignalOnce(raw, type) {
     if (!raw || typeof raw !== "object") {
         return false;
     }
+    if (raw.__eldurInline) {
+        _vConnect(raw, type);
+        return true;
+    }
     if (_isPlainJsObject(raw)) {
         m.connected[type] = true;
         return true;
@@ -3051,7 +3185,13 @@ function _connectSignalOnce(raw, type) {
 
     if (type === "click") {
         if (typeof raw.clicked === "function") {
-            raw.clicked.connect(function() { _dispatchDynamic(raw, "click", null); });
+            raw.clicked.connect(function() {
+                if (_vHasRules()) {
+                    _clickedControl(raw);
+                } else {
+                    _dispatchDynamic(raw, "click", null);
+                }
+            });
             m.connected[type] = true;
             return true;
         }
@@ -3437,6 +3577,10 @@ function _coerceNode(nodeOrString) {
     return _unwrap(document.createTextNode(String(nodeOrString)));
 }
 
+function _forRealItems(nodes) {
+    return nodes.map(function(n) { return n.__eldurInline ? _vToReal(n) : n; });
+}
+
 function _expandInsertRawNodes(nodes) {
     var out = [];
     for (var i = 0; i < nodes.length; ++i) {
@@ -3498,6 +3642,7 @@ function _leaveFlow(item) {
 }
 
 function _insertRawNodesBefore(container, rawNodes, rawRef) {
+    rawNodes = _forRealItems(rawNodes);
     if (!container || rawNodes.length === 0) {
         return;
     }
@@ -4390,6 +4535,10 @@ function wrap(rawItem) {
         },
         set id(v) {
             var s = String(v);
+            if (rawItem.__eldurInline) {
+                _vSetAttr(rawItem, "id", s);
+                return;
+            }
             m.attrs.id = s;
             if (typeof rawItem.objectName === "string") {
                 rawItem.objectName = s;
@@ -4408,7 +4557,103 @@ function wrap(rawItem) {
         },
         get innerHTML() { return getInnerHTML(rawItem); },
         set innerHTML(v) { setInnerHTML(rawItem, v); },
+        get nodeType() {
+            return rawItem.vtext || (_isPlainTextItem(rawItem) && !_vIsTagged(rawItem) && !m.createdTag)
+                || m.createdTag === "#text" ? 3 : 1;
+        },
+        get data() { return rawItem.vtext ? rawItem.data : getText(rawItem); },
+        set data(v) { setText(rawItem, v); },
+        get nodeValue() { return this.nodeType === 3 ? this.data : null; },
+        set nodeValue(v) {
+            if (this.nodeType === 3) {
+                setText(rawItem, v);
+            }
+        },
+        get hash() {
+            if (_inferTagName(rawItem) !== "A") {
+                return undefined;
+            }
+            var hashHref = getAttribute(rawItem, "href");
+            var hashAt = hashHref === null ? -1 : hashHref.indexOf("#");
+            return hashAt === -1 || hashAt === hashHref.length - 1 ? "" : hashHref.slice(hashAt);
+        },
+        getClientRects: function() {
+            var r = getBoundingClientRect(rawItem);
+            return _asNodeList(r.width > 0 || r.height > 0 ? [r] : []);
+        },
+        get selected() { return rawItem.sel === true; },
+        set selected(v) {
+            if (rawItem.eldurTag === "option") {
+                var owner = rawItem.model;
+                rawItem.sel = Boolean(v);
+                if (owner) {
+                    if (v) {
+                        _vPick(owner, rawItem);
+                    }
+                    _vEnsureSelected(owner);
+                    _vChanged(owner);
+                }
+            }
+        },
+        get defaultSelected() { return rawItem.__eldurInline && _vGetAttr(rawItem, "selected") !== null; },
+        get text() { return rawItem.eldurTag === "option" ? _vOptionText(rawItem) : undefined; },
+        set text(v) { setText(rawItem, v); },
+        get label() {
+            var labelAttr = rawItem.__eldurInline ? _vGetAttr(rawItem, "label") : null;
+            return labelAttr !== null ? labelAttr : _vOptionText(rawItem);
+        },
+        get index() {
+            return rawItem.model && rawItem.model.select ? _vOptions(rawItem.model).indexOf(rawItem) : undefined;
+        },
+        get options() {
+            var sel = _vSelectModel(rawItem);
+            if (!sel) {
+                return undefined;
+            }
+            if (!m.optionCollection) {
+                m.optionCollection = _liveCollection(function() { return _vOptions(sel); }, function(n) {
+                    var opts = _vOptions(sel);
+                    for (var o = opts.length - 1; o >= n; --o) {
+                        _vRemove(opts[o]);
+                    }
+                });
+            }
+            return m.optionCollection;
+        },
+        get selectedOptions() {
+            var sel = _vSelectModel(rawItem);
+            return sel ? _asNodeList(_vOptions(sel).filter(function(o) { return o.sel; }).map(wrap)) : undefined;
+        },
+        get length() {
+            var sel = _vSelectModel(rawItem);
+            return sel ? _vOptions(sel).length : undefined;
+        },
+        set length(n) {
+            if (this.options) {
+                this.options.length = n;
+            }
+        },
+        item: function(n) {
+            var sel = _vSelectModel(rawItem);
+            var opt = sel ? _vOptions(sel)[n] : null;
+            return opt ? wrap(opt) : null;
+        },
+        add: function(option, before) {
+            var sel = _vSelectModel(rawItem);
+            if (sel) {
+                var ref = typeof before === "number" ? _vOptions(sel)[before] : _unwrap(before);
+                _vInsert(sel, [_unwrap(option)], ref || null);
+            }
+        },
         get value() {
+            if (rawItem.eldurTag === "option") {
+                return _vOptionValue(rawItem);
+            }
+            var valueOf = _vSelectModel(rawItem);
+            if (valueOf) {
+                var selAt = _vSelected(valueOf);
+                return selAt === -1 ? "" : _vOptionValue(_vOptions(valueOf)[selAt]);
+            }
             if (typeof rawItem.currentText === "string") {
                 var current = rawItem.currentValue;
                 return current !== undefined && current !== null ? String(current) : rawItem.currentText;
@@ -4428,6 +4673,17 @@ function wrap(rawItem) {
             return "";
         },
         set value(v) {
+            if (rawItem.eldurTag === "option") {
+                _vSetAttr(rawItem, "value", String(v));
+                return;
+            }
+            var valueTo = _vSelectModel(rawItem);
+            if (valueTo) {
+                var match = _vOptions(valueTo).filter(function(o) { return _vOptionValue(o) === String(v); });
+                _vPick(valueTo, match.length > 0 ? match[0] : null);
+                _vChanged(valueTo);
+                return;
+            }
             m.explicitValue = v;
             if (typeof rawItem.find === "function" && typeof rawItem.currentIndex === "number") {
                 var byValue = rawItem.indexOfValue(String(v));
@@ -4441,9 +4697,18 @@ function wrap(rawItem) {
             }
         },
         get selectedIndex() {
+            if (_vSelectModel(rawItem)) {
+                return _vSelected(_vSelectModel(rawItem));
+            }
             return typeof rawItem.currentIndex === "number" ? rawItem.currentIndex : -1;
         },
         set selectedIndex(v) {
+            var indexOn = _vSelectModel(rawItem);
+            if (indexOn) {
+                _vPick(indexOn, _vOptions(indexOn)[Number(v)] || null);
+                _vChanged(indexOn);
+                return;
+            }
             if (typeof rawItem.currentIndex === "number") {
                 rawItem.currentIndex = Number(v) || 0;
             }
@@ -4460,7 +4725,7 @@ function wrap(rawItem) {
                 rawItem.checked = Boolean(v);
             }
         },
-        get disabled() { return rawItem.enabled !== undefined ? !rawItem.enabled : Boolean(m.explicitDisabled); },
+        get disabled() { return rawItem.__eldurInline ? _vGetAttr(rawItem, "disabled") !== null : rawItem.enabled !== undefined ? !rawItem.enabled : Boolean(m.explicitDisabled); },
         set disabled(v) {
             m.explicitDisabled = Boolean(v);
             _reflectFlag(m, "disabled", v);
@@ -4484,7 +4749,9 @@ function wrap(rawItem) {
         set hidden(v) {
             m.explicitHidden = Boolean(v);
             _reflectFlag(m, "hidden", v);
-            if (typeof rawItem.visible === "boolean") {
+            if (rawItem.__eldurInline) {
+                _vChanged(rawItem.model);
+            } else if (typeof rawItem.visible === "boolean") {
                 _setShown(rawItem, !v);
             }
         },
@@ -4601,8 +4868,8 @@ function wrap(rawItem) {
         set className(v) { setClassName(rawItem, v); },
         get classList() { return classList(rawItem); },
         get dataset() { return dataset(rawItem); },
-        get offsetWidth() { return typeof rawItem.width === "number" ? rawItem.width : 0; },
-        get offsetHeight() { return typeof rawItem.height === "number" ? rawItem.height : 0; },
+        get offsetWidth() { _vSettle(); return typeof rawItem.width === "number" ? rawItem.width : 0; },
+        get offsetHeight() { _vSettle(); return typeof rawItem.height === "number" ? rawItem.height : 0; },
         get clientWidth() { return typeof rawItem.width === "number" ? rawItem.width : 0; },
         get clientHeight() { return typeof rawItem.height === "number" ? rawItem.height : 0; },
         get scrollTop() {
@@ -4656,7 +4923,7 @@ function wrap(rawItem) {
             return m.childCollection;
         },
         get childNodes() {
-            return _asNodeList(_rawElementChildren(rawItem).map(wrap));
+            return _asNodeList(_rawChildNodes(rawItem).map(wrap));
         },
         get childElementCount() {
             return _rawElementChildren(rawItem).length;
@@ -4670,11 +4937,11 @@ function wrap(rawItem) {
             return kids.length > 0 ? wrap(kids[kids.length - 1]) : null;
         },
         get firstChild() {
-            var kids = _rawElementChildren(rawItem);
+            var kids = _rawChildNodes(rawItem);
             return kids.length > 0 ? wrap(kids[0]) : null;
         },
         get lastChild() {
-            var kids = _rawElementChildren(rawItem);
+            var kids = _rawChildNodes(rawItem);
             return kids.length > 0 ? wrap(kids[kids.length - 1]) : null;
         },
         get nextElementSibling() {
@@ -4696,10 +4963,16 @@ function wrap(rawItem) {
             return idx > 0 ? wrap(kids[idx - 1]) : null;
         },
         get nextSibling() {
-            return this.nextElementSibling;
+            var nextIn = _logicalParent(rawItem);
+            var nextKids = nextIn ? _rawChildNodes(nextIn) : [];
+            var nextAt = nextKids.indexOf(rawItem);
+            return nextAt !== -1 && nextAt + 1 < nextKids.length ? wrap(nextKids[nextAt + 1]) : null;
         },
         get previousSibling() {
-            return this.previousElementSibling;
+            var prevIn = _logicalParent(rawItem);
+            var prevKids = prevIn ? _rawChildNodes(prevIn) : [];
+            var prevAt = prevKids.indexOf(rawItem);
+            return prevAt > 0 ? wrap(prevKids[prevAt - 1]) : null;
         },
         setAttribute: function(k, v) { setAttribute(rawItem, k, v); },
         getAttribute: function(k) { return getAttribute(rawItem, k); },
@@ -4712,6 +4985,10 @@ function wrap(rawItem) {
         focus: function() { focus(rawItem); },
         blur: function() { blur(rawItem); },
         click: function() {
+            if (rawItem.__eldurInline) {
+                _vClick(rawItem);
+                return;
+            }
             _dispatchDynamic(rawItem, "click", null);
         },
         scrollTo: function(xOrOpts, y) {
@@ -4807,24 +5084,41 @@ function wrap(rawItem) {
         },
         appendChild: function(child) {
             var rawNodes = _expandInsertRawNodes([child]);
+            if (_vTryInsert(rawItem, rawNodes, null)) {
+                return child;
+            }
             _insertRawNodesBefore(_appendTarget(rawItem), rawNodes, null);
             return child;
         },
         removeChild: function(child) {
             var rawChild = _unwrap(child);
-            if (rawChild && rawChild.parent !== undefined) {
+            if (rawChild && rawChild.__eldurInline) {
+                _vRemove(rawChild);
+            } else if (rawChild && rawChild.parent !== undefined) {
                 _detachNode(rawChild);
             }
             return child;
         },
-        remove: function() {
-            if (rawItem.parent !== undefined) {
+        remove: function(n) {
+            var removeFrom = _vSelectModel(rawItem);
+            if (removeFrom && typeof n === "number") {
+                if (_vOptions(removeFrom)[n]) {
+                    _vRemove(_vOptions(removeFrom)[n]);
+                }
+                return;
+            }
+            if (rawItem.__eldurInline) {
+                _vRemove(rawItem);
+            } else if (rawItem.parent !== undefined) {
                 _detachNode(rawItem);
             }
         },
         insertBefore: function(newChild, refChild) {
             var rawNodes = _expandInsertRawNodes([newChild]);
             var rawRef = _unwrap(refChild);
+            if (_vTryInsert(rawItem, rawNodes, rawRef || null)) {
+                return newChild;
+            }
             _insertRawNodesBefore(_appendTarget(rawItem), rawNodes, rawRef);
             return newChild;
         },
@@ -4834,6 +5128,10 @@ function wrap(rawItem) {
                 return oldChild;
             }
             var rawNodes = _expandInsertRawNodes([newChild]);
+            if (_vTryInsert(rawItem, rawNodes, rawOld)) {
+                _vRemove(rawOld);
+                return oldChild;
+            }
             _insertRawNodesBefore(_appendTarget(rawItem), rawNodes, rawOld);
             if (rawOld.parent !== undefined) {
                 _detachNode(rawOld);
@@ -4842,15 +5140,27 @@ function wrap(rawItem) {
         },
         append: function() {
             var rawNodes = _expandInsertRawNodes(arguments);
+            if (_vTryInsert(rawItem, rawNodes, null)) {
+                return;
+            }
             _insertRawNodesBefore(_appendTarget(rawItem), rawNodes, null);
         },
         prepend: function() {
             var rawNodes = _expandInsertRawNodes(arguments);
+            var vFirst = _vHostOf(rawItem, rawNodes, null);
+            if (vFirst) {
+                _vInsert(vFirst, rawNodes, vFirst.kids.filter(_vIsRendered)[0] || null);
+                return;
+            }
             var kids = _rawElementChildren(rawItem);
             var first = kids.length > 0 ? kids[0] : null;
             _insertRawNodesBefore(_appendTarget(rawItem), rawNodes, first);
         },
         before: function() {
+            if (rawItem.__eldurInline) {
+                _vInsert(rawItem.vparent || rawItem.model, _expandInsertRawNodes(arguments), rawItem);
+                return;
+            }
             var p = _logicalParent(rawItem);
             if (!p) {
                 return;
@@ -4859,6 +5169,11 @@ function wrap(rawItem) {
             _insertRawNodesBefore(_appendTarget(p), rawNodes, rawItem);
         },
         after: function() {
+            if (rawItem.__eldurInline) {
+                var afterIn = rawItem.vparent || rawItem.model;
+                _vInsert(afterIn, _expandInsertRawNodes(arguments), afterIn.kids[afterIn.kids.indexOf(rawItem) + 1] || null);
+                return;
+            }
             var p = _logicalParent(rawItem);
             if (!p) {
                 return;
@@ -4870,6 +5185,11 @@ function wrap(rawItem) {
             _insertRawNodesBefore(_appendTarget(p), rawNodes, nextRef);
         },
         replaceWith: function() {
+            if (rawItem.__eldurInline) {
+                _vInsert(rawItem.vparent || rawItem.model, _expandInsertRawNodes(arguments), rawItem);
+                _vRemove(rawItem);
+                return;
+            }
             var p = _logicalParent(rawItem);
             if (!p) {
                 return;
@@ -4881,6 +5201,12 @@ function wrap(rawItem) {
             }
         },
         replaceChildren: function() {
+            var vAll = rawItem.__eldurInline ? rawItem : _vExisting(rawItem);
+            if (vAll) {
+                _vDetachKids(vAll);
+                _vInsert(vAll, _expandInsertRawNodes(arguments), null);
+                return;
+            }
             var existing = _rawElementChildren(rawItem);
             for (var i = 0; i < existing.length; ++i) {
                 if (existing[i].parent !== undefined) {
@@ -4891,6 +5217,9 @@ function wrap(rawItem) {
             _insertRawNodesBefore(_appendTarget(rawItem), rawNodes, null);
         },
         cloneNode: function(deep) {
+            if (rawItem.__eldurInline) {
+                return wrap(_vClone(rawItem, Boolean(deep)));
+            }
             var tag = _inferTagName(rawItem).toLowerCase() || "div";
             var clone = document.createElement(tag);
             if (m.inputType) {
@@ -4987,6 +5316,1608 @@ function wrap(rawItem) {
     return wrapper;
 }
 
+// Inline nodes (docs/spec/dom-api.md). A run of inline content is one `Text`,
+// so its elements have no QML object. A script gets these instead: objects
+// that quack as QObjects for `wrap` and `_meta`, built from the model the
+// converter declares in `eldurInline`, which then own the block's text.
+var _vRules = null;
+var _vModels = [];
+var _vGen = 0;
+var _vSyncing = false;
+var _vVoid = { area: 1, base: 1, br: 1, col: 1, embed: 1, hr: 1, img: 1, input: 1, link: 1, meta: 1, source: 1, track: 1, wbr: 1 };
+var _vProps = ["color", "font-weight", "font-style", "font-size", "font-family", "display", "visibility", "background-color", "text-decoration-line"];
+var _vDefault = { color: "rgb(0, 0, 0)", weight: 400, italic: false, underline: false, strike: false, size: 16, family: "", bg: "rgba(0, 0, 0, 0)", display: "inline", visible: true };
+
+function _vHasRules() {
+    return Boolean(_root) && _root.eldurInlineRules !== undefined;
+}
+
+var _VProto = {
+    __eldurInline: true,
+    objectNameChanged: function() {},
+    get parent() {
+        return this.vparent || (this.model ? _vHostElement(this.model) : null);
+    },
+    get children() {
+        return this.kids ? this.kids.filter(_vIsElement) : [];
+    },
+    get width() { return _vRect(this).width; },
+    get height() { return _vRect(this).height; },
+    get checked() { return this.eldurTag === "option" ? this.sel === true : undefined; }
+};
+
+function _vIsElement(k) {
+    return Boolean(k.kids);
+}
+
+function _vIsRendered(k) {
+    return !k.gen;
+}
+
+function _vLeaf(text, parent, model) {
+    var leaf = Object.create(_VProto);
+    leaf.eldurTag = "#text";
+    leaf.objectName = "";
+    leaf.vtext = true;
+    leaf.data = String(text);
+    leaf.vparent = parent;
+    leaf.model = model;
+    return leaf;
+}
+
+function _vElement(tag, attrs, parent, model) {
+    var v = Object.create(_VProto);
+    v.eldurTag = tag;
+    v.objectName = "";
+    v.eldurClasses = "";
+    v.eldurAttrs = {};
+    v.attrOrder = [];
+    v.vparent = parent;
+    v.model = model;
+    v.kids = [];
+    var styleAttr = null;
+    for (var i = 0; i < attrs.length; ++i) {
+        var name = attrs[i][0], value = attrs[i][1];
+        v.attrOrder.push(name);
+        if (name === "id") {
+            v.objectName = value;
+        } else if (name === "class") {
+            v.eldurClasses = value;
+        } else if (name === "style") {
+            styleAttr = value;
+        } else {
+            v.eldurAttrs[name] = value;
+        }
+    }
+    var m = _meta(v);
+    m.raw = v;
+    if (styleAttr !== null) {
+        _vParseCss(m, styleAttr);
+    }
+    if (m.attrs.hidden !== undefined) {
+        m.explicitHidden = true;
+    }
+    if (tag === "option") {
+        v.sel = m.attrs.selected !== undefined;
+    }
+    return v;
+}
+
+function _vBuild(json, parent, model) {
+    if (json.gen) {
+        return { gen: json.gen };
+    }
+    if (json.text !== undefined) {
+        return _vLeaf(json.text, parent, model);
+    }
+    var v = _vElement(json.tag, json.attrs, parent, model);
+    v.c = json.c || null;
+    v.before = json.before || null;
+    v.after = json.after || null;
+    v.kids = json.kids.map(function(k) { return _vBuild(k, v, model); });
+    return v;
+}
+
+function _vEachElement(kids, fn) {
+    for (var i = 0; i < kids.length; ++i) {
+        if (kids[i].kids) {
+            fn(kids[i]);
+            _vEachElement(kids[i].kids, fn);
+        }
+    }
+}
+
+// The model of `item`, once a `Text` or `ComboBox` has one.
+function _vModelOf(item) {
+    if (!item || item.__eldurInline || item.__eldurWrapper) {
+        return null;
+    }
+    var known = _itemMeta.get(item);
+    if (known && known.vModel !== undefined) {
+        return known.vModel;
+    }
+    if (typeof item.eldurInline !== "string") {
+        return null;
+    }
+    var m = _meta(item);
+    var model = JSON.parse(item.eldurInline);
+    model.text = item;
+    m.vModel = model;
+    model.kids = model.kids.map(function(k) { return _vBuild(k, null, model); });
+    _vModels.push(model);
+    if (model.select) {
+        _vEnsureSelected(model);
+        item.currentIndexChanged.connect(function() {
+            if (!_vSyncing) {
+                _vPick(model, _vOptions(model)[item.currentIndex] || null);
+            }
+        });
+    } else {
+        // What the converter worked out holds until the rules matching a node
+        // change.
+        _vEachElement(model.kids, function(v) { v.sig0 = _vSig(v); });
+        // A link takes the press, so nothing above hears of it otherwise.
+        if (item.eldurInline.indexOf("\"tag\":\"a\"") !== -1 && _vHasRules()) {
+            _vTapHandler(item);
+        }
+    }
+    return model;
+}
+
+// A `Text` the converter saw no elements in, the first time a script gives
+// it one or asks for its text node.
+function _vEnsureModel(text) {
+    var known = _vModelOf(text);
+    if (known) {
+        return known;
+    }
+    var model = {
+        text: text,
+        kids: [],
+        k: _vLiveBase(text),
+        hoisted: false,
+        bare: false,
+        html: false,
+        pre: false,
+        underline: Boolean(text.font && text.font.underline),
+        strike: Boolean(text.font && text.font.strikeout)
+    };
+    var initial = _meta(text).explicitText !== undefined
+        ? _meta(text).explicitText
+        : (text.textFormat === 0 ? String(text.text) : _unescapeHtmlText(String(text.text)));
+    if (initial !== "") {
+        model.kids.push(_vLeaf(initial, null, model));
+    }
+    _meta(text).vModel = model;
+    _vModels.push(model);
+    return model;
+}
+
+function _vIsTagged(item) {
+    return (typeof item.eldurTag === "string" && item.eldurTag !== "")
+        || (typeof item.objectName === "string" && item.objectName !== "");
+}
+
+function _vHostElement(model) {
+    var text = model.text;
+    return model.select || _vIsTagged(text) ? text : _logicalParent(text);
+}
+
+// The model whose top-level nodes are `raw`'s children, when all of them are.
+function _vOwnModel(raw) {
+    var model = _vModelOf(raw);
+    if (model) {
+        return model.select || _vIsTagged(raw) ? model : null;
+    }
+    if (_vHasRules() && _isPlainTextItem(raw) && _vIsTagged(raw) && !_meta(raw).createdTag) {
+        return _vEnsureModel(raw);
+    }
+    return null;
+}
+
+function _vAnonText(item) {
+    return item && !_vIsTagged(item) && !_meta(item).createdTag && !_meta(item).isFragment
+        && typeof item.eldurInline === "string" && _isPlainTextItem(item);
+}
+
+// A box's only text, unless it also lays out other children.
+function _vBoxModel(raw) {
+    if (!_vHasRules() || raw.__eldurInline || typeof raw.text === "string"
+        || typeof raw.spacing === "number" || typeof raw.columnSpacing === "number") {
+        return null;
+    }
+    var text = _findTextChild(raw);
+    if (!text || _meta(raw).flow) {
+        return null;
+    }
+    return _vEnsureModel(text);
+}
+
+// What holds `raw`'s inline children, for writes: a node, a model, or nothing
+// when `raw` lays out real items.
+function _vContainerOf(raw) {
+    if (raw.__eldurInline) {
+        return raw;
+    }
+    return _vOwnModel(raw) || _vBoxModel(raw);
+}
+
+function _vLeaves(kids, out) {
+    for (var i = 0; i < kids.length; ++i) {
+        if (kids[i].vtext) {
+            out.push(kids[i].data);
+        } else if (kids[i].kids) {
+            _vLeaves(kids[i].kids, out);
+        }
+    }
+    return out;
+}
+
+function _vContainerKids(c) {
+    return c.kids;
+}
+
+function _vText(c) {
+    return c.vtext ? c.data : _vLeaves(c.kids, []).join("");
+}
+
+function _vDetachKids(c) {
+    var old = c.kids.slice();
+    c.kids = c.kids.filter(function(k) { return k.gen; });
+    for (var i = 0; i < old.length; ++i) {
+        if (!old[i].gen) {
+            _vSetModel(old[i], null);
+            old[i].vparent = null;
+        }
+    }
+}
+
+function _vSetModel(node, model) {
+    node.model = model;
+    if (node.kids) {
+        for (var i = 0; i < node.kids.length; ++i) {
+            if (!node.kids[i].gen) {
+                _vSetModel(node.kids[i], model);
+            }
+        }
+    }
+}
+
+function _vModelFor(c) {
+    return c.__eldurInline ? c.model : c;
+}
+
+function _vSetText(c, value) {
+    var str = value === null || value === undefined ? "" : String(value);
+    if (c.vtext) {
+        c.data = str;
+    } else {
+        _vDetachKids(c);
+        if (str !== "") {
+            c.kids.push(_vLeaf(str, c.__eldurInline ? c : null, _vModelFor(c)));
+        }
+    }
+    _vChanged(_vModelFor(c));
+}
+
+// Enough of HTML for what a script writes inside a line of text.
+function _vParseInto(c, html) {
+    var parent = c.__eldurInline ? c : null;
+    var model = _vModelFor(c);
+    var stack = [{ node: parent, list: c.kids }];
+    var re = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)((?:\s+[^\s=>\/]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*)\s*(\/?)>/g;
+    var pos = 0, hit;
+    function addText(s) {
+        if (s !== "") {
+            var top = stack[stack.length - 1];
+            top.list.push(_vLeaf(_unescapeHtmlText(s), top.node, model));
+        }
+    }
+    while ((hit = re.exec(html)) !== null) {
+        addText(html.slice(pos, hit.index));
+        pos = hit.index + hit[0].length;
+        var tag = hit[2].toLowerCase();
+        if (hit[1]) {
+            for (var d = stack.length - 1; d > 0; --d) {
+                if (stack[d].node.eldurTag === tag) {
+                    stack.length = d;
+                    break;
+                }
+            }
+            continue;
+        }
+        var attrs = [];
+        var attrRe = /([^\s=>\/]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g, a;
+        while ((a = attrRe.exec(hit[3])) !== null) {
+            var val = a[2] !== undefined ? a[2] : a[3] !== undefined ? a[3] : a[4] !== undefined ? a[4] : "";
+            attrs.push([a[1].toLowerCase(), _unescapeHtmlText(val)]);
+        }
+        var top = stack[stack.length - 1];
+        var v = _vElement(tag, attrs, top.node, model);
+        top.list.push(v);
+        if (!_vVoid[tag] && !hit[4]) {
+            stack.push({ node: v, list: v.kids });
+        }
+    }
+    addText(html.slice(pos));
+}
+
+function _vSetInnerHTML(c, html) {
+    _vDetachKids(c);
+    _vParseInto(c, String(html === null || html === undefined ? "" : html));
+    var model = _vModelFor(c);
+    if (model && model.select) {
+        _vEnsureSelected(model);
+    }
+    _vChanged(model);
+}
+
+function _vEscapeText(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function _vAttrNames(v) {
+    var m = _meta(v);
+    var names = v.attrOrder.slice();
+    function need(name) {
+        if (names.indexOf(name) === -1) {
+            names.push(name);
+        }
+    }
+    if (v.objectName !== "") {
+        need("id");
+    }
+    if (m.classes.length > 0) {
+        need("class");
+    }
+    if (Object.keys(m.styles).length > 0) {
+        need("style");
+    }
+    Object.keys(m.attrs).forEach(need);
+    return names;
+}
+
+function _vGetAttr(v, name) {
+    var m = _meta(v);
+    var key = String(name).toLowerCase();
+    if (_vAttrNames(v).indexOf(key) === -1) {
+        return null;
+    }
+    if (key === "id") {
+        return v.objectName;
+    }
+    if (key === "class") {
+        return m.classes.join(" ");
+    }
+    if (key === "style") {
+        return _vCssText(m);
+    }
+    return m.attrs[key] !== undefined ? String(m.attrs[key]) : "";
+}
+
+function _vSetAttr(v, name, value) {
+    var m = _meta(v);
+    var key = String(name).toLowerCase();
+    var str = String(value);
+    if (v.attrOrder.indexOf(key) === -1) {
+        v.attrOrder.push(key);
+    }
+    if (key === "id") {
+        v.objectName = str;
+    } else if (key === "class") {
+        setClassName(v, str);
+        return;
+    } else if (key === "style") {
+        m.styles = {};
+        _vParseCss(m, str);
+    } else {
+        m.attrs[key] = str;
+        if (key.indexOf("data-") === 0) {
+            m.dataset[_kebabToCamel(key.slice(5))] = str;
+        }
+        if (key === "hidden") {
+            m.explicitHidden = true;
+        }
+    }
+    if (v.eldurTag === "option" && key === "selected") {
+        v.sel = true;
+    }
+    _vAttrChanged(v);
+}
+
+function _vRemoveAttr(v, name) {
+    var m = _meta(v);
+    var key = String(name).toLowerCase();
+    var at = v.attrOrder.indexOf(key);
+    if (at !== -1) {
+        v.attrOrder.splice(at, 1);
+    }
+    if (key === "id") {
+        v.objectName = "";
+    } else if (key === "class") {
+        m.classes.length = 0;
+    } else if (key === "style") {
+        m.styles = {};
+    } else {
+        delete m.attrs[key];
+        if (key.indexOf("data-") === 0) {
+            delete m.dataset[_kebabToCamel(key.slice(5))];
+        }
+        if (key === "hidden") {
+            m.explicitHidden = false;
+        }
+    }
+    _vAttrChanged(v);
+}
+
+function _vAttrChanged(v) {
+    _vChanged(v.model);
+}
+
+function _vSerialize(v) {
+    if (v.vtext) {
+        return _vEscapeText(v.data);
+    }
+    var out = "<" + v.eldurTag;
+    var names = _vAttrNames(v);
+    for (var i = 0; i < names.length; ++i) {
+        var value = _vGetAttr(v, names[i]);
+        out += " " + names[i] + "=\"" + String(value).replace(/&/g, "&amp;").replace(/"/g, "&quot;") + "\"";
+    }
+    out += ">";
+    if (_vVoid[v.eldurTag]) {
+        return out;
+    }
+    return out + _vInner(v) + "</" + v.eldurTag + ">";
+}
+
+function _vInner(c) {
+    return c.kids.filter(_vIsRendered).map(_vSerialize).join("");
+}
+
+function _vKebab(name) {
+    return String(name).replace(/[A-Z]/g, function(ch) { return "-" + ch.toLowerCase(); });
+}
+
+function _vParseCss(m, css) {
+    var parts = String(css).split(";");
+    for (var i = 0; i < parts.length; ++i) {
+        var at = parts[i].indexOf(":");
+        if (at > 0) {
+            var name = parts[i].slice(0, at).trim();
+            var value = parts[i].slice(at + 1).trim();
+            if (value !== "") {
+                m.styles[name.indexOf("--") === 0 ? name : _kebabToCamel(name)] = value;
+            }
+        }
+    }
+}
+
+function _vCssText(m) {
+    return Object.keys(m.styles).map(function(k) {
+        return _vKebab(k) + ": " + m.styles[k] + ";";
+    }).join(" ");
+}
+
+function _vSetStyle(v, prop, value) {
+    var m = _meta(v);
+    var name = String(prop);
+    var str = value === null || value === undefined ? "" : String(value);
+    if (name === "cssText") {
+        m.styles = {};
+        _vParseCss(m, str);
+    } else {
+        var camel = name.indexOf("--") === 0 ? name : _kebabToCamel(name);
+        if (str === "") {
+            delete m.styles[camel];
+        } else {
+            m.styles[camel] = str;
+        }
+    }
+    _vChanged(v.model);
+}
+
+function _vGetStyle(v, prop) {
+    var m = _meta(v);
+    var name = String(prop);
+    if (name === "cssText") {
+        return _vCssText(m);
+    }
+    var value = m.styles[name.indexOf("--") === 0 ? name : _kebabToCamel(name)];
+    return value === undefined ? "" : String(value);
+}
+
+// The rule table, without what nothing here reads and with what spares most
+// selector matches.
+function _vLoadRules() {
+    if (_vRules) {
+        return _vRules;
+    }
+    _vRules = [];
+    var table = _vHasRules() && _root.eldurInlineRules !== "" ? JSON.parse(_root.eldurInlineRules) : [];
+    for (var i = 0; i < table.length; ++i) {
+        var decls = table[i].decls.filter(function(d) { return _vProps.indexOf(d[0]) !== -1; });
+        if (decls.length > 0 && table[i].sel.indexOf("::") === -1) {
+            var last = /([.#]?)([\w-]+)$/.exec(table[i].sel);
+            _vRules.push({
+                sel: table[i].sel,
+                rank: table[i].spec[0] * 1000000 + table[i].spec[1] * 1000 + table[i].spec[2],
+                ua: table[i].ua,
+                decls: decls,
+                lastKind: last ? last[1] : null,
+                lastName: last ? last[2] : null,
+                list: undefined
+            });
+        }
+    }
+    return _vRules;
+}
+
+function _vRuleMatches(rule, v, m) {
+    if (rule.lastKind === "") {
+        if (rule.lastName !== v.eldurTag) {
+            return false;
+        }
+    } else if (rule.lastKind === ".") {
+        if (m.classes.indexOf(rule.lastName) === -1) {
+            return false;
+        }
+    } else if (rule.lastKind === "#") {
+        if (rule.lastName !== v.objectName) {
+            return false;
+        }
+    }
+    if (rule.list === undefined) {
+        try {
+            rule.list = _parseSelector(rule.sel);
+        } catch (e) {
+            rule.list = null;
+        }
+    }
+    if (rule.list === null) {
+        return false;
+    }
+    try {
+        return _matchesList(v, rule.list);
+    } catch (e2) {
+        return false;
+    }
+}
+
+function _vMatched(v) {
+    if (v.matchGen === _vGen) {
+        return v.matched;
+    }
+    var rules = _vLoadRules();
+    var m = _meta(v);
+    var out = [];
+    for (var i = 0; i < rules.length; ++i) {
+        if (_vRuleMatches(rules[i], v, m)) {
+            out.push(i);
+        }
+    }
+    v.matched = out;
+    v.matchGen = _vGen;
+    return out;
+}
+
+function _vSig(v) {
+    var m = _meta(v);
+    return _vMatched(v).join(",") + "|" + _vCssText(m) + "|" + Boolean(m.explicitHidden);
+}
+
+function _vColorParts(c) {
+    return "rgb(" + Math.round(c.r * 255) + ", " + Math.round(c.g * 255) + ", " + Math.round(c.b * 255) + ")";
+}
+
+function _vLiveColor(c) {
+    if (c === undefined || c === null) {
+        return "rgb(0, 0, 0)";
+    }
+    if (c.a !== undefined && c.a < 1) {
+        var alpha = Math.round(c.a * 1000) / 1000;
+        return "rgba(" + Math.round(c.r * 255) + ", " + Math.round(c.g * 255) + ", " + Math.round(c.b * 255) + ", " + alpha + ")";
+    }
+    return _vColorParts(c);
+}
+
+function _vLiveBase(text) {
+    var f = text.font || {};
+    return {
+        color: _vLiveColor(text.color),
+        weight: typeof f.weight === "number" ? f.weight : 400,
+        italic: Boolean(f.italic),
+        underline: Boolean(f.underline),
+        strike: Boolean(f.strikeout),
+        size: typeof f.pixelSize === "number" && f.pixelSize > 0 ? f.pixelSize : 16,
+        family: typeof f.family === "string" ? f.family : "",
+        bg: "rgba(0, 0, 0, 0)",
+        display: "block",
+        visible: true
+    };
+}
+
+// What the top of a line inherits: the block as it is now, since a class on
+// the block restyles the `Text`; a `Text` showing one element's style has lost
+// the block's.
+function _vBase(model) {
+    if (!model || model.select) {
+        return _vDefault;
+    }
+    if (model.hoisted) {
+        return model.k;
+    }
+    var live = _vLiveBase(model.text);
+    live.family = model.k.family;
+    live.underline = model.k.underline;
+    live.strike = model.k.strike;
+    return live;
+}
+
+function _vColor(value, current) {
+    var v = String(value).trim().toLowerCase();
+    if (v === "currentcolor") {
+        return current;
+    }
+    if (v === "transparent") {
+        return "rgba(0, 0, 0, 0)";
+    }
+    var fn = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,\/]+([\d.]+%?))?\s*\)$/.exec(v);
+    if (fn) {
+        var alpha = fn[4] === undefined ? 1 : fn[4].slice(-1) === "%" ? parseFloat(fn[4]) / 100 : parseFloat(fn[4]);
+        return alpha >= 1
+            ? "rgb(" + Math.round(fn[1]) + ", " + Math.round(fn[2]) + ", " + Math.round(fn[3]) + ")"
+            : "rgba(" + Math.round(fn[1]) + ", " + Math.round(fn[2]) + ", " + Math.round(fn[3]) + ", " + alpha + ")";
+    }
+    if (!/^(#[0-9a-f]{3,8}|[a-z]+)$/.test(v) || !Qt.colorEqual) {
+        return current;
+    }
+    var hex = /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/.exec(v);
+    if (hex) {
+        var h = hex[1];
+        if (h.length <= 4) {
+            h = h.replace(/./g, "$&$&");
+        }
+        var rgb = [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+        return h.length === 8 && h.slice(6) !== "ff"
+            ? "rgba(" + rgb.join(", ") + ", " + Math.round(parseInt(h.slice(6), 16) / 255 * 1000) / 1000 + ")"
+            : "rgb(" + rgb.join(", ") + ")";
+    }
+    var named = Qt.color(v);
+    return named ? _vLiveColor(named) : current;
+}
+
+function _vApply(out, prop, value, pc) {
+    var v = String(value).trim();
+    var low = v.toLowerCase();
+    var inherits = prop !== "display" && prop !== "background-color" && prop !== "text-decoration-line";
+    if (low === "inherit" || ((low === "unset" || low === "revert") && inherits)) {
+        low = v = "\u0000inherit";
+    } else if (low === "initial" || low === "unset" || low === "revert") {
+        low = v = "\u0000initial";
+    }
+    var key = { color: "color", "font-weight": "weight", "font-style": "italic", "font-size": "size",
+        "font-family": "family", display: "display", visibility: "visible", "background-color": "bg" }[prop];
+    if (prop === "text-decoration-line") {
+        if (low === "\u0000inherit") {
+            out.underline = pc.underline;
+            out.strike = pc.strike;
+        } else {
+            out.underline = low.indexOf("underline") !== -1;
+            out.strike = low.indexOf("line-through") !== -1;
+        }
+        return;
+    }
+    if (low === "\u0000inherit") {
+        out[key] = pc[key];
+    } else if (low === "\u0000initial") {
+        out[key] = _vDefault[key];
+    } else if (prop === "color") {
+        out.color = _vColor(v, out.color);
+    } else if (prop === "background-color") {
+        out.bg = _vColor(v, out.bg);
+    } else if (prop === "font-weight") {
+        out.weight = low === "bold" ? 700 : low === "normal" ? 400
+            : low === "bolder" ? (pc.weight >= 600 ? 900 : pc.weight >= 350 ? 700 : 400)
+            : low === "lighter" ? (pc.weight >= 800 ? 700 : pc.weight >= 600 ? 400 : 100)
+            : (Number(low) || out.weight);
+    } else if (prop === "font-style") {
+        out.italic = low === "italic" || low.indexOf("oblique") === 0;
+    } else if (prop === "font-size") {
+        var size = /^([\d.]+)(px|em|rem|%|pt)$/.exec(low);
+        if (size) {
+            var n = parseFloat(size[1]);
+            out.size = size[2] === "px" ? n : size[2] === "em" ? n * pc.size : size[2] === "rem" ? n * 16
+                : size[2] === "%" ? n * pc.size / 100 : n * 4 / 3;
+        } else {
+            out.size = low === "smaller" ? pc.size / 1.2 : low === "larger" ? pc.size * 1.2 : out.size;
+        }
+    } else if (prop === "font-family") {
+        out.family = v.split(",")[0].trim().replace(/^["']|["']$/g, "");
+    } else if (prop === "display") {
+        out.display = low;
+    } else if (prop === "visibility") {
+        out.visible = low === "visible";
+    }
+}
+
+function _vCascade(v, pc) {
+    var rules = _vLoadRules();
+    var matched = _vMatched(v);
+    var won = {};
+    function offer(prop, value, weight) {
+        if (!won[prop] || weight >= won[prop].weight) {
+            won[prop] = { value: value, weight: weight };
+        }
+    }
+    var band = 10000000000;
+    for (var i = 0; i < matched.length; ++i) {
+        var rule = rules[matched[i]];
+        for (var d = 0; d < rule.decls.length; ++d) {
+            var decl = rule.decls[d];
+            var origin = decl[2] ? (rule.ua ? 4 : 3) : (rule.ua ? 0 : 1);
+            offer(decl[0], decl[1], origin * band + rule.rank);
+        }
+    }
+    var m = _meta(v);
+    var keys = Object.keys(m.styles);
+    for (var s = 0; s < keys.length; ++s) {
+        var prop = _vKebab(keys[s]);
+        var raw = String(m.styles[keys[s]]);
+        var important = /!\s*important\s*$/i.test(raw);
+        var value = raw.replace(/!\s*important\s*$/i, "");
+        if (prop === "text-decoration") {
+            prop = "text-decoration-line";
+        }
+        if (_vProps.indexOf(prop) !== -1) {
+            offer(prop, value, (important ? 3.5 : 2) * band);
+        }
+    }
+    var out = {
+        color: pc.color, weight: pc.weight, italic: pc.italic, size: pc.size, family: pc.family,
+        visible: pc.visible, underline: false, strike: false, bg: "rgba(0, 0, 0, 0)", display: "inline"
+    };
+    if (m.explicitHidden && !won.display) {
+        out.display = "none";
+    }
+    for (var w = 0; w < _vProps.length; ++w) {
+        if (won[_vProps[w]]) {
+            _vApply(out, _vProps[w], won[_vProps[w]].value, pc);
+        }
+    }
+    return out;
+}
+
+function _vStyle(v) {
+    if (v.styleGen === _vGen && v.style) {
+        return v.style;
+    }
+    var parent = v.vparent;
+    var pc = parent ? _vStyle(parent) : _vBase(v.model);
+    var clean = Boolean(v.c) && v.sig0 !== undefined && _vSig(v) === v.sig0;
+    if (clean && parent) {
+        clean = parent.cleanNow;
+    } else if (clean) {
+        var k = v.model && v.model.k;
+        clean = !k || (pc.color === k.color && pc.weight === k.weight && pc.italic === k.italic);
+    }
+    v.cleanNow = clean;
+    v.style = clean ? v.c : _vCascade(v, pc);
+    v.styleGen = _vGen;
+    return v.style;
+}
+
+function _vComputedStyle(v) {
+    function read(prop) {
+        var c = _vStyle(v);
+        switch (_kebabToCamel(String(prop))) {
+        case "color": return c.color;
+        case "fontWeight": return String(c.weight);
+        case "fontStyle": return c.italic ? "italic" : "normal";
+        case "display": return c.display;
+        case "fontSize": return c.size + "px";
+        case "fontFamily": return c.family;
+        case "backgroundColor": return c.bg;
+        case "visibility": return c.visible ? "visible" : "hidden";
+        case "textDecorationLine":
+            return c.underline ? (c.strike ? "underline line-through" : "underline") : c.strike ? "line-through" : "none";
+        default: return "";
+        }
+    }
+    return new Proxy({ getPropertyValue: read }, {
+        get: function(target, prop) {
+            if (prop in target) {
+                return target[prop];
+            }
+            return typeof prop === "string" ? read(prop) : undefined;
+        }
+    });
+}
+
+function _vHex(css) {
+    var fn = /rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)/.exec(css);
+    if (!fn) {
+        return "#000000";
+    }
+    function two(n) {
+        var s = Number(n).toString(16);
+        return s.length === 1 ? "0" + s : s;
+    }
+    var rgb = two(fn[1]) + two(fn[2]) + two(fn[3]);
+    return fn[4] !== undefined ? "#" + two(Math.round(parseFloat(fn[4]) * 255)) + rgb : "#" + rgb;
+}
+
+// Whether the node needs what only RichText has.
+function _vNeedsHtml(kids, pc, family) {
+    for (var i = 0; i < kids.length; ++i) {
+        if (kids[i].kids) {
+            var c = _vStyle(kids[i]);
+            if ((c.bg !== "rgba(0, 0, 0, 0)" && c.bg !== "transparent") || (c.family !== family && c.family !== "")
+                || _vNeedsHtml(kids[i].kids, c, family)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function _vWriteText(st, data, owner) {
+    var out = "";
+    for (var i = 0; i < data.length; ++i) {
+        var ch = data.charAt(i);
+        if (st.pre) {
+            out += ch === "\n" ? "<br>" : ch === " " ? "&nbsp;" : ch === "&" ? "&amp;" : ch === "<" ? "&lt;" : ch === ">" ? "&gt;" : ch;
+        } else if (/[ \t\r\n\f]/.test(ch)) {
+            if (!st.prevSpace) {
+                out += " ";
+                st.prevSpace = true;
+            }
+        } else {
+            out += ch === "&" ? "&amp;" : ch === "<" ? "&lt;" : ch === ">" ? "&gt;" : ch;
+            st.prevSpace = false;
+        }
+    }
+    if (out === "") {
+        return;
+    }
+    if (st.twin) {
+        st.owners.push(owner);
+        st.out += "<a href=\"eldur:" + (st.owners.length - 1) + "\">" + out + "</a>";
+    } else {
+        st.out += out;
+    }
+}
+
+function _vWriteGen(st, gen, pc, owner) {
+    _vWrap(st, gen.c, pc, false, null, function() {
+        _vWriteText(st, gen.text, owner);
+    });
+}
+
+function _vWrap(st, c, pc, isLink, href, body) {
+    var close = "";
+    function open(tag, attrs) {
+        st.out += "<" + tag + (attrs || "") + ">";
+        close = "</" + tag + ">" + close;
+    }
+    var wasLink = st.inLink;
+    if (isLink && !st.twin) {
+        if (st.bareLink) {
+            st.inLink = false;
+        } else {
+            if (st.html) {
+                open("a", " href=\"" + href + "\" style=\"color:" + _vHex(c.color) + ";text-decoration:none\"");
+            } else {
+                open("a", " href=\"" + href + "\"");
+                if (st.linkColor === null) {
+                    st.linkColor = c.color;
+                }
+            }
+            st.inLink = true;
+        }
+    }
+    if (c.weight >= 600 && pc.weight < 600) {
+        open("b");
+    }
+    if (c.italic && !pc.italic) {
+        open("i");
+    }
+    if (c.underline && !(pc.underline && pc.inlineLine) && !(st.inLink && !st.html) && !st.bareLink) {
+        open("u");
+    }
+    if (c.strike && !(pc.strike && pc.inlineLine)) {
+        open("s");
+    }
+    if (!st.twin && !c.visible) {
+        open("font", " color=\"#00000000\"");
+    } else if (!st.twin && c.color !== pc.color && !(st.inLink && !st.html)) {
+        open("font", " color=\"" + _vHex(c.color) + "\"");
+    }
+    if (st.html) {
+        var css = [];
+        if (c.size !== pc.size) {
+            css.push("font-size:" + c.size + "px");
+        }
+        if (c.family !== pc.family && c.family !== "") {
+            css.push("font-family:'" + c.family + "'");
+        }
+        if (c.bg !== "rgba(0, 0, 0, 0)" && c.bg !== "transparent") {
+            css.push("background-color:" + _vHex(c.bg));
+        }
+        if (css.length > 0) {
+            open("span", " style=\"" + css.join(";") + "\"");
+        }
+    } else if (c.size > pc.size) {
+        open("big");
+    } else if (c.size < pc.size) {
+        open("small");
+    }
+    body();
+    st.inLink = wasLink;
+    st.out += close;
+}
+
+function _vWriteKids(st, kids, pc, owner) {
+    for (var i = 0; i < kids.length; ++i) {
+        var k = kids[i];
+        if (k.gen) {
+            _vWriteGen(st, k.gen, pc, owner);
+        } else if (k.vtext) {
+            _vWriteText(st, k.data, owner);
+        } else {
+            _vWriteElement(st, k, pc);
+        }
+    }
+}
+
+function _vWriteElement(st, v, pc) {
+    var c = _vStyle(v);
+    if (c.display === "none") {
+        return;
+    }
+    if (v.eldurTag === "br") {
+        st.out += "<br>";
+        st.prevSpace = true;
+        return;
+    }
+    var href = v.eldurTag === "a" ? _vGetAttr(v, "href") : null;
+    var lined = { color: c.color, weight: c.weight, italic: c.italic, size: c.size, family: c.family, bg: c.bg,
+        underline: c.underline || (pc.underline && pc.inlineLine), strike: c.strike || (pc.strike && pc.inlineLine),
+        inlineLine: true, visible: c.visible, display: c.display };
+    _vWrap(st, c, pc, href !== null, href === null ? null : _vEscapeText(href).replace(/"/g, "&quot;"), function() {
+        if (v.before) {
+            _vWriteGen(st, v.before, lined, v);
+        }
+        _vWriteKids(st, v.kids, lined, v);
+        if (v.after) {
+            _vWriteGen(st, v.after, lined, v);
+        }
+    });
+}
+
+function _vMarkup(model, twin) {
+    var base = _vBase(model);
+    var st = {
+        out: "", prevSpace: true, pre: model.pre, html: model.html, twin: twin,
+        owners: [], inLink: false, linkColor: null,
+        bareLink: model.bare && model.kids.length === 1 && Boolean(model.kids[0].kids)
+            && !_vStyle(model.kids[0]).underline
+    };
+    _vWriteKids(st, model.kids, base, null);
+    if (!st.pre) {
+        st.out = st.out.replace(/ ((?:<\/[a-z]+>)*)$/, "$1");
+    }
+    return st;
+}
+
+// The first write takes the `Text` over from what the converter emitted: a
+// `Text` styled as its one element goes back to the block's style, as that
+// element's style now comes from the markup.
+function _vRender(model) {
+    var text = model.text;
+    if (model.hoisted) {
+        var k = model.k;
+        text.color = k.color;
+        text.font.weight = k.weight;
+        text.font.italic = k.italic;
+        text.font.underline = model.underline;
+        text.font.strikeout = model.strike;
+        text.font.pixelSize = k.size;
+        model.hoisted = false;
+    }
+    if (!model.html && _vNeedsHtml(model.kids, _vBase(model), model.k.family)) {
+        model.html = true;
+    }
+    var st = _vMarkup(model, false);
+    var markup = st.out;
+    if (model.html && model.lh !== undefined) {
+        markup = "<div style=\"line-height:" + model.lh + "px\">" + markup + "</div>";
+        text.lineHeightMode = Text.ProportionalHeight;
+        text.lineHeight = 1;
+    }
+    text.textFormat = model.html ? 1 : 4;
+    if (st.linkColor !== null) {
+        text.linkColor = st.linkColor;
+    }
+    text.text = markup;
+    model.rendered = true;
+    model.twinText = null;
+    _layoutChanged(text);
+}
+
+// After any write a selector could notice. A `Text` nothing touched keeps
+// what the converter wrote for it.
+function _vChanged(model) {
+    ++_vGen;
+    for (var i = 0; i < _vModels.length; ++i) {
+        var each = _vModels[i];
+        if (each.select) {
+            if (each === model) {
+                _vSyncSelect(each);
+            }
+            continue;
+        }
+        var render = each === model || each.rendered;
+        if (!render) {
+            _vEachElement(each.kids, function(v) {
+                _vStyle(v);
+                render = render || !v.cleanNow;
+            });
+        }
+        if (render) {
+            _vRender(each);
+        }
+    }
+}
+
+// Text has `linkAt` and nothing like `positionAt`. Making every run of the
+// painted text a link would change how it paints, so a hidden copy, laid out
+// the same, has every run as a link naming its node. Links the page has are
+// left out of the copy; what it reports for them is the same run.
+function _vTwin(model) {
+    var text = model.text;
+    if (!model.twin) {
+        model.twin = Qt.createQmlObject(
+            "import QtQuick; Text { visible: false; width: parent.width; font: parent.font; "
+            + "wrapMode: parent.wrapMode; lineHeight: parent.lineHeight; lineHeightMode: parent.lineHeightMode; "
+            + "horizontalAlignment: parent.horizontalAlignment }", text, "eldur_twin");
+        _meta(model.twin).isFragment = true;
+    }
+    if (model.twinText === null || model.twinText === undefined) {
+        var st = _vMarkup(model, true);
+        model.twinOwners = st.owners;
+        model.twinText = st.out;
+        model.twin.textFormat = model.html ? 1 : 4;
+        model.twin.text = model.html && model.lh !== undefined
+            ? "<div style=\"line-height:" + model.lh + "px\">" + st.out + "</div>"
+            : st.out;
+        model.twinRects = null;
+    }
+    return model.twin;
+}
+
+function _vHitAt(model, x, y) {
+    var twin = _vTwin(model);
+    var link = twin.linkAt(x, y);
+    if (link.indexOf("eldur:") !== 0) {
+        return null;
+    }
+    return model.twinOwners[Number(link.slice(6))] || null;
+}
+
+function _vRect(v) {
+    var none = { x: 0, y: 0, width: 0, height: 0 };
+    if (!v.model || v.model.select || v.vtext) {
+        return none;
+    }
+    for (var at = v; at; at = at.vparent) {
+        if (_vStyle(at).display === "none") {
+            return none;
+        }
+    }
+    var twin = _vTwin(v.model);
+    var line = Math.max(1, Math.floor((twin.font.pixelSize || 16) / 2));
+    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (var y = line / 2; y < v.model.text.height; y += line) {
+        for (var x = 0; x < v.model.text.width; x += 2) {
+            var owner = _vHitAt(v.model, x, y);
+            for (var o = owner; o; o = o.vparent) {
+                if (o === v) {
+                    minX = Math.min(minX, x);
+                    maxX = Math.max(maxX, x + 2);
+                    minY = Math.min(minY, y - line / 2);
+                    maxY = Math.max(maxY, y + line / 2);
+                    break;
+                }
+            }
+        }
+    }
+    return maxX < minX ? none : { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
+function _vClientRect(v) {
+    var r = _vRect(v);
+    var origin = v.model && !v.model.select && r.width > 0
+        ? v.model.text.mapToItem(null, r.x, r.y) : { x: 0, y: 0 };
+    return { x: origin.x, y: origin.y, left: origin.x, top: origin.y, right: origin.x + r.width,
+        bottom: origin.y + r.height, width: r.width, height: r.height };
+}
+
+// `_connectSignalOnce` for a node: what reaches it is its `Text`'s tap.
+function _vConnect(v, type) {
+    _meta(v).connected[type] = true;
+    if (type === "click" && v.model && !v.model.select) {
+        _vTapHandler(v.model.text);
+    }
+}
+
+function _vTapHandler(text) {
+    var m = _meta(text);
+    if (!m.vTap) {
+        m.vTap = Qt.createQmlObject("import QtQuick; TapHandler {}", text, "eldur_vtap");
+        m.vTap.tapped.connect(function(eventPoint, btn) {
+            _beginTap({
+                position: eventPoint.position,
+                scenePosition: eventPoint.scenePosition,
+                button: btn
+            });
+        });
+    }
+}
+
+function _vReconnect(node) {
+    if (node.vtext || !node.model) {
+        return;
+    }
+    var m = _meta(node);
+    if ((m.listeners.click && m.listeners.click.length > 0) || m.onHandlers.click) {
+        _vConnect(node, "click");
+    }
+    for (var i = 0; i < node.kids.length; ++i) {
+        if (!node.kids[i].gen) {
+            _vReconnect(node.kids[i]);
+        }
+    }
+}
+
+// A tap: not every handler under the point hears it (a link or a control takes
+// the press for itself) and those that do hear it on their own, so the first
+// to hear runs the whole path of a browser's one event, and the rest find their
+// turn taken.
+var _tap = null;
+
+function _deepestAt(scene) {
+    var cur = _root.contentItem || _root;
+    var found = cur;
+    while (cur && typeof cur.childAt === "function") {
+        var local = cur.mapFromItem(null, scene.x, scene.y);
+        var next = cur.childAt(local.x, local.y);
+        if (!next) {
+            break;
+        }
+        found = next;
+        cur = next;
+    }
+    return found;
+}
+
+function _beginTap(qtEv) {
+    var scene = qtEv.scenePosition;
+    if (_tap && _tap.x === scene.x && _tap.y === scene.y) {
+        return _tap;
+    }
+    var deep = _deepestAt(scene);
+    var t = { x: scene.x, y: scene.y, deep: deep, target: null, control: null, ev: null, ran: [] };
+    _tap = t;
+    Qt.callLater(_flushTap);
+    for (var at = deep; at && !t.target; at = at.parent) {
+        var model = _vModelOf(at);
+        if (model && !model.select) {
+            var local = at.mapFromItem(null, scene.x, scene.y);
+            t.target = _vHitAt(model, local.x, local.y) || _vHostElement(model);
+        } else if (!_isInternalHelperNode(at) && _vIsTagged(at)) {
+            t.target = at;
+            if (typeof at.clicked === "function") {
+                t.control = at;
+            }
+        }
+    }
+    t.target = t.target || _unwrap(document.body);
+    t.ev = event("click", wrap(t.target), qtEv);
+    t.ev.target = wrap(t.target);
+    t.ev.bubbles = true;
+    // A control's own `clicked` starts its path, if the press comes to a click.
+    if (!t.control) {
+        _runPath(t.target, t.ev, t.ran);
+    }
+    return t;
+}
+
+function _runPath(from, ev, ran) {
+    for (var at = from; at && !ev._propagationStopped; at = _logicalParent(at)) {
+        if (_isDomTarget(at) && !_isInternalHelperNode(at)) {
+            if (ran) {
+                ran.push(at);
+            }
+            _dispatchDynamic(at, "click", ev);
+        }
+    }
+}
+
+function _flushTap() {
+    _tap = null;
+}
+
+// A link's own handler asks; a tap on it comes first.
+function linkPrevented() {
+    return Boolean(_tap && _tap.ev && _tap.ev.defaultPrevented);
+}
+
+function tapPrevented(eventPoint) {
+    return _vHasRules() && Boolean(_beginTap(eventPoint).ev.defaultPrevented);
+}
+
+function _vClick(v) {
+    var ev = event("click", wrap(v), null);
+    ev.target = wrap(v);
+    _runPath(v, ev, null);
+}
+
+// A control takes the press for itself, so no handler above it hears: the
+// event goes up from here.
+function _clickedControl(raw) {
+    var ev = event("click", wrap(raw), null);
+    ev.target = wrap(raw);
+    _runPath(raw, ev, null);
+}
+
+// Inserting: what a script made as a QML object becomes a node when it goes
+// into a line of text. Its wrapper stays the script's handle on it.
+function _vFromCreated(raw) {
+    var m = _meta(raw);
+    if (m.createdTag === "#text") {
+        return _vLeaf(raw.text, null, null);
+    }
+    var tag = m.createdTag;
+    var kidSource = m.flow ? m.flow.children : raw.children;
+    var kids = [];
+    if (typeof raw.text === "string" && raw.text !== "") {
+        kids.push(_vLeaf(m.explicitText !== undefined ? m.explicitText : raw.text, null, null));
+    } else if (typeof raw.text !== "string" && m.explicitText !== undefined && m.explicitText !== "") {
+        kids.push(_vLeaf(m.explicitText, null, null));
+    }
+    for (var i = 0; kidSource && i < kidSource.length; ++i) {
+        var ch = kidSource[i];
+        if (_meta(ch).createdTag) {
+            kids.push(_vFromCreated(ch));
+        }
+    }
+    var v = _vElement(tag, [], null, null);
+    _itemMeta.delete(v);
+    _itemMeta.delete(raw);
+    _itemMeta.set(v, m);
+    m.raw = v;
+    if (m._setRaw) {
+        m._setRaw(v);
+    }
+    delete m.createdTag;
+    m.connected = {};
+    delete m.flow;
+    if (raw.objectName) {
+        v.objectName = raw.objectName;
+    } else if (m.attrs.id) {
+        v.objectName = String(m.attrs.id);
+    }
+    delete m.attrs.id;
+    if (m.explicitHidden) {
+        m.attrs.hidden = "";
+    }
+    v.eldurClasses = m.classes.join(" ");
+    for (var k = 0; k < kids.length; ++k) {
+        kids[k].vparent = v;
+        v.kids.push(kids[k]);
+    }
+    if (typeof raw.destroy === "function") {
+        raw.destroy();
+    }
+    return v;
+}
+
+// A node going where only real items are laid out.
+function _vToReal(v) {
+    if (v.vtext) {
+        return _unwrap(document.createTextNode(v.data));
+    }
+    var m = _meta(v);
+    var made = _unwrap(document.createElement(v.eldurTag));
+    var mm = _meta(made);
+    var script = m.wrapper;
+    _vRemove(v);
+    if (v.objectName) {
+        made.objectName = v.objectName;
+    }
+    var text = _vText(v);
+    _itemMeta.delete(v);
+    _itemMeta.set(made, m);
+    m.raw = made;
+    m.createdTag = v.eldurTag;
+    m.connected = {};
+    if (m._setRaw) {
+        m._setRaw(made);
+    }
+    if (script) {
+        m.wrapper = script;
+    }
+    if (text !== "") {
+        setText(made, text);
+    }
+    var keys = Object.keys(m.styles);
+    for (var i = 0; i < keys.length; ++i) {
+        setStyle(made, keys[i], m.styles[keys[i]]);
+    }
+    var kinds = ["click", "dblclick"];
+    for (var e = 0; e < kinds.length; ++e) {
+        if ((m.listeners[kinds[e]] && m.listeners[kinds[e]].length > 0) || m.onHandlers[kinds[e]]) {
+            _connectSignalOnce(made, kinds[e]);
+        }
+    }
+    void mm;
+    return made;
+}
+
+function _vRemove(node) {
+    var owner = node.vparent || node.model;
+    if (!owner) {
+        return;
+    }
+    var at = owner.kids.indexOf(node);
+    if (at !== -1) {
+        owner.kids.splice(at, 1);
+    }
+    var model = node.model;
+    node.vparent = null;
+    _vSetModel(node, null);
+    if (model) {
+        if (model.select) {
+            _vEnsureSelected(model);
+        }
+        _vChanged(model);
+    }
+}
+
+function _vAsNode(raw) {
+    if (raw.__eldurInline) {
+        return raw;
+    }
+    var m = _meta(raw);
+    return m.createdTag ? _vFromCreated(raw) : null;
+}
+
+// Inserts `nodes` (raw, or wrappers' raws) into container `c` before `ref`.
+function _vInsert(c, rawNodes, ref) {
+    var model = _vModelFor(c);
+    var list = c.kids;
+    for (var i = 0; i < rawNodes.length; ++i) {
+        var node = _vAsNode(rawNodes[i]);
+        if (!node) {
+            continue;
+        }
+        if (node === ref) {
+            ref = null;
+            var after = list.indexOf(node) + 1;
+            if (after > 0 && after < list.length) {
+                ref = list[after];
+            }
+        }
+        if (node.vparent || node.model) {
+            _vRemove(node);
+        }
+        var at = ref ? list.indexOf(ref) : -1;
+        node.vparent = c.__eldurInline ? c : null;
+        _vSetModel(node, model);
+        if (at === -1) {
+            list.push(node);
+        } else {
+            list.splice(at, 0, node);
+        }
+        _vReconnect(node);
+        if (model && model.select && node.sel) {
+            _vPick(model, node);
+        }
+    }
+    if (model && model.select) {
+        _vEnsureSelected(model);
+    }
+    _vChanged(model);
+}
+
+function _vClone(node, deep) {
+    if (node.vtext) {
+        return _vLeaf(node.data, null, null);
+    }
+    var m = _meta(node);
+    var copy = _vElement(node.eldurTag, [], null, null);
+    var cm = _meta(copy);
+    copy.objectName = node.objectName;
+    copy.attrOrder = node.attrOrder.slice();
+    cm.classes = m.classes.slice();
+    Object.keys(m.attrs).forEach(function(k) { cm.attrs[k] = m.attrs[k]; });
+    Object.keys(m.dataset).forEach(function(k) { cm.dataset[k] = m.dataset[k]; });
+    Object.keys(m.styles).forEach(function(k) { cm.styles[k] = m.styles[k]; });
+    cm.explicitHidden = m.explicitHidden;
+    if (deep) {
+        node.kids.forEach(function(k) {
+            if (!k.gen) {
+                var kc = _vClone(k, true);
+                kc.vparent = copy;
+                copy.kids.push(kc);
+            }
+        });
+    }
+    return copy;
+}
+
+// Options. `selectedness` as HTML has it: the node keeps its own flag, and
+// a select showing one line always has one on while it can.
+function _vOptions(model) {
+    var out = [];
+    _vEachElement(model.kids, function(v) {
+        if (v.eldurTag === "option") {
+            out.push(v);
+        }
+    });
+    return out;
+}
+
+function _vOptionText(v) {
+    return _vText(v).replace(/[ \t\r\n\f]+/g, " ").trim();
+}
+
+function _vOptionValue(v) {
+    var attr = _vGetAttr(v, "value");
+    return attr !== null ? attr : _vOptionText(v);
+}
+
+function _vSelected(model) {
+    var opts = _vOptions(model);
+    var found = -1;
+    for (var i = 0; i < opts.length; ++i) {
+        if (opts[i].sel) {
+            found = i;
+        }
+    }
+    return found;
+}
+
+function _vEnsureSelected(model) {
+    var opts = _vOptions(model);
+    var keep = _vSelected(model);
+    for (var i = 0; i < opts.length; ++i) {
+        if (i !== keep) {
+            opts[i].sel = false;
+        }
+    }
+    if (keep === -1) {
+        for (var j = 0; j < opts.length; ++j) {
+            if (_vGetAttr(opts[j], "disabled") === null) {
+                opts[j].sel = true;
+                break;
+            }
+        }
+    }
+}
+
+function _vPick(model, v) {
+    var opts = _vOptions(model);
+    for (var i = 0; i < opts.length; ++i) {
+        opts[i].sel = opts[i] === v;
+    }
+}
+
+function _vSyncSelect(model) {
+    var opts = _vOptions(model);
+    var combo = model.text;
+    _vSyncing = true;
+    combo.model = opts.map(function(o) { return { text: _vOptionText(o), value: _vOptionValue(o) }; });
+    combo.currentIndex = _vSelected(model);
+    _vSyncing = false;
+    _layoutChanged(combo);
+}
+
+function _vSelectModel(raw) {
+    var model = raw && !raw.__eldurInline ? _vModelOf(raw) : null;
+    return model && model.select ? model : null;
+}
+
+function Option(text, value, defaultSelected, selected) {
+    var attrs = [];
+    if (value !== undefined) {
+        attrs.push(["value", String(value)]);
+    }
+    if (defaultSelected) {
+        attrs.push(["selected", ""]);
+    }
+    var v = _vElement("option", attrs, null, null);
+    v.sel = Boolean(selected);
+    if (text !== undefined && String(text) !== "") {
+        v.kids.push(_vLeaf(String(text), v, null));
+    }
+    return wrap(v);
+}
+
+// A script reading a size right after writing text expects it to count.
+function _vSettle() {
+    if (_vHasRules() && _layoutDirty.length > 0) {
+        _settleLayouts();
+    }
+}
+
+// The model already holding `raw`'s text.
+function _vExisting(raw) {
+    if (!_vHasRules() && typeof raw.eldurInline !== "string" && !_itemMeta.has(raw)) {
+        return null;
+    }
+    var own = _vModelOf(raw);
+    if (own) {
+        return own;
+    }
+    var text = typeof raw.text === "string" ? null : _findTextChild(raw);
+    return text ? _vModelOf(text) : null;
+}
+
+function _vStaysInline(node) {
+    var tag = node.__eldurInline ? node.eldurTag : String(_meta(node).createdTag || "");
+    return /^(#text|a|abbr|b|bdi|bdo|br|cite|code|data|del|dfn|em|font|i|ins|kbd|label|mark|q|s|samp|small|span|strike|strong|sub|sup|time|tt|u|var|wbr)$/.test(tag);
+}
+
+// Where `nodes` go, if a line of text takes them; else they are real items.
+function _vHostOf(raw, nodes, ref) {
+    if (!_vHasRules() && !raw.__eldurInline) {
+        return null;
+    }
+    if (ref && ref.__eldurInline) {
+        return ref.vparent || ref.model;
+    }
+    if (raw.__eldurInline) {
+        return raw;
+    }
+    var known = _vExisting(raw);
+    if (known) {
+        return known;
+    }
+    if (!nodes.every(_vStaysInline)) {
+        return null;
+    }
+    var hasNode = nodes.some(function(n) { return n.__eldurInline; });
+    if (_meta(raw).createdTag && hasNode && _vStaysInline(raw)) {
+        return _vFromCreated(raw);
+    }
+    return _vOwnModel(raw) || (_markupMakesElements(raw) ? null : _vBoxModel(raw));
+}
+
+// `true` when the nodes went into a line of text.
+function _vTryInsert(raw, nodes, ref) {
+    var host = _vHostOf(raw, nodes, ref);
+    if (!host) {
+        return false;
+    }
+    _vInsert(host, nodes, ref);
+    return true;
+}
+
+// The children and, with text, the child nodes of `raw`; shared since both
+// must agree where a model's nodes stand among a box's items.
+function _rawChildNodes(raw) {
+    if (raw.__eldurInline) {
+        return raw.kids ? raw.kids.filter(_vIsRendered) : [];
+    }
+    var own = _vOwnModel(raw);
+    if (own) {
+        return own.kids.filter(_vIsRendered);
+    }
+    return _rawKids(raw, true);
+}
+
 function _walkItems(node, visitor) {
     if (!node) {
         return false;
@@ -4997,6 +6928,15 @@ function _walkItems(node, visitor) {
     }
     if (visitor(node)) {
         return true;
+    }
+    var inlineModel = _vModelOf(node);
+    if (inlineModel) {
+        var inlineKids = inlineModel.kids.filter(_vIsElement);
+        for (var v = 0; v < inlineKids.length; ++v) {
+            if (_walkItems(inlineKids[v], visitor)) {
+                return true;
+            }
+        }
     }
     if (node.children) {
         for (var i = 0; i < node.children.length; ++i) {
@@ -5809,6 +7749,10 @@ var document = {
         return _byTagName(null, tagName);
     },
     createElement: function(tagName) {
+        // An option never is a QML object: its control lists it.
+        if (_vHasRules() && /^(option|optgroup)$/i.test(String(tagName))) {
+            return wrap(_vElement(String(tagName).toLowerCase(), [], null, null));
+        }
         var tag = String(tagName).toLowerCase();
         var qmlSrc = _genericElementSource(tag, "text");
         var created = Qt.createQmlObject(qmlSrc, _qobjectParent(), "eldur_el_" + tag);
@@ -5909,6 +7853,7 @@ var window = {
     scrollBy: scrollBy,
     scroll: scroll,
     Event: Event,
+    Option: Option,
     CustomEvent: CustomEvent,
     EventTarget: EventTarget,
     KeyboardEvent: KeyboardEvent,

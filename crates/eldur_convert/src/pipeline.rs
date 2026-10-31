@@ -69,7 +69,13 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         &scripts.wanted
     };
     let images = crate::images::collect(&doc, &input.url, resources, &mut diags);
-    let runtime_dom = !scripts.is_empty() && scripts.analysis.runtime_dom;
+    // An inline element or option has no object for a script's static target,
+    // so a script that wants one finds it at run time.
+    let runtime_dom = !scripts.is_empty()
+        && (scripts.analysis.runtime_dom
+            || wanted
+                .iter()
+                .any(|&n| crate::boxes::is_inline_node(&doc, &styles, n)));
     let inputs = crate::emit::dynamic::Inputs {
         doc: &doc,
         styles: &styles,
@@ -84,6 +90,7 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     let emission = crate::emit::dynamic::emit(&inputs, &mut diags);
     let mut root = emission.root;
     let targets = emission.targets;
+    let inline_covered = emission.inline_covered;
     let forms = emission.forms;
     let mut extra_imports = emission.imports;
     let mut gated = emission.gated;
@@ -101,7 +108,7 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
 
     // 6: page.js, with the ids chosen in step 5.
     if !scripts.is_empty() {
-        scripts::report_missing(&doc, &scripts, &targets, &mut diags);
+        scripts::report_missing(&doc, &scripts, &targets, &inline_covered, &mut diags);
         let resolver = scripts::Resolver::new(&scripts, &targets);
         let js = eldur_js::rewrite(&scripts.inputs, &scripts.analysis, &resolver);
         for d in &js.diagnostics {
@@ -131,6 +138,18 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         if runtime_dom {
             let classes = eldur_css::styled_classes(&sheets);
             decls.push(metadata::styled_classes_decl(&classes));
+            // A created element may land in a block of text the script holds.
+            let holds_text = wanted.iter().any(|&n| {
+                doc.children(n).any(|c| {
+                    matches!(&doc.node(c).data, eldur_dom::NodeData::Text(t) if !t.trim().is_empty())
+                })
+            });
+            if !inline_covered.is_empty() || (scripts.analysis.mutates_dom && holds_text) {
+                decls.push(metadata::inline_rules_decl(&eldur_css::inline_rules(
+                    &sheets,
+                    &options.viewport,
+                )));
+            }
         }
         root.members.splice(0..0, decls);
         // A page with only functions has no init function, but the runtime

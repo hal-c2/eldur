@@ -1,0 +1,8 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[html]: index.html:19: inline <button id="b"> is laid out as a block (no inline replaced elements yet)
+info[css]: index.html:15: styles under class `done` of <span id="state" class="warn"> are left out: it has no item of its own
+info[css]: index.html:15: styles under class `warn` of <span id="state" class="warn"> are left out: it has no item of its own
+info[css]: index.html:31: a created <span> has no item of its own where the script puts it, so it has no template there (dynamic-templates)

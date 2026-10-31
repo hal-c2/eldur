@@ -344,4 +344,35 @@ What `eldur_convert` emits for the runtime (`docs/design/dynamic-styles.md` §7,
 Asserted end to end in qml6 against Chromium's answers for the same page (`crates/eldur_convert/tests/metadata_e2e.rs`, values recorded by `tests/metadata/chromium.mjs`): `el.matches` (class, tag and class, non-matching class and tag), `el.closest` (by class, by tag, no match → `null`) and reading `.id`/`.className` of the result, `classList.contains`, `classList.toggle` followed by `matches`, `document.querySelector` by class and by descendant class selector, `tagName`, `className`, `location.href`, and `a.href` for relative, `../` and `/` URLs, both from the page URL and from `<base href>`. For a local page `location.href` is the converted `Main.qml`, not the source file (dynamic-styles §14, decision 2).
 
 Known gaps:
+- Inline elements and options are nodes without objects: see §12.
 - `cls_<s>` is not yet declared on elements reached without a literal query (`event.target`, `this`) or on created elements (dynamic-styles S6/S7).
+
+## 12. Inline nodes
+
+A run of inline content is one `Text`, so `<span id>`, `<b>`, inline `<a>`, and `<option>` have no QML object of their own. To a script they are still nodes. Measured against Chromium in `crates/eldur_convert/tests/inline_dom_e2e.rs`.
+
+**Design.** The converter declares what is inside such a `Text` (or a select's `ComboBox`) as `readonly property string eldurInline`: the nodes as written, with attributes in order, and each element's computed style. Only pages whose scripts could reach these nodes get it: an inline element or option in the script's `wanted` set forces `runtime_dom`, and `eldurInline` follows `runtime_dom`. A page with no script emits what it did. The root's `eldurInlineRules` is the cascade's input for the properties a run can show (`eldur_css::inline_rules`), present when the page has a model, or a script that mutates the DOM and holds a block with its own text, since a created element may land there.
+
+At run time each node is a JS object that passes `_isQObject`, so `wrap`, `_meta`, selector matching and the tree walks need no second path; the funnels (`getText`, `setText`, `setStyle`, `getAttribute`, the wrapper's mutators) start with a hook for it. Once a node changes, or a rule matching it does, the runtime writes the `Text`'s markup from the model. A `Text` nothing touched keeps the text the converter wrote, byte for byte.
+
+Why this and not one QML object per element, or splitting the block whenever a script may touch it: `Text` is what wraps a line and shapes it across elements. A `Flow` of pieces breaks at element edges rather than mid-element and loses kerning and baseline agreement (`docs/design/dynamic-styles.md` §6.8). Virtual nodes keep paint identical until a script writes, and a write is one `Text` update, so the block's layout follows by itself.
+
+**Style.** A node's computed value is the converter's until the signature of what matches it (rule indices, inline style, `hidden`) moves from its first value, or its parent's does. Then the runtime runs the cascade over `eldurInlineRules`: origin, `!important`, specificity, order, inheritance from the node's parent or the block's live font. Spares every page the cost until a write, and keeps the two cascades from disagreeing on values no script changed. Selector matching is the runtime's own (`_matchesList`), with a quick reject on the rule's last simple selector. Any class change, on any element, recomputes the rendered and the now-dirty runs.
+
+**Hit testing.** A tap asks which node is under the point. `Text` has `linkAt` and nothing like `positionAt`. Making each run of the painted text a link would change its paint (link colour, what a tap does), so each model has a hidden copy, same width, font, wrap and line height, with every run a link named after its node. `linkAt` on the copy names the run; it is laid out by the same engine from the same text, so it is right on every line of a wrapped element, where measuring would not be. `getBoundingClientRect` scans the copy in 2 px steps, so an inline box's rectangle is approximate; the copy exists only once something asks.
+
+**Events.** Not every handler under the point hears a tap: a link and a control take the press for themselves, and those that do hear hear separately. On a page with `eldurInlineRules`, the first to hear (`_beginTap`) finds the target and runs the whole path up the DOM with one shared event; the rest find their turn taken. So `target`, `stopPropagation` and `preventDefault` behave as in a browser. A `Text` holding a link always gets a tap handler for this reason. `onLinkActivated` and a bare link's `onTapped` check `preventDefault`.
+
+**Writes.** `textContent`, `innerHTML` (a small inline-markup parser), `className`/`classList`, `style`, attributes, `hidden`, and `append`/`remove`/`insertBefore`/`replaceWith` and the rest. A created element is a QML object until it goes into a line of text, then becomes a node, keeping its wrapper; only tags that are inline by default do. `createElement("option")` is a node from the start.
+
+**Options.** Nodes of their select, with HTML's selectedness on the node: `selected`, `value`, `index`, `text`, `label`, `defaultSelected`, and on the select `options` (live, `length` truncates), `selectedOptions`, `add`, `remove(i)`, `item`, `new Option(...)`. A change rebuilds the `ComboBox`'s `model`; the user picking a line writes the flag back.
+
+**Known gaps.**
+- A run with an atomic inline (`<img>`, `<button>`, inline-block) stays a `Flow`, and its inline elements have no nodes; the converter's "no QML object of its own" warning stays for them.
+- Whitespace-only text between blocks is not a node, and a real element's `childNodes` adds only its text runs to its element children, so counts differ when whitespace is all there is.
+- The dirty recompute does not know `var()`, nested rules or `@layer` order; `:is()` specificity takes the maximum for every match. `text-transform` is not applied to a rewritten run. `display: block` on an inline node paints it inline.
+- A change to a real element's attribute, other than a class, does not recompute inline nodes.
+- A `Text` shown as its one element's style goes back to the block's on first write, using what the converter computed; a later class change on the block is then read live.
+- A node moved into a box that lays out only real items becomes a real item, as text and inline style: best effort.
+- A control's press reaches listeners up its path only if the control itself has a listener: with none, nothing is connected to its `clicked`, so a listener on an ancestor does not hear it. A statically wired handler (`Page.fn(Eldur.event(...))`) runs on its own TapHandler, after the dynamic path, and a `stopPropagation` does not stop it.
+- `dataset` writes do not recompute styles.

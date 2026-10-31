@@ -14,6 +14,7 @@ mod grid;
 mod ids;
 mod image;
 mod inline;
+mod inline_model;
 mod links;
 mod lists;
 mod paint;
@@ -147,6 +148,8 @@ pub(crate) struct Emitter<'a, 'd> {
     /// Created inline elements laid out as items of their own in their
     /// line (`boxes::build_with`).
     inline_items: HashSet<NodeId>,
+    /// Inline elements and options a script reaches through `eldurInline`.
+    pub inline_covered: std::collections::BTreeSet<NodeId>,
 }
 
 impl<'a, 'd> Emitter<'a, 'd> {
@@ -201,6 +204,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             collapsed: HashSet::new(),
             force_paint: false,
             inline_items: HashSet::new(),
+            inline_covered: std::collections::BTreeSet::new(),
         }
     }
 
@@ -538,6 +542,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
             }
             Content::Inline(items) => {
                 let mut text = self.text(style, decoration, items, line);
+                if self.runtime_dom {
+                    self.declare_inline_model(&mut text, b, decoration, items);
+                }
                 if matches!(b.kind, BoxKind::Flex | BoxKind::Grid) {
                     place_anonymous_item(&mut text, style, b.kind);
                 }
