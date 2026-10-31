@@ -1,0 +1,6 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[html]: index.html:24: inline <button id="open" class="btn"> is laid out as a block (no inline replaced elements yet)
+info[html]: index.html:31: inline <input id="email"> is laid out as a block (no inline replaced elements yet)

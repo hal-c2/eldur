@@ -230,12 +230,12 @@ let chips;
 
 function __eldur_init(rootItem) {
     Eldur.init(rootItem || (typeof root !== "undefined" ? root : null));
-    ((__v) => (panel.visible = __v !== "none", __v))("none");
-    ((__v) => (panel.visible = __v !== "none", __v))("flex");
+    ((__v) => (Eldur.setStyle(panel, "display", __v), __v))("none");
+    ((__v) => (Eldur.setStyle(panel, "display", __v), __v))("flex");
     ((__v) => (Eldur.setStyle(panel, "color", __v), __v))("#ff0000");
     ((__v) => (Eldur.setStyle(panel, "backgroundColor", __v), __v))("navy");
     col = Eldur.getStyle(panel, "color");
-    disp = (panel.visible ? "" : "none");
+    disp = Eldur.getStyle(panel, "display");
     Eldur.classList(panel).add("open");
     Eldur.classList(panel).toggle("active");
     Eldur.dataset(panel).tabId = "settings";
@@ -1175,8 +1175,8 @@ function updateDom(suffix, extraClass, htmlChunk, fallbackRole, node, state) {
     Eldur.getStyle(cardBox, "color") || ((__v) => (Eldur.setStyle(cardBox, "color", __v), __v))("#112233");
     Eldur.getStyle(cardBox, "color") && ((__v) => (Eldur.setStyle(cardBox, "color", __v), __v))("#445566");
     Eldur.getStyle(cardBox, "color") ?? ((__v) => (Eldur.setStyle(cardBox, "color", __v), __v))("#778899");
-    (cardBox.visible ? "" : "none") || ((__v) => (cardBox.visible = __v !== "none", __v))("none");
-    (cardBox.visible ? "" : "none") && ((__v) => (cardBox.visible = __v !== "none", __v))("flex");
+    Eldur.getStyle(cardBox, "display") || ((__v) => (Eldur.setStyle(cardBox, "display", __v), __v))("none");
+    Eldur.getStyle(cardBox, "display") && ((__v) => (Eldur.setStyle(cardBox, "display", __v), __v))("flex");
 
     ((__v) => (Eldur.setInnerHTML(node, __v), __v))(Eldur.getInnerHTML(node) + (htmlChunk));
     Eldur.getInnerHTML(node) || ((__v) => (Eldur.setInnerHTML(node, __v), __v))("<span>node</span>");

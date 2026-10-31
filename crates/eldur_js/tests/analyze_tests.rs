@@ -98,6 +98,7 @@ fn tracks_listeners_and_property_writes_across_variables_functions_and_loops() {
         live_queries,
         text_writes,
         reads_attributes,
+        reads_template_content,
         dispatch_by_path: _,
         listens_unresolved: _,
         opaque_inserts: _,
@@ -121,6 +122,7 @@ fn tracks_listeners_and_property_writes_across_variables_functions_and_loops() {
         ]
     );
     assert!(!reads_attributes);
+    assert!(!reads_template_content);
     // `textContent` replaces the children of the elements it is written to.
     assert_eq!(
         mutated_parents,
