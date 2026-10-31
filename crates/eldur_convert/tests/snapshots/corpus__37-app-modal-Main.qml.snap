@@ -91,11 +91,11 @@ ApplicationWindow {
                             id: open
                             property string eldurTag: "button"
                             property string eldurClasses: "btn"
-                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h1.eldurCarry
+                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 34) - Layout.topMargin - 34 + 0.000001) : h1.eldurCarry
 
                             text: "Invite someone"
                             palette.buttonText: "#ffffff"
-                            font.family: "sans-serif"
+                            font.family: "Arial"
                             font.pixelSize: 14
                             background: Rectangle {
                                 color: "#1a56db"
@@ -108,6 +108,7 @@ ApplicationWindow {
                             rightPadding: 17
                             bottomPadding: 9
                             leftPadding: 17
+                            implicitHeight: 34
                             contentItem: Text {
                                 text: open.text
                                 font: open.font
@@ -118,7 +119,6 @@ ApplicationWindow {
                             }
                             objectName: "open"
                             Layout.topMargin: 21.44 - h1.eldurCarry
-                            Layout.preferredHeight: implicitHeight
 
                             Keys.onPressed: (event) => {
                                 event.accepted = !Eldur.fire(open, "keydown", event);
@@ -262,14 +262,14 @@ ApplicationWindow {
                     TextField {
                         id: email
                         property string eldurTag: "input"
-                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : label.eldurCarry
+                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 29) - Layout.topMargin - 29 + 0.000001) : label.eldurCarry
 
                         color: "#000000"
-                        font.family: "sans-serif"
+                        font.family: "Arial"
                         font.pixelSize: 13
                         verticalAlignment: TextInput.AlignVCenter
                         background: Rectangle {
-                            color: "#00000000"
+                            color: "#ffffff"
                             border.width: 1
                             border.color: "#aaaaaa"
                         }
@@ -277,12 +277,12 @@ ApplicationWindow {
                         rightPadding: 9
                         bottomPadding: 7
                         leftPadding: 9
+                        implicitHeight: 29
                         implicitWidth: 195
                         Accessible.name: "Email"
                         objectName: "email"
                         Layout.fillWidth: true
                         Layout.topMargin: 4 - label.eldurCarry
-                        Layout.preferredHeight: implicitHeight
                         renderType: Text.NativeRendering
 
                         Keys.onPressed: (event) => {
@@ -312,7 +312,7 @@ ApplicationWindow {
 
                             text: "Cancel"
                             palette.buttonText: "#1a56db"
-                            font.family: "sans-serif"
+                            font.family: "Arial"
                             font.pixelSize: 14
                             background: Rectangle {
                                 color: "#ffffff"
@@ -325,6 +325,7 @@ ApplicationWindow {
                             rightPadding: 17
                             bottomPadding: 9
                             leftPadding: 17
+                            implicitHeight: 34
                             contentItem: Text {
                                 text: cancel.text
                                 font: cancel.font
@@ -351,7 +352,7 @@ ApplicationWindow {
 
                             text: "Send invite"
                             palette.buttonText: "#ffffff"
-                            font.family: "sans-serif"
+                            font.family: "Arial"
                             font.pixelSize: 14
                             background: Rectangle {
                                 color: "#1a56db"
@@ -364,6 +365,7 @@ ApplicationWindow {
                             rightPadding: 17
                             bottomPadding: 9
                             leftPadding: 17
+                            implicitHeight: 34
                             contentItem: Text {
                                 text: send.text
                                 font: send.font

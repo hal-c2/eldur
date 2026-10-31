@@ -6,6 +6,7 @@
 pub(crate) mod background;
 mod carry;
 mod controls;
+pub(crate) use controls::control_fonts_json;
 mod decoration;
 pub(crate) mod dynamic;
 mod flex;

@@ -456,11 +456,17 @@ container filled with inline-level children (`_gFillsLine`).
 - Inline-level created elements directly under a static parent with static
   siblings, or under `body`, do not form lines with them.
 - Normal line height comes from Qt's metrics: 17 at 16px where Chromium has 18.
-- Fonts are whole pixels, so control text is 13px against Chromium's 13.3333px
-  and `getComputedStyle` reports `sans-serif` where Chromium says `Arial`.
-- `<select>` is as wide as its current option, not its widest, within Qt's
-  hinted glyph widths. `<input>` width is measured for Arial. `<textarea>` and
-  `type=number` default sizes still differ from Chromium.
+- `QFont` loads whole pixels whatever it is asked (9.75pt, 10pt and 10.2pt all
+  measure as pixelSize 13; `Qt.font({pixelSize: 13.5})` is 13). Control text is
+  therefore painted at 13px against Chromium's 13.3333px. `getComputedStyle`
+  reports the UA sheet's 13.3333px and `Arial`, and a control's box is scaled up
+  to the width Chromium's text takes.
+- Controls' defaults live in the UA sheet (`eldur_css/src/ua.rs`) and their
+  sizing per family in `CONTROL_FONTS` (`emit/controls.rs`), handed to the
+  runtime as `root.eldurControlFonts`. The native line a control paints while
+  the page leaves its border and background to the UA is still written twice:
+  `NATIVE_BORDER` in Rust, the created sources in the runtime.
+- A SpinBox has no empty state: a `type=number` nobody wrote reads `""` and shows 0.
 
 ## 14. Realistic pages
 

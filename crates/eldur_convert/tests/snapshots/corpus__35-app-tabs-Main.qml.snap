@@ -161,7 +161,7 @@ ApplicationWindow {
 
                                     text: "Profile"
                                     palette.buttonText: tabProfile.cls_active ? "#1a56db" : "#555555"
-                                    font.family: "sans-serif"
+                                    font.family: "Arial"
                                     font.pixelSize: 14
                                     font.weight: tabProfile.cls_active ? 700 : 400
                                     background: Rectangle {
@@ -179,6 +179,7 @@ ApplicationWindow {
                                     rightPadding: 16
                                     bottomPadding: 10
                                     leftPadding: 16
+                                    implicitHeight: 34
                                     contentItem: Text {
                                         text: tabProfile.text
                                         font: tabProfile.font
@@ -203,7 +204,7 @@ ApplicationWindow {
 
                                     text: "Billing"
                                     palette.buttonText: tabBilling.cls_active ? "#1a56db" : (tabBilling.hovered ? "#000000" : "#555555")
-                                    font.family: "sans-serif"
+                                    font.family: "Arial"
                                     font.pixelSize: 14
                                     background: Rectangle {
                                         color: "#00000000"
@@ -220,6 +221,7 @@ ApplicationWindow {
                                     rightPadding: 16
                                     bottomPadding: 10
                                     leftPadding: 16
+                                    implicitHeight: 34
                                     contentItem: Text {
                                         text: tabBilling.text
                                         font: tabBilling.font
@@ -247,7 +249,7 @@ ApplicationWindow {
 
                                     text: "Alerts"
                                     palette.buttonText: tabAlerts.cls_active ? "#1a56db" : (tabAlerts.hovered ? "#000000" : "#555555")
-                                    font.family: "sans-serif"
+                                    font.family: "Arial"
                                     font.pixelSize: 14
                                     background: Rectangle {
                                         color: "#00000000"
@@ -264,6 +266,7 @@ ApplicationWindow {
                                     rightPadding: 16
                                     bottomPadding: 10
                                     leftPadding: 16
+                                    implicitHeight: 34
                                     contentItem: Text {
                                         text: tabAlerts.text
                                         font: tabAlerts.font

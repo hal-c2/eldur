@@ -897,6 +897,12 @@ pub struct ComputedStyle {
     pub border_spacing: (f32, f32),
     pub caption_side: CaptionSide,
     pub accent_color: AccentColor,
+    /// The page, not the UA sheet, sets a `background-*` of this element. Not
+    /// inherited. With [`Self::author_border`] it decides whether a control
+    /// keeps its native look, as a browser's `appearance: auto` does.
+    pub author_background: bool,
+    /// The page, not the UA sheet, sets a `border-*` of this element.
+    pub author_border: bool,
 
     // Not inherited, but propagated to inline descendants by the converter
     pub text_decoration_line: TextDecorationLine,
@@ -1023,6 +1029,8 @@ impl Default for ComputedStyle {
             border_spacing: (0.0, 0.0),
             caption_side: CaptionSide::Top,
             accent_color: AccentColor::Auto,
+            author_background: false,
+            author_border: false,
             table_layout: TableLayout::Auto,
             text_decoration_line: TextDecorationLine::default(),
             text_decoration_color: None,

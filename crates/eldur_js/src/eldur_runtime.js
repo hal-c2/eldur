@@ -4019,6 +4019,9 @@ function _buttonSource(signals) {
 // Created elements have no computed style, since CSS is applied at
 // conversion; these are a browser's unstyled controls, whatever the system
 // palette is.
+// What these say with no `value`, which is still "" to a script.
+var _G_INPUT_LABEL = { submit: "Submit", reset: "Reset" };
+
 function _inputSource(type) {
     if (type === "checkbox" || type === "radio") {
         var isRadio = type === "radio";
@@ -4042,7 +4045,8 @@ function _inputSource(type) {
             + "Component.onCompleted: contentItem.renderType = Text.NativeRendering }";
     }
     if (type === "submit" || type === "button" || type === "reset") {
-        return _buttonSource(_KEY_SIGNALS);
+        var label = _G_INPUT_LABEL[type];
+        return _buttonSource(_KEY_SIGNALS + (label ? "text: \"" + label + "\"; " : ""));
     }
     return _NATIVE_IMPORTS + "TextField { " + _NATIVE_TEXT + _KEY_SIGNALS + "color: \"black\"; "
         + "background: Rectangle { color: \"white\"; border.color: \"#767676\"; radius: 2 } }";
@@ -4231,6 +4235,16 @@ function _genericElementSource(tag, inputType) {
     }
     if (tag === "textarea") {
         return _NATIVE_IMPORTS + "TextArea { " + _NATIVE_TEXT + "color: \"black\"; background: Rectangle { color: \"white\"; border.color: \"#767676\" } }";
+    }
+    if (tag === "select") {
+        return _NATIVE_IMPORTS + "ComboBox { id: control; " + _KEY_SIGNALS
+            // A static select's model starts from its markup; this one from none.
+            + "property string eldurInline: '{\"select\":true,\"kids\":[]}'; "
+            + "textRole: \"text\"; valueRole: \"value\"; model: []; "
+            + "contentItem: Text { " + _NATIVE_TEXT + "text: control.displayText; font: control.font; color: \"black\"; "
+            + "verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight } "
+            + "indicator: Text { " + _NATIVE_TEXT + "x: control.width - width - 4; y: (control.height - height) / 2; text: \"\\u25be\"; font.pixelSize: 12 } "
+            + "background: Rectangle { color: \"white\"; border.color: \"#767676\"; radius: 2 } }";
     }
     if (tag === "li") {
         return "import QtQuick; import QtQuick.Layouts; RowLayout { Layout.fillWidth: true; spacing: 8 }";
@@ -5286,6 +5300,15 @@ function wrap(rawItem) {
             // Before `text`: a checkbox's `text` is not its form value.
             if (typeof rawItem.checked === "boolean" && typeof rawItem.value === "string") {
                 return rawItem.value;
+            }
+            var unset = m.explicitValue === undefined && getAttribute(rawItem, "value") === null;
+            var label = _G_INPUT_LABEL[getAttribute(rawItem, "type") || m.inputType];
+            if (unset && label && rawItem.text === label) {
+                return "";
+            }
+            // A SpinBox has no empty state. Zero nobody wrote stands for one.
+            if (unset && rawItem.value === 0 && typeof rawItem.editable === "boolean") {
+                return "";
             }
             if (typeof rawItem.text === "string") {
                 return rawItem.text;
@@ -7573,6 +7596,11 @@ function _vSyncSelect(model) {
     combo.model = opts.map(function(o) { return { text: _vOptionText(o), value: _vOptionValue(o) }; });
     combo.currentIndex = _vSelected(model);
     _vSyncing = false;
+    // A created select is as wide as its options, and they come after it.
+    if (_meta(combo).createdTag && combo.parent) {
+        var style = _gStyle(combo);
+        _gControlWidth(combo, style, _gEdges(combo, style, combo.parent.width));
+    }
     _layoutChanged(combo);
 }
 
@@ -8706,14 +8734,9 @@ var _G_INITIAL = {
     "transition-delay": "0s", "transition-timing-function": "ease", "background-size": "auto",
     "background-position-x": "0%", "background-position-y": "0%", "background-repeat": "repeat"
 };
-// A browser's controls before the page says otherwise: the box a `<button>`
-// has around its line, whatever the system's style draws.
-var _G_CONTROL_BOX = {
-    button: { padV: 1, padH: 6, border: 2 },
-    input: { padV: 1, padH: 2, border: 2 },
-    select: { padV: 0, padH: 0, border: 1 },
-    textarea: { padV: 2, padH: 2, border: 1 }
-};
+// The controls whose box the UA sheet in the rule table describes: padding and
+// border are the control's insets.
+var _G_FRAMED = { button: true, input: true, select: true, textarea: true };
 
 // A settle may swap the item a read started out with.
 function _gCurrent(raw) {
@@ -9001,7 +9024,8 @@ function _gExpand(prop, value) {
             out.push(["background-color", whole.color === null ? "rgba(0, 0, 0, 0)" : whole.color],
                 ["background-image", whole.image === null ? "none" : whole.image]);
         } else {
-            out.push(["background-color", value]);
+            // `background: none` names no colour: the shorthand resets it.
+            out.push(["background-color", /^none$/i.test(String(value).trim()) ? "rgba(0, 0, 0, 0)" : value]);
         }
     } else if (/^border(-(top|right|bottom|left))?$/.test(prop)) {
         var which = prop === "border" ? names : [prop.slice(7)];
@@ -9202,11 +9226,6 @@ function _gStyle(raw) {
         }
         return got;
     };
-    var control = _G_CONTROL_BOX[tag];
-    // A checkbox or a radio is only its indicator, without a field's box.
-    if (tag === "input" && (m.inputType === "checkbox" || m.inputType === "radio")) {
-        control = undefined;
-    }
     // font-size first: every em below is of it.
     var parentSize = inherited ? inherited.fontSize : 16;
     var sizeText = value("font-size");
@@ -9253,10 +9272,6 @@ function _gStyle(raw) {
                 text = { "color": "rgb(0, 0, 0)", "font-family": "", "font-weight": "400", "font-style": "normal", "text-align": "start", "visibility": "visible", "white-space": "normal" }[name];
             }
         }
-        // A control's text colour is its own, not its parent's.
-        if (name === "color" && control && !won.color) {
-            text = "rgb(0, 0, 0)";
-        }
         s[name] = text;
     }
     s.color = s.color === undefined ? s["color"] : s.color;
@@ -9285,7 +9300,6 @@ function _gStyle(raw) {
         var px = known[widthText] !== undefined ? known[widthText] : (_gPx(widthText, null, s.fontSize, s.rootSize) || 0);
         s["border-" + side + "-px"] = style === "none" || style === "hidden" ? 0 : px;
     }
-    _gControlDefaults(s, won, control);
     var flexParent = inherited && (inherited.display === "flex" || inherited.display === "grid" || inherited.display === "inline-flex" || inherited.display === "inline-grid");
     if (flexParent && (s.display === "inline" || s.display === "inline-block")) {
         s.display = "block";
@@ -9338,26 +9352,6 @@ function _gQtColor(text) {
     }
     var v = m[1].split(/[\s,/]+/).map(Number);
     return Qt.rgba(v[0] / 255, v[1] / 255, v[2] / 255, v.length > 3 ? v[3] : 1);
-}
-
-function _gControlDefaults(s, won, control) {
-    if (!control) {
-        return;
-    }
-    var has = function(prop) {
-        return Boolean(won[prop]);
-    };
-    var sides = ["top", "right", "bottom", "left"];
-    for (var i = 0; i < 4; ++i) {
-        var side = sides[i];
-        if (!has("padding-" + side)) {
-            s["padding-" + side] = (i % 2 === 0 ? control.padV : control.padH) + "px";
-        }
-        if (!has("border-" + side + "-width") && !has("border-" + side + "-style")) {
-            s["border-" + side + "-px"] = control.border;
-            s["border-" + side + "-style"] = "outset";
-        }
-    }
 }
 
 function _gMetrics(s) {
@@ -9710,7 +9704,7 @@ function _gBaseline(raw, s) {
         return e.bt + e.pt + (text.lineCount - 1) * height
             + Math.floor((height - ascent - Math.round(metrics.descent)) / 2) + ascent;
     }
-    if (_G_CONTROL_BOX[s.tag] && raw.contentItem) {
+    if (_G_FRAMED[s.tag] && raw.contentItem) {
         var controlLine = _gLineHeight(s);
         if (controlLine === null) {
             controlLine = _gControlLine(s);
@@ -10700,8 +10694,7 @@ function _gPaintControl(raw, s, e) {
         return;
     }
     if (raw.background !== undefined && raw.background !== null && raw.font !== undefined) {
-        var control = _G_CONTROL_BOX[s.tag];
-        if (control) {
+        if (_G_FRAMED[s.tag]) {
             _gSet(raw, "topPadding", e.pt + e.bt);
             _gSet(raw, "bottomPadding", e.pb + e.bb);
             _gSet(raw, "leftPadding", e.pl + e.bl);
@@ -10710,6 +10703,7 @@ function _gPaintControl(raw, s, e) {
             _gSet(raw, "bottomInset", 0);
             _gSet(raw, "leftInset", 0);
             _gSet(raw, "rightInset", 0);
+            _gControlWidth(raw, s, e);
         }
         var inLayout = raw.parent && _gIsLayout(raw.parent);
         if (inLayout && (s.width !== "auto" || s.height !== "auto")) {
@@ -10725,23 +10719,90 @@ function _gPaintControl(raw, s, e) {
             _gPaintFontOnly(raw, s);
             if (line === null) {
                 line = _gControlLine(s);
+                // As `emit/controls.rs`: a fallback font's glyph makes the line taller.
+                if (/[^\u0000-\u00ff]/.test(String(raw.text))) {
+                    line = Math.max(line, raw.contentItem.implicitHeight);
+                }
             }
             var frame = e.pt + e.pb + e.bt + e.bb;
             _gSet(raw, "implicitHeight", line + frame);
         }
-        if (s.won["background-color"] && raw.background.color !== undefined) {
-            raw.background.color = _gQtColor(s["background-color"]);
-        }
-        if (s.won["border-top-color"] && raw.background.border !== undefined) {
-            raw.background.border.color = _gQtColor(s["border-top-color"]);
-        }
-        if (s.won["border-top-width"] && raw.background.border !== undefined) {
-            raw.background.border.width = e.bt;
-        }
-        if (s.won["border-top-left-radius"] && typeof raw.background.radius === "number") {
-            raw.background.radius = _gPx(s["border-top-left-radius"], raw.width, s.fontSize, s.rootSize) || 0;
+        // Native until the page sets a border or background, as with
+        // `appearance: auto`: the source's own line then stands for the UA's.
+        if (_gAuthorBox(s)) {
+            if (raw.background.color !== undefined) {
+                raw.background.color = _gQtColor(s["background-color"]);
+            }
+            if (raw.background.border !== undefined) {
+                raw.background.border.color = _gQtColor(s["border-top-color"]);
+                raw.background.border.width = e.bt;
+            }
+            if (typeof raw.background.radius === "number") {
+                raw.background.radius = _gPx(s["border-top-left-radius"], raw.width, s.fontSize, s.rootSize) || 0;
+            }
         }
     }
+}
+
+// The converter's `CONTROL_FONTS`: what `size` and `cols` count in this family.
+function _gControlFont(s) {
+    var table = _root && _root.eldurControlFonts ? JSON.parse(_root.eldurControlFonts) : [];
+    var family = _gFamily(s["font-family"]);
+    for (var i = 0; i < table.length; ++i) {
+        if (table[i].names.length === 0 || table[i].names.indexOf(family) !== -1) {
+            return s.fontSize < 14.5 ? table[i].small : table[i].large;
+        }
+    }
+    return null;
+}
+
+// A created control's width when nothing else says: as `emit/controls.rs` works
+// out a static one's.
+function _gControlWidth(raw, s, e) {
+    var frame = e.pl + e.pr + e.bl + e.br;
+    var font = _gControlFont(s);
+    var whole = Math.max(Math.round(s.fontSize), 1);
+    if (s.tag === "select") {
+        var metrics = _gMetrics(s);
+        var options = _vSelectModel(raw);
+        var widest = (options ? _vOptions(options) : []).reduce(function(w, o) {
+            return Math.max(w, metrics.advanceWidth(_vOptionText(o)));
+        }, 0);
+        // Its frame around the text is 22 with the arrow; 2 of that is the border.
+        raw.rightPadding = e.pr + e.br + 20;
+        _gSet(raw, "implicitWidth", Math.ceil(widest * s.fontSize / whole) + frame + 20);
+        return;
+    }
+    if (!font) {
+        return;
+    }
+    var attr = function(name, fallback) {
+        var n = parseInt(getAttribute(raw, name), 10);
+        return n > 0 ? n : fallback;
+    };
+    if (s.tag === "textarea") {
+        _gSet(raw, "implicitWidth", attr("cols", 20) * font[0] * s.fontSize + 15 + frame);
+        var line = _gLineHeight(s);
+        _gSet(raw, "implicitHeight", attr("rows", 2) * (line === null ? _gControlLine(s) : line) + e.pt + e.pb + e.bt + e.bb);
+    } else if (s.tag === "input" && !/^(checkbox|radio|range|submit|button|reset)$/.test(_meta(raw).inputType || "")) {
+        _gSet(raw, "implicitWidth", Math.round((attr("size", 20) * font[0] + font[1]) * s.fontSize) + frame);
+    }
+}
+
+// Whether a rule of the page, not the UA sheet, sets `prop`.
+function _gAuthor(s, prop) {
+    return Boolean(s.won[prop]) && s.won[prop].weight >= _V_ORIGIN_BAND;
+}
+
+function _gAuthorBox(s) {
+    var props = ["background-color", "background-image"];
+    var sides = ["top", "right", "bottom", "left"];
+    for (var i = 0; i < 4; ++i) {
+        props.push("border-" + sides[i] + "-width", "border-" + sides[i] + "-style", "border-" + sides[i] + "-color");
+    }
+    return props.some(function(prop) {
+        return _gAuthor(s, prop);
+    });
 }
 
 // A line of a control's text at "normal" line height, as a browser rounds it.
@@ -10752,7 +10813,7 @@ function _gControlLine(s) {
 
 function _gPaintFontOnly(raw, s) {
     raw.font = _gFontOf(s);
-    if (raw.palette && s.won["color"]) {
+    if (raw.palette) {
         raw.palette.buttonText = _gQtColor(s["color"]);
     }
 }

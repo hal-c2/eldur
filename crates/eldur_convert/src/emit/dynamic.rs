@@ -215,7 +215,9 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
         emitter.gains_any_empty = scripts.gains.any_empty || scripts.analysis.reads_computed_style;
     }
     emitter.by_path = cx.scripts.is_some_and(|s| s.analysis.dispatch_by_path);
-    emitter.script_attrs = cx.scripts.is_some_and(|s| s.analysis.reads_attributes);
+    emitter.script_attrs = cx
+        .scripts
+        .is_some_and(|s| s.analysis.reads_attributes || s.analysis.needs_cascade());
     if let Some(probe) = cx.probe {
         emitter.markers = true;
         emitter.no_carry = true;
@@ -1023,7 +1025,9 @@ impl Dynamic<'_, '_> {
             emitter.gains_any_empty = scripts.gains.any_empty;
         }
         emitter.by_path = cx.scripts.is_some_and(|s| s.analysis.dispatch_by_path);
-        emitter.script_attrs = cx.scripts.is_some_and(|s| s.analysis.reads_attributes);
+        emitter.script_attrs = cx
+            .scripts
+            .is_some_and(|s| s.analysis.reads_attributes || s.analysis.needs_cascade());
         emitter.markers = true;
         if let Some(probe) = cx.probe {
             emitter.no_carry = true;

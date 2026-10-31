@@ -1266,6 +1266,11 @@ impl<'a> CascadeEngine<'a> {
 
             if let Some(mut cands) = longhand_candidates.remove(&l) {
                 cands.sort_by(|(ka, _), (kb, _)| ka.cmp(kb));
+                let author = cands
+                    .last()
+                    .is_some_and(|(k, _)| k.tier.origin() == Origin::Author);
+                style.author_background |= author && properties::is_background(l);
+                style.author_border |= author && properties::is_border(l);
                 let action = select_winning_longhand_action(l, &cands, &style.custom_properties);
                 if let Some(casc) = cascade_out.as_deref_mut() {
                     casc.base_actions.insert(l, action.clone());

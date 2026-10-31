@@ -1779,3 +1779,27 @@ fn set_corner_radius(
         }
     }
 }
+
+/// A longhand that turns a control's native look off when the page sets it.
+pub(crate) fn is_background(l: Longhand) -> bool {
+    matches!(l, Longhand::BackgroundColor | Longhand::BackgroundImage)
+}
+
+/// See [`is_background`].
+pub(crate) fn is_border(l: Longhand) -> bool {
+    matches!(
+        l,
+        Longhand::BorderTopStyle
+            | Longhand::BorderRightStyle
+            | Longhand::BorderBottomStyle
+            | Longhand::BorderLeftStyle
+            | Longhand::BorderTopWidth
+            | Longhand::BorderRightWidth
+            | Longhand::BorderBottomWidth
+            | Longhand::BorderLeftWidth
+            | Longhand::BorderTopColor
+            | Longhand::BorderRightColor
+            | Longhand::BorderBottomColor
+            | Longhand::BorderLeftColor
+    )
+}

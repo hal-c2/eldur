@@ -6,13 +6,13 @@
 
 use std::collections::BTreeMap;
 
-use eldur_css::{BorderSide, BorderStyle, ComputedStyle, Length, Rgba, Size, TextAlign};
+use eldur_css::{BorderSide, BorderStyle, BoxSizing, ComputedStyle, Length, Rgba, Size, TextAlign};
 use eldur_dom::{Document, NodeId};
 use eldur_js::TargetKind;
 use eldur_qml::{Member, Object, Value};
 
 use super::flow::{Emitted, MarginSet};
-use super::text::font_family;
+use super::text::{font_extents, font_family};
 use super::units::{color, number, round};
 use super::{Emitter, Target};
 use crate::boxes::{LayoutBox, describe};
@@ -26,13 +26,8 @@ const METER_BORDER: Rgba = Rgba::new(0xcb, 0xcb, 0xcb, 0xff);
 const PLACEHOLDER: Rgba = Rgba::new(0x75, 0x75, 0x75, 0xff);
 const NATIVE_BORDER: Rgba = Rgba::new(0x76, 0x76, 0x76, 0xff);
 const TRACK: Rgba = Rgba::new(0xef, 0xef, 0xef, 0xff);
-/// Average glyph advance of the fallback fonts, in em: `size` and `cols`
-/// count these (HTML §4.10.5.1.2 "average character width").
-const AVG_CHAR: f32 = 0.55;
-/// What Chromium measures an `<input>` by, in em, for its default font: each
-/// `size` counts this, and the font's widest glyph adds a constant once.
-const INPUT_CHAR: f32 = 0.6;
-const INPUT_EXTRA: f32 = 1.275;
+/// Scrollbar room a `<textarea>` keeps beside its `cols`.
+const TEXTAREA_SCROLLBAR: f32 = 15.0;
 /// Room for the drop-down arrow, which CSS padding does not include.
 const ARROW_ROOM: f32 = 18.0;
 
@@ -183,52 +178,137 @@ fn line_box(style: &ComputedStyle) -> Option<f32> {
     }
 }
 
-fn is_zero_length(l: &Length) -> bool {
-    l.as_px() == Some(0.0)
+/// A family's numbers for sizing a control, in em, measured in Chromium: what each
+/// `size` or `cols` counts, what a font's widest glyph adds once, and the line
+/// gap `line-height: normal` rounds in. Hinted advances run wider below
+/// [`SMALL_FONT`], which is where the UA's 13.33px sits. A stopgap like
+/// `font_extents`, and right where fontconfig resolves as on the machine it was
+/// measured on.
+struct ControlFont {
+    names: &'static [&'static str],
+    small: (f32, f32),
+    large: (f32, f32),
+    gap: f32,
 }
 
-/// eldur_css's UA sheet has no rules for the controls' native box, so a
-/// control with no border, background or padding computes to nothing at
-/// all, and a browser's default look is what the page means. An author's
-/// explicit `border: 0; padding: 0; background: none` looks the same from
-/// here and gets the native box too; that is reported as a limitation.
+const SMALL_FONT: f32 = 14.5;
+
+/// The last entry is for any other name.
+const CONTROL_FONTS: &[ControlFont] = &[
+    ControlFont {
+        names: &[
+            "serif",
+            "Times",
+            "Times New Roman",
+            "Georgia",
+            "Liberation Serif",
+        ],
+        small: (0.555, 1.2),
+        large: (0.555, 1.28),
+        gap: 0.042,
+    },
+    ControlFont {
+        names: &["monospace"],
+        small: (0.6, 2.4),
+        large: (0.6, 2.5),
+        gap: 0.0,
+    },
+    ControlFont {
+        names: &["Helvetica"],
+        small: (0.555, 0.075),
+        large: (0.555, 0.03),
+        gap: 0.033,
+    },
+    ControlFont {
+        names: &[],
+        small: (0.6, 1.275),
+        large: (0.582, 1.28),
+        gap: 0.033,
+    },
+];
+
+fn control_font(style: &ComputedStyle) -> (f32, f32, f32) {
+    let family = font_family(&style.font_family);
+    let font = CONTROL_FONTS
+        .iter()
+        .find(|f| f.names.contains(&family.as_str()) || f.names.is_empty())
+        .expect("the last entry takes any name");
+    let (avg, extra) = if style.font_size < SMALL_FONT {
+        font.small
+    } else {
+        font.large
+    };
+    (avg, extra, font.gap)
+}
+
+/// `CONTROL_FONTS` for the runtime's created controls, so there is one table.
+pub(crate) fn control_fonts_json() -> String {
+    let rows: Vec<String> = CONTROL_FONTS
+        .iter()
+        .map(|f| {
+            let names: Vec<String> = f.names.iter().map(|n| js_string(n)).collect();
+            format!(
+                "{{\"names\":[{}],\"small\":[{},{}],\"large\":[{},{}],\"gap\":{}}}",
+                names.join(","),
+                f.small.0,
+                f.small.1,
+                f.large.0,
+                f.large.1,
+                f.gap
+            )
+        })
+        .collect();
+    format!("[{}]", rows.join(","))
+}
+
+/// A control's line at `line-height: normal`: Chromium rounds ascent, descent
+/// and line gap each.
+fn normal_line(style: &ComputedStyle) -> f32 {
+    let (ascent, descent) = font_extents(&font_family(&style.font_family));
+    let (_, _, gap) = control_font(style);
+    let fs = style.font_size;
+    (ascent * fs).round() + (descent * fs).round() + (gap * fs).round()
+}
+
+/// The `<input>` content width: `size` average glyphs and the widest one's excess.
+fn input_width(style: &ComputedStyle, size: f32) -> f32 {
+    let (avg, extra, _) = control_font(style);
+    (size * avg + extra) * style.font_size
+}
+
+/// How much wider Chromium's text runs than Qt's whole-pixel font of the same size.
+fn text_scale(style: &ComputedStyle) -> f32 {
+    style.font_size / style.font_size.round().max(1.0)
+}
+
+/// What Chromium's theme paints while the page leaves a control's border and
+/// background to the UA sheet (a browser's `appearance: auto`): a one-pixel
+/// rounded line along the border box, whatever `2px outset` the sheet computes
+/// to. The rest of the border's width stays as room, so the box keeps its size.
 fn with_native_box(style: &ComputedStyle, control: Control) -> Option<ComputedStyle> {
-    let bare = style.background_color.is_transparent()
-        && style.background_layers.iter().all(|l| l.image.is_none())
-        && [
-            &style.border.top,
-            &style.border.right,
-            &style.border.bottom,
-            &style.border.left,
-        ]
-        .iter()
-        .all(|s| s.width == 0.0 || matches!(s.style, BorderStyle::None | BorderStyle::Hidden))
-        && [
-            &style.padding.top,
-            &style.padding.right,
-            &style.padding.bottom,
-            &style.padding.left,
-        ]
-        .iter()
-        .all(|l| is_zero_length(l));
-    if !bare {
+    if style.author_background || style.author_border {
         return None;
     }
-    let (v, h, background) = match control {
-        // A browser's 2px border, of which the painted border below is one.
-        Control::Button { .. } => (2.0, 7.0, TRACK),
-        Control::Text | Control::Number => (2.0, 3.0, Rgba::WHITE),
-        Control::TextArea => (2.0, 2.0, Rgba::WHITE),
-        // A select's own text box carries its vertical room.
-        Control::Select => (0.0, 2.0, Rgba::WHITE),
+    let (extra, background) = match control {
+        Control::Button { .. } => (true, style.background_color),
+        Control::Text | Control::Number | Control::TextArea => (true, style.background_color),
+        // Its own text box carries its vertical room, with two pixels aside.
+        Control::Select => (false, Rgba::WHITE),
         _ => return None,
     };
     let mut native = style.clone();
     native.background_color = background;
-    native.padding.top = Length::px(v);
-    native.padding.bottom = Length::px(v);
-    native.padding.left = Length::px(h);
-    native.padding.right = Length::px(h);
+    let room = |side: &BorderSide| side.width.max(1.0) - 1.0;
+    let grow = |l: &Length, by: f32| Length::px(l.as_px().unwrap_or(0.0) + by);
+    if extra {
+        native.padding.top = grow(&style.padding.top, room(&style.border.top));
+        native.padding.bottom = grow(&style.padding.bottom, room(&style.border.bottom));
+        native.padding.left = grow(&style.padding.left, room(&style.border.left));
+        native.padding.right = grow(&style.padding.right, room(&style.border.right));
+    } else {
+        native.padding.left = grow(&style.padding.left, 2.0);
+        native.padding.right = grow(&style.padding.right, 2.0);
+    }
     let side = BorderSide {
         width: 1.0,
         style: BorderStyle::Solid,
@@ -250,6 +330,8 @@ fn with_native_box(style: &ComputedStyle, control: Control) -> Option<ComputedSt
     Some(native)
 }
 
+/// Whole pixels: a fractional `font.pointSize` is rounded to one when the font
+/// is loaded, and `font.pixelSize` is an int, so Qt has no 13.33px glyphs.
 fn set_font(obj: &mut Object, style: &ComputedStyle) {
     obj.set(
         "font.family",
@@ -477,9 +559,19 @@ impl Emitter<'_, '_> {
     /// `line-height` has no equivalent on text controls, so it decides the
     /// control's height instead, as it decides a browser's.
     fn line_height_implicit(&mut self, obj: &mut Object, style: &ComputedStyle, vertical: f32) {
-        if let Some(lh) = line_box(style) {
-            obj.set("implicitHeight", Value::Number(round(lh + vertical)));
+        // A template has no layout slot to say a fixed height: only this does.
+        if let Size::Length(height) = &style.height
+            && let Some(height) = height.as_px()
+        {
+            let extra = match style.box_sizing {
+                BoxSizing::BorderBox => 0.0,
+                BoxSizing::ContentBox => vertical,
+            };
+            obj.set("implicitHeight", Value::Number(round(height + extra)));
+            return;
         }
+        let lh = line_box(style).unwrap_or_else(|| normal_line(style));
+        obj.set("implicitHeight", Value::Number(round(lh + vertical)));
     }
 
     fn text_align(obj: &mut Object, style: &ComputedStyle) {
@@ -541,9 +633,7 @@ impl Emitter<'_, '_> {
             .unwrap_or(20.0);
         obj.set(
             "implicitWidth",
-            Value::Number(round(
-                (size as f32 * INPUT_CHAR + INPUT_EXTRA) * style.font_size + insets.horizontal(),
-            )),
+            Value::Number(round(input_width(style, size as f32) + insets.horizontal())),
         );
         self.placeholder(&mut obj, node);
         match ty.as_str() {
@@ -657,9 +747,10 @@ impl Emitter<'_, '_> {
         let cols = attr_f64(self.doc, node, "cols")
             .filter(|c| *c > 0.0)
             .unwrap_or(20.0);
-        let lh = line_box(style).unwrap_or(style.font_size * 1.15);
+        let lh = line_box(style).unwrap_or_else(|| normal_line(style));
+        let (avg, _, _) = control_font(style);
         (
-            cols as f32 * AVG_CHAR * style.font_size + insets.horizontal(),
+            cols as f32 * avg * style.font_size + TEXTAREA_SCROLLBAR + insets.horizontal(),
             rows as f32 * lh + insets.vertical(),
         )
     }
@@ -721,9 +812,7 @@ impl Emitter<'_, '_> {
         let insets = self.insets(style, line);
         obj.set(
             "implicitWidth",
-            Value::Number(round(
-                (20.0 * INPUT_CHAR + INPUT_EXTRA) * style.font_size + insets.horizontal(),
-            )),
+            Value::Number(round(input_width(style, 20.0) + insets.horizontal())),
         );
         // The Basic style's +/- buttons take the field's space; a browser
         // shows only small spinners on hover, and arrow keys step here too.
@@ -975,12 +1064,25 @@ impl Emitter<'_, '_> {
             }
             eldur_dom::collapse_whitespace(&self.doc.text_content(node))
         };
+        let beyond_latin = text.chars().any(|c| u32::from(c) >= 0x100);
         obj.set("text", Value::String(text));
         // Scripts and hover states change the colour through the palette.
         obj.set("palette.buttonText", color(style.color));
         set_font(&mut obj, style);
         let vertical = self.apply_box(&mut obj, style, line);
         self.line_height_implicit(&mut obj, style, vertical);
+        // A glyph from a fallback font makes the line taller, here as in Chromium,
+        // and only the laid-out text knows by how much.
+        if beyond_latin && line_box(style).is_none() {
+            let base = round(normal_line(style));
+            obj.set(
+                "implicitHeight",
+                Value::expr(format!(
+                    "Math.max({base}, contentItem.implicitHeight) + {}",
+                    round(vertical)
+                )),
+            );
+        }
         // The Basic style's IconLabel has no renderType to ask for (paint.rs).
         let mut label = Object::new("Text");
         label.set("text", Value::expr(format!("{id}.text")));
@@ -989,6 +1091,15 @@ impl Emitter<'_, '_> {
         label.set("horizontalAlignment", Value::expr("Text.AlignHCenter"));
         label.set("verticalAlignment", Value::expr("Text.AlignVCenter"));
         obj.set("contentItem", object_value(label));
+        let scale = text_scale(style);
+        if (scale - 1.0).abs() > 0.001 {
+            obj.set(
+                "implicitWidth",
+                Value::expr(format!(
+                    "Math.ceil(contentItem.implicitWidth * {scale}) + leftPadding + rightPadding"
+                )),
+            );
+        }
         obj
     }
 
@@ -1083,11 +1194,19 @@ impl Emitter<'_, '_> {
         arrow.set("color", color(style.color));
         arrow.set("font.pixelSize", Value::Number(12.0));
         obj.set("indicator", object_value(arrow));
-        // `WidestText` measures only a TextInput content item, and this is a
-        // Text; a browser's frame around the text is 22 with the arrow.
+        // A browser's select is as wide as its widest option, whichever is
+        // current, and its frame around the text is 22 with the arrow.
+        // `WidestText` measures only a TextInput content item, and this is a Text.
+        let metrics = self.ids.claim(&format!("{id} metrics"));
+        let mut measure = Object::new("FontMetrics").with_id(metrics.clone());
+        measure.set("font", Value::expr(format!("{id}.font")));
+        obj.push_child(measure);
         obj.set(
             "implicitWidth",
-            Value::expr("Math.ceil(contentItem.implicitWidth) + leftPadding + rightPadding - 2"),
+            Value::expr(format!(
+                "Math.ceil(model.reduce((w, o) => Math.max(w, {metrics}.advanceWidth(o.text)), 0) * {}) + leftPadding + rightPadding - 2",
+                text_scale(style)
+            )),
         );
         if let Some(form) = form {
             self.forms

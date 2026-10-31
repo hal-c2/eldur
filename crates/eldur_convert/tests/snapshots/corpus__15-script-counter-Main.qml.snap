@@ -176,7 +176,7 @@ ApplicationWindow {
 
                                     text: "−"
                                     palette.buttonText: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: "Arial"
                                     font.pixelSize: 18
                                     font.weight: 600
                                     background: Rectangle {
@@ -190,6 +190,7 @@ ApplicationWindow {
                                     rightPadding: 19
                                     bottomPadding: 11
                                     leftPadding: 19
+                                    implicitHeight: Math.max(21, contentItem.implicitHeight) + 22
                                     contentItem: Text {
                                         text: dec.text
                                         font: dec.font
@@ -218,7 +219,7 @@ ApplicationWindow {
 
                                     text: "+"
                                     palette.buttonText: "#ffffff"
-                                    font.family: "sans-serif"
+                                    font.family: "Arial"
                                     font.pixelSize: 18
                                     font.weight: 600
                                     background: Rectangle {
@@ -232,6 +233,7 @@ ApplicationWindow {
                                     rightPadding: 19
                                     bottomPadding: 11
                                     leftPadding: 19
+                                    implicitHeight: 43
                                     contentItem: Text {
                                         text: inc.text
                                         font: inc.font
@@ -261,7 +263,7 @@ ApplicationWindow {
 
                                     text: "Reset"
                                     palette.buttonText: "#5c6578"
-                                    font.family: "sans-serif"
+                                    font.family: "Arial"
                                     font.pixelSize: 16
                                     font.weight: 500
                                     background: Rectangle {
@@ -275,6 +277,7 @@ ApplicationWindow {
                                     rightPadding: 19
                                     bottomPadding: 11
                                     leftPadding: 19
+                                    implicitHeight: 40
                                     contentItem: Text {
                                         text: reset.text
                                         font: reset.font
@@ -331,10 +334,10 @@ ApplicationWindow {
                                 id: mirrorInput
                                 property string eldurTag: "input"
                                 property string eldurClasses: "text-input"
-                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : field.eldurCarry
+                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 40) - Layout.topMargin - 40 + 0.000001) : field.eldurCarry
 
                                 color: "#1f2430"
-                                font.family: "sans-serif"
+                                font.family: "Arial"
                                 font.pixelSize: 16
                                 verticalAlignment: TextInput.AlignVCenter
                                 background: Rectangle {
@@ -348,14 +351,14 @@ ApplicationWindow {
                                 rightPadding: 13
                                 bottomPadding: 11
                                 leftPadding: 13
-                                implicitWidth: 238.4
+                                implicitHeight: 40
+                                implicitWidth: 232.72
                                 placeholderText: "Start typing…"
                                 placeholderTextColor: "#757575"
                                 Accessible.name: "Live text"
                                 objectName: "mirror-input"
                                 Layout.fillWidth: true
                                 Layout.topMargin: 8 - field.eldurCarry
-                                Layout.preferredHeight: implicitHeight
                                 renderType: Text.NativeRendering
 
                                 onTextEdited: {

@@ -128,7 +128,7 @@ ApplicationWindow {
 
                                     text: "Account ▾"
                                     palette.buttonText: "#ffffff"
-                                    font.family: "sans-serif"
+                                    font.family: "Arial"
                                     font.pixelSize: 13
                                     background: Rectangle {
                                         color: "#444d56"
@@ -139,6 +139,7 @@ ApplicationWindow {
                                     rightPadding: 12
                                     bottomPadding: 8
                                     leftPadding: 12
+                                    implicitHeight: Math.max(15, contentItem.implicitHeight) + 16
                                     contentItem: Text {
                                         text: btn.text
                                         font: btn.font
@@ -147,6 +148,7 @@ ApplicationWindow {
                                         verticalAlignment: Text.AlignVCenter
                                         renderType: Text.NativeRendering
                                     }
+                                    implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
                                     objectName: "btn"
                                     Layout.preferredHeight: implicitHeight
                                 }

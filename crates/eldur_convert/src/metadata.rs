@@ -247,6 +247,15 @@ pub(crate) fn open_elements_decl() -> Member {
     decl("bool", "eldurOpenElements", Value::Bool(true))
 }
 
+/// `root.eldurControlFonts`: what sizes a created control, the converter's table.
+pub(crate) fn control_fonts_decl() -> Member {
+    decl(
+        "string",
+        "eldurControlFonts",
+        Value::string(crate::emit::control_fonts_json()),
+    )
+}
+
 /// `root.eldurLiteralClasses`: the classes a script names outright, which the
 /// converter gave variants. One it composes at run time has none it can trust.
 pub(crate) fn literal_classes_decl(classes: &BTreeSet<&str>) -> Member {

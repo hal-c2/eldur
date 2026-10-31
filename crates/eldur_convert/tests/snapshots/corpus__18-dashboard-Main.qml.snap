@@ -853,7 +853,7 @@ ApplicationWindow {
                                         // <input class="search">
                                         TextField {
                                             id: inputControl
-                                            color: "#111827"
+                                            color: "#000000"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
                                             verticalAlignment: TextInput.AlignVCenter
@@ -868,6 +868,7 @@ ApplicationWindow {
                                             rightPadding: 13
                                             bottomPadding: 1
                                             leftPadding: 13
+                                            implicitHeight: 36
                                             implicitWidth: 211.85
                                             placeholderText: "Search orders"
                                             placeholderTextColor: "#757575"

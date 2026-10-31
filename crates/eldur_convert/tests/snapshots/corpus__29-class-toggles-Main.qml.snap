@@ -111,6 +111,7 @@ ApplicationWindow {
                             rightPadding: 15
                             bottomPadding: 7
                             leftPadding: 15
+                            implicitHeight: 32
                             contentItem: Text {
                                 text: compact.text
                                 font: compact.font
@@ -149,6 +150,7 @@ ApplicationWindow {
                             rightPadding: 15
                             bottomPadding: 7
                             leftPadding: 15
+                            implicitHeight: 32
                             contentItem: Text {
                                 text: ok.text
                                 font: ok.font
@@ -188,6 +190,7 @@ ApplicationWindow {
                             rightPadding: 15
                             bottomPadding: 7
                             leftPadding: 15
+                            implicitHeight: 32
                             contentItem: Text {
                                 text: warn.text
                                 font: warn.font
@@ -227,6 +230,7 @@ ApplicationWindow {
                             rightPadding: 15
                             bottomPadding: 7
                             leftPadding: 15
+                            implicitHeight: 32
                             contentItem: Text {
                                 text: more.text
                                 font: more.font

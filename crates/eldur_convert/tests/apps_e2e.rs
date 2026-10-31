@@ -31,9 +31,9 @@ const GEOMETRY_TOLERANCE: f64 = 2.0;
 const WS: &str = "text: inter-element whitespace between blocks is not kept, so textContent runs them together (dom-api.md §12)";
 const UA: &str = "static controls lack the UA 2px border and 13.33px Arial; adding them changes script-less pages";
 const UAFOLLOW: &str = "follows from static controls being smaller than Chromium's";
-const UAPAINT: &str = "computed paint of a static control: its UA background and border colours are not in the cascade";
 const INLINE: &str =
     "a checkbox beside inline text is block-level: no inline replaced elements (boxes/mod.rs)";
+const STRUT: &str = "a control alone in a line box sits on the line's baseline, here at its top: no inline replaced elements (boxes/mod.rs)";
 const FONT: &str = "Helvetica: Qt's fontconfig match has line height 23 where Chromium's has 18";
 const FONTFOLLOW: &str = "follows from the Helvetica line height and width difference";
 const TABLE: &str = "created rows do not take part in the table's auto column sizing";
@@ -44,6 +44,8 @@ const FOCUS: &str = "hiding the form leaves focus on its hidden button";
 /// `(page, what differs, why)`. `what` starts a difference's name, as printed by a
 /// failing test, `<step> <selector>[<row>] <field>:`; `*` stands for any text.
 const KNOWN: &[(&str, &str, &str)] = &[
+    ("controls", "* *[*] y:", STRUT),
+    ("created_controls", "* *[*] y:", STRUT),
     ("tabs", "* .panel[*] text:", WS),
     ("theme", "* #compact[*] x:", UA),
     ("theme", "* .card[*] text:", WS),
@@ -64,9 +66,6 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("cards", "* #cart[*] x:", FONT),
     ("cards", "* #cart[*] width:", FONT),
     ("accordion", "* details[*] text:", WS),
-    ("table", "* #filter[*] width:", UA),
-    ("table", "* #filter[*] height:", UA),
-    ("table", "* #people[*] y:", UAFOLLOW),
     ("table", "* #people[*] height:", UAFOLLOW),
     ("table", "* #people[*] text:", WS),
     ("table", "* #summary[*] y:", UAFOLLOW),
@@ -75,7 +74,6 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("table", "* td[*] x:", TABLE),
     ("table", "* tr[*] y:", UAFOLLOW),
     ("table", "* tr[*] width:", TABLE),
-    ("table", "* th[*] y:", UAFOLLOW),
     ("table", "* th[*] width:", TABLE),
     ("table", "* th[*] x:", TABLE),
     ("table", "* th[*] class:", CLASS),
@@ -84,12 +82,7 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("dropdown", "* #m-settings[*] color:", HOVER),
     ("modal", "* #overlay[*] text:", WS),
     ("modal", "* .dialog[*] text:", WS),
-    ("form", "* #email[*] border-top-color:", UAPAINT),
     ("form", "* #go[*] y:", UAFOLLOW),
-    ("form", "* #go[*] width:", UA),
-    ("form", "* #go[*] height:", UA),
-    ("form", "* #name[*] background-color:", UAPAINT),
-    ("form", "* #name[*] border-top-color:", UAPAINT),
     ("form", "* #signup[*] height:", INLINE),
     ("form", "* #signup[*] text:", WS),
     ("form", "* #terms[*] y:", INLINE),
@@ -367,6 +360,16 @@ fn page(name: &str) {
             .join("\n  "),
         gone.iter().map(|k| k.1).collect::<Vec<_>>().join("\n  "),
     );
+}
+
+#[test]
+fn controls() {
+    page("controls");
+}
+
+#[test]
+fn created_controls() {
+    page("created_controls");
 }
 
 #[test]

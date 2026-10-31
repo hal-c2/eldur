@@ -309,7 +309,7 @@ ApplicationWindow {
                                     property string eldurClasses: "acc-head"
 
                                     text: "How long does delivery take?"
-                                    palette.buttonText: accItem.cls_open ? "#123a9c" : "#333333"
+                                    palette.buttonText: accItem.cls_open ? "#123a9c" : "#000000"
                                     font.family: "Arial"
                                     font.pixelSize: 15
                                     font.weight: 700
@@ -409,7 +409,7 @@ ApplicationWindow {
                                         property string eldurClasses: "acc-head"
 
                                         text: "Do you ship abroad?"
-                                        palette.buttonText: accItem2.cls_open ? "#123a9c" : "#333333"
+                                        palette.buttonText: accItem2.cls_open ? "#123a9c" : "#000000"
                                         font.family: "Arial"
                                         font.pixelSize: 15
                                         font.weight: 700
@@ -510,7 +510,7 @@ ApplicationWindow {
                                         property string eldurClasses: "acc-head"
 
                                         text: "Can I return something?"
-                                        palette.buttonText: accItem3.cls_open ? "#123a9c" : "#333333"
+                                        palette.buttonText: accItem3.cls_open ? "#123a9c" : "#000000"
                                         font.family: "Arial"
                                         font.pixelSize: 15
                                         font.weight: 700

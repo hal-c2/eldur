@@ -202,6 +202,7 @@ ApplicationWindow {
                                                             rightPadding: 18
                                                             bottomPadding: 10
                                                             leftPadding: 18
+                                                            implicitHeight: 38
                                                             contentItem: Text {
                                                                 text: buttonControl.text
                                                                 font: buttonControl.font
@@ -210,7 +211,6 @@ ApplicationWindow {
                                                                 verticalAlignment: Text.AlignVCenter
                                                                 renderType: Text.NativeRendering
                                                             }
-                                                            Layout.preferredHeight: implicitHeight
                                                         }
                                                     }
 
