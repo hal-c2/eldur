@@ -57,6 +57,10 @@ pub(crate) struct Decoration {
     pub inset_shadows: bool,
     /// Base for the ids of generated parts (gradient shapes).
     pub hint: String,
+    /// Draw the borders as strips on these sides (top, right, bottom,
+    /// left), visible or not, so every combination of conditions has
+    /// the same objects.
+    pub strips: Option<[bool; 4]>,
 }
 
 impl Decoration {
@@ -133,6 +137,7 @@ impl Emitter<'_, '_> {
             shadows,
             inset_shadows,
             hint: "box".to_owned(),
+            strips: None,
         }
     }
 
@@ -220,7 +225,9 @@ impl Emitter<'_, '_> {
         }
         let borders: Vec<&BorderSide> = sides(style).to_vec();
         let uniform = borders.iter().all(|s| **s == *borders[0]) && is_visible(borders[0]);
-        if uniform && painted {
+        if let Some(forced) = deco.strips {
+            self.border_strips(&mut wrapper, style, forced, line);
+        } else if uniform && painted {
             // The background is painted under the border (`background-clip:
             // border-box`), and a Rectangle draws its border below its
             // children, so the border goes on top as its own outline.
@@ -235,7 +242,7 @@ impl Emitter<'_, '_> {
             wrapper.set("border.width", number(borders[0].width));
             wrapper.set("border.color", color(borders[0].color));
         } else {
-            self.border_strips(&mut wrapper, style, line);
+            self.border_strips(&mut wrapper, style, [false; 4], line);
         }
         for side in borders.iter().filter(|s| is_visible(s)) {
             if !matches!(side.style, BorderStyle::Solid) {
@@ -475,9 +482,15 @@ impl Emitter<'_, '_> {
         Some((w + extra_w).min(h + extra_h))
     }
 
-    /// Non-uniform borders: one thin `Rectangle` per visible side (corner
-    /// joins are not mitred).
-    fn border_strips(&mut self, wrapper: &mut Object, style: &ComputedStyle, line: Option<u32>) {
+    /// Non-uniform borders: one thin `Rectangle` per visible side, and per
+    /// `forced` one (corner joins are not mitred).
+    fn border_strips(
+        &mut self,
+        wrapper: &mut Object,
+        style: &ComputedStyle,
+        forced: [bool; 4],
+        line: Option<u32>,
+    ) {
         let b = &style.border;
         let strips = [
             ("top", &b.top, ["left", "right", "top"], "height"),
@@ -486,17 +499,25 @@ impl Emitter<'_, '_> {
             ("left", &b.left, ["top", "bottom", "left"], "width"),
         ];
         let mut any = false;
-        for (_, side, anchors, size) in strips {
-            if !is_visible(side) {
+        for ((_, side, anchors, size), forced) in strips.into_iter().zip(forced) {
+            let visible = is_visible(side);
+            if !visible && !forced {
                 continue;
             }
-            any = true;
+            any |= visible;
             let mut strip = Object::new("Rectangle");
             for a in anchors {
                 strip.set(&format!("anchors.{a}"), Value::expr(format!("parent.{a}")));
             }
-            strip.set(size, number(side.width));
-            strip.set("color", color(side.color));
+            strip.set(size, number(border_width(side)));
+            strip.set(
+                "color",
+                color(if visible {
+                    side.color
+                } else {
+                    h2q_css::Rgba::TRANSPARENT
+                }),
+            );
             wrapper.push_child(strip);
         }
         let r = &style.border_radius;

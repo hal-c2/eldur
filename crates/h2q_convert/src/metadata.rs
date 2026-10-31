@@ -99,6 +99,64 @@ pub(crate) fn declare_classes(
     obj.members.splice(at..at, decls);
 }
 
+/// `h2qIndex`/`h2qCount` (and, with `of_type`, the same-tag
+/// `h2qTypeIndex`/`h2qTypeCount`): `node`'s 1-based place among its element
+/// siblings, which the runtime keeps up to date as scripts change them.
+pub(crate) fn declare_position(obj: &mut Object, doc: &Document, node: NodeId, of_type: bool) {
+    let (place, type_place) = position(doc, node);
+    let mut wanted = vec![("h2qIndex", place.0), ("h2qCount", place.1)];
+    if of_type {
+        wanted.extend([
+            ("h2qTypeIndex", type_place.0),
+            ("h2qTypeCount", type_place.1),
+        ]);
+    }
+    let declared: BTreeSet<String> = obj
+        .members
+        .iter()
+        .filter_map(|m| match m {
+            Member::PropertyDecl { name, .. } => Some(name.clone()),
+            _ => None,
+        })
+        .collect();
+    let decls: Vec<Member> = wanted
+        .into_iter()
+        .filter(|(name, _)| !declared.contains(*name))
+        .map(|(name, value)| Member::PropertyDecl {
+            ty: "int".to_owned(),
+            name: name.to_owned(),
+            value: Some(Value::Number(f64::from(value))),
+            readonly: false,
+            required: false,
+        })
+        .collect();
+    let at = obj
+        .members
+        .iter()
+        .take_while(|m| matches!(m, Member::PropertyDecl { name, .. } if name.starts_with("h2q")))
+        .count();
+    obj.members.splice(at..at, decls);
+}
+
+/// `node`'s (index, count) among its parent's element children, and among
+/// those with its tag.
+pub(crate) fn position(doc: &Document, node: NodeId) -> ((u32, u32), (u32, u32)) {
+    let tag = |n: NodeId| doc.element(n).map(|e| e.local_name().to_ascii_lowercase());
+    let Some(parent) = doc.parent(node) else {
+        return ((1, 1), (1, 1));
+    };
+    let kids: Vec<NodeId> = doc.element_children(parent).collect();
+    let own = tag(node);
+    let count = |list: &[NodeId]| u32::try_from(list.len()).unwrap_or(u32::MAX);
+    let at = kids.iter().position(|&k| k == node).unwrap_or(0);
+    let same: Vec<NodeId> = kids.iter().copied().filter(|&k| tag(k) == own).collect();
+    let type_at = same.iter().position(|&k| k == node).unwrap_or(0);
+    (
+        (count(&kids[..=at]), count(&kids)),
+        (count(&same[..=type_at]), count(&same)),
+    )
+}
+
 /// Class names that share one `cls_` property, by property.
 pub(crate) fn collisions<'c>(
     classes: impl IntoIterator<Item = &'c str>,

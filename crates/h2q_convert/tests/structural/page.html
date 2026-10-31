@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Positions</title>
+<style>
+body {
+  margin: 0;
+  padding: 24px;
+  font-family: sans-serif;
+  font-size: 16px;
+  color: #1f2430;
+  background: #f4f6fa;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.list {
+  width: 400px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid #ccd3e0;
+  background: #ffffff;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e3e7ef;
+  background: #ffffff;
+}
+
+li:first-child {
+  border-top: 3px solid #1c7ed6;
+}
+
+li:first-child .label {
+  color: #1c7ed6;
+}
+
+li:last-child {
+  border-bottom: 4px solid #e8590c;
+}
+
+li:nth-child(even) {
+  background: #f1f3f5;
+}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button type="button" id="add">Add</button>
+  <button type="button" id="prepend">Prepend</button>
+  <button type="button" id="shift">Remove first</button>
+  <button type="button" id="reverse">Reverse</button>
+</div>
+<ul class="list" id="list">
+  <li class="item"><span class="label">Alpha</span></li>
+  <li class="item"><span class="label">Beta</span></li>
+  <li class="item"><span class="label">Gamma</span></li>
+</ul>
+
+<script>
+  var labels = ['Alpha', 'Beta', 'Gamma'];
+  var next = 1;
+  var list = document.getElementById('list');
+
+  function makeItem(text) {
+    var li = document.createElement('li');
+    li.className = 'item';
+    var label = document.createElement('span');
+    label.className = 'label';
+    label.textContent = text;
+    li.appendChild(label);
+    return li;
+  }
+
+  function fresh() {
+    var text = 'Item ' + next;
+    next += 1;
+    return text;
+  }
+
+  function render() {
+    list.textContent = '';
+    for (var i = 0; i < labels.length; i++) {
+      list.appendChild(makeItem(labels[i]));
+    }
+  }
+
+  document.getElementById('add').addEventListener('click', function () {
+    var text = fresh();
+    labels.push(text);
+    list.appendChild(makeItem(text));
+  });
+
+  document.getElementById('prepend').addEventListener('click', function () {
+    var text = fresh();
+    labels.unshift(text);
+    list.insertBefore(makeItem(text), list.firstElementChild);
+  });
+
+  document.getElementById('shift').addEventListener('click', function () {
+    labels.shift();
+    list.removeChild(list.firstElementChild);
+  });
+
+  document.getElementById('reverse').addEventListener('click', function () {
+    labels.reverse();
+    render();
+  });
+</script>
+</body>
+</html>

@@ -25,7 +25,7 @@ pub(crate) mod units;
 #[cfg(test)]
 mod tests;
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use h2q_css::{
     Align, BoxSizing, ComputedStyle, Direction, Display, FlexDirection, Float, LengthAuto,
@@ -106,6 +106,9 @@ pub(crate) struct Emitter<'a, 'd> {
     /// Elements some condition gives paint, padding or a shadow: they keep
     /// a painting wrapper in every combination, so the forms agree.
     sticky: HashSet<NodeId>,
+    /// Elements whose border form differs between combinations: they draw
+    /// strips on the sides visible in any of them, in every combination.
+    strips: HashMap<NodeId, [bool; 4]>,
     /// Elements `display: none` in the combination being emitted, laid out
     /// as shown and hidden with `visible`.
     collapsed: HashSet<NodeId>,
@@ -152,6 +155,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             runtime_dom: false,
             markers: false,
             sticky: HashSet::new(),
+            strips: HashMap::new(),
             collapsed: HashSet::new(),
             force_paint: false,
         }
@@ -366,6 +370,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         if b.node.is_some_and(|n| self.sticky.contains(&n)) {
             deco.paints = true;
         }
+        deco.strips = b.node.and_then(|n| self.strips.get(&n).copied());
         let wanted = b.node.is_some_and(|n| self.wanted.contains(&n));
         let mt = self.vertical_margin(&style.margin.top, line);
         let mb = self.vertical_margin(&style.margin.bottom, line);

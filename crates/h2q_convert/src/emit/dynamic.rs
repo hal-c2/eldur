@@ -19,7 +19,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use h2q_css::{
     ComputedStyle, Condition, ConditionalStyles, Display, Easing, LengthPercentage, PseudoState,
-    Rgba, Shadow, StyleMap, Stylesheet, TransformFn,
+    Rgba, Shadow, Structural, StyleMap, Stylesheet, TransformFn,
 };
 use h2q_dom::{Document, NodeId};
 use h2q_js::ElementRef;
@@ -37,6 +37,9 @@ use crate::scripts::Scripts;
 
 /// More worlds than this are left out (each is a full emission).
 const MAX_WORLDS: usize = 512;
+/// A container scripts change with more element children than this keeps
+/// its children's document positions (each position is a condition).
+const MAX_POSITIONED: usize = 32;
 
 const MARKER: &str = "\u{1}h2q:";
 
@@ -74,6 +77,8 @@ pub(crate) struct Probe {
     pub classes: BTreeMap<NodeId, BTreeMap<String, bool>>,
     pub reserved: BTreeSet<String>,
     pub relevant: HashSet<NodeId>,
+    /// Every probe element: each is a child its container gains.
+    pub nodes: HashSet<NodeId>,
 }
 
 /// What a probe emission leaves for the templates. Its bindings read each
@@ -216,7 +221,9 @@ struct Cond {
 
 fn node_of(c: &Condition) -> NodeId {
     match c {
-        Condition::Class { node, .. } | Condition::State { node, .. } => *node,
+        Condition::Class { node, .. }
+        | Condition::State { node, .. }
+        | Condition::Structural { node, .. } => *node,
     }
 }
 
@@ -294,6 +301,7 @@ fn conditions(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Vec<Cond> {
     if let Some(scripts) = cx.scripts {
         class_conditions(cx, scripts, &mut out, diags);
     }
+    structural_conditions(cx, &mut out, diags);
     if let Some(probe) = cx.probe {
         for (&node, classes) in &probe.classes {
             for (class, &initial) in classes {
@@ -387,6 +395,133 @@ fn class_conditions(
                 }
             }
         }
+    }
+}
+
+/// The places of the children of containers scripts insert into or remove
+/// from (dynamic-styles §5.5), for the structural pseudo-classes the
+/// sheets use. Other containers keep the document's positions.
+fn structural_conditions(
+    cx: &Inputs<'_>,
+    out: &mut BTreeMap<Condition, bool>,
+    diags: &mut Diagnostics,
+) {
+    let tests = h2q_css::structural_pseudos(cx.sheets);
+    if tests.is_empty() {
+        return;
+    }
+    let doc = cx.doc;
+    let mut containers: BTreeSet<NodeId> = BTreeSet::new();
+    if let Some(scripts) = cx.scripts {
+        let analysis = &scripts.analysis;
+        let parents = analysis
+            .created
+            .iter()
+            .flat_map(|e| &e.parents)
+            .chain(&analysis.mutated_parents);
+        for target in parents {
+            if let ElementRef::Query(query) = target {
+                containers.extend(scripts.matches(query).iter().copied());
+            }
+        }
+        for target in &analysis.mutated_siblings {
+            if let ElementRef::Query(query) = target {
+                containers.extend(
+                    scripts
+                        .matches(query)
+                        .iter()
+                        .filter_map(|&n| doc.parent_element(n)),
+                );
+            }
+        }
+    }
+    if let Some(probe) = cx.probe {
+        containers.extend(probe.nodes.iter().filter_map(|&n| doc.parent_element(n)));
+    }
+    for container in containers {
+        let kids: Vec<NodeId> = doc.element_children(container).collect();
+        if kids.len() > MAX_POSITIONED {
+            if cx.probe.is_none() {
+                diags.warning(
+                    "css",
+                    node_line(doc, container),
+                    format!(
+                        "{} has more than {MAX_POSITIONED} children; scripts changing them do not restyle `:first-child`, `:nth-child()` and the like (dynamic-structural)",
+                        describe(doc, container)
+                    ),
+                );
+            }
+            continue;
+        }
+        for kid in kids {
+            let (place, type_place) = crate::metadata::position(doc, kid);
+            for &test in &tests {
+                let (index, count) = if test.of_type() { type_place } else { place };
+                out.insert(
+                    Condition::Structural { node: kid, test },
+                    test.matches(index, count),
+                );
+            }
+        }
+    }
+}
+
+/// The QML test of `test` on the element with id `id`, which declares
+/// [`crate::metadata::declare_position`]'s properties.
+pub(crate) fn structural_expr(test: Structural, id: &str) -> String {
+    let (index, count) = if test.of_type() {
+        (format!("{id}.h2qTypeIndex"), format!("{id}.h2qTypeCount"))
+    } else {
+        (format!("{id}.h2qIndex"), format!("{id}.h2qCount"))
+    };
+    let from_end = format!("({count} - {index} + 1)");
+    match test {
+        Structural::FirstChild | Structural::FirstOfType => format!("{index} === 1"),
+        Structural::LastChild | Structural::LastOfType => format!("{index} === {count}"),
+        Structural::OnlyChild | Structural::OnlyOfType => format!("{count} === 1"),
+        Structural::NthChild { a, b } | Structural::NthOfType { a, b } => nth(a, b, &index),
+        Structural::NthLastChild { a, b } | Structural::NthLastOfType { a, b } => {
+            nth(a, b, &from_end)
+        }
+    }
+}
+
+/// Whether `x` is `a`n+`b` for some n >= 0.
+fn nth(a: i32, b: i32, x: &str) -> String {
+    let offset = match b {
+        0 => x.to_owned(),
+        b if b > 0 => format!("({x} - {b})"),
+        b => format!("({x} + {})", -i64::from(b)),
+    };
+    match a {
+        0 => format!("{x} === {b}"),
+        1 => format!("{x} >= {b}"),
+        -1 => format!("{x} <= {b}"),
+        a if a > 0 && b <= 1 => format!("{offset} % {a} === 0"),
+        a if a > 0 => format!("({x} >= {b} && {offset} % {a} === 0)"),
+        a => format!("({x} <= {b} && ({b} - {x}) % {} === 0)", -i64::from(a)),
+    }
+}
+
+/// How the sheets write `test`.
+pub(crate) fn structural_name(test: Structural) -> String {
+    let formula = |a: i32, b: i32| match (a, b) {
+        (0, b) => b.to_string(),
+        (a, 0) => format!("{a}n"),
+        (a, b) if b > 0 => format!("{a}n+{b}"),
+        (a, b) => format!("{a}n{b}"),
+    };
+    match test {
+        Structural::FirstChild => ":first-child".to_owned(),
+        Structural::LastChild => ":last-child".to_owned(),
+        Structural::OnlyChild => ":only-child".to_owned(),
+        Structural::FirstOfType => ":first-of-type".to_owned(),
+        Structural::LastOfType => ":last-of-type".to_owned(),
+        Structural::OnlyOfType => ":only-of-type".to_owned(),
+        Structural::NthChild { a, b } => format!(":nth-child({})", formula(a, b)),
+        Structural::NthLastChild { a, b } => format!(":nth-last-child({})", formula(a, b)),
+        Structural::NthOfType { a, b } => format!(":nth-of-type({})", formula(a, b)),
+        Structural::NthLastOfType { a, b } => format!(":nth-last-of-type({})", formula(a, b)),
     }
 }
 
@@ -623,6 +758,12 @@ impl Dynamic<'_, '_> {
             .filter(|e| is_sticky(&e.by_mask))
             .map(|e| e.node)
             .collect();
+        let strips: HashMap<NodeId, [bool; 4]> = self
+            .found
+            .elements
+            .iter()
+            .filter_map(|e| border_strips(&e.by_mask).map(|s| (e.node, s)))
+            .collect();
         // The display an element hidden in some combinations has when shown.
         let shown: HashMap<NodeId, Display> = self
             .found
@@ -641,7 +782,7 @@ impl Dynamic<'_, '_> {
             forms,
             mut imports,
             mut ids,
-        } = Self::emit_world(self.cx, &styles, &sticky, collapsed, self.diags);
+        } = Self::emit_world(self.cx, &styles, &sticky, &strips, collapsed, self.diags);
         let mut markers = HashMap::new();
         marker_paths(&root, &mut Vec::new(), &mut markers);
         // A condition on an element without an item of its own (an inline
@@ -660,7 +801,8 @@ impl Dynamic<'_, '_> {
             let (styles, collapsed) = self.world(flipped, &shown);
             // Only the document's world reports; the others repeat it.
             let mut scratch = Diagnostics::new(&self.diags.document);
-            let emitted = Self::emit_world(self.cx, &styles, &sticky, collapsed, &mut scratch);
+            let emitted =
+                Self::emit_world(self.cx, &styles, &sticky, &strips, collapsed, &mut scratch);
             imports.extend(emitted.imports);
             trees.push(emitted.root);
         }
@@ -824,6 +966,7 @@ impl Dynamic<'_, '_> {
         cx: &Inputs<'_>,
         styles: &StyleMap,
         sticky: &HashSet<NodeId>,
+        strips: &HashMap<NodeId, [bool; 4]>,
         collapsed: HashSet<NodeId>,
         diags: &mut Diagnostics,
     ) -> Emitted {
@@ -837,6 +980,7 @@ impl Dynamic<'_, '_> {
             emitter.ids.reserve(id);
         }
         emitter.sticky = sticky.clone();
+        emitter.strips = strips.clone();
         emitter.collapsed = collapsed;
         let root = emitter.document(tree.as_ref(), body);
         let emitted = Emitted {
@@ -1251,6 +1395,30 @@ fn identity_of(f: &TransformFn) -> TransformFn {
     }
 }
 
+/// The sides to draw as strips in every combination, when the
+/// combinations disagree on how the borders are drawn (one uniform
+/// `border`, or strips on the visible sides).
+fn border_strips(styles: &[Box<ComputedStyle>]) -> Option<[bool; 4]> {
+    let form = |s: &ComputedStyle| {
+        let b = &s.border;
+        let sides = [&b.top, &b.right, &b.bottom, &b.left];
+        let visible = sides.map(super::decoration::is_visible);
+        let uniform = visible[0] && sides.iter().all(|side| **side == *sides[0]);
+        (uniform, visible)
+    };
+    let first = form(&styles[0]);
+    if styles.iter().all(|s| form(s) == first) {
+        return None;
+    }
+    let mut union = [false; 4];
+    for s in styles {
+        for (u, v) in union.iter_mut().zip(form(s).1) {
+            *u |= v;
+        }
+    }
+    Some(union)
+}
+
 /// Whether some combination paints the box, or they differ in what makes
 /// a wrapper (padding, border, shadow, radius).
 fn is_sticky(styles: &[Box<ComputedStyle>]) -> bool {
@@ -1288,6 +1456,9 @@ struct Sources {
     handlers: BTreeMap<Path, Vec<(&'static str, String)>>,
     /// Controls that must report hover.
     hover_enabled: BTreeSet<Path>,
+    /// Elements that read their place: path, node, and whether the
+    /// same-tag place is read too.
+    positions: BTreeMap<Path, (NodeId, bool)>,
     /// A probe emission: bindings read [`token`]s, and `locals` has what
     /// each stands for inside its element's template.
     probe: bool,
@@ -1385,6 +1556,15 @@ impl Sources {
                 (PseudoState::Disabled, _) => format!("!{id}.enabled"),
                 (PseudoState::FocusWithin | PseudoState::Visited, _) => return None,
             },
+            Condition::Structural { test, .. } => {
+                let of_type = &mut self
+                    .positions
+                    .entry(path.clone())
+                    .or_insert((node, false))
+                    .1;
+                *of_type |= test.of_type();
+                structural_expr(*test, &id)
+            }
         };
         if self.probe {
             self.locals.insert(c, expr);
@@ -1406,6 +1586,7 @@ impl Sources {
         let mut paths: BTreeSet<&Path> = self.classes.keys().collect();
         paths.extend(self.handlers.keys());
         paths.extend(self.hover_enabled.iter());
+        paths.extend(self.positions.keys());
         for path in paths.into_iter().rev() {
             let Some(obj) = object_at(root, path) else {
                 continue;
@@ -1419,6 +1600,9 @@ impl Sources {
             if let Some((node, classes)) = self.classes.get(path) {
                 crate::metadata::declare_classes(obj, doc, *node, classes);
             }
+            if let Some(&(node, of_type)) = self.positions.get(path) {
+                crate::metadata::declare_position(obj, doc, node, of_type);
+            }
         }
     }
 }
@@ -1427,6 +1611,7 @@ fn no_item(doc: &Document, cond: &Condition, diags: &mut Diagnostics) {
     let (node, what) = match cond {
         Condition::Class { node, class } => (*node, format!("class `{class}`")),
         Condition::State { node, state } => (*node, format!("`{}`", state_name(*state))),
+        Condition::Structural { node, test } => (*node, format!("`{}`", structural_name(*test))),
     };
     diags.info(
         "css",

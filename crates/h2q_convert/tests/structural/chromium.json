@@ -1,0 +1,934 @@
+{
+ "initial order": {
+  "--h2q-order": "\"Alpha|Beta|Gamma\""
+ },
+ "initial item1": {
+  "background-color": "rgb(255, 255, 255)",
+  "border-top-width": "3px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "initial label1": {
+  "color": "rgb(28, 126, 214)"
+ },
+ "initial item2": {
+  "background-color": "rgb(241, 243, 245)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "initial label2": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "initial item3": {
+  "background-color": "rgb(255, 255, 255)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(232, 89, 12)"
+ },
+ "initial label3": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "initial item4": {
+  "error": "no match"
+ },
+ "initial label4": {
+  "error": "no match"
+ },
+ "initial item5": {
+  "error": "no match"
+ },
+ "initial label5": {
+  "error": "no match"
+ },
+ "add order": {
+  "--h2q-order": "\"Alpha|Beta|Gamma|Item 1\""
+ },
+ "add item1": {
+  "background-color": "rgb(255, 255, 255)",
+  "border-top-width": "3px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "add label1": {
+  "color": "rgb(28, 126, 214)"
+ },
+ "add item2": {
+  "background-color": "rgb(241, 243, 245)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "add label2": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "add item3": {
+  "background-color": "rgb(255, 255, 255)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "add label3": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "add item4": {
+  "background-color": "rgb(241, 243, 245)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(232, 89, 12)"
+ },
+ "add label4": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "add item5": {
+  "error": "no match"
+ },
+ "add label5": {
+  "error": "no match"
+ },
+ "addTwice order": {
+  "--h2q-order": "\"Alpha|Beta|Gamma|Item 1|Item 2\""
+ },
+ "addTwice item1": {
+  "background-color": "rgb(255, 255, 255)",
+  "border-top-width": "3px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "addTwice label1": {
+  "color": "rgb(28, 126, 214)"
+ },
+ "addTwice item2": {
+  "background-color": "rgb(241, 243, 245)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "addTwice label2": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "addTwice item3": {
+  "background-color": "rgb(255, 255, 255)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "addTwice label3": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "addTwice item4": {
+  "background-color": "rgb(241, 243, 245)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "addTwice label4": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "addTwice item5": {
+  "background-color": "rgb(255, 255, 255)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(232, 89, 12)"
+ },
+ "addTwice label5": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "prepend order": {
+  "--h2q-order": "\"Item 1|Alpha|Beta|Gamma\""
+ },
+ "prepend item1": {
+  "background-color": "rgb(255, 255, 255)",
+  "border-top-width": "3px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "prepend label1": {
+  "color": "rgb(28, 126, 214)"
+ },
+ "prepend item2": {
+  "background-color": "rgb(241, 243, 245)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "prepend label2": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "prepend item3": {
+  "background-color": "rgb(255, 255, 255)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "prepend label3": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "prepend item4": {
+  "background-color": "rgb(241, 243, 245)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(232, 89, 12)"
+ },
+ "prepend label4": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "prepend item5": {
+  "error": "no match"
+ },
+ "prepend label5": {
+  "error": "no match"
+ },
+ "shift order": {
+  "--h2q-order": "\"Beta|Gamma\""
+ },
+ "shift item1": {
+  "background-color": "rgb(255, 255, 255)",
+  "border-top-width": "3px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "shift label1": {
+  "color": "rgb(28, 126, 214)"
+ },
+ "shift item2": {
+  "background-color": "rgb(241, 243, 245)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(232, 89, 12)"
+ },
+ "shift label2": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "shift item3": {
+  "error": "no match"
+ },
+ "shift label3": {
+  "error": "no match"
+ },
+ "shift item4": {
+  "error": "no match"
+ },
+ "shift label4": {
+  "error": "no match"
+ },
+ "shift item5": {
+  "error": "no match"
+ },
+ "shift label5": {
+  "error": "no match"
+ },
+ "shiftTwice order": {
+  "--h2q-order": "\"Gamma\""
+ },
+ "shiftTwice item1": {
+  "background-color": "rgb(255, 255, 255)",
+  "border-top-width": "3px",
+  "border-bottom-color": "rgb(232, 89, 12)"
+ },
+ "shiftTwice label1": {
+  "color": "rgb(28, 126, 214)"
+ },
+ "shiftTwice item2": {
+  "error": "no match"
+ },
+ "shiftTwice label2": {
+  "error": "no match"
+ },
+ "shiftTwice item3": {
+  "error": "no match"
+ },
+ "shiftTwice label3": {
+  "error": "no match"
+ },
+ "shiftTwice item4": {
+  "error": "no match"
+ },
+ "shiftTwice label4": {
+  "error": "no match"
+ },
+ "shiftTwice item5": {
+  "error": "no match"
+ },
+ "shiftTwice label5": {
+  "error": "no match"
+ },
+ "addShift order": {
+  "--h2q-order": "\"Beta|Gamma|Item 1\""
+ },
+ "addShift item1": {
+  "background-color": "rgb(255, 255, 255)",
+  "border-top-width": "3px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "addShift label1": {
+  "color": "rgb(28, 126, 214)"
+ },
+ "addShift item2": {
+  "background-color": "rgb(241, 243, 245)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "addShift label2": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "addShift item3": {
+  "background-color": "rgb(255, 255, 255)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(232, 89, 12)"
+ },
+ "addShift label3": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "addShift item4": {
+  "error": "no match"
+ },
+ "addShift label4": {
+  "error": "no match"
+ },
+ "addShift item5": {
+  "error": "no match"
+ },
+ "addShift label5": {
+  "error": "no match"
+ },
+ "reverse order": {
+  "--h2q-order": "\"Gamma|Beta|Alpha\""
+ },
+ "reverse item1": {
+  "background-color": "rgb(255, 255, 255)",
+  "border-top-width": "3px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "reverse label1": {
+  "color": "rgb(28, 126, 214)"
+ },
+ "reverse item2": {
+  "background-color": "rgb(241, 243, 245)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "reverse label2": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "reverse item3": {
+  "background-color": "rgb(255, 255, 255)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(232, 89, 12)"
+ },
+ "reverse label3": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "reverse item4": {
+  "error": "no match"
+ },
+ "reverse label4": {
+  "error": "no match"
+ },
+ "reverse item5": {
+  "error": "no match"
+ },
+ "reverse label5": {
+  "error": "no match"
+ },
+ "addReverse order": {
+  "--h2q-order": "\"Item 1|Gamma|Beta|Alpha\""
+ },
+ "addReverse item1": {
+  "background-color": "rgb(255, 255, 255)",
+  "border-top-width": "3px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "addReverse label1": {
+  "color": "rgb(28, 126, 214)"
+ },
+ "addReverse item2": {
+  "background-color": "rgb(241, 243, 245)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "addReverse label2": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "addReverse item3": {
+  "background-color": "rgb(255, 255, 255)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "addReverse label3": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "addReverse item4": {
+  "background-color": "rgb(241, 243, 245)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(232, 89, 12)"
+ },
+ "addReverse label4": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "addReverse item5": {
+  "error": "no match"
+ },
+ "addReverse label5": {
+  "error": "no match"
+ },
+ "reverseAdd order": {
+  "--h2q-order": "\"Gamma|Beta|Alpha|Item 1\""
+ },
+ "reverseAdd item1": {
+  "background-color": "rgb(255, 255, 255)",
+  "border-top-width": "3px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "reverseAdd label1": {
+  "color": "rgb(28, 126, 214)"
+ },
+ "reverseAdd item2": {
+  "background-color": "rgb(241, 243, 245)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "reverseAdd label2": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "reverseAdd item3": {
+  "background-color": "rgb(255, 255, 255)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(227, 231, 239)"
+ },
+ "reverseAdd label3": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "reverseAdd item4": {
+  "background-color": "rgb(241, 243, 245)",
+  "border-top-width": "0px",
+  "border-bottom-color": "rgb(232, 89, 12)"
+ },
+ "reverseAdd label4": {
+  "color": "rgb(31, 36, 48)"
+ },
+ "reverseAdd item5": {
+  "error": "no match"
+ },
+ "reverseAdd label5": {
+  "error": "no match"
+ },
+ "initial geometry": {
+  "#list": [
+   {
+    "x": 24,
+    "y": 61,
+    "width": 402,
+    "height": 113
+   }
+  ],
+  "#list li": [
+   {
+    "x": 25,
+    "y": 62,
+    "width": 400,
+    "height": 38
+   },
+   {
+    "x": 25,
+    "y": 100,
+    "width": 400,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 135,
+    "width": 400,
+    "height": 38
+   }
+  ],
+  "#list .label": [
+   {
+    "x": 37,
+    "y": 73,
+    "width": 40.921875,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 108,
+    "width": 32.921875,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 143,
+    "width": 56.90625,
+    "height": 18
+   }
+  ]
+ },
+ "add geometry": {
+  "#list": [
+   {
+    "x": 24,
+    "y": 61,
+    "width": 402,
+    "height": 148
+   }
+  ],
+  "#list li": [
+   {
+    "x": 25,
+    "y": 62,
+    "width": 400,
+    "height": 38
+   },
+   {
+    "x": 25,
+    "y": 100,
+    "width": 400,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 135,
+    "width": 400,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 170,
+    "width": 400,
+    "height": 38
+   }
+  ],
+  "#list .label": [
+   {
+    "x": 37,
+    "y": 73,
+    "width": 40.921875,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 108,
+    "width": 32.921875,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 143,
+    "width": 56.90625,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 178,
+    "width": 44.46875,
+    "height": 18
+   }
+  ]
+ },
+ "addTwice geometry": {
+  "#list": [
+   {
+    "x": 24,
+    "y": 61,
+    "width": 402,
+    "height": 183
+   }
+  ],
+  "#list li": [
+   {
+    "x": 25,
+    "y": 62,
+    "width": 400,
+    "height": 38
+   },
+   {
+    "x": 25,
+    "y": 100,
+    "width": 400,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 135,
+    "width": 400,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 170,
+    "width": 400,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 205,
+    "width": 400,
+    "height": 38
+   }
+  ],
+  "#list .label": [
+   {
+    "x": 37,
+    "y": 73,
+    "width": 40.921875,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 108,
+    "width": 32.921875,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 143,
+    "width": 56.90625,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 178,
+    "width": 44.46875,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 213,
+    "width": 44.46875,
+    "height": 18
+   }
+  ]
+ },
+ "prepend geometry": {
+  "#list": [
+   {
+    "x": 24,
+    "y": 61,
+    "width": 402,
+    "height": 148
+   }
+  ],
+  "#list li": [
+   {
+    "x": 25,
+    "y": 62,
+    "width": 400,
+    "height": 38
+   },
+   {
+    "x": 25,
+    "y": 100,
+    "width": 400,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 135,
+    "width": 400,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 170,
+    "width": 400,
+    "height": 38
+   }
+  ],
+  "#list .label": [
+   {
+    "x": 37,
+    "y": 73,
+    "width": 44.46875,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 108,
+    "width": 40.921875,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 143,
+    "width": 32.921875,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 178,
+    "width": 56.90625,
+    "height": 18
+   }
+  ]
+ },
+ "shift geometry": {
+  "#list": [
+   {
+    "x": 24,
+    "y": 61,
+    "width": 402,
+    "height": 78
+   }
+  ],
+  "#list li": [
+   {
+    "x": 25,
+    "y": 62,
+    "width": 400,
+    "height": 38
+   },
+   {
+    "x": 25,
+    "y": 100,
+    "width": 400,
+    "height": 38
+   }
+  ],
+  "#list .label": [
+   {
+    "x": 37,
+    "y": 73,
+    "width": 32.921875,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 108,
+    "width": 56.90625,
+    "height": 18
+   }
+  ]
+ },
+ "shiftTwice geometry": {
+  "#list": [
+   {
+    "x": 24,
+    "y": 61,
+    "width": 402,
+    "height": 43
+   }
+  ],
+  "#list li": [
+   {
+    "x": 25,
+    "y": 62,
+    "width": 400,
+    "height": 41
+   }
+  ],
+  "#list .label": [
+   {
+    "x": 37,
+    "y": 73,
+    "width": 56.90625,
+    "height": 18
+   }
+  ]
+ },
+ "addShift geometry": {
+  "#list": [
+   {
+    "x": 24,
+    "y": 61,
+    "width": 402,
+    "height": 113
+   }
+  ],
+  "#list li": [
+   {
+    "x": 25,
+    "y": 62,
+    "width": 400,
+    "height": 38
+   },
+   {
+    "x": 25,
+    "y": 100,
+    "width": 400,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 135,
+    "width": 400,
+    "height": 38
+   }
+  ],
+  "#list .label": [
+   {
+    "x": 37,
+    "y": 73,
+    "width": 32.921875,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 108,
+    "width": 56.90625,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 143,
+    "width": 44.46875,
+    "height": 18
+   }
+  ]
+ },
+ "reverse geometry": {
+  "#list": [
+   {
+    "x": 24,
+    "y": 61,
+    "width": 402,
+    "height": 113
+   }
+  ],
+  "#list li": [
+   {
+    "x": 25,
+    "y": 62,
+    "width": 400,
+    "height": 38
+   },
+   {
+    "x": 25,
+    "y": 100,
+    "width": 400,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 135,
+    "width": 400,
+    "height": 38
+   }
+  ],
+  "#list .label": [
+   {
+    "x": 37,
+    "y": 73,
+    "width": 56.90625,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 108,
+    "width": 32.921875,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 143,
+    "width": 40.921875,
+    "height": 18
+   }
+  ]
+ },
+ "addReverse geometry": {
+  "#list": [
+   {
+    "x": 24,
+    "y": 61,
+    "width": 402,
+    "height": 148
+   }
+  ],
+  "#list li": [
+   {
+    "x": 25,
+    "y": 62,
+    "width": 400,
+    "height": 38
+   },
+   {
+    "x": 25,
+    "y": 100,
+    "width": 400,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 135,
+    "width": 400,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 170,
+    "width": 400,
+    "height": 38
+   }
+  ],
+  "#list .label": [
+   {
+    "x": 37,
+    "y": 73,
+    "width": 44.46875,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 108,
+    "width": 56.90625,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 143,
+    "width": 32.921875,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 178,
+    "width": 40.921875,
+    "height": 18
+   }
+  ]
+ },
+ "reverseAdd geometry": {
+  "#list": [
+   {
+    "x": 24,
+    "y": 61,
+    "width": 402,
+    "height": 148
+   }
+  ],
+  "#list li": [
+   {
+    "x": 25,
+    "y": 62,
+    "width": 400,
+    "height": 38
+   },
+   {
+    "x": 25,
+    "y": 100,
+    "width": 400,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 135,
+    "width": 400,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 170,
+    "width": 400,
+    "height": 38
+   }
+  ],
+  "#list .label": [
+   {
+    "x": 37,
+    "y": 73,
+    "width": 56.90625,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 108,
+    "width": 32.921875,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 143,
+    "width": 40.921875,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 178,
+    "width": 44.46875,
+    "height": 18
+   }
+  ]
+ }
+}
