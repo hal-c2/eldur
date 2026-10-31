@@ -1088,6 +1088,114 @@ fn glyphs_sit_on_chromiums_whole_pixel_baseline() {
 }
 
 #[test]
+fn richtext_lines_shift_to_chromiums_baseline() {
+    // The same lines as tools/visual/paint/gen.mjs's RICH; `rich.txt` is what
+    // it measured on both sides.
+    const CODE: &str = "font-family:monospace;background:#eee";
+    let cases = [
+        (
+            "r1",
+            "font:16px/1.6 sans-serif",
+            format!("{CODE};font-size:14px;padding:2px 5px"),
+        ),
+        (
+            "r2",
+            "font:14px/20px sans-serif",
+            format!("{CODE};font-size:12px"),
+        ),
+        (
+            "r3",
+            "font:16px/1.5 sans-serif",
+            format!("{CODE};font-size:16px"),
+        ),
+        (
+            "r4",
+            "font:16px/1.5 sans-serif",
+            format!("{CODE};font-size:24px"),
+        ),
+        (
+            "r5",
+            "font:15px/1.5 sans-serif",
+            "background:#eee;font-family:serif".to_owned(),
+        ),
+        (
+            "r6",
+            "font:16px/1.5 serif",
+            format!("{CODE};font-size:14px"),
+        ),
+        (
+            "r7",
+            "font:16px/1.6 sans-serif",
+            "background:#eee".to_owned(),
+        ),
+        (
+            "r8",
+            "font:14px/1.5 sans-serif",
+            "background:#eee;font-size:24px".to_owned(),
+        ),
+    ];
+    // Qt's line with a monospace run of the body's size came out a row above
+    // anything its metrics predict (layout.md §1.2, known limits).
+    let known = [("r3", "-2")];
+    let measured = include_str!("../../../../tools/visual/paint/rich.txt");
+    for (class, css, run) in cases {
+        let (qml, _) = convert(&page(
+            &format!("p{{margin:0;{css}}}"),
+            &format!("<p class={class}>Hx<span style=\"{run}\">H</span></p>"),
+        ));
+        let line = measured
+            .lines()
+            .find(|l| l.starts_with(class))
+            .unwrap_or_else(|| panic!("{class} in {measured}"));
+        let measured = line.rsplit(' ').next().expect("rich.txt: name shifts");
+        let want = known
+            .iter()
+            .find(|(k, _)| *k == class)
+            .map_or(measured, |(_, v)| v);
+        let p = object_after(&qml, &format!("<p class=\"{class}\">"));
+        assert!(p.contains("Text.RichText"), "{p}");
+        let t = p
+            .find("transform: Translate {")
+            .unwrap_or_else(|| panic!("{p}"));
+        let y = p[t..].lines().nth(1).map(str::trim);
+        assert_eq!(y, Some(format!("y: {want}").as_str()), "{class}: {p}");
+    }
+}
+
+#[test]
+fn a_fractional_caption_keeps_the_table_on_its_exact_y() {
+    // Chromium: a 37.5px caption puts the table's rows 37.5px down. A floored
+    // caption height moved them half a pixel up (08-table).
+    let (qml, _) = convert(&page(
+        "caption{padding-bottom:12px;font:17px/25.5px sans-serif}",
+        "<table><caption>c</caption><tr><td>a</td></tr></table>",
+    ));
+    assert!(!qml.contains("Math.floor(implicitHeight)"), "{qml}");
+    assert!(qml.contains("eldurCarry"), "{qml}");
+}
+
+#[test]
+fn a_middle_table_cell_centres_exactly() {
+    // A cell's content is centred without Qt's rounding, on both ends of the
+    // anchor; the values behind it are `cN` in tools/visual/paint/gen.mjs.
+    let (qml, _) = convert(&page(
+        "table{border-collapse:collapse} td{border:1px solid #000;padding:4px}",
+        "<table><tr><td>a</td></tr></table>",
+    ));
+    assert_eq!(
+        qml.matches("anchors.alignWhenCentered: false").count(),
+        2,
+        "{qml}"
+    );
+    // `vertical-align: top` is not centred.
+    let (qml, _) = convert(&page(
+        "td{vertical-align:top;padding:4px}",
+        "<table><tr><td>a</td></tr></table>",
+    ));
+    assert!(!qml.contains("alignWhenCentered"), "{qml}");
+}
+
+#[test]
 fn tight_line_height_does_not_grow_the_last_line() {
     // Chromium: `font: 96px/1` is 96px tall and `16px/1` two lines 32px.
     // Qt gives the last fixed-height line the font's own height (108px and

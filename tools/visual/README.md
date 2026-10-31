@@ -83,11 +83,12 @@ the converter writes in its source comments (`describe`).
 
 ### Painting probe: `paint/`
 
-`node tools/visual/paint/gen.mjs` regenerates `page.html`, `chromium.json` and
-`shifts.txt`: how Chromium paints boxes and text lines at fractions of a pixel,
-and the baselines Qt gives the same fonts. `PaintSnapTests` in `test_visual.py`
-compares a conversion of the page with them pixel by pixel on the gl backend;
-`eldur_convert`'s glyph test reads `shifts.txt`. See `docs/spec/layout.md` §1.2.
+`node tools/visual/paint/gen.mjs` regenerates `page.html`, `chromium.json`,
+`shifts.txt` and `rich.txt`: how Chromium paints boxes, text lines, RichText
+lines and table cells at fractions of a pixel, and the baselines Qt gives the
+same fonts. `PaintSnapTests` in `test_visual.py` compares a conversion of the
+page with them pixel by pixel on the gl backend; `eldur_convert`'s glyph tests
+read `shifts.txt` and `rich.txt`. See `docs/spec/layout.md` §1.2.
 
 ### Drift: `drift.py`
 

@@ -856,7 +856,7 @@ ApplicationWindow {
                                 font.pixelSize: 16
                                 wrapMode: Text.WordWrap
                                 transform: Translate {
-                                    y: -3.6
+                                    y: -3
                                 }
                                 Layout.fillWidth: true
                                 Layout.topMargin: 16 - subtitle.eldurCarry
@@ -934,7 +934,7 @@ ApplicationWindow {
                                             font.pixelSize: 16
                                             wrapMode: Text.WordWrap
                                             transform: Translate {
-                                                y: -3.6
+                                                y: -3
                                             }
                                             Layout.fillWidth: true
                                             Layout.topMargin: 4 - calloutTitle.eldurCarry
@@ -1030,9 +1030,6 @@ ApplicationWindow {
                                     font.pixelSize: 13
                                     lineHeight: 18.85
                                     lineHeightMode: Text.FixedHeight
-                                    transform: Translate {
-                                        y: 1
-                                    }
                                     wrapMode: Text.NoWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -1349,7 +1346,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
                                             transform: Translate {
-                                                y: -3.15
+                                                y: -2
                                             }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1505,7 +1502,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
                                             transform: Translate {
-                                                y: -3.15
+                                                y: -2
                                             }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1553,7 +1550,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
                                             transform: Translate {
-                                                y: -3.15
+                                                y: -2
                                             }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1659,7 +1656,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
                                             transform: Translate {
-                                                y: -3.15
+                                                y: -2
                                             }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1707,7 +1704,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
                                             transform: Translate {
-                                                y: -3.15
+                                                y: -2
                                             }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1821,7 +1818,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
                                             transform: Translate {
-                                                y: -3.15
+                                                y: -2
                                             }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1877,7 +1874,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
                                             transform: Translate {
-                                                y: -3.15
+                                                y: -2
                                             }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1911,7 +1908,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
                                             transform: Translate {
-                                                y: -3.15
+                                                y: -2
                                             }
                                             anchors.left: parent.left
                                             anchors.right: parent.right

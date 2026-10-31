@@ -173,6 +173,12 @@ The exception on gl: an edge at exactly x.5 in **x** takes the column whose cent
 - **Boxes without a radius** need no paint mechanism on gl, only their exact height. A box around a carried column (§1.1) is laid out at `Layout.preferredHeight: implicitHeight - <excess>`, and a fractional fixed height stays as it is. The carry keeps the cell whole. Before this, the excess made the bottom edge up to a row low (02-block-flow's hero, 187 vs 188).
 - **Rounded boxes** (`emit/paint.rs`) bind `antialiasing` to "x, y, width and height are whole to 1/64 px". On whole boxes the corners stay smooth like Chromium's. On fractional ones the edges are crisp and the corners aliased. Boxes under a transform or a layer keep Qt's default.
 - **Glyphs** (`emit/text.rs`): the `Translate` is Chromium's baseline less Qt's.
+- **RichText lines** (a run in another family, or with a background or padding) get the same whole `Translate`, and need Qt's baseline for such a line:
+  - Chromium's line baseline is the largest `whole_baseline` among the strut and the runs, each at its own font and line height.
+  - Qt's is `floor(lh − descent)`, `lh` in 1/64 px and `descent` the largest among the line's runs. When ascent + descent exceeds `lh`, the line grows and the baseline is the largest ascent, rounded. Measured for r1–r9 in `gen.mjs`; `rich.txt` holds both numbers.
+  - Qt's row follows the rounded position as for plain lines (4 fractions, 9 lines).
+  - A paragraph has one `Translate`, and it is the tallest run's: the corpus scored higher that way than with the block's font alone (26-docs-page 95.56 vs 93.72, 19-article 89.37 vs 88.54, 02-block-flow 95.56 vs 94.93; 01-typography goes the other way, 92.95 vs 93.38).
+- **Table cells** (`emit/decoration.rs`): Chromium centres a `vertical-align: middle` cell's content exactly, and the glyph row is the rounded result like any line (`cN` in `gen.mjs`: 9 cells × 2 fractions). Qt's anchors round an odd height's centre up unless `anchors.alignWhenCentered: false` is set **on the anchored item and on its parent**, so both get it. The offset `(top inset − bottom inset) / 2` stays. A table's `ColumnLayout` with a caption is carried (§1.1), which keeps its rows on their exact y.
 
 **Alternatives scored** (corpus mean on gl, from 90.19 before any rounded-box change):
 - `antialiasing: false` on every rounded box: 90.35, but it aliases every corner and pill, including whole ones (20-pricing −0.37, 07-lists −0.18).
@@ -183,8 +189,11 @@ Snapping a rounded box's position instead (`Translate` or margins) needs its sce
 
 **Known limits**
 - A rounded box whole in a fractional parent looks whole to its own binding and stays soft on its edges.
-- `font_extents` is a stopgap: it knows Liberation Sans and Liberation Serif by the names that resolve to them here, and gives anything else Liberation Sans's numbers, so such glyphs can land a row off. It is one function, so it can be replaced when font metrics are decided, also for `line-height: normal`.
-- Text anchored in a table cell whose insets differ sits half a pixel below Chromium's line (`anchors.verticalCenterOffset: 0.5`, 21-table-model). The whole baseline now rounds that half up where a fractional shift hid it: −0.73 there, and removing the offset by hand gives the score back (98.29).
+- `font_extents` is a stopgap: it knows Liberation Sans, Liberation Serif and JetBrains Mono (`monospace`) by the names that resolve to them here, and gives anything else Liberation Sans's numbers, so such glyphs can land a row off. It is one function, so it can be replaced when font metrics are decided, also for `line-height: normal`.
+- A paragraph's lines without its tallest run land a row low (r9): Qt's descent is per line and the `Translate` per paragraph.
+- A monospace run the size of the body (r3) comes out a row above `floor(lh − descent)`; no formula from the reported metrics fits every measured pair, so it stays off. `lh` also stays the block's where Chromium's line box grows for a tall run (r4, r8): the row is right, the paragraph's height is not.
+- A cell whose exact text position is half a pixel after a fractional height can land a row high (c9 at 695.5): Qt's sum comes out just under the half. Each case above is pinned in `PaintSnapTests.KNOWN_ROWS` or `richtext_lines_shift_to_chromiums_baseline`.
+- A page whose table is already off through a non-carried flex or grid parent can lose a little: 18-dashboard −0.74, where the old half pixel partly cancelled its 2 px offset.
 - Flex rows and grid cells round heights their own way (§1.1, not carried).
 
 ## 2. Inline formatting context

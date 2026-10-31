@@ -267,7 +267,7 @@ ApplicationWindow {
                             font.pixelSize: 17
                             wrapMode: Text.WordWrap
                             transform: Translate {
-                                y: -3.83
+                                y: -3
                             }
                             Layout.fillWidth: true
                             Layout.topMargin: 11 - h3.eldurCarry
@@ -446,7 +446,7 @@ ApplicationWindow {
                             font.pixelSize: 17
                             wrapMode: Text.WordWrap
                             transform: Translate {
-                                y: -3.83
+                                y: -4
                             }
                             Layout.fillWidth: true
                             Layout.topMargin: 14 - h2.eldurCarry
@@ -614,7 +614,7 @@ ApplicationWindow {
                             font.pixelSize: 17
                             wrapMode: Text.WordWrap
                             transform: Translate {
-                                y: -3.83
+                                y: -3
                             }
                             Layout.fillWidth: true
                             Layout.topMargin: 14 - h23.eldurCarry
@@ -644,7 +644,7 @@ ApplicationWindow {
                                 lineHeight: 21
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2
+                                    y: 1
                                 }
                                 wrapMode: Text.NoWrap
                                 anchors.left: parent.left

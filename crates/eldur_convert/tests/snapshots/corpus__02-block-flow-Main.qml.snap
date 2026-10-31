@@ -286,7 +286,7 @@ ApplicationWindow {
                                     font.pixelSize: 16
                                     wrapMode: Text.WordWrap
                                     transform: Translate {
-                                        y: -2.8
+                                        y: -2
                                     }
                                     Layout.fillWidth: true
                                     Layout.topMargin: 10
@@ -520,7 +520,7 @@ ApplicationWindow {
                                         font.pixelSize: 16
                                         wrapMode: Text.WordWrap
                                         transform: Translate {
-                                            y: -2.8
+                                            y: -2
                                         }
                                         anchors.left: parent.left
                                         anchors.right: parent.right

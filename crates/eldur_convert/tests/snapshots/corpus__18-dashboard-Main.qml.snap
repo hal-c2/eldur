@@ -2108,6 +2108,7 @@ ApplicationWindow {
 
                                                         implicitWidth: thText.implicitWidth + 28
                                                         implicitHeight: thText.implicitHeight + 24
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 0
                                                         Layout.column: 0
                                                         Layout.preferredWidth: tableGrid.columnWidths[0]
@@ -2127,6 +2128,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                         }
@@ -2138,6 +2140,7 @@ ApplicationWindow {
 
                                                         implicitWidth: thText2.implicitWidth + 28
                                                         implicitHeight: thText2.implicitHeight + 24
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 0
                                                         Layout.column: 1
                                                         Layout.preferredWidth: tableGrid.columnWidths[1]
@@ -2157,6 +2160,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                         }
@@ -2168,6 +2172,7 @@ ApplicationWindow {
 
                                                         implicitWidth: thText3.implicitWidth + 28
                                                         implicitHeight: thText3.implicitHeight + 24
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 0
                                                         Layout.column: 2
                                                         Layout.preferredWidth: tableGrid.columnWidths[2]
@@ -2187,6 +2192,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                         }
@@ -2198,6 +2204,7 @@ ApplicationWindow {
 
                                                         implicitWidth: numText.implicitWidth + 28
                                                         implicitHeight: numText.implicitHeight + 24
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 0
                                                         Layout.column: 3
                                                         Layout.preferredWidth: tableGrid.columnWidths[3]
@@ -2217,6 +2224,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                         }
@@ -2228,6 +2236,7 @@ ApplicationWindow {
 
                                                         implicitWidth: thText4.implicitWidth + 28
                                                         implicitHeight: thText4.implicitHeight + 24
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 0
                                                         Layout.column: 4
                                                         Layout.preferredWidth: tableGrid.columnWidths[4]
@@ -2247,6 +2256,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                         }
@@ -2265,6 +2275,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText.implicitWidth + 28
                                                         implicitHeight: tdText.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 1
                                                         Layout.column: 0
                                                         Layout.preferredWidth: tableGrid.columnWidths[0]
@@ -2289,6 +2300,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -2302,6 +2314,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText2.implicitWidth + 28
                                                         implicitHeight: tdText2.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 1
                                                         Layout.column: 1
                                                         Layout.preferredWidth: tableGrid.columnWidths[1]
@@ -2326,6 +2339,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -2339,6 +2353,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText3.implicitWidth + 28
                                                         implicitHeight: tdText3.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 1
                                                         Layout.column: 2
                                                         Layout.preferredWidth: tableGrid.columnWidths[2]
@@ -2363,6 +2378,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -2376,6 +2392,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: numText2.implicitWidth + 28
                                                         implicitHeight: numText2.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 1
                                                         Layout.column: 3
                                                         Layout.preferredWidth: tableGrid.columnWidths[3]
@@ -2401,6 +2418,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -2414,6 +2432,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdContent.implicitWidth + 28
                                                         implicitHeight: tdContent.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 1
                                                         Layout.column: 4
                                                         Layout.preferredWidth: tableGrid.columnWidths[4]
@@ -2433,6 +2452,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -2473,6 +2493,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText4.implicitWidth + 28
                                                         implicitHeight: tdText4.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 2
                                                         Layout.column: 0
                                                         Layout.preferredWidth: tableGrid.columnWidths[0]
@@ -2497,6 +2518,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -2510,6 +2532,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText5.implicitWidth + 28
                                                         implicitHeight: tdText5.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 2
                                                         Layout.column: 1
                                                         Layout.preferredWidth: tableGrid.columnWidths[1]
@@ -2534,6 +2557,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -2547,6 +2571,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText6.implicitWidth + 28
                                                         implicitHeight: tdText6.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 2
                                                         Layout.column: 2
                                                         Layout.preferredWidth: tableGrid.columnWidths[2]
@@ -2571,6 +2596,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -2584,6 +2610,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: numText3.implicitWidth + 28
                                                         implicitHeight: numText3.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 2
                                                         Layout.column: 3
                                                         Layout.preferredWidth: tableGrid.columnWidths[3]
@@ -2609,6 +2636,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -2622,6 +2650,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdContent2.implicitWidth + 28
                                                         implicitHeight: tdContent2.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 2
                                                         Layout.column: 4
                                                         Layout.preferredWidth: tableGrid.columnWidths[4]
@@ -2641,6 +2670,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -2681,6 +2711,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText7.implicitWidth + 28
                                                         implicitHeight: tdText7.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 3
                                                         Layout.column: 0
                                                         Layout.preferredWidth: tableGrid.columnWidths[0]
@@ -2705,6 +2736,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -2718,6 +2750,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText8.implicitWidth + 28
                                                         implicitHeight: tdText8.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 3
                                                         Layout.column: 1
                                                         Layout.preferredWidth: tableGrid.columnWidths[1]
@@ -2742,6 +2775,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -2755,6 +2789,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText9.implicitWidth + 28
                                                         implicitHeight: tdText9.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 3
                                                         Layout.column: 2
                                                         Layout.preferredWidth: tableGrid.columnWidths[2]
@@ -2779,6 +2814,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -2792,6 +2828,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: numText4.implicitWidth + 28
                                                         implicitHeight: numText4.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 3
                                                         Layout.column: 3
                                                         Layout.preferredWidth: tableGrid.columnWidths[3]
@@ -2817,6 +2854,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -2830,6 +2868,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdContent3.implicitWidth + 28
                                                         implicitHeight: tdContent3.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 3
                                                         Layout.column: 4
                                                         Layout.preferredWidth: tableGrid.columnWidths[4]
@@ -2849,6 +2888,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -2889,6 +2929,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText10.implicitWidth + 28
                                                         implicitHeight: tdText10.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 4
                                                         Layout.column: 0
                                                         Layout.preferredWidth: tableGrid.columnWidths[0]
@@ -2913,6 +2954,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -2926,6 +2968,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText11.implicitWidth + 28
                                                         implicitHeight: tdText11.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 4
                                                         Layout.column: 1
                                                         Layout.preferredWidth: tableGrid.columnWidths[1]
@@ -2950,6 +2993,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -2963,6 +3007,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText12.implicitWidth + 28
                                                         implicitHeight: tdText12.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 4
                                                         Layout.column: 2
                                                         Layout.preferredWidth: tableGrid.columnWidths[2]
@@ -2987,6 +3032,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -3000,6 +3046,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: numText5.implicitWidth + 28
                                                         implicitHeight: numText5.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 4
                                                         Layout.column: 3
                                                         Layout.preferredWidth: tableGrid.columnWidths[3]
@@ -3025,6 +3072,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -3038,6 +3086,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdContent4.implicitWidth + 28
                                                         implicitHeight: tdContent4.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 4
                                                         Layout.column: 4
                                                         Layout.preferredWidth: tableGrid.columnWidths[4]
@@ -3057,6 +3106,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -3097,6 +3147,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText13.implicitWidth + 28
                                                         implicitHeight: tdText13.implicitHeight + 26
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 5
                                                         Layout.column: 0
                                                         Layout.preferredWidth: tableGrid.columnWidths[0]
@@ -3129,6 +3180,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                         }
@@ -3141,6 +3193,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText14.implicitWidth + 28
                                                         implicitHeight: tdText14.implicitHeight + 26
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 5
                                                         Layout.column: 1
                                                         Layout.preferredWidth: tableGrid.columnWidths[1]
@@ -3173,6 +3226,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                         }
@@ -3185,6 +3239,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText15.implicitWidth + 28
                                                         implicitHeight: tdText15.implicitHeight + 26
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 5
                                                         Layout.column: 2
                                                         Layout.preferredWidth: tableGrid.columnWidths[2]
@@ -3217,6 +3272,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                         }
@@ -3229,6 +3285,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: numText6.implicitWidth + 28
                                                         implicitHeight: numText6.implicitHeight + 26
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 5
                                                         Layout.column: 3
                                                         Layout.preferredWidth: tableGrid.columnWidths[3]
@@ -3262,6 +3319,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                         }
@@ -3274,6 +3332,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdContent5.implicitWidth + 28
                                                         implicitHeight: tdContent5.implicitHeight + 26
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 5
                                                         Layout.column: 4
                                                         Layout.preferredWidth: tableGrid.columnWidths[4]
@@ -3301,6 +3360,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
 

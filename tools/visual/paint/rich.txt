@@ -1,0 +1,10 @@
+# font chromium-baseline qt-painted-baseline shift (gen.mjs; never edit by hand)
+r1 18 21 -3
+r2 15 16 -1
+r3 17 18 -1
+r4 26 24 2
+r5 16 19 -3
+r6 17 19 -2
+r7 18 22 -4
+r8 26 22 4
+r9 18 21 -3

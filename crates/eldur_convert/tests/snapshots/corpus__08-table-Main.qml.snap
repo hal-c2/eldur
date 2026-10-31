@@ -258,7 +258,7 @@ ApplicationWindow {
                         // <div class="table-wrap">
                         Rectangle {
                             id: tableWrap
-                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+                            property real eldurCarry: Math.ceil(Layout.topMargin - (item.eldurCarry)) - Layout.topMargin + item.eldurCarry + 0.000001
 
                             color: "#ffffff"
                             radius: 12
@@ -270,6 +270,7 @@ ApplicationWindow {
                             Layout.alignment: Qt.AlignHCenter
                             Layout.maximumWidth: 900
                             Layout.topMargin: 24 - pageMeta.eldurCarry
+                            Layout.preferredHeight: implicitHeight - item.eldurCarry
                             antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                             ColumnLayout {
@@ -291,11 +292,14 @@ ApplicationWindow {
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
 
                                     Item {
+                                        id: caption
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                         implicitWidth: captionText.implicitWidth
                                         implicitHeight: captionText.implicitHeight + 12
                                         Layout.fillWidth: true
                                         Layout.preferredWidth: 0
-                                        Layout.preferredHeight: Math.floor(implicitHeight)
+                                        Layout.preferredHeight: implicitHeight
 
                                         Text {
                                             id: captionText
@@ -318,10 +322,14 @@ ApplicationWindow {
                                     }
 
                                     Item {
+                                        id: item
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                         implicitWidth: dataTableGrid.maxContentWidth
                                         implicitHeight: dataTableGrid.implicitHeight
                                         Layout.fillWidth: true
                                         Layout.minimumWidth: dataTableGrid.minContentWidth
+                                        Layout.topMargin: -caption.eldurCarry
 
                                         GridLayout {
                                             id: dataTableGrid
@@ -352,6 +360,7 @@ ApplicationWindow {
                                                 color: "#1f2a44"
                                                 implicitWidth: thText.implicitWidth + 29
                                                 implicitHeight: thText.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 0
                                                 Layout.column: 0
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[0]
@@ -390,6 +399,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -403,6 +413,7 @@ ApplicationWindow {
                                                 color: "#1f2a44"
                                                 implicitWidth: numText.implicitWidth + 29
                                                 implicitHeight: numText.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 0
                                                 Layout.column: 1
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[1]
@@ -442,6 +453,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -455,6 +467,7 @@ ApplicationWindow {
                                                 color: "#1f2a44"
                                                 implicitWidth: numText2.implicitWidth + 29
                                                 implicitHeight: numText2.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 0
                                                 Layout.column: 2
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[2]
@@ -494,6 +507,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -507,6 +521,7 @@ ApplicationWindow {
                                                 color: "#1f2a44"
                                                 implicitWidth: numText3.implicitWidth + 30
                                                 implicitHeight: numText3.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 0
                                                 Layout.column: 3
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[3]
@@ -554,6 +569,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 15
                                                     anchors.verticalCenterOffset: 0.5
@@ -574,6 +590,7 @@ ApplicationWindow {
                                                 color: "#00000000"
                                                 implicitWidth: thText2.implicitWidth + 29
                                                 implicitHeight: thText2.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 1
                                                 Layout.column: 0
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[0]
@@ -612,6 +629,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -631,6 +649,7 @@ ApplicationWindow {
                                                 color: "#00000000"
                                                 implicitWidth: numText4.implicitWidth + 29
                                                 implicitHeight: numText4.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 1
                                                 Layout.column: 1
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[1]
@@ -669,6 +688,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -682,6 +702,7 @@ ApplicationWindow {
                                                 color: "#00000000"
                                                 implicitWidth: numText5.implicitWidth + 29
                                                 implicitHeight: numText5.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 1
                                                 Layout.column: 2
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[2]
@@ -720,6 +741,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -733,6 +755,7 @@ ApplicationWindow {
                                                 color: "#00000000"
                                                 implicitWidth: numText6.implicitWidth + 30
                                                 implicitHeight: numText6.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 1
                                                 Layout.column: 3
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[3]
@@ -779,6 +802,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 15
                                                     anchors.verticalCenterOffset: 0.5
@@ -792,6 +816,7 @@ ApplicationWindow {
                                                 color: "#f5f7fb"
                                                 implicitWidth: thText3.implicitWidth + 29
                                                 implicitHeight: thText3.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 2
                                                 Layout.column: 0
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[0]
@@ -830,6 +855,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -843,6 +869,7 @@ ApplicationWindow {
                                                 color: "#f5f7fb"
                                                 implicitWidth: numText7.implicitWidth + 29
                                                 implicitHeight: numText7.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 2
                                                 Layout.column: 1
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[1]
@@ -881,6 +908,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -894,6 +922,7 @@ ApplicationWindow {
                                                 color: "#f5f7fb"
                                                 implicitWidth: numText8.implicitWidth + 29
                                                 implicitHeight: numText8.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 2
                                                 Layout.column: 2
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[2]
@@ -932,6 +961,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -945,6 +975,7 @@ ApplicationWindow {
                                                 color: "#f5f7fb"
                                                 implicitWidth: numText9.implicitWidth + 30
                                                 implicitHeight: numText9.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 2
                                                 Layout.column: 3
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[3]
@@ -991,6 +1022,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 15
                                                     anchors.verticalCenterOffset: 0.5
@@ -1004,6 +1036,7 @@ ApplicationWindow {
                                                 color: "#00000000"
                                                 implicitWidth: thText4.implicitWidth + 29
                                                 implicitHeight: thText4.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 3
                                                 Layout.column: 0
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[0]
@@ -1042,6 +1075,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -1055,6 +1089,7 @@ ApplicationWindow {
                                                 color: "#00000000"
                                                 implicitWidth: numText10.implicitWidth + 29
                                                 implicitHeight: numText10.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 3
                                                 Layout.column: 1
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[1]
@@ -1093,6 +1128,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -1106,6 +1142,7 @@ ApplicationWindow {
                                                 color: "#00000000"
                                                 implicitWidth: numText11.implicitWidth + 29
                                                 implicitHeight: numText11.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 3
                                                 Layout.column: 2
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[2]
@@ -1144,6 +1181,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -1157,6 +1195,7 @@ ApplicationWindow {
                                                 color: "#00000000"
                                                 implicitWidth: numText12.implicitWidth + 30
                                                 implicitHeight: numText12.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 3
                                                 Layout.column: 3
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[3]
@@ -1203,6 +1242,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 15
                                                     anchors.verticalCenterOffset: 0.5
@@ -1216,6 +1256,7 @@ ApplicationWindow {
                                                 color: "#f5f7fb"
                                                 implicitWidth: thText5.implicitWidth + 29
                                                 implicitHeight: thText5.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 4
                                                 Layout.column: 0
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[0]
@@ -1254,6 +1295,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -1267,6 +1309,7 @@ ApplicationWindow {
                                                 color: "#f5f7fb"
                                                 implicitWidth: numText13.implicitWidth + 29
                                                 implicitHeight: numText13.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 4
                                                 Layout.column: 1
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[1]
@@ -1305,6 +1348,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -1318,6 +1362,7 @@ ApplicationWindow {
                                                 color: "#f5f7fb"
                                                 implicitWidth: numText14.implicitWidth + 29
                                                 implicitHeight: numText14.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 4
                                                 Layout.column: 2
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[2]
@@ -1356,6 +1401,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -1369,6 +1415,7 @@ ApplicationWindow {
                                                 color: "#f5f7fb"
                                                 implicitWidth: numText15.implicitWidth + 30
                                                 implicitHeight: numText15.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 4
                                                 Layout.column: 3
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[3]
@@ -1415,6 +1462,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 15
                                                     anchors.verticalCenterOffset: 0.5
@@ -1428,6 +1476,7 @@ ApplicationWindow {
                                                 color: "#00000000"
                                                 implicitWidth: thText6.implicitWidth + 29
                                                 implicitHeight: thText6.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 5
                                                 Layout.column: 0
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[0]
@@ -1466,6 +1515,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -1479,6 +1529,7 @@ ApplicationWindow {
                                                 color: "#00000000"
                                                 implicitWidth: numText16.implicitWidth + 29
                                                 implicitHeight: numText16.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 5
                                                 Layout.column: 1
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[1]
@@ -1517,6 +1568,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -1530,6 +1582,7 @@ ApplicationWindow {
                                                 color: "#00000000"
                                                 implicitWidth: numText17.implicitWidth + 29
                                                 implicitHeight: numText17.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 5
                                                 Layout.column: 2
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[2]
@@ -1568,6 +1621,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -1581,6 +1635,7 @@ ApplicationWindow {
                                                 color: "#00000000"
                                                 implicitWidth: numText18.implicitWidth + 30
                                                 implicitHeight: numText18.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 5
                                                 Layout.column: 3
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[3]
@@ -1627,6 +1682,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 15
                                                     anchors.verticalCenterOffset: 0.5
@@ -1640,6 +1696,7 @@ ApplicationWindow {
                                                 color: "#f5f7fb"
                                                 implicitWidth: thText7.implicitWidth + 29
                                                 implicitHeight: thText7.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 6
                                                 Layout.column: 0
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[0]
@@ -1678,6 +1735,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -1691,6 +1749,7 @@ ApplicationWindow {
                                                 color: "#f5f7fb"
                                                 implicitWidth: numText19.implicitWidth + 29
                                                 implicitHeight: numText19.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 6
                                                 Layout.column: 1
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[1]
@@ -1729,6 +1788,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -1742,6 +1802,7 @@ ApplicationWindow {
                                                 color: "#f5f7fb"
                                                 implicitWidth: numText20.implicitWidth + 29
                                                 implicitHeight: numText20.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 6
                                                 Layout.column: 2
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[2]
@@ -1780,6 +1841,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -1793,6 +1855,7 @@ ApplicationWindow {
                                                 color: "#f5f7fb"
                                                 implicitWidth: numText21.implicitWidth + 30
                                                 implicitHeight: numText21.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 6
                                                 Layout.column: 3
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[3]
@@ -1839,6 +1902,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 15
                                                     anchors.verticalCenterOffset: 0.5
@@ -1852,6 +1916,7 @@ ApplicationWindow {
                                                 color: "#00000000"
                                                 implicitWidth: thText8.implicitWidth + 29
                                                 implicitHeight: thText8.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 7
                                                 Layout.column: 0
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[0]
@@ -1890,6 +1955,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -1903,6 +1969,7 @@ ApplicationWindow {
                                                 color: "#00000000"
                                                 implicitWidth: numText22.implicitWidth + 29
                                                 implicitHeight: numText22.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 7
                                                 Layout.column: 1
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[1]
@@ -1941,6 +2008,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -1954,6 +2022,7 @@ ApplicationWindow {
                                                 color: "#00000000"
                                                 implicitWidth: numText23.implicitWidth + 29
                                                 implicitHeight: numText23.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 7
                                                 Layout.column: 2
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[2]
@@ -1992,6 +2061,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -2005,6 +2075,7 @@ ApplicationWindow {
                                                 color: "#00000000"
                                                 implicitWidth: numText24.implicitWidth + 30
                                                 implicitHeight: numText24.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 7
                                                 Layout.column: 3
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[3]
@@ -2051,6 +2122,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 15
                                                     anchors.verticalCenterOffset: 0.5
@@ -2064,6 +2136,7 @@ ApplicationWindow {
                                                 color: "#f5f7fb"
                                                 implicitWidth: thText9.implicitWidth + 29
                                                 implicitHeight: thText9.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 8
                                                 Layout.column: 0
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[0]
@@ -2102,6 +2175,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -2115,6 +2189,7 @@ ApplicationWindow {
                                                 color: "#f5f7fb"
                                                 implicitWidth: numText25.implicitWidth + 29
                                                 implicitHeight: numText25.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 8
                                                 Layout.column: 1
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[1]
@@ -2153,6 +2228,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -2166,6 +2242,7 @@ ApplicationWindow {
                                                 color: "#f5f7fb"
                                                 implicitWidth: numText26.implicitWidth + 29
                                                 implicitHeight: numText26.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 8
                                                 Layout.column: 2
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[2]
@@ -2204,6 +2281,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                     anchors.verticalCenterOffset: 0.5
@@ -2217,6 +2295,7 @@ ApplicationWindow {
                                                 color: "#f5f7fb"
                                                 implicitWidth: numText27.implicitWidth + 30
                                                 implicitHeight: numText27.implicitHeight + 21
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 8
                                                 Layout.column: 3
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[3]
@@ -2263,6 +2342,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 15
                                                     anchors.verticalCenterOffset: 0.5
@@ -2283,6 +2363,7 @@ ApplicationWindow {
                                                 color: "#e6ebf5"
                                                 implicitWidth: thText10.implicitWidth + 29
                                                 implicitHeight: thText10.implicitHeight + 22
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 9
                                                 Layout.column: 0
                                                 Layout.columnSpan: 2
@@ -2330,6 +2411,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                 }
@@ -2342,6 +2424,7 @@ ApplicationWindow {
                                                 color: "#e6ebf5"
                                                 implicitWidth: numText28.implicitWidth + 29
                                                 implicitHeight: numText28.implicitHeight + 22
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 9
                                                 Layout.column: 2
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[2]
@@ -2389,6 +2472,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 14
                                                 }
@@ -2403,6 +2487,7 @@ ApplicationWindow {
                                                 implicitHeight: numText29.implicitHeight + 22
                                                 border.width: 1
                                                 border.color: "#d5dbe7"
+                                                anchors.alignWhenCentered: false
                                                 Layout.row: 9
                                                 Layout.column: 3
                                                 Layout.preferredWidth: dataTableGrid.columnWidths[3]
@@ -2426,6 +2511,7 @@ ApplicationWindow {
                                                     anchors.left: parent.left
                                                     anchors.right: parent.right
                                                     anchors.verticalCenter: parent.verticalCenter
+                                                    anchors.alignWhenCentered: false
                                                     anchors.leftMargin: 15
                                                     anchors.rightMargin: 15
                                                 }

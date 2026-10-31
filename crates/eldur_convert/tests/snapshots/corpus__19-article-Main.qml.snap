@@ -352,7 +352,7 @@ ApplicationWindow {
                                 font.pixelSize: 19
                                 wrapMode: Text.WordWrap
                                 transform: Translate {
-                                    y: -5.7
+                                    y: -5
                                 }
                                 Layout.fillWidth: true
                             }
@@ -590,7 +590,7 @@ ApplicationWindow {
                                         font.pixelSize: 18
                                         wrapMode: Text.WordWrap
                                         transform: Translate {
-                                            y: -5.41
+                                            y: -6
                                         }
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: implicitHeight
