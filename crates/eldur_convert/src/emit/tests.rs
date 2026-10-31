@@ -1021,7 +1021,8 @@ fn a_transformed_text_keeps_its_baseline_shift_first() {
         "<p>x</p>",
     ));
     let text = object_after(&qml, "<p>");
-    let nudge = text.find("y: 2.8").expect("nudge");
+    // Chromium's baseline is 14 + floor((24 - 17) / 2) = 17 down, Qt's 14.
+    let nudge = text.find("y: 3\n").expect("nudge");
     let moved = text.find("x: 10").expect("translate");
     assert!(nudge < moved, "{text}");
 }
@@ -1052,6 +1053,31 @@ fn fixed_box_leaves_the_flow_for_the_window() {
         !diags.iter().any(|d| d.contains("position: fixed")),
         "{diags:?}"
     );
+}
+
+#[test]
+fn glyphs_sit_on_chromiums_whole_pixel_baseline() {
+    // Chromium puts the baseline round(ascent) + floor(half-leading) below
+    // the line top, rounded ascent and descent (Liberation Sans 0.905 and
+    // 0.212, Serif 0.891 and 0.216): a whole offset, so its glyph row is
+    // the line top rounded half up. Qt's fixed line puts it round(ascent)
+    // down, so the shift is the floored half-leading. Measured with both
+    // at 32 fractions of a pixel (t2 probe in layout.md §1.2).
+    let (qml, _) = convert(&page(
+        "p{margin:0} .a{font:15px/1.5 sans-serif} .b{font:17px/1.5 sans-serif} \
+         .c{font:bold 28px/1.5 sans-serif} .d{font:16px/1.5 serif} \
+         .e{font:16px/1.1 sans-serif} .f{font:13px/1 sans-serif}",
+        "<p class=a>a</p><p class=b>b</p><p class=c>c</p><p class=d>d</p>\
+         <p class=e>e</p><p class=f>f</p>",
+    ));
+    for (class, shift) in [("a", 2), ("b", 3), ("c", 5), ("d", 3), ("f", -1)] {
+        let p = object_after(&qml, &format!("<p class=\"{class}\">"));
+        let t = p.find("transform: Translate {").unwrap_or_else(|| panic!("{p}"));
+        let y = p[t..].lines().nth(1).map(str::trim);
+        assert_eq!(y, Some(format!("y: {shift}").as_str()), "{p}");
+    }
+    let e = object_after(&qml, "<p class=\"e\">");
+    assert!(!e.contains("Translate"), "{e}");
 }
 
 #[test]

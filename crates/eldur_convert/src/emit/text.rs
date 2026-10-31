@@ -139,7 +139,7 @@ impl Emitter<'_, '_> {
                 }
             }
         }
-        if raise.abs() >= 0.5 && !markup.html {
+        if raise != 0.0 && !markup.html {
             let shift = match text.get("transform") {
                 Some(Value::Object(t)) => match t.get("y") {
                     Some(Value::Number(y)) => *y as f32,
@@ -147,12 +147,16 @@ impl Emitter<'_, '_> {
                 },
                 _ => 0.0,
             };
-            text.set(
-                "transform",
-                Value::Object(Box::new(
-                    Object::new("Translate").prop("y", round(shift + raise)),
-                )),
-            );
+            text.members
+                .retain(|m| !matches!(m, Member::Property { name, .. } if name == "transform"));
+            if shift + raise != 0.0 {
+                text.set(
+                    "transform",
+                    Value::Object(Box::new(
+                        Object::new("Translate").prop("y", round(shift + raise)),
+                    )),
+                );
+            }
         }
         if let Some(&link) = markup.link_colors.first() {
             // RichText colours each link itself.
@@ -238,12 +242,14 @@ impl Emitter<'_, '_> {
             text.set("lineHeight", number(lh));
             text.set("lineHeightMode", Value::expr("Text.FixedHeight"));
             // CSS centres the glyphs in the line box (half-leading); a fixed
-            // QML line puts them at its top.
-            let shift = round((lh - CONTENT_AREA * style.font_size) / 2.0);
-            if shift.abs() >= 0.5 {
+            // QML line puts them at its top. Both round the glyphs' baseline
+            // to a whole pixel, so a whole shift lands them on Chromium's
+            // row wherever the line is.
+            let shift = whole_baseline(style, lh) - qt_ascent(style);
+            if shift != 0.0 {
                 text.set(
                     "transform",
-                    Value::Object(Box::new(Object::new("Translate").prop("y", shift))),
+                    Value::Object(Box::new(Object::new("Translate").prop("y", round(shift)))),
                 );
             }
             // Qt gives the last fixed-height line the font's own height when
@@ -678,10 +684,41 @@ fn whole_span(block: &ComputedStyle, items: &[Inline<'_>]) -> Option<(ComputedSt
         return Some((style, 0.0));
     }
     style.line_height = LineHeight::Px(line);
-    // `font` centres the glyphs in the line; the baseline is the taller
-    // ascent's.
-    let centred = (line - CONTENT_AREA * s.font_size) / 2.0 + super::inline::ASCENT * s.font_size;
-    Some((style, up - centred))
+    // `font` puts the glyphs on the line's own baseline; Chromium's is the
+    // taller box's, each whole (`whole_baseline`).
+    let up = whole_baseline(block, super::inline::line_height(block))
+        .max(whole_baseline(s, super::inline::line_height(s)));
+    Some((style, up - whole_baseline(s, line)))
+}
+
+/// Ascent and descent, as fractions of the size, of the font `family`
+/// resolves to through fontconfig for Chromium and Qt alike here:
+/// Liberation Serif for the serif families, Liberation Sans otherwise.
+fn font_extents(family: &str) -> (f32, f32) {
+    match family {
+        "serif" | "Times" | "Times New Roman" | "Georgia" | "Liberation Serif" => (0.891, 0.216),
+        _ => (0.905, 0.212),
+    }
+}
+
+/// Chromium's baseline in a `line` px line box of `style`'s font, from the
+/// line's top. It rounds the font's ascent and descent, and floors the
+/// half-leading, so the offset is whole and the glyphs' row is the line's
+/// top rounded half up (measured, layout.md §1.2).
+pub(super) fn whole_baseline(style: &ComputedStyle, line: f32) -> f32 {
+    let (a, d) = font_extents(&font_family(&style.font_family));
+    let ascent = (a * style.font_size).round();
+    let descent = (d * style.font_size).round();
+    // In Chromium's 1/64 px units, so that 19.2 - 17 is not just under 2.2.
+    let line = (line * 64.0).round() / 64.0;
+    ascent + ((line - ascent - descent) / 2.0 + 1e-4).floor()
+}
+
+/// Where a fixed-height Qt line puts the baseline: its font's ascent at the
+/// whole `font.pixelSize`, rounded.
+fn qt_ascent(style: &ComputedStyle) -> f32 {
+    let (a, _) = font_extents(&font_family(&style.font_family));
+    (a * style.font_size.round().max(1.0)).round()
 }
 
 /// Whether a run in `items` needs RichText: another font family, a

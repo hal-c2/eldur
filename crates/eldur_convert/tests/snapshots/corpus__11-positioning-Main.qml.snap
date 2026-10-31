@@ -145,7 +145,7 @@ ApplicationWindow {
                                             lineHeight: 24
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 2.8
+                                                y: 3
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true

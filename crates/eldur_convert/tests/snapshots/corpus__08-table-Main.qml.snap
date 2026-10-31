@@ -227,7 +227,7 @@ ApplicationWindow {
                                 lineHeight: 42
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 4.9
+                                    y: 5
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
@@ -246,7 +246,7 @@ ApplicationWindow {
                                 lineHeight: 22.5
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2.63
+                                    y: 2
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
@@ -307,7 +307,7 @@ ApplicationWindow {
                                             lineHeight: 25.5
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 2.98
+                                                y: 3
                                             }
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
@@ -383,7 +383,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     anchors.left: parent.left
@@ -434,7 +434,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -486,7 +486,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -546,7 +546,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -605,7 +605,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     anchors.left: parent.left
@@ -661,7 +661,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -712,7 +712,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -771,7 +771,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -823,7 +823,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     anchors.left: parent.left
@@ -873,7 +873,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -924,7 +924,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -983,7 +983,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -1035,7 +1035,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     anchors.left: parent.left
@@ -1085,7 +1085,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -1136,7 +1136,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -1195,7 +1195,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -1247,7 +1247,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     anchors.left: parent.left
@@ -1297,7 +1297,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -1348,7 +1348,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -1407,7 +1407,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -1459,7 +1459,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     anchors.left: parent.left
@@ -1509,7 +1509,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -1560,7 +1560,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -1619,7 +1619,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -1671,7 +1671,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     anchors.left: parent.left
@@ -1721,7 +1721,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -1772,7 +1772,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -1831,7 +1831,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -1883,7 +1883,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     anchors.left: parent.left
@@ -1933,7 +1933,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -1984,7 +1984,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -2043,7 +2043,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -2095,7 +2095,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     anchors.left: parent.left
@@ -2145,7 +2145,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -2196,7 +2196,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -2255,7 +2255,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -2323,7 +2323,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     anchors.left: parent.left
@@ -2381,7 +2381,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -2418,7 +2418,7 @@ ApplicationWindow {
                                                     lineHeight: 22.5
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 2.63
+                                                        y: 2
                                                     }
                                                     horizontalAlignment: Text.AlignRight
                                                     wrapMode: Text.WordWrap
@@ -2448,7 +2448,7 @@ ApplicationWindow {
                             lineHeight: 21
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2.45
+                                y: 2
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true

@@ -78,7 +78,7 @@ ApplicationWindow {
                             lineHeight: 24
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2.8
+                                y: 3
                             }
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
@@ -132,7 +132,7 @@ ApplicationWindow {
                             lineHeight: 24
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2.8
+                                y: 3
                             }
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
@@ -230,7 +230,7 @@ ApplicationWindow {
                             lineHeight: 24
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2.8
+                                y: 3
                             }
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
@@ -310,7 +310,7 @@ ApplicationWindow {
                             lineHeight: 40
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 10.8
+                                y: 11
                             }
                             horizontalAlignment: Text.AlignHCenter
                             wrapMode: Text.WordWrap
@@ -366,7 +366,7 @@ ApplicationWindow {
                         lineHeight: 24
                         lineHeightMode: Text.FixedHeight
                         transform: Translate {
-                            y: 2.8
+                            y: 3
                         }
                         wrapMode: Text.WordWrap
                         anchors.left: parent.left

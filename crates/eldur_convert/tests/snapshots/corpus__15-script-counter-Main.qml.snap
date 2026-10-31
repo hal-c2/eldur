@@ -139,7 +139,7 @@ ApplicationWindow {
                                 lineHeight: 96
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: -7.2
+                                    y: -6
                                 }
                                 bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
                                 horizontalAlignment: Text.AlignHCenter
@@ -489,7 +489,7 @@ ApplicationWindow {
                                         lineHeight: 24
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 3.38
+                                            y: 3
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
@@ -509,7 +509,7 @@ ApplicationWindow {
                                         lineHeight: 22.4
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 3.15
+                                            y: 3
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true

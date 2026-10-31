@@ -229,7 +229,7 @@ ApplicationWindow {
                                 lineHeight: 33.6
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 0.7
+                                    y: 1
                                 }
                                 bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
                                 wrapMode: Text.WordWrap
@@ -355,7 +355,7 @@ ApplicationWindow {
                                     lineHeight: 27.9
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3.6
+                                        y: 3
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
@@ -371,7 +371,7 @@ ApplicationWindow {
                                     lineHeight: 21.7
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2.8
+                                        y: 2
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
@@ -458,7 +458,7 @@ ApplicationWindow {
                                         lineHeight: 21.7
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 2.8
+                                            y: 2
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
@@ -492,7 +492,7 @@ ApplicationWindow {
                                     lineHeight: 34.1
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 4.4
+                                        y: 4
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
@@ -511,7 +511,7 @@ ApplicationWindow {
                                     lineHeight: 24.8
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3.2
+                                        y: 3
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
@@ -528,7 +528,7 @@ ApplicationWindow {
                                     lineHeight: 24.8
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3.2
+                                        y: 3
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
@@ -593,7 +593,7 @@ ApplicationWindow {
                             lineHeight: 20.15
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2.6
+                                y: 2
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
@@ -632,7 +632,7 @@ ApplicationWindow {
                         lineHeight: 20.15
                         lineHeightMode: Text.FixedHeight
                         transform: Translate {
-                            y: 2.6
+                            y: 2
                         }
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.WordWrap

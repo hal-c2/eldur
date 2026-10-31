@@ -93,7 +93,7 @@ ApplicationWindow {
                                     lineHeight: 38.4
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 0.8
+                                        y: 1
                                     }
                                     bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
                                     wrapMode: Text.WordWrap
@@ -114,7 +114,7 @@ ApplicationWindow {
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2.8
+                                        y: 3
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
@@ -187,7 +187,7 @@ ApplicationWindow {
                                     lineHeight: 30
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3.5
+                                        y: 4
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
@@ -203,7 +203,7 @@ ApplicationWindow {
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2.8
+                                        y: 3
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
@@ -220,7 +220,7 @@ ApplicationWindow {
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2.8
+                                        y: 3
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
@@ -263,7 +263,7 @@ ApplicationWindow {
                                     lineHeight: 30
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3.5
+                                        y: 4
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
@@ -311,7 +311,7 @@ ApplicationWindow {
                                         lineHeight: 21.6
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 2.52
+                                            y: 2
                                         }
                                         wrapMode: Text.WordWrap
                                         anchors.left: parent.left
@@ -359,7 +359,7 @@ ApplicationWindow {
                                     lineHeight: 30
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3.5
+                                        y: 4
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
@@ -401,7 +401,7 @@ ApplicationWindow {
                                                 lineHeight: 24
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: 2.8
+                                                    y: 3
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 anchors.left: parent.left
@@ -436,7 +436,7 @@ ApplicationWindow {
                                                 lineHeight: 24
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: 2.8
+                                                    y: 3
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 anchors.left: parent.left
@@ -484,7 +484,7 @@ ApplicationWindow {
                                     lineHeight: 30
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3.5
+                                        y: 4
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
@@ -559,7 +559,7 @@ ApplicationWindow {
                                             lineHeight: 24
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 2.8
+                                                y: 3
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
@@ -601,7 +601,7 @@ ApplicationWindow {
                                     lineHeight: 25.2
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2.94
+                                        y: 3
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
@@ -620,7 +620,7 @@ ApplicationWindow {
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2.8
+                                        y: 3
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
@@ -637,7 +637,7 @@ ApplicationWindow {
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2.8
+                                        y: 3
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
@@ -684,7 +684,7 @@ ApplicationWindow {
                                     lineHeight: 21
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2.45
+                                        y: 2
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true

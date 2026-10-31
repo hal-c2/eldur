@@ -50,7 +50,8 @@ TestCase {
         text.lineLaidOut.connect(record)
         text.forceLayout()
         text.lineLaidOut.disconnect(record)
-        const p = text.mapToItem(page, 0, 0)
+        // The text's box, without the half-leading `Translate` of its glyphs.
+        const p = text.parent.mapToItem(page, text.x, text.y)
         // The first line box starts at the top of the text; Qt's `line.y`
         // is offset within a fixed line height.
         return out.map(l => ({ left: p.x + l.x, right: p.x + l.x + l.width, top: p.y }))
