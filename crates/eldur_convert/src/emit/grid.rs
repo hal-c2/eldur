@@ -585,6 +585,60 @@ fn self_alignment(items: Align, own: Align, horizontal: bool) -> Option<&'static
 }
 
 impl Emitter<'_, '_> {
+    /// An empty grid a script fills. What it comes to hold is not known, so
+    /// no cell can be kept free for a placeholder carrying a track: the
+    /// runtime gives each item its cell and its column's size.
+    pub(super) fn grid_to_fill(
+        &mut self,
+        b: &LayoutBox<'_>,
+        decoration: TextDecorationLine,
+        line: Option<u32>,
+    ) -> Object {
+        let mut grid = self.grid(b, &[], decoration, line);
+        let style = &*b.style;
+        // A fixed size as itself, a fraction as its negative.
+        let tracks: Option<Vec<f64>> = if style.grid_template_columns.is_empty() {
+            Some(vec![-1.0])
+        } else {
+            style
+                .grid_template_columns
+                .iter()
+                .map(|t| match t {
+                    Track::Length(l) => l.as_px().map(f64::from),
+                    Track::Fr(fr) => Some(-f64::from(*fr)),
+                    _ => None,
+                })
+                .collect()
+        };
+        let Some(tracks) = tracks else {
+            return grid;
+        };
+        let n = tracks.len();
+        let fills = tracks.iter().any(|t| *t < 0.0);
+        grid.members.retain(|m| !matches!(m, Member::Child(_)));
+        grid.set("columns", Value::Number((n + usize::from(!fills)) as f64));
+        let column_gap = self.gap_px(style.column_gap.as_ref(), line);
+        let row_gap = self.gap_px(style.row_gap.as_ref(), line);
+        grid.set("columnSpacing", number(column_gap));
+        grid.set("rowSpacing", number(row_gap));
+        grid.members.push(Member::PropertyDecl {
+            ty: "var".to_owned(),
+            name: "eldurTracks".to_owned(),
+            value: Some(Value::List(tracks.into_iter().map(Value::Number).collect())),
+            readonly: false,
+            required: false,
+        });
+        if !fills {
+            grid.push_child(
+                Object::new("Item")
+                    .prop("Layout.row", Value::Number(0.0))
+                    .prop("Layout.column", Value::Number(n as f64))
+                    .prop("Layout.fillWidth", true),
+            );
+        }
+        grid
+    }
+
     pub(super) fn grid(
         &mut self,
         b: &LayoutBox<'_>,

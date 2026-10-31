@@ -1,0 +1,13 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.row{height:30px;background:#def}#end{height:10px;background:red}
+</style></head><body><div id="a"></div><div id="b"></div><div id="c"></div><div id="d"></div><div id="end"></div>
+<script>function g(id){var r=document.getElementById(id).getBoundingClientRect();return id+":"+[r.left,r.top,r.width,r.height].map(Math.round).join(",")}
+function all(){return Array.prototype.map.call(arguments,g).join(" ")}
+function row(id,t){var d=document.createElement('div');d.id=id;d.className='row';d.textContent=t;return d}
+function fill(e,n,p){for(var i=0;i<n;i++)e.appendChild(row(p+i,'x'));}
+var a=document.getElementById('a'),b=document.getElementById('b'),c=document.getElementById('c'),d=document.getElementById('d');
+fill(a,2,'a');fill(b,2,'b');fill(c,2,'c');fill(d,2,'d');
+console.log('LC '+all('a','b','c','d','end'));
+while(a.firstChild)a.removeChild(a.firstChild);b.textContent='';c.innerHTML='';d.replaceChildren();
+console.log('LC cleared');
+fill(a,1,'e');fill(b,1,'f');fill(c,1,'g');fill(d,3,'h');
+console.log('LC '+all('a','e0','b','f0','c','g0','d','h2','end'));</script></body></html>

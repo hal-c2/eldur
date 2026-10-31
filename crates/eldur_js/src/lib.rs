@@ -138,6 +138,11 @@ pub struct Analysis {
     /// `append`, `replaceChildren`, `innerHTML =`, `textContent =`, …), in
     /// first-seen order. Elements the analysis cannot follow are left out.
     pub mutated_parents: Vec<ElementRef>,
+    /// Elements given a node or markup analysis cannot name (`list.appendChild(
+    /// helper())`, `el.innerHTML = html`), which may be a block. `Unknown` when
+    /// the receiver is itself out of reach. Created elements it can name are in
+    /// their [`CreatedElement::parents`].
+    pub opaque_inserts: Vec<ElementRef>,
     /// Elements scripts remove or put siblings beside (`remove()`,
     /// `before`, `after`, `replaceWith`, `outerHTML =`): their parents'
     /// children change.

@@ -242,8 +242,8 @@ ApplicationWindow {
                                 property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                                 color: "#00000000"
-                                implicitWidth: todoListText.implicitWidth
-                                implicitHeight: todoListText.implicitHeight + 1
+                                implicitWidth: Math.max(todoListText.implicitWidth, todoListFlow.implicitWidth) + 0
+                                implicitHeight: (todoListText.text === "" ? 0 : todoListText.implicitHeight) + todoListFlow.implicitHeight + 1
                                 objectName: "todo-list"
                                 Layout.fillWidth: true
                                 Layout.topMargin: 20
@@ -269,7 +269,16 @@ ApplicationWindow {
                                     anchors.right: parent.right
                                     anchors.top: parent.top
                                     anchors.topMargin: 1
+                                    visible: text !== ""
                                     renderType: Text.NativeRendering
+                                }
+
+                                ColumnLayout {
+                                    id: todoListFlow
+                                    spacing: 0
+                                    x: 0
+                                    y: (todoListText.text === "" ? 0 : todoListText.implicitHeight) + 1
+                                    width: parent.width - 0
                                 }
                             }
 
@@ -559,7 +568,6 @@ ApplicationWindow {
                 verticalAlignment: Text.AlignVCenter
                 renderType: Text.NativeRendering
             }
-            Layout.alignment: Qt.AlignHCenter
             Layout.preferredHeight: implicitHeight
             hoverEnabled: true
         }

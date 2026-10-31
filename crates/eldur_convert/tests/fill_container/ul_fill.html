@@ -1,0 +1,9 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.row{height:30px;background:#def}#end{height:10px;background:red}
+ul,ol{margin:4px 0;padding:0 0 0 40px} li{height:24px}</style></head><body><ul id="u"></ul><ol id="o">
+</ol><div id="end"></div>
+<script>function g(id){var r=document.getElementById(id).getBoundingClientRect();return id+":"+[r.left,r.top,r.width,r.height].map(Math.round).join(",")}
+function all(){return Array.prototype.map.call(arguments,g).join(" ")}
+function li(id,t){var d=document.createElement('li');d.id=id;d.textContent=t;return d}
+var u=document.getElementById('u'),o=document.getElementById('o');
+for(var i=0;i<2;i++){u.appendChild(li('u'+i,'u'));o.appendChild(li('o'+i,'o'));}
+console.log('LC '+all('u','u0','u1','o','o0','o1','end'));</script></body></html>

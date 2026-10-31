@@ -1,0 +1,11 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.row{height:30px;background:#def}#end{height:10px;background:red}
+</style></head><body><div id="a"></div><div id="b"></div><div id="c"></div><div id="end"></div>
+<script>function g(id){var r=document.getElementById(id).getBoundingClientRect();return id+":"+[r.left,r.top,r.width,r.height].map(Math.round).join(",")}
+function all(){return Array.prototype.map.call(arguments,g).join(" ")}
+function row(id,t){var d=document.createElement('div');d.id=id;d.className='row';d.textContent=t;return d}
+var a=document.getElementById('a'),b=document.getElementById('b'),c=document.getElementById('c');
+a.prepend(row('a1','1'));a.prepend(row('a0','0'));
+b.insertBefore(row('b1','1'),null);b.insertBefore(row('b0','0'),b.firstChild);
+var c1=row('c1','1');c.appendChild(c1);c1.before(row('c0','0'));c1.after(row('c2','2'));
+console.log('LC '+all('a0','a1','b0','b1','c0','c1','c2','end'));
+console.log('LC '+[a.children[0].id,b.children[0].id,c.children[2].id,a.childElementCount].join(','));</script></body></html>

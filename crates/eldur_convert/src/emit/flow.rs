@@ -544,9 +544,10 @@ impl Emitter<'_, '_> {
                     | Display::InlineTable
                     | Display::InlineBlock
             );
-        // An inline-level box's place in its line comes from `text-align`,
-        // which it inherited from its parent.
-        let alignment = alignment.or(match (style.display, style.text_align) {
+        // An inline-level box's place in its line comes from the `text-align`
+        // of the block it is in; its own (a button's is `center`) is for its
+        // content.
+        let alignment = alignment.or(match (style.display, self.line_align) {
             (Display::InlineBlock | Display::InlineTable, TextAlign::Center) => {
                 Some("Qt.AlignHCenter")
             }

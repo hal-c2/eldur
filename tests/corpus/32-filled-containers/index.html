@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Filled containers</title>
+<style>
+body { margin: 0; font: 16px/20px sans-serif; color: #223; }
+button { font: 14px/20px sans-serif; }
+h2 { margin: 12px 0 4px; font-size: 18px; }
+.row { height: 30px; background: #def; border-bottom: 1px solid #9ab; padding-left: 8px; line-height: 30px; }
+#tags { display: flex; gap: 8px; }
+.tag { width: 60px; height: 28px; background: #fd9; }
+#cells { display: grid; grid-template-columns: 90px 90px 90px; gap: 6px; }
+.cell { height: 24px; background: #cec; }
+#centred { text-align: center; }
+</style>
+</head>
+<body>
+<button id="first">Left, as in a browser</button>
+<div id="centred"><button id="second">Centred by its parent</button></div>
+<h2>Rows</h2>
+<div id="rows"></div>
+<h2>Text, then a block</h2>
+<div id="note">A note above what the script adds.</div>
+<h2>Items</h2>
+<ul id="items"> </ul>
+<h2>Flex and grid</h2>
+<div id="tags"></div>
+<div id="cells"></div>
+<h2>Markup</h2>
+<div id="markup"></div>
+<script>
+var rows = document.getElementById('rows');
+for (var i = 0; i < 3; i++) {
+  var row = document.createElement('div');
+  row.className = 'row';
+  row.textContent = 'Row ' + i;
+  rows.appendChild(row);
+}
+var extra = document.createElement('div');
+extra.className = 'row';
+extra.textContent = 'Added to the text';
+document.getElementById('note').appendChild(extra);
+var items = document.getElementById('items');
+for (var j = 0; j < 2; j++) {
+  var li = document.createElement('li');
+  li.textContent = 'Item ' + j;
+  items.appendChild(li);
+}
+var tags = document.getElementById('tags');
+for (var k = 0; k < 3; k++) {
+  var tag = document.createElement('div');
+  tag.className = 'tag';
+  tags.appendChild(tag);
+}
+var cells = document.getElementById('cells');
+for (var m = 0; m < 4; m++) {
+  var cell = document.createElement('div');
+  cell.className = 'cell';
+  cells.appendChild(cell);
+}
+document.getElementById('markup').innerHTML = '<div class="row">From markup</div><div class="row">And another</div>';
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[html]: index.html:19: inline <button id="first"> is laid out as a block (no inline replaced elements yet)
+info[html]: index.html:20: inline <button id="second"> is laid out as a block (no inline replaced elements yet)

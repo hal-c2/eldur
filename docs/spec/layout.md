@@ -237,7 +237,7 @@ Text {
 | `line-height` | Full | `lineHeight` + `ProportionalHeight` (or `FixedHeight` for lengths). |
 | `letter-spacing`, `word-spacing` | Full | `font.letterSpacing`, `font.wordSpacing`. |
 | `white-space: pre` | Approx | `wrapMode: Text.NoWrap` with `textFormat: Text.PlainText`. Collapse whitespace for the normal modes at convert time, before emitting. |
-| `text-align` | Full | `horizontalAlignment`. |
+| `text-align` | Full | `horizontalAlignment`. An inline-level box (control, `inline-block`) laid out as a block takes its place from its parent's `text-align`, not its own: a `<button>`'s UA `center` applies to its label. |
 | `text-decoration` | Full | `<u>`, `<s>`, or `font.underline`/`font.strikeout` (whole `Text` only). |
 | `text-shadow` | Approx | Second `Text` behind, offset by `x`/`y` in the shadow colour (blur is lost), or `style: Text.Raised` with `styleColor` for a 1px shadow. |
 | Inline `img` | Full | `<img src="…" width="W" height="H" align="middle">` inside the StyledText. |

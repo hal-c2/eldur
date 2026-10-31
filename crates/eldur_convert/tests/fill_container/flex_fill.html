@@ -1,0 +1,9 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.row{height:30px;background:#def}#end{height:10px;background:red}
+#r{display:flex;gap:10px}#c{display:flex;flex-direction:column;gap:5px}#j{display:flex;justify-content:space-between}#k{display:flex;align-items:center;height:60px}.i{width:50px;height:30px;background:#def}</style></head><body><div id="r"></div><div id="c"></div><div id="j">  </div><div id="k"></div><div id="end"></div>
+<script>function g(id){var r=document.getElementById(id).getBoundingClientRect();return id+":"+[r.left,r.top,r.width,r.height].map(Math.round).join(",")}
+function all(){return Array.prototype.map.call(arguments,g).join(" ")}
+function item(id,t){var d=document.createElement('div');d.id=id;d.className='i';d.textContent=t;return d}
+function fill(n,p){var e=document.getElementById(n);for(var i=0;i<p;i++)e.appendChild(item(n+i,'x'));}
+console.log('LC '+all('r','c','j','k','end'));
+fill('r',3);fill('c',2);fill('j',3);fill('k',2);
+console.log('LC '+all('r','r0','r1','r2','c','c0','c1','j','j0','j1','j2','k','k0','k1','end'));</script></body></html>

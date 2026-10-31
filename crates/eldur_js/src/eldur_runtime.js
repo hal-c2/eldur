@@ -1689,7 +1689,7 @@ function _appendTarget(raw) {
     }
     var text = _findTextChild(raw);
     if (!text) {
-        return raw;
+        return _isPlainTextItem(raw) ? _flowInText(raw) : raw;
     }
     var flow = Qt.createQmlObject("import QtQuick; import QtQuick.Layouts; ColumnLayout { spacing: 0 }", raw, "eldur_flow");
     var extra = raw.implicitHeight - text.implicitHeight;
@@ -1703,6 +1703,25 @@ function _appendTarget(raw) {
     // `textContent = x` replaces every child.
     text.textChanged.connect(function() { _clearAppended(raw); });
     _meta(flow).hostBox = raw;
+    m.flow = flow;
+    return flow;
+}
+
+// A block of text that is its own item, which no script was seen to fill (one
+// reached by traversal or an event's target): the column goes under the text,
+// and the size a layout gives the item says how much room both take.
+function _flowInText(text) {
+    var m = _meta(text);
+    var flow = Qt.createQmlObject("import QtQuick; import QtQuick.Layouts; ColumnLayout { spacing: 0 }", text, "eldur_flow");
+    var shift = text.transform.length > 0 && typeof text.transform[0].y === "number" ? text.transform[0].y : 0;
+    var lines = function() { return text.text === "" ? 0 : text.contentHeight; };
+    flow.y = Qt.binding(function() { return lines() - shift; });
+    flow.width = Qt.binding(function() { return text.width; });
+    var sizer = Qt.createQmlObject("import QtQuick; import QtQuick.Layouts; QtObject { "
+        + "function hold(item, height) { item.Layout.preferredHeight = Qt.binding(height); } }", flow, "eldur_flow_size");
+    sizer.hold(text, function() { return lines() + flow.implicitHeight; });
+    text.textChanged.connect(function() { _clearAppended(text); });
+    _meta(flow).hostBox = text;
     m.flow = flow;
     return flow;
 }
@@ -1743,6 +1762,85 @@ function _polishSubtree(item) {
 // element's place among its siblings from `eldurIndex`/`eldurCount` (and the
 // same-tag `eldurTypeIndex`/`eldurTypeCount`), which the converter declares
 // only on the children of containers scripts change.
+// A flex container the page left empty: its spacers follow what it now holds
+// (`spacer_slots` in the converter's flex.rs). `spacing` is the gap unless
+// spacers sit between the items, which then hold the gap open themselves.
+function _packFlex(layout, force) {
+    var kids = [];
+    var spacers = [];
+    for (var i = 0; i < layout.children.length; ++i) {
+        (_isLayoutSpacer(layout.children[i]) ? spacers : kids).push(layout.children[i]);
+    }
+    var m = _meta(layout);
+    if (!force && m.packedFor === kids.length) {
+        return;
+    }
+    m.packedFor = kids.length;
+    var n = kids.length;
+    var pack = layout.eldurPack;
+    if (pack === "between" && n <= 1) {
+        pack = "start";
+    }
+    var slot = function(at) {
+        switch (pack) {
+        case "none": return 0;
+        case "start": return at === n ? 1 : 0;
+        case "end": return at === 0 ? 1 : 0;
+        case "center": return at === 0 || at === n ? 1 : 0;
+        case "between": return at === 0 || at === n ? 0 : 1;
+        case "around": return at === 0 || at === n ? 1 : 2;
+        default: return 1;
+        }
+    };
+    var axis = layout.eldurPackRow ? "Width" : "Height";
+    var source = "import QtQuick; import QtQuick.Layouts; Item { Layout.fill" + axis + ": true; Layout.minimum" + axis + ": ";
+    for (var d = 0; d < spacers.length; ++d) {
+        spacers[d].parent = null;
+        spacers[d].destroy();
+    }
+    for (var k = 0; k < n; ++k) {
+        kids[k].parent = null;
+    }
+    for (var at = 0; at <= n; ++at) {
+        for (var c = slot(at); c > 0; --c) {
+            var between = at > 0 && at < n;
+            Qt.createQmlObject(source + (between ? layout.eldurPackGap / slot(at) : 0) + " }", layout);
+        }
+        if (at < n) {
+            kids[at].parent = layout;
+        }
+    }
+}
+
+// A grid the page left empty: each item takes the next cell and that column's
+// size, which only attached properties can say.
+function _placeGrid(grid) {
+    var tracks = grid.eldurTracks;
+    var n = tracks.length;
+    var m = _meta(grid);
+    if (!m.gridPlacer) {
+        m.gridPlacer = Qt.createQmlObject("import QtQuick; import QtQuick.Layouts; QtObject { "
+            + "function place(item, row, column, size) { "
+            + "item.Layout.row = row; item.Layout.column = column; "
+            + "if (size >= 0) { item.Layout.fillWidth = false; item.Layout.minimumWidth = size; "
+            + "item.Layout.preferredWidth = size; item.Layout.maximumWidth = size; } "
+            + "else { item.Layout.fillWidth = true; item.Layout.minimumWidth = 0; item.Layout.preferredWidth = 0; "
+            + "item.Layout.horizontalStretchFactor = -size; } } }", grid);
+    }
+    var kids = _rawElementChildren(grid);
+    for (var i = 0; i < kids.length; ++i) {
+        m.gridPlacer.place(kids[i], Math.floor(i / n), i % n, tracks[i % n]);
+    }
+}
+
+function _reflowFilled(container, force) {
+    if (typeof container.eldurPack === "string") {
+        _packFlex(container, force);
+    } else if (container.eldurTracks) {
+        _placeGrid(container);
+    }
+}
+
 function _renumber(container) {
     if (!container || typeof container !== "object" || !container.children) {
         return;
@@ -1815,6 +1913,7 @@ function _settleLayouts() {
         for (var q = 0; q < pair.length; ++q) {
             if (pair[q] && numbered.indexOf(pair[q]) < 0) {
                 numbered.push(pair[q]);
+                _reflowFilled(pair[q], false);
                 _renumber(pair[q]);
             }
         }
@@ -1830,6 +1929,30 @@ function _settleLayouts() {
                 p.ensurePolished();
             }
         }
+    }
+}
+
+// A browser lays out when a script asks where things are: a size read right
+// after an insert already counts it. The settle above works upwards, so the
+// widths the top hands back down are polished afterwards.
+function _layoutForRead() {
+    if (_layoutDirty.length === 0) {
+        return;
+    }
+    _settleLayouts();
+    _polishDown(_root);
+}
+
+function _polishDown(item) {
+    if (!item) {
+        return;
+    }
+    if (typeof item.ensurePolished === "function") {
+        item.ensurePolished();
+    }
+    var kids = item.children || [];
+    for (var i = 0; i < kids.length; ++i) {
+        _polishDown(kids[i]);
     }
 }
 
@@ -2797,6 +2920,7 @@ function blur(item) {
 }
 
 function getBoundingClientRect(item) {
+    _layoutForRead();
     var raw = _unwrap(item);
     if (raw && raw.__eldurInline) {
         return _vClientRect(raw);
@@ -3937,6 +4061,7 @@ function _insertInFlow(container, rawNodes, rawRef) {
             _connectSubtree(rawNodes[mIdx]);
         }
     }
+    _reflowFilled(container, true);
     // Before the script reads styles back; removals settle with the layouts.
     _renumber(container);
 }
@@ -3950,6 +4075,9 @@ function _genericElementSource(tag, inputType) {
     }
     if (tag === "li") {
         return "import QtQuick; import QtQuick.Layouts; RowLayout { Layout.fillWidth: true; spacing: 8 }";
+    }
+    if (tag === "tr") {
+        return "import QtQuick; import QtQuick.Layouts; RowLayout { spacing: 0 }";
     }
     if (tag === "ul" || tag === "ol") {
         return "import QtQuick; import QtQuick.Layouts; ColumnLayout { Layout.fillWidth: true; spacing: 0 }";
@@ -4078,6 +4206,10 @@ function _lookupTemplate(raw) {
     if (!_root || !_root.eldurTemplates || typeof _root.eldurTemplates !== "object") {
         return null;
     }
+    // A row has no form of its own for a template to describe.
+    if (_meta(raw).createdTag === "tr") {
+        return null;
+    }
     var templates = _root.eldurTemplates;
     var keys = _buildTemplateKeys(raw);
     var exact = keys[0];
@@ -4094,7 +4226,12 @@ function _lookupTemplate(raw) {
             return { component: templates[cand], exactKey: exact, step: cand };
         }
     }
-    if (!_warnedMissingTemplates[exact]) {
+    // Connected before the script says its class: templates for this tag are
+    // keyed by the classes it comes to have.
+    var classed = exact.split("@")[0] + ".";
+    var classless = exact.indexOf(".") < 0
+        && Object.keys(templates).some(function(k) { return k.indexOf(classed) === 0; });
+    if (!classless && !_warnedMissingTemplates[exact]) {
         _warnedMissingTemplates[exact] = true;
         console.warn("eldur: no style template for " + exact + "; using generic");
     }
@@ -5092,10 +5229,10 @@ function wrap(rawItem) {
         set className(v) { setClassName(rawItem, v); },
         get classList() { return classList(rawItem); },
         get dataset() { return dataset(rawItem); },
-        get offsetWidth() { _vSettle(); return typeof rawItem.width === "number" ? rawItem.width : 0; },
-        get offsetHeight() { _vSettle(); return typeof rawItem.height === "number" ? rawItem.height : 0; },
-        get clientWidth() { return typeof rawItem.width === "number" ? rawItem.width : 0; },
-        get clientHeight() { return typeof rawItem.height === "number" ? rawItem.height : 0; },
+        get offsetWidth() { _vSettle(); _layoutForRead(); return typeof rawItem.width === "number" ? rawItem.width : 0; },
+        get offsetHeight() { _vSettle(); _layoutForRead(); return typeof rawItem.height === "number" ? rawItem.height : 0; },
+        get clientWidth() { _layoutForRead(); return typeof rawItem.width === "number" ? rawItem.width : 0; },
+        get clientHeight() { _layoutForRead(); return typeof rawItem.height === "number" ? rawItem.height : 0; },
         get scrollTop() {
             if (typeof rawItem.contentY === "number") {
                 return rawItem.contentY;
@@ -5115,10 +5252,13 @@ function wrap(rawItem) {
             _applyScrollOffset("x", v);
         },
         get scrollWidth() {
-            return _computeScrollDimension("x");
+            _layoutForRead();
+            // The document's scrolling area is at least the viewport.
+            return Math.max(_computeScrollDimension("x"), rawItem.eldurTag === "html" || rawItem === _root ? _root.width : 0);
         },
         get scrollHeight() {
-            return _computeScrollDimension("y");
+            _layoutForRead();
+            return Math.max(_computeScrollDimension("y"), rawItem.eldurTag === "html" || rawItem === _root ? _root.height : 0);
         },
         get isConnected() {
             var at = rawItem;
@@ -6557,7 +6697,7 @@ function _vRender(model) {
     var markup = st.out;
     if (model.html && model.lh !== undefined) {
         markup = "<div style=\"line-height:" + model.lh + "px\">" + markup + "</div>";
-        text.lineHeightMode = Text.ProportionalHeight;
+        text.lineHeightMode = 0; // Text.ProportionalHeight; a library script has no `Text`
         text.lineHeight = 1;
     }
     text.textFormat = model.html ? 1 : 4;
@@ -7119,8 +7259,13 @@ function _vHostOf(raw, nodes, ref) {
     if (raw.__eldurInline) {
         return raw;
     }
+    // A block breaks out of a line of text; what is a node of a model has no box
+    // to break out with.
+    var joinsModel = function(n) {
+        return n.__eldurInline || _vStaysInline(n);
+    };
     var known = _vExisting(raw);
-    if (known) {
+    if (known && nodes.every(joinsModel)) {
         return known;
     }
     if (!nodes.every(_vStaysInline)) {
@@ -8047,10 +8192,12 @@ var window = {
         return _root && typeof _root.height === "number" ? _root.height : 0;
     },
     get scrollX() {
+        _layoutForRead();
         var scroller = _findRootScroller();
         return scroller && typeof scroller.contentX === "number" ? scroller.contentX : 0;
     },
     get scrollY() {
+        _layoutForRead();
         var scroller = _findRootScroller();
         return scroller && typeof scroller.contentY === "number" ? scroller.contentY : 0;
     },

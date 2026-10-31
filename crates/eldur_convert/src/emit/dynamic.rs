@@ -207,6 +207,10 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
     let mut emitter = Emitter::new(cx.doc, cx.styles, cx.options, diags, cx.wanted);
     emitter.images = cx.images.clone();
     emitter.runtime_dom = cx.runtime_dom;
+    if let Some(scripts) = cx.scripts {
+        emitter.gains.clone_from(&scripts.gains.nodes);
+        emitter.gains_any_empty = scripts.gains.any_empty;
+    }
     emitter.by_path = cx.scripts.is_some_and(|s| s.analysis.dispatch_by_path);
     emitter.script_attrs = cx.scripts.is_some_and(|s| s.analysis.reads_attributes);
     if let Some(probe) = cx.probe {
@@ -1010,6 +1014,10 @@ impl Dynamic<'_, '_> {
         let mut emitter = Emitter::new(cx.doc, styles, cx.options, diags, cx.wanted);
         emitter.images = cx.images.clone();
         emitter.runtime_dom = cx.runtime_dom;
+        if let Some(scripts) = cx.scripts {
+            emitter.gains.clone_from(&scripts.gains.nodes);
+            emitter.gains_any_empty = scripts.gains.any_empty;
+        }
         emitter.by_path = cx.scripts.is_some_and(|s| s.analysis.dispatch_by_path);
         emitter.script_attrs = cx.scripts.is_some_and(|s| s.analysis.reads_attributes);
         emitter.markers = true;

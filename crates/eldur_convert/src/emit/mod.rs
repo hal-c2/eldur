@@ -123,6 +123,13 @@ pub(crate) struct Emitter<'a, 'd> {
     /// Scripts reach elements at run time, so every element object says
     /// what it is (`eldurTag`, `eldurClasses`).
     pub runtime_dom: bool,
+    /// The boxes a script may put block children in.
+    gains: HashSet<NodeId>,
+    /// A script inserts into something found at run time: any empty box.
+    gains_any_empty: bool,
+    /// `text-align` of the box whose lines are being laid out: what places
+    /// an inline-level child, which has its own for its content.
+    line_align: eldur_css::TextAlign,
     /// Events run one dispatch over the path from the target.
     pub by_path: bool,
     /// Scripts read attributes, so elements carry `eldurAttrs`.
@@ -197,6 +204,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
             imports: std::collections::BTreeSet::new(),
             images: BTreeMap::new(),
             runtime_dom: false,
+            gains: HashSet::new(),
+            gains_any_empty: false,
+            line_align: eldur_css::TextAlign::Start,
             by_path: false,
             script_attrs: false,
             markers: false,
@@ -392,6 +402,18 @@ impl<'a, 'd> Emitter<'a, 'd> {
         inherited: TextDecorationLine,
         independent: bool,
     ) -> Emitted {
+        let outer = std::mem::replace(&mut self.line_align, b.style.text_align);
+        let e = self.block_box_in_lines(b, inherited, independent);
+        self.line_align = outer;
+        e
+    }
+
+    fn block_box_in_lines(
+        &mut self,
+        b: &LayoutBox<'_>,
+        inherited: TextDecorationLine,
+        independent: bool,
+    ) -> Emitted {
         let style = &*b.style;
         let line = b.node.and_then(|n| node_line(self.doc, n));
         match b.kind {
@@ -419,10 +441,17 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 Display::Table | Display::InlineTable => {
                     self.has_table = true;
                     self.positioned_child = false;
-                    let e = self.table(b, inherited, line);
+                    let e = if self.table_to_fill(b) {
+                        self.column_to_fill(b, inherited, line)
+                    } else {
+                        self.table(b, inherited, line)
+                    };
                     return self.transformed(e, b, line);
                 }
                 Display::TableCell | Display::TableCaption => {}
+                // A section with no rows yet stands as a box of its own for
+                // a script to fill.
+                _ if b.node.is_some_and(|n| self.gains.contains(&n)) => {}
                 _ => self.unsupported_layout(b, line),
             },
         }
@@ -485,6 +514,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     .is_some_and(|n| self.collapsed.contains(&n) || self.wanted.contains(&n))
                 || (self.markers && b.node.is_some())
         };
+        let gains = b.node.is_some_and(|n| {
+            self.gains.contains(&n) || (self.gains_any_empty && matches!(b.content, Content::Empty))
+        });
         let (in_flow, leaving) = lists::split_out_of_flow(b);
         let mut corner_slots = Vec::new();
         for c in leaving {
@@ -553,6 +585,12 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 }
                 Some((text, "Text"))
             }
+            Content::Empty if gains && b.kind == BoxKind::Flex => {
+                Some((self.flex_to_fill(b, decoration, line), "Content"))
+            }
+            Content::Empty if gains && b.kind == BoxKind::Grid => {
+                Some((self.grid_to_fill(b, decoration, line), "Content"))
+            }
             Content::Empty => None,
         };
         self.backdrop = outer_backdrop;
@@ -567,7 +605,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         {
             overlays.extend(own.overlays);
         }
-        if inner.is_none() && (wanted || b.marker.is_some()) {
+        if inner.is_none() && (wanted || gains || b.marker.is_some()) {
             // Scripts write text into it; a marker still has its line.
             inner = Some((self.text(style, decoration, &[], line), "Text"));
         }
@@ -610,7 +648,10 @@ impl<'a, 'd> Emitter<'a, 'd> {
         // A layout whose children refer to it by id keeps that id, so an
         // HTML id goes on a wrapper.
         let inner_has_id = inner.as_ref().is_some_and(|(o, _)| o.id.is_some());
+        // Text and the children a script adds stack, in one box.
+        let text_then_flow = gains && matches!(&inner, Some((_, "Text")));
         let needs_wrapper = deco.needed()
+            || text_then_flow
             || inner.is_none()
             || (has_height(style) && inner.is_some())
             || (inner_has_id && outer_id.is_some())
@@ -640,7 +681,15 @@ impl<'a, 'd> Emitter<'a, 'd> {
             }
             extra.append(&mut corner_slots);
             extra.extend(overlays.into_iter().map(|(_, overlay)| overlay));
-            let wrapper = self.wrap_with(style, &deco, paint_background, inner, extra, fill, line);
+            let flow_text = inner
+                .as_ref()
+                .filter(|_| text_then_flow)
+                .map(|(_, id)| id.clone());
+            let mut wrapper =
+                self.wrap_with(style, &deco, paint_background, inner, extra, fill, line);
+            if let Some(text) = flow_text {
+                self.add_script_flow(&mut wrapper, &text, &deco, b);
+            }
             (wrapper, TargetKind::Box)
         } else {
             let (obj, suffix) = inner.unwrap_or((Object::new("Item"), "Content"));
@@ -679,6 +728,52 @@ impl<'a, 'd> Emitter<'a, 'd> {
             collapse_through: false,
         };
         self.transformed(e, b, line)
+    }
+
+    /// Makes the box the text and block children of a script's filling: the
+    /// text comes first, the column below, and each takes no height while
+    /// it is empty. In CSS an empty box is no taller than its insets.
+    fn add_script_flow(
+        &mut self,
+        wrapper: &mut Object,
+        text: &str,
+        deco: &decoration::Decoration,
+        b: &LayoutBox<'_>,
+    ) {
+        let flow_id = self.ids.claim(&format!("{} flow", hint(self.doc, b)));
+        let insets = deco.insets;
+        let text_height = format!("({text}.text === \"\" ? 0 : {text}.implicitHeight)");
+        wrapper.set(
+            "implicitWidth",
+            Value::expr(format!(
+                "Math.max({text}.implicitWidth, {flow_id}.implicitWidth) + {}",
+                insets.horizontal()
+            )),
+        );
+        wrapper.set(
+            "implicitHeight",
+            Value::expr(format!(
+                "{text_height} + {flow_id}.implicitHeight + {}",
+                insets.vertical()
+            )),
+        );
+        let mut flow = Object::new("ColumnLayout");
+        flow.id = Some(flow_id);
+        flow.set("spacing", Value::Number(0.0));
+        flow.set("x", Value::Number(f64::from(insets.left)));
+        flow.set("y", Value::expr(format!("{text_height} + {}", insets.top)));
+        flow.set(
+            "width",
+            Value::expr(format!("parent.width - {}", insets.horizontal())),
+        );
+        for member in &mut wrapper.members {
+            if let eldur_qml::Member::Child(child) = member
+                && child.id.as_deref() == Some(text)
+            {
+                child.set("visible", Value::expr("text !== \"\""));
+            }
+        }
+        wrapper.push_child(flow);
     }
 
     /// Raises an in-flow box that is positioned, or holds one, over its later

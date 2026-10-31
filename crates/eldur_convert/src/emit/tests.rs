@@ -1970,3 +1970,38 @@ fn what_hoisting_cannot_keep_is_reported() {
     ));
     assert!(diags.iter().any(|d| d.contains("alignment")), "{diags:?}");
 }
+
+#[test]
+fn a_box_a_script_only_writes_text_into_stays_a_text() {
+    let (qml, _) = convert(&page(
+        "",
+        "<div id=a></div><script>document.getElementById('a').textContent='x'</script>",
+    ));
+    assert!(!qml.contains("flow"), "{qml}");
+    assert!(qml.contains("Text {\n"), "{qml}");
+}
+
+#[test]
+fn a_box_a_script_fills_has_a_column_and_no_height_until_then() {
+    let (qml, _) = convert(&page(
+        "",
+        "<div id=a></div><script>var d=document.createElement('div');\
+         document.getElementById('a').appendChild(d)</script>",
+    ));
+    assert!(qml.contains("ColumnLayout {\n"), "{qml}");
+    assert!(qml.contains("text === \"\" ? 0"), "{qml}");
+}
+
+#[test]
+fn an_inline_level_box_takes_its_place_from_the_parents_text_align() {
+    let (left, _) = convert(&page("", "<button>Go</button>"));
+    assert!(!left.contains("Qt.AlignHCenter"), "{left}");
+    let (centred, _) = convert(&page(
+        "",
+        "<div style=\"text-align:center\"><button>Go</button></div>",
+    ));
+    assert!(
+        centred.contains("Layout.alignment: Qt.AlignHCenter"),
+        "{centred}"
+    );
+}
