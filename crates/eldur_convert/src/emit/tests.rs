@@ -1480,18 +1480,30 @@ const CARRY_CSS: &str = "p{margin:0 0 13.3px;font:16px/27.2px sans-serif}";
 
 #[test]
 fn a_fractional_line_height_hands_its_rounding_to_the_next_item() {
-    let (qml, _) = convert(&page(CARRY_CSS, r#"<p id="a">One</p><p id="b">Two</p><p id="c">Three</p>"#));
+    let (qml, _) = convert(&page(
+        CARRY_CSS,
+        r#"<p id="a">One</p><p id="b">Two</p><p id="c">Three</p>"#,
+    ));
     let a = own_lines(object_after(&qml, r#"<p id="a">"#));
     assert!(
         a.contains(&"property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001"),
         "{a:?}"
     );
     let b = own_lines(object_after(&qml, r#"<p id="b">"#));
-    assert!(b.contains(&"Layout.topMargin: 13.3 - a.eldurCarry"), "{b:?}");
+    assert!(
+        b.contains(&"Layout.topMargin: 13.3 - a.eldurCarry"),
+        "{b:?}"
+    );
     // The last cell is rounded once: its height is not rounded first.
     let c = own_lines(object_after(&qml, r#"<p id="c">"#));
-    assert!(c.contains(&"Layout.topMargin: 13.3 - b.eldurCarry"), "{c:?}");
-    assert!(c.contains(&"Layout.preferredHeight: implicitHeight"), "{c:?}");
+    assert!(
+        c.contains(&"Layout.topMargin: 13.3 - b.eldurCarry"),
+        "{c:?}"
+    );
+    assert!(
+        c.contains(&"Layout.preferredHeight: implicitHeight"),
+        "{c:?}"
+    );
 }
 
 #[test]
@@ -1532,7 +1544,10 @@ fn a_fixed_height_after_a_fractional_one_takes_the_carry() {
         r#"<label id="l">Name</label><input id="i"><p id="k">After</p>"#,
     ));
     let l = own_lines(object_after(&qml, r#"<label id="l">"#));
-    assert!(!l.iter().any(|m| m.starts_with("Layout.bottomMargin")), "{l:?}");
+    assert!(
+        !l.iter().any(|m| m.starts_with("Layout.bottomMargin")),
+        "{l:?}"
+    );
     let i = own_lines(object_after(&qml, r#"<input id="i">"#));
     assert!(i.contains(&"Layout.topMargin: 5 - l.eldurCarry"), "{i:?}");
     assert!(
@@ -1550,10 +1565,14 @@ fn a_nested_column_hands_on_its_last_rounding() {
         r#"<section id="s"><p id="d">Four</p><p id="e">Five</p></section><p id="g">Six</p>"#,
     ));
     let e = own_lines(object_after(&qml, r#"<p id="e">"#));
-    assert!(e.iter().any(|m| m.starts_with("property real eldurCarry:")), "{e:?}");
+    assert!(
+        e.iter().any(|m| m.starts_with("property real eldurCarry:")),
+        "{e:?}"
+    );
     let g = own_lines(object_after(&qml, r#"<p id="g">"#));
     assert!(
-        g.iter().any(|m| m.starts_with("Layout.topMargin: 13.3 - ") && m.ends_with(".eldurCarry")),
+        g.iter()
+            .any(|m| m.starts_with("Layout.topMargin: 13.3 - ") && m.ends_with(".eldurCarry")),
         "{g:?}"
     );
     assert!(!g.contains(&"Layout.topMargin: 13.3"), "{g:?}");
@@ -1566,7 +1585,10 @@ fn a_flex_column_carries_past_its_spacer() {
         r#"<div class="f"><label id="fl">Flex</label><input id="fi"></div>"#,
     ));
     let fi = own_lines(object_after(&qml, r#"<input id="fi">"#));
-    assert!(fi.contains(&"Layout.topMargin: 5 - fl.eldurCarry"), "{fi:?}");
+    assert!(
+        fi.contains(&"Layout.topMargin: 5 - fl.eldurCarry"),
+        "{fi:?}"
+    );
 }
 
 #[test]
@@ -1578,9 +1600,14 @@ fn a_hidden_item_passes_the_carry_on() {
     ));
     let x = own_lines(object_after(&qml, r#"<p id="x">"#));
     assert!(
-        x.iter().any(|m| m.starts_with("property real eldurCarry: visible ? (") && m.ends_with(") : a.eldurCarry")),
+        x.iter()
+            .any(|m| m.starts_with("property real eldurCarry: visible ? (")
+                && m.ends_with(") : a.eldurCarry")),
         "{x:?}"
     );
     let b = own_lines(object_after(&qml, r#"<p id="b">"#));
-    assert!(b.contains(&"Layout.topMargin: 13.3 - x.eldurCarry"), "{b:?}");
+    assert!(
+        b.contains(&"Layout.topMargin: 13.3 - x.eldurCarry"),
+        "{b:?}"
+    );
 }

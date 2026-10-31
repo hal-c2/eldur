@@ -47,7 +47,10 @@ pub(super) enum Excess {
     Expr(String),
     /// The last item's carry, declared as its `eldurCarry` once a parent
     /// reads it (`item` counts the column's children).
-    Pending { item: usize, binding: String },
+    Pending {
+        item: usize,
+        binding: String,
+    },
 }
 
 /// What the next item's top margin takes back.
@@ -192,7 +195,10 @@ impl Emitter<'_, '_> {
                 (h, _) => {
                     let (qt, css) = match h {
                         Height::Static { qt, css } => (fmt_number(qt), fmt_number(css)),
-                        Height::Text => ("Math.ceil(implicitHeight)".to_owned(), "implicitHeight".to_owned()),
+                        Height::Text => (
+                            "Math.ceil(implicitHeight)".to_owned(),
+                            "implicitHeight".to_owned(),
+                        ),
                         Height::Other => {
                             obj.set("Layout.preferredHeight", Value::expr("implicitHeight"));
                             ("implicitHeight".to_owned(), "implicitHeight".to_owned())
@@ -338,7 +344,7 @@ fn top_margin(obj: &Object) -> Gap {
 fn with_carry(gap: Gap, carry: &Carry) -> Gap {
     match (gap, carry) {
         (Gap::Static(g), Carry::Static(c)) => Gap::Static(round(g - c)),
-        (Gap::Static(g), Carry::Expr(c)) if g == 0.0 => Gap::Expr(format!("-{c}")),
+        (Gap::Static(0.0), Carry::Expr(c)) => Gap::Expr(format!("-{c}")),
         (Gap::Static(g), Carry::Expr(c)) => Gap::Expr(format!("{} - {c}", fmt_number(g))),
         (Gap::Expr(g), Carry::Static(c)) if c.abs() < 1e-9 => Gap::Expr(g),
         (Gap::Expr(g), Carry::Static(c)) => Gap::Expr(format!("({g}) - {}", fmt_carry(*c))),
@@ -434,13 +440,19 @@ fn implicit_height(obj: &Object, excess: &HashMap<String, Excess>) -> Height {
         };
     }
     match obj.get("implicitHeight") {
-        Some(Value::Number(n)) => return Height::Static { qt: n.ceil(), css: *n },
+        Some(Value::Number(n)) => {
+            return Height::Static {
+                qt: n.ceil(),
+                css: *n,
+            };
+        }
         Some(Value::Expr(e)) => return expr_height(obj, e, excess),
         _ => {}
     }
     if obj.type_name == "Text" {
         // A fixed line height is the height of each line.
-        let fixed = matches!(obj.get("lineHeightMode"), Some(Value::Expr(m)) if m == "Text.FixedHeight");
+        let fixed =
+            matches!(obj.get("lineHeightMode"), Some(Value::Expr(m)) if m == "Text.FixedHeight");
         return match obj.get("lineHeight") {
             Some(Value::Number(l)) if fixed && l.fract() == 0.0 => Height::Whole,
             _ => Height::Text,
