@@ -87,11 +87,23 @@ impl Emitter<'_, '_> {
     /// Rewrites the top margins of a block-flow `ColumnLayout`'s items so
     /// that their positions are not rounded (module docs).
     pub(super) fn carry(&mut self, layout: &mut Object) {
+        // Qt adds spacing between cells as is; only whole spacing keeps
+        // the cell edges whole.
+        match layout.get("spacing").or(layout.get("rowSpacing")) {
+            None => {}
+            Some(Value::Number(s)) if s.fract() == 0.0 => {}
+            Some(_) => return,
+        }
+        // A spacer's cell is between two whole cell edges whatever it
+        // takes, so the carry goes past it.
         let indices: Vec<usize> = layout
             .members
             .iter()
             .enumerate()
-            .filter_map(|(i, m)| matches!(m, Member::Child(_)).then_some(i))
+            .filter_map(|(i, m)| match m {
+                Member::Child(c) if !is_spacer(c) => Some(i),
+                _ => None,
+            })
             .collect();
         // A template's item cannot name its siblings, so it keeps its own
         // rounding; it is still a pixel at most, not a height hint rounded
@@ -397,7 +409,9 @@ fn hideable(obj: &Object) -> bool {
 fn height(obj: &Object, excess: &HashMap<String, Excess>) -> Height {
     if matches!(obj.get("Layout.fillHeight"), Some(Value::Bool(true)))
         || obj.get("Layout.minimumHeight").is_some()
-        || obj.get("Layout.maximumHeight").is_some()
+        || obj
+            .get("Layout.maximumHeight")
+            .is_some_and(|m| !matches!(m, Value::Expr(e) if e == "Number.POSITIVE_INFINITY"))
     {
         return Height::Unknown;
     }
@@ -467,6 +481,16 @@ fn expr_height(obj: &Object, expr: &str, excess: &HashMap<String, Excess>) -> He
         }
         _ => Height::Other,
     }
+}
+
+/// A flex container's `Item { Layout.fillHeight: true }`.
+fn is_spacer(obj: &Object) -> bool {
+    obj.type_name == "Item"
+        && obj.id.is_none()
+        && obj.members.iter().all(|m| {
+            matches!(m, Member::Property { name, .. }
+                if name == "Layout.fillHeight" || name == "Layout.verticalStretchFactor")
+        })
 }
 
 fn find_mut<'o>(obj: &'o mut Object, id: &str) -> Option<&'o mut Object> {
