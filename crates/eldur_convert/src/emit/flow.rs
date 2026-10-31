@@ -14,7 +14,7 @@ use eldur_qml::{Member, Object, Value};
 
 use super::Emitter;
 use super::units::{fmt_number, length_expr, number, px_part, round};
-use crate::boxes::{LayoutBox, describe};
+use crate::boxes::{LayoutBox, describe, is_out_of_flow};
 
 /// A set of adjoining margins: the largest positive and the most negative
 /// one; the collapsed margin is their sum.
@@ -62,6 +62,9 @@ pub(crate) struct Column {
     /// is no item).
     pub escaped_top: MarginSet,
     pub escaped_bottom: MarginSet,
+    /// Only out-of-flow boxes' slots, which take no room: the box's own
+    /// margins still collapse through it.
+    pub only_slots: bool,
 }
 
 impl Emitter<'_, '_> {
@@ -88,6 +91,21 @@ impl Emitter<'_, '_> {
         let mut before_hidden: Option<usize> = None;
         let mut rest = children;
         while let Some(child) = rest.first() {
+            if is_out_of_flow(&child.style) {
+                rest = &rest[1..];
+                // Its static position is past the margins so far, unless
+                // they escape through the parent's top edge, which moves
+                // the slot with them.
+                let margin = if last.is_none() && top_open {
+                    0.0
+                } else {
+                    pending.value()
+                };
+                if let Some(slot) = self.out_of_flow_box(child, margin) {
+                    layout.push_child(slot);
+                }
+                continue;
+            }
             let run = float_run(rest);
             let wrapped = rest.get(run..).map_or(0, |after| {
                 let side = child.style.float;
@@ -217,13 +235,24 @@ impl Emitter<'_, '_> {
             last = Some(layout.members.len() - 1);
             pending = emitted.bottom;
         }
-        let Some(last) = last else {
+        let only_slots = last.is_none() && !layout.members.is_empty();
+        let Some(mut last) = last else {
             return Column {
-                obj: None,
+                obj: only_slots.then_some(layout),
                 escaped_top: pending,
                 escaped_bottom: MarginSet::default(),
+                only_slots,
             };
         };
+        // A slot after the last item counts its static position from past
+        // the item's margins, so those go below the slot.
+        if let Some(tail) = layout
+            .members
+            .iter()
+            .rposition(|m| matches!(m, Member::Child(_)))
+        {
+            last = tail;
+        }
         let escaped_bottom = if bottom_open {
             // The page as loaded: a hidden last box passes on the margins
             // before it.
@@ -252,6 +281,7 @@ impl Emitter<'_, '_> {
             obj: Some(layout),
             escaped_top: escaped_top.unwrap_or_default(),
             escaped_bottom,
+            only_slots: false,
         }
     }
 

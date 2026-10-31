@@ -309,12 +309,16 @@ impl<'a> Builder<'a, '_> {
             Level::Inline => {
                 let mut children = Vec::new();
                 self.children_of(node, &mut children);
-                let children = children
+                // `level` blockifies inline elements with block descendants,
+                // so only out-of-flow boxes reach here. They do not split
+                // the inline box; they leave for their containing block.
+                let (inline, blocks): (Vec<_>, Vec<_>) = children
+                    .into_iter()
+                    .partition(|c| matches!(c, Child::Inline(_)));
+                let children = inline
                     .into_iter()
                     .filter_map(|c| match c {
                         Child::Inline(raw) => Some(raw),
-                        // `level` blockifies inline elements with block
-                        // descendants, so none reach here.
                         Child::Block(_) => None,
                     })
                     .collect();
@@ -323,6 +327,7 @@ impl<'a> Builder<'a, '_> {
                     style,
                     children,
                 }));
+                out.extend(blocks);
             }
             Level::Atomic(kind) => {
                 let atomic = self.block_box(node, style, kind);
@@ -489,7 +494,7 @@ impl<'a> Builder<'a, '_> {
             }
             return Level::Atomic(kind_of(style.display));
         }
-        if self.has_block_descendant(node) {
+        if self.has_block_descendant(node, is_containing_block(style)) {
             self.diags.info(
                 "css",
                 node_line(self.doc, node),
@@ -523,8 +528,9 @@ impl<'a> Builder<'a, '_> {
 
     /// Whether an in-flow descendant of `node` (through inline and
     /// `contents` elements only) is block-level, which splits the inline
-    /// box in CSS.
-    fn has_block_descendant(&self, node: NodeId) -> bool {
+    /// box in CSS. Out-of-flow boxes do not split it, but one whose
+    /// containing block is the inline box (`holds`) needs a box to sit in.
+    fn has_block_descendant(&self, node: NodeId, holds: bool) -> bool {
         self.doc.element_children(node).any(|child| {
             let Some(style) = self.styles.computed(child).map(|s| &s.style) else {
                 return false;
@@ -533,12 +539,13 @@ impl<'a> Builder<'a, '_> {
                 return false;
             }
             is_replaced(self.doc, child)
-                || is_block_level(style.display)
-                || style.float != Float::None
-                || matches!(style.position, Position::Absolute | Position::Fixed)
+                || (is_out_of_flow(style) && holds)
+                || (!is_out_of_flow(style)
+                    && (is_block_level(style.display) || style.float != Float::None))
                 // An atomic inline's blocks are inside its own box.
-                || (matches!(style.display, Display::Inline | Display::Contents)
-                    && self.has_block_descendant(child))
+                || (!is_out_of_flow(style)
+                    && matches!(style.display, Display::Inline | Display::Contents)
+                    && self.has_block_descendant(child, holds || is_containing_block(style)))
         })
     }
 
@@ -637,6 +644,9 @@ fn group<'a>(children: Vec<Child<'a>>, parent: &'a ComputedStyle) -> Content<'a>
     }
     let mut blocks = Vec::new();
     let mut run = Vec::new();
+    // Out-of-flow boxes that were block-level sit below the line before
+    // them, so they follow the run they interrupt without ending it.
+    let mut below_run = Vec::new();
     let flush = |run: &mut Vec<whitespace::Raw<'a>>, blocks: &mut Vec<LayoutBox<'a>>| {
         if let Content::Inline(items) = inline_content(std::mem::take(run)) {
             blocks.push(LayoutBox {
@@ -651,13 +661,22 @@ fn group<'a>(children: Vec<Child<'a>>, parent: &'a ComputedStyle) -> Content<'a>
     for child in children {
         match child {
             Child::Inline(raw) => run.push(raw),
+            Child::Block(b) if is_out_of_flow(&b.style) => {
+                if b.style.display == Display::Inline {
+                    blocks.push(*b);
+                } else {
+                    below_run.push(*b);
+                }
+            }
             Child::Block(b) => {
                 flush(&mut run, &mut blocks);
+                blocks.append(&mut below_run);
                 blocks.push(*b);
             }
         }
     }
     flush(&mut run, &mut blocks);
+    blocks.append(&mut below_run);
     Content::Blocks(blocks)
 }
 
@@ -668,6 +687,23 @@ fn inline_content(raw: Vec<whitespace::Raw<'_>>) -> Content<'_> {
     } else {
         Content::Inline(items)
     }
+}
+
+/// Whether a box leaves the flow for a containing block.
+pub(crate) fn is_out_of_flow(style: &ComputedStyle) -> bool {
+    matches!(style.position, Position::Absolute | Position::Fixed)
+}
+
+/// Whether a box is the containing block of its `position: fixed`
+/// descendants (CSS Transforms 1 §3, Filter Effects 1 §5).
+pub(crate) fn is_fixed_containing_block(style: &ComputedStyle) -> bool {
+    !style.transform.is_empty() || style.filter.is_some()
+}
+
+/// Whether a box is the containing block of its `position: absolute`
+/// descendants (CSS 2.2 §10.1).
+pub(crate) fn is_containing_block(style: &ComputedStyle) -> bool {
+    style.position != Position::Static || is_fixed_containing_block(style)
 }
 
 /// The style of an anonymous block box: inherited properties from its
