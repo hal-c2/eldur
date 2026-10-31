@@ -483,7 +483,7 @@ impl Emitter<'_, '_> {
             obj.set(&format!("Layout.fill{main}"), true);
             // A Flow is as wide as it is given: with nothing given, every item
             // on a row of its own. Its row of controls says its own width.
-            let natural = if holds_control_row(&obj) {
+            let natural = if holds_control_row(obj) {
                 obj.set("Layout.preferredWidth", Value::expr(CONTROL_ROW_WIDTH));
                 CONTROL_ROW_WIDTH.to_owned()
             } else {

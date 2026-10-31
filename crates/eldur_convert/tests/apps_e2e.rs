@@ -290,7 +290,9 @@ fn differences(steps: &[Value], want: &[Value]) -> Vec<String> {
                     let (a, b) = (a.unwrap_or(f64::NAN), b.unwrap_or(f64::NAN));
                     // A box nobody sees has no place to compare.
                     let hidden = w["shown"] == false && g["shown"] == false;
-                    if !hidden && !((a - b).abs() <= GEOMETRY_TOLERANCE) {
+                    // A value only one side has is NaN, and is never near.
+                    let near = (a - b).abs() <= GEOMETRY_TOLERANCE;
+                    if !hidden && !near {
                         out.push(format!("{at} {axis}: got {a} Chromium {b}"));
                     }
                 }
