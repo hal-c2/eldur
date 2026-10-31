@@ -515,6 +515,65 @@ through the registry (S9a).
 - `getInnerHTML` returns the last string assigned, not a serialisation;
   `outerHTML` and markup built by `Array.prototype.join` are opaque.
 
+### 6.8 Created inline elements
+
+A static line is one `Text` with StyledText runs (§7), and a run has no
+object for a template to style. So an inline element a script makes
+(`<span class="label">`, `<strong>`, `<a>`, by `createElement` or in
+`innerHTML` markup) is **an item of its own** when its probe is inside a
+created element or in `<body>`:
+
+- **The line.** The created block's inline content becomes a `Flow`
+  (`inline.rs inline_flow`). The runtime's `_appendTarget` already appends
+  to it, because a `Flow` has `spacing`.
+- **The element.** A `Text`, or a `Rectangle` holding a `Text` when it has
+  a background or border, with the template's colour, weight, style and
+  decoration. The decoration includes what the block propagates (CSS Text
+  Decoration 3 §2: `.item.done { text-decoration: line-through }` strikes
+  its children). Its width is
+  `parent ? Math.min(implicitWidth, parent.width) : implicitWidth`, so it
+  wraps only when it is wider than the line.
+- **Text nodes.** A text node between the elements becomes a `Text` made
+  from the `Flow`'s `readonly property Component h2qTextRun`, which has
+  the block's font, colour and decoration (`_materializeTextRun`). Spaces
+  become U+00A0, because Qt does not measure a `Text`'s trailing spaces,
+  and the space before `by` would vanish.
+- **Boxes.** Vertical margin and padding are zeroed: they do not move an
+  inline box's line (CSS 2.2 §10.6.1), but an item's would. Horizontal
+  margins of a `Text` become its `leftPadding`/`rightPadding`. Horizontal
+  padding of a painted element is the `Rectangle`'s.
+- **Class toggles** on created elements work the same as on blocks (§6.4
+  step 3). The keys include every set a toggle makes. A toggle through a
+  query (`list.querySelector('.label').classList.toggle('warn')`) or an
+  unattributed target counts when the selector matches the probe, or when
+  the class could style it (§2.2). Before this, `span.label.warn` missed
+  its key and fell back to a generic item.
+- **Shared keys.** Two probes with the same key (a `li.item` built with
+  `createElement` and another built from markup) are two templates. The
+  first wins the key, so the second's children are also registered under
+  the winner (`span.tag@h2qT_li_0`); the runtime finds them by the
+  template the parent actually has.
+
+Limits:
+
+- A created inline element does not break across lines. The `Flow` wraps
+  between items, and a long `<span>` wraps inside its own box.
+- The `Flow` aligns tops, not baselines. Mixed font sizes on one line sit
+  higher than in Chromium.
+- Qt's line box is 18–19px where Chromium's inline content area is 17px
+  (16px sans-serif). Each run is shaped on its own, so x positions drift
+  by up to ~3px along a line. The end-to-end test allows 3px in x and
+  width and 2px in y and height for text boxes, and 1px for the blocks.
+- A painted inline (`Rectangle` + `Text`) loses its horizontal margins.
+- **Static parents keep a StyledText line.** A created inline appended to
+  a static block (`Context::Static`) has no template and still takes the
+  `@*`/generic fallback, and `innerHTML` markup on a static element is
+  StyledText (`_markupMakesElements`). Turning a static line into a `Flow`
+  would change every static page.
+- A created `<a>` is probed with `href=""`. Analysis records only `type`
+  and `class`, and an `<a>` without `href` would not match `a:link` or
+  the user-agent link style.
+
 ---
 
 ## 7. Runtime metadata
@@ -569,6 +628,7 @@ through the registry (S9a).
 | `h2qIndex`, `h2qCount` | `int`, 1-based place among element siblings, and their number | converter (document value), runtime (`_renumber`) | structural bindings (§5.5) |
 | `h2qTypeIndex`, `h2qTypeCount` | `int`, the same among siblings with the same tag | converter (only when an of-type test reads it), runtime | structural bindings |
 | `h2qIs<Test>` | `readonly bool`, e.g. `h2qIsFirstChild`, `h2qIsNthChild2n1` | converter (in templates) | descendant templates' bindings |
+| `h2qTextRun` | `readonly Component` on a created block's line `Flow`: a `Text` with the block's text style | converter (§6.8) | runtime (text nodes in that line) |
 | `root.h2qTemplates` | `var` object: key → `Component` | converter | runtime |
 | `root.h2qStyledClasses` | `var` array of strings, sorted | converter | runtime (key building) |
 | `root.baseUrl` | `string` | converter | runtime (`init`, already supported) |
@@ -593,6 +653,10 @@ diagnostic.
   initial properties carry `cls_*` and `h2qClasses`; recorded state is
   replayed; `h2qUpN` is set.
 - Rematerialisation on a form-changing class change.
+- Created text nodes in a line with `h2qTextRun` (§6.8):
+  `_materializeTextRun` remakes the node's `Text` from that Component, in
+  place, with spaces as U+00A0. `textContent` reads and writes the text
+  as the script set it, and `_layoutChanged` follows each swap.
 - Positions (S9b): `_renumber(container)` rewrites `h2qIndex`/`h2qCount`
   (and the type pair where declared) on the container's element children
   after every insert, remove, reorder, template swap, `innerHTML` and

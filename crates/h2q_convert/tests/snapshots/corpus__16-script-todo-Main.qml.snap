@@ -16,7 +16,7 @@ ApplicationWindow {
     property string baseUrl: Qt.resolvedUrl("Main.qml")
     property string documentUrl: Qt.resolvedUrl("Main.qml")
     property var h2qStyledClasses: ["app", "app-header", "btn", "composer", "counter", "delete", "done", "empty", "footer-note", "todo-item", "todo-list", "todo-text"]
-    readonly property var h2qTemplates: ({ "li.done.todo-item@todoList": h2qT_li_0, "li.todo-item@todoList": h2qT_li_0, "input[type=checkbox]@h2qT_li_0": h2qT_input_1, "span.todo-text@h2qT_li_0": h2qT_span_2, "button.delete@h2qT_li_0": h2qT_button_3, "li.done.todo-item@*": h2qT_li_0, "li.todo-item@*": h2qT_li_0, "input[type=checkbox]@*": h2qT_input_4, "button.delete@*": h2qT_button_5 })
+    readonly property var h2qTemplates: ({ "li.done.todo-item@todoList": h2qT_li_0, "li.todo-item@todoList": h2qT_li_0, "input[type=checkbox]@h2qT_li_0": h2qT_input_1, "span.todo-text@h2qT_li_0": h2qT_span_2, "button.delete@h2qT_li_0": h2qT_button_3, "li.done.todo-item@*": h2qT_li_0, "li.todo-item@*": h2qT_li_0, "input[type=checkbox]@*": h2qT_input_4, "span.todo-text@*": h2qT_span_5, "button.delete@*": h2qT_button_6 })
 
     visible: true
     color: "#eef1f7"
@@ -466,15 +466,35 @@ ApplicationWindow {
         }
     }
 
+    // <span class="todo-text"> created by a script
+    Component {
+        id: h2qT_span_5
+
+        Text {
+            id: todoText3
+            property string h2qTag: "span"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_span_5"
+
+            text: ""
+            textFormat: Text.PlainText
+            color: "#1f2430"
+            font.family: "sans-serif"
+            font.pixelSize: 16
+            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+            width: parent ? Math.min(implicitWidth, parent.width) : implicitWidth
+        }
+    }
+
     // <button class="delete"> created by a script
     Component {
-        id: h2qT_button_5
+        id: h2qT_button_6
 
         Button {
             id: buttonControl3
             property string h2qTag: "button"
             property string h2qClasses: ""
-            property string h2qTemplate: "h2qT_button_5"
+            property string h2qTemplate: "h2qT_button_6"
 
             text: ""
             palette.buttonText: "#b42318"

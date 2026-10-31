@@ -114,6 +114,9 @@ pub(crate) struct Emitter<'a, 'd> {
     collapsed: HashSet<NodeId>,
     /// The control being emitted is sticky.
     force_paint: bool,
+    /// Created inline elements laid out as items of their own in their
+    /// line (`boxes::build_with`).
+    inline_items: HashSet<NodeId>,
 }
 
 impl<'a, 'd> Emitter<'a, 'd> {
@@ -158,6 +161,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             strips: HashMap::new(),
             collapsed: HashSet::new(),
             force_paint: false,
+            inline_items: HashSet::new(),
         }
     }
 

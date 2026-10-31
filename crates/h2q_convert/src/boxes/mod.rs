@@ -115,15 +115,19 @@ pub(crate) fn build<'a>(
     styles: &'a StyleMap,
     diags: &mut Diagnostics,
 ) -> Option<LayoutBox<'a>> {
-    build_keeping(doc, styles, None, diags)
+    build_with(doc, styles, None, None, diags)
 }
 
 /// [`build`], also keeping a hidden box for each `display: none` element
 /// in `keep`: scripts that show it (`el.hidden = false`) need an object.
-pub(crate) fn build_keeping<'a>(
+/// Each inline element in `own` is laid out as an atomic inline-level box
+/// of its own: the elements a script creates in a line need an item to be
+/// materialised into (dynamic-styles.md §6.8).
+pub(crate) fn build_with<'a>(
     doc: &'a Document,
     styles: &'a StyleMap,
     keep: Option<&'a HashSet<NodeId>>,
+    own: Option<&'a HashSet<NodeId>>,
     diags: &mut Diagnostics,
 ) -> Option<LayoutBox<'a>> {
     let root = doc.html()?;
@@ -135,6 +139,7 @@ pub(crate) fn build_keeping<'a>(
         doc,
         styles,
         keep,
+        own,
         diags,
         counters: counters::Counters::new(),
     };
@@ -167,6 +172,7 @@ struct Builder<'a, 'd> {
     doc: &'a Document,
     styles: &'a StyleMap,
     keep: Option<&'a HashSet<NodeId>>,
+    own: Option<&'a HashSet<NodeId>>,
     diags: &'d mut Diagnostics,
     counters: counters::Counters,
 }
@@ -287,6 +293,18 @@ impl<'a> Builder<'a, '_> {
             Level::Contents => self.children_of(node, out),
             Level::Block(kind) => {
                 out.push(Child::Block(Box::new(self.block_box(node, style, kind))))
+            }
+            Level::Inline if self.own.is_some_and(|own| own.contains(&node)) => {
+                let mut built = self.block_box(node, style, BoxKind::Block);
+                // Vertical margins and padding of an inline box do not move
+                // its line (CSS 2.2 §10.6.1); as an item they would.
+                let mut owned = style.clone();
+                owned.margin.top = h2q_css::LengthAuto::Length(h2q_css::Length::default());
+                owned.margin.bottom = h2q_css::LengthAuto::Length(h2q_css::Length::default());
+                owned.padding.top = h2q_css::Length::default();
+                owned.padding.bottom = h2q_css::Length::default();
+                built.style = Cow::Owned(owned);
+                out.push(Child::Inline(whitespace::Raw::Atomic(Box::new(built))));
             }
             Level::Inline => {
                 let mut children = Vec::new();
