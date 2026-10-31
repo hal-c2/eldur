@@ -355,6 +355,7 @@ pub(crate) struct Resolver<'a> {
     scripts: &'a Scripts,
     targets: &'a BTreeMap<NodeId, Target>,
     inline_covered: &'a std::collections::BTreeSet<NodeId>,
+    generated_text: bool,
 }
 
 /// The root property that holds an inline node with a handler attribute.
@@ -370,7 +371,14 @@ impl<'a> Resolver<'a> {
             scripts,
             targets,
             inline_covered,
+            generated_text: false,
         }
+    }
+
+    /// The page has `::before` or `::after` text the runtime follows.
+    pub(crate) fn with_generated_text(mut self, generated_text: bool) -> Self {
+        self.generated_text = generated_text;
+        self
     }
 
     fn target(&self, node: NodeId) -> Option<QmlTarget> {
@@ -383,6 +391,10 @@ impl<'a> Resolver<'a> {
 }
 
 impl DomResolver for Resolver<'_> {
+    fn text_has_generated_parts(&self) -> bool {
+        self.generated_text
+    }
+
     fn resolve(&self, query: &DomQuery) -> Vec<QmlTarget> {
         self.scripts
             .matches

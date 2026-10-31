@@ -7,7 +7,7 @@
 
 pub mod values;
 
-pub use inline_rules::{InlineRule, PaintValue, RuntimeRule};
+pub use inline_rules::{InlineRule, PaintValue, PseudoPart, PseudoRule, RuntimeRule};
 
 pub use values::*;
 
@@ -453,6 +453,12 @@ pub fn parse_paint_value(property: &str, text: &str, viewport: &Viewport) -> Opt
 #[must_use]
 pub fn background_parts(value: &str) -> Option<(Option<String>, Option<String>)> {
     inline_rules::background_parts(value)
+}
+
+/// The inline text `::before` and `::after` rules generate, which the runtime
+/// follows when a script changes what an element's classes match.
+pub fn pseudo_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<PseudoRule> {
+    inline_rules::pseudo_rules(sheets, viewport)
 }
 
 /// The structural pseudo-classes (without `of S`) some selector in `sheets`

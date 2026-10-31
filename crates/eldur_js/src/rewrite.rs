@@ -109,6 +109,10 @@ struct StaticOnly<'a> {
 }
 
 impl DomResolver for StaticOnly<'_> {
+    fn text_has_generated_parts(&self) -> bool {
+        self.inner.text_has_generated_parts()
+    }
+
     fn resolve(&self, query: &DomQuery) -> Vec<QmlTarget> {
         if self.live.contains(query) {
             Vec::new()

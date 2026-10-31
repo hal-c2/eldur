@@ -119,7 +119,10 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     // 6: page.js, with the ids chosen in step 5.
     if !scripts.is_empty() {
         scripts::report_missing(&doc, &scripts, &targets, &inline_covered, &mut diags);
-        let resolver = scripts::Resolver::new(&scripts, &targets, &inline_covered);
+        let follows_generated = !scripts.analysis.class_writes.is_empty()
+            && !eldur_css::pseudo_rules(&sheets, &options.viewport).is_empty();
+        let resolver = scripts::Resolver::new(&scripts, &targets, &inline_covered)
+            .with_generated_text(follows_generated);
         let js = eldur_js::rewrite(&scripts.inputs, &scripts.analysis, &resolver);
         for d in &js.diagnostics {
             diags.push(js_diagnostic(d));
@@ -168,6 +171,12 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
             decls.push(metadata::styled_classes_decl(&classes));
             if scripts.analysis.reads_template_content {
                 decls.extend(metadata::html_templates_decl(&doc));
+            }
+            if !scripts.analysis.class_writes.is_empty() {
+                let pseudo = eldur_css::pseudo_rules(&sheets, &options.viewport);
+                if !pseudo.is_empty() {
+                    decls.push(metadata::pseudo_rules_decl(&pseudo));
+                }
             }
             if scripts.analysis.needs_cascade() {
                 let rules = eldur_css::runtime_rules(&sheets, &options.viewport);

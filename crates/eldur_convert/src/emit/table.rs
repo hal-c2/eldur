@@ -832,6 +832,7 @@ impl<'a> Emitter<'a, '_> {
 
         let mut fonts: Vec<(String, String)> = Vec::new();
         let mut objects: Vec<Vec<Object>> = Vec::new();
+        let mut outer_edge = 0.0_f32;
         for (row, row_slots) in parts.rows.iter().zip(&slots) {
             self.table_row_diagnostics(row, live, line);
             let moves = self.row_translations(row, line);
@@ -846,6 +847,9 @@ impl<'a> Emitter<'a, '_> {
                 cell_style.background_color = self.cell_background(cell, row, &parts, slot);
                 if let Some(edges) = &edges {
                     let [top, right, bottom, left] = edges.cell_borders(slot);
+                    if slot.column + slot.column_span == columns {
+                        outer_edge = outer_edge.max(right.width);
+                    }
                     cell_style.border.top = top;
                     cell_style.border.right = right;
                     cell_style.border.bottom = bottom;
@@ -868,6 +872,15 @@ impl<'a> Emitter<'a, '_> {
         }
 
         if live {
+            // Last-column cells draw the outer border whole; a browser's hold half
+            // of it and the table the rest, so it is no content to share width by.
+            grid.members.push(Member::PropertyDecl {
+                ty: "real".to_owned(),
+                name: "eldurOuterEdge".to_owned(),
+                value: Some(Value::expr(fmt_number(round(outer_edge)))),
+                readonly: true,
+                required: false,
+            });
             self.live_parts(b, &parts, objects, &mut grid, line);
         } else {
             // A script's empty row group to fill: it has no cells to place, but

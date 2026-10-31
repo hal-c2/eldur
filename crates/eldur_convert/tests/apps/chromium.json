@@ -9208,6 +9208,407 @@
    }
   }
  ],
+ "generated": [
+  {
+   "name": "load",
+   "log": [
+    "load \"Note\" \"Age\" \"Static\""
+   ],
+   "state": {
+    "#age": [
+     {
+      "box": [
+       361.08,
+       8.5,
+       46.42,
+       27
+      ],
+      "shown": true,
+      "text": "Age"
+     }
+    ],
+    "#name": [
+     {
+      "box": [
+       8.5,
+       8.5,
+       352.58,
+       27
+      ],
+      "shown": true,
+      "text": "Name"
+     }
+    ],
+    "#note": [
+     {
+      "box": [
+       8,
+       79,
+       33.8,
+       18
+      ],
+      "shown": true,
+      "text": "Note"
+     }
+    ],
+    "#static-one": [
+     {
+      "box": [
+       46.25,
+       79,
+       74.7,
+       18
+      ],
+      "shown": true,
+      "text": "Static"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "up",
+   "log": [
+    "up \"Note\" \"Age\" \"Static\""
+   ],
+   "state": {
+    "#age": [
+     {
+      "box": [
+       341.09,
+       8.5,
+       66.41,
+       27
+      ],
+      "shown": true,
+      "text": "Age"
+     }
+    ],
+    "#name": [
+     {
+      "box": [
+       8.5,
+       8.5,
+       332.59,
+       27
+      ],
+      "shown": true,
+      "text": "Name"
+     }
+    ],
+    "#note": [
+     {
+      "box": [
+       8,
+       79,
+       33.8,
+       18
+      ],
+      "shown": true,
+      "text": "Note"
+     }
+    ],
+    "#static-one": [
+     {
+      "box": [
+       46.25,
+       79,
+       74.7,
+       18
+      ],
+      "shown": true,
+      "text": "Static"
+     }
+    ],
+    "(focus)": "up"
+   }
+  },
+  {
+   "name": "down",
+   "log": [
+    "up \"Note\" \"Age\" \"Static\""
+   ],
+   "state": {
+    "#age": [
+     {
+      "box": [
+       341.09,
+       8.5,
+       66.41,
+       27
+      ],
+      "shown": true,
+      "text": "Age"
+     }
+    ],
+    "#name": [
+     {
+      "box": [
+       8.5,
+       8.5,
+       332.59,
+       27
+      ],
+      "shown": true,
+      "text": "Name"
+     }
+    ],
+    "#note": [
+     {
+      "box": [
+       8,
+       79,
+       33.8,
+       18
+      ],
+      "shown": true,
+      "text": "Note"
+     }
+    ],
+    "#static-one": [
+     {
+      "box": [
+       46.25,
+       79,
+       74.7,
+       18
+      ],
+      "shown": true,
+      "text": "Static"
+     }
+    ],
+    "(focus)": "up"
+   }
+  },
+  {
+   "name": "mark",
+   "log": [
+    "mark \"Note\" \"Age\" \"Static\""
+   ],
+   "state": {
+    "#age": [
+     {
+      "box": [
+       341.09,
+       8.5,
+       66.41,
+       27
+      ],
+      "shown": true,
+      "text": "Age"
+     }
+    ],
+    "#name": [
+     {
+      "box": [
+       8.5,
+       8.5,
+       332.59,
+       27
+      ],
+      "shown": true,
+      "text": "Name"
+     }
+    ],
+    "#note": [
+     {
+      "box": [
+       8,
+       79,
+       89.39,
+       18
+      ],
+      "shown": true,
+      "text": "Note"
+     }
+    ],
+    "#static-one": [
+     {
+      "box": [
+       101.84,
+       79,
+       74.7,
+       18
+      ],
+      "shown": true,
+      "text": "Static"
+     }
+    ],
+    "(focus)": "mark"
+   }
+  },
+  {
+   "name": "strong",
+   "log": [
+    "strong \"Note\" \"Age\" \"Static\""
+   ],
+   "state": {
+    "#age": [
+     {
+      "box": [
+       341.09,
+       8.5,
+       66.41,
+       27
+      ],
+      "shown": true,
+      "text": "Age"
+     }
+    ],
+    "#name": [
+     {
+      "box": [
+       8.5,
+       8.5,
+       332.59,
+       27
+      ],
+      "shown": true,
+      "text": "Name"
+     }
+    ],
+    "#note": [
+     {
+      "box": [
+       8,
+       79,
+       56.48,
+       18
+      ],
+      "shown": true,
+      "text": "Note"
+     }
+    ],
+    "#static-one": [
+     {
+      "box": [
+       68.94,
+       79,
+       74.7,
+       18
+      ],
+      "shown": true,
+      "text": "Static"
+     }
+    ],
+    "(focus)": "strong"
+   }
+  },
+  {
+   "name": "text",
+   "log": [
+    "text \"Changed\" \"Age\" \"Static\""
+   ],
+   "state": {
+    "#age": [
+     {
+      "box": [
+       341.09,
+       8.5,
+       66.41,
+       27
+      ],
+      "shown": true,
+      "text": "Age"
+     }
+    ],
+    "#name": [
+     {
+      "box": [
+       8.5,
+       8.5,
+       332.59,
+       27
+      ],
+      "shown": true,
+      "text": "Name"
+     }
+    ],
+    "#note": [
+     {
+      "box": [
+       8,
+       79,
+       87.64,
+       18
+      ],
+      "shown": true,
+      "text": "Changed"
+     }
+    ],
+    "#static-one": [
+     {
+      "box": [
+       100.09,
+       79,
+       74.7,
+       18
+      ],
+      "shown": true,
+      "text": "Static"
+     }
+    ],
+    "(focus)": "text"
+   }
+  },
+  {
+   "name": "off",
+   "log": [
+    "off \"Changed\" \"Age\" \"Static\""
+   ],
+   "state": {
+    "#age": [
+     {
+      "box": [
+       361.08,
+       8.5,
+       46.42,
+       27
+      ],
+      "shown": true,
+      "text": "Age"
+     }
+    ],
+    "#name": [
+     {
+      "box": [
+       8.5,
+       8.5,
+       352.58,
+       27
+      ],
+      "shown": true,
+      "text": "Name"
+     }
+    ],
+    "#note": [
+     {
+      "box": [
+       8,
+       79,
+       64.95,
+       18
+      ],
+      "shown": true,
+      "text": "Changed"
+     }
+    ],
+    "#static-one": [
+     {
+      "box": [
+       77.41,
+       79,
+       74.7,
+       18
+      ],
+      "shown": true,
+      "text": "Static"
+     }
+    ],
+    "(focus)": "off"
+   }
+  }
+ ],
  "hidden_focus": [
   {
    "name": "load",

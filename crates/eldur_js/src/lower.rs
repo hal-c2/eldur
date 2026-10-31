@@ -419,7 +419,7 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
             "innerText" => format!("Eldur.getInnerText({id})"),
             "textContent" => {
                 // A box has a `<id>Text` only when it has text of its own.
-                if target.kind == TargetKind::Box {
+                if target.kind == TargetKind::Box || self.resolver.text_has_generated_parts() {
                     format!("Eldur.getText({id})")
                 } else {
                     format!("{id}.text")
@@ -548,6 +548,13 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
                         && is_empty_string_literal(right) =>
                 {
                     format!("Eldur.setText({id}, \"\")")
+                }
+                // The element's `Text` may also hold what `::after` generates.
+                "textContent" | "innerText"
+                    if self.resolver.text_has_generated_parts()
+                        && op == AssignmentOperator::Assign =>
+                {
+                    format!("Eldur.setText({id}, {rhs_str})")
                 }
                 "textContent" | "innerText" => {
                     let lhs = if target.kind == TargetKind::Box {

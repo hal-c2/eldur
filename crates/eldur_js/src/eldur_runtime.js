@@ -350,6 +350,7 @@ function init(rootItem, baseUrl, documentUrl) {
             return false;
         });
         _tableSetUp();
+        _pseudoLoad();
     }
 }
 
@@ -1575,6 +1576,153 @@ function _syncEldurClasses(raw, m) {
     }
 }
 
+// Generated text in the element's `Text`, kept out of what its content reads:
+// a generated box there would be one more thing a line or a column measures apart.
+var _pseudoRules = null;
+var _pseudoPending = false;
+
+function _pseudoLoad() {
+    _pseudoRules = [];
+    if (!_root || typeof _root.eldurPseudoRules !== "string") {
+        return;
+    }
+    _pseudoRules = JSON.parse(_root.eldurPseudoRules);
+    // What the converter already wrote is matched here, before any class moves.
+    _pseudoFlush(true);
+}
+
+function _pseudoTouch() {
+    if (!_pseudoRules || _pseudoRules.length === 0 || _pseudoPending) {
+        return;
+    }
+    _pseudoPending = true;
+    Qt.callLater(function() {
+        _pseudoPending = false;
+        _pseudoFlush(false);
+    });
+}
+
+function _pseudoHolder(raw) {
+    return typeof raw.text === "string" ? raw : _findTextChild(raw);
+}
+
+// `str` without what generated text the element holds.
+function _pseudoOwn(raw, str) {
+    var p = _meta(raw).pseudo;
+    if (!p || p.model) {
+        return str;
+    }
+    var out = String(str);
+    if (p.before && out.indexOf(p.before) === 0) {
+        out = out.slice(p.before.length);
+    }
+    if (p.after && out.slice(-p.after.length) === p.after) {
+        out = out.slice(0, -p.after.length);
+    }
+    return out;
+}
+
+function _pseudoWrapped(raw, str) {
+    var p = _meta(raw).pseudo;
+    return p && !p.model ? p.before + str + p.after : str;
+}
+
+function _pseudoFlush(baseline) {
+    var seen = new Map();
+    _pseudoRules.forEach(function(rule, order) {
+        var found = document.querySelectorAll(rule.sel);
+        for (var i = 0; i < found.length; ++i) {
+            var raw = _unwrap(found[i]);
+            if (!raw || raw.__eldurInline || !_pseudoHolder(raw)) {
+                continue;
+            }
+            var entry = seen.get(raw) || { before: null, after: null };
+            var side = rule.after ? "after" : "before";
+            var rank = rule.spec[0] * 1e6 + rule.spec[1] * 1e3 + rule.spec[2];
+            if (!entry[side] || rank > entry[side].rank
+                || (rank === entry[side].rank && order > entry[side].order)) {
+                var text = rule.parts.map(function(part) {
+                    return typeof part === "string" ? part : (getAttribute(raw, part.attr) || "");
+                }).join("");
+                entry[side] = { rank: rank, order: order, text: text };
+            }
+            seen.set(raw, entry);
+        }
+    });
+    var next = new Set();
+    seen.forEach(function(entry, raw) {
+        next.add(raw);
+        _pseudoSet(raw, entry.before ? entry.before.text : "", entry.after ? entry.after.text : "", baseline);
+    });
+    _pseudoShown.forEach(function(raw) {
+        if (!next.has(raw)) {
+            _pseudoSet(raw, "", "", false);
+        }
+    });
+    _pseudoShown = next;
+}
+var _pseudoShown = new Set();
+
+// A `Text` with a model renders from it: generated text is a node there, which
+// no script reads, and a leaf the converter wrote it into gives it back.
+function _pseudoInModel(model, raw, before, after, baseline) {
+    var m = _meta(raw);
+    if (baseline) {
+        var leaves = model.kids.filter(function(k) { return k.vtext; });
+        var first = leaves[0], last = leaves[leaves.length - 1];
+        if ((before && (!first || first.data.indexOf(before) !== 0))
+            || (after && (!last || last.data.slice(-after.length) !== after))) {
+            return;
+        }
+        if (before) {
+            first.data = first.data.slice(before.length);
+        }
+        if (after) {
+            last.data = last.data.slice(0, -after.length);
+        }
+    }
+    var kids = model.kids.filter(function(k) { return !k.pseudo; });
+    if (before) {
+        kids.unshift({ gen: { text: before, c: {} }, pseudo: true });
+    }
+    if (after) {
+        kids.push({ gen: { text: after, c: {} }, pseudo: true });
+    }
+    model.kids = kids;
+    m.pseudo = { before: before, after: after, model: true };
+    if (!baseline) {
+        _vRender(model);
+    }
+}
+
+function _pseudoSet(raw, before, after, baseline) {
+    var m = _meta(raw);
+    var was = m.pseudo || { before: "", after: "" };
+    if (was.before === before && was.after === after) {
+        return;
+    }
+    var holder = _pseudoHolder(raw);
+    var model = _vOwnModel(raw) || _vExisting(raw);
+    if (model) {
+        _pseudoInModel(model, raw, before, after, baseline);
+        return;
+    }
+    if (baseline) {
+        // The converter's text: it holds this only if it is plain.
+        var written = String(holder.text);
+        if ((before && written.indexOf(before) !== 0)
+            || (after && written.slice(-after.length) !== after)) {
+            return;
+        }
+        m.pseudo = { before: before, after: after };
+        return;
+    }
+    var own = _pseudoOwn(raw, holder.text);
+    m.pseudo = { before: before, after: after };
+    holder.text = before + own + after;
+    _layoutChanged(raw);
+}
+
 function _afterClassMutation(raw, m) {
     var curRaw = (m && m.raw) ? m.raw : raw;
     if (curRaw && curRaw.__eldurInline) {
@@ -1587,6 +1735,7 @@ function _afterClassMutation(raw, m) {
     _vChanged(null);
     _layoutChanged(curRaw);
     _gTouch();
+    _pseudoTouch();
     _syncEldurClasses(curRaw, m);
     if (_isCreatedElement(curRaw) && _isConnected(curRaw)) {
         _connectSubtree(curRaw);
@@ -2045,8 +2194,8 @@ function _tableSpacing(host) {
 }
 
 // A cell's CSS width is a floor on its column, as its text is.
-function _tableCellWidth(item) {
-    var wanted = Math.ceil(item.implicitWidth);
+function _tableCellWidth(item, exact) {
+    var wanted = exact ? item.implicitWidth : Math.ceil(item.implicitWidth);
     if (_gHasCascade()) {
         var s = _gStyle(item);
         var px = /px$/.test(String(s.width)) ? _gPx(s.width, 0, s.fontSize, s.rootSize) : null;
@@ -2238,6 +2387,18 @@ function _tablePlaceAll(host, live) {
             // cells this function is about to resize.
             host.maxContentWidth = _root.tableMaxContentWidth(host, specsNow, host.eldurFixed);
             host.minContentWidth = _root.tableMinContentWidth(host, specsNow, host.eldurFixed);
+            // Spare width is shared by content width, on the text's exact width and
+            // without the outer collapsed border; whole pixels only keep a table with
+            // none to spare from wrapping.
+            if (host.width > host.maxContentWidth) {
+                host.eldurCreatedCells = placed.cells.map(function(c, i) {
+                    var exact = Object.assign({}, adapters[i]);
+                    var last = c.column + c.columnSpan === host.columnSpecs.length;
+                    exact.implicitWidth = _tableCellWidth(c.item, true) - (last ? host.eldurOuterEdge : 0);
+                    exact.minContentWidth = Math.min(exact.minContentWidth, exact.implicitWidth);
+                    return exact;
+                });
+            }
             host.columnWidths = _root.tableColumnWidths(host, specsNow, host.eldurFixed);
         }
         widths = host.columnWidths;
@@ -3124,14 +3285,14 @@ function getText(item) {
         return "";
     }
     if (typeof raw.text === "string") {
-        return raw.text;
+        return _pseudoOwn(raw, raw.text);
     }
     var textChild = _findTextChild(raw);
     // A row of controls in a Flow: its text item is only the space between them.
     // A tagged one is an element of its own, read with the others below.
     if (textChild && !textChild.eldurTag
         && !(_rawElementChildren(raw).length > 0 && textChild.text.trim() === "")) {
-        return String(textChild.text);
+        return _pseudoOwn(raw, String(textChild.text));
     }
     var m = _meta(raw);
     if (m.explicitText !== undefined) {
@@ -3368,13 +3529,13 @@ function setText(item, value) {
         return;
     }
     if (typeof raw.text === "string") {
-        raw.text = str;
+        raw.text = _pseudoWrapped(raw, str);
         return;
     }
     _clearAppended(raw);
     var textChild = _findTextChild(raw);
     if (textChild) {
-        textChild.text = str;
+        textChild.text = _pseudoWrapped(raw, str);
     }
 }
 

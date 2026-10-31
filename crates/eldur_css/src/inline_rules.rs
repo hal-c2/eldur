@@ -5,7 +5,7 @@
 use crate::cascade::layer_ranks;
 use crate::parse::{CustomDeclValue, DeclValue};
 use crate::properties::{CssWide, Longhand};
-use crate::{Origin, Stylesheet, Viewport, user_agent_stylesheet};
+use crate::{ContentItem, Origin, Stylesheet, Viewport, user_agent_stylesheet};
 
 /// One selector of a rule, with the declarations the runtime can paint.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -32,6 +32,25 @@ pub struct RuntimeRule {
     /// `(property, value, important)`; a value may hold `var()`, a property may
     /// be a custom property or a shorthand waiting on `var()`.
     pub declarations: Vec<(String, String, bool)>,
+}
+
+/// What a `::before` or `::after` selector generates, for an element whose class
+/// a script sets: the cascade cannot know at conversion time that it will match.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PseudoRule {
+    /// The selector of the element, without the pseudo-element.
+    pub selector: String,
+    pub after: bool,
+    /// `(id, class, type)`, the pseudo-element included.
+    pub specificity: (u32, u32, u32),
+    /// The text, with `attr(x)` as [`PseudoPart::Attr`]; empty for `content: none`.
+    pub content: Vec<PseudoPart>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PseudoPart {
+    Text(String),
+    Attr(String),
 }
 
 fn property(longhand: Longhand) -> Option<&'static str> {
@@ -368,4 +387,75 @@ pub(crate) fn inline_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<In
         }
     }
     out
+}
+
+/// The page's `content` declarations on `::before` and `::after`. Only inline
+/// generated text can follow a class at run time: a rule that also lays the
+/// pseudo-element out as a box, or counts, is not listed.
+pub(crate) fn pseudo_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<PseudoRule> {
+    let mut out = Vec::new();
+    for sheet in sheets {
+        for rule in &sheet.inner.rules {
+            let Some(text) = &rule.selector_text else {
+                continue;
+            };
+            if !rule.media.iter().all(|m| m.matches(viewport)) {
+                continue;
+            }
+            let boxed = rule.declarations.iter().any(|d| {
+                matches!(&d.value, DeclValue::Expanded(l, _)
+                    if matches!(l, Longhand::Display | Longhand::Position | Longhand::Float))
+            });
+            let content = rule.declarations.iter().rev().find_map(|d| match &d.value {
+                DeclValue::Expanded(Longhand::Content, v) => pseudo_content(v),
+                _ => None,
+            });
+            let (Some(content), false) = (content, boxed) else {
+                continue;
+            };
+            for part in split_list(text) {
+                let part = part.trim();
+                let (element, after) = if let Some(e) = strip_pseudo(part, "after") {
+                    (e, true)
+                } else if let Some(e) = strip_pseudo(part, "before") {
+                    (e, false)
+                } else {
+                    continue;
+                };
+                let Some(specificity) = part_specificity(part) else {
+                    continue;
+                };
+                let selector = if element.is_empty() { "*" } else { element };
+                out.push(PseudoRule {
+                    selector: selector.to_owned(),
+                    after,
+                    specificity,
+                    content: content.clone(),
+                });
+            }
+        }
+    }
+    out
+}
+
+fn strip_pseudo<'a>(part: &'a str, name: &str) -> Option<&'a str> {
+    let rest = part.strip_suffix(name)?;
+    rest.strip_suffix("::")
+        .or_else(|| rest.strip_suffix(':'))
+        .map(str::trim_end)
+}
+
+fn pseudo_content(value: &str) -> Option<Vec<PseudoPart>> {
+    let items = crate::properties::parse_content_value(value)?;
+    let mut parts = Vec::new();
+    for item in items.iter().flatten() {
+        parts.push(match item {
+            ContentItem::String(s) => PseudoPart::Text(s.clone()),
+            ContentItem::Attr(name) => PseudoPart::Attr(name.clone()),
+            ContentItem::OpenQuote => PseudoPart::Text("\u{201c}".to_owned()),
+            ContentItem::CloseQuote => PseudoPart::Text("\u{201d}".to_owned()),
+            _ => return None,
+        });
+    }
+    Some(parts)
 }

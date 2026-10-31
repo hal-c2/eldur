@@ -38,10 +38,6 @@ const STRUT: &str = "a control alone in a line box sits on the line's baseline, 
 const FONT: &str = "Helvetica: Qt's fontconfig match has line height 23 where Chromium's has 18";
 const FONTFOLLOW: &str = "follows from the Helvetica line height and width difference";
 const PAGER: &str = "an empty span with an id between buttons has no item, and the buttons stack";
-const COLLAPSE: &str =
-    "the column solver counts a collapsed cell's whole border and columns are whole pixels";
-const AFTER: &str =
-    "a ::after that depends on a class a script sets is not generated, so its column does not grow";
 const NEVER: &str =
     "a display:none element no script names has no item: it is neither text nor a child node";
 const NEVER_SCRIPT: &str =
@@ -72,78 +68,10 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("text_nodes", "* #never-rendered[*] y:", CREATED_P),
     ("text_nodes", "* #out[*] y:", CREATED_P),
     ("theme", "* body[*] text:", NEVER_SCRIPT),
-    ("table", "* th[1] x:", COLLAPSE),
-    ("table", "* tbody td[*] x:", COLLAPSE),
     ("roster", "* #next[*] x:", PAGER),
     ("roster", "* #next[*] y:", PAGER),
     ("roster", "* #picked[*] y:", PAGER),
     ("roster", "* #page-label count:", PAGER),
-    ("roster", "sort years thead th[*] x:", AFTER),
-    ("roster", "sort years thead th[*] width:", AFTER),
-    ("roster", "sort years tbody td[*] x:", AFTER),
-    ("roster", "sort years tbody td[*] width:", AFTER),
-    ("roster", "sort years tfoot td[*] x:", AFTER),
-    ("roster", "sort years tfoot td[*] width:", AFTER),
-    ("roster", "next sorted thead th[*] x:", AFTER),
-    ("roster", "next sorted thead th[*] width:", AFTER),
-    ("roster", "next sorted tbody td[*] x:", AFTER),
-    ("roster", "next sorted tbody td[*] width:", AFTER),
-    ("roster", "next sorted tfoot td[*] x:", AFTER),
-    ("roster", "next sorted tfoot td[*] width:", AFTER),
-    ("roster", "prev sorted thead th[*] x:", AFTER),
-    ("roster", "prev sorted thead th[*] width:", AFTER),
-    ("roster", "prev sorted tbody td[*] x:", AFTER),
-    ("roster", "prev sorted tbody td[*] width:", AFTER),
-    ("roster", "prev sorted tfoot td[*] x:", AFTER),
-    ("roster", "prev sorted tfoot td[*] width:", AFTER),
-    ("roster", "pick cell thead th[*] x:", AFTER),
-    ("roster", "pick cell thead th[*] width:", AFTER),
-    ("roster", "pick cell tbody td[*] x:", AFTER),
-    ("roster", "pick cell tbody td[*] width:", AFTER),
-    ("roster", "pick cell tfoot td[*] x:", AFTER),
-    ("roster", "pick cell tfoot td[*] width:", AFTER),
-    ("roster", "hover row thead th[*] x:", AFTER),
-    ("roster", "hover row thead th[*] width:", AFTER),
-    ("roster", "hover row tbody td[*] x:", AFTER),
-    ("roster", "hover row tbody td[*] width:", AFTER),
-    ("roster", "hover row tfoot td[*] x:", AFTER),
-    ("roster", "hover row tfoot td[*] width:", AFTER),
-    ("roster", "filter thead th[*] x:", AFTER),
-    ("roster", "filter thead th[*] width:", AFTER),
-    ("roster", "filter tbody td[*] x:", AFTER),
-    ("roster", "filter tbody td[*] width:", AFTER),
-    ("roster", "filter tfoot td[*] x:", AFTER),
-    ("roster", "filter tfoot td[*] width:", AFTER),
-    ("roster", "sort team thead th[*] x:", AFTER),
-    ("roster", "sort team thead th[*] width:", AFTER),
-    ("roster", "sort team tbody td[*] x:", AFTER),
-    ("roster", "sort team tbody td[*] width:", AFTER),
-    ("roster", "sort team tfoot td[*] x:", AFTER),
-    ("roster", "sort team tfoot td[*] width:", AFTER),
-    ("roster", "filter less thead th[*] x:", AFTER),
-    ("roster", "filter less thead th[*] width:", AFTER),
-    ("roster", "filter less tbody td[*] x:", AFTER),
-    ("roster", "filter less tbody td[*] width:", AFTER),
-    ("roster", "filter less tfoot td[*] x:", AFTER),
-    ("roster", "filter less tfoot td[*] width:", AFTER),
-    ("roster", "clear filter thead th[*] x:", AFTER),
-    ("roster", "clear filter thead th[*] width:", AFTER),
-    ("roster", "clear filter tbody td[*] x:", AFTER),
-    ("roster", "clear filter tbody td[*] width:", AFTER),
-    ("roster", "clear filter tfoot td[*] x:", AFTER),
-    ("roster", "clear filter tfoot td[*] width:", AFTER),
-    ("table", "load th[2] width:", COLLAPSE),
-    ("table", "load tbody td[*] width:", COLLAPSE),
-    ("table", "sort name* th[2] width:", COLLAPSE),
-    ("table", "sort name* tbody td[*] width:", COLLAPSE),
-    ("table", "sort age th[*] x:", AFTER),
-    ("table", "sort age th[*] width:", AFTER),
-    ("table", "sort age tbody td[*] x:", AFTER),
-    ("table", "sort age tbody td[*] width:", AFTER),
-    ("table", "filter th[*] x:", AFTER),
-    ("table", "filter th[*] width:", AFTER),
-    ("table", "filter tbody td[*] x:", AFTER),
-    ("table", "filter tbody td[*] width:", AFTER),
     ("table", "* #people[*] height:", ROWS),
     ("table", "* #summary[*] y:", ROWS),
     ("table", "* td[*] y:", ROWS),
@@ -407,6 +335,10 @@ fn page(name: &str) {
     let (steps, trouble) = parse(&text);
     let mut all = differences(&steps, chromium[name].as_array().expect("recorded"));
     all.extend(trouble);
+    // `ELDUR_APPS_ALL=1` prints every difference, the known ones too.
+    if std::env::var_os("ELDUR_APPS_ALL").is_some() {
+        eprintln!("{name}:\n  {}", all.join("\n  "));
+    }
     let known: Vec<_> = KNOWN.iter().filter(|k| k.0 == name).collect();
     let new: Vec<_> = all
         .iter()
@@ -511,4 +443,9 @@ fn cards() {
 #[test]
 fn theme() {
     page("theme");
+}
+
+#[test]
+fn generated() {
+    page("generated");
 }

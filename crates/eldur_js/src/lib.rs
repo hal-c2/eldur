@@ -289,6 +289,12 @@ pub enum TargetKind {
 /// Lets the rewrite map DOM queries to QML ids. Implemented by the
 /// converter.
 pub trait DomResolver {
+    /// Whether an element's `Text` can hold generated text a script must not
+    /// read or overwrite, so its text goes through the runtime.
+    fn text_has_generated_parts(&self) -> bool {
+        false
+    }
+
     /// All elements a query matches, in document order.
     fn resolve(&self, query: &DomQuery) -> Vec<QmlTarget>;
     /// The target for a handler attribute's element (`this` in handler code).

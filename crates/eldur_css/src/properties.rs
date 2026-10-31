@@ -20,6 +20,12 @@ mod shorthand;
 #[cfg(test)]
 mod tests;
 mod text;
+
+/// `content`'s value as text, for what the runtime generates itself.
+pub(crate) fn parse_content_value(value: &str) -> Option<Option<Vec<crate::ContentItem>>> {
+    let cvs = cursor::parse_component_values(value).ok()?;
+    text::parse_content(cursor::trim_ws(&cvs)).ok()
+}
 mod transform;
 
 use crate::{BackgroundRepeat, ComputedStyle, LengthPercentage, Size, TransformFn, Viewport};

@@ -1,0 +1,1 @@
+{"steps":[{"name":"up","click":"#up"},{"name":"down","click":"#up"},{"name":"mark","click":"#mark"},{"name":"strong","click":"#strong"},{"name":"text","click":"#text"},{"name":"off","click":"#off"}],"watch":[{"sel":"#age"},{"sel":"#name"},{"sel":"#note"},{"sel":"#static-one"}]}
