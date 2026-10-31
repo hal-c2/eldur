@@ -1,0 +1,44 @@
+<!doctype html>
+<html><head><style>
+body { margin: 0; font: 16px/27.2px sans-serif; }
+p { margin: 0 0 13.3px; }
+.box { background: #eee; padding: 3.3px 0; margin: 0 0 7px; }
+.half { height: 10.5px; margin: 0 0 4px; background: #ccc; }
+section { margin: 0 0 9px; }
+button { display: block; margin: 0; }
+</style></head><body>
+<div id="c">
+<p id="p1" class="b">one</p>
+<p id="p2" class="b">two</p>
+<div id="d1" class="box b">boxed</div>
+<p id="p3" class="b">three</p>
+<div id="h1" class="half b"></div>
+<div id="h2" class="half b"></div>
+<p id="x" class="b" hidden>hidden</p>
+<p id="p4" class="b">four</p>
+<section id="s1" class="b"><p id="p5" class="b">five</p><p id="p6" class="b">six</p></section>
+<p id="p7" class="b">seven</p>
+<p id="p8" class="b">eight</p>
+<p id="p9" class="b">nine</p>
+<p id="p10" class="b">ten</p>
+<p id="p11" class="b">eleven</p>
+<p id="p12" class="b">twelve</p>
+</div>
+<button id="show" onclick="document.getElementById('x').hidden = !document.getElementById('x').hidden">show</button>
+<button id="append" onclick="append()">append</button>
+<button id="insert" onclick="insert()">insert</button>
+<script>
+function append() {
+  var p = document.createElement("p");
+  p.className = "b";
+  p.textContent = "added";
+  document.getElementById("c").appendChild(p);
+}
+function insert() {
+  var p = document.createElement("p");
+  p.className = "b";
+  p.textContent = "inserted";
+  document.getElementById("c").insertBefore(p, document.getElementById("p7"));
+}
+</script>
+</body></html>

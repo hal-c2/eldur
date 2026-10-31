@@ -207,6 +207,7 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
     emitter.runtime_dom = cx.runtime_dom;
     if let Some(probe) = cx.probe {
         emitter.markers = true;
+        emitter.no_carry = true;
         emitter.inline_items = probe.inline_items.clone();
         for id in &probe.reserved {
             emitter.ids.reserve(id);
@@ -996,6 +997,7 @@ impl Dynamic<'_, '_> {
         emitter.runtime_dom = cx.runtime_dom;
         emitter.markers = true;
         if let Some(probe) = cx.probe {
+            emitter.no_carry = true;
             emitter.inline_items = probe.inline_items.clone();
         }
         for id in cx.probe.iter().flat_map(|p| &p.reserved) {

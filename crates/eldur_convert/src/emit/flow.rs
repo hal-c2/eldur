@@ -247,6 +247,7 @@ impl Emitter<'_, '_> {
             }
             MarginSet::default()
         };
+        self.carry(&mut layout);
         Column {
             obj: Some(layout),
             escaped_top: escaped_top.unwrap_or_default(),

@@ -4,6 +4,7 @@
 //! own submodule.
 
 mod background;
+mod carry;
 mod controls;
 mod decoration;
 pub(crate) mod dynamic;
@@ -103,6 +104,9 @@ pub(crate) struct Emitter<'a, 'd> {
     /// Each element's outermost object carries a marker comment naming its
     /// node, so [`dynamic`] can tell whose properties differ.
     markers: bool,
+    /// Set for the templates' probe document: a template's ids are its
+    /// own, so it cannot read a sibling's carry (`carry`).
+    no_carry: bool,
     /// Elements some condition gives paint, padding or a shadow: they keep
     /// a painting wrapper in every combination, so the forms agree.
     sticky: HashSet<NodeId>,
@@ -157,6 +161,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             images: BTreeMap::new(),
             runtime_dom: false,
             markers: false,
+            no_carry: false,
             sticky: HashSet::new(),
             strips: HashMap::new(),
             collapsed: HashSet::new(),
