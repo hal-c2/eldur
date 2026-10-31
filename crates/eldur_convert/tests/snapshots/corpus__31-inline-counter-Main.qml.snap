@@ -181,8 +181,6 @@ ApplicationWindow {
                     Layout.alignment: Qt.AlignHCenter
                     Layout.topMargin: 18 - below.eldurCarry
                     Layout.preferredHeight: implicitHeight
-
-                    onClicked: if (!Eldur.connected(b, "click")) { Page.__eldur_on_click_b_0(Eldur.event("click", b, null)); }
                 }
             }
         }

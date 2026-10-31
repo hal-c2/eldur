@@ -207,6 +207,7 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
     let mut emitter = Emitter::new(cx.doc, cx.styles, cx.options, diags, cx.wanted);
     emitter.images = cx.images.clone();
     emitter.runtime_dom = cx.runtime_dom;
+    emitter.by_path = cx.scripts.is_some_and(|s| s.analysis.dispatch_by_path);
     emitter.script_attrs = cx.scripts.is_some_and(|s| s.analysis.reads_attributes);
     if let Some(probe) = cx.probe {
         emitter.markers = true;
@@ -813,6 +814,13 @@ impl Dynamic<'_, '_> {
             .map(|c| u16::try_from(c).expect("conditions fit u16"))
             .collect();
         for &c in &unmarked {
+            // The runtime styles a node's classes itself, by the page's rules.
+            if let Condition::Class { node, .. } = &self.conds[usize::from(c)].cond
+                && self.cx.runtime_dom
+                && inline_covered.contains(node)
+            {
+                continue;
+            }
             no_item(self.cx.doc, &self.conds[usize::from(c)].cond, self.diags);
         }
         let worlds = self.worlds(&unmarked);
@@ -1002,6 +1010,7 @@ impl Dynamic<'_, '_> {
         let mut emitter = Emitter::new(cx.doc, styles, cx.options, diags, cx.wanted);
         emitter.images = cx.images.clone();
         emitter.runtime_dom = cx.runtime_dom;
+        emitter.by_path = cx.scripts.is_some_and(|s| s.analysis.dispatch_by_path);
         emitter.script_attrs = cx.scripts.is_some_and(|s| s.analysis.reads_attributes);
         emitter.markers = true;
         if let Some(probe) = cx.probe {

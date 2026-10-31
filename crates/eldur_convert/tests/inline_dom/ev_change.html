@@ -1,0 +1,12 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif}button,a,span{text-align:left}.b{display:block;width:120px;height:30px}p,ul,li{margin:0;padding:0;list-style:none}label{display:block;width:120px;height:24px}input[type=text]{display:block;width:120px;height:24px;box-sizing:border-box}</style><script>function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){if(e===window)return "window";if(e===document)return "document";return e?(e.id||e.tagName):"null"}</script></head>
+<body id="bd" data-clicks="#one key:Tab #one key:x key:Tab">
+<input id="one" class="b" type="text">
+<input id="two" class="b" type="text">
+<script>
+var one=document.getElementById("one");
+one.addEventListener("change",function(){L("change",one.value)});
+one.addEventListener("blur",function(){L("blur")});
+one.addEventListener("focus",function(){L("focus")});
+document.body.addEventListener("change",function(e){L("body change",I(e.target))});
+</script></body></html>

@@ -1,0 +1,31 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif}button,a,span{text-align:left}.b{display:block;width:120px;height:30px}p,ul,li{margin:0;padding:0;list-style:none}label{display:block;width:120px;height:24px}input[type=text]{display:block;width:120px;height:24px;box-sizing:border-box}</style><script>function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){if(e===window)return "window";if(e===document)return "document";return e?(e.id||e.tagName):"null"}</script></head>
+<body id="bd" data-clicks="#attr #inside #attrstop #mixed #onlyprop #swap #nulled #falsy #hdl #hdl">
+<div id="host" onclick="L('host',I(event.target),I(this))">
+<button id="attr" class="b" onclick="L('attr',I(event.target),I(this))">attr</button>
+<div id="inside" class="b">inside</div>
+<button id="attrstop" class="b" onclick="L('attrstop');event.stopPropagation()">stop</button>
+<button id="mixed" class="b" onclick="L('mixed attr')">mixed</button>
+<button id="onlyprop" class="b">prop</button>
+<button id="swap" class="b" onclick="L('swap attr')">swap</button>
+<button id="nulled" class="b">nulled</button>
+<p><a id="falsy" href="#no" onclick="L('falsy',location.hash);return false">falsy</a></p>
+<div id="hdl" class="b">hdl</div>
+</div>
+<script>
+function byId(i){return document.getElementById(i)}
+byId("mixed").addEventListener("click",function(){L("mixed listener 1")});
+byId("mixed").onclick=function(){L("mixed prop replaces attr, keeps its place")};
+byId("mixed").addEventListener("click",function(){L("mixed listener 2")});
+byId("onlyprop").onclick=function(e){L("onlyprop",I(e.target),I(this))};
+byId("swap").addEventListener("click",function(){L("swap listener")});
+byId("swap").onclick=function(){L("swap prop")};
+byId("nulled").onclick=function(){L("nulled first")};
+byId("nulled").addEventListener("click",function(){L("nulled listener")});
+byId("nulled").onclick=null;
+byId("nulled").onclick=function(){L("nulled again")};
+function named(e){L("named",I(e.target),I(this))}
+byId("hdl").addEventListener("click",named);
+byId("hdl").addEventListener("click",named);
+byId("hdl").addEventListener("click",function once(){L("once")},{once:true});
+</script></body></html>

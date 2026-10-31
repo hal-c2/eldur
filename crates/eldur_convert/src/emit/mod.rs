@@ -123,6 +123,8 @@ pub(crate) struct Emitter<'a, 'd> {
     /// Scripts reach elements at run time, so every element object says
     /// what it is (`eldurTag`, `eldurClasses`).
     pub runtime_dom: bool,
+    /// Events run one dispatch over the path from the target.
+    pub by_path: bool,
     /// Scripts read attributes, so elements carry `eldurAttrs`.
     pub script_attrs: bool,
     /// Each element's outermost object carries a marker comment naming its
@@ -195,6 +197,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             imports: std::collections::BTreeSet::new(),
             images: BTreeMap::new(),
             runtime_dom: false,
+            by_path: false,
             script_attrs: false,
             markers: false,
             no_carry: false,

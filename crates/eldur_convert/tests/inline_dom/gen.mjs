@@ -4,7 +4,7 @@
 // lands on the middle of that element's first glyph run; `#id:tail` aims at the
 // element's last text node, `#id:start` at the first child's text and `#id:right`
 // at the empty end of the element's line. Each point is recorded, so the test
-// presses the same pixels.
+// presses the same pixels. `key:Name` presses a key instead.
 //
 //   node crates/eldur_convert/tests/inline_dom/gen.mjs
 //
@@ -38,6 +38,12 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
   const names = (await page.getAttribute("body", "data-clicks")) || "";
   const clicks = [];
   for (const name of names.split(/\s+/).filter(Boolean)) {
+    if (name.startsWith("key:")) {
+      await page.keyboard.press(name.slice(4));
+      clicks.push({ name, key: name.slice(4) });
+      await page.waitForTimeout(30);
+      continue;
+    }
     const point = await page.evaluate((name) => {
       const [sel, part] = name.split(":");
       const el = document.querySelector(sel);

@@ -237,6 +237,8 @@ Mapping depends on the `TargetKind` of the resolved `QmlTarget`:
 
 ---
 
+4. **Dispatch by path**: if a listener could hear another element (a bubbling listener on an element with element children, a listener on `document`, `window`, `body` or an unresolved element) or a script wants an inline node, the page is `dispatch_by_path`. Every listener, property and attribute handler of that page then goes through `Eldur.listen`/`Eldur.setOn`, in Chromium's order (a property or attribute keeps the place where it was first set). A handler attribute on an inline node has a root property `eldurNode<key>`, set from `Eldur.inlineNode(key)` at start. Other pages keep the static bindings above: nothing above the target listens, so nothing needs a path.
+
 ## 8. Timers, Storage, Network, Observers & Browser Globals
 
 | Browser Global / API | Lowering in `page.js` | Implementation in `eldur_runtime.js` | Status |
@@ -361,7 +363,7 @@ Why this and not one QML object per element, or splitting the block whenever a s
 
 **Hit testing.** A tap asks which node is under the point. `Text` has `linkAt` and nothing like `positionAt`. Making each run of the painted text a link would change its paint (link colour, what a tap does), so each model has a hidden copy, same width, font, wrap and line height, with every run a link named after its node. `linkAt` on the copy names the run; it is laid out by the same engine from the same text, so it is right on every line of a wrapped element, where measuring would not be. `getBoundingClientRect` scans the copy in 2 px steps, so an inline box's rectangle is approximate; the copy exists only once something asks.
 
-**Events.** Not every handler under the point hears a tap: a link and a control take the press for themselves, and those that do hear hear separately. On a page with `eldurInlineRules`, the first to hear (`_beginTap`) finds the target and runs the whole path up the DOM with one shared event; the rest find their turn taken. So `target`, `stopPropagation` and `preventDefault` behave as in a browser. A `Text` holding a link always gets a tap handler for this reason. `onLinkActivated` and a bare link's `onTapped` check `preventDefault`.
+**Events.** Not every handler under the point hears a tap: a link and a control take the press for themselves, and those that do hear hear separately. On a page that dispatches by path (below), the first to hear (`_beginTap`) finds the target and runs the whole path with one shared event; the rest find their turn taken. A control's `clicked`, once any click listener exists on the page, starts the path from the control, so an ancestor hears a control with no listener. A label's tap runs the label's click, then the control's unless prevented. Capture listeners run from the root down, then at the target in registration order, then bubbling from the target up. So `target`, `stopPropagation`, `stopImmediatePropagation` and `preventDefault` behave as in a browser. `onLinkActivated` and a bare link's `onTapped` check `preventDefault`.
 
 **Writes.** `textContent`, `innerHTML` (a small inline-markup parser), `className`/`classList`, `style`, attributes, `hidden`, and `append`/`remove`/`insertBefore`/`replaceWith` and the rest. A created element is a QML object until it goes into a line of text, then becomes a node, keeping its wrapper; only tags that are inline by default do. `createElement("option")` is a node from the start.
 
@@ -374,5 +376,10 @@ Why this and not one QML object per element, or splitting the block whenever a s
 - A change to a real element's attribute, other than a class, does not recompute inline nodes.
 - A `Text` shown as its one element's style goes back to the block's on first write, using what the converter computed; a later class change on the block is then read live.
 - A node moved into a box that lays out only real items becomes a real item, as text and inline style: best effort.
-- A control's press reaches listeners up its path only if the control itself has a listener: with none, nothing is connected to its `clicked`, so a listener on an ancestor does not hear it. A statically wired handler (`Page.fn(Eldur.event(...))`) runs on its own TapHandler, after the dynamic path, and a `stopPropagation` does not stop it.
+- `mouseover`, `mouseout`, `mouseenter`, `mouseleave` and `focus`/`blur` are heard on the element that listens; the path only serves click, input, change, keydown, keyup, submit, focusin and focusout, and only `click` and the key and form events are checked against Chromium.
+- A radio's `preventDefault` unchecks it but does not recheck the radio it replaced. Enter in a text field fires `submit` but not a synthetic `click` on the submit button.
+- A tap on a box that overflows its parent reaches only handlers on boxes containing the point; a created box gets its own handler for this, a static one does not.
+- On a page not dispatching by path, a text field's static `change` listener still runs on `editingFinished`, edited or not.
+- `<select>` change, `dblclick`, and controls added through `innerHTML` have no Chromium comparison; a control so added is not connected until a later listener sweeps the page.
+- Created block children of a `<div>` that was empty at conversion are not stacked: the div is a `Text`, and they overlap at its top.
 - `dataset` writes do not recompute styles.

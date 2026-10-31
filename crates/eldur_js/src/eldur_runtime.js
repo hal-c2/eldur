@@ -333,6 +333,9 @@ function init(rootItem, baseUrl, documentUrl) {
         _walkItems(_root, function() { return false; });
     }
     _startTime = Date.now();
+    if (_root) {
+        _connectControls(_root);
+    }
 }
 
 function _isQObject(obj) {
@@ -2898,14 +2901,15 @@ function _mapKey(qtKey, text, shiftKey) {
     }
 }
 
+var _BUBBLES = {
+    click: true, dblclick: true, input: true, change: true, submit: true, reset: true,
+    keydown: true, keyup: true, keypress: true, focusin: true, focusout: true,
+    mousedown: true, mouseup: true, mousemove: true, mouseover: true, mouseout: true,
+    pointerdown: true, pointerup: true, touchstart: true, touchend: true,
+    contextmenu: true, wheel: true
+};
+
 function event(type, targetItem, qtEvent) {
-    if (type === "click" && qtEvent && qtEvent.scenePosition && _vHasRules()) {
-        var shared = _beginTap(qtEvent);
-        if (shared.ev) {
-            shared.ev.currentTarget = targetItem;
-            return shared.ev;
-        }
-    }
     var rawTarget = _unwrap(targetItem);
     var ev = qtEvent || {};
     var mods = typeof ev.modifiers === "number" ? ev.modifiers : 0;
@@ -2991,9 +2995,10 @@ function event(type, targetItem, qtEvent) {
         deltaX: deltaX,
         deltaY: deltaY,
         deltaMode: 0,
-        bubbles: true,
+        bubbles: _BUBBLES[String(type)] === true,
         cancelable: true,
         defaultPrevented: false,
+        eventPhase: 0,
         timeStamp: Date.now() - _startTime,
         detail: ev.detail !== undefined ? ev.detail : null,
         _propagationStopped: false,
@@ -3113,57 +3118,121 @@ function IntersectionObserver(_callback) {
     };
 }
 
+// A browser's one event: target and ancestors, fixed when it starts, capture
+// listeners from the root down, then the rest from the target up.
 function _dispatchDynamic(raw, type, qtEv) {
-    // A real item's turn in a tap: see `_beginTap`.
-    if (type === "click" && !raw.__eldurInline && qtEv && qtEv.scenePosition && _vHasRules()) {
-        var t = _beginTap(qtEv);
-        if (t.control || t.ran.indexOf(raw) !== -1 || t.ev._propagationStopped) {
-            return !t.ev.defaultPrevented;
-        }
-        t.ran.push(raw);
-        qtEv = t.ev;
+    // A tap, heard by some handler under the point: see `_beginTap`.
+    if (type === "click" && !raw.__eldurInline && qtEv && qtEv.scenePosition && !qtEv.preventDefault) {
+        return !_beginTap(qtEv, raw).ev.defaultPrevented;
     }
-    var m = _meta(raw);
-    var target = wrap(raw);
+    var target = _eventTarget(raw);
     var domEv = qtEv && qtEv.preventDefault ? qtEv : event(type, target, qtEv);
-    domEv.currentTarget = target;
-    if (!domEv.target) {
-        domEv.target = target;
+    domEv.target = target;
+    var path = _eventPath(raw);
+    for (var down = path.length - 1; down > 0 && !domEv._propagationStopped; --down) {
+        _runListeners(path[down], "capture:" + type, type, domEv, 1);
     }
-
-    var propHandler = m.onHandlers[type];
-    if (typeof propHandler === "function") {
-        if (propHandler.call(target, domEv) === false) {
-            domEv.preventDefault();
-        }
-        if (domEv._immediateStopped) {
-            return !domEv.defaultPrevented;
-        }
+    if (!domEv._propagationStopped) {
+        _runListeners(raw, "capture:" + type, type, domEv, 2);
     }
-
-    var list = m.listeners[type];
-    var onceList = m.onceListeners[type];
-    if (list && list.length > 0) {
-        var copy = list.slice();
-        for (var i = 0; i < copy.length; ++i) {
-            var fn = copy[i];
-            if (onceList) {
-                var onceIdx = onceList.indexOf(fn);
-                if (onceIdx !== -1) {
-                    onceList.splice(onceIdx, 1);
-                    var listIdx = list.indexOf(fn);
-                    if (listIdx !== -1) {
-                        list.splice(listIdx, 1);
-                    }
-                }
-            }
-            fn.call(target, domEv);
-            if (domEv._immediateStopped) {
-                break;
-            }
-        }
+    if (!domEv._propagationStopped) {
+        _runListeners(raw, type, type, domEv, 2);
     }
+    for (var up = 1; up < path.length && domEv.bubbles && !domEv._propagationStopped; ++up) {
+        _runListeners(path[up], type, type, domEv, 3);
+    }
+    domEv.currentTarget = null;
+    domEv.eventPhase = 0;
     return !domEv.defaultPrevented;
+}
+
+function _eventTarget(raw) {
+    return raw === document || raw === window ? raw : wrap(raw);
+}
+
+function _eventPath(raw) {
+    var path = [raw];
+    if (raw === document || raw === window) {
+        return raw === document ? [document, window] : path;
+    }
+    if (raw === _root) {
+        return [_root, document, window];
+    }
+    // The root may be inside an item that is not the page's.
+    for (var at = _logicalParent(raw); at; at = _logicalParent(at)) {
+        if (at === _root) {
+            path.push(_root, document, window);
+            break;
+        }
+        if (_isDomTarget(at) && !_isInternalHelperNode(at)) {
+            path.push(at);
+        }
+    }
+    return path;
+}
+
+function _runListeners(raw, key, type, domEv, phase) {
+    var m = _listenerMeta(raw);
+    var list = m.listeners[key];
+    if (!list || list.length === 0) {
+        return;
+    }
+    var target = _eventTarget(raw);
+    domEv.currentTarget = target;
+    domEv.eventPhase = phase;
+    var onceList = m.onceListeners[key];
+    var copy = list.slice();
+    for (var i = 0; i < copy.length; ++i) {
+        var fn = copy[i];
+        // One removed by a listener before it runs does not run.
+        var at = list.indexOf(fn);
+        if (at === -1) {
+            continue;
+        }
+        if (onceList) {
+            var onceIdx = onceList.indexOf(fn);
+            if (onceIdx !== -1) {
+                onceList.splice(onceIdx, 1);
+                list.splice(at, 1);
+            }
+        }
+        fn.call(target, domEv);
+        if (domEv._immediateStopped) {
+            break;
+        }
+    }
+}
+
+// The converter's handler for what the runtime cannot connect itself; `false`
+// when a listener prevented the default.
+function fire(item, type, qtEv) {
+    var raw = _unwrap(item);
+    if (Boolean(_meta(raw).connected[type])) {
+        return true;
+    }
+    // A key no handler accepted goes on to the parent's handler, but is one event.
+    if (type === "keydown" || type === "keyup") {
+        if (_keyHeard[type]) {
+            return true;
+        }
+        _keyHeard[type] = true;
+        Qt.callLater(_flushKeys);
+    }
+    return _dispatchDynamic(raw, type, qtEv);
+}
+
+var _keyHeard = {};
+
+function _flushKeys() {
+    _keyHeard = {};
+}
+
+function _flushChange(raw) {
+    var m = _meta(raw);
+    if (m.changeBase !== String(raw.text)) {
+        m.changeBase = String(raw.text);
+        _dispatchDynamic(raw, "change", null);
+    }
 }
 
 function _connectSignalOnce(raw, type) {
@@ -3185,13 +3254,26 @@ function _connectSignalOnce(raw, type) {
 
     if (type === "click") {
         if (typeof raw.clicked === "function") {
-            raw.clicked.connect(function() {
-                if (_vHasRules()) {
-                    _clickedControl(raw);
-                } else {
-                    _dispatchDynamic(raw, "click", null);
-                }
-            });
+            // `toggled` comes before `clicked`, and a browser's `change` after
+            // its `click`, which can undo the toggle. A toggle with no press
+            // has no click to wait for.
+            if (typeof raw.toggled === "function") {
+                raw.toggled.connect(function() {
+                    if (m.pressing) {
+                        m.toggledNow = true;
+                    } else {
+                        _toggleEvents(raw);
+                    }
+                });
+                raw.pressedChanged.connect(function() {
+                    if (raw.pressed) {
+                        m.pressing = true;
+                    } else {
+                        Qt.callLater(function() { m.pressing = false; });
+                    }
+                });
+            }
+            raw.clicked.connect(function() { _clickedControl(raw); });
             m.connected[type] = true;
             return true;
         }
@@ -3225,6 +3307,11 @@ function _connectSignalOnce(raw, type) {
             m.connected[type] = true;
             return true;
         }
+    } else if ((type === "input" || type === "change") && typeof raw.toggled === "function"
+               && typeof raw.clicked === "function") {
+        _connectSignalOnce(raw, "click");
+        m.connected[type] = true;
+        return true;
     } else if (type === "input") {
         if (typeof raw.textEdited === "function") {
             raw.textEdited.connect(function() { _dispatchDynamic(raw, "input", null); });
@@ -3243,7 +3330,12 @@ function _connectSignalOnce(raw, type) {
             return true;
         }
         if (typeof raw.textChanged === "function") {
-            raw.textChanged.connect(function() { _dispatchDynamic(raw, "input", null); });
+            // TextArea has no "edited by the user" signal.
+            raw.textChanged.connect(function() {
+                if (raw.activeFocus) {
+                    _dispatchDynamic(raw, "input", null);
+                }
+            });
             m.connected[type] = true;
             return true;
         }
@@ -3277,7 +3369,16 @@ function _connectSignalOnce(raw, type) {
             return true;
         }
         if (typeof raw.editingFinished === "function") {
-            raw.editingFinished.connect(function() { _dispatchDynamic(raw, "change", null); });
+            // Enter, then leaving the field, is one `change`, and none if nothing changed.
+            m.changeBase = String(raw.text);
+            if (typeof raw.activeFocusChanged === "function") {
+                raw.activeFocusChanged.connect(function() {
+                    if (raw.activeFocus) {
+                        m.changeBase = String(raw.text);
+                    }
+                });
+            }
+            raw.editingFinished.connect(function() { _flushChange(raw); });
             m.connected[type] = true;
             return true;
         }
@@ -3392,40 +3493,116 @@ function listen(item, eventType, handler, options) {
     if (item && !_isDomTarget(item) && typeof item.addEventListener === "function") {
         return item.addEventListener(eventType, handler, options);
     }
+    var raw = _listenerHome(item, eventType);
     // An event no signal delivers (a custom one, say) can still be dispatched.
-    if (_addListener(item, eventType, handler, options)) {
-        _connectSignalOnce(_unwrap(item), String(eventType));
+    if (_addListener(raw, eventType, handler, options)) {
+        _connectSignalOnce(raw === document || raw === window ? _root : raw, String(eventType));
     }
 }
 
 // For events QML handlers already deliver (keys, a form's submit): the
 // generated handler calls `dispatchEvent`, there is nothing to connect.
 function listenBound(item, eventType, handler, options) {
-    _addListener(item, eventType, handler, options);
+    _addListener(_listenerHome(item, eventType), eventType, handler, options);
+}
+
+// `document` and `window` are on the path of a bubbling event, each with its
+// own listeners. What is fired only at the root (`resize`, `hashchange`, ...)
+// is listened for there.
+function _listenerHome(item, eventType) {
+    if ((item === document || item === window) && _BUBBLES[String(eventType)] === true) {
+        return item;
+    }
+    return _unwrap(item);
+}
+
+var _documentListeners = { listeners: {}, onceListeners: {}, onHandlers: {} };
+var _windowListeners = { listeners: {}, onceListeners: {}, onHandlers: {} };
+
+// `_meta` of either is the root's.
+function _listenerMeta(raw) {
+    if (raw === document) {
+        return _documentListeners;
+    }
+    return raw === window ? _windowListeners : _meta(raw);
+}
+
+function _isCapture(options) {
+    return options === true || Boolean(options && typeof options === "object" && options.capture);
 }
 
 function _addListener(item, eventType, handler, options) {
     if (!item || typeof handler !== "function") {
         return false;
     }
-    var raw = _unwrap(item);
+    var raw = item === document || item === window ? item : _unwrap(item);
     var type = String(eventType);
-    var m = _meta(raw);
-    if (!m.listeners[type]) {
-        m.listeners[type] = [];
+    var key = _isCapture(options) ? "capture:" + type : type;
+    var m = _listenerMeta(raw);
+    if (!m.listeners[key]) {
+        m.listeners[key] = [];
     }
-    if (m.listeners[type].indexOf(handler) === -1) {
-        m.listeners[type].push(handler);
+    if (m.listeners[key].indexOf(handler) === -1) {
+        m.listeners[key].push(handler);
         if (options && typeof options === "object" && Boolean(options.once)) {
-            if (!m.onceListeners[type]) {
-                m.onceListeners[type] = [];
+            if (!m.onceListeners[key]) {
+                m.onceListeners[key] = [];
             }
-            if (m.onceListeners[type].indexOf(handler) === -1) {
-                m.onceListeners[type].push(handler);
+            if (m.onceListeners[key].indexOf(handler) === -1) {
+                m.onceListeners[key].push(handler);
             }
         }
     }
+    _wantForControls(type);
     return true;
+}
+
+// A control takes the press or the key for itself and tells only its own
+// signal, so once anything listens for an event a control can start, every
+// control's signal is connected: the listener may be on an ancestor.
+var _CONTROL_EVENTS = { click: true, dblclick: true, input: true, change: true, focusin: true, focusout: true };
+var _controlEvents = {};
+
+function _wantForControls(type) {
+    if (_CONTROL_EVENTS[type] !== true || _controlEvents[type]) {
+        return;
+    }
+    _controlEvents[type] = true;
+    if (_root) {
+        _connectControls(_root);
+    }
+}
+
+function _connectControls(from) {
+    var kinds = Object.keys(_controlEvents);
+    if (kinds.length === 0) {
+        return;
+    }
+    _walkItems(from, function(item) {
+        if (!item.__eldurInline && _startsEvents(item)) {
+            for (var i = 0; i < kinds.length; ++i) {
+                _connectSignalOnce(item, kinds[i]);
+            }
+        } else if (_controlEvents.click && _isCreatedBox(item)) {
+            // What a script adds can lie outside the box of what it went into,
+            // where that one's handler does not hear.
+            _connectSignalOnce(item, "click");
+        }
+        return false;
+    });
+}
+
+function _isCreatedBox(item) {
+    var tag = _meta(item).createdTag;
+    return !item.__eldurInline && Boolean(tag) && tag !== "#text";
+}
+
+// Tagged, because a control is built of untagged ones.
+function _startsEvents(item) {
+    return (_vIsTagged(item) || Boolean(_meta(item).createdTag))
+        && (typeof item.clicked === "function" || typeof item.editingFinished === "function"
+            || typeof item.activated === "function" || typeof item.moved === "function"
+            || typeof item.valueModified === "function");
 }
 
 // A listener on a known element can get both a connection and the generated
@@ -3434,15 +3611,15 @@ function connected(item, eventType) {
     return Boolean(_meta(item).connected[String(eventType)]);
 }
 
-function unlisten(item, eventType, handler) {
+function unlisten(item, eventType, handler, options) {
     if (item && !_isDomTarget(item) && typeof item.removeEventListener === "function") {
         return item.removeEventListener(eventType, handler);
     }
     if (!item || typeof handler !== "function") {
         return;
     }
-    var m = _meta(item);
-    var type = String(eventType);
+    var m = _listenerMeta(_listenerHome(item, eventType));
+    var type = _isCapture(options) ? "capture:" + eventType : String(eventType);
     var list = m.listeners[type];
     if (!list) {
         return;
@@ -3464,16 +3641,63 @@ function setOn(item, eventType, handler) {
     if (!item) {
         return handler;
     }
-    var raw = _unwrap(item);
+    var raw = _listenerHome(item, eventType);
     var type = String(eventType);
-    var m = _meta(raw);
-    m.onHandlers[type] = typeof handler === "function" ? handler : null;
+    _setOnSlot(raw, type, handler);
     if (typeof handler === "function") {
-        if (!_connectSignalOnce(raw, type)) {
+        if (!_connectSignalOnce(raw === document || raw === window ? _root : raw, type)) {
             console.warn("eldur: dynamic on" + type + " handler cannot bind to a QML signal");
         }
     }
     return handler;
+}
+
+function fireSubmit(item) {
+    for (var at = item; at; at = at.parent) {
+        if (at.eldurTag === "form") {
+            fire(at, "submit", null);
+            return;
+        }
+    }
+}
+
+// An inline element with a handler attribute, by the converter's key.
+function inlineNode(key) {
+    var found = null;
+    _walkItems(_root, function(item) {
+        if (item.__eldurInline && item.eldurKey === key) {
+            found = item;
+        }
+        return found !== null;
+    });
+    return found;
+}
+
+// An attribute's handler, for an event QML handlers deliver.
+function setOnBound(item, eventType, handler) {
+    _setOnSlot(_listenerHome(item, eventType), String(eventType), handler);
+}
+
+// Among the listeners where it was first set; a new function keeps the place.
+// Setting null gives the place up (measured in Chromium).
+function _setOnSlot(raw, type, handler) {
+    var m = _listenerMeta(raw);
+    var isFn = typeof handler === "function";
+    m.onHandlers[type] = isFn ? handler : null;
+    if (!m.onSlots) {
+        m.onSlots = {};
+    }
+    if (isFn && !m.onSlots[type]) {
+        m.onSlots[type] = function(domEv) {
+            if (m.onHandlers[type].call(this, domEv) === false) {
+                domEv.preventDefault();
+            }
+        };
+        _addListener(raw, type, m.onSlots[type], undefined);
+    } else if (!isFn && m.onSlots[type]) {
+        unlisten(raw, type, m.onSlots[type], undefined);
+        m.onSlots[type] = null;
+    }
 }
 
 function dispatchEvent(item, domEv) {
@@ -3483,7 +3707,7 @@ function dispatchEvent(item, domEv) {
     if (!item || !domEv || !domEv.type) {
         return true;
     }
-    return _dispatchDynamic(_unwrap(item), String(domEv.type), domEv);
+    return _dispatchDynamic(_listenerHome(item, domEv.type), String(domEv.type), domEv);
 }
 
 // ---------------------------------------------------------------------------
@@ -4072,7 +4296,7 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
     var lKeys = Object.keys(m.listeners);
     for (ei = 0; ei < lKeys.length; ++ei) {
         if (m.listeners[lKeys[ei]] && m.listeners[lKeys[ei]].length > 0) {
-            eventTypes[lKeys[ei]] = true;
+            eventTypes[lKeys[ei].replace("capture:", "")] = true;
         }
     }
     var oKeys = Object.keys(m.onHandlers);
@@ -4980,7 +5204,7 @@ function wrap(rawItem) {
         hasAttribute: function(k) { return hasAttribute(rawItem, k); },
         toggleAttribute: function(k, force) { return toggleAttribute(rawItem, k, force); },
         addEventListener: function(t, fn, opts) { listen(rawItem, t, fn, opts); },
-        removeEventListener: function(t, fn) { unlisten(rawItem, t, fn); },
+        removeEventListener: function(t, fn, opts) { unlisten(rawItem, t, fn, opts); },
         dispatchEvent: function(ev) { return dispatchEvent(rawItem, ev); },
         focus: function() { focus(rawItem); },
         blur: function() { blur(rawItem); },
@@ -5411,6 +5635,7 @@ function _vBuild(json, parent, model) {
         return _vLeaf(json.text, parent, model);
     }
     var v = _vElement(json.tag, json.attrs, parent, model);
+    v.eldurKey = json.key;
     v.c = json.c || null;
     v.before = json.before || null;
     v.after = json.after || null;
@@ -6465,12 +6690,18 @@ function _vTapHandler(text) {
     }
 }
 
+function _hasListeners(m, type) {
+    var bubble = m.listeners[type];
+    var capture = m.listeners["capture:" + type];
+    return Boolean((bubble && bubble.length > 0) || (capture && capture.length > 0));
+}
+
 function _vReconnect(node) {
     if (node.vtext || !node.model) {
         return;
     }
     var m = _meta(node);
-    if ((m.listeners.click && m.listeners.click.length > 0) || m.onHandlers.click) {
+    if (_hasListeners(m, "click")) {
         _vConnect(node, "click");
     }
     for (var i = 0; i < node.kids.length; ++i) {
@@ -6501,13 +6732,13 @@ function _deepestAt(scene) {
     return found;
 }
 
-function _beginTap(qtEv) {
+function _beginTap(qtEv, heardBy) {
     var scene = qtEv.scenePosition;
     if (_tap && _tap.x === scene.x && _tap.y === scene.y) {
         return _tap;
     }
     var deep = _deepestAt(scene);
-    var t = { x: scene.x, y: scene.y, deep: deep, target: null, control: null, ev: null, ran: [] };
+    var t = { x: scene.x, y: scene.y, target: null, control: null, ev: null };
     _tap = t;
     Qt.callLater(_flushTap);
     for (var at = deep; at && !t.target; at = at.parent) {
@@ -6522,26 +6753,15 @@ function _beginTap(qtEv) {
             }
         }
     }
-    t.target = t.target || _unwrap(document.body);
+    t.target = t.target || _unwrap(document.body) || heardBy;
     t.ev = event("click", wrap(t.target), qtEv);
     t.ev.target = wrap(t.target);
     t.ev.bubbles = true;
     // A control's own `clicked` starts its path, if the press comes to a click.
     if (!t.control) {
-        _runPath(t.target, t.ev, t.ran);
+        _dispatchDynamic(t.target, "click", t.ev);
     }
     return t;
-}
-
-function _runPath(from, ev, ran) {
-    for (var at = from; at && !ev._propagationStopped; at = _logicalParent(at)) {
-        if (_isDomTarget(at) && !_isInternalHelperNode(at)) {
-            if (ran) {
-                ran.push(at);
-            }
-            _dispatchDynamic(at, "click", ev);
-        }
-    }
 }
 
 function _flushTap() {
@@ -6554,21 +6774,39 @@ function linkPrevented() {
 }
 
 function tapPrevented(eventPoint) {
-    return _vHasRules() && Boolean(_beginTap(eventPoint).ev.defaultPrevented);
+    return Boolean(_beginTap(eventPoint).ev.defaultPrevented);
 }
 
 function _vClick(v) {
-    var ev = event("click", wrap(v), null);
-    ev.target = wrap(v);
-    _runPath(v, ev, null);
+    _dispatchDynamic(v, "click", null);
 }
 
 // A control takes the press for itself, so no handler above it hears: the
-// event goes up from here.
+// event goes up from here. Its toggle has happened; `preventDefault` undoes it.
 function _clickedControl(raw) {
+    var m = _meta(raw);
+    var toggled = Boolean(m.toggledNow);
+    m.toggledNow = false;
     var ev = event("click", wrap(raw), null);
-    ev.target = wrap(raw);
-    _runPath(raw, ev, null);
+    _dispatchDynamic(raw, "click", ev);
+    if (!toggled) {
+        return;
+    }
+    if (ev.defaultPrevented) {
+        raw.checked = !raw.checked;
+        return;
+    }
+    _toggleEvents(raw);
+}
+
+function _toggleEvents(raw) {
+    var m = _meta(raw);
+    if (m.connected.input) {
+        _dispatchDynamic(raw, "input", null);
+    }
+    if (m.connected.change) {
+        _dispatchDynamic(raw, "change", null);
+    }
 }
 
 // Inserting: what a script made as a QML object becomes a node when it goes
@@ -6657,7 +6895,7 @@ function _vToReal(v) {
     }
     var kinds = ["click", "dblclick"];
     for (var e = 0; e < kinds.length; ++e) {
-        if ((m.listeners[kinds[e]] && m.listeners[kinds[e]].length > 0) || m.onHandlers[kinds[e]]) {
+        if (_hasListeners(m, kinds[e])) {
             _connectSignalOnce(made, kinds[e]);
         }
     }
@@ -7760,6 +7998,7 @@ var document = {
         if (tag === "input") {
             _meta(created).lastGenericInputSource = qmlSrc;
         }
+        _connectControls(created);
         if (created && created.parent !== undefined) {
             created.parent = null;
         }
@@ -7787,17 +8026,13 @@ var document = {
         return wrap(created);
     },
     addEventListener: function(type, fn, opts) {
-        if (_root) {
-            listen(_root, type, fn, opts);
-        }
+        listen(document, type, fn, opts);
     },
-    removeEventListener: function(type, fn) {
-        if (_root) {
-            unlisten(_root, type, fn);
-        }
+    removeEventListener: function(type, fn, opts) {
+        unlisten(document, type, fn, opts);
     },
     dispatchEvent: function(ev) {
-        return _root ? dispatchEvent(_root, ev) : true;
+        return dispatchEvent(document, ev);
     },
     write: function() {
         console.warn("eldur: document.write() is unsupported");
@@ -7876,16 +8111,12 @@ var window = {
         Qt.openUrlExternally(String(url));
     },
     addEventListener: function(type, fn, opts) {
-        if (_root) {
-            listen(_root, type, fn, opts);
-        }
+        listen(window, type, fn, opts);
     },
-    removeEventListener: function(type, fn) {
-        if (_root) {
-            unlisten(_root, type, fn);
-        }
+    removeEventListener: function(type, fn, opts) {
+        unlisten(window, type, fn, opts);
     },
     dispatchEvent: function(ev) {
-        return _root ? dispatchEvent(_root, ev) : true;
+        return dispatchEvent(window, ev);
     }
 };

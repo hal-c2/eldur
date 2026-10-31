@@ -216,7 +216,13 @@ pub(crate) fn rewrite(
 
     // Pre-scan `.on<event> = ...` assignments across all valid scripts to find which
     // `(qml_id, event)` pairs cannot be hoisted as a single static top-level binding.
-    prescan_on_prop_assignments(&valid_scripts, &cross_script, resolver, &mut shared);
+    prescan_on_prop_assignments(
+        &valid_scripts,
+        &cross_script,
+        resolver,
+        analysis.dispatch_by_path,
+        &mut shared,
+    );
 
     let mut valid_map = HashMap::with_capacity(valid_scripts.len());
     for (pos, v) in valid_scripts.iter().enumerate() {
@@ -1697,6 +1703,7 @@ fn prescan_on_prop_assignments(
     valid_scripts: &[ValidScript<'_>],
     cross_script: &HashMap<String, crate::DomQuery>,
     resolver: &dyn DomResolver,
+    dispatch_by_path: bool,
     shared: &mut SharedRewriteState,
 ) {
     let mut total_counts: HashMap<(String, String), usize> = HashMap::new();
@@ -1787,7 +1794,8 @@ fn prescan_on_prop_assignments(
 
     for (key, &total) in &total_counts {
         let top_single = top_static_counts.get(key).copied().unwrap_or(0);
-        let needs_dynamic_event_path = total_listener_counts.contains_key(key)
+        let needs_dynamic_event_path = dispatch_by_path
+            || total_listener_counts.contains_key(key)
             || dynamic_listener_ops.contains(key)
             || targets_with_dispatch.contains(&key.0);
         if total != 1 || top_single != 1 || needs_dynamic_event_path {
@@ -1800,7 +1808,8 @@ fn prescan_on_prop_assignments(
 
     for (key, total) in total_listener_counts {
         let top_single = top_static_listener_counts.get(&key).copied().unwrap_or(0);
-        if total != 1
+        if dispatch_by_path
+            || total != 1
             || top_single != 1
             || total_counts.contains_key(&key)
             || dynamic_listener_ops.contains(&key)

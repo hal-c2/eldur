@@ -357,6 +357,9 @@ impl AnalysisVisitor<'_, '_> {
                 }
                 return;
             }
+            if known_dom_event_from_on_prop(prop).is_some_and(crate::bubbles) {
+                self.analysis.listens_unresolved = true;
+            }
 
             // `el.style.<prop> = ...` or `el.dataset.<key> = ...`
             if let Expression::StaticMemberExpression(parent_obj) = unwrap_parens(&member.object) {
@@ -937,6 +940,15 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
                 && let Some(query) = self.bindings.resolve_expr_for_analysis(&member.object)
             {
                 self.record_listened(query, ev);
+            } else if method == "addEventListener"
+                && it
+                    .arguments
+                    .first()
+                    .and_then(|a| a.as_expression())
+                    .and_then(extract_string_literal)
+                    .is_none_or(|ev| crate::bubbles(&ev))
+            {
+                self.analysis.listens_unresolved = true;
             } else if matches!(
                 method,
                 "setAttribute" | "removeAttribute" | "toggleAttribute"

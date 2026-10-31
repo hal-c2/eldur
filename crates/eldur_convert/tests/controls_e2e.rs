@@ -112,6 +112,7 @@ TestCase {
         const t = find("t")
         t.forceActiveFocus()
         verify(logged().indexOf("focus;") !== -1, logged())
+        keyClick(Qt.Key_A) // A browser sends `change` only for an edit.
         keyClick(Qt.Key_Tab)
         verify(logged().indexOf("blur;") !== -1, logged())
         verify(logged().indexOf("change;") !== -1, logged())

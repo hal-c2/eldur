@@ -56,13 +56,22 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     }
 
     // 3: what scripts touch.
-    let scripts = scripts::collect(&doc, &input.url, resources, &mut diags);
+    let mut scripts = scripts::collect(&doc, &input.url, resources, &mut diags);
     for d in &scripts.analysis.diagnostics {
         diags.push(js_diagnostic(d));
     }
 
     // 4–5: boxes, then QML.
     let no_scripts = HashSet::new();
+    // A tap on an inline element looks for its node, and goes up from there.
+    if !scripts.is_empty()
+        && scripts
+            .wanted
+            .iter()
+            .any(|&n| crate::boxes::is_inline_node(&doc, &styles, n))
+    {
+        scripts.analysis.dispatch_by_path = true;
+    }
     let wanted = if scripts.is_empty() {
         &no_scripts
     } else {
@@ -109,16 +118,33 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     // 6: page.js, with the ids chosen in step 5.
     if !scripts.is_empty() {
         scripts::report_missing(&doc, &scripts, &targets, &inline_covered, &mut diags);
-        let resolver = scripts::Resolver::new(&scripts, &targets);
+        let resolver = scripts::Resolver::new(&scripts, &targets, &inline_covered);
         let js = eldur_js::rewrite(&scripts.inputs, &scripts.analysis, &resolver);
         for d in &js.diagnostics {
             diags.push(js_diagnostic(d));
         }
-        scripts::wire(&mut root, &js, &forms, &scripts, &mut diags);
+        let attribute_handlers = scripts::wire(&mut root, &js, &forms, &scripts, &mut diags);
         scripts::declare_classes(&mut root, &doc, &scripts, &targets, &mut diags);
-        if let Some(added) =
-            crate::emit::templates::add(&inputs, &scripts, &mut root, &targets, &mut diags)
-        {
+        // A created element may land in a block of text the script holds.
+        let holds_text = wanted.iter().any(|&n| {
+            doc.children(n).any(|c| {
+                matches!(&doc.node(c).data, eldur_dom::NodeData::Text(t) if !t.trim().is_empty())
+            })
+        });
+        // The page's links and spans may be an event's target, named or not.
+        let delegated = scripts.analysis.dispatch_by_path && has_inline_model(&root);
+        let inline_rules = runtime_dom
+            && (delegated
+                || !inline_covered.is_empty()
+                || (scripts.analysis.mutates_dom && holds_text));
+        if let Some(added) = crate::emit::templates::add(
+            &inputs,
+            &scripts,
+            &mut root,
+            &targets,
+            inline_rules,
+            &mut diags,
+        ) {
             gated |= added.gated;
             extra_imports.extend(added.imports);
         }
@@ -138,13 +164,7 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         if runtime_dom {
             let classes = eldur_css::styled_classes(&sheets);
             decls.push(metadata::styled_classes_decl(&classes));
-            // A created element may land in a block of text the script holds.
-            let holds_text = wanted.iter().any(|&n| {
-                doc.children(n).any(|c| {
-                    matches!(&doc.node(c).data, eldur_dom::NodeData::Text(t) if !t.trim().is_empty())
-                })
-            });
-            if !inline_covered.is_empty() || (scripts.analysis.mutates_dom && holds_text) {
+            if inline_rules {
                 decls.push(metadata::inline_rules_decl(&eldur_css::inline_rules(
                     &sheets,
                     &options.viewport,
@@ -163,12 +183,16 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
             params: Vec::new(),
             body: if gated {
                 // Transitions start once the document's classes are set.
-                vec![
+                let mut body = attribute_handlers;
+                body.extend([
                     init,
                     format!("{}.eldurAnimate = true;", crate::emit::units::ROOT_ID),
-                ]
+                ]);
+                body
             } else {
-                vec![init]
+                let mut body = attribute_handlers;
+                body.push(init);
+                body
             },
         });
         qml.import(Import::path("page.js", Some("Page")));
@@ -206,6 +230,18 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         files,
         diagnostics: diags.into_vec(),
     }
+}
+
+fn has_inline_model(obj: &eldur_qml::Object) -> bool {
+    obj.members.iter().any(|member| match member {
+        Member::PropertyDecl {
+            name,
+            value: Some(Value::String(model)),
+            ..
+        } => name == "eldurInline" && model.contains("\"tag\":"),
+        Member::Child(child) => has_inline_model(child),
+        _ => false,
+    })
 }
 
 pub(crate) fn css_diagnostic(d: &eldur_css::Diagnostic) -> Diagnostic {

@@ -70,6 +70,36 @@ pub enum DomQuery {
     SelectorAll(String),
 }
 
+/// Whether a DOM event of this type goes on to the target's ancestors.
+#[must_use]
+pub fn bubbles(event: &str) -> bool {
+    matches!(
+        event,
+        "click"
+            | "dblclick"
+            | "input"
+            | "change"
+            | "submit"
+            | "reset"
+            | "keydown"
+            | "keyup"
+            | "keypress"
+            | "focusin"
+            | "focusout"
+            | "mousedown"
+            | "mouseup"
+            | "mousemove"
+            | "mouseover"
+            | "mouseout"
+            | "pointerdown"
+            | "pointerup"
+            | "touchstart"
+            | "touchend"
+            | "contextmenu"
+            | "wheel"
+    )
+}
+
 /// Static summary of DOM queries, mutations, writes and event listeners found across scripts.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Analysis {
@@ -96,6 +126,13 @@ pub struct Analysis {
     /// Scripts reach elements by runtime selectors, traversal, `matches`/`closest`,
     /// event targets, or mutate the DOM: every element needs `eldurTag`/`eldurClasses`.
     pub runtime_dom: bool,
+    /// Some handler can hear an event that started on another element, so
+    /// every listener goes through the runtime's one dispatch path rather
+    /// than a QML handler of its own. The converter sets this.
+    pub dispatch_by_path: bool,
+    /// A bubbling event is listened for on something no literal query names
+    /// (`document`, `window`, `event.target`, a created element).
+    pub listens_unresolved: bool,
     /// Elements whose children scripts insert, remove, replace or reorder
     /// (the receiver of `appendChild`, `insertBefore`, `removeChild`,
     /// `append`, `replaceChildren`, `innerHTML =`, `textContent =`, …), in

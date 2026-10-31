@@ -133,6 +133,10 @@ impl Emitter<'_, '_> {
                     .collect();
                 self.inline_covered.insert(node);
                 let mut out = json!({ "tag": e.local_name(), "attrs": attrs, "kids": kids });
+                // Its handler attribute finds it by this, id or no id.
+                if e.attrs.iter().any(|a| a.name.local.starts_with("on")) {
+                    out["key"] = json!(node.index());
+                }
                 if let Some(c) = self.styles.computed(node) {
                     out["c"] = computed(&c.style);
                 }

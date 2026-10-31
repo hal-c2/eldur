@@ -189,9 +189,7 @@ ApplicationWindow {
                                     renderType: Text.NativeRendering
 
                                     Keys.onPressed: (event) => {
-                                        const dom = Eldur.event("keydown", todoInput, event);
-                                        Page.__eldur_on_keydown_todoInput(dom);
-                                        event.accepted = dom.defaultPrevented;
+                                        event.accepted = !Eldur.fire(todoInput, "keydown", event);
                                     }
                                 }
 
@@ -229,8 +227,8 @@ ApplicationWindow {
                                     Layout.fillHeight: true
                                     hoverEnabled: true
 
-                                    onClicked: {
-                                        Page.__eldur_on_click_addBtn(Eldur.event("click", addBtn, null));
+                                    Keys.onPressed: (event) => {
+                                        event.accepted = !Eldur.fire(addBtn, "keydown", event);
                                     }
                                 }
                             }

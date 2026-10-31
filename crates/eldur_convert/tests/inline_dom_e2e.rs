@@ -35,7 +35,12 @@ TestCase {
         const page = createTemporaryObject(component, host, { width: 1280, height: 800 })
         waitForRendering(page)
         for (const [x, y] of CLICKS) {
-            mouseClick(page, x, y)
+            if (typeof x === "string") {
+                const named = { Tab: Qt.Key_Tab, Enter: Qt.Key_Return, ArrowDown: Qt.Key_Down }
+                keyClick(named[x] !== undefined ? named[x] : x)
+            } else {
+                mouseClick(page, x, y)
+            }
             wait(50)
         }
     }
@@ -115,7 +120,10 @@ fn page(name: &str) {
         .as_array()
         .expect("clicks for every page")
         .iter()
-        .map(|c| format!("[{},{}]", c["x"], c["y"]))
+        .map(|c| match c.get("key") {
+            Some(key) => format!("[{key}]"),
+            None => format!("[{},{}]", c["x"], c["y"]),
+        })
         .collect();
     let clicks = format!("[{}]", clicks.join(","));
     if let Err(e) = run(name, &html, &want, &clicks) {
@@ -146,4 +154,107 @@ fn created_and_removed_inline_nodes_match_chromium() {
 #[test]
 fn options_are_nodes_of_their_select() {
     page("options");
+}
+
+#[test]
+fn bubbling_runs_from_the_target_up_and_capture_from_the_root_down() {
+    page("ev_order");
+}
+
+#[test]
+fn stop_propagation_and_prevent_default_at_each_level() {
+    page("ev_stop");
+}
+
+#[test]
+fn delegation_through_closest_reaches_controls_with_no_listener() {
+    page("ev_delegate");
+}
+
+#[test]
+fn attribute_property_and_listener_handlers_share_one_dispatch() {
+    page("ev_static");
+}
+
+#[test]
+fn a_page_with_only_attributes_bubbles_through_ancestors() {
+    page("ev_static_only");
+}
+
+#[test]
+fn form_events_bubble() {
+    page("ev_forms");
+}
+
+fn notes(html: &str) -> Vec<String> {
+    convert_str(html, &Options::default())
+        .diagnostics
+        .into_iter()
+        .map(|d| d.message)
+        .collect()
+}
+
+#[test]
+fn a_class_on_an_inline_node_is_styled_so_no_note_says_otherwise() {
+    let html = r#"<!doctype html><style>.done{color:red}</style>
+<p>one <span id="s">two</span></p><button id="b">b</button>
+<script>document.getElementById("b").onclick=function(){
+document.getElementById("s").classList.add("done")}</script>"#;
+    let notes = notes(html);
+    assert!(
+        !notes.iter().any(|n| n.contains("styles under class")),
+        "{notes:?}"
+    );
+}
+
+#[test]
+fn a_class_with_no_node_to_style_keeps_its_note() {
+    let html = r#"<!doctype html><style>a.on{color:red}a:hover{color:blue}</style>
+<p>one <a class="on" href="/x">two</a></p>"#;
+    let notes = notes(html);
+    assert!(notes.iter().any(|n| n.contains("`:hover`")), "{notes:?}");
+}
+
+#[test]
+fn a_created_span_in_a_line_with_rules_is_a_styled_node() {
+    let html = r#"<!doctype html><style>.n{color:red}</style>
+<p id="line">one</p><button id="b">b</button>
+<script>document.getElementById("b").onclick=function(){
+var s=document.createElement("span");s.className="n";s.textContent="x";
+document.getElementById("line").appendChild(s)}</script>"#;
+    let notes = notes(html);
+    assert!(
+        !notes.iter().any(|n| n.contains("a created <span>")),
+        "{notes:?}"
+    );
+}
+
+#[test]
+fn a_created_element_that_stays_an_object_keeps_its_note() {
+    // `display` makes it inline for the probe; the runtime goes by the tag.
+    let html = r#"<!doctype html><style>section{display:inline;color:red}</style>
+<p id="line">one</p><button id="b">b</button>
+<script>document.getElementById("b").onclick=function(){
+var s=document.createElement("section");s.textContent="x";
+document.getElementById("line").appendChild(s)}</script>"#;
+    let notes = notes(html);
+    assert!(
+        notes.iter().any(|n| n.contains("a created <section>")),
+        "{notes:?}"
+    );
+}
+
+#[test]
+fn submit_reaches_ancestors_of_a_form_with_no_listener() {
+    page("ev_submit");
+}
+
+#[test]
+fn change_comes_only_when_the_text_changed() {
+    page("ev_change");
+}
+
+#[test]
+fn a_scripted_click_bubbles() {
+    page("ev_scripted");
 }
