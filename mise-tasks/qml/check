@@ -10,11 +10,12 @@ while IFS= read -r -d '' f; do
   fi
 done < <(find "$dir" -name '*.qml' -print0)
 while IFS= read -r -d '' f; do
+  # A page's console.log is its own output; console.warn still fails the check.
   # qml6 has no "load and quit"; Quit.qml, loaded into the same engine, quits
   # after 1 s so warnings during load, the first frames and engine
   # destruction are printed. The timeout catches a page that hangs.
   rc=0
-  out=$(cd "$(dirname "$f")" && QT_QPA_PLATFORM=offscreen QT_FORCE_STDERR_LOGGING=1 timeout 10 qml6 "$(basename "$f")" "$quit" 2>&1) || rc=$?
+  out=$(cd "$(dirname "$f")" && QT_QPA_PLATFORM=offscreen QT_FORCE_STDERR_LOGGING=1 QT_LOGGING_RULES="qml.debug=false" timeout 10 qml6 "$(basename "$f")" "$quit" 2>&1) || rc=$?
   if [[ -n "$out" || $rc -ne 0 ]]; then echo "qml6: $f (exit $rc)"; echo "$out"; status=1; fi
 done < <(find "$dir" -name 'Main.qml' -print0)
 exit $status
