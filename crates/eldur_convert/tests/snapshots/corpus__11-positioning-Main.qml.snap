@@ -159,14 +159,19 @@ ApplicationWindow {
                                             renderType: Text.NativeRendering
                                         }
 
-                                        Flow {
+                                        EldurLines {
                                             id: blockFlow
+                                            color: "#1f2937"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 16
                                             z: 1
                                             Layout.fillWidth: true
                                             Layout.topMargin: 16 - p.eldurCarry
                                             Layout.preferredHeight: implicitHeight
 
+                                            // <div class="tooltip-wrap">
                                             Item {
+                                                implicitWidth: tooltipWrapBox.implicitWidth
                                                 width: tooltipWrapBox.width
                                                 height: tooltipWrapBox.height + 64
 
@@ -185,31 +190,41 @@ ApplicationWindow {
                                                         anchors.right: parent.right
                                                         anchors.top: parent.top
 
-                                                        // <button class="btn">
-                                                        Button {
-                                                            id: buttonControl
-                                                            text: "Follow"
-                                                            palette.buttonText: "#ffffff"
+                                                        EldurLines {
+                                                            id: blockFlow2
+                                                            color: "#1f2937"
                                                             font.family: "sans-serif"
                                                             font.pixelSize: 16
-                                                            font.weight: 600
-                                                            background: Rectangle {
-                                                                color: "#3b6fe0"
-                                                                radius: 8
-                                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
-                                                            }
-                                                            topPadding: 10
-                                                            rightPadding: 18
-                                                            bottomPadding: 10
-                                                            leftPadding: 18
-                                                            implicitHeight: 38
-                                                            contentItem: Text {
-                                                                text: buttonControl.text
-                                                                font: buttonControl.font
-                                                                color: buttonControl.palette.buttonText
-                                                                horizontalAlignment: Text.AlignHCenter
-                                                                verticalAlignment: Text.AlignVCenter
-                                                                renderType: Text.NativeRendering
+                                                            Layout.fillWidth: true
+                                                            Layout.preferredHeight: implicitHeight
+
+                                                            // <button class="btn">
+                                                            Button {
+                                                                id: buttonControl
+                                                                text: "Follow"
+                                                                palette.buttonText: "#ffffff"
+                                                                font.family: "sans-serif"
+                                                                font.pixelSize: 16
+                                                                font.weight: 600
+                                                                background: Rectangle {
+                                                                    color: "#3b6fe0"
+                                                                    radius: 8
+                                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                                                                }
+                                                                topPadding: 10
+                                                                rightPadding: 18
+                                                                bottomPadding: 10
+                                                                leftPadding: 18
+                                                                implicitHeight: 38
+                                                                contentItem: Text {
+                                                                    text: buttonControl.text
+                                                                    font: buttonControl.font
+                                                                    color: buttonControl.palette.buttonText
+                                                                    horizontalAlignment: Text.AlignHCenter
+                                                                    verticalAlignment: Text.AlignVCenter
+                                                                    renderType: Text.NativeRendering
+                                                                }
+                                                                width: Math.min(implicitWidth, blockFlow2.width)
                                                             }
                                                         }
                                                     }

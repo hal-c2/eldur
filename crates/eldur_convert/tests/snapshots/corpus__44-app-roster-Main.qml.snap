@@ -244,17 +244,20 @@ ApplicationWindow {
                 }
 
                 // <div class="tools">
-                ColumnLayout {
-                    id: tools
+                EldurLines {
+                    id: toolsFlow
                     property string eldurTag: "div"
                     property string eldurClasses: "tools"
                     property string eldurWs: "\n"
                     property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h1.eldurCarry
 
-                    spacing: 0
+                    color: "#222222"
+                    font.family: "Arial"
+                    font.pixelSize: 14
+                    lineHeight: 19.6
                     Layout.fillWidth: true
-                    Layout.maximumWidth: Number.POSITIVE_INFINITY
                     Layout.topMargin: 12 - h1.eldurCarry
+                    Layout.preferredHeight: implicitHeight
 
                     // <input id="filter">
                     TextField {
@@ -278,11 +281,11 @@ ApplicationWindow {
                         bottomPadding: 6
                         leftPadding: 6
                         implicitHeight: 27
-                        implicitWidth: 189
+                        implicitWidth: 212
                         placeholderText: "Filter by name or team"
                         placeholderTextColor: "#757575"
                         objectName: "filter"
-                        Layout.preferredWidth: 212
+                        width: 212
                         renderType: Text.NativeRendering
                     }
                 }
@@ -293,7 +296,7 @@ ApplicationWindow {
                     property string eldurTag: "table"
                     property string eldurWs: "\n"
                     property string eldurWsEnd: "\n"
-                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin) - Layout.topMargin + item.eldurCarry + 0.000001) : tools.eldurCarry
+                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin) - Layout.topMargin + item.eldurCarry + 0.000001) : toolsFlow.eldurCarry
 
                     spacing: 0
                     Layout.minimumWidth: tableGrid.minContentWidth
@@ -301,7 +304,7 @@ ApplicationWindow {
                     objectName: "staff"
                     Layout.preferredWidth: 640
                     Layout.maximumWidth: Number.POSITIVE_INFINITY
-                    Layout.topMargin: 10 - tools.eldurCarry
+                    Layout.topMargin: 10 - toolsFlow.eldurCarry
 
                     Item {
                         id: count
@@ -1665,86 +1668,120 @@ ApplicationWindow {
                 }
 
                 // <div class="pager">
-                ColumnLayout {
-                    id: pager
+                EldurLines {
+                    id: pagerFlow
                     property string eldurTag: "div"
                     property string eldurClasses: "pager"
                     property string eldurWs: "\n"
                     property string eldurWsEnd: "\n"
                     property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : staff.eldurCarry
 
-                    spacing: 0
+                    color: "#222222"
+                    font.family: "Arial"
+                    font.pixelSize: 14
+                    lineHeight: 19.6
                     Layout.fillWidth: true
-                    Layout.maximumWidth: Number.POSITIVE_INFINITY
                     Layout.topMargin: 10 - staff.eldurCarry
+                    Layout.preferredHeight: implicitHeight
 
                     // <button id="prev">
-                    Button {
-                        id: prev
-                        property string eldurTag: "button"
-                        property string eldurWs: "\n  "
+                    Item {
+                        implicitWidth: prev.implicitWidth + 4
+                        width: prev.width + 4
+                        height: prev.height
 
-                        text: "Previous"
-                        palette.buttonText: "#000000"
+                        Button {
+                            id: prev
+                            property string eldurTag: "button"
+                            property string eldurWs: "\n  "
+
+                            text: "Previous"
+                            palette.buttonText: "#000000"
+                            font.family: "Arial"
+                            font.pixelSize: 13
+                            background: Rectangle {
+                                color: "#efefef"
+                                radius: 2
+                                border.width: 1
+                                border.color: "#767676"
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                            }
+                            topPadding: 3
+                            rightPadding: 8
+                            bottomPadding: 3
+                            leftPadding: 8
+                            implicitHeight: 21
+                            contentItem: Text {
+                                text: prev.text
+                                font: prev.font
+                                color: prev.palette.buttonText
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                                renderType: Text.NativeRendering
+                            }
+                            implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
+                            objectName: "prev"
+                            width: Math.min(implicitWidth, pagerFlow.width - 4)
+                        }
+                    }
+
+                    Text {
+                        readonly property string eldurInline: "{\"bare\":false,\"hoisted\":true,\"html\":false,\"k\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(34, 34, 34)\",\"display\":\"block\",\"family\":\"Arial\",\"italic\":false,\"size\":14.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"attrs\":[[\"id\",\"page-label\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(34, 34, 34)\",\"display\":\"inline\",\"family\":\"Arial\",\"italic\":false,\"size\":14.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[],\"tag\":\"span\"}],\"lh\":19.600000381469727,\"pre\":false,\"strike\":false,\"underline\":false}"
+                        readonly property real eldurMarginRight: 8
+                        readonly property real eldurMarginLeft: 8
+
+                        text: ""
+                        textFormat: Text.PlainText
+                        color: "#222222"
                         font.family: "Arial"
-                        font.pixelSize: 13
-                        background: Rectangle {
-                            color: "#efefef"
-                            radius: 2
-                            border.width: 1
-                            border.color: "#767676"
-                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                        font.pixelSize: 14
+                        lineHeight: 19.6
+                        lineHeightMode: Text.FixedHeight
+                        transform: Translate {
+                            y: 1
                         }
-                        topPadding: 3
-                        rightPadding: 8
-                        bottomPadding: 3
-                        leftPadding: 8
-                        implicitHeight: 21
-                        contentItem: Text {
-                            text: prev.text
-                            font: prev.font
-                            color: prev.palette.buttonText
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                            renderType: Text.NativeRendering
-                        }
-                        implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
-                        objectName: "prev"
-                        Layout.rightMargin: 4
+                        wrapMode: Text.WordWrap
+                        renderType: Text.NativeRendering
                     }
 
                     // <button id="next">
-                    Button {
-                        id: next
-                        property string eldurTag: "button"
+                    Item {
+                        implicitWidth: next.implicitWidth + 4
+                        width: next.width + 4
+                        height: next.height
 
-                        text: "Next"
-                        palette.buttonText: "#000000"
-                        font.family: "Arial"
-                        font.pixelSize: 13
-                        background: Rectangle {
-                            color: "#efefef"
-                            radius: 2
-                            border.width: 1
-                            border.color: "#767676"
-                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                        Button {
+                            id: next
+                            property string eldurTag: "button"
+
+                            text: "Next"
+                            palette.buttonText: "#000000"
+                            font.family: "Arial"
+                            font.pixelSize: 13
+                            background: Rectangle {
+                                color: "#efefef"
+                                radius: 2
+                                border.width: 1
+                                border.color: "#767676"
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                            }
+                            topPadding: 3
+                            rightPadding: 8
+                            bottomPadding: 3
+                            leftPadding: 8
+                            implicitHeight: 21
+                            contentItem: Text {
+                                text: next.text
+                                font: next.font
+                                color: next.palette.buttonText
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                                renderType: Text.NativeRendering
+                            }
+                            implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
+                            objectName: "next"
+                            width: Math.min(implicitWidth, pagerFlow.width - 4)
                         }
-                        topPadding: 3
-                        rightPadding: 8
-                        bottomPadding: 3
-                        leftPadding: 8
-                        implicitHeight: 21
-                        contentItem: Text {
-                            text: next.text
-                            font: next.font
-                            color: next.palette.buttonText
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                            renderType: Text.NativeRendering
-                        }
-                        implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
-                        objectName: "next"
-                        Layout.rightMargin: 4
                     }
                 }
 
@@ -1753,7 +1790,7 @@ ApplicationWindow {
                     id: picked
                     property string eldurTag: "p"
                     property string eldurWs: "\n"
-                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : pager.eldurCarry
+                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : pagerFlow.eldurCarry
 
                     text: "Nothing picked"
                     textFormat: Text.PlainText
@@ -1768,7 +1805,7 @@ ApplicationWindow {
                     wrapMode: Text.WordWrap
                     objectName: "picked"
                     Layout.fillWidth: true
-                    Layout.topMargin: 14 - pager.eldurCarry
+                    Layout.topMargin: 14 - pagerFlow.eldurCarry
                     Layout.preferredHeight: implicitHeight
                     renderType: Text.NativeRendering
                 }

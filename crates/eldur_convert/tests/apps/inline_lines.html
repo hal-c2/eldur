@@ -1,0 +1,42 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Lines of text and boxes</title>
+<style>
+  body { margin: 8px; font: 16px sans-serif; width: 500px; }
+  div, p { margin: 0 0 6px; }
+  .tall { line-height: 30px; }
+  .ib { display: inline-block; width: 40px; height: 20px; background: #cde; }
+  .ibtext { display: inline-block; background: #edc; padding: 2px; }
+  .iflex { display: inline-flex; width: 30px; height: 30px; background: #dce; }
+  .box { display: inline-block; width: 24px; height: 24px; background: #9bd; }
+  .clip { display: inline-block; overflow: hidden; height: 20px; width: 50px; background: #ddd; }
+  .pad { padding: 4px; }
+  img { width: 32px; height: 32px; }
+  .center { text-align: center; }
+  .right { text-align: right; }
+  .nowrap { white-space: nowrap; }
+  .narrow { width: 180px; }
+</style></head><body>
+<div id="mixed"><button id="a">A</button> <span id="page"></span> <button id="b">B</button></div>
+<div id="labelled"><label id="lab"><input id="ok" type="checkbox"> Accept</label></div>
+<div id="named">Name: <input id="name"></div>
+<p id="pic">Text <img id="i1" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt=""> after</p>
+<p id="ibs">Before <span id="ib1" class="ib"></span> middle <span id="ib2" class="ibtext">two<br>lines</span> and <span id="clip" class="clip">clipped</span> end</p>
+<p id="flex">One <span id="f1" class="iflex"></span> two</p>
+<div id="alone"><input id="solo"></div>
+<div id="tall" class="tall">Line <button id="tb">T</button> tall</div>
+<p id="va" class="pad">x<span id="v-mid" class="box" style="vertical-align: middle"></span>x<span id="v-top" class="box" style="vertical-align: top"></span>x<span id="v-bot" class="box" style="vertical-align: bottom"></span>x<span id="v-tt" class="box" style="vertical-align: text-top"></span>x<span id="v-tb" class="box" style="vertical-align: text-bottom"></span>x<span id="v-sub" class="box" style="vertical-align: sub"></span>x<span id="v-sup" class="box" style="vertical-align: super"></span>x<span id="v-px" class="box" style="vertical-align: 7px"></span>x<span id="v-pc" class="box" style="vertical-align: 50%"></span>x</p>
+<p id="wrap" class="narrow">Words before a box <span id="w1" class="box"></span> and words after it that wrap to more lines <button id="w2">Go</button> tail</p>
+<p id="nw" class="narrow nowrap">No wrapping here at all <span id="n1" class="box"></span> keeps on going past it</p>
+<p id="cen" class="center">Centred <span id="c1" class="box"></span> line</p>
+<p id="rig" class="right">Right <span id="r1" class="box"></span> line</p>
+<div id="ctl"><button id="u">more</button> <button id="hide">hide</button> <button id="back">back</button></div>
+<script>
+  var page = document.getElementById("page");
+  document.getElementById("a").onclick = function () { page.textContent = "Page 1 of 2"; console.log("a", page.textContent); };
+  document.getElementById("b").onclick = function () { page.textContent = ""; console.log("b"); };
+  document.getElementById("lab").onclick = function () { console.log("lab", document.getElementById("ok").checked); };
+  document.getElementById("u").onclick = function () { document.getElementById("ib2").textContent = "much wider than before"; };
+  document.getElementById("hide").onclick = function () { document.getElementById("w1").style.display = "none"; document.getElementById("c1").style.display = "none"; };
+  document.getElementById("back").onclick = function () { document.getElementById("w1").style.display = ""; };
+</script>
+</body></html>

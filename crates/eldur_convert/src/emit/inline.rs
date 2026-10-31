@@ -1,24 +1,25 @@
-//! An inline formatting context with atomic inline-level boxes
-//! (`inline-block`, `inline-flex`, …) → a `Flow`.
+//! An inline formatting context with atomic inline-level boxes (replaced
+//! elements, controls, `inline-block`, `inline-flex`, …) → `EldurLines`.
 //!
-//! One `Text` cannot hold a box, so the line is cut into pieces a `Flow`
-//! can wrap: one `Text` per word (its spans kept as StyledText tags) and
-//! one item per atomic box. The space after a word is a trailing no-break
-//! space, which Qt measures, so gaps come from the page's own white space.
-//! `Flow` aligns the items of a row by their tops; CSS aligns baselines, so
-//! each item is moved down by its baseline's distance from the lowest one,
-//! estimated from the fonts and insets at conversion time.
+//! One `Text` cannot hold a box, so the content is cut at the boxes only: each
+//! run of text stays one `Text`, shaped whole, its inline elements its nodes. The
+//! one line layouter, `EldurLines.qml`, is written beside `Main.qml`: it knows the
+//! real measures, follows the viewport, and also places what a script changes.
 
 use eldur_css::{
-    BoxSizing, ComputedStyle, LengthAuto, LineHeight, Overflow, Size, TextAlign,
-    TextDecorationLine, VerticalAlign,
+    BoxSizing, ComputedStyle, Length, LengthAuto, LineHeight, Overflow, Size, TextAlign,
+    TextDecorationLine, VerticalAlign, WhiteSpace,
 };
+use eldur_dom::NodeId;
 use eldur_qml::{Member, Object, Value};
 
 use super::Emitter;
 use super::text::CONTENT_AREA;
 use super::units::{fmt_number, number, round};
-use crate::boxes::{BoxKind, Content, Inline, LayoutBox, Span, node_line};
+use crate::boxes::{BoxKind, Inline, LayoutBox, Span, node_line};
+
+/// The layouter, written beside `Main.qml` when anything may use it.
+pub(crate) const ELDUR_LINES_QML: &str = include_str!("EldurLines.qml");
 
 /// Ascent of the common fallback fonts as a fraction of the font size
 /// (Liberation Sans: 0.905).
@@ -37,97 +38,148 @@ pub(crate) fn has_atomic(items: &[Inline<'_>]) -> bool {
     })
 }
 
-/// A piece of the line a `Flow` places.
-enum Piece<'b, 'a> {
-    /// A word and the space after it, its spans kept.
-    Word(Vec<Inline<'a>>),
-    Atomic(&'b LayoutBox<'a>),
-    Break,
+fn has_words(items: &[Inline<'_>]) -> bool {
+    items.iter().any(|item| match item {
+        Inline::Text(_) | Inline::LineBreak => true,
+        Inline::Span(span) => has_words(&span.children),
+        Inline::Atomic(_) => false,
+    })
 }
 
-/// Text of one word under one chain of spans.
-type Segment<'b, 'a> = (Vec<&'b Span<'a>>, String);
+/// The horizontal margins a run's spans take on the line. One `Text` cannot put
+/// space inside itself, so only those at the run's edges can be honoured.
+fn run_margins(items: &[Inline<'_>]) -> [f32; 2] {
+    let side = |m: &LengthAuto| match m {
+        LengthAuto::Length(l) => l.as_px().unwrap_or(0.0),
+        LengthAuto::Auto => 0.0,
+    };
+    let is_space = |i: &&Inline<'_>| matches!(i, Inline::Text(t) if t.trim().is_empty());
+    let first = items.iter().find(|i| !is_space(i));
+    let last = items.iter().rev().find(|i| !is_space(i));
+    let left = match first {
+        Some(Inline::Span(s)) => side(&s.style.margin.left),
+        _ => 0.0,
+    };
+    let right = match last {
+        Some(Inline::Span(s)) => side(&s.style.margin.right),
+        _ => 0.0,
+    };
+    [left, right]
+}
+
+/// The percentage and pixels of a `width` that follows the containing block.
+fn percent_width(style: &ComputedStyle) -> Option<(f32, f32)> {
+    match style.width {
+        Size::Length(Length::Linear(l)) if l.percent != 0.0 && l.vw == 0.0 && l.vh == 0.0 => {
+            Some((l.percent, l.px))
+        }
+        _ => None,
+    }
+}
+
+/// A piece of the line `EldurLines` places.
+enum Piece<'b, 'a> {
+    /// A run of text between boxes, its spans kept.
+    Run(Vec<Inline<'a>>),
+    /// A box, with the innermost element around it that has its own node.
+    Atomic(&'b LayoutBox<'a>, Option<NodeId>),
+}
 
 fn pieces<'b, 'a>(
     items: &'b [Inline<'a>],
     chain: &mut Vec<&'b Span<'a>>,
-    word: &mut Vec<Segment<'b, 'a>>,
+    run: &mut Vec<Inline<'a>>,
     out: &mut Vec<Piece<'b, 'a>>,
 ) {
     for item in items {
         match item {
-            Inline::Text(text) => {
-                for c in text.chars() {
-                    if c == ' ' {
-                        push_char(word, chain, '\u{a0}');
-                        end_word(word, out);
-                    } else {
-                        push_char(word, chain, c);
-                    }
-                }
+            Inline::Atomic(b) => {
+                end_run(run, out);
+                let owner = chain.iter().rev().find_map(|span| span.node);
+                out.push(Piece::Atomic(b, owner));
             }
-            Inline::LineBreak => {
-                end_word(word, out);
-                out.push(Piece::Break);
-            }
-            Inline::Span(span) => {
+            Inline::Span(span) if has_atomic(&span.children) => {
                 chain.push(span);
-                pieces(&span.children, chain, word, out);
+                // With only boxes in it, no run would give the element a node.
+                if span.node.is_some() && !has_words(&span.children) {
+                    push_in_chain(run, Inline::Text(String::new()), chain);
+                }
+                pieces(&span.children, chain, run, out);
                 chain.pop();
             }
-            Inline::Atomic(b) => {
-                end_word(word, out);
-                out.push(Piece::Atomic(b));
-            }
+            other => push_in_chain(run, other.clone(), chain),
         }
     }
 }
 
-fn push_char<'b, 'a>(word: &mut Vec<Segment<'b, 'a>>, chain: &[&'b Span<'a>], c: char) {
-    let same = |other: &[&Span<'a>]| {
-        other.len() == chain.len() && other.iter().zip(chain).all(|(a, b)| std::ptr::eq(*a, *b))
+/// Puts `inner` in `run` inside `chain`, the spans cut at a box, in the piece
+/// already open for them when there is one.
+fn push_in_chain<'a>(run: &mut Vec<Inline<'a>>, inner: Inline<'a>, chain: &[&Span<'a>]) {
+    let Some((span, rest)) = chain.split_first() else {
+        run.push(inner);
+        return;
     };
-    match word.last_mut() {
-        Some((spans, text)) if same(spans) => text.push(c),
-        _ => word.push((chain.to_vec(), c.to_string())),
-    }
-}
-
-fn end_word<'a>(word: &mut Vec<Segment<'_, 'a>>, out: &mut Vec<Piece<'_, 'a>>) {
-    if word.is_empty() {
+    if let Some(Inline::Span(open)) = run.last_mut()
+        && open.node == span.node
+        && open.node.is_some()
+    {
+        push_in_chain(&mut open.children, inner, rest);
         return;
     }
-    let items = word
-        .drain(..)
-        .map(|(chain, text)| {
-            chain.iter().rev().fold(Inline::Text(text), |inner, span| {
-                Inline::Span(Span {
-                    node: span.node,
-                    style: span.style,
-                    children: vec![inner],
-                })
-            })
-        })
-        .collect();
-    out.push(Piece::Word(items));
+    let mut children = Vec::new();
+    push_in_chain(&mut children, inner, rest);
+    run.push(Inline::Span(Span {
+        node: span.node,
+        style: span.style,
+        children,
+    }));
 }
 
-/// A piece converted, before baselines are lined up.
-enum Part {
-    Word(Object),
-    Break,
-    Atomic {
-        obj: Object,
-        /// Base for the id of its margin box.
-        hint: String,
-        /// Horizontal and vertical margins.
-        margins: [f32; 4],
-        /// From the top margin edge; `None` sits at the top of the row.
-        baseline: Option<f32>,
-        /// A created inline element: its object is its template, so it is
-        /// not wrapped.
-        own: bool,
-    },
+/// `items` without the second of two spaces an empty span holds apart: what the
+/// `Text` draws until a script fills the span.
+fn drop_doubled_spaces<'a>(items: &[Inline<'a>], after_space: &mut bool) -> Vec<Inline<'a>> {
+    let mut out = Vec::new();
+    for item in items {
+        match item {
+            Inline::Text(t) => {
+                let t = if *after_space {
+                    t.strip_prefix(' ').unwrap_or(t)
+                } else {
+                    t
+                };
+                if !t.is_empty() {
+                    *after_space = t.ends_with(' ');
+                    out.push(Inline::Text(t.to_owned()));
+                }
+            }
+            Inline::Span(s) => out.push(Inline::Span(Span {
+                node: s.node,
+                style: s.style,
+                children: drop_doubled_spaces(&s.children, after_space),
+            })),
+            other => {
+                *after_space = false;
+                out.push(other.clone());
+            }
+        }
+    }
+    out
+}
+
+/// Every span in `items`, depth first.
+fn each_span<'b, 'a>(items: &'b [Inline<'a>], out: &mut Vec<&'b Span<'a>>) {
+    for item in items {
+        if let Inline::Span(span) = item {
+            out.push(span);
+            each_span(&span.children, out);
+        }
+    }
+}
+
+fn end_run<'a>(run: &mut Vec<Inline<'a>>, out: &mut Vec<Piece<'_, 'a>>) {
+    if !run.is_empty() {
+        out.push(Piece::Run(std::mem::take(run)));
+    }
 }
 
 /// The line height of `style` in px.
@@ -145,8 +197,66 @@ pub(super) fn text_baseline(style: &ComputedStyle) -> f32 {
     (line_height(style) - CONTENT_AREA * style.font_size) / 2.0 + ASCENT * style.font_size
 }
 
+/// The first box of an atomic inline a line places.
+struct Part {
+    obj: Object,
+    hint: String,
+    margins: [f32; 4],
+    own: bool,
+}
+
+/// How the line finds an atomic's baseline, when it is not the walk over its
+/// last lines; `none` is its bottom margin edge (CSS 2.2 §10.8.1).
+fn baseline_kind(a: &LayoutBox<'_>) -> Option<&'static str> {
+    let style = &*a.style;
+    if style.overflow_x != Overflow::Visible || style.overflow_y != Overflow::Visible {
+        return Some("none");
+    }
+    (a.kind == BoxKind::Flex || a.kind == BoxKind::Grid).then_some("first")
+}
+
+fn string_property(obj: &mut Object, name: &str, value: &str) {
+    obj.members.insert(
+        0,
+        Member::PropertyDecl {
+            ty: "string".to_owned(),
+            name: name.to_owned(),
+            value: Some(Value::String(value.to_owned())),
+            readonly: false,
+            required: false,
+        },
+    );
+}
+
+fn vertical_align(obj: &mut Object, align: VerticalAlign) {
+    let name = match align {
+        VerticalAlign::Baseline => return,
+        VerticalAlign::Sub => "sub",
+        VerticalAlign::Super => "super",
+        VerticalAlign::Top => "top",
+        VerticalAlign::TextTop => "text-top",
+        VerticalAlign::Middle => "middle",
+        VerticalAlign::Bottom => "bottom",
+        VerticalAlign::TextBottom => "text-bottom",
+        VerticalAlign::Length(px) => {
+            obj.members.insert(
+                0,
+                Member::PropertyDecl {
+                    ty: "real".to_owned(),
+                    name: "eldurVShift".to_owned(),
+                    value: Some(number(px)),
+                    readonly: false,
+                    required: false,
+                },
+            );
+            "length"
+        }
+    };
+    string_property(obj, "eldurVAlign", name);
+}
+
 impl Emitter<'_, '_> {
-    /// The `Flow` of block container `b`'s inline content `items`.
+    /// The `EldurLines` of block container `b`'s inline content `items`.
     pub(super) fn inline_flow(
         &mut self,
         b: &LayoutBox<'_>,
@@ -159,87 +269,113 @@ impl Emitter<'_, '_> {
             .ids
             .claim(&format!("{} flow", super::hint(self.doc, b)));
         let mut list = Vec::new();
-        let mut word = Vec::new();
-        pieces(items, &mut Vec::new(), &mut word, &mut list);
-        end_word(&mut word, &mut list);
+        let mut run = Vec::new();
+        pieces(items, &mut Vec::new(), &mut run, &mut list);
+        end_run(&mut run, &mut list);
 
-        let mut parts = Vec::new();
+        let mut flow = Object::new("EldurLines").with_id(flow_id.clone());
+        // The strut: the block's font and line height.
+        let strut = self.text(style, decoration, &[], line);
+        for member in &strut.members {
+            if let Member::Property { name, value } = member
+                && (name.starts_with("font.") || name == "font" || name == "color")
+            {
+                flow.set(name, value.clone());
+            }
+        }
+        if let Some(lh) = super::text::line_height(style) {
+            flow.set("lineHeight", number(lh));
+        }
+        match style.text_align {
+            TextAlign::Center => {
+                flow.set("textAlign", Value::expr("Text.AlignHCenter"));
+            }
+            TextAlign::Right | TextAlign::End => {
+                flow.set("textAlign", Value::expr("Text.AlignRight"));
+            }
+            _ => {}
+        }
+        if style.white_space == WhiteSpace::NoWrap || style.white_space == WhiteSpace::Pre {
+            flow.set("noWrap", true);
+        }
+        if !matches!(style.white_space, WhiteSpace::Normal | WhiteSpace::NoWrap) {
+            flow.set("preserveSpace", true);
+        }
+
+        let mut runs = false;
         for piece in list {
-            parts.push(match piece {
-                Piece::Word(items) => {
-                    let mut text = self.text(style, decoration, &items, line);
-                    // A word is as wide as its glyphs; the Flow wraps.
-                    text.members.retain(|m| {
-                        !matches!(m, Member::Property { name, .. }
-                            if name == "wrapMode" || name == "horizontalAlignment")
-                    });
-                    Part::Word(text)
-                }
-                Piece::Break => Part::Break,
-                Piece::Atomic(a) => self.atomic(a, decoration, &flow_id),
-            });
-        }
-        let runs = parts
-            .iter()
-            .any(|p| matches!(p, Part::Atomic { own: true, .. }));
-        let word_baseline = text_baseline(style);
-        let lowest = parts
-            .iter()
-            .filter_map(|p| match p {
-                Part::Word(_) => Some(word_baseline),
-                Part::Atomic {
-                    margins, baseline, ..
-                } => baseline.map(|b| margins[2] + b),
-                Part::Break => None,
-            })
-            .fold(0.0_f32, f32::max);
-
-        let mut flow = Object::new("Flow").with_id(flow_id.clone());
-        let padding = match style.text_align {
-            TextAlign::Center => Some("Math.floor((width - used) / 2)"),
-            TextAlign::Right | TextAlign::End => Some("Math.floor(width - used)"),
-            _ => None,
-        };
-        if let Some(padding) = padding {
-            // Flow has no alignment: the free space of a row goes before
-            // it. Measured on all items, so it is right for one row and
-            // left-aligns a paragraph that wraps.
-            flow.set(
-                "leftPadding",
-                Value::expr(format!(
-                    "{{ const used = Array.from(children).reduce((sum, item) => sum + item.width, 0); return Math.max(0, {padding}); }}"
-                )),
-            );
-        }
-        for part in parts {
-            match part {
-                Part::Word(mut text) => {
-                    let shift = lowest - word_baseline;
-                    if round(shift) > 0.0 {
-                        text.set("topPadding", number(shift));
+            match piece {
+                Piece::Run(items) => {
+                    let drawn = drop_doubled_spaces(&items, &mut false);
+                    let mut text = self.text(style, decoration, &drawn, line);
+                    let mut spans = Vec::new();
+                    each_span(&items, &mut spans);
+                    // A label cut by its control still takes a press on its words.
+                    for span in spans {
+                        if !span.node.is_some_and(|n| self.has_tapped_label(n)) {
+                            self.label_tap(&mut text, span.node);
+                        }
+                    }
+                    // The line aligns; a justified Text spreads its full lines.
+                    if style.text_align != TextAlign::Justify {
+                        text.members.retain(|m| {
+                            !matches!(m, Member::Property { name, .. }
+                                if name == "horizontalAlignment")
+                        });
+                    }
+                    let [left, right] = run_margins(&items);
+                    for (name, m) in [("eldurMarginLeft", left), ("eldurMarginRight", right)] {
+                        if m != 0.0 {
+                            text.members.insert(
+                                0,
+                                Member::PropertyDecl {
+                                    ty: "real".to_owned(),
+                                    name: name.to_owned(),
+                                    value: Some(number(m)),
+                                    readonly: true,
+                                    required: false,
+                                },
+                            );
+                        }
+                    }
+                    if self.runtime_dom {
+                        self.declare_run_model(&mut text, b, decoration, &items);
                     }
                     flow.push_child(text);
                 }
-                Part::Break => {
-                    // A row of its own as wide as the Flow ends the line.
-                    flow.push_child(
-                        Object::new("Item")
-                            .prop("width", Value::expr(format!("{flow_id}.width")))
-                            .prop("height", 0.0),
-                    );
-                }
-                Part::Atomic { obj, own: true, .. } => {
-                    flow.push_child(obj);
-                }
-                Part::Atomic {
-                    obj,
-                    hint,
-                    margins,
-                    baseline,
-                    own: false,
-                } => {
-                    let shift = baseline.map_or(0.0, |b| lowest - margins[2] - b);
-                    flow.push_child(self.place_atomic(obj, &hint, margins, shift));
+                Piece::Atomic(a, owner) => {
+                    let part = self.atomic(a, decoration, &flow_id);
+                    runs |= part.own;
+                    let mut obj = part.obj;
+                    let kind = baseline_kind(a);
+                    if let Some(kind) = kind {
+                        string_property(&mut obj, "eldurBaseline", kind);
+                    }
+                    if let Some(owner) = owner.filter(|_| self.runtime_dom) {
+                        obj.members.insert(
+                            0,
+                            Member::PropertyDecl {
+                                ty: "int".to_owned(),
+                                name: "eldurInlineOwner".to_owned(),
+                                value: Some(number(owner.index() as f32)),
+                                readonly: true,
+                                required: false,
+                            },
+                        );
+                    }
+                    let mut placed = if part.own {
+                        obj
+                    } else {
+                        self.place_atomic(obj, &part.hint, part.margins, 0.0)
+                    };
+                    vertical_align(&mut placed, a.style.vertical_align);
+                    if self.options.source_comments
+                        && let Some(node) = a.node
+                    {
+                        flow.members
+                            .push(Member::Comment(super::describe(self.doc, node)));
+                    }
+                    flow.push_child(placed);
                 }
             }
         }
@@ -308,13 +444,24 @@ impl Emitter<'_, '_> {
                         obj.set(name, number(m));
                     }
                 }
+            } else {
+                // For the line it joins, as a layout it joins would read them.
+                for (name, m) in [
+                    ("Layout.leftMargin", margins[0]),
+                    ("Layout.rightMargin", margins[1]),
+                    ("Layout.topMargin", margins[2]),
+                    ("Layout.bottomMargin", margins[3]),
+                ] {
+                    if round(m) != 0.0 {
+                        obj.set(name, number(m));
+                    }
+                }
             }
             obj.set("width", Value::expr(OWN_WIDTH));
-            return Part::Atomic {
+            return Part {
                 obj,
                 hint: super::hint(self.doc, a),
                 margins: [0.0; 4],
-                baseline: None,
                 own: true,
             };
         }
@@ -323,7 +470,19 @@ impl Emitter<'_, '_> {
             _ => None,
         };
         match px(&style.width) {
-            Some(w) => obj.set("width", number(w + extra_w)),
+            Some(w) => {
+                obj.set("implicitWidth", number(w + extra_w));
+                obj.set("width", number(w + extra_w))
+            }
+            None if percent_width(style).is_some() => {
+                let (percent, px) = percent_width(style).unwrap_or_default();
+                let share = format!(
+                    "{flow_id}.width * {} + {}",
+                    fmt_number(f64::from(percent) / 100.0),
+                    fmt_number(round(px + extra_w))
+                );
+                obj.set("width", Value::expr(share))
+            }
             None => {
                 // Shrink to fit, but no wider than the line.
                 let mut limit = format!("{flow_id}.width");
@@ -342,47 +501,12 @@ impl Emitter<'_, '_> {
         if let Some(h) = px(&style.height) {
             obj.set("height", number(h + extra_h));
         }
-        let baseline = match style.vertical_align {
-            VerticalAlign::Baseline | VerticalAlign::Middle => self.first_baseline(a),
-            _ => None,
-        };
-        Part::Atomic {
+        Part {
             obj,
             hint: super::hint(self.doc, a),
             margins,
-            baseline,
             own: false,
         }
-    }
-
-    /// The baseline of an atomic inline from its top border edge: that of
-    /// its first line (CSS 2.2 §10.8.1). `None` when it has no line or
-    /// clips, where CSS uses the bottom margin edge.
-    fn first_baseline(&mut self, b: &LayoutBox<'_>) -> Option<f32> {
-        let style = &*b.style;
-        if style.overflow_x != Overflow::Visible || style.overflow_y != Overflow::Visible {
-            return None;
-        }
-        let line = b.node.and_then(|n| node_line(self.doc, n));
-        let top = self.insets(style, line).top;
-        let first = match &b.content {
-            Content::Inline(_) => return Some(top + text_baseline(style)),
-            Content::Empty => return None,
-            // Flex items all start at the top of the content box.
-            Content::Blocks(children) if b.kind == BoxKind::Flex => children
-                .iter()
-                .find_map(|c| Some((c, self.first_baseline(c)?)))?,
-            Content::Blocks(children) => {
-                let child = children.first()?;
-                (child, self.first_baseline(child)?)
-            }
-        };
-        let (child, baseline) = first;
-        let margin = match &child.style.margin.top {
-            LengthAuto::Length(l) => l.as_px().unwrap_or(0.0).max(0.0),
-            LengthAuto::Auto => 0.0,
-        };
-        Some(top + margin + baseline)
     }
 
     /// `obj` in its margin box, moved down by `shift`: a Flow places
@@ -421,6 +545,10 @@ impl Emitter<'_, '_> {
             obj.set("y", number(top + shift));
         }
         let mut wrapper = Object::new("Item");
+        wrapper.set(
+            "implicitWidth",
+            Value::expr(plus(format!("{id}.implicitWidth"), left + right)),
+        );
         wrapper.set(
             "width",
             Value::expr(plus(format!("{id}.width"), left + right)),

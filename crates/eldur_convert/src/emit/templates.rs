@@ -744,13 +744,8 @@ pub(crate) fn add(
     }
     let mut reserved = BTreeSet::new();
     collect_ids(root, &mut reserved);
-    // Under a static element the page's own object is what the script
-    // appends to, and a static line has no place for an item (§6.8).
-    let inline_items = insts
-        .iter()
-        .filter(|inst| !matches!(inst.context, Context::Static(_)))
-        .map(|inst| inst.node)
-        .collect();
+    // A template is instantiated apart from the line its probe sat on.
+    let inline_items = insts.iter().map(|inst| inst.node).collect();
     let probe = Probe {
         classes,
         reserved,

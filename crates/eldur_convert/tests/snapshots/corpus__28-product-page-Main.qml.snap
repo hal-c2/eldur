@@ -676,40 +676,54 @@ ApplicationWindow {
                                     }
                                 }
 
-                                // <progress id="stock">
-                                ProgressBar {
-                                    id: stock
-                                    from: 0
-                                    to: 50
-                                    value: 7
-                                    implicitWidth: 140
-                                    implicitHeight: 10
-                                    background: Item {
-                                        Rectangle {
-                                            width: parent.width
-                                            y: parent.height / 4
-                                            height: parent.height / 2
-                                            radius: height / 2
-                                            color: "#efefef"
-                                            border.color: "#b2b2b2"
-                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
-                                        }
-                                    }
-                                    contentItem: Item {
-                                        Rectangle {
-                                            width: stock.visualPosition * parent.width
-                                            y: parent.height / 4
-                                            height: parent.height / 2
-                                            radius: height / 2
-                                            color: "#0075ff"
-                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
-                                        }
-                                    }
-                                    Accessible.name: "Only 7 left in stock"
+                                EldurLines {
+                                    id: blockFlow
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
+                                    color: "#1d2329"
+                                    font.family: "sans-serif"
+                                    font.pixelSize: 14
+                                    lineHeight: 21
                                     Layout.fillWidth: true
-                                    Layout.preferredHeight: 10
-                                    Layout.topMargin: 11.92
-                                    Layout.bottomMargin: 3.08
+                                    Layout.topMargin: 4
+                                    Layout.preferredHeight: implicitHeight
+
+                                    // <progress id="stock">
+                                    ProgressBar {
+                                        id: stock
+                                        property string eldurVAlign: "length"
+                                        property real eldurVShift: -2.8
+
+                                        from: 0
+                                        to: 50
+                                        value: 7
+                                        implicitWidth: 140
+                                        implicitHeight: 10
+                                        background: Item {
+                                            Rectangle {
+                                                width: parent.width
+                                                y: parent.height / 4
+                                                height: parent.height / 2
+                                                radius: height / 2
+                                                color: "#efefef"
+                                                border.color: "#b2b2b2"
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                                            }
+                                        }
+                                        contentItem: Item {
+                                            Rectangle {
+                                                width: stock.visualPosition * parent.width
+                                                y: parent.height / 4
+                                                height: parent.height / 2
+                                                radius: height / 2
+                                                color: "#0075ff"
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                                            }
+                                        }
+                                        Accessible.name: "Only 7 left in stock"
+                                        width: blockFlow.width * 1 + 0
+                                        height: 10
+                                    }
                                 }
                             }
 
@@ -730,7 +744,7 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 20
+                                Layout.topMargin: 20 - blockFlow.eldurCarry
                                 renderType: Text.NativeRendering
                             }
 
@@ -799,52 +813,62 @@ ApplicationWindow {
                                             }
                                         }
 
-                                        // <select id="colour">
-                                        ComboBox {
-                                            id: colour
-                                            property string name: "colour"
-
-                                            model: [{ text: "Fjord blue", value: "Fjord blue" }, { text: "Ember red", value: "Ember red" }, { text: "Moss green", value: "Moss green" }, { text: "Mustard", value: "Mustard" }]
-                                            textRole: "text"
-                                            valueRole: "value"
+                                        EldurLines {
+                                            id: blockFlow2
+                                            color: "#1d2329"
                                             font.family: "sans-serif"
                                             font.pixelSize: 15
-                                            background: Rectangle {
-                                                color: "#ffffff"
-                                                radius: 6
-                                                border.width: 1
-                                                border.color: "#c5ccd3"
-                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
-                                            }
-                                            topPadding: 9
-                                            rightPadding: 29
-                                            bottomPadding: 9
-                                            leftPadding: 11
-                                            implicitHeight: 37
-                                            contentItem: Text {
-                                                text: colour.displayText
-                                                font: colour.font
-                                                color: "#000000"
-                                                verticalAlignment: Text.AlignVCenter
-                                                elide: Text.ElideRight
-                                                renderType: Text.NativeRendering
-                                            }
-                                            indicator: Text {
-                                                x: colour.width - width - 11
-                                                y: (colour.height - height) / 2
-                                                text: "▾"
-                                                color: "#000000"
-                                                font.pixelSize: 12
-                                                renderType: Text.NativeRendering
-                                            }
-                                            implicitWidth: Math.ceil(model.reduce((w, o) => Math.max(w, colourMetrics.advanceWidth(o.text)), 0) * 1) + leftPadding + rightPadding - 2
-                                            Accessible.name: "Colour"
+                                            lineHeight: 22.5
                                             Layout.fillWidth: true
                                             Layout.topMargin: 4 - label.eldurCarry
+                                            Layout.preferredHeight: implicitHeight
 
-                                            FontMetrics {
-                                                id: colourMetrics
-                                                font: colour.font
+                                            // <select id="colour">
+                                            ComboBox {
+                                                id: colour
+                                                property string name: "colour"
+
+                                                model: [{ text: "Fjord blue", value: "Fjord blue" }, { text: "Ember red", value: "Ember red" }, { text: "Moss green", value: "Moss green" }, { text: "Mustard", value: "Mustard" }]
+                                                textRole: "text"
+                                                valueRole: "value"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 15
+                                                background: Rectangle {
+                                                    color: "#ffffff"
+                                                    radius: 6
+                                                    border.width: 1
+                                                    border.color: "#c5ccd3"
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                                                }
+                                                topPadding: 9
+                                                rightPadding: 29
+                                                bottomPadding: 9
+                                                leftPadding: 11
+                                                implicitHeight: 37
+                                                contentItem: Text {
+                                                    text: colour.displayText
+                                                    font: colour.font
+                                                    color: "#000000"
+                                                    verticalAlignment: Text.AlignVCenter
+                                                    elide: Text.ElideRight
+                                                    renderType: Text.NativeRendering
+                                                }
+                                                indicator: Text {
+                                                    x: colour.width - width - 11
+                                                    y: (colour.height - height) / 2
+                                                    text: "▾"
+                                                    color: "#000000"
+                                                    font.pixelSize: 12
+                                                    renderType: Text.NativeRendering
+                                                }
+                                                implicitWidth: Math.ceil(model.reduce((w, o) => Math.max(w, colourMetrics.advanceWidth(o.text)), 0) * 1) + leftPadding + rightPadding - 2
+                                                Accessible.name: "Colour"
+                                                width: blockFlow2.width * 1 + 0
+
+                                                FontMetrics {
+                                                    id: colourMetrics
+                                                    font: colour.font
+                                                }
                                             }
                                         }
                                     }
@@ -888,49 +912,59 @@ ApplicationWindow {
                                             }
                                         }
 
-                                        // <input id="qty">
-                                        SpinBox {
-                                            id: qty
-                                            property string name: "qty"
-
-                                            from: 1
-                                            to: 7
-                                            value: 1
-                                            editable: true
+                                        EldurLines {
+                                            id: blockFlow3
+                                            color: "#1d2329"
                                             font.family: "sans-serif"
                                             font.pixelSize: 15
-                                            background: Rectangle {
-                                                color: "#ffffff"
-                                                radius: 6
-                                                border.width: 1
-                                                border.color: "#c5ccd3"
-                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
-                                            }
-                                            topPadding: 9
-                                            rightPadding: 11
-                                            bottomPadding: 9
-                                            leftPadding: 11
-                                            implicitHeight: 40.5
-                                            implicitWidth: 215.8
-                                            up.indicator.visible: false
-                                            up.indicator.width: 0
-                                            up.indicator.height: 0
-                                            down.indicator.visible: false
-                                            down.indicator.width: 0
-                                            down.indicator.height: 0
-                                            contentItem: TextInput {
-                                                text: qty.displayText
-                                                font: qty.font
-                                                color: "#000000"
-                                                verticalAlignment: Qt.AlignVCenter
-                                                readOnly: !qty.editable
-                                                validator: qty.validator
-                                                inputMethodHints: Qt.ImhFormattedNumbersOnly
-                                                renderType: Text.NativeRendering
-                                            }
-                                            Accessible.name: "Quantity"
+                                            lineHeight: 22.5
                                             Layout.fillWidth: true
                                             Layout.topMargin: 4 - label2.eldurCarry
+                                            Layout.preferredHeight: implicitHeight
+
+                                            // <input id="qty">
+                                            SpinBox {
+                                                id: qty
+                                                property string name: "qty"
+
+                                                from: 1
+                                                to: 7
+                                                value: 1
+                                                editable: true
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 15
+                                                background: Rectangle {
+                                                    color: "#ffffff"
+                                                    radius: 6
+                                                    border.width: 1
+                                                    border.color: "#c5ccd3"
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                                                }
+                                                topPadding: 9
+                                                rightPadding: 11
+                                                bottomPadding: 9
+                                                leftPadding: 11
+                                                implicitHeight: 40.5
+                                                implicitWidth: 215.8
+                                                up.indicator.visible: false
+                                                up.indicator.width: 0
+                                                up.indicator.height: 0
+                                                down.indicator.visible: false
+                                                down.indicator.width: 0
+                                                down.indicator.height: 0
+                                                contentItem: TextInput {
+                                                    text: qty.displayText
+                                                    font: qty.font
+                                                    color: "#000000"
+                                                    verticalAlignment: Qt.AlignVCenter
+                                                    readOnly: !qty.editable
+                                                    validator: qty.validator
+                                                    inputMethodHints: Qt.ImhFormattedNumbersOnly
+                                                    renderType: Text.NativeRendering
+                                                }
+                                                Accessible.name: "Quantity"
+                                                width: blockFlow3.width * 1 + 0
+                                            }
                                         }
                                     }
 

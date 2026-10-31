@@ -380,6 +380,10 @@ impl Emitter<'_, '_> {
         id
     }
 
+    pub(super) fn has_tapped_label(&self, label: NodeId) -> bool {
+        self.tapped_labels.contains(&label)
+    }
+
     /// A `<label>` focuses or toggles its control when tapped. A tap on the
     /// control itself never reaches this handler: the control takes the
     /// press, and `TapHandler` gives up when another item grabs the point.
@@ -1715,7 +1719,7 @@ mod tests {
         assert!(bars[0].contains("border.color: \"#b2b2b2\""), "{q}");
         assert!(bars[0].contains("color: \"#4f46e5\""), "{q}");
         assert!(!bars[0].contains("#0075ff"), "{q}");
-        assert!(bars[1].contains("Layout.preferredWidth: 140\n"), "{q}");
+        assert!(bars[1].contains("implicitWidth: 140\n"), "{q}");
         assert!(bars[1].contains("implicitHeight: 14\n"), "{q}");
     }
 

@@ -57,56 +57,24 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.maximumWidth: Number.POSITIVE_INFINITY
 
-                // <button id="first">
-                Button {
-                    id: first
-                    property string eldurTag: "button"
-                    property string eldurWs: "\n"
+                EldurLines {
+                    id: blockFlow
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
-                    text: "Left, as in a browser"
-                    palette.buttonText: "#000000"
+                    color: "#222233"
                     font.family: "sans-serif"
-                    font.pixelSize: 14
-                    background: Rectangle {
-                        color: "#efefef"
-                        radius: 2
-                        border.width: 1
-                        border.color: "#767676"
-                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
-                    }
-                    topPadding: 3
-                    rightPadding: 8
-                    bottomPadding: 3
-                    leftPadding: 8
-                    implicitHeight: 26
-                    contentItem: Text {
-                        text: first.text
-                        font: first.font
-                        color: first.palette.buttonText
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        renderType: Text.NativeRendering
-                    }
-                    objectName: "first"
-                }
-
-                // <div id="centred">
-                ColumnLayout {
-                    id: centred
-                    property string eldurTag: "div"
-                    property string eldurWs: "\n"
-
-                    spacing: 0
-                    objectName: "centred"
+                    font.pixelSize: 16
+                    lineHeight: 20
                     Layout.fillWidth: true
-                    Layout.maximumWidth: Number.POSITIVE_INFINITY
+                    Layout.preferredHeight: implicitHeight
 
-                    // <button id="second">
+                    // <button id="first">
                     Button {
-                        id: second
+                        id: first
                         property string eldurTag: "button"
+                        property string eldurWs: "\n"
 
-                        text: "Centred by its parent"
+                        text: "Left, as in a browser"
                         palette.buttonText: "#000000"
                         font.family: "sans-serif"
                         font.pixelSize: 14
@@ -123,20 +91,81 @@ ApplicationWindow {
                         leftPadding: 8
                         implicitHeight: 26
                         contentItem: Text {
-                            text: second.text
-                            font: second.font
-                            color: second.palette.buttonText
+                            text: first.text
+                            font: first.font
+                            color: first.palette.buttonText
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                             renderType: Text.NativeRendering
                         }
-                        objectName: "second"
-                        Layout.alignment: Qt.AlignHCenter
+                        objectName: "first"
+                        width: Math.min(implicitWidth, blockFlow.width)
+                    }
+                }
+
+                // <div id="centred">
+                Item {
+                    id: centred
+                    property string eldurTag: "div"
+                    property string eldurWs: "\n"
+                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : blockFlow.eldurCarry
+
+                    implicitWidth: divFlow.implicitWidth
+                    implicitHeight: divFlow.implicitHeight
+                    objectName: "centred"
+                    Layout.fillWidth: true
+                    Layout.topMargin: -blockFlow.eldurCarry
+                    Layout.preferredHeight: implicitHeight
+
+                    EldurLines {
+                        id: divFlow
+                        color: "#222233"
+                        font.family: "sans-serif"
+                        font.pixelSize: 16
+                        lineHeight: 20
+                        textAlign: Text.AlignHCenter
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+
+                        // <button id="second">
+                        Button {
+                            id: second
+                            property string eldurTag: "button"
+
+                            text: "Centred by its parent"
+                            palette.buttonText: "#000000"
+                            font.family: "sans-serif"
+                            font.pixelSize: 14
+                            background: Rectangle {
+                                color: "#efefef"
+                                radius: 2
+                                border.width: 1
+                                border.color: "#767676"
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                            }
+                            topPadding: 3
+                            rightPadding: 8
+                            bottomPadding: 3
+                            leftPadding: 8
+                            implicitHeight: 26
+                            contentItem: Text {
+                                text: second.text
+                                font: second.font
+                                color: second.palette.buttonText
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                                renderType: Text.NativeRendering
+                            }
+                            objectName: "second"
+                            width: Math.min(implicitWidth, divFlow.width)
+                        }
                     }
                 }
 
                 // <h2>
                 Text {
+                    id: h2
                     property string eldurTag: "h2"
                     readonly property FontMetrics metrics: FontMetrics {
                         font.family: "sans-serif"
@@ -144,6 +173,7 @@ ApplicationWindow {
                         font.weight: 700
                     }
                     property string eldurWs: "\n"
+                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : centred.eldurCarry
 
                     text: "Rows"
                     textFormat: Text.PlainText
@@ -156,7 +186,7 @@ ApplicationWindow {
                     bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
                     wrapMode: Text.WordWrap
                     Layout.fillWidth: true
-                    Layout.topMargin: 12
+                    Layout.topMargin: 12 - centred.eldurCarry
                     renderType: Text.NativeRendering
                 }
 
@@ -166,13 +196,13 @@ ApplicationWindow {
                     property string eldurTag: "div"
                     property string eldurKey: "rows"
                     property string eldurWs: "\n"
-                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : 0
+                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h2.eldurCarry
 
-                    implicitWidth: Math.max(rowsText.implicitWidth, divFlow.implicitWidth) + 0
-                    implicitHeight: (rowsText.text === "" ? 0 : rowsText.implicitHeight) + divFlow.implicitHeight + 0
+                    implicitWidth: Math.max(rowsText.implicitWidth, divFlow2.implicitWidth) + 0
+                    implicitHeight: (rowsText.text === "" ? 0 : rowsText.implicitHeight) + divFlow2.implicitHeight + 0
                     objectName: "rows"
                     Layout.fillWidth: true
-                    Layout.topMargin: 4
+                    Layout.topMargin: 4 - h2.eldurCarry
                     Layout.preferredHeight: implicitHeight
 
                     Text {
@@ -196,7 +226,7 @@ ApplicationWindow {
                     }
 
                     ColumnLayout {
-                        id: divFlow
+                        id: divFlow2
                         spacing: 0
                         x: 0
                         y: (rowsText.text === "" ? 0 : rowsText.implicitHeight) + 0
@@ -206,7 +236,7 @@ ApplicationWindow {
 
                 // <h2>
                 Text {
-                    id: h2
+                    id: h22
                     property string eldurTag: "h2"
                     readonly property FontMetrics metrics: FontMetrics {
                         font.family: "sans-serif"
@@ -237,13 +267,13 @@ ApplicationWindow {
                     property string eldurTag: "div"
                     property string eldurKey: "note"
                     property string eldurWs: "\n"
-                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h2.eldurCarry
+                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h22.eldurCarry
 
-                    implicitWidth: Math.max(noteText.implicitWidth, divFlow2.implicitWidth) + 0
-                    implicitHeight: (noteText.text === "" ? 0 : noteText.implicitHeight) + divFlow2.implicitHeight + 0
+                    implicitWidth: Math.max(noteText.implicitWidth, divFlow3.implicitWidth) + 0
+                    implicitHeight: (noteText.text === "" ? 0 : noteText.implicitHeight) + divFlow3.implicitHeight + 0
                     objectName: "note"
                     Layout.fillWidth: true
-                    Layout.topMargin: 4 - h2.eldurCarry
+                    Layout.topMargin: 4 - h22.eldurCarry
                     Layout.preferredHeight: implicitHeight
 
                     Text {
@@ -267,7 +297,7 @@ ApplicationWindow {
                     }
 
                     ColumnLayout {
-                        id: divFlow2
+                        id: divFlow3
                         spacing: 0
                         x: 0
                         y: (noteText.text === "" ? 0 : noteText.implicitHeight) + 0
@@ -277,7 +307,7 @@ ApplicationWindow {
 
                 // <h2>
                 Text {
-                    id: h22
+                    id: h23
                     property string eldurTag: "h2"
                     readonly property FontMetrics metrics: FontMetrics {
                         font.family: "sans-serif"
@@ -308,13 +338,13 @@ ApplicationWindow {
                     property string eldurTag: "ul"
                     property string eldurKey: "items"
                     property string eldurWs: "\n"
-                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h22.eldurCarry
+                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h23.eldurCarry
 
                     implicitWidth: Math.max(itemsText.implicitWidth, ulFlow.implicitWidth) + 40
                     implicitHeight: (itemsText.text === "" ? 0 : itemsText.implicitHeight) + ulFlow.implicitHeight + 0
                     objectName: "items"
                     Layout.fillWidth: true
-                    Layout.topMargin: 16 - h22.eldurCarry
+                    Layout.topMargin: 16 - h23.eldurCarry
                     Layout.preferredHeight: implicitHeight
 
                     Text {
@@ -349,7 +379,7 @@ ApplicationWindow {
 
                 // <h2>
                 Text {
-                    id: h23
+                    id: h24
                     property string eldurTag: "h2"
                     readonly property FontMetrics metrics: FontMetrics {
                         font.family: "sans-serif"
@@ -383,13 +413,13 @@ ApplicationWindow {
                     property bool eldurPackRow: true
                     property real eldurPackGap: 8
                     property string eldurWs: "\n"
-                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h23.eldurCarry
+                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h24.eldurCarry
 
                     spacing: 8
                     objectName: "tags"
                     Layout.fillWidth: true
                     Layout.maximumWidth: Number.POSITIVE_INFINITY
-                    Layout.topMargin: 4 - h23.eldurCarry
+                    Layout.topMargin: 4 - h24.eldurCarry
 
                     Item {
                         Layout.fillWidth: true
@@ -422,7 +452,7 @@ ApplicationWindow {
 
                 // <h2>
                 Text {
-                    id: h24
+                    id: h25
                     property string eldurTag: "h2"
                     readonly property FontMetrics metrics: FontMetrics {
                         font.family: "sans-serif"
@@ -453,13 +483,13 @@ ApplicationWindow {
                     property string eldurTag: "div"
                     property string eldurKey: "markup"
                     property string eldurWs: "\n"
-                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h24.eldurCarry
+                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h25.eldurCarry
 
-                    implicitWidth: Math.max(markupText.implicitWidth, divFlow3.implicitWidth) + 0
-                    implicitHeight: (markupText.text === "" ? 0 : markupText.implicitHeight) + divFlow3.implicitHeight + 0
+                    implicitWidth: Math.max(markupText.implicitWidth, divFlow4.implicitWidth) + 0
+                    implicitHeight: (markupText.text === "" ? 0 : markupText.implicitHeight) + divFlow4.implicitHeight + 0
                     objectName: "markup"
                     Layout.fillWidth: true
-                    Layout.topMargin: 4 - h24.eldurCarry
+                    Layout.topMargin: 4 - h25.eldurCarry
                     Layout.preferredHeight: implicitHeight
 
                     Text {
@@ -483,7 +513,7 @@ ApplicationWindow {
                     }
 
                     ColumnLayout {
-                        id: divFlow3
+                        id: divFlow4
                         spacing: 0
                         x: 0
                         y: (markupText.text === "" ? 0 : markupText.implicitHeight) + 0

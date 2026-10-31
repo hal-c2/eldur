@@ -244,39 +244,56 @@ ApplicationWindow {
                     renderType: Text.NativeRendering
                 }
 
-                // <input id="filter">
-                TextField {
-                    id: filter
-                    property var eldurAttrs: ({ "type": "text", "placeholder": "Filter by name or city" })
-                    property string eldurTag: "input"
-                    property string eldurWs: "\n"
-                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 31) - Layout.topMargin - 31 + 0.000001) : h1.eldurCarry
+                EldurLines {
+                    id: blockFlow
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                     color: "#000000"
                     font.family: "Arial"
-                    font.pixelSize: 13
-                    verticalAlignment: TextInput.AlignVCenter
-                    background: Rectangle {
-                        color: "#ffffff"
-                        radius: 2
-                        border.width: 1
-                        border.color: "#767676"
-                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
-                    }
-                    topPadding: 8
-                    rightPadding: 8
-                    bottomPadding: 8
-                    leftPadding: 8
-                    implicitHeight: 31
-                    implicitWidth: 193
-                    placeholderText: "Filter by name or city"
-                    placeholderTextColor: "#757575"
-                    objectName: "filter"
-                    Layout.preferredWidth: 256
+                    font.pixelSize: 14
+                    lineHeight: 19.6
+                    Layout.fillWidth: true
                     Layout.topMargin: 18.76 - h1.eldurCarry
-                    renderType: Text.NativeRendering
+                    Layout.preferredHeight: implicitHeight
 
-                    onTextEdited: if (!Eldur.connected(filter, "input")) { Page.__eldur_on_input_filter_0(Eldur.event("input", filter, null)); }
+                    // <input id="filter">
+                    Item {
+                        implicitWidth: filter.implicitWidth
+                        width: filter.width
+                        height: filter.height + 12
+
+                        TextField {
+                            id: filter
+                            property var eldurAttrs: ({ "type": "text", "placeholder": "Filter by name or city" })
+                            property string eldurTag: "input"
+                            property string eldurWs: "\n"
+
+                            color: "#000000"
+                            font.family: "Arial"
+                            font.pixelSize: 13
+                            verticalAlignment: TextInput.AlignVCenter
+                            background: Rectangle {
+                                color: "#ffffff"
+                                radius: 2
+                                border.width: 1
+                                border.color: "#767676"
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                            }
+                            topPadding: 8
+                            rightPadding: 8
+                            bottomPadding: 8
+                            leftPadding: 8
+                            implicitHeight: 31
+                            implicitWidth: 256
+                            placeholderText: "Filter by name or city"
+                            placeholderTextColor: "#757575"
+                            objectName: "filter"
+                            width: 256
+                            renderType: Text.NativeRendering
+
+                            onTextEdited: if (!Eldur.connected(filter, "input")) { Page.__eldur_on_input_filter_0(Eldur.event("input", filter, null)); }
+                        }
+                    }
                 }
 
                 // <table id="people">
@@ -293,7 +310,7 @@ ApplicationWindow {
                     objectName: "people"
                     Layout.fillWidth: true
                     Layout.maximumWidth: 700
-                    Layout.topMargin: 12 - filter.eldurCarry
+                    Layout.topMargin: -blockFlow.eldurCarry
 
                     ColumnLayout {
                         id: tableGrid

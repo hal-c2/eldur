@@ -502,20 +502,8 @@ impl<'a> Builder<'a, '_> {
             return Level::Contents;
         }
         if is_replaced(self.doc, node) {
-            // A row of controls sits in one line. A control among other inline
-            // content is still a block, as below.
-            if self.is_inline_control(node, style) {
-                return Level::Atomic(BoxKind::Replaced);
-            }
             if !is_block_level(style.display) {
-                self.diags.info(
-                    "html",
-                    node_line(self.doc, node),
-                    format!(
-                        "inline {} is laid out as a block (no inline replaced elements yet)",
-                        describe(self.doc, node)
-                    ),
-                );
+                return Level::Atomic(BoxKind::Replaced);
             }
             return Level::Block(BoxKind::Replaced);
         }
@@ -534,11 +522,6 @@ impl<'a> Builder<'a, '_> {
             Display::InlineBlock | Display::InlineFlex | Display::InlineGrid | Display::InlineTable
         );
         if atomic {
-            // Alone in its parent there is no line to sit in, so a block
-            // that shrinks to fit looks the same and lays out more simply.
-            if self.is_only_content(node) {
-                return Level::Block(kind_of(style.display));
-            }
             return Level::Atomic(kind_of(style.display));
         }
         if self.has_block_descendant(node, is_containing_block(style)) {
@@ -555,52 +538,6 @@ impl<'a> Builder<'a, '_> {
         Level::Inline
     }
 
-    fn is_inline_control(&self, node: NodeId, style: &ComputedStyle) -> bool {
-        let control = |n: NodeId| {
-            self.doc.element(n).is_some_and(|e| {
-                matches!(e.local_name(), "button" | "input" | "select" | "textarea")
-            })
-        };
-        let Some(parent) = self.doc.parent(node) else {
-            return false;
-        };
-        !is_block_level(style.display)
-            && control(node)
-            && !self.is_only_content(node)
-            && self
-                .doc
-                .children(parent)
-                .all(|sibling| match &self.doc.node(sibling).data {
-                    NodeData::Text(t) => t.chars().all(|c| c.is_ascii_whitespace()),
-                    NodeData::Element(_) => {
-                        control(sibling)
-                            || self
-                                .styles
-                                .computed(sibling)
-                                .is_none_or(|s| s.style.display == Display::None)
-                    }
-                    _ => true,
-                })
-    }
-
-    /// Whether `node` has no sibling that generates anything but whitespace.
-    fn is_only_content(&self, node: NodeId) -> bool {
-        let Some(parent) = self.doc.parent(node) else {
-            return false;
-        };
-        self.doc.children(parent).all(|sibling| {
-            sibling == node
-                || match &self.doc.node(sibling).data {
-                    NodeData::Text(t) => t.chars().all(|c| c.is_ascii_whitespace()),
-                    NodeData::Element(_) => self
-                        .styles
-                        .computed(sibling)
-                        .is_none_or(|s| s.style.display == Display::None),
-                    _ => true,
-                }
-        })
-    }
-
     /// Whether an in-flow descendant of `node` (through inline and
     /// `contents` elements only) is block-level, which splits the inline
     /// box in CSS. Out-of-flow boxes do not split it, but one whose
@@ -613,8 +550,7 @@ impl<'a> Builder<'a, '_> {
             if style.display == Display::None {
                 return false;
             }
-            is_replaced(self.doc, child)
-                || (is_out_of_flow(style) && holds)
+            (is_out_of_flow(style) && holds)
                 || (!is_out_of_flow(style)
                     && (is_block_level(style.display) || style.float != Float::None))
                 // An atomic inline's blocks are inside its own box.

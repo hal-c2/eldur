@@ -269,11 +269,23 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         qml.import(Import::module(module));
     }
     qml.root = root;
+    let main = qml.to_qml();
+    // A script makes lines of its own; a page without one needs it only if it uses it.
+    if main.contains("EldurLines {")
+        || files
+            .iter()
+            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
+    {
+        files.push(OutputFile {
+            path: PathBuf::from("EldurLines.qml"),
+            contents: crate::emit::ELDUR_LINES_QML.as_bytes().to_vec(),
+        });
+    }
     files.insert(
         0,
         OutputFile {
             path: PathBuf::from("Main.qml"),
-            contents: qml.to_qml().into_bytes(),
+            contents: main.into_bytes(),
         },
     );
     Output {

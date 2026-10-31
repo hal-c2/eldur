@@ -85,7 +85,7 @@ ApplicationWindow {
                     property bool cls_invalid: false
                     property string eldurWs: "\n"
                     property string eldurWsEnd: "\n"
-                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin) - Layout.topMargin + go.eldurCarry + 0.000001) : h1.eldurCarry
+                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin) - Layout.topMargin + blockFlow5.eldurCarry + 0.000001) : h1.eldurCarry
 
                     spacing: 0
                     objectName: "signup"
@@ -132,38 +132,48 @@ ApplicationWindow {
                             }
                         }
 
-                        // <input id="name">
-                        TextField {
-                            id: name
-                            property string eldurTag: "input"
-                            property string eldurWs: "\n    "
-                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 32) - Layout.topMargin - 32 + 0.000001) : label.eldurCarry
+                        EldurLines {
+                            id: blockFlow
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
-                            color: "#000000"
+                            color: "#111111"
                             font.family: "Arial"
-                            font.pixelSize: 14
-                            verticalAlignment: TextInput.AlignVCenter
-                            background: Rectangle {
-                                color: fName.cls_invalid ? "#fff5f5" : (signup.cls_invalid ? "#fff5f5" : (body.cls_invalid ? "#fff5f5" : (page.cls_invalid ? "#fff5f5" : "#ffffff")))
-                                radius: 3
-                                border.width: 1
-                                border.color: fName.cls_invalid ? "#cc0000" : (signup.cls_invalid ? "#cc0000" : (body.cls_invalid ? "#cc0000" : (page.cls_invalid ? "#cc0000" : "#999999")))
-                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
-                            }
-                            topPadding: 8
-                            rightPadding: 8
-                            bottomPadding: 8
-                            leftPadding: 8
-                            implicitHeight: 32
-                            implicitWidth: 201.85
-                            Accessible.name: "Name"
-                            objectName: "name"
+                            font.pixelSize: 16
                             Layout.fillWidth: true
                             Layout.topMargin: 4 - label.eldurCarry
-                            renderType: Text.NativeRendering
+                            Layout.preferredHeight: implicitHeight
 
-                            onAccepted: {
-                                Eldur.fire(signup, "submit", null);
+                            // <input id="name">
+                            TextField {
+                                id: name
+                                property string eldurTag: "input"
+                                property string eldurWs: "\n    "
+
+                                color: "#000000"
+                                font.family: "Arial"
+                                font.pixelSize: 14
+                                verticalAlignment: TextInput.AlignVCenter
+                                background: Rectangle {
+                                    color: fName.cls_invalid ? "#fff5f5" : (signup.cls_invalid ? "#fff5f5" : (body.cls_invalid ? "#fff5f5" : (page.cls_invalid ? "#fff5f5" : "#ffffff")))
+                                    radius: 3
+                                    border.width: 1
+                                    border.color: fName.cls_invalid ? "#cc0000" : (signup.cls_invalid ? "#cc0000" : (body.cls_invalid ? "#cc0000" : (page.cls_invalid ? "#cc0000" : "#999999")))
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                                }
+                                topPadding: 8
+                                rightPadding: 8
+                                bottomPadding: 8
+                                leftPadding: 8
+                                implicitHeight: 32
+                                implicitWidth: 201.85
+                                Accessible.name: "Name"
+                                objectName: "name"
+                                width: blockFlow.width * 1 + 0
+                                renderType: Text.NativeRendering
+
+                                onAccepted: {
+                                    Eldur.fire(signup, "submit", null);
+                                }
                             }
                         }
 
@@ -173,7 +183,7 @@ ApplicationWindow {
                             property string eldurTag: "div"
                             property string eldurClasses: "error"
                             property string eldurWs: "\n    "
-                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : name.eldurCarry
+                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : blockFlow.eldurCarry
 
                             text: "Please enter your name."
                             textFormat: Text.PlainText
@@ -183,7 +193,7 @@ ApplicationWindow {
                             wrapMode: Text.WordWrap
                             visible: fName.cls_invalid ? true : (signup.cls_invalid ? true : (body.cls_invalid ? true : page.cls_invalid))
                             Layout.fillWidth: true
-                            Layout.topMargin: 3 - name.eldurCarry
+                            Layout.topMargin: 3 - blockFlow.eldurCarry
                             Layout.preferredHeight: implicitHeight
                             renderType: Text.NativeRendering
                         }
@@ -229,39 +239,49 @@ ApplicationWindow {
                             }
                         }
 
-                        // <input id="email">
-                        TextField {
-                            id: email
-                            property string eldurTag: "input"
-                            property string eldurWs: "\n    "
-                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 32) - Layout.topMargin - 32 + 0.000001) : label2.eldurCarry
+                        EldurLines {
+                            id: blockFlow2
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
-                            color: "#000000"
+                            color: "#111111"
                             font.family: "Arial"
-                            font.pixelSize: 14
-                            verticalAlignment: TextInput.AlignVCenter
-                            background: Rectangle {
-                                color: fEmail.cls_invalid ? "#fff5f5" : (signup.cls_invalid ? "#fff5f5" : (body.cls_invalid ? "#fff5f5" : (page.cls_invalid ? "#fff5f5" : "#ffffff")))
-                                radius: 3
-                                border.width: 1
-                                border.color: fEmail.cls_invalid ? "#cc0000" : (signup.cls_invalid ? "#cc0000" : (body.cls_invalid ? "#cc0000" : (page.cls_invalid ? "#cc0000" : "#999999")))
-                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
-                            }
-                            topPadding: 8
-                            rightPadding: 8
-                            bottomPadding: 8
-                            leftPadding: 8
-                            implicitHeight: 32
-                            implicitWidth: 201.85
-                            inputMethodHints: Qt.ImhEmailCharactersOnly
-                            Accessible.name: "Email"
-                            objectName: "email"
+                            font.pixelSize: 16
                             Layout.fillWidth: true
                             Layout.topMargin: 4 - label2.eldurCarry
-                            renderType: Text.NativeRendering
+                            Layout.preferredHeight: implicitHeight
 
-                            onAccepted: {
-                                Eldur.fire(signup, "submit", null);
+                            // <input id="email">
+                            TextField {
+                                id: email
+                                property string eldurTag: "input"
+                                property string eldurWs: "\n    "
+
+                                color: "#000000"
+                                font.family: "Arial"
+                                font.pixelSize: 14
+                                verticalAlignment: TextInput.AlignVCenter
+                                background: Rectangle {
+                                    color: fEmail.cls_invalid ? "#fff5f5" : (signup.cls_invalid ? "#fff5f5" : (body.cls_invalid ? "#fff5f5" : (page.cls_invalid ? "#fff5f5" : "#ffffff")))
+                                    radius: 3
+                                    border.width: 1
+                                    border.color: fEmail.cls_invalid ? "#cc0000" : (signup.cls_invalid ? "#cc0000" : (body.cls_invalid ? "#cc0000" : (page.cls_invalid ? "#cc0000" : "#999999")))
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                                }
+                                topPadding: 8
+                                rightPadding: 8
+                                bottomPadding: 8
+                                leftPadding: 8
+                                implicitHeight: 32
+                                implicitWidth: 201.85
+                                inputMethodHints: Qt.ImhEmailCharactersOnly
+                                Accessible.name: "Email"
+                                objectName: "email"
+                                width: blockFlow2.width * 1 + 0
+                                renderType: Text.NativeRendering
+
+                                onAccepted: {
+                                    Eldur.fire(signup, "submit", null);
+                                }
                             }
                         }
 
@@ -271,7 +291,7 @@ ApplicationWindow {
                             property string eldurTag: "div"
                             property string eldurClasses: "error"
                             property string eldurWs: "\n    "
-                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : email.eldurCarry
+                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : blockFlow2.eldurCarry
 
                             text: "That doesn't look like an email address."
                             textFormat: Text.PlainText
@@ -281,7 +301,7 @@ ApplicationWindow {
                             wrapMode: Text.WordWrap
                             visible: fEmail.cls_invalid ? true : (signup.cls_invalid ? true : (body.cls_invalid ? true : page.cls_invalid))
                             Layout.fillWidth: true
-                            Layout.topMargin: 3 - email.eldurCarry
+                            Layout.topMargin: 3 - blockFlow2.eldurCarry
                             Layout.preferredHeight: implicitHeight
                             renderType: Text.NativeRendering
                         }
@@ -327,39 +347,49 @@ ApplicationWindow {
                             }
                         }
 
-                        // <input id="pass">
-                        TextField {
-                            id: pass
-                            property string eldurTag: "input"
-                            property string eldurWs: "\n    "
-                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 32) - Layout.topMargin - 32 + 0.000001) : label3.eldurCarry
+                        EldurLines {
+                            id: blockFlow3
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
-                            color: "#000000"
+                            color: "#111111"
                             font.family: "Arial"
-                            font.pixelSize: 14
-                            verticalAlignment: TextInput.AlignVCenter
-                            background: Rectangle {
-                                color: fPass.cls_invalid ? "#fff5f5" : (signup.cls_invalid ? "#fff5f5" : (body.cls_invalid ? "#fff5f5" : (page.cls_invalid ? "#fff5f5" : "#ffffff")))
-                                radius: 3
-                                border.width: 1
-                                border.color: fPass.cls_invalid ? "#cc0000" : (signup.cls_invalid ? "#cc0000" : (body.cls_invalid ? "#cc0000" : (page.cls_invalid ? "#cc0000" : "#999999")))
-                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
-                            }
-                            topPadding: 8
-                            rightPadding: 8
-                            bottomPadding: 8
-                            leftPadding: 8
-                            implicitHeight: 32
-                            implicitWidth: 201.85
-                            echoMode: TextInput.Password
-                            Accessible.name: "Password"
-                            objectName: "pass"
+                            font.pixelSize: 16
                             Layout.fillWidth: true
                             Layout.topMargin: 4 - label3.eldurCarry
-                            renderType: Text.NativeRendering
+                            Layout.preferredHeight: implicitHeight
 
-                            onAccepted: {
-                                Eldur.fire(signup, "submit", null);
+                            // <input id="pass">
+                            TextField {
+                                id: pass
+                                property string eldurTag: "input"
+                                property string eldurWs: "\n    "
+
+                                color: "#000000"
+                                font.family: "Arial"
+                                font.pixelSize: 14
+                                verticalAlignment: TextInput.AlignVCenter
+                                background: Rectangle {
+                                    color: fPass.cls_invalid ? "#fff5f5" : (signup.cls_invalid ? "#fff5f5" : (body.cls_invalid ? "#fff5f5" : (page.cls_invalid ? "#fff5f5" : "#ffffff")))
+                                    radius: 3
+                                    border.width: 1
+                                    border.color: fPass.cls_invalid ? "#cc0000" : (signup.cls_invalid ? "#cc0000" : (body.cls_invalid ? "#cc0000" : (page.cls_invalid ? "#cc0000" : "#999999")))
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                                }
+                                topPadding: 8
+                                rightPadding: 8
+                                bottomPadding: 8
+                                leftPadding: 8
+                                implicitHeight: 32
+                                implicitWidth: 201.85
+                                echoMode: TextInput.Password
+                                Accessible.name: "Password"
+                                objectName: "pass"
+                                width: blockFlow3.width * 1 + 0
+                                renderType: Text.NativeRendering
+
+                                onAccepted: {
+                                    Eldur.fire(signup, "submit", null);
+                                }
                             }
                         }
 
@@ -368,14 +398,14 @@ ApplicationWindow {
                             id: strength
                             property string eldurTag: "div"
                             property string eldurWs: "\n    "
-                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 16) - Layout.topMargin - 16 + 0.000001) : pass.eldurCarry
+                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 16) - Layout.topMargin - 16 + 0.000001) : blockFlow3.eldurCarry
 
                             implicitWidth: strengthText.implicitWidth
                             implicitHeight: strengthText.implicitHeight
                             objectName: "strength"
                             Layout.fillWidth: true
                             Layout.preferredHeight: 16
-                            Layout.topMargin: -pass.eldurCarry
+                            Layout.topMargin: -blockFlow3.eldurCarry
 
                             Text {
                                 id: strengthText
@@ -430,61 +460,76 @@ ApplicationWindow {
                         Layout.maximumWidth: Number.POSITIVE_INFINITY
                         Layout.topMargin: 14 - fPass.eldurCarry
 
-                        // <input id="terms">
-                        CheckBox {
-                            id: terms
-                            property string eldurTag: "input"
-                            property string value: "on"
-                            property string eldurWs: "\n    "
+                        EldurLines {
+                            id: blockFlow4
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
-                            implicitWidth: 13
-                            implicitHeight: 13
-                            padding: 0
-                            spacing: 0
-                            contentItem: Item {}
-                            indicator: Rectangle {
-                                width: terms.width
-                                height: terms.height
-                                border.width: 1
-                                radius: 2
-                                color: fTerms.cls_invalid ? ((terms.checked ? "#0075ff" : "#fff5f5")) : (signup.cls_invalid ? ((terms.checked ? "#0075ff" : "#fff5f5")) : (body.cls_invalid ? ((terms.checked ? "#0075ff" : "#fff5f5")) : (page.cls_invalid ? ((terms.checked ? "#0075ff" : "#fff5f5")) : ((terms.checked ? "#0075ff" : "#ffffff")))))
-                                border.color: terms.checked ? "#0075ff" : "#767676"
-                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: "✓"
-                                    color: "#ffffff"
-                                    font.pixelSize: Math.max(1, terms.height - 2)
-                                    visible: terms.checked
-                                    renderType: Text.NativeRendering
-                                }
-                            }
-                            Accessible.name: "I accept the terms"
-                            objectName: "terms"
-                            Layout.leftMargin: 4
-                            Layout.rightMargin: 3
-                        }
-
-                        Text {
-                            id: text
-                            readonly property string eldurInline: "{\"bare\":false,\"hoisted\":true,\"html\":false,\"k\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(17, 17, 17)\",\"display\":\"block\",\"family\":\"Arial\",\"italic\":false,\"size\":16.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"attrs\":[[\"for\",\"terms\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(17, 17, 17)\",\"display\":\"inline\",\"family\":\"Arial\",\"italic\":false,\"size\":14.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"I accept the terms\"}],\"tag\":\"label\"}],\"pre\":false,\"strike\":false,\"underline\":false}"
-                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
-
-                            text: "I accept the terms"
-                            textFormat: Text.PlainText
                             color: "#111111"
                             font.family: "Arial"
-                            font.pixelSize: 14
-                            lineHeight: 18.4
-                            lineHeightMode: Text.FixedHeight
-                            transform: Translate {
-                                y: 1
-                            }
-                            wrapMode: Text.WordWrap
+                            font.pixelSize: 16
                             Layout.fillWidth: true
-                            Layout.topMargin: 3
-                            renderType: Text.NativeRendering
+                            Layout.preferredHeight: implicitHeight
+
+                            // <input id="terms">
+                            Item {
+                                implicitWidth: terms.implicitWidth + 7
+                                width: terms.width + 7
+                                height: terms.height + 6
+
+                                CheckBox {
+                                    id: terms
+                                    property string eldurTag: "input"
+                                    property string value: "on"
+                                    property string eldurWs: "\n    "
+
+                                    implicitWidth: 13
+                                    implicitHeight: 13
+                                    padding: 0
+                                    spacing: 0
+                                    contentItem: Item {}
+                                    indicator: Rectangle {
+                                        width: terms.width
+                                        height: terms.height
+                                        border.width: 1
+                                        radius: 2
+                                        color: fTerms.cls_invalid ? ((terms.checked ? "#0075ff" : "#fff5f5")) : (signup.cls_invalid ? ((terms.checked ? "#0075ff" : "#fff5f5")) : (body.cls_invalid ? ((terms.checked ? "#0075ff" : "#fff5f5")) : (page.cls_invalid ? ((terms.checked ? "#0075ff" : "#fff5f5")) : ((terms.checked ? "#0075ff" : "#ffffff")))))
+                                        border.color: terms.checked ? "#0075ff" : "#767676"
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "✓"
+                                            color: "#ffffff"
+                                            font.pixelSize: Math.max(1, terms.height - 2)
+                                            visible: terms.checked
+                                            renderType: Text.NativeRendering
+                                        }
+                                    }
+                                    Accessible.name: "I accept the terms"
+                                    objectName: "terms"
+                                    width: Math.min(implicitWidth, blockFlow4.width - 7)
+                                    x: 4
+                                    y: 3
+                                }
+                            }
+
+                            Text {
+                                readonly property string eldurInline: "{\"bare\":false,\"hoisted\":false,\"html\":false,\"k\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(17, 17, 17)\",\"display\":\"block\",\"family\":\"Arial\",\"italic\":false,\"size\":16.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\" \"},{\"attrs\":[[\"for\",\"terms\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(17, 17, 17)\",\"display\":\"inline\",\"family\":\"Arial\",\"italic\":false,\"size\":14.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"I accept the terms\"}],\"tag\":\"label\"}],\"pre\":false,\"strike\":false,\"underline\":false}"
+
+                                text: " <small>I accept the terms</small>"
+                                textFormat: Text.StyledText
+                                color: "#111111"
+                                font.family: "Arial"
+                                font.pixelSize: 16
+                                wrapMode: Text.WordWrap
+                                renderType: Text.NativeRendering
+
+                                TapHandler {
+                                    onTapped: (eventPoint, button) => {
+                                        if (terms.enabled && !Eldur.tapPrevented(eventPoint)) { terms.click(); }
+                                    }
+                                }
+                            }
                         }
 
                         // <div class="error">
@@ -493,7 +538,7 @@ ApplicationWindow {
                             property string eldurTag: "div"
                             property string eldurClasses: "error"
                             property string eldurWs: "\n    "
-                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : text.eldurCarry
+                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : blockFlow4.eldurCarry
 
                             text: "You have to accept the terms."
                             textFormat: Text.PlainText
@@ -503,48 +548,59 @@ ApplicationWindow {
                             wrapMode: Text.WordWrap
                             visible: fTerms.cls_invalid ? true : (signup.cls_invalid ? true : (body.cls_invalid ? true : page.cls_invalid))
                             Layout.fillWidth: true
-                            Layout.topMargin: 3 - text.eldurCarry
+                            Layout.topMargin: 3 - blockFlow4.eldurCarry
                             Layout.preferredHeight: implicitHeight
                             renderType: Text.NativeRendering
                         }
                     }
 
-                    // <button id="go">
-                    Button {
-                        id: go
-                        property string eldurTag: "button"
-                        property string eldurWs: "\n  "
-                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 36) - Layout.topMargin - 36 + 0.000001) : fTerms.eldurCarry
+                    EldurLines {
+                        id: blockFlow5
+                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
-                        text: "Sign up"
-                        palette.buttonText: "#000000"
+                        color: "#111111"
                         font.family: "Arial"
-                        font.pixelSize: 14
-                        background: Rectangle {
-                            color: "#efefef"
-                            radius: 2
-                            border.width: 1
-                            border.color: "#767676"
-                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
-                        }
-                        topPadding: 10
-                        rightPadding: 20
-                        bottomPadding: 10
-                        leftPadding: 20
-                        implicitHeight: 36
-                        contentItem: Text {
-                            text: go.text
-                            font: go.font
-                            color: go.palette.buttonText
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                            renderType: Text.NativeRendering
-                        }
-                        objectName: "go"
+                        font.pixelSize: 16
+                        Layout.fillWidth: true
                         Layout.topMargin: 14 - fTerms.eldurCarry
+                        Layout.preferredHeight: implicitHeight
 
-                        onClicked: {
-                            Eldur.fire(signup, "submit", null);
+                        // <button id="go">
+                        Button {
+                            id: go
+                            property string eldurTag: "button"
+                            property string eldurWs: "\n  "
+
+                            text: "Sign up"
+                            palette.buttonText: "#000000"
+                            font.family: "Arial"
+                            font.pixelSize: 14
+                            background: Rectangle {
+                                color: "#efefef"
+                                radius: 2
+                                border.width: 1
+                                border.color: "#767676"
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                            }
+                            topPadding: 10
+                            rightPadding: 20
+                            bottomPadding: 10
+                            leftPadding: 20
+                            implicitHeight: 36
+                            contentItem: Text {
+                                text: go.text
+                                font: go.font
+                                color: go.palette.buttonText
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                                renderType: Text.NativeRendering
+                            }
+                            objectName: "go"
+                            width: Math.min(implicitWidth, blockFlow5.width)
+
+                            onClicked: {
+                                Eldur.fire(signup, "submit", null);
+                            }
                         }
                     }
                 }

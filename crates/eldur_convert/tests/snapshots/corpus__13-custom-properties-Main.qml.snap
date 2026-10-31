@@ -223,14 +223,20 @@ ApplicationWindow {
                         anchors.rightMargin: 64
                         anchors.topMargin: 48
 
-                        Flow {
+                        EldurLines {
                             id: blockFlow
                             property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
+                            color: "#ffffff"
+                            font.family: "sans-serif"
+                            font.pixelSize: 16
+                            lineHeight: 24
                             Layout.fillWidth: true
                             Layout.preferredHeight: implicitHeight
 
+                            // <span class="eyebrow">
                             Item {
+                                implicitWidth: eyebrowBox.implicitWidth
                                 width: eyebrowBox.width
                                 height: eyebrowBox.height + 9.75
 
@@ -734,13 +740,19 @@ ApplicationWindow {
                                 renderType: Text.NativeRendering
                             }
 
-                            Flow {
+                            EldurLines {
                                 id: blockFlow2
+                                color: "#1c2233"
+                                font.family: "sans-serif"
+                                font.pixelSize: 16
+                                lineHeight: 24
                                 Layout.fillWidth: true
                                 Layout.topMargin: 15.2 - p3.eldurCarry
                                 Layout.preferredHeight: implicitHeight
 
+                                // <span class="tag">
                                 Item {
+                                    implicitWidth: tagBox.implicitWidth + 12
                                     width: tagBox.width + 12
                                     height: tagBox.height + 6.5
 
@@ -778,7 +790,7 @@ ApplicationWindow {
                                 }
 
                                 Text {
-                                    text: " "
+                                    text: " "
                                     textFormat: Text.PlainText
                                     color: "#1c2233"
                                     font.family: "sans-serif"
@@ -788,11 +800,13 @@ ApplicationWindow {
                                     transform: Translate {
                                         y: 3
                                     }
-                                    topPadding: 0.76
+                                    wrapMode: Text.WordWrap
                                     renderType: Text.NativeRendering
                                 }
 
+                                // <span class="tag">
                                 Item {
+                                    implicitWidth: tagBox2.implicitWidth + 12
                                     width: tagBox2.width + 12
                                     height: tagBox2.height + 6.5
 
@@ -830,7 +844,7 @@ ApplicationWindow {
                                 }
 
                                 Text {
-                                    text: " "
+                                    text: " "
                                     textFormat: Text.PlainText
                                     color: "#1c2233"
                                     font.family: "sans-serif"
@@ -840,11 +854,13 @@ ApplicationWindow {
                                     transform: Translate {
                                         y: 3
                                     }
-                                    topPadding: 0.76
+                                    wrapMode: Text.WordWrap
                                     renderType: Text.NativeRendering
                                 }
 
+                                // <span class="tag">
                                 Item {
+                                    implicitWidth: tagBox3.implicitWidth + 12
                                     width: tagBox3.width + 12
                                     height: tagBox3.height + 6.5
 
@@ -882,7 +898,7 @@ ApplicationWindow {
                                 }
 
                                 Text {
-                                    text: " "
+                                    text: " "
                                     textFormat: Text.PlainText
                                     color: "#1c2233"
                                     font.family: "sans-serif"
@@ -892,11 +908,13 @@ ApplicationWindow {
                                     transform: Translate {
                                         y: 3
                                     }
-                                    topPadding: 0.76
+                                    wrapMode: Text.WordWrap
                                     renderType: Text.NativeRendering
                                 }
 
+                                // <span class="tag">
                                 Item {
+                                    implicitWidth: tagBox4.implicitWidth + 12
                                     width: tagBox4.width + 12
                                     height: tagBox4.height + 6.5
 
@@ -1009,12 +1027,17 @@ ApplicationWindow {
                                 renderType: Text.NativeRendering
                             }
 
-                            Flow {
+                            EldurLines {
                                 id: blockFlow3
+                                color: "#1c2233"
+                                font.family: "sans-serif"
+                                font.pixelSize: 16
+                                lineHeight: 24
                                 Layout.fillWidth: true
                                 Layout.topMargin: 15.2 - p4.eldurCarry
                                 Layout.preferredHeight: implicitHeight
 
+                                // <a class="button">
                                 Rectangle {
                                     id: button
                                     color: buttonHover.hovered ? "#2f4ac0" : "#3b5bdb"

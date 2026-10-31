@@ -31,13 +31,13 @@ const GEOMETRY_TOLERANCE: f64 = 2.0;
 const COMPACT: &str = "the button sits 2px left of Chromium's; cause not isolated";
 const ROWS: &str =
     "table rows are whole pixels: 33 against Chromium's 32.59, adding up down the table";
+const BUTTONWIDTH: &str = "a button's width is whole pixels (`Math.ceil` in emit/controls.rs): \
+                           five on a line add up to 2.2px against Chromium's fractions";
+const MONOLINE: &str = "a created textarea is 40 high, not 42: the runtime measures monospace in Qt \
+                        where the converter's font_extents table has Chromium's; what follows is higher";
 const CONTROLROW: &str = "13.4px lower than Chromium from the fields above; cause not isolated";
-const INLINE: &str =
-    "a checkbox beside inline text is block-level: no inline replaced elements (boxes/mod.rs)";
-const STRUT: &str = "a control alone in a line box sits on the line's baseline, here at its top: no inline replaced elements (boxes/mod.rs)";
 const FONT: &str = "Helvetica: Qt's fontconfig match has line height 23 where Chromium's has 18";
 const FONTFOLLOW: &str = "follows from the Helvetica line height and width difference";
-const PAGER: &str = "an empty span with an id between buttons has no item, and the buttons stack";
 const NEVER: &str =
     "a display:none element no script names has no item: it is neither text nor a child node";
 const NEVER_SCRIPT: &str =
@@ -48,8 +48,6 @@ const CREATED_P: &str =
 /// `(page, what differs, why)`. `what` starts a difference's name, as printed by a
 /// failing test, `<step> <selector>[<row>] <field>:`; `*` stands for any text.
 const KNOWN: &[(&str, &str, &str)] = &[
-    ("controls", "* *[*] y:", STRUT),
-    ("created_controls", "* *[*] y:", STRUT),
     ("theme", "* #compact[*] x:", COMPACT),
     ("cards", "* #cart[*] height:", FONT),
     ("cards", "* .buy[*] y:", FONTFOLLOW),
@@ -68,20 +66,13 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("text_nodes", "* #never-rendered[*] y:", CREATED_P),
     ("text_nodes", "* #out[*] y:", CREATED_P),
     ("theme", "* body[*] text:", NEVER_SCRIPT),
-    ("roster", "* #next[*] x:", PAGER),
-    ("roster", "* #next[*] y:", PAGER),
-    ("roster", "* #picked[*] y:", PAGER),
-    ("roster", "* #page-label count:", PAGER),
     ("table", "* #people[*] height:", ROWS),
     ("table", "* #summary[*] y:", ROWS),
     ("table", "* td[*] y:", ROWS),
     ("table", "* tr[*] y:", ROWS),
-    ("form", "* #go[*] y:", CONTROLROW),
-    ("form", "* #signup[*] height:", INLINE),
-    ("form", "* #terms[*] y:", INLINE),
-    ("form", "* .field[*] height:", INLINE),
-    ("form", "* .error[*] y:", CONTROLROW),
     ("form", "* #done[*] y:", CONTROLROW),
+    ("created_lines", "* #reset[*] x:", BUTTONWIDTH),
+    ("created_controls", "* select[*] y:", MONOLINE),
 ];
 
 const TEST: &str = r##"
@@ -448,4 +439,14 @@ fn theme() {
 #[test]
 fn generated() {
     page("generated");
+}
+
+#[test]
+fn created_lines() {
+    page("created_lines");
+}
+
+#[test]
+fn inline_lines() {
+    page("inline_lines");
 }

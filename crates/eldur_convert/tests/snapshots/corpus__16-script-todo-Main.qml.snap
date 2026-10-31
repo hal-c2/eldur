@@ -537,6 +537,8 @@ ApplicationWindow {
             Layout.leftMargin: 4
             Layout.rightMargin: 3
             Layout.topMargin: 3
+            Layout.bottomMargin: 3
+            width: parent ? Math.min(implicitWidth, parent.width) : implicitWidth
         }
     }
 
@@ -595,6 +597,7 @@ ApplicationWindow {
                 verticalAlignment: Text.AlignVCenter
                 renderType: Text.NativeRendering
             }
+            width: parent ? Math.min(implicitWidth, parent.width) : implicitWidth
             hoverEnabled: true
         }
     }

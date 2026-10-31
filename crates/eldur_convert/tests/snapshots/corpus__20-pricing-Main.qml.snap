@@ -136,21 +136,29 @@ ApplicationWindow {
                                 renderType: Text.NativeRendering
                             }
 
-                            Flow {
+                            EldurLines {
                                 id: blockFlow
                                 property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
-                                leftPadding: { const used = Array.from(children).reduce((sum, item) => sum + item.width, 0); return Math.max(0, Math.floor((width - used) / 2)); }
+                                color: "#0f172a"
+                                font.family: "sans-serif"
+                                font.pixelSize: 16
+                                lineHeight: 25.6
+                                textAlign: Text.AlignHCenter
                                 Layout.fillWidth: true
                                 Layout.topMargin: -p.eldurCarry
                                 Layout.preferredHeight: implicitHeight
 
+                                // <div class="billing-toggle">
                                 Item {
+                                    implicitWidth: billingToggleBox.implicitWidth
                                     width: billingToggleBox.width
                                     height: billingToggleBox.height + 92
 
                                     Rectangle {
                                         id: billingToggleBox
+                                        property string eldurBaseline: "first"
+
                                         color: "#ffffff"
                                         radius: 999
                                         implicitWidth: billingToggleContent.implicitWidth + 10

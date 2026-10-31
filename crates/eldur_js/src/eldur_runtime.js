@@ -2746,6 +2746,9 @@ function _polishSubtree(item) {
     for (var i = 0; i < kids.length; ++i) {
         _polishSubtree(kids[i]);
     }
+    if (typeof item.settleLines === "function") {
+        item.settleLines();
+    }
     if (typeof item.ensurePolished === "function") {
         item.ensurePolished();
     }
@@ -2873,6 +2876,10 @@ function _renumber(container) {
 // A Qt layout left with no visible item keeps its last implicit size, so an
 // emptied one holds an empty item until something goes in it.
 function _keepCollapsing(layout) {
+    // Lines keep no size for what is gone.
+    if (typeof layout.firstBaseline === "number") {
+        return;
+    }
     if (typeof layout.spacing !== "number" && typeof layout.columnSpacing !== "number") {
         return;
     }
@@ -2932,6 +2939,11 @@ function _settleLayouts() {
 // widths the top hands back down are polished afterwards.
 function _layoutForRead() {
     if (_layoutDirty.length === 0) {
+        // Lines lay out once when complete, which may be after a page's script.
+        if (!_linesLaidOut) {
+            _linesLaidOut = true;
+            _polishDown(_root);
+        }
         return;
     }
     _settleLayouts();
@@ -2940,7 +2952,12 @@ function _layoutForRead() {
     _polishDown(_root);
 }
 
+var _linesLaidOut = false;
+
 function _polishDown(item) {
+    if (typeof item.settleLines === "function") {
+        item.settleLines();
+    }
     if (!item) {
         return;
     }
@@ -2950,6 +2967,10 @@ function _polishDown(item) {
     var kids = item.children || [];
     for (var i = 0; i < kids.length; ++i) {
         _polishDown(kids[i]);
+    }
+    // A line below may have just found its height from the width given here.
+    if (typeof item.ensurePolished === "function") {
+        item.ensurePolished();
     }
 }
 
@@ -3130,6 +3151,13 @@ function _rawKids(raw, withText) {
         if (child.eldurSlot !== undefined) {
             continue;
         }
+        if (_isAnonLines(child)) {
+            var inLines = _rawKids(child, withText);
+            for (var al = 0; al < inLines.length; ++al) {
+                out.push(inLines[al]);
+            }
+            continue;
+        }
         if (child.eldurBox !== undefined) {
             if (child.eldurBox) {
                 out.push(child.eldurBox);
@@ -3140,6 +3168,9 @@ function _rawKids(raw, withText) {
         // children of it but not elements; a Button also has `spacing`.
         if (child === container.background || child === container.contentItem
             || child === container.indicator) {
+            continue;
+        }
+        if (!withText && _meta(child).createdTag === "#text" && _isLines(container)) {
             continue;
         }
         if (_vAnonText(child)) {
@@ -3153,6 +3184,10 @@ function _rawKids(raw, withText) {
             if (withText && _vHasRules()) {
                 out.push(child);
             }
+            continue;
+        }
+        // A run of a line is a text node to a script, not an element.
+        if (!withText && _isLines(container) && _isPlainTextItem(child) && !child.objectName) {
             continue;
         }
         if (isLayout && _isLayoutSpacer(child)) {
@@ -3181,9 +3216,21 @@ function _domUp(raw) {
     return _logicalParent(raw) || raw.parent || null;
 }
 
+// An anonymous block's lines are not a node of the page.
+function _isAnonLines(raw) {
+    return typeof raw.firstBaseline === "number" && !raw.objectName && !_meta(raw).createdTag
+        && typeof raw.eldurTag !== "string";
+}
+
 function _logicalParent(raw) {
     if (raw && raw.__eldurInline) {
         return raw.parent;
+    }
+    if (raw && raw.eldurInlineOwner !== undefined) {
+        var cutFrom = _vCutOwner(raw);
+        if (cutFrom) {
+            return cutFrom;
+        }
     }
     if (raw && raw.eldurSlot) {
         raw = raw.eldurSlot;
@@ -3193,6 +3240,9 @@ function _logicalParent(raw) {
     }
     var p = raw.parent;
     var pm = _meta(p);
+    if (_isAnonLines(p)) {
+        return _logicalParent(p);
+    }
     if (pm.hostBox) {
         return pm.hostBox;
     }
@@ -3269,7 +3319,7 @@ function getText(item) {
         return _vText(vOwn);
     }
     var vRun = _findTextChild(raw);
-    if (vRun && _vAnonText(vRun)) {
+    if ((vRun && _vAnonText(vRun)) || (typeof raw.text !== "string" && _holdsLines(raw))) {
         return _rawKids(raw, true).map(function(kid) { return _wsText(_wsBefore(kid)) + getText(kid); }).join("")
             + _wsText(_wsEnd(raw));
     }
@@ -3297,6 +3347,18 @@ function getText(item) {
     var m = _meta(raw);
     if (m.explicitText !== undefined) {
         return String(m.explicitText);
+    }
+    // On lines a run's own text nodes hold the space the record has too.
+    var lined = _childContainer(raw);
+    if (lined && typeof lined.firstBaseline === "number") {
+        var words = "";
+        _rawKids(raw, true).forEach(function(kid) {
+            if (!kid.vtext && !/\s$/.test(words)) {
+                words += _wsText(_wsBefore(kid));
+            }
+            words += getText(kid);
+        });
+        return words + _wsText(_wsEnd(raw));
     }
     // `textContent` is the text of everything inside, the whitespace between too.
     var inside = _rawElementChildren(raw).map(function(kid) { return _wsText(_wsBefore(kid)) + getText(kid); });
@@ -3412,10 +3474,15 @@ function _itCollect(raw, out) {
         return;
     }
     var edge = tag === "p" ? 2 : _IT_BLOCK.test(tag) ? 1 : 0;
+    // A run of text in its lines is no block of its own, and its model counts.
+    var run = !raw.__eldurInline && raw.parent && typeof raw.parent.firstBaseline === "number";
+    if (run) {
+        edge = 0;
+    }
     if (edge) {
         out.push(edge);
     }
-    var model = raw.__eldurInline ? raw : _vOwnModel(raw);
+    var model = raw.__eldurInline ? raw : run ? _vModelOf(raw) || _vOwnModel(raw) : _vOwnModel(raw);
     if (model && model.kids) {
         model.kids.filter(_vIsRendered).forEach(function(k) { _itCollect(k, out); });
     } else {
@@ -3522,6 +3589,21 @@ function setText(item, value) {
     }
     var str = value === null || value === undefined ? "" : String(value);
     var m = _meta(raw);
+    if (_holdsLines(raw)) {
+        // Every child goes, and the runs with them; the line stays for the text.
+        _rawKids(raw, true).forEach(function(kid) {
+            if (kid.__eldurInline || _meta(kid).createdTag || kid.objectName) {
+                _detachNode(kid);
+            } else {
+                kid.destroy();
+            }
+        });
+        _wsEnd(raw).length = 0;
+        if (str !== "") {
+            _insertChildren(raw, [_unwrap(document.createTextNode(str))], null);
+        }
+        return;
+    }
     m.explicitText = str;
     if (m.runText !== undefined) {
         m.runText = str;
@@ -4412,6 +4494,12 @@ function getBoundingClientRect(item) {
         if (pt) {
             x = pt.x;
             y = pt.y - (_gHasCascade() ? _gGlyphShift(raw) : 0);
+        }
+        // An inline element is as tall as its font, whatever its line holds.
+        if (_isLines(raw) && !_isAnonLines(raw) && _vInlineTag(_nodeTag(raw))
+            && _gHasCascade() && _gStyle(raw).display === "inline") {
+            y += raw.fontTop;
+            h = raw.fontHeight;
         }
         // A transform moves what a box's rect reports: the corners' bounds.
         if (_meta(raw).gMatrix) {
@@ -5491,6 +5579,219 @@ function _leaveFlow(item) {
     item.parent = gate;
 }
 
+// --- Lines a script makes --------------------------------------------------
+
+function _isLines(raw) {
+    return Boolean(raw) && typeof raw.firstBaseline === "number";
+}
+
+// A text node or an inline-level element: what CSS puts on a line.
+function _joinsLine(node) {
+    if (node && node.__eldurInline) {
+        return node.eldurTag === "#text";
+    }
+    if (!node || node.eldurSlot !== undefined || node.eldurBlock !== undefined) {
+        return false;
+    }
+    var tag = String(_meta(node).createdTag || "");
+    if (tag === "#text") {
+        return true;
+    }
+    if (!tag) {
+        return false;
+    }
+    if (_gHasCascade()) {
+        ++_gGen;
+        return _gInlineLevel(_gStyle(node));
+    }
+    return /^(button|input|textarea|select|img|canvas)$/.test(tag) || _vInlineTag(tag);
+}
+
+// A block whose inline content is on lines: new text goes on them too.
+function _holdsLines(raw) {
+    if (_isLines(raw)) {
+        return true;
+    }
+    var container = _childContainer(raw);
+    var kids = container ? container.children : null;
+    for (var i = 0; kids && i < kids.length; ++i) {
+        if (_isLines(kids[i]) && _isAnonLines(kids[i])) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function _isTextNode(node) {
+    return node.__eldurInline ? node.eldurTag === "#text" : _meta(node).createdTag === "#text";
+}
+
+function _isBlockColumn(raw, column) {
+    if (String(column).indexOf("QQuickColumnLayout") !== 0) {
+        return false;
+    }
+    if (!_gHasCascade()) {
+        return true;
+    }
+    ++_gGen;
+    return !/flex|grid|table/.test(_gStyle(raw).display);
+}
+
+function _newLines(owner) {
+    var lines = Qt.createQmlObject(
+        "import QtQuick; import QtQuick.Layouts; import \".\"; "
+        + "EldurLines { Layout.fillWidth: true; Layout.preferredHeight: implicitHeight }",
+        _qobjectParent(), Qt.resolvedUrl("eldur_lines"));
+    if (_gHasCascade()) {
+        ++_gGen;
+        var s = _gStyle(owner);
+        lines.font = _gFontOf(s);
+        lines.color = s.color;
+        var line = _gLineHeight(s);
+        lines.lineHeight = line === null ? 0 : line;
+    }
+    return lines;
+}
+
+function _dressLineText(lines, node) {
+    if (!_isTextNode(node) || typeof node.text !== "string") {
+        return;
+    }
+    node.font = lines.font;
+    node.color = lines.color;
+    node.textFormat = 0; // Text.PlainText; a library script has no `Text`
+    node.wrapMode = 1; // Text.WordWrap
+    node.renderType = 1; // Text.NativeRendering
+    if (lines.lineHeight > 0) {
+        node.lineHeightMode = 1; // Text.FixedHeight
+        node.lineHeight = lines.lineHeight;
+    }
+}
+
+// The text a block already shows starts its first line: from here on the line
+// holds it and its height is the column's.
+function _textStartsLine(raw, column, lines) {
+    var text = _findTextChild(raw);
+    if (!text || text.text === "") {
+        return;
+    }
+    var model = _vModelOf(text);
+    var top = text.y;
+    var extra = raw.implicitHeight - text.implicitHeight - column.implicitHeight;
+    text.anchors.left = undefined;
+    text.anchors.right = undefined;
+    text.anchors.top = undefined;
+    text.parent = lines;
+    lines.font = text.font;
+    lines.color = text.color;
+    if (text.lineHeightMode === 1) {
+        lines.lineHeight = text.lineHeight;
+    }
+    column.y = top;
+    raw.implicitHeight = Qt.binding(function() { return extra + column.implicitHeight; });
+    if (model) {
+        _vRender(model);
+    }
+}
+
+// The line `nodes` go on when `raw` takes them before `ref`, made if a box needs
+// it; null when they go where they always did.
+function _lineToJoin(raw, nodes, ref) {
+    if (_gIsBox(raw) || raw.__eldurInline || (ref && ref.__eldurInline) || !nodes.every(_joinsLine)) {
+        return null;
+    }
+    if (_isLines(raw)) {
+        return { lines: raw, ref: ref };
+    }
+    if (ref && _isLines(ref.parent)) {
+        return { lines: ref.parent, ref: ref };
+    }
+    var boxes = nodes.some(function(n) { return !_isTextNode(n) && !_vStaysInline(n); });
+    // A box inside a created inline element: the element becomes the line.
+    if (_meta(raw).createdTag && _isPlainTextItem(raw)) {
+        return boxes ? { lines: _inlineBecomesLines(raw), ref: ref } : null;
+    }
+    if (raw.contentItem || _meta(raw).tableGrid || _TABLE_PARTS[_nodeTag(raw)]) {
+        return null;
+    }
+    var column = _appendTarget(raw);
+    if (!column || !_isBlockColumn(raw, column)) {
+        return null;
+    }
+    var kids = [];
+    for (var i = 0; i < column.children.length; ++i) {
+        if (!_isLayoutSpacer(column.children[i])) {
+            kids.push(column.children[i]);
+        }
+    }
+    var at = ref ? kids.indexOf(ref) : kids.length;
+    if (at === -1) {
+        return null;
+    }
+    var before = at > 0 ? kids[at - 1] : null;
+    if (before && _isAnonLines(before) && _isLines(before)) {
+        return { lines: before, ref: null };
+    }
+    var after = at < kids.length ? kids[at] : null;
+    if (after && _isLines(after) && _isAnonLines(after)) {
+        return { lines: after, ref: after.children.length > 0 ? after.children[0] : null };
+    }
+    if (!boxes) {
+        return null;
+    }
+    var lines = _newLines(raw);
+    _insertInFlow(column, [lines], after);
+    if (at === 0 && !_meta(raw).createdTag) {
+        _textStartsLine(raw, column, lines);
+    }
+    // Inline elements already made are on the same line.
+    var pull = [];
+    for (var p = at - 1; p >= 0 && _meta(kids[p]).createdTag && _joinsLine(kids[p]); --p) {
+        pull.unshift(kids[p]);
+    }
+    pull.forEach(function(k) { k.parent = lines; _dressLineText(lines, k); });
+    return { lines: lines, ref: null };
+}
+
+function _inlineBecomesLines(raw) {
+    var source = "import QtQuick; import QtQuick.Layouts; import \".\"; EldurLines {}";
+    var m = _meta(raw);
+    var text = m.explicitText !== undefined ? String(m.explicitText) : String(raw.text);
+    var font = raw.font;
+    var color = raw.color;
+    var name = raw.objectName;
+    var next = _swapRawItem(raw, null, source);
+    next.objectName = name;
+    next.font = font;
+    next.color = color;
+    if (text !== "") {
+        var node = _unwrap(document.createTextNode(text));
+        _insertInFlow(next, [node], null);
+        _dressLineText(next, node);
+    }
+    return next;
+}
+
+function _insertChildren(raw, nodes, ref) {
+    var line = nodes.length > 0 ? _lineToJoin(raw, nodes, ref || null) : null;
+    if (line) {
+        var usable = _forRealItems(nodes);
+        // The space the script's ref or the end held now comes before these.
+        var spaces = ref && !_isLines(ref.parent) ? _wsBefore(ref) : ref ? [] : _wsEnd(raw);
+        if (spaces.length > 0) {
+            usable.unshift(_unwrap(document.createTextNode(_wsText(spaces))));
+            usable[0] = _forRealItems([usable[0]])[0];
+            spaces.length = 0;
+        }
+        _insertRawNodesBefore(line.lines, usable, line.ref);
+        usable.forEach(function(n) { _dressLineText(line.lines, n); });
+        return;
+    }
+    // What is not inline-level goes beside the anonymous line, not in it.
+    var at = ref && ref.parent && _isLines(ref.parent) && _isAnonLines(ref.parent) ? ref.parent : ref;
+    _insertRawNodesBefore(_appendTarget(raw), nodes, at);
+}
+
 function _insertRawNodesBefore(container, rawNodes, rawRef) {
     rawNodes = _forRealItems(rawNodes);
     if (!container || rawNodes.length === 0) {
@@ -6115,7 +6416,8 @@ function _materializeSubtree(raw) {
     if (_isCreatedElement(cur)) {
         var m = _meta(cur);
         var res = _lookupTemplate(cur);
-        if (res && !res.component && _gActive() && !_gIsBox(cur) && _gWantsBox(m.createdTag)
+        // A span the rules make a box is one, with or without a template for its text.
+        if ((!res || !res.component) && _gActive() && !_gIsBox(cur) && _gWantsBox(m.createdTag)
             && _gStyle(cur).display !== "inline") {
             cur = _swapRawItem(cur, null, _gBoxSource(m.createdTag, false));
             _gLive.push(cur);
@@ -7206,7 +7508,7 @@ function wrap(rawItem) {
             if (_vTryInsert(rawItem, rawNodes, null)) {
                 return child;
             }
-            _insertRawNodesBefore(_appendTarget(rawItem), rawNodes, null);
+            _insertChildren(rawItem, rawNodes, null);
             return child;
         },
         removeChild: function(child) {
@@ -7238,7 +7540,7 @@ function wrap(rawItem) {
             if (_vTryInsert(rawItem, rawNodes, rawRef || null)) {
                 return newChild;
             }
-            _insertRawNodesBefore(_appendTarget(rawItem), rawNodes, rawRef);
+            _insertChildren(rawItem, rawNodes, rawRef);
             return newChild;
         },
         replaceChild: function(newChild, oldChild) {
@@ -7251,7 +7553,7 @@ function wrap(rawItem) {
                 _vRemove(rawOld);
                 return oldChild;
             }
-            _insertRawNodesBefore(_appendTarget(rawItem), rawNodes, rawOld);
+            _insertChildren(rawItem, rawNodes, rawOld);
             if (rawOld.parent !== undefined) {
                 _detachNode(rawOld);
             }
@@ -7262,7 +7564,7 @@ function wrap(rawItem) {
             if (_vTryInsert(rawItem, rawNodes, null)) {
                 return;
             }
-            _insertRawNodesBefore(_appendTarget(rawItem), rawNodes, null);
+            _insertChildren(rawItem, rawNodes, null);
         },
         prepend: function() {
             var rawNodes = _expandInsertRawNodes(arguments);
@@ -7273,7 +7575,7 @@ function wrap(rawItem) {
             }
             var kids = _rawElementChildren(rawItem);
             var first = kids.length > 0 ? kids[0] : null;
-            _insertRawNodesBefore(_appendTarget(rawItem), rawNodes, first);
+            _insertChildren(rawItem, rawNodes, first);
         },
         before: function() {
             if (rawItem.__eldurInline) {
@@ -7285,7 +7587,7 @@ function wrap(rawItem) {
                 return;
             }
             var rawNodes = _expandInsertRawNodes(arguments);
-            _insertRawNodesBefore(_appendTarget(p), rawNodes, rawItem);
+            _insertChildren(p, rawNodes, rawItem);
         },
         after: function() {
             if (rawItem.__eldurInline) {
@@ -7301,7 +7603,7 @@ function wrap(rawItem) {
             var idx = kids.indexOf(rawItem);
             var nextRef = (idx !== -1 && idx + 1 < kids.length) ? kids[idx + 1] : null;
             var rawNodes = _expandInsertRawNodes(arguments);
-            _insertRawNodesBefore(_appendTarget(p), rawNodes, nextRef);
+            _insertChildren(p, rawNodes, nextRef);
         },
         replaceWith: function() {
             if (rawItem.__eldurInline) {
@@ -7314,7 +7616,7 @@ function wrap(rawItem) {
                 return;
             }
             var rawNodes = _expandInsertRawNodes(arguments);
-            _insertRawNodesBefore(_appendTarget(p), rawNodes, rawItem);
+            _insertChildren(p, rawNodes, rawItem);
             if (rawItem.parent !== undefined) {
                 _detachNode(rawItem);
             }
@@ -7334,7 +7636,7 @@ function wrap(rawItem) {
             }
             _wsEnd(rawItem).length = 0;
             var rawNodes = _expandInsertRawNodes(arguments);
-            _insertRawNodesBefore(_appendTarget(rawItem), rawNodes, null);
+            _insertChildren(rawItem, rawNodes, null);
         },
         cloneNode: function(deep) {
             if (rawItem.__eldurInline) {
@@ -8500,14 +8802,16 @@ function _vWriteElement(st, v, pc) {
 
 function _vMarkup(model, twin) {
     var base = _vBase(model);
+    // A run between boxes starts and ends mid-line: the line takes its edge spaces.
+    var inLine = model.text.parent && typeof model.text.parent.firstBaseline === "number";
     var st = {
-        out: "", prevSpace: true, pre: model.pre, html: model.html, twin: twin,
+        out: "", prevSpace: !inLine, pre: model.pre, html: model.html, twin: twin,
         owners: [], inLink: false, linkColor: null,
         bareLink: model.bare && model.kids.length === 1 && Boolean(model.kids[0].kids)
             && !_vStyle(model.kids[0]).underline
     };
     _vWriteKids(st, model.kids, base, null);
-    if (!st.pre) {
+    if (!st.pre && !inLine) {
         st.out = st.out.replace(/ ((?:<\/[a-z]+>)*)$/, "$1");
     }
     return st;
@@ -8601,6 +8905,11 @@ function _vTwin(model) {
 
 function _vHitAt(model, x, y) {
     var twin = _vTwin(model);
+    // A plain `Text` draws the space its marked twin drops.
+    var drawn = model.text;
+    if (drawn.textFormat === 0 && String(drawn.text).charAt(0) === " ") {
+        x -= _vMetrics(drawn).advanceWidth(" ");
+    }
     var link = twin.linkAt(x, y);
     if (link.indexOf("eldur:") !== 0) {
         return null;
@@ -8635,12 +8944,98 @@ function _vRect(v) {
             }
         }
     }
-    return maxX < minX ? none : { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+    // A box on the line cut out of it counts across the line, margins too; an
+    // inline box's own height is its font's whatever sits on its baseline.
+    _vCutBoxes(v).forEach(function(box) {
+        var from = box.mapToItem(v.model.text, 0, 0).x;
+        minX = Math.min(minX, from);
+        maxX = Math.max(maxX, from + box.width);
+    });
+    if (maxX >= minX) {
+        return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+    }
+    // An element with nothing in it still has a place on its line.
+    if (v.kids && v.kids.length === 0) {
+        var chars = _vCharsBefore(v.model.kids, v);
+        var height = v.model.text.contentHeight / Math.max(1, v.model.text.lineCount);
+        return { x: Math.min(v.model.text.width, chars.width), y: 0, width: 0, height: height };
+    }
+    return none;
+}
+
+// How far along its `Text` the empty element `v` sits, read off the twin's
+// marks is not possible with nothing to mark: the text before it, measured.
+function _vCharsBefore(kids, v) {
+    var metrics = _vMetrics(v.model.text);
+    var text = "";
+    function walk(list) {
+        for (var i = 0; i < list.length; ++i) {
+            if (list[i] === v) {
+                return true;
+            }
+            if (list[i].vtext) {
+                text += list[i].data;
+            } else if (list[i].kids && walk(list[i].kids)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    walk(kids);
+    return { width: metrics.advanceWidth(text.replace(/\s+/g, " ").replace(/^ /, "")) };
+}
+
+function _vMetrics(text) {
+    var m = _meta(text);
+    if (!m.vMetrics) {
+        m.vMetrics = Qt.createQmlObject("import QtQuick; FontMetrics {}", text, "eldur_vmetrics");
+        m.vMetrics.font = text.font;
+    }
+    return m.vMetrics;
+}
+
+// The boxes on `v`'s line that are `v`'s in the page.
+function _vCutBoxes(v) {
+    var line = v.model.text.parent;
+    if (v.eldurKey === undefined || !line || typeof line.firstBaseline !== "number") {
+        return [];
+    }
+    var boxes = [];
+    Array.from(line.children).forEach(function(kid) {
+        var box = kid.eldurInlineOwner !== undefined ? kid : kid.children && kid.children[0];
+        if (box && box.eldurInlineOwner === v.eldurKey && box.visible) {
+            boxes.push(kid);
+        }
+    });
+    return boxes;
+}
+
+// The element around a box on a line, in the run its words went to.
+function _vCutOwner(raw) {
+    var line = raw.parent;
+    while (line && typeof line.firstBaseline !== "number") {
+        line = line.parent;
+    }
+    if (!line) {
+        return null;
+    }
+    var found = null;
+    Array.from(line.children).forEach(function(kid) {
+        var model = found ? null : _vModelOf(kid);
+        if (model && !model.select) {
+            _vEachElement(model.kids, function(v) {
+                if (!found && v.eldurKey === raw.eldurInlineOwner) {
+                    found = v;
+                }
+            });
+        }
+    });
+    return found;
 }
 
 function _vClientRect(v) {
     var r = _vRect(v);
-    var origin = v.model && !v.model.select && r.width > 0
+    var origin = v.model && !v.model.select && (r.width > 0 || r.height > 0)
         ? v.model.text.mapToItem(null, r.x, r.y) : { x: 0, y: 0 };
     return { x: origin.x, y: origin.y, left: origin.x, top: origin.y, right: origin.x + r.width,
         bottom: origin.y + r.height, width: r.width, height: r.height };
@@ -9129,6 +9524,10 @@ function _vInlineTag(tag) {
 }
 
 function _vStaysInline(node) {
+    // An inline element holding a box is a line, not a node of a model.
+    if (_isLines(node)) {
+        return false;
+    }
     var tag = node.__eldurInline ? node.eldurTag : String(_meta(node).createdTag || "");
     if (!_vInlineTag(tag)) {
         return false;
@@ -9151,6 +9550,9 @@ function _vHostOf(raw, nodes, ref) {
     }
     if (raw.__eldurInline) {
         return raw;
+    }
+    if (_holdsLines(raw)) {
+        return null;
     }
     // A block breaks out of a line of text; what is a node of a model has no box
     // to break out with.
@@ -11203,6 +11605,10 @@ function _gBaseline(raw, s) {
         return e.bt + e.pt + (text.lineCount - 1) * height
             + Math.floor((height - ascent - Math.round(metrics.descent)) / 2) + ascent;
     }
+    // A scroller's baseline is its bottom margin edge.
+    if (s.tag === "textarea") {
+        return raw.height + (_gEdges(raw, s, 0).mb || 0);
+    }
     if (_G_FRAMED[s.tag] && raw.contentItem) {
         var controlLine = _gLineHeight(s);
         if (controlLine === null) {
@@ -12249,7 +12655,7 @@ function _gControlFont(s) {
     var family = _gFamily(s["font-family"]);
     for (var i = 0; i < table.length; ++i) {
         if (table[i].names.length === 0 || table[i].names.indexOf(family) !== -1) {
-            return s.fontSize < 14.5 ? table[i].small : table[i].large;
+            return (s.fontSize < 14.5 ? table[i].small : table[i].large);
         }
     }
     return null;
@@ -12634,7 +13040,7 @@ function _gMarginPass() {
         found.push({ column: column, owner: owner });
     };
     var visit = function(raw) {
-        if (!raw.parent || _gIsBox(raw.parent) || !_gIsLayout(raw.parent) || !_isConnected(raw) || raw.eldurSlot !== undefined) {
+        if (!raw.parent || _gIsBox(raw.parent) || _isLines(raw.parent) || !_gIsLayout(raw.parent) || !_isConnected(raw) || raw.eldurSlot !== undefined) {
             return;
         }
         if (_gStyle(raw).display === "none" || _gOutOfFlow(_gStyle(raw))) {
@@ -12695,6 +13101,20 @@ function _gAttached(raw, s, e) {
     _gSet(raw, "eldurAlign", centred ? 4 : e.ml === null ? 2 : 0);
 }
 
+// Margins of a box on a line do not collapse: the line reads them as they are.
+function _gLineMargins(raw, e) {
+    var tool = _gMarginTool();
+    if (_gIsBox(raw)) {
+        _gSet(raw, "eldurMt", e.mt || 0);
+        _gSet(raw, "eldurMb", e.mb || 0);
+        _gSet(raw, "eldurMl", e.ml || 0);
+        _gSet(raw, "eldurMr", e.mr || 0);
+        return;
+    }
+    tool.set(raw, e.mt || 0, e.mb || 0);
+    tool.side(raw, e.ml || 0, e.mr || 0);
+}
+
 function _gLayoutRoots() {
     var containers = [];
     var outOfFlow = [];
@@ -12706,6 +13126,9 @@ function _gLayoutRoots() {
         var s = _gStyle(raw);
         if (!_gIsBox(raw)) {
             _gPaintControl(raw, s, _gEdges(raw, s, raw.parent.width));
+            if (_isLines(raw.parent)) {
+                _gLineMargins(raw, _gEdges(raw, s, raw.parent.width));
+            }
             continue;
         }
         if (s.display === "none") {
@@ -12714,7 +13137,9 @@ function _gLayoutRoots() {
         }
         raw.visible = true;
         var abs = _gOutOfFlow(s);
-        var avail = raw.parent.width;
+        // A new line has its width once the layout holding it is polished.
+        var avail = _isLines(raw.parent) && raw.parent.width === 0 && raw.parent.parent
+            ? raw.parent.parent.width : raw.parent.width;
         var e = _gEdges(raw, s, avail);
         if (abs) {
             outOfFlow.push(raw);
@@ -12734,6 +13159,9 @@ function _gLayoutRoots() {
         }
         var margins = _gPlace(raw, Math.max(avail, 0), opts, null);
         _meta(raw).gMargins = margins;
+        if (_isLines(raw.parent)) {
+            _gLineMargins(raw, e);
+        }
         if (containers.indexOf(raw.parent) === -1) {
             containers.push(raw.parent);
         }
@@ -12885,7 +13313,7 @@ function _gSettle() {
 // Lines are only made inside a box. A page's empty container that a script
 // fills with inline-level children becomes one, as nothing of its own is lost.
 function _gFillsLine(raw) {
-    if (!raw.parent || _gIsBox(raw.parent) || !_gInlineLevel(_gStyle(raw))) {
+    if (!raw.parent || _gIsBox(raw.parent) || _isLines(raw.parent) || !_gInlineLevel(_gStyle(raw))) {
         return;
     }
     var parent = _gParent(raw);

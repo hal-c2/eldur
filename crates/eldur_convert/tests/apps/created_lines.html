@@ -1,0 +1,79 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Lines a script makes</title>
+<style>
+  body { margin: 8px; font: 16px sans-serif; width: 500px; }
+  div, p { margin: 0 0 6px; }
+  .narrow { width: 150px; }
+  .chip { display: inline-block; width: 40px; height: 20px; background: #cde; }
+  .m { margin: 0 10px; }
+</style></head><body>
+<div id="static">Static <b>bold</b> text </div>
+<button id="sb">In body</button>
+<div id="empty"></div>
+<div id="ins">A <button id="ref">R</button> B</div>
+<div id="rm">x <button id="gone">gone</button> y</div>
+<div id="wrap" class="narrow"></div>
+<div id="labels"></div>
+<div id="spans">Lead <span id="fill"></span> tail</div>
+<div id="ctl"><button id="add">add</button> <button id="del">del</button> <button id="hide">hide</button> <button id="text">text</button> <button id="reset">reset</button></div>
+<script>
+  function make(tag, id, text, cls) {
+    var e = document.createElement(tag);
+    if (id) e.id = id;
+    if (text) e.textContent = text;
+    if (cls) e.className = cls;
+    return e;
+  }
+  var st = document.getElementById("static");
+  st.appendChild(make("span", "cs", "made"));
+  st.appendChild(document.createTextNode(" then "));
+  st.appendChild(make("button", "cb", "made"));
+  st.appendChild(make("span", "cc", "", "chip"));
+  document.body.insertBefore(make("button", "bb", "beside"), document.getElementById("empty"));
+  var em = document.getElementById("empty");
+  em.appendChild(make("button", "e1", "one"));
+  em.appendChild(document.createTextNode(" "));
+  em.appendChild(make("input", "e2"));
+  em.appendChild(document.createTextNode(" "));
+  em.appendChild(make("button", "e3", "three", "m"));
+  var ins = document.getElementById("ins");
+  ins.insertBefore(make("button", "i1", "before"), document.getElementById("ref"));
+  var wrap = document.getElementById("wrap");
+  for (var i = 0; i < 5; i++) {
+    wrap.appendChild(make("span", "w" + i, "", "chip"));
+    wrap.appendChild(document.createTextNode(" "));
+  }
+  var lab = make("label", "ml");
+  var box = make("input", "mc");
+  box.type = "checkbox";
+  lab.appendChild(box);
+  lab.appendChild(document.createTextNode(" Accept"));
+  document.getElementById("labels").appendChild(lab);
+  var chips = document.getElementById("labels");
+  chips.appendChild(make("span", "mm", "", "chip m"));
+  console.log("loaded", st.children.length, em.childNodes.length, document.getElementById("cb").previousElementSibling.id);
+  document.getElementById("add").onclick = function () {
+    em.insertBefore(make("button", "e0", "first"), em.firstChild);
+    document.getElementById("rm").appendChild(make("button", "r2", "end"));
+    console.log("add", em.children.length);
+  };
+  document.getElementById("del").onclick = function () {
+    document.getElementById("gone").remove();
+    em.removeChild(document.getElementById("e2"));
+    console.log("del", document.getElementById("rm").children.length, em.children.length);
+  };
+  document.getElementById("hide").onclick = function () {
+    document.getElementById("w1").style.display = "none";
+    document.getElementById("cb").style.display = "none";
+  };
+  document.getElementById("text").onclick = function () {
+    document.getElementById("fill").textContent = "filled in";
+    document.getElementById("cs").textContent = "made longer now";
+    console.log("text", st.textContent);
+  };
+  document.getElementById("reset").onclick = function () {
+    em.textContent = "plain again";
+    console.log("reset", em.children.length, em.textContent);
+  };
+</script>
+</body></html>
