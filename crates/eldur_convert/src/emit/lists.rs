@@ -12,9 +12,9 @@ use eldur_dom::NodeId;
 use eldur_qml::{Member, Object, Value};
 
 use super::decoration::border_width;
-use super::{Emitter, hint};
 use super::text::CONTENT_AREA;
 use super::units::{ROOT_ID, color, fmt_number, length_expr, number, round};
+use super::{Emitter, hint};
 use crate::boxes::{
     self, BoxKind, Content, LayoutBox, Marker, MarkerKind, describe, is_out_of_flow, node_line,
 };
@@ -218,10 +218,9 @@ impl Emitter<'_, '_> {
         for sibling in siblings {
             let in_line = match self.doc.text(sibling) {
                 Some(text) => !text.trim().is_empty(),
-                None => self
-                    .styles
-                    .computed(sibling)
-                    .is_some_and(|s| !is_out_of_flow(&s.style) && s.style.display != eldur_css::Display::None),
+                None => self.styles.computed(sibling).is_some_and(|s| {
+                    !is_out_of_flow(&s.style) && s.style.display != eldur_css::Display::None
+                }),
             };
             if in_line {
                 self.diags.warning(
@@ -300,7 +299,9 @@ impl Emitter<'_, '_> {
             || !start(parent.style.align_items)
             || !start(b.style.align_self);
         if aligned {
-            let what = b.node.map_or_else(|| "a generated box".to_owned(), |n| describe(self.doc, n));
+            let what = b
+                .node
+                .map_or_else(|| "a generated box".to_owned(), |n| describe(self.doc, n));
             self.diags.warning(
                 "css",
                 line,
@@ -625,7 +626,11 @@ fn place(
         // Its static position: where its slot is, as if it were in flow.
         (LengthAuto::Auto, LengthAuto::Auto) => {
             if let Some((place, flow_margin)) = static_place {
-                let function = if coordinate == "x" { "staticX" } else { "staticY" };
+                let function = if coordinate == "x" {
+                    "staticX"
+                } else {
+                    "staticY"
+                };
                 let read = format!("{ROOT_ID}.{function}({}, {})", place.slot, place.from);
                 let margin = flow_margin + margin_px(start_margin);
                 obj.set(

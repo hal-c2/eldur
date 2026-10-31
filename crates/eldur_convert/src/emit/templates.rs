@@ -18,11 +18,9 @@ use eldur_dom::{Document, LocalName, NodeId, QualName, ns};
 use eldur_js::{CreatedElement, DomQuery, ElementRef};
 use eldur_qml::{Member, Object, Value};
 
-use super::{ICB_ID, Target, ensure_initial_block};
 use super::dynamic::{self, Inputs, Probe};
-use crate::boxes::{
-    describe, is_containing_block, is_fixed_containing_block, is_out_of_flow,
-};
+use super::{ICB_ID, Target, ensure_initial_block};
+use crate::boxes::{describe, is_containing_block, is_fixed_containing_block, is_out_of_flow};
 use crate::diag::Diagnostics;
 use crate::metadata::class_prop;
 use crate::scripts::{Scripts, find_mut};
@@ -172,14 +170,18 @@ fn leave_flow(
 ) {
     let mut lost_static = false;
     obj.members.retain(|m| match m {
-        Member::Property { name, value: Value::Expr(e) } if name == "x" || name == "y" => {
+        Member::Property {
+            name,
+            value: Value::Expr(e),
+        } if name == "x" || name == "y" => {
             let slot = e.contains(".staticX(") || e.contains(".staticY(");
             lost_static |= slot;
             !slot
         }
-        Member::Property { name, value: Value::Expr(e) } if name == "visible" => {
-            !e.ends_with("Slot.visible")
-        }
+        Member::Property {
+            name,
+            value: Value::Expr(e),
+        } if name == "visible" => !e.ends_with("Slot.visible"),
         _ => true,
     });
     if lost_static {
@@ -224,7 +226,8 @@ fn leave_flow(
             }
         },
     };
-    obj.members.insert(0, decl("var", "eldurBlock", value, true));
+    obj.members
+        .insert(0, decl("var", "eldurBlock", value, true));
 }
 
 /// Every id in `obj`.
@@ -1024,12 +1027,7 @@ pub(crate) fn add(
         ensure_initial_block(root);
         root.members.insert(
             0,
-            decl(
-                "var",
-                "eldurInitialBlock",
-                Value::expr(ICB_ID),
-                true,
-            ),
+            decl("var", "eldurInitialBlock", Value::expr(ICB_ID), true),
         );
     }
     root.members.insert(

@@ -1927,7 +1927,10 @@ fn a_box_without_offsets_reads_its_static_position_from_a_slot() {
         "<p>y</p><div class=a></div>",
     ));
     assert!(qml.contains("function staticY(item, block)"), "{qml}");
-    assert!(qml.contains("y: root.staticY(aSlot, flickable.contentItem)"), "{qml}");
+    assert!(
+        qml.contains("y: root.staticY(aSlot, flickable.contentItem)"),
+        "{qml}"
+    );
 }
 
 #[test]

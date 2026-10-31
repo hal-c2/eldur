@@ -465,9 +465,8 @@ impl<'a, 'd> Emitter<'a, 'd> {
         } else {
             outer_hideable
                 || style.visibility == eldur_css::Visibility::Collapse
-                || b.node.is_some_and(|n| {
-                    self.collapsed.contains(&n) || self.wanted.contains(&n)
-                })
+                || b.node
+                    .is_some_and(|n| self.collapsed.contains(&n) || self.wanted.contains(&n))
                 || (self.markers && b.node.is_some())
         };
         let (in_flow, leaving) = lists::split_out_of_flow(b);
@@ -820,9 +819,7 @@ fn initial_block() -> Object {
 /// What overflows the initial containing block can be scrolled to (CSS
 /// Overflow 3 §2.2).
 fn height_with_initial_block(content_height: &str) -> String {
-    format!(
-        "Math.max({content_height}, {ICB_ID}.childrenRect.y + {ICB_ID}.childrenRect.height)"
-    )
+    format!("Math.max({content_height}, {ICB_ID}.childrenRect.y + {ICB_ID}.childrenRect.height)")
 }
 
 /// Gives a page without the initial containing block's item one, for a

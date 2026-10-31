@@ -1698,8 +1698,7 @@ fn apply_box_fixups(
     );
 
     if is_root || is_abs_or_fixed || style.float != Float::None || is_flex_or_grid_item {
-        style.blockified_inline =
-            matches!(style.display, Display::Inline | Display::InlineBlock);
+        style.blockified_inline = matches!(style.display, Display::Inline | Display::InlineBlock);
         style.display = blockify_display(style.display, is_root);
     }
 }

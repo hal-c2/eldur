@@ -38,9 +38,7 @@ fn run(name: &str, html: &str) -> Result<(), String> {
     for file in &out.files {
         std::fs::write(dir.join(&file.path), &file.contents).expect("write output");
     }
-    let test = TEST
-        .replace("@CHROMIUM@", CHROMIUM)
-        .replace("@CASE@", name);
+    let test = TEST.replace("@CHROMIUM@", CHROMIUM).replace("@CASE@", name);
     std::fs::write(dir.join("tst_absolute.qml"), test).expect("write test");
     let output = Command::new(RUNNER)
         .args(["-platform", "offscreen", "-input"])
@@ -155,7 +153,11 @@ fn boxes_match_chromium() {
     pages.sort();
     assert!(!pages.is_empty());
     for page in pages {
-        let name = page.file_stem().expect("stem").to_string_lossy().into_owned();
+        let name = page
+            .file_stem()
+            .expect("stem")
+            .to_string_lossy()
+            .into_owned();
         let html = std::fs::read_to_string(&page).expect("page");
         if let Err(e) = run(&name, &html) {
             failures.push(e);
