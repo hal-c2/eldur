@@ -123,6 +123,9 @@ pub(crate) struct Emitter<'a, 'd> {
     /// Scripts reach elements at run time, so every element object says
     /// what it is (`eldurTag`, `eldurClasses`).
     pub runtime_dom: bool,
+    /// The runtime resolves some element from the page's rules, and reads what
+    /// each element's markup says about itself.
+    pub open_elements: bool,
     /// The boxes a script may put block children in.
     gains: HashSet<NodeId>,
     /// A script inserts into something found at run time: any empty box.
@@ -204,6 +207,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             imports: std::collections::BTreeSet::new(),
             images: BTreeMap::new(),
             runtime_dom: false,
+            open_elements: false,
             gains: HashSet::new(),
             gains_any_empty: false,
             line_align: eldur_css::TextAlign::Start,
@@ -822,6 +826,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
             && let Some(node) = b.node
         {
             crate::metadata::tag(&mut e.obj, self.doc, node);
+            if self.open_elements {
+                crate::metadata::declare_style(&mut e.obj, self.doc, node);
+            }
             if self.script_attrs {
                 crate::metadata::declare_attrs(&mut e.obj, self.doc, node);
             }
@@ -993,6 +1000,21 @@ fn height_with_initial_block(content_height: &str) -> String {
 
 /// Gives a page without the initial containing block's item one, for a
 /// script's boxes to go to.
+/// The block an out-of-flow box the runtime places answers to, by name.
+pub(crate) fn declare_initial_block(root: &mut Object) {
+    ensure_initial_block(root);
+    root.members.insert(
+        0,
+        Member::PropertyDecl {
+            ty: "var".to_owned(),
+            name: "eldurInitialBlock".to_owned(),
+            value: Some(Value::expr(ICB_ID)),
+            readonly: true,
+            required: false,
+        },
+    );
+}
+
 fn ensure_initial_block(root: &mut Object) {
     let Some(flickable) = root.members.iter_mut().find_map(|m| match m {
         Member::Child(c) if c.id.as_deref() == Some(FLICKABLE_ID) => Some(c),

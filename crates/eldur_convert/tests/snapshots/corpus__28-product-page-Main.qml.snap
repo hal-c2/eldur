@@ -807,7 +807,6 @@ ApplicationWindow {
                                             model: [{ text: "Fjord blue", value: "Fjord blue" }, { text: "Ember red", value: "Ember red" }, { text: "Moss green", value: "Moss green" }, { text: "Mustard", value: "Mustard" }]
                                             textRole: "text"
                                             valueRole: "value"
-                                            implicitContentWidthPolicy: ComboBox.WidestText
                                             font.family: "sans-serif"
                                             font.pixelSize: 15
                                             background: Rectangle {
@@ -838,6 +837,7 @@ ApplicationWindow {
                                                 font.pixelSize: 12
                                                 renderType: Text.NativeRendering
                                             }
+                                            implicitWidth: Math.ceil(contentItem.implicitWidth) + leftPadding + rightPadding - 2
                                             Accessible.name: "Colour"
                                             Layout.fillWidth: true
                                             Layout.topMargin: 4 - label.eldurCarry
@@ -906,7 +906,7 @@ ApplicationWindow {
                                             bottomPadding: 9
                                             leftPadding: 11
                                             implicitHeight: 40.5
-                                            implicitWidth: 187
+                                            implicitWidth: 221.13
                                             up.indicator.visible: false
                                             up.indicator.width: 0
                                             up.indicator.height: 0

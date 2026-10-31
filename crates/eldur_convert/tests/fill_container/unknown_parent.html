@@ -1,8 +1,9 @@
 <!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.row{height:30px;background:#def}#end{height:10px;background:red}
-.card{background:#eee}button{box-sizing:border-box;width:40px;height:21px}</style></head><body data-clicks=#go><div id="l"></div><p id="t" style="margin:0">text</p><button id="go">go</button><div class="card" id="c">card text</div><div>plain block</div><div id="end"></div>
+.card{background:#eee}</style></head><body data-clicks=#go><div id="l"></div><p id="t" style="margin:0">text</p><button id="go">go</button><div class="card" id="c">card text</div><div>plain block</div><div id="end"></div>
 <script>function g(id){var r=document.getElementById(id).getBoundingClientRect();return id+":"+[r.left,r.top,r.width,r.height].map(Math.round).join(",")}
 function all(){return Array.prototype.map.call(arguments,g).join(" ")}
-function row(id,t){var d=document.createElement('div');d.id=id;d.className='row';d.textContent=t;return d}
+function make(tag,c){var d=document.createElement(tag);d.className=c;return d}
+function row(id,t){var d=make('div','row');d.id=id;d.textContent=t;return d}
 function fill(p,n,pre){for(var i=0;i<n;i++)p.appendChild(row(pre+i,'x'));}
 fill(document.getElementById('l'),2,'l');fill(document.getElementById('t'),1,'t');
 console.log('LC '+all('l','l1','t','t0','go','c','end'));

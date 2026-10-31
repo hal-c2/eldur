@@ -1,0 +1,5 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[js]: index.html:23: a class written on an element the script finds at run time, with a computed name, is not followed

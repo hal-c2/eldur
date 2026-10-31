@@ -1753,6 +1753,50 @@ fn record_decl_longhand(decl: &ParsedDecl, out: &mut BTreeSet<Longhand>) {
     }
 }
 
+/// The page's cascade layers as numbers: a higher one wins among normal
+/// declarations.
+pub(crate) struct LayerRanks {
+    tree: LayerTreeNode,
+    keys: Vec<LayerOrderKey>,
+}
+
+impl LayerRanks {
+    pub(crate) fn rank(&self, path: &[LayerSegment]) -> Option<u32> {
+        let key = self.tree.key_for_path(Some(path));
+        self.keys
+            .iter()
+            .position(|k| *k == key)
+            .and_then(|at| u32::try_from(at).ok())
+    }
+}
+
+pub(crate) fn layer_ranks(sheets: &[Stylesheet], viewport: &Viewport) -> LayerRanks {
+    let mut tree = LayerTreeNode::default();
+    let author = || sheets.iter().filter(|s| s.origin == Origin::Author);
+    for sheet in author() {
+        for reg in &sheet.inner.layer_registrations {
+            if media_all_match(&reg.media, viewport) {
+                tree.register_path(&reg.path);
+            }
+        }
+        for rule in &sheet.inner.rules {
+            if media_all_match(&rule.media, viewport)
+                && let Some(path) = &rule.layer
+            {
+                tree.register_path(path);
+            }
+        }
+    }
+    let mut keys: Vec<LayerOrderKey> = author()
+        .flat_map(|s| s.inner.rules.iter())
+        .filter_map(|r| r.layer.as_deref())
+        .map(|path| tree.key_for_path(Some(path)))
+        .collect();
+    keys.sort();
+    keys.dedup();
+    LayerRanks { tree, keys }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

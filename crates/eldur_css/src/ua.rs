@@ -324,6 +324,11 @@ legend {
 
 input, button, select, textarea {
     display: inline-block;
+    font-size: 13.3333px;
+    font-family: sans-serif;
+    font-weight: normal;
+    font-style: normal;
+    line-height: normal;
 }
 
 button,

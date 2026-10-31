@@ -1,0 +1,11 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.card{height:40px;background:rgb(1,1,1);margin-bottom:4px}.card .t{color:rgb(255,0,0);height:10px}.tile{padding:5px;background:rgb(2,2,2)}h2{margin:3px 0;font-size:18px;line-height:22px}ul{margin:0;padding:0 0 0 10px}li{height:12px}#end{height:10px}</style></head><body><div id="list"></div><div id="end"></div>
+<script>
+function box(id){var b=document.getElementById(id).getBoundingClientRect();return id+" "+Math.round(b.left)+","+Math.round(b.top)+" "+Math.round(b.width)+"x"+Math.round(b.height)}
+function geo(){console.log("CS "+Array.prototype.map.call(arguments,box).join(" | "))}
+function cs(id){var s=getComputedStyle(document.getElementById(id)),o=[];for(var i=1;i<arguments.length;i++)o.push(arguments[i]+"="+s[arguments[i]]);console.log("CS "+id+" "+o.join(" "))}
+var l=document.getElementById("list");var cls="card";
+l.innerHTML="<div class=\""+cls+"\" id=\"a\"><p class=\"t\" id=\"at\">x</p></div><div class=\"tile\" id=\"b\"><h2 id=\"bh\">head</h2><ul id=\"bu\"><li id=\"li1\">1</li><li id=\"li2\">2</li></ul></div>";
+geo("a","at","b","bh","bu","li1","li2","end");cs("a","backgroundColor","height");cs("at","color");cs("bh","fontSize","marginTop");
+document.getElementById("a").className="tile";geo("a","end");
+l.insertAdjacentHTML("beforeend","<div class=card id=\"c\"></div>");geo("c","end");
+</script></body></html>

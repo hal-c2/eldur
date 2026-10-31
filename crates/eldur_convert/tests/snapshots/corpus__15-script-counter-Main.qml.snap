@@ -348,7 +348,7 @@ ApplicationWindow {
                                 rightPadding: 13
                                 bottomPadding: 11
                                 leftPadding: 13
-                                implicitWidth: 202
+                                implicitWidth: 238.4
                                 placeholderText: "Start typing…"
                                 placeholderTextColor: "#757575"
                                 Accessible.name: "Live text"

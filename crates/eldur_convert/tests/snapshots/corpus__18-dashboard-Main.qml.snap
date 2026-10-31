@@ -868,7 +868,7 @@ ApplicationWindow {
                                             rightPadding: 13
                                             bottomPadding: 1
                                             leftPadding: 13
-                                            implicitWidth: 180
+                                            implicitWidth: 211.85
                                             placeholderText: "Search orders"
                                             placeholderTextColor: "#757575"
                                             Layout.fillWidth: true

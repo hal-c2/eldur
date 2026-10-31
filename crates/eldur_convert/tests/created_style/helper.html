@@ -1,0 +1,9 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.card{height:40px;background:#def;margin-bottom:4px}.t{color:red}#end{height:10px;background:red}.big{height:60px;background:#fed}</style></head><body><div id="list"></div><div id="end"></div>
+<script>
+function el(tag,cls,text){var e=document.createElement(tag);e.className=cls;if(text)e.textContent=text;return e}
+var items=[{n:'a',big:false},{n:'b',big:true}];var l=document.getElementById('list');
+items.forEach(function(it,i){var c=el('div',it.big?'big':'card');c.id='c'+i;c.appendChild(el('span','t',it.n));c.appendChild(el('p','',it.n+'!'));l.appendChild(c)});
+var e=document.createElement('div');e.className='card';e.id='x1';l.appendChild(e);e=document.createElement('div');e.className='big';e.id='x2';l.appendChild(e);
+function r(id){var b=document.getElementById(id).getBoundingClientRect();return Math.round(b.top)+'+'+Math.round(b.height)}
+console.log('CS '+['c0','c1','x1','x2','end'].map(r).join(' '));console.log('CS children='+l.children.length+' t='+document.querySelectorAll('.t').length+' color='+getComputedStyle(document.querySelector('.t')).color);
+</script></body></html>

@@ -1,0 +1,11 @@
+<!doctype html><html><head><style>body{margin:0}#end{height:10px}.f{font:16px/20px sans-serif}.pb{padding:4px 8px;border:1px solid red;font-size:14px;line-height:18px}</style></head><body><button id="s1">one</button><div><button id="s2" class="f">two</button></div><div id="list"></div><div id="end"></div>
+<script>
+function box(id){var b=document.getElementById(id).getBoundingClientRect();return id+" "+Math.round(b.left)+","+Math.round(b.top)+" "+Math.round(b.width)+"x"+Math.round(b.height)}
+function geo(){console.log("CS "+Array.prototype.map.call(arguments,box).join(" | "))}
+function cs(id){var s=getComputedStyle(document.getElementById(id)),o=[];for(var i=1;i<arguments.length;i++)o.push(arguments[i]+"="+s[arguments[i]]);console.log("CS "+id+" "+o.join(" "))}
+var l=document.getElementById("list");function b(c,id,p){var e=document.createElement("button");e.textContent=id;if(c)e.className=c;e.id=id;(p||l).appendChild(e);return e}
+b("","c1");var d=document.createElement("div");d.className="f";d.id="w";l.appendChild(d);b("","c2",d);b("pb","c3");var x=b("f","c4");
+function hh(id){var r=document.getElementById(id).getBoundingClientRect();return id+" "+Math.round(r.height)}
+console.log("CS "+["s1","s2","c1","c2","c3","c4"].map(hh).join(" "));
+cs("c1","fontSize","paddingTop","paddingLeft","borderTopWidth","display");cs("c3","fontSize","paddingTop","borderTopWidth");geo("end")
+</script></body></html>

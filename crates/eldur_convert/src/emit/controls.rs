@@ -29,6 +29,10 @@ const TRACK: Rgba = Rgba::new(0xef, 0xef, 0xef, 0xff);
 /// Average glyph advance of the fallback fonts, in em: `size` and `cols`
 /// count these (HTML §4.10.5.1.2 "average character width").
 const AVG_CHAR: f32 = 0.55;
+/// What Chromium measures an `<input>` by, in em, for its default font: each
+/// `size` counts this, and the font's widest glyph adds a constant once.
+const INPUT_CHAR: f32 = 0.6;
+const INPUT_EXTRA: f32 = 1.275;
 /// Room for the drop-down arrow, which CSS padding does not include.
 const ARROW_ROOM: f32 = 18.0;
 
@@ -211,8 +215,10 @@ fn with_native_box(style: &ComputedStyle, control: Control) -> Option<ComputedSt
         return None;
     }
     let (v, h, background) = match control {
-        Control::Button { .. } => (1.0, 6.0, TRACK),
-        Control::Text | Control::TextArea | Control::Number => (1.0, 2.0, Rgba::WHITE),
+        // A browser's 2px border, of which the painted border below is one.
+        Control::Button { .. } => (2.0, 7.0, TRACK),
+        Control::Text | Control::Number => (2.0, 3.0, Rgba::WHITE),
+        Control::TextArea => (2.0, 2.0, Rgba::WHITE),
         // A select's own text box carries its vertical room.
         Control::Select => (0.0, 2.0, Rgba::WHITE),
         _ => return None,
@@ -536,7 +542,7 @@ impl Emitter<'_, '_> {
         obj.set(
             "implicitWidth",
             Value::Number(round(
-                size as f32 * AVG_CHAR * style.font_size + insets.horizontal(),
+                (size as f32 * INPUT_CHAR + INPUT_EXTRA) * style.font_size + insets.horizontal(),
             )),
         );
         self.placeholder(&mut obj, node);
@@ -716,7 +722,7 @@ impl Emitter<'_, '_> {
         obj.set(
             "implicitWidth",
             Value::Number(round(
-                20.0 * AVG_CHAR * style.font_size + insets.horizontal(),
+                (20.0 * INPUT_CHAR + INPUT_EXTRA) * style.font_size + insets.horizontal(),
             )),
         );
         // The Basic style's +/- buttons take the field's space; a browser
@@ -1048,10 +1054,6 @@ impl Emitter<'_, '_> {
         if index != 0 {
             obj.set("currentIndex", Value::Number(index as f64));
         }
-        obj.set(
-            "implicitContentWidthPolicy",
-            Value::expr("ComboBox.WidestText"),
-        );
         set_font(&mut obj, style);
         let vertical = self.apply_box(&mut obj, style, line);
         // A browser's select ignores line-height: its text box is the
@@ -1081,6 +1083,12 @@ impl Emitter<'_, '_> {
         arrow.set("color", color(style.color));
         arrow.set("font.pixelSize", Value::Number(12.0));
         obj.set("indicator", object_value(arrow));
+        // `WidestText` measures only a TextInput content item, and this is a
+        // Text; a browser's frame around the text is 22 with the arrow.
+        obj.set(
+            "implicitWidth",
+            Value::expr("Math.ceil(contentItem.implicitWidth) + leftPadding + rightPadding - 2"),
+        );
         if let Some(form) = form {
             self.forms
                 .entry(form)

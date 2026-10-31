@@ -124,6 +124,8 @@ pub(crate) fn analyze(scripts: &[ScriptInput]) -> Analysis {
     }
 
     analysis.created = dynamic.finish();
+    analysis.open_elements |= analysis.created.iter().any(|c| c.open_classes)
+        || analysis.class_writes.iter().any(|w| w.open);
     analysis.runtime_dom |= analysis.mutates_dom;
     for write in &analysis.class_writes {
         lookups.written_classes.extend(write.names.iter().cloned());
@@ -524,7 +526,11 @@ impl AnalysisVisitor<'_, '_> {
     /// attribute value; between elements, or in a tag or attribute name, it
     /// may be markup, which is reported.
     fn record_markup(&mut self, parent: &ElementRef, value: &Expression<'_>, span: Span) {
-        let alts = self.facts.resolve_str(&self.eval.strings(value), 0);
+        let written = self.eval.strings(value);
+        // A variable inside a tag may resolve to one literal here and still be
+        // the script's choice of what the element is.
+        self.analysis.open_elements |= written.iter().any(|alt| computed_in_a_tag(alt));
+        let alts = self.facts.resolve_str(&written, 0);
         let line = Some(line_for_span(self.input, span));
         let mut shapes = MarkupShapes::default();
         let mut opaque = false;
@@ -549,6 +555,7 @@ impl AnalysisVisitor<'_, '_> {
             self.record_opaque(parent);
         }
         if opaque {
+            self.analysis.open_elements = true;
             self.analysis.diagnostics.push(Diagnostic {
                 severity: Severity::Unsupported,
                 source: self.input.name.clone(),
@@ -909,6 +916,16 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
             site.path = self.path.clone();
         }
         if let Expression::StaticMemberExpression(member) = unwrap_parens(&it.callee) {
+            if member.property.name == "createElement"
+                && it
+                    .arguments
+                    .first()
+                    .and_then(|a| a.as_expression())
+                    .and_then(extract_string_literal)
+                    .is_none()
+            {
+                self.analysis.open_elements = true;
+            }
             self.inspect_lookup_call(it, member);
             self.inspect_dynamic_call(it, member);
         }
@@ -996,6 +1013,14 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
     }
 
     fn visit_assignment_expression(&mut self, it: &AssignmentExpression<'a>) {
+        // Later writes to the variable may mean either element.
+        if matches!(it.left, AssignmentTarget::AssignmentTargetIdentifier(_))
+            && matches!(unwrap_parens(&it.right), Expression::CallExpression(call)
+                if matches!(unwrap_parens(&call.callee), Expression::StaticMemberExpression(m)
+                    if m.property.name == "createElement"))
+        {
+            self.analysis.open_elements = true;
+        }
         self.inspect_lookup_write(it);
         self.inspect_dynamic_assignment(it);
         match &it.left {
@@ -1617,6 +1642,25 @@ fn apply_class_op(states: &[ClassAlt], op: &ClassOp) -> Vec<ClassAlt> {
 /// Stands for a part of markup that is not literal. A private-use character,
 /// so the parser keeps it in names, values and text.
 const SENTINEL: char = '\u{E000}';
+
+fn computed_in_a_tag(pieces: &[Piece]) -> bool {
+    let mut in_tag = false;
+    for piece in pieces {
+        match piece {
+            Piece::Lit(text) => {
+                if let Some(at) = text.rfind(['<', '>']) {
+                    in_tag = text[at..].starts_with('<');
+                }
+            }
+            Piece::Open | Piece::Sym(_) => {
+                if in_tag {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
 
 /// One element of literal markup. Elements with the same tag, input type
 /// and class value under the same parent, in any alternative of one value,

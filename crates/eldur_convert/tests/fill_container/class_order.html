@@ -1,14 +1,14 @@
 <!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.row{height:30px;background:#def}#end{height:10px;background:red}
-.b{height:30px;width:40px;padding:0 12px;border:0;box-sizing:border-box}.t{height:40px;background:#def}.u{height:50px}</style></head><body><div id="a"></div><div id="a1"></div><div id="a2"></div><div id="b"></div><div id="c"></div><div id="d"></div><div id="end"></div>
+.b{height:30px;padding:0 12px;border:0}.t{height:40px;background:#def}.u{height:50px}</style></head><body><div id="a"></div><div id="a1"></div><div id="a2"></div><div id="b"></div><div id="c"></div><div id="d"></div><div id="end"></div>
 <script>function g(id){var r=document.getElementById(id).getBoundingClientRect();return id+":"+[r.left,r.top,r.width,r.height].map(Math.round).join(",")}
 function all(){return Array.prototype.map.call(arguments,g).join(" ")}
 function add(n,e){document.getElementById(n).appendChild(e);return e}
-var e0=document.createElement('button');e0.id='b0';e0.className='b';e0.textContent='go';add('a',e0);
-var e1=document.createElement('button');e1.id='b1';e1.textContent='go';add('a1',e1);e1.className='b';
-var e2=document.createElement('button');e2.id='b2';e2.textContent='go';e2.classList.add('b');add('a2',e2);
-var e3=document.createElement('div');e3.id='t0';e3.className='t';add('b',e3);
-var e4=document.createElement('div');e4.id='t1';add('b',e4);e4.className='t';
-var e5=document.createElement('div');e5.id='t2';add('b',e5);e5.classList.add('t');
-var e6=document.createElement('div');e6.id='u0';e6.className='t';add('c',e6);e6.className='u';
-var e7=document.createElement('div');e7.id='u1';e7.className='t';add('d',e7);e7.classList.add('u');
+var e=document.createElement('button');e.id='b0';e.className='b';e.textContent='go';add('a',e);
+e=document.createElement('button');e.id='b1';e.textContent='go';add('a1',e);e.className='b';
+e=document.createElement('button');e.id='b2';e.textContent='go';e.classList.add('b');add('a2',e);
+e=document.createElement('div');e.id='t0';e.className='t';add('b',e);
+e=document.createElement('div');e.id='t1';add('b',e);e.className='t';
+e=document.createElement('div');e.id='t2';add('b',e);e.classList.add('t');
+e=document.createElement('div');e.id='u0';e.className='t';add('c',e);e.className='u';
+e=document.createElement('div');e.id='u1';e.className='t';add('d',e);e.classList.add('u');
 console.log('LC '+all('b0','b1','b2','t0','t1','t2','u0','u1','end'));</script></body></html>

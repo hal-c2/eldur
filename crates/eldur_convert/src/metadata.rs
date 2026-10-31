@@ -61,6 +61,18 @@ pub(crate) fn tag(obj: &mut Object, doc: &Document, node: NodeId) {
     }
 }
 
+/// `eldurStyle`: a `style` attribute as written, which the cascade of what a
+/// script makes inherits from.
+pub(crate) fn declare_style(obj: &mut Object, doc: &Document, node: NodeId) {
+    let Some(style) = doc.element(node).and_then(|e| e.attr("style")) else {
+        return;
+    };
+    if !style.trim().is_empty() {
+        obj.members
+            .insert(0, decl("string", "eldurStyle", Value::string(style)));
+    }
+}
+
 /// `eldurAttrs`: what the markup says, for scripts that ask. `id` and `class`
 /// have their own properties, `style` was applied, `on*` became handlers.
 pub(crate) fn declare_attrs(obj: &mut Object, doc: &Document, node: NodeId) {
@@ -226,6 +238,23 @@ pub(crate) fn styled_classes_decl(classes: &BTreeSet<String>) -> Member {
     )
 }
 
+/// `root.eldurOpenElements`: the runtime styles created elements from the
+/// page's rules, because analysis cannot name them all.
+pub(crate) fn open_elements_decl() -> Member {
+    decl("bool", "eldurOpenElements", Value::Bool(true))
+}
+
+/// `root.eldurLiteralClasses`: the classes a script names outright, which the
+/// converter gave variants. One it composes at run time has none it can trust.
+pub(crate) fn literal_classes_decl(classes: &BTreeSet<&str>) -> Member {
+    let list: Vec<String> = classes.iter().map(|c| format!("{c:?}")).collect();
+    decl(
+        "var",
+        "eldurLiteralClasses",
+        Value::Expr(format!("[{}]", list.join(", "))),
+    )
+}
+
 /// `root.eldurInlineRules`: what the runtime re-evaluates on inline elements a
 /// script changes. A string, parsed once, as the page may have many rules.
 pub(crate) fn inline_rules_decl(rules: &[eldur_css::InlineRule]) -> Member {
@@ -238,6 +267,31 @@ pub(crate) fn inline_rules_decl(rules: &[eldur_css::InlineRule]) -> Member {
                 "ua": r.user_agent,
                 "decls": r.declarations,
             })
+        })
+        .collect();
+    decl(
+        "string",
+        "eldurInlineRules",
+        Value::String(serde_json::Value::Array(list).to_string()),
+    )
+}
+
+/// The same property with all a created element can use (`eldur_runtime.js`
+/// reads either).
+pub(crate) fn runtime_rules_decl(rules: &[eldur_css::RuntimeRule]) -> Member {
+    let list: Vec<serde_json::Value> = rules
+        .iter()
+        .map(|r| {
+            let mut rule = serde_json::json!({
+                "sel": r.selector,
+                "spec": [r.specificity.0, r.specificity.1, r.specificity.2],
+                "ua": r.user_agent,
+                "decls": r.declarations,
+            });
+            if let Some(layer) = r.layer {
+                rule["layer"] = layer.into();
+            }
+            rule
         })
         .collect();
     decl(

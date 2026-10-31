@@ -7,7 +7,7 @@
 
 pub mod values;
 
-pub use inline_rules::InlineRule;
+pub use inline_rules::{InlineRule, RuntimeRule};
 
 pub use values::*;
 
@@ -432,6 +432,14 @@ pub fn styled_classes(sheets: &[Stylesheet]) -> BTreeSet<String> {
 #[must_use]
 pub fn inline_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<InlineRule> {
     inline_rules::inline_rules(sheets, viewport)
+}
+
+/// The rules of `sheets` and the user agent's in cascade order, with everything
+/// the runtime can apply to an element whose class it only learns when a script
+/// runs (`docs/spec/dom-api.md`, Created elements).
+#[must_use]
+pub fn runtime_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<RuntimeRule> {
+    inline_rules::runtime_rules(sheets, viewport)
 }
 
 /// The structural pseudo-classes (without `of S`) some selector in `sheets`

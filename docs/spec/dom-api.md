@@ -392,7 +392,7 @@ Why this and not one QML object per element, or splitting the block whenever a s
 **Known gaps.**
 - A run with an atomic inline (`<img>`, `<button>`, inline-block) stays a `Flow`, and its inline elements have no nodes; the converter's "no QML object of its own" warning stays for them.
 - Whitespace-only text between blocks is not a node, and a real element's `childNodes` adds only its text runs to its element children, so counts differ when whitespace is all there is.
-- The dirty recompute does not know `var()`, nested rules or `@layer` order; `:is()` specificity takes the maximum for every match. `text-transform` is not applied to a rewritten run. `display: block` on an inline node paints it inline.
+- On a page whose elements analysis can all name (§13) the table holds no `var()`; nested rules and `@layer` order come from the richer table only there too. `:is()` specificity takes the maximum for every match. `text-transform` is not applied to a rewritten run. `display: block` on an inline node paints it inline.
 - A change to a real element's attribute, other than a class, does not recompute inline nodes.
 - A `Text` shown as its one element's style goes back to the block's on first write, using what the converter computed; a later class change on the block is then read live.
 - A node moved into a box that lays out only real items becomes a real item, as text and inline style: best effort.
@@ -403,3 +403,52 @@ Why this and not one QML object per element, or splitting the block whenever a s
 - `<select>` change, `dblclick`, and controls added through `innerHTML` have no Chromium comparison; a control so added is not connected until a later listener sweeps the page.
 - Created block children of a `<div>` that was empty at conversion are not stacked: the div is a `Text`, and they overlap at its top.
 - `dataset` writes do not recompute styles.
+
+## 13. Created elements
+
+Whether a page's created elements are styled by templates or at run time is
+decided per page, by `Analysis::open_elements`. It is set when analysis cannot
+name what an element is or which classes it gets: `createElement(expr)`,
+`el.className = expr` and other open class writes, a variable reassigned to
+another `createElement`, or markup with a variable inside a tag.
+
+**Closed pages** (no such site) keep their templates and variants. A template
+can paint what one generic box cannot (gradients, shadows, transforms,
+transitions, `:hover`), its output is what the corpus has always checked, and
+pages that need nothing new keep their QML.
+
+**Open pages** get `eldurOpenElements: true`, the rule table
+(`eldur_css::runtime_rules`, `eldurInlineRules`: every declaration of a box or
+text, with `var()` kept, nested selectors composed, `:is()` measured per part,
+layer ranks, and `@media` settled at the conversion viewport), `eldurStyle` on
+each element and `eldurLiteralClasses`. CSS parsing stays in the converter; the
+`_g*` section of the runtime only matches and applies.
+
+On an open page a created element is one generic box, with a synchronous pass
+in JavaScript (`_gSettle`): Qt's layouts have no margin collapse, no baseline
+line boxes and no answer to a read in the same tick. Each pass re-resolves
+`_gMatched` by DOM place, inherits along the DOM parent, and places flow, flex,
+grid, inline-block and out-of-flow children. An exact-key template stays only
+when a matched rule needs what the box cannot paint (`_gTemplateFits`). A static
+element whose matched rules change through a class with no literal variant is
+adopted to the box form (`_gStaticChanges`, `_gAdopt`), as is a static empty
+container filled with inline-level children (`_gFillsLine`).
+
+**Known gaps.**
+- A closed page's template keeps the converter's picture: margins do not
+  collapse through a template, and `var()` in an inline rule is not seen.
+- On a generic box: hover and other states only through a template, no gradient,
+  shadow or transform unless a template exists; table-family elements keep their
+  old forms.
+- Grid is column tracks with auto placement; explicit placement is not honoured.
+- `font` shorthand holding `var()` is not expanded.
+- `@media` is not re-evaluated on a live resize.
+- Inline nodes in a box always sit in its `Text`, before its block children.
+- Inline-level created elements directly under a static parent with static
+  siblings, or under `body`, do not form lines with them.
+- Normal line height comes from Qt's metrics: 17 at 16px where Chromium has 18.
+- Fonts are whole pixels, so control text is 13px against Chromium's 13.3333px
+  and `getComputedStyle` reports `sans-serif` where Chromium says `Arial`.
+- `<select>` is as wide as its current option, not its widest, within Qt's
+  hinted glyph widths. `<input>` width is measured for Arial. `<textarea>` and
+  `type=number` default sizes still differ from Chromium.

@@ -190,7 +190,6 @@ ApplicationWindow {
                                                 rightPadding: 22
                                                 bottomPadding: 0
                                                 leftPadding: 22
-                                                implicitHeight: 24.32
                                                 contentItem: Text {
                                                     text: buttonControl.text
                                                     font: buttonControl.font
@@ -218,7 +217,6 @@ ApplicationWindow {
                                                 rightPadding: 22
                                                 bottomPadding: 0
                                                 leftPadding: 22
-                                                implicitHeight: 24.32
                                                 contentItem: Text {
                                                     text: buttonControl2.text
                                                     font: buttonControl2.font
@@ -628,7 +626,6 @@ ApplicationWindow {
                                         rightPadding: 2
                                         bottomPadding: 2
                                         leftPadding: 2
-                                        implicitHeight: 29.6
                                         contentItem: Text {
                                             text: buttonControl3.text
                                             font: buttonControl3.font
@@ -1064,7 +1061,6 @@ ApplicationWindow {
                                         rightPadding: 2
                                         bottomPadding: 2
                                         leftPadding: 2
-                                        implicitHeight: 29.6
                                         contentItem: Text {
                                             text: buttonControl4.text
                                             font: buttonControl4.font
@@ -1541,7 +1537,6 @@ ApplicationWindow {
                                         rightPadding: 2
                                         bottomPadding: 2
                                         leftPadding: 2
-                                        implicitHeight: 29.6
                                         contentItem: Text {
                                             text: buttonControl5.text
                                             font: buttonControl5.font

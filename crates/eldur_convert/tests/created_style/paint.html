@@ -1,0 +1,12 @@
+<!doctype html><html><head><style>:root{--a:rgb(40,90,200)}body{margin:0;font:16px/20px sans-serif}#host{padding:10px;background:rgb(240,242,248)}.card{height:40px;margin-bottom:8px;background:white;border:2px solid rgb(10,120,30);border-radius:4px}.hot{background:var(--a)}.wrap{padding:6px}.chip{height:20px;background:rgba(200,0,0,1)}.ghost{height:20px}</style></head><body><div id="host" data-probe="2,2"></div>
+<script>
+function make(t,c,id,p){var e=document.createElement(t);e.className=c;e.id=id;if(p)p.setAttribute("data-probe",p);return e}
+var h=document.getElementById("host");
+var a=make("div","card","a");a.setAttribute("data-probe","20,20");h.appendChild(a);
+var ab=make("div","card","ab");ab.setAttribute("data-probe","1,20");ab.setAttribute("data-border","1");h.appendChild(ab);
+var b=make("div","card hot","b");b.setAttribute("data-probe","20,20");h.appendChild(b);
+var w=make("div","wrap","w");w.setAttribute("data-probe","2,2");h.appendChild(w);
+var c=make("div","chip","c");c.setAttribute("data-probe","20,10");w.appendChild(c);
+var g=make("div","ghost","g");g.setAttribute("data-probe","20,10");h.appendChild(g);
+console.log("CS painted")
+</script></body></html>

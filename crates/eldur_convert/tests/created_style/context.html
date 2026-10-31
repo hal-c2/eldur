@@ -1,0 +1,16 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif;color:#010203}.outer{color:rgb(10,20,30);font-size:20px;font-weight:700;line-height:24px}.outer .leaf{height:11px}.other>.leaf{height:22px}.leaf{height:5px}.a+.b{height:33px}.a~.c{height:44px}li.leaf{height:6px}.dyn .leaf{height:17px}.static-parent .leaf{height:19px;color:rgb(7,8,9)}#end{height:10px}.t{margin:0}</style></head><body><div id="list"></div><div id="st" class="static-parent" style="color:rgb(1,1,1)"></div><div id="end"></div>
+<script>
+function box(id){var b=document.getElementById(id).getBoundingClientRect();return id+" "+Math.round(b.left)+","+Math.round(b.top)+" "+Math.round(b.width)+"x"+Math.round(b.height)}
+function geo(){console.log("CS "+Array.prototype.map.call(arguments,box).join(" | "))}
+function cs(id){var s=getComputedStyle(document.getElementById(id)),o=[];for(var i=1;i<arguments.length;i++)o.push(arguments[i]+"="+s[arguments[i]]);console.log("CS "+id+" "+o.join(" "))}
+var l=document.getElementById("list");function mk(p,c,id,tag){var e=document.createElement(tag||"div");if(c)e.className=c;if(id)e.id=id;p.appendChild(e);return e}
+var o=mk(l,"outer","o");var ot=mk(l,"other","ot");var lf=mk(o,"leaf","lf");mk(o,"","plain");var deep=mk(o,"","deep");var txt=mk(deep,"t","txt","p");txt.textContent="x";
+geo("lf");cs("lf","color","fontSize","fontWeight","lineHeight");
+ot.appendChild(lf);geo("lf");cs("lf","color","fontSize");
+var aa=mk(l,"a","aa");var bb=mk(l,"b","bb");var cc=mk(l,"c","cc");geo("aa","bb","cc");
+aa.className="";geo("bb","cc");aa.className="a";
+var dy=mk(l,"","dy");var dl=mk(dy,"leaf","dl");geo("dl");dy.className="dyn";geo("dl");
+var sl=mk(document.getElementById("st"),"leaf","sl");geo("sl");cs("sl","color");
+var di=mk(l,"","di");di.style.color="rgb(50,60,70)";var dc=mk(di,"","dc");cs("dc","color");di.style.color="rgb(70,60,50)";cs("dc","color");
+geo("o","ot","plain","deep","txt","end");cs("txt","color","fontSize","lineHeight","fontWeight");cs("plain","color")
+</script></body></html>
