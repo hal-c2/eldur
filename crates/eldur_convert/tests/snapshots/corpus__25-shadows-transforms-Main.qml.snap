@@ -58,6 +58,7 @@ ApplicationWindow {
                         Layout.preferredWidth: 192
                         Layout.maximumWidth: 192
                         Layout.fillHeight: true
+                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                         RectangularShadow {
                             anchors.fill: parent
@@ -101,6 +102,7 @@ ApplicationWindow {
                         Layout.maximumWidth: 192
                         Layout.fillHeight: true
                         Layout.leftMargin: 32
+                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                         RectangularShadow {
                             anchors.fill: parent
@@ -155,6 +157,7 @@ ApplicationWindow {
                         Layout.maximumWidth: 192
                         Layout.fillHeight: true
                         Layout.leftMargin: 32
+                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                         Shape {
                             id: cardInset
@@ -256,6 +259,7 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 160
                     Layout.topMargin: 40
+                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                     Rectangle {
                         id: tiltBox

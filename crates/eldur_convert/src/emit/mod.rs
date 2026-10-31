@@ -16,6 +16,7 @@ mod image;
 mod inline;
 mod links;
 mod lists;
+mod paint;
 mod shadow;
 mod table;
 pub(crate) mod templates;
@@ -311,6 +312,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         self.finish_resets(&mut root);
         self.report_inline_labels();
         carry::strip_hints(&mut root);
+        paint::snap_rounded_boxes(&mut root, false);
         root
     }
 

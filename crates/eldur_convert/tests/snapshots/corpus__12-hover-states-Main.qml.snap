@@ -344,6 +344,7 @@ ApplicationWindow {
                                     radius: 8
                                     border.width: 1
                                     border.color: "#e5e7eb"
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                     RectangularShadow {
                                         anchors.fill: parent
@@ -880,6 +881,7 @@ ApplicationWindow {
                                 implicitHeight: menuContent.implicitHeight + 16
                                 Layout.fillWidth: true
                                 Layout.topMargin: 12 - sectionTitle4.eldurCarry
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                 RectangularShadow {
                                     anchors.fill: parent
@@ -908,6 +910,7 @@ ApplicationWindow {
                                         implicitWidth: itemContent.implicitWidth + 24
                                         implicitHeight: itemContent.implicitHeight + 20
                                         Layout.fillWidth: true
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                         Behavior on color {
                                             ColorAnimation {
@@ -940,6 +943,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: 16
                                                 Layout.preferredHeight: 16
                                                 Layout.alignment: Qt.AlignVCenter
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 Behavior on color {
                                                     ColorAnimation {
@@ -987,6 +991,7 @@ ApplicationWindow {
                                         implicitWidth: itemContent2.implicitWidth + 24
                                         implicitHeight: itemContent2.implicitHeight + 20
                                         Layout.fillWidth: true
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                         Behavior on color {
                                             ColorAnimation {
@@ -1019,6 +1024,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: 16
                                                 Layout.preferredHeight: 16
                                                 Layout.alignment: Qt.AlignVCenter
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 Behavior on color {
                                                     ColorAnimation {
@@ -1066,6 +1072,7 @@ ApplicationWindow {
                                         implicitWidth: itemContent3.implicitWidth + 24
                                         implicitHeight: itemContent3.implicitHeight + 20
                                         Layout.fillWidth: true
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                         Behavior on color {
                                             ColorAnimation {
@@ -1098,6 +1105,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: 16
                                                 Layout.preferredHeight: 16
                                                 Layout.alignment: Qt.AlignVCenter
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 Behavior on color {
                                                     ColorAnimation {
@@ -1145,6 +1153,7 @@ ApplicationWindow {
                                         implicitWidth: itemContent4.implicitWidth + 24
                                         implicitHeight: itemContent4.implicitHeight + 20
                                         Layout.fillWidth: true
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                         Behavior on color {
                                             ColorAnimation {
@@ -1177,6 +1186,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: 16
                                                 Layout.preferredHeight: 16
                                                 Layout.alignment: Qt.AlignVCenter
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 Behavior on color {
                                                     ColorAnimation {

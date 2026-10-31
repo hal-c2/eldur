@@ -186,6 +186,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 0
                                 Layout.fillHeight: true
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                 Image {
                                     source: "assets/kettle-1.svg"
@@ -227,6 +228,7 @@ ApplicationWindow {
                                     radius: 8
                                     border.width: 1
                                     border.color: "#e3e7eb"
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                 }
                             }
 
@@ -245,6 +247,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 0
                                 Layout.fillHeight: true
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                 Image {
                                     source: "assets/kettle-2.svg"
@@ -286,6 +289,7 @@ ApplicationWindow {
                                     radius: 8
                                     border.width: 1
                                     border.color: "#e3e7eb"
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                 }
                             }
 
@@ -304,6 +308,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 0
                                 Layout.fillHeight: true
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                 Image {
                                     source: "assets/kettle-3.svg"
@@ -345,6 +350,7 @@ ApplicationWindow {
                                     radius: 8
                                     border.width: 1
                                     border.color: "#e3e7eb"
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                 }
                             }
 
@@ -363,6 +369,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 0
                                 Layout.fillHeight: true
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                 Image {
                                     source: "assets/kettle-4.svg"
@@ -404,6 +411,7 @@ ApplicationWindow {
                                     radius: 8
                                     border.width: 1
                                     border.color: "#e3e7eb"
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                 }
                             }
                         }
@@ -433,6 +441,7 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.fillHeight: true
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                     Text {
                                         id: badgeText
@@ -469,6 +478,7 @@ ApplicationWindow {
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.fillHeight: true
                                     Layout.leftMargin: 8
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                     Text {
                                         id: badgeText2
@@ -671,6 +681,7 @@ ApplicationWindow {
                                             radius: height / 2
                                             color: "#efefef"
                                             border.color: "#b2b2b2"
+                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                         }
                                     }
                                     contentItem: Item {
@@ -680,6 +691,7 @@ ApplicationWindow {
                                             height: parent.height / 2
                                             radius: height / 2
                                             color: "#0075ff"
+                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                         }
                                     }
                                     Accessible.name: "Only 7 left in stock"
@@ -720,6 +732,7 @@ ApplicationWindow {
                                 border.color: "#e3e7eb"
                                 Layout.fillWidth: true
                                 Layout.topMargin: 20 - description.eldurCarry
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                 GridLayout {
                                     id: buyContent
@@ -789,6 +802,7 @@ ApplicationWindow {
                                                 radius: 6
                                                 border.width: 1
                                                 border.color: "#c5ccd3"
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                             }
                                             topPadding: 9
                                             rightPadding: 29
@@ -869,6 +883,7 @@ ApplicationWindow {
                                                 radius: 6
                                                 border.width: 1
                                                 border.color: "#c5ccd3"
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                             }
                                             topPadding: 9
                                             rightPadding: 11
@@ -908,6 +923,7 @@ ApplicationWindow {
                                         background: Rectangle {
                                             color: "#1d6fd1"
                                             radius: 6
+                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                         }
                                         topPadding: 12
                                         rightPadding: 12
@@ -1039,6 +1055,7 @@ ApplicationWindow {
                                                     radius: height / 2
                                                     color: "#efefef"
                                                     border.color: "#cbcbcb"
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                 }
                                             }
                                             contentItem: Item {
@@ -1048,6 +1065,7 @@ ApplicationWindow {
                                                     height: parent.height / 2
                                                     radius: height / 2
                                                     color: meterControl.value < 0 ? "#ffb900" : (meterControl.value > 5 ? "#ffb900" : "#107c10")
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                 }
 
                                                 Rectangle {
@@ -1057,6 +1075,7 @@ ApplicationWindow {
                                                     radius: height / 2
                                                     color: "transparent"
                                                     border.color: "#cbcbcb"
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                 }
                                             }
                                             Layout.fillWidth: true
@@ -1163,6 +1182,7 @@ ApplicationWindow {
                                                     radius: height / 2
                                                     color: "#efefef"
                                                     border.color: "#cbcbcb"
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                 }
                                             }
                                             contentItem: Item {
@@ -1172,6 +1192,7 @@ ApplicationWindow {
                                                     height: parent.height / 2
                                                     radius: height / 2
                                                     color: meterControl2.value < 2 ? "#d13438" : (meterControl2.value > 4 ? "#107c10" : "#ffb900")
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                 }
 
                                                 Rectangle {
@@ -1181,6 +1202,7 @@ ApplicationWindow {
                                                     radius: height / 2
                                                     color: "transparent"
                                                     border.color: "#cbcbcb"
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                 }
                                             }
                                             Layout.fillWidth: true

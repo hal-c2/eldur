@@ -155,6 +155,7 @@ ApplicationWindow {
                                         border.color: "#e2e8f0"
                                         width: Math.min(implicitWidth, blockFlow.width)
                                         y: 36
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                         RowLayout {
                                             id: billingToggleContent
@@ -179,6 +180,7 @@ ApplicationWindow {
                                                 background: Rectangle {
                                                     color: "#0f172a"
                                                     radius: 999
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                 }
                                                 topPadding: 0
                                                 rightPadding: 22
@@ -242,6 +244,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 0
                                 Layout.fillHeight: true
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                 ColumnLayout {
                                     id: planContent
@@ -577,6 +580,7 @@ ApplicationWindow {
                                             radius: 12
                                             border.width: 2
                                             border.color: "#2563eb"
+                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                             Behavior on color {
                                                 ColorAnimation {
@@ -1072,6 +1076,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 0
                                 Layout.fillHeight: true
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                 ColumnLayout {
                                     id: planContent3
@@ -1457,6 +1462,7 @@ ApplicationWindow {
                                             radius: 12
                                             border.width: 2
                                             border.color: "#2563eb"
+                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                             Behavior on color {
                                                 ColorAnimation {

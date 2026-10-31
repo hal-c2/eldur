@@ -388,6 +388,7 @@ ApplicationWindow {
                             Layout.fillWidth: true
                             Layout.topMargin: 24 - item.eldurCarry
                             Layout.preferredHeight: implicitHeight - li4.eldurCarry
+                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                             ColumnLayout {
                                 id: tocContent

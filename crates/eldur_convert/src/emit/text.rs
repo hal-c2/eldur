@@ -692,8 +692,12 @@ fn whole_span(block: &ComputedStyle, items: &[Inline<'_>]) -> Option<(ComputedSt
 }
 
 /// Ascent and descent, as fractions of the size, of the font `family`
-/// resolves to through fontconfig for Chromium and Qt alike here:
-/// Liberation Serif for the serif families, Liberation Sans otherwise.
+/// resolves to. A stopgap, and the one place that knows: it is right only
+/// where fontconfig resolves these names to Liberation Serif and Liberation
+/// Sans, as on the machine it was measured on (layout.md §1.2). Any other
+/// font, monospace included, gets Liberation Sans's numbers, and its glyphs
+/// can land a row off. How to obtain real metrics, also for
+/// `line-height: normal`, is undecided; replace this function then.
 fn font_extents(family: &str) -> (f32, f32) {
     match family {
         "serif" | "Times" | "Times New Roman" | "Georgia" | "Liberation Serif" => (0.891, 0.216),
@@ -704,7 +708,7 @@ fn font_extents(family: &str) -> (f32, f32) {
 /// Chromium's baseline in a `line` px line box of `style`'s font, from the
 /// line's top. It rounds the font's ascent and descent, and floors the
 /// half-leading, so the offset is whole and the glyphs' row is the line's
-/// top rounded half up (measured, layout.md §1.2).
+/// top rounded half up (`tools/visual/paint`, layout.md §1.2).
 pub(super) fn whole_baseline(style: &ComputedStyle, line: f32) -> f32 {
     let (a, d) = font_extents(&font_family(&style.font_family));
     let ascent = (a * style.font_size).round();

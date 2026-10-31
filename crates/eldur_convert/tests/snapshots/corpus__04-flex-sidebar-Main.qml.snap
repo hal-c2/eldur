@@ -135,6 +135,7 @@ ApplicationWindow {
                                                 implicitHeight: menuItemText.implicitHeight + 20
                                                 Layout.fillWidth: true
                                                 Layout.preferredHeight: implicitHeight
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 Shape {
                                                     id: menuItemInset
@@ -195,6 +196,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.topMargin: 4 - menuItem.eldurCarry
                                                 Layout.preferredHeight: implicitHeight
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 Text {
                                                     id: menuItemText2
@@ -235,6 +237,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.topMargin: 4 - menuItem2.eldurCarry
                                                 Layout.preferredHeight: implicitHeight
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 Text {
                                                     id: menuItemText3
@@ -275,6 +278,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.topMargin: 4 - menuItem3.eldurCarry
                                                 Layout.preferredHeight: implicitHeight
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 Text {
                                                     id: menuItemText4
@@ -315,6 +319,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.topMargin: 4 - menuItem4.eldurCarry
                                                 Layout.preferredHeight: implicitHeight
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 Text {
                                                     id: menuItemText5
@@ -391,6 +396,7 @@ ApplicationWindow {
                                                 implicitHeight: menuItemText6.implicitHeight + 20
                                                 Layout.fillWidth: true
                                                 Layout.preferredHeight: implicitHeight
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 Text {
                                                     id: menuItemText6
@@ -431,6 +437,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.topMargin: 4 - menuItem5.eldurCarry
                                                 Layout.preferredHeight: implicitHeight
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 Text {
                                                     id: menuItemText7
@@ -471,6 +478,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.topMargin: 4 - menuItem6.eldurCarry
                                                 Layout.preferredHeight: implicitHeight
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 Text {
                                                     id: menuItemText8
@@ -597,6 +605,7 @@ ApplicationWindow {
                                                             radius: 6
                                                             border.width: 1
                                                             border.color: "#c8d0de"
+                                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                         }
                                                         topPadding: 9
                                                         rightPadding: 13
@@ -654,6 +663,7 @@ ApplicationWindow {
                                                         Layout.fillWidth: true
                                                         Layout.preferredWidth: 0
                                                         Layout.fillHeight: true
+                                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                         ColumnLayout {
                                                             id: statContent
@@ -715,6 +725,7 @@ ApplicationWindow {
                                                         Layout.fillWidth: true
                                                         Layout.preferredWidth: 0
                                                         Layout.fillHeight: true
+                                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                         ColumnLayout {
                                                             id: statContent2
@@ -776,6 +787,7 @@ ApplicationWindow {
                                                         Layout.fillWidth: true
                                                         Layout.preferredWidth: 0
                                                         Layout.fillHeight: true
+                                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                         ColumnLayout {
                                                             id: statContent3
@@ -837,6 +849,7 @@ ApplicationWindow {
                                                     border.color: "#e1e5ee"
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 20
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     ColumnLayout {
                                                         id: panelContent
@@ -913,6 +926,7 @@ ApplicationWindow {
                                                                     Layout.fillWidth: true
                                                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                                                     Layout.alignment: Qt.AlignVCenter
+                                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                                     Text {
                                                                         id: pillText
@@ -994,6 +1008,7 @@ ApplicationWindow {
                                                                     Layout.fillWidth: true
                                                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                                                     Layout.alignment: Qt.AlignVCenter
+                                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                                     Text {
                                                                         id: pillText2
@@ -1075,6 +1090,7 @@ ApplicationWindow {
                                                                     Layout.fillWidth: true
                                                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                                                     Layout.alignment: Qt.AlignVCenter
+                                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                                     Text {
                                                                         id: pillText3

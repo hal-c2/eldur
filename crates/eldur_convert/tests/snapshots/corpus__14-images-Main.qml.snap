@@ -199,6 +199,7 @@ ApplicationWindow {
                         x: 32
                         anchors.bottom: parent.bottom
                         anchors.bottomMargin: 24
+                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                         ColumnLayout {
                             id: heroCaptionContent
@@ -405,6 +406,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 0
                                 Layout.alignment: Qt.AlignTop
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                 ColumnLayout {
                                     id: figureContent
@@ -551,6 +553,7 @@ ApplicationWindow {
                             Layout.maximumWidth: parent.width
                             Layout.preferredHeight: 250
                             Layout.topMargin: 32
+                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                             Shape {
                                 id: thumbCorners
@@ -580,6 +583,7 @@ ApplicationWindow {
                                 radius: 10
                                 border.width: 1
                                 border.color: "#e3e7ef"
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                             }
                         }
 

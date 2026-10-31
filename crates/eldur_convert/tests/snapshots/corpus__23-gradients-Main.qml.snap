@@ -733,6 +733,7 @@ ApplicationWindow {
                         implicitHeight: tileText11.implicitHeight + 32
                         width: Math.min(220, parent.width)
                         height: 120
+                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                         Shape {
                             id: tileGradient12
@@ -771,6 +772,7 @@ ApplicationWindow {
                             radius: 20
                             border.width: 4
                             border.color: "#1b2231"
+                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                         }
 
                         Text {

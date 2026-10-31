@@ -632,6 +632,7 @@ ApplicationWindow {
                             implicitHeight: preText.implicitHeight + 32
                             Layout.fillWidth: true
                             Layout.topMargin: 20 - p9.eldurCarry
+                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                             Text {
                                 id: preText
@@ -750,6 +751,7 @@ ApplicationWindow {
                                         height: 5
                                         color: "#1d1f23"
                                         radius: 2.5
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                     }
                                 }
 
@@ -789,6 +791,7 @@ ApplicationWindow {
                                         height: 5
                                         color: "#1d1f23"
                                         radius: 2.5
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                     }
                                 }
 
@@ -828,6 +831,7 @@ ApplicationWindow {
                                         height: 5
                                         color: "#1d1f23"
                                         radius: 2.5
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                     }
                                 }
                             }

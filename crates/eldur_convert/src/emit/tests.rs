@@ -1555,11 +1555,43 @@ fn a_box_around_a_carried_column_paints_its_css_height() {
         .unwrap_or_else(|| panic!("{a:?}"));
     assert!(height.ends_with(".eldurCarry"), "{a:?}");
     assert!(
-        a.iter().any(|l| l.starts_with("property real eldurCarry: Math.ceil(Layout.topMargin - (")),
+        a.iter()
+            .any(|l| l.starts_with("property real eldurCarry: Math.ceil(Layout.topMargin - (")),
         "{a:?}"
     );
     let b = own_lines(object_after(&qml, r#"<div id="b" class="c">"#));
-    assert!(b.iter().any(|l| l.ends_with(".eldurCarry") && l.starts_with("Layout.topMargin: 9.3 - ")), "{b:?}");
+    assert!(
+        b.iter()
+            .any(|l| l.ends_with(".eldurCarry") && l.starts_with("Layout.topMargin: 9.3 - ")),
+        "{b:?}"
+    );
+}
+
+#[test]
+fn a_rounded_box_antialiases_only_while_it_sits_whole() {
+    // Its straight edges would spread over two rows otherwise, where
+    // Chromium's are one (layout.md §1.2, tools/visual/paint).
+    let (qml, _) = convert(&page(
+        ".r{border-radius:4px;height:10px;background:#eee} .t{transform:rotate(10deg)} \
+         .s{height:10px;background:#eee}",
+        r#"<div class="r"></div><div class="r t"></div><div class="s"></div>"#,
+    ));
+    let line = own_lines(object_after(&qml, r#"<div class="r">"#))
+        .into_iter()
+        .find(|l| l.starts_with("antialiasing: "))
+        .map(str::to_owned);
+    assert_eq!(
+        line.as_deref(),
+        Some(
+            "antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 \
+             && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0"
+        ),
+        "{qml}"
+    );
+    for plain in [r#"<div class="r t">"#, r#"<div class="s">"#] {
+        let o = object_after(&qml, plain);
+        assert!(!o.contains("antialiasing"), "{o}");
+    }
 }
 
 #[test]

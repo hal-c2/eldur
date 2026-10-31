@@ -32,6 +32,7 @@ const BOXES = {
   border: "height:20px;background:#f00;border:1px solid #000;box-sizing:border-box",
   bordertall: "height:20.5px;background:#f00;border:1px solid #000;box-sizing:border-box",
   thick: "height:20px;background:#f00;border:2px solid #000;box-sizing:border-box",
+  round: "height:20px;background:#f00;border:1px solid #000;box-sizing:border-box;border-radius:3px",
   bottom: "height:20.25px;background:#f00;border-bottom:1px solid #000;box-sizing:border-box",
 };
 
@@ -52,7 +53,7 @@ function page() {
     ".stage{position:relative;width:1280px;height:800px;overflow:hidden}",
     ".abs{position:absolute;width:20px}",
     ".line{position:absolute;width:44px;color:#000;white-space:nowrap}",
-    ".flow{position:absolute;left:20px;top:330px;width:330px}",
+    ".flow{position:absolute;left:20px;top:370px;width:330px}",
     ".card{background:#eee;border:1px solid #000;padding:10px;margin-bottom:9.3px}",
     ".card p{font:16px/27.2px sans-serif;color:#000}",
     ...Object.entries(BOXES).map(([k, v]) => `.${k}{${v}}`),

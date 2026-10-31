@@ -421,6 +421,7 @@ ApplicationWindow {
                                                 implicitWidth: eyebrowText.implicitWidth + 28
                                                 implicitHeight: eyebrowText.implicitHeight + 12
                                                 width: Math.min(implicitWidth, blockFlow.width)
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 Text {
                                                     id: eyebrowText
@@ -630,6 +631,7 @@ ApplicationWindow {
                                         Layout.preferredWidth: 0
                                         Layout.alignment: Qt.AlignVCenter
                                         Layout.leftMargin: 21.33
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                         ColumnLayout {
                                             id: heroPanelContent
@@ -658,6 +660,7 @@ ApplicationWindow {
                                                     Layout.maximumWidth: 10
                                                     Layout.preferredHeight: 10
                                                     Layout.alignment: Qt.AlignTop
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                 }
 
                                                 // <span class="dot">
@@ -672,6 +675,7 @@ ApplicationWindow {
                                                     Layout.preferredHeight: 10
                                                     Layout.alignment: Qt.AlignTop
                                                     Layout.leftMargin: 8
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                 }
 
                                                 // <span class="dot">
@@ -686,6 +690,7 @@ ApplicationWindow {
                                                     Layout.preferredHeight: 10
                                                     Layout.alignment: Qt.AlignTop
                                                     Layout.leftMargin: 8
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                 }
 
                                                 Item {
@@ -752,6 +757,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.preferredHeight: 8
                                                 Layout.topMargin: 8
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 ColumnLayout {
                                                     id: meterContent
@@ -769,6 +775,7 @@ ApplicationWindow {
                                                         Layout.fillWidth: true
                                                         Layout.maximumWidth: parent.width * 0.72
                                                         Layout.preferredHeight: 8
+                                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                     }
                                                 }
                                             }
@@ -832,6 +839,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.preferredHeight: 8
                                                 Layout.topMargin: 8
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 ColumnLayout {
                                                     id: meterContent2
@@ -849,6 +857,7 @@ ApplicationWindow {
                                                         Layout.fillWidth: true
                                                         Layout.maximumWidth: parent.width * 0.45
                                                         Layout.preferredHeight: 8
+                                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                     }
                                                 }
                                             }
@@ -912,6 +921,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.preferredHeight: 8
                                                 Layout.topMargin: 8
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 ColumnLayout {
                                                     id: meterContent3
@@ -929,6 +939,7 @@ ApplicationWindow {
                                                         Layout.fillWidth: true
                                                         Layout.maximumWidth: parent.width * 0.88
                                                         Layout.preferredHeight: 8
+                                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                     }
                                                 }
                                             }
@@ -1113,6 +1124,7 @@ ApplicationWindow {
                                             Layout.fillWidth: true
                                             Layout.preferredWidth: 0
                                             Layout.fillHeight: true
+                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                             ColumnLayout {
                                                 id: featureCardContent
@@ -1235,6 +1247,7 @@ ApplicationWindow {
                                             Layout.fillWidth: true
                                             Layout.preferredWidth: 0
                                             Layout.fillHeight: true
+                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                             ColumnLayout {
                                                 id: featureCardContent2
@@ -1357,6 +1370,7 @@ ApplicationWindow {
                                             Layout.fillWidth: true
                                             Layout.preferredWidth: 0
                                             Layout.fillHeight: true
+                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                             ColumnLayout {
                                                 id: featureCardContent3
@@ -1564,6 +1578,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: 48
                                                 Layout.preferredHeight: 48
                                                 Layout.alignment: Qt.AlignVCenter
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 Text {
                                                     id: avatarText
@@ -1689,6 +1704,7 @@ ApplicationWindow {
                                         implicitWidth: ctaBandContent.implicitWidth + 128
                                         implicitHeight: ctaBandContent.implicitHeight + 128
                                         Layout.fillWidth: true
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                         RowLayout {
                                             id: ctaBandContent

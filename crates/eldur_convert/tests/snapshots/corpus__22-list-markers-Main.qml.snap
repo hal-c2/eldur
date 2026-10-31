@@ -99,6 +99,7 @@ ApplicationWindow {
                                         height: 5
                                         color: "#1b2231"
                                         radius: 2.5
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                     }
                                 }
 
@@ -133,6 +134,7 @@ ApplicationWindow {
                                         height: 5
                                         color: "#1b2231"
                                         radius: 2.5
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                     }
                                 }
                             }
@@ -186,6 +188,7 @@ ApplicationWindow {
                                         border.width: 1
                                         border.color: "#1b2231"
                                         radius: 2.5
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                     }
                                 }
                             }
@@ -288,6 +291,7 @@ ApplicationWindow {
                                         height: 7
                                         color: "#1b2231"
                                         radius: 3.5
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                     }
                                 }
                             }
@@ -893,6 +897,7 @@ ApplicationWindow {
                                         height: 5
                                         color: "#1b2231"
                                         radius: 2.5
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                     }
                                 }
                             }

@@ -81,6 +81,14 @@ converter tests.
 other than an inline one, in document order, with the `<tag id class>` text
 the converter writes in its source comments (`describe`).
 
+### Painting probe: `paint/`
+
+`node tools/visual/paint/gen.mjs` regenerates `page.html`, `chromium.json` and
+`shifts.txt`: how Chromium paints boxes and text lines at fractions of a pixel,
+and the baselines Qt gives the same fonts. `PaintSnapTests` in `test_visual.py`
+compares a conversion of the page with them pixel by pixel on the gl backend;
+`eldur_convert`'s glyph test reads `shifts.txt`. See `docs/spec/layout.md` §1.2.
+
 ### Drift: `drift.py`
 
 ```bash

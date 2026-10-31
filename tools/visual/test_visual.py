@@ -326,6 +326,9 @@ class PaintSnapTests(unittest.TestCase):
 
     FUZZ = 2
     maxDiff = None
+    # The probe at exactly half a pixel. The one at 0.51 is 0.5 to Chromium,
+    # in 1/64 px units, and 0.51 to Qt; both come out on the same column.
+    HALF_X = 510.5
     tmp: tempfile.TemporaryDirectory[str]
     measured: dict
     pixels: dict[str, np.ndarray]
@@ -367,7 +370,7 @@ class PaintSnapTests(unittest.TestCase):
             diff = self._differences(rows, image[y0 : y0 + len(rows), x], y0)
             if "cols" in box:
                 y, x0, cols = box["row"], box["fromX"], box["cols"]
-                if box["x"] % 1 != 0.5:
+                if box["x"] != self.HALF_X:
                     diff += self._differences(cols, image[y, x0 : x0 + len(cols)], x0)
             if diff:
                 wrong[f"{box['x']},{box['y']} {box['width']}x{box['height']}"] = diff[:4]
@@ -378,9 +381,7 @@ class PaintSnapTests(unittest.TestCase):
         # column whose centre is on the edge, Chromium rounds half up. This
         # fails when that changes; move the case into the test above then.
         image = self.pixels["gl"]
-        boxes = [b for b in self.measured["boxes"] if b["x"] % 1 == 0.5 and "cols" in b]
-        self.assertEqual(len(boxes), 1)
-        box = boxes[0]
+        box = next(b for b in self.measured["boxes"] if b["x"] == self.HALF_X)
         y, x0, cols = box["row"], box["fromX"], box["cols"]
         left = int(np.floor(box["x"]))
         self.assertEqual(cols[left - x0], "255,255,255")

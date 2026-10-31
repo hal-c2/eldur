@@ -63,6 +63,7 @@ ApplicationWindow {
                         Layout.preferredWidth: parent.width
                         Layout.maximumWidth: Math.min(parent.width, 520)
                         Layout.alignment: Qt.AlignVCenter
+                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                         RectangularShadow {
                             anchors.fill: parent
@@ -180,6 +181,7 @@ ApplicationWindow {
                                             radius: 8
                                             border.width: 1
                                             border.color: name.activeFocus ? "#3b6fe0" : "#cfd6e4"
+                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                             RectangularShadow {
                                                 anchors.fill: parent
@@ -258,6 +260,7 @@ ApplicationWindow {
                                             radius: 8
                                             border.width: 1
                                             border.color: email.activeFocus ? "#3b6fe0" : "#cfd6e4"
+                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                             RectangularShadow {
                                                 anchors.fill: parent
@@ -337,6 +340,7 @@ ApplicationWindow {
                                             radius: 8
                                             border.width: 1
                                             border.color: password.activeFocus ? "#3b6fe0" : "#cfd6e4"
+                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                             RectangularShadow {
                                                 anchors.fill: parent
@@ -419,6 +423,7 @@ ApplicationWindow {
                                             radius: 8
                                             border.width: 1
                                             border.color: team.activeFocus ? "#3b6fe0" : "#cfd6e4"
+                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                             RectangularShadow {
                                                 anchors.fill: parent
@@ -516,6 +521,7 @@ ApplicationWindow {
                                                 radius: 8
                                                 border.width: 1
                                                 border.color: bio.activeFocus ? "#3b6fe0" : "#cfd6e4"
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 RectangularShadow {
                                                     anchors.fill: parent
@@ -552,6 +558,7 @@ ApplicationWindow {
                                         border.color: "#cfd6e4"
                                         y: Math.max(0, (fieldset.implicitLabelHeight - 1) / 2)
                                         height: fieldset.height - y
+                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                     }
                                     label: Item {
                                         implicitWidth: legendText.implicitWidth + 12
@@ -624,6 +631,7 @@ ApplicationWindow {
                                                         radius: width / 2
                                                         color: "#ffffff"
                                                         border.color: plan.checked ? "#3b6fe0" : "#767676"
+                                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                         Rectangle {
                                                             anchors.centerIn: parent
@@ -632,6 +640,7 @@ ApplicationWindow {
                                                             radius: width / 2
                                                             color: "#3b6fe0"
                                                             visible: plan.checked
+                                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                         }
                                                     }
                                                     ButtonGroup.group: planGroup
@@ -697,6 +706,7 @@ ApplicationWindow {
                                                         radius: width / 2
                                                         color: "#ffffff"
                                                         border.color: plan2.checked ? "#3b6fe0" : "#767676"
+                                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                         Rectangle {
                                                             anchors.centerIn: parent
@@ -705,6 +715,7 @@ ApplicationWindow {
                                                             radius: width / 2
                                                             color: "#3b6fe0"
                                                             visible: plan2.checked
+                                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                         }
                                                     }
                                                     ButtonGroup.group: planGroup
@@ -770,6 +781,7 @@ ApplicationWindow {
                                                         radius: width / 2
                                                         color: "#ffffff"
                                                         border.color: plan3.checked ? "#3b6fe0" : "#767676"
+                                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                         Rectangle {
                                                             anchors.centerIn: parent
@@ -778,6 +790,7 @@ ApplicationWindow {
                                                             radius: width / 2
                                                             color: "#3b6fe0"
                                                             visible: plan3.checked
+                                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                         }
                                                     }
                                                     ButtonGroup.group: planGroup
@@ -884,6 +897,7 @@ ApplicationWindow {
                                                 radius: 8
                                                 border.width: 1
                                                 border.color: seats.activeFocus ? "#3b6fe0" : "#cfd6e4"
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 RectangularShadow {
                                                     anchors.fill: parent
@@ -983,12 +997,14 @@ ApplicationWindow {
                                                 radius: 4
                                                 color: "#efefef"
                                                 border.color: "#767676"
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 Rectangle {
                                                     width: volume.visualPosition * parent.width
                                                     height: parent.height
                                                     radius: 4
                                                     color: "#0075ff"
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                 }
                                             }
                                             handle: Rectangle {
@@ -998,6 +1014,7 @@ ApplicationWindow {
                                                 height: 16
                                                 radius: 8
                                                 color: "#0075ff"
+                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                             }
                                             Accessible.name: "Notification volume"
                                             Layout.fillWidth: true
@@ -1054,6 +1071,7 @@ ApplicationWindow {
                                             radius: 2
                                             color: terms.checked ? "#3b6fe0" : "#ffffff"
                                             border.color: terms.checked ? "#3b6fe0" : "#767676"
+                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                             Text {
                                                 anchors.centerIn: parent
@@ -1126,6 +1144,7 @@ ApplicationWindow {
                                             radius: 8
                                             border.width: 1
                                             border.color: "#cfd6e4"
+                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                         }
                                         topPadding: 11
                                         rightPadding: 19
@@ -1165,6 +1184,7 @@ ApplicationWindow {
                                             radius: 8
                                             border.width: 1
                                             border.color: "#00000000"
+                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                         }
                                         topPadding: 11
                                         rightPadding: 19

@@ -116,6 +116,7 @@ ApplicationWindow {
                                     border.width: 1
                                     border.color: "#e1e5ee"
                                     Layout.fillWidth: true
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                     ColumnLayout {
                                         id: cardContent
@@ -277,6 +278,7 @@ ApplicationWindow {
                                                                                     height: 6
                                                                                     x: 0
                                                                                     y: 9.6
+                                                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                                                 }
                                                                             }
 
@@ -319,6 +321,7 @@ ApplicationWindow {
                                                                                     height: 6
                                                                                     x: 0
                                                                                     y: 9.6
+                                                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                                                                 }
                                                                             }
                                                                         }
@@ -475,6 +478,7 @@ ApplicationWindow {
                                     border.color: "#e1e5ee"
                                     Layout.fillWidth: true
                                     Layout.topMargin: 24
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                     ColumnLayout {
                                         id: cardContent2
@@ -706,6 +710,7 @@ ApplicationWindow {
                                     border.width: 1
                                     border.color: "#e1e5ee"
                                     Layout.fillWidth: true
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                     ColumnLayout {
                                         id: cardContent3
@@ -909,6 +914,7 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     Layout.topMargin: 24
                                     Layout.preferredHeight: implicitHeight - tags.eldurCarry
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                     ColumnLayout {
                                         id: cardContent4
@@ -959,6 +965,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText.implicitWidth + 28
                                                     implicitHeight: aText.implicitHeight + 12
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {
                                                         id: aText
@@ -1000,6 +1007,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText2.implicitWidth + 28
                                                     implicitHeight: aText2.implicitHeight + 12
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {
                                                         id: aText2
@@ -1041,6 +1049,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText3.implicitWidth + 28
                                                     implicitHeight: aText3.implicitHeight + 12
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {
                                                         id: aText3
@@ -1082,6 +1091,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText4.implicitWidth + 28
                                                     implicitHeight: aText4.implicitHeight + 12
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {
                                                         id: aText4
@@ -1123,6 +1133,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText5.implicitWidth + 28
                                                     implicitHeight: aText5.implicitHeight + 12
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {
                                                         id: aText5
@@ -1164,6 +1175,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText6.implicitWidth + 28
                                                     implicitHeight: aText6.implicitHeight + 12
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {
                                                         id: aText6
@@ -1205,6 +1217,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText7.implicitWidth + 28
                                                     implicitHeight: aText7.implicitHeight + 12
+                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {
                                                         id: aText7
