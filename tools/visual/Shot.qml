@@ -21,11 +21,19 @@ QtObject {
     property string outputPath: ""
     property int reqWidth: 1280
     property int reqHeight: 800
-    property int swappedCount: 0
-    property int readyTicks: 0
+    property int quietMs: 250
+    property int maxWaitMs: 4000
     property int totalTicks: 0
     property bool imagesReady: false
     property bool grabStarted: false
+    // Settling: a frame is swapped only when something in the scene changed
+    // (QQuickItem::update() / polish schedule one); a static scene swaps no
+    // frames. So the page has settled once no frame has been swapped for
+    // quietMs, after at least one frame at the requested size.
+    property bool settling: false
+    property bool frameAtSize: false
+    property double settleStart: 0
+    property double lastActivity: 0
 
     property Component hostWindowComp: Component {
         Window {
@@ -47,40 +55,58 @@ QtObject {
     property Connections windowConn: Connections {
         target: root.targetWindow
         function onFrameSwapped() {
-            if (!root.imagesReady)
+            if (!root.settling)
                 return;
-            root.swappedCount += 1;
-            if (root.swappedCount >= 2) {
+            if (root.targetWindow.width === root.reqWidth && root.targetWindow.height === root.reqHeight)
+                root.frameAtSize = true;
+            root.lastActivity = Date.now();
+        }
+        function onWidthChanged() { root.sizeChanged(); }
+        function onHeightChanged() { root.sizeChanged(); }
+    }
+
+    // Only watches the clock; it never requests frames, which would keep the
+    // scene from ever looking quiet.
+    property Timer settleWatch: Timer {
+        interval: 16
+        repeat: true
+        onTriggered: {
+            root.totalTicks += 1;
+            const now = Date.now();
+            if (!root.imagesReady) {
+                if (!root.hasLoadingImages(root.captureRoot) || root.totalTicks > 120)
+                    root.startSettling();
+                return;
+            }
+            if (root.hasLoadingImages(root.captureRoot))
+                root.lastActivity = now;
+            if (root.frameAtSize && now - root.lastActivity >= root.quietMs) {
+                root.triggerGrab();
+            } else if (now - root.settleStart >= root.maxWaitMs) {
+                console.warn("Shot.qml: page did not settle within " + root.maxWaitMs
+                             + " ms (frames kept changing); capturing anyway");
                 root.triggerGrab();
             }
         }
     }
 
-    // Offscreen software rendering stops scheduling swaps once a static scene
-    // settles; requestUpdate() drives two frames and readyTicks acts as a
-    // bounded fallback if the platform plugin coalesces swap signals.
-    property Timer frameDriver: Timer {
-        interval: 16
-        repeat: true
-        onTriggered: {
-            root.totalTicks += 1;
-            if (!root.imagesReady) {
-                if (!root.hasLoadingImages(root.captureRoot) || root.totalTicks > 120) {
-                    root.imagesReady = true;
-                    root.swappedCount = 0;
-                    root.readyTicks = 0;
-                }
-            } else {
-                root.readyTicks += 1;
-                if (root.swappedCount >= 2 || root.readyTicks >= 6) {
-                    root.triggerGrab();
-                    return;
-                }
-            }
-            if (root.targetWindow) {
-                root.targetWindow.requestUpdate();
-            }
-        }
+    function startSettling() {
+        root.imagesReady = true;
+        root.settling = true;
+        root.frameAtSize = false;
+        root.settleStart = Date.now();
+        root.lastActivity = root.settleStart;
+        // One frame so a scene that is already static is drawn at least once.
+        if (root.targetWindow)
+            root.targetWindow.requestUpdate();
+    }
+
+    function sizeChanged() {
+        if (!root.settling)
+            return;
+        root.frameAtSize = false;
+        root.lastActivity = Date.now();
+        root.targetWindow.requestUpdate();
     }
 
     function hasLoadingImages(item: Item): bool {
@@ -115,7 +141,7 @@ QtObject {
         if (root.grabStarted || !root.captureRoot || !root.targetWindow)
             return;
         root.grabStarted = true;
-        frameDriver.stop();
+        settleWatch.stop();
 
         // grabToImage scales to targetSize, so a window the platform resized
         // (a tiling compositor, a too-small screen) would come out stretched
@@ -193,10 +219,9 @@ QtObject {
             return;
         }
 
-        if (!root.hasLoadingImages(root.captureRoot)) {
-            root.imagesReady = true;
-        }
-        frameDriver.start();
+        if (!root.hasLoadingImages(root.captureRoot))
+            root.startSettling();
+        settleWatch.start();
     }
 
     Component.onCompleted: {
@@ -210,7 +235,7 @@ QtObject {
         }
         const tail = sepIdx >= 0 ? args.slice(sepIdx + 1) : args.slice(Math.max(0, args.length - 4));
         if (tail.length < 4) {
-            console.error("Shot.qml: expected arguments -- <mainUrl> <width> <height> <outPath>, got: " + JSON.stringify(args));
+            console.error("Shot.qml: expected arguments -- <mainUrl> <width> <height> <outPath> [quietMs maxWaitMs], got: " + JSON.stringify(args));
             Qt.exit(2);
             return;
         }
@@ -229,6 +254,10 @@ QtObject {
         root.reqWidth = w;
         root.reqHeight = h;
         root.outputPath = outPath;
+        if (tail.length >= 6) {
+            root.quietMs = parseInt(tail[4], 10);
+            root.maxWaitMs = parseInt(tail[5], 10);
+        }
 
         const comp = Qt.createComponent(mainUrl);
         if (comp.status === Component.Loading) {

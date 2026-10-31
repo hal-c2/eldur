@@ -260,6 +260,92 @@ Item {
 """
 
 
+# The final appearance arrives only after five changes 50 ms apart, as text
+# wrapping around a float settles through callLater/forceLayout chains. Each
+# change is visible, so a grab before the chain ends shows a wrong colour or a
+# wrong wrap width.
+DELAYED_QML = """import QtQuick
+
+Item {
+    id: page
+    property int step: 0
+    readonly property var colours: ["#ff0000", "#ffff00", "#0000ff", "#ff00ff", "#00ffff", "#00ff00"]
+    Rectangle {
+        id: box
+        x: 0; y: 0; width: 160; height: 60
+        color: page.colours[page.step]
+    }
+    Rectangle {
+        x: 0; y: 60
+        width: 40 + page.step * 24; height: 40
+        color: "#000000"
+    }
+    Timer {
+        interval: 50
+        repeat: true
+        running: page.step < 5
+        onTriggered: page.step += 1
+    }
+}
+"""
+
+# Never quiet: Shot.qml must still grab, but warn that the page did not settle.
+RESTLESS_QML = """import QtQuick
+
+Rectangle {
+    width: 40; height: 40
+    color: "#ff0000"
+    RotationAnimation on rotation { from: 0; to: 360; duration: 1000; loops: Animation.Infinite }
+}
+"""
+
+
+def _assert_delayed_final_state(test: unittest.TestCase, png: Path) -> None:
+    arr = compare.load_rgb(png)
+    test.assertEqual(arr[30, 80].tolist(), [0, 255, 0], "box colour is not the final step's")
+    # The bar ends at x = 40 + 5 * 24 = 160.
+    test.assertEqual(arr[80, 155].tolist(), [0, 0, 0], "bar is not at its final width")
+    test.assertEqual(arr[80, 165].tolist(), [255, 255, 255], "bar is wider than its final width")
+
+
+class RenderQmlSettleTests(unittest.TestCase):
+    def test_software_capture_waits_for_delayed_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text(DELAYED_QML, encoding="utf-8")
+            out_png = tmp_dir / "out.png"
+            warnings = render_qml.render_qml(
+                tmp_dir, out_png, width=200, height=120, strict=True, backend="software"
+            )
+            self.assertEqual(warnings, [])
+            _assert_delayed_final_state(self, out_png)
+
+    @unittest.skipUnless(shutil.which("sway"), "sway is not installed")
+    def test_gl_capture_waits_for_delayed_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text(DELAYED_QML, encoding="utf-8")
+            out_png = tmp_dir / "out.png"
+            warnings = render_qml.render_qml(
+                tmp_dir, out_png, width=200, height=120, strict=True, backend="gl",
+                gl_text="native",
+            )
+            self.assertEqual(warnings, [])
+            _assert_delayed_final_state(self, out_png)
+
+    def test_page_that_never_settles_is_grabbed_with_a_warning(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text(RESTLESS_QML, encoding="utf-8")
+            out_png = tmp_dir / "out.png"
+            with mock.patch.object(render_qml, "SETTLE_MAX_MS", 600):
+                warnings = render_qml.render_qml(
+                    tmp_dir, out_png, width=120, height=80, backend="software"
+                )
+            self.assertTrue(out_png.is_file())
+            self.assertTrue(any("did not settle" in line for line in warnings), warnings)
+
+
 class RenderQmlBackendTests(unittest.TestCase):
     def test_gl_backend_without_sway_fails_clearly(self) -> None:
         real_which = render_qml.shutil.which

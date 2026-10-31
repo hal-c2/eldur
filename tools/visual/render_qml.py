@@ -45,6 +45,12 @@ from PIL import Image
 SCRIPT_DIR = Path(__file__).resolve().parent
 SHOT_QML = SCRIPT_DIR / "Shot.qml"
 DEFAULT_TIMEOUT_SEC = 10.0
+# Shot.qml grabs once no frame has been swapped for SETTLE_QUIET_MS (the page's
+# delayed layout passes, e.g. text wrapping around floats via callLater, have
+# finished), or after SETTLE_MAX_MS with a "did not settle" warning for pages
+# that never go quiet (infinite animations).
+SETTLE_QUIET_MS = 250
+SETTLE_MAX_MS = 4000
 BACKENDS = ("software", "gl")
 DEFAULT_BACKEND = "software"
 GL_TEXT_MODES = ("distancefield", "native")
@@ -293,6 +299,8 @@ def render_qml(
         str(width),
         str(height),
         str(out_abs),
+        str(SETTLE_QUIET_MS),
+        str(SETTLE_MAX_MS),
     ]
 
     try:
