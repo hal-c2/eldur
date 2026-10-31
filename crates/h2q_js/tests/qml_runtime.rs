@@ -3477,3 +3477,633 @@ Item {
         "{output}"
     );
 }
+
+#[test]
+fn qml6_template_lookup_and_fallback_chain_with_single_warning() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default()
+        .with_id("todo-list", 1, "todoList", TargetKind::Box)
+        .with_id("other-box", 2, "otherBox", TargetKind::Box);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verifyTemplateLookup() {
+    const todoList = document.getElementById("todo-list");
+    const otherBox = document.getElementById("other-box");
+
+    // Step 1 exact hit: classes filtered by h2qStyledClasses ("extra" ignored) and sorted ("done", "todo-item")
+    const li = document.createElement("li");
+    li.className = "todo-item extra done";
+    const cb = document.createElement("input");
+    cb.setAttribute("type", "checkbox");
+    cb.className = "toggle";
+    li.appendChild(cb);
+    todoList.appendChild(li);
+
+    // Step 2 fallback (tag.classes@*): span.badge@todoList -> span.badge@*
+    const badge1 = document.createElement("span");
+    badge1.className = "badge";
+    todoList.appendChild(badge1);
+    // Second miss of the same exact key must NOT warn a second time.
+    const badge2 = document.createElement("span");
+    badge2.className = "badge";
+    todoList.appendChild(badge2);
+
+    // Step 3 fallback (tag@context): span.unknown-styled@todoList -> span@todoList
+    const sCtx = document.createElement("span");
+    sCtx.className = "unknown-styled";
+    todoList.appendChild(sCtx);
+
+    // Step 4 fallback (tag@*): p.unknown-styled@otherBox -> p@*
+    const pStar = document.createElement("p");
+    pStar.className = "unknown-styled";
+    otherBox.appendChild(pStar);
+
+    // Step 5 fallback (generic source): div.unknown-styled@todoList -> generic
+    const divGen1 = document.createElement("div");
+    divGen1.className = "unknown-styled";
+    todoList.appendChild(divGen1);
+    const divGen2 = document.createElement("div");
+    divGen2.className = "unknown-styled";
+    todoList.appendChild(divGen2);
+
+    return [
+        li._item.h2qTemplate,
+        li._item.h2qClasses,
+        cb._item.h2qTemplate,
+        badge1._item.h2qTemplate,
+        badge2._item.h2qTemplate,
+        sCtx._item.h2qTemplate,
+        pStar._item.h2qTemplate,
+        divGen1._item.h2qTemplate || "generic",
+        divGen1.tagName
+    ].join("|");
+}
+"##,
+        r#"import QtQuick
+import QtQuick.Layouts
+
+Item {
+    id: root
+    readonly property var h2qStyledClasses: ["badge", "done", "todo-item", "toggle", "unknown-styled"]
+    readonly property var h2qTemplates: ({
+        "li.done.todo-item@todoList": h2qT_li_exact,
+        "input[type=checkbox].toggle@h2qT_li_exact": h2qT_input_cb,
+        "span.badge@*": h2qT_span_star,
+        "span@todoList": h2qT_span_ctx,
+        "p@*": h2qT_p_star
+    })
+
+    Component {
+        id: h2qT_li_exact
+        RowLayout {
+            property string h2qTag: "li"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_li_exact"
+            property bool cls_done: false
+        }
+    }
+    Component {
+        id: h2qT_input_cb
+        CheckBox {
+            property string h2qTag: "input"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_input_cb"
+        }
+    }
+    Component {
+        id: h2qT_span_star
+        Text {
+            property string h2qTag: "span"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_span_star"
+        }
+    }
+    Component {
+        id: h2qT_span_ctx
+        Text {
+            property string h2qTag: "span"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_span_ctx"
+        }
+    }
+    Component {
+        id: h2qT_p_star
+        Text {
+            property string h2qTag: "p"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_p_star"
+        }
+    }
+
+    ColumnLayout {
+        id: todoList
+        objectName: "todo-list"
+        property string h2qTag: "ul"
+        property string h2qKey: "todoList"
+    }
+    ColumnLayout {
+        id: otherBox
+        objectName: "other-box"
+        property string h2qTag: "div"
+        property string h2qKey: "otherBox"
+    }
+
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        console.log("H2Q_OK_LOOKUP", Page.verifyTemplateLookup());
+        Qt.quit();
+    }
+}"#,
+    );
+
+    assert!(
+        output.contains("H2Q_OK_LOOKUP h2qT_li_exact|todo-item extra done|h2qT_input_cb|h2qT_span_star|h2qT_span_star|h2qT_span_ctx|h2qT_p_star|generic|DIV"),
+        "{output}"
+    );
+    assert_eq!(
+        output
+            .matches("no style template for li.done.todo-item@todoList")
+            .count(),
+        0,
+        "{output}"
+    );
+    assert_eq!(
+        output
+            .matches("h2q: no style template for span.badge@todoList; using span.badge@*")
+            .count(),
+        1,
+        "{output}"
+    );
+    assert_eq!(
+        output
+            .matches("h2q: no style template for span.unknown-styled@todoList; using span@todoList")
+            .count(),
+        1,
+        "{output}"
+    );
+    assert_eq!(
+        output
+            .matches("h2q: no style template for p.unknown-styled@otherBox; using p@*")
+            .count(),
+        1,
+        "{output}"
+    );
+    assert_eq!(
+        output
+            .matches("h2q: no style template for div.unknown-styled@todoList; using generic")
+            .count(),
+        1,
+        "{output}"
+    );
+}
+
+#[test]
+fn qml6_template_rematerialisation_preserves_state_children_listeners_and_order() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("todo-list", 1, "todoList", TargetKind::Box);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verifyRematerialisation() {
+    const todoList = document.getElementById("todo-list");
+    const events = [];
+
+    const first = document.createElement("li");
+    first.id = "first";
+    first.className = "todo-item";
+
+    const li = document.createElement("li");
+    li.className = "todo-item";
+    li.id = "item-1";
+    li.dataset.index = "42";
+    li.style.opacity = "0.85";
+    li.addEventListener("click", () => { events.push("li:" + li._item.h2qTemplate); });
+
+    const cb = document.createElement("input");
+    cb.addEventListener("change", () => { events.push("cb:" + cb.checked); });
+    cb.type = "checkbox";
+    cb.checked = true;
+    cb.disabled = true;
+
+    const label = document.createElement("span");
+    label.className = "todo-text";
+    label.textContent = "Buy oat milk";
+    label.style.width = "140px";
+    label.addEventListener("click", () => { events.push("label:" + label.textContent); });
+
+    const note = document.createElement("input");
+    note.value = "urgent";
+    note.readOnly = true;
+
+    li.appendChild(cb);
+    li.appendChild(note);
+    li.insertBefore(label, note);
+
+    const last = document.createElement("li");
+    last.id = "last";
+    last.className = "todo-item";
+
+    todoList.appendChild(first);
+    todoList.appendChild(li);
+    todoList.appendChild(last);
+
+    const initialTemplates = [
+        li._item.h2qTemplate,
+        cb._item.h2qTemplate,
+        label._item.h2qTemplate,
+        note._item.h2qTemplate
+    ].join(",");
+
+    const childTagsBefore = Array.from(li.children).map((c) => c.tagName).join(",");
+    const wrapperStable = (todoList.children[1] === li) && (li.children[0] === cb) && (li.children[1] === label) && (li.children[2] === note);
+
+    // Fire listeners after initial connection rematerialisation
+    li.click();
+    cb._item.toggled();
+    label.click();
+
+    // Same-template class change: updates cls_done and h2qClasses without swapping _item
+    const itemBeforeSame = li._item;
+    li.classList.add("done");
+    const sameItemKept = (li._item === itemBeforeSame);
+    const clsAfterAdd = li.className + ":" + li._item.h2qClasses + ":" + li._item.cls_done;
+
+    // Form-change class change: switches from h2qT_li_0 to h2qT_li_card in place
+    li.classList.replace("todo-item", "card-item");
+    const afterSwapTemplate = li._item.h2qTemplate;
+    const clsAfterReplace = li.className + ":" + li._item.h2qClasses + ":" + li._item.cls_done;
+    const childTagsAfter = Array.from(li.children).map((c) => c.tagName).join(",");
+    const childTemplatesAfter = [cb._item.h2qTemplate, label._item.h2qTemplate, note._item.h2qTemplate].join(",");
+    const listOrder = Array.from(todoList.children).map((c) => c.id).join(",");
+
+    // Fire listener again on the newly swapped card item
+    li.click();
+
+    const stateCheck = [
+        li.id,
+        li.dataset.index,
+        Math.round(li._item.opacity * 100),
+        cb.checked,
+        cb.disabled,
+        label.textContent,
+        label._item.width,
+        note.value,
+        note.readOnly
+    ].join(",");
+
+    return [
+        initialTemplates,
+        childTagsBefore,
+        wrapperStable,
+        sameItemKept,
+        clsAfterAdd,
+        afterSwapTemplate,
+        clsAfterReplace,
+        childTagsAfter,
+        childTemplatesAfter,
+        listOrder,
+        stateCheck,
+        events.join(";")
+    ].join("|");
+}
+"##,
+        r#"import QtQuick
+import QtQuick.Layouts
+
+Item {
+    id: root
+    readonly property var h2qStyledClasses: ["card-item", "done", "todo-item", "todo-text"]
+    readonly property var h2qTemplates: ({
+        "li.todo-item@todoList": h2qT_li_0,
+        "li.done.todo-item@todoList": h2qT_li_0,
+        "li.card-item.done@todoList": h2qT_li_card,
+        "input[type=checkbox]@h2qT_li_0": h2qT_input_cb,
+        "input[type=checkbox]@h2qT_li_card": h2qT_input_cb,
+        "span.todo-text@h2qT_li_0": h2qT_span_text,
+        "span.todo-text@h2qT_li_card": h2qT_span_text_card,
+        "input@h2qT_li_0": h2qT_input_text,
+        "input@h2qT_li_card": h2qT_input_text
+    })
+
+    Component {
+        id: h2qT_li_0
+        RowLayout {
+            property string h2qTag: "li"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_li_0"
+            property bool cls_done: false
+        }
+    }
+    Component {
+        id: h2qT_li_card
+        ColumnLayout {
+            property string h2qTag: "li"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_li_card"
+            property bool cls_done: false
+        }
+    }
+    Component {
+        id: h2qT_input_cb
+        CheckBox {
+            property string h2qTag: "input"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_input_cb"
+        }
+    }
+    Component {
+        id: h2qT_span_text
+        Text {
+            property string h2qTag: "span"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_span_text"
+        }
+    }
+    Component {
+        id: h2qT_span_text_card
+        Text {
+            property string h2qTag: "span"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_span_text_card"
+        }
+    }
+    Component {
+        id: h2qT_input_text
+        TextField {
+            property string h2qTag: "input"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_input_text"
+        }
+    }
+
+    ColumnLayout {
+        id: todoList
+        objectName: "todo-list"
+        property string h2qTag: "ul"
+        property string h2qKey: "todoList"
+    }
+
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        console.log("H2Q_OK_REMAT", Page.verifyRematerialisation());
+        Qt.quit();
+    }
+}"#,
+    );
+
+    assert!(
+        output.contains(
+            "H2Q_OK_REMAT h2qT_li_0,h2qT_input_cb,h2qT_span_text,h2qT_input_text|INPUT,SPAN,INPUT|true|true|todo-item done:todo-item done:true|h2qT_li_card|card-item done:card-item done:true|INPUT,SPAN,INPUT|h2qT_input_cb,h2qT_span_text_card,h2qT_input_text|first,item-1,last|item-1,42,85,true,true,Buy oat milk,140,urgent,true|li:h2qT_li_0;cb:true;label:Buy oat milk;li:h2qT_li_card"
+        ),
+        "{output}"
+    );
+}
+
+#[test]
+fn qml6_template_h2q_up_n_tracks_ancestor_classes_and_parent_rematerialisation() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default()
+        .with_id("todo-list", 1, "todoList", TargetKind::Box)
+        .with_id("archive-list", 2, "archiveList", TargetKind::Box);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verifyUpPointers() {
+    const todoList = document.getElementById("todo-list");
+    const archiveList = document.getElementById("archive-list");
+
+    const li = document.createElement("li");
+    li.className = "todo-item";
+    const wrapDiv = document.createElement("div");
+    wrapDiv.className = "wrap";
+    const leaf = document.createElement("span");
+    leaf.className = "todo-text";
+    leaf.textContent = "Nested item";
+
+    wrapDiv.appendChild(leaf);
+    li.appendChild(wrapDiv);
+    todoList.appendChild(li);
+
+    const upInitialOk = (wrapDiv._item.h2qUp1 === li._item)
+        && (leaf._item.h2qUp1 === wrapDiv._item)
+        && (leaf._item.h2qUp2 === li._item);
+    const strike0 = leaf._item.font.strikeout;
+    const bold0 = leaf._item.font.bold;
+
+    // Toggling class on grandparent (h2qUp2) and parent (h2qUp1)
+    li.classList.toggle("done");
+    wrapDiv.classList.toggle("highlighted");
+    const strike1 = leaf._item.font.strikeout;
+    const bold1 = leaf._item.font.bold;
+
+    // Form change on grandparent li swaps li._item; h2qUp1 and h2qUp2 must update to new li._item
+    li.classList.replace("todo-item", "card-item");
+    const upAfterSwapOk = (wrapDiv._item.h2qUp1 === li._item)
+        && (leaf._item.h2qUp1 === wrapDiv._item)
+        && (leaf._item.h2qUp2 === li._item)
+        && (li._item.h2qTemplate === "h2qT_li_card");
+    li.classList.toggle("done");
+    const strike2 = leaf._item.font.strikeout;
+
+    // Detaching does not rematerialise; reinserting into archiveList rematerialises for new context
+    li.remove();
+    const whileDetached = li._item.h2qTemplate;
+    archiveList.appendChild(li);
+    const afterReinsert = li._item.h2qTemplate;
+    const upAfterReinsertOk = (wrapDiv._item.h2qUp1 === li._item) && (leaf._item.h2qUp2 === li._item);
+
+    return [
+        upInitialOk,
+        strike0,
+        bold0,
+        strike1,
+        bold1,
+        upAfterSwapOk,
+        strike2,
+        whileDetached,
+        afterReinsert,
+        upAfterReinsertOk
+    ].join("|");
+}
+"##,
+        r#"import QtQuick
+import QtQuick.Layouts
+
+Item {
+    id: root
+    readonly property var h2qStyledClasses: ["card-item", "done", "highlighted", "todo-item", "todo-text", "wrap"]
+    readonly property var h2qTemplates: ({
+        "li.todo-item@todoList": h2qT_li_0,
+        "li.done.todo-item@todoList": h2qT_li_0,
+        "li.card-item@todoList": h2qT_li_card,
+        "li.card-item.done@todoList": h2qT_li_card,
+        "li.card-item@archiveList": h2qT_li_archive,
+        "div.wrap@*": h2qT_div_wrap,
+        "div.highlighted.wrap@*": h2qT_div_wrap,
+        "span.todo-text@h2qT_div_wrap": h2qT_span_leaf
+    })
+
+    Component {
+        id: h2qT_li_0
+        RowLayout {
+            property string h2qTag: "li"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_li_0"
+            property bool cls_done: false
+        }
+    }
+    Component {
+        id: h2qT_li_card
+        ColumnLayout {
+            property string h2qTag: "li"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_li_card"
+            property bool cls_done: false
+        }
+    }
+    Component {
+        id: h2qT_li_archive
+        RowLayout {
+            property string h2qTag: "li"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_li_archive"
+            property bool cls_done: false
+        }
+    }
+    Component {
+        id: h2qT_div_wrap
+        RowLayout {
+            property string h2qTag: "div"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_div_wrap"
+            property bool cls_highlighted: false
+            property Item h2qUp1: null
+        }
+    }
+    Component {
+        id: h2qT_span_leaf
+        Text {
+            property string h2qTag: "span"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_span_leaf"
+            property Item h2qUp1: null
+            property Item h2qUp2: null
+            font.bold: Boolean(h2qUp1 && h2qUp1.cls_highlighted)
+            font.strikeout: Boolean(h2qUp2 && h2qUp2.cls_done)
+        }
+    }
+
+    ColumnLayout {
+        id: todoList
+        objectName: "todo-list"
+        property string h2qTag: "ul"
+        property string h2qKey: "todoList"
+    }
+    ColumnLayout {
+        id: archiveList
+        objectName: "archive-list"
+        property string h2qTag: "ul"
+        property string h2qKey: "archiveList"
+    }
+
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        console.log("H2Q_OK_UP_N", Page.verifyUpPointers());
+        Qt.quit();
+    }
+}"#,
+    );
+
+    assert!(
+        output.contains(
+            "H2Q_OK_UP_N true|false|false|true|true|true|false|h2qT_li_card|h2qT_li_archive|true"
+        ),
+        "{output}"
+    );
+}
+
+#[test]
+fn qml6_template_no_behavior_on_insertion_and_behavior_animates_on_toggle() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("todo-list", 1, "todoList", TargetKind::Box);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function startBehaviorTest() {
+    const todoList = document.getElementById("todo-list");
+    const li = document.createElement("li");
+    li.className = "todo-item done";
+    todoList.appendChild(li);
+
+    // On insertion, initial properties passed to createObject must NOT trigger Behavior:
+    // opacity is immediately 0.4, not 1.0.
+    const opacityOnInsert = li._item.opacity.toFixed(2);
+
+    // Toggling class after insertion MUST trigger Behavior:
+    // synchronously after toggle, opacity is still at 0.4 (animating towards 1.0),
+    // and reaches 1.0 after the 100ms animation finishes.
+    li.classList.remove("done");
+    const opacitySyncAfterToggle = li._item.opacity.toFixed(2);
+
+    setTimeout(() => {
+        const opacityAfterAnim = li._item.opacity.toFixed(2);
+        console.log("H2Q_OK_BEHAVIOR", [opacityOnInsert, opacitySyncAfterToggle, opacityAfterAnim].join("|"));
+        Qt.quit();
+    }, 220);
+}
+"##,
+        r#"import QtQuick
+import QtQuick.Layouts
+
+Item {
+    id: root
+    readonly property var h2qStyledClasses: ["done", "todo-item"]
+    readonly property var h2qTemplates: ({
+        "li.todo-item@todoList": h2qT_li_anim,
+        "li.done.todo-item@todoList": h2qT_li_anim
+    })
+
+    Component {
+        id: h2qT_li_anim
+        RowLayout {
+            property string h2qTag: "li"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_li_anim"
+            property bool cls_done: false
+            opacity: cls_done ? 0.4 : 1.0
+            Behavior on opacity { NumberAnimation { duration: 100 } }
+        }
+    }
+
+    ColumnLayout {
+        id: todoList
+        objectName: "todo-list"
+        property string h2qTag: "ul"
+        property string h2qKey: "todoList"
+    }
+
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        Page.startBehaviorTest();
+    }
+}"#,
+    );
+
+    assert!(
+        output.contains("H2Q_OK_BEHAVIOR 0.40|0.40|1.00"),
+        "{output}"
+    );
+}
