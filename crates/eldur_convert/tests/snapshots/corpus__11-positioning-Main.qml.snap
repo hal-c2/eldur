@@ -215,16 +215,22 @@ ApplicationWindow {
                                                                 rightPadding: 18
                                                                 bottomPadding: 10
                                                                 leftPadding: 18
-                                                                implicitHeight: 38
+                                                                implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 18
                                                                 contentItem: Text {
                                                                     text: buttonControl.text
                                                                     font: buttonControl.font
                                                                     color: buttonControl.palette.buttonText
                                                                     horizontalAlignment: Text.AlignHCenter
                                                                     verticalAlignment: Text.AlignVCenter
+                                                                    wrapMode: Text.WordWrap
                                                                     renderType: Text.NativeRendering
                                                                 }
-                                                                width: Math.min(implicitWidth, blockFlow2.width)
+                                                                width: Math.min(implicitWidth, Math.max(blockFlow2.width, Math.ceil(Math.max(...buttonControl.text.split(/\s+/).map(w => buttonControlWords.advanceWidth(w))) * 1) + leftPadding + rightPadding))
+
+                                                                FontMetrics {
+                                                                    id: buttonControlWords
+                                                                    font: buttonControl.font
+                                                                }
                                                             }
                                                         }
                                                     }

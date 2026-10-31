@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Hidden elements</title>
+<style>
+body { margin: 8px; font: 16px/20px Arial, sans-serif; }
+.h { display: none; }
+.card { padding: 4px 8px; border: 1px solid #888; margin: 6px 0; }
+.card b { color: #a00; }
+#controls button { margin-right: 4px; }
+</style>
+</head>
+<body>
+<div id="controls"><button id="b-class">class</button><button id="b-empty">empty</button><button id="b-block">block</button><button id="b-attr">attr</button><button id="b-anc">ancestor</button><button id="b-field">field</button><button id="b-hide">hide</button></div>
+<span id="hid" style="display:none" title="t1" data-kind="span">q</span>
+<div id="hid2" style="display:none" class="card one" data-kind="div">q2</div>
+<div id="hid3" class="h card" data-a-b="x"><b id="hid4" class="inner">r</b><i id="hid4b">s</i></div>
+<input id="hid5" style="display:none" name="five" value="v5">
+<p id="v">visible paragraph</p>
+<div id="hid6" hidden class="card">attr <span id="hid6s">inner</span></div>
+<div id="anc" class="h card"><p id="anc-p" style="margin:2px">deep <em id="anc-em">er</em></p><div id="anc-nest" style="display:none">nested</div></div>
+<form id="f" action="#"><input id="f-a" name="a" value="1"><input id="f-h" type="hidden" name="csrf" value="tok"><input id="f-n" name="n" value="2" style="display:none"><select id="f-s" name="s" style="display:none"><option value="x">X</option><option value="y" selected>Y</option></select><textarea id="f-t" name="t" style="display:none">tt</textarea><button id="f-b" type="button" class="h">go</button></form>
+<template id="tpl"><p id="in-tpl">template</p></template>
+<p id="after">after</p>
+<script>
+var log = function (s) { console.log(s); };
+var get = function (id) { return document.getElementById(id); };
+function rect(e) { var r = e.getBoundingClientRect(); return r.left === 0 && r.top === 0 && r.width === 0 && r.height === 0 ? "zero" : "box"; }
+function near(a, b) { return Math.abs(a - b) <= 1 ? "=" : a + "!=" + b; }
+function report(id) {
+  var e = get(id);
+  if (!e) { log(id + " NULL"); return; }
+  var r = e.getBoundingClientRect(), shown = e.offsetParent !== null;
+  log(id + " " + e.tagName + " rect " + rect(e) + " off " + near(e.offsetWidth, r.width) + " " + near(e.offsetHeight, r.height) + " " + (shown ? near(e.offsetLeft, r.left) + " " + near(e.offsetTop, r.top) : e.offsetLeft + " " + e.offsetTop) + " " + (e.offsetParent ? e.offsetParent.tagName : "null") + " client " + (e.clientWidth > 0) + " " + (e.clientHeight > 0) + " rects " + e.getClientRects().length + " text " + JSON.stringify(e.textContent) + " display " + getComputedStyle(e).display);
+}
+["hid", "hid2", "hid3", "hid4", "hid4b", "hid5", "hid6", "hid6s", "anc", "anc-p", "anc-em", "anc-nest", "f-h", "f-n", "f-s", "f-t", "f-b"].forEach(report);
+log("attr " + get("hid").getAttribute("title") + " " + get("hid").dataset.kind + " " + get("hid3").dataset.aB + " " + get("hid2").className + " " + get("hid2").classList.contains("one") + " " + get("hid6").hidden + " " + get("hid").hidden);
+log("val " + get("hid5").value + " " + get("hid5").name + " " + get("f-s").value + " " + get("f-s").options.length + " " + get("f-t").value + " " + get("f-h").value + " " + get("f-h").type);
+log("q " + document.querySelector("#hid4").id + " " + document.querySelectorAll(".h").length + " " + document.querySelectorAll(".card").length + " " + document.getElementsByClassName("inner").length + " " + document.getElementsByTagName("em").length + " " + document.querySelectorAll("[data-kind]").length + " " + document.querySelectorAll("#hid3 > *").length);
+log("tree " + get("hid3").children.length + " " + get("hid4").parentNode.id + " " + get("hid4").parentElement.id + " " + get("hid4").nextElementSibling.id + " " + get("hid4b").previousElementSibling.id + " " + get("hid").nextElementSibling.id + " " + get("v").previousElementSibling.id + " " + get("v").nextElementSibling.id + " " + get("hid4").closest(".h").id + " " + get("hid4").matches(".inner") + " " + document.querySelectorAll("body > div").length + " " + get("anc").querySelector("em").id + " " + get("anc").firstElementChild.id + " " + get("anc").lastElementChild.id);
+var form = get("f");
+log("form " + form.elements.length + " " + form.elements.csrf.value + " " + form.elements.n.value + " " + form.elements[1].id + " " + form.elements.s.value);
+var data = new FormData(form);
+log("fd " + data.get("a") + " " + data.get("csrf") + " " + data.get("n") + " " + data.get("s") + " " + data.get("t"));
+log("tpl " + get("in-tpl") + " " + get("tpl").children.length + " " + get("tpl").content.children.length + " " + get("tpl").content.firstElementChild.id + " " + rect(get("tpl")));
+var clicks = 0;
+get("hid3").addEventListener("click", function (ev) { clicks++; log("click on hid3 from " + ev.target.id); });
+get("hid4").click();
+get("hid3").click();
+log("clicks " + clicks);
+get("hid").textContent = "written";
+get("hid2").textContent = "written two";
+get("hid4").textContent = "r written";
+get("hid4").style.color = "rgb(0, 128, 0)";
+get("hid5").value = "typed";
+get("hid2").classList.add("two");
+get("hid3").setAttribute("data-x", "1");
+log("wrote " + get("hid").textContent + " " + get("hid2").className + " " + get("hid3").getAttribute("data-x") + " " + get("hid5").value + " " + get("hid3").textContent + " " + rect(get("hid2")));
+var v = get("v");
+v.style.display = "none";
+report("v");
+v.style.display = "";
+report("v");
+["after"].forEach(report);
+var on = function (id, f) { get(id).addEventListener("click", f); };
+on("b-class", function () { get("hid3").classList.remove("h"); ["hid3", "hid4", "hid4b"].forEach(report); report("after"); });
+on("b-empty", function () { get("hid").style.display = ""; report("hid"); get("hid2").style.display = ""; report("hid2"); report("after"); });
+on("b-block", function () { get("hid").style.display = "block"; report("hid"); get("hid5").style.display = "block"; report("hid5"); report("after"); });
+on("b-attr", function () { get("hid6").hidden = false; ["hid6", "hid6s"].forEach(report); report("after"); });
+on("b-anc", function () { get("anc").classList.remove("h"); ["anc", "anc-p", "anc-em", "anc-nest"].forEach(report); report("after"); });
+on("b-field", function () { get("f-b").style.display = ""; report("f-b"); ["f-n", "f-s", "f-t", "f-b"].forEach(function (id) { get(id).style.display = ""; get(id).classList.remove("h"); report(id); }); report("after"); });
+on("b-hide", function () { ["hid3", "anc"].forEach(function (id) { get(id).classList.add("h"); report(id); }); get("hid2").style.display = "none"; ["hid4", "anc-em", "hid2"].forEach(report); report("after"); });
+</script>
+</body>
+</html>

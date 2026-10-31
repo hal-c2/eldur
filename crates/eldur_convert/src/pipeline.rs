@@ -86,6 +86,16 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
             || wanted
                 .iter()
                 .any(|&n| crate::boxes::is_inline_node(&doc, &styles, n)));
+    // A script that walks or looks up at run time can reach anything, and a
+    // hidden element has no object unless it is kept.
+    let reachable = if runtime_dom {
+        let mut all = wanted.clone();
+        all.extend(crate::boxes::hidden_elements(&doc, &styles));
+        all
+    } else {
+        HashSet::new()
+    };
+    let wanted = if runtime_dom { &reachable } else { wanted };
     let inputs = crate::emit::dynamic::Inputs {
         doc: &doc,
         styles: &styles,

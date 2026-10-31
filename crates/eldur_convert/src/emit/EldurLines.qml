@@ -27,6 +27,7 @@ Item {
 
     property var _runs: new Map()
     property var _watched: new Set()
+    property var _ownLeading: new Map()
     property bool _running: false
     property bool _scheduled: false
     property bool _laidOut: false
@@ -34,6 +35,10 @@ Item {
     FontMetrics {
         id: metrics
         font: lines.font
+    }
+
+    FontMetrics {
+        id: runMetrics
     }
 
     function schedule() {
@@ -60,6 +65,28 @@ Item {
         }
     }
 
+    // A run keeps its font's natural height to be placed, so what its own
+    // `line-height` asks of the line is told here. Null is `normal`.
+    function setRunLineHeight(item, pixels) {
+        if (pixels === null) {
+            _ownLeading.delete(item);
+        } else {
+            _ownLeading.set(item, pixels);
+        }
+    }
+
+    // Whether a point in a run's own coordinates is on one of its lines: its box
+    // is their bounding box, and a press beside a short line is not on it.
+    function runCovers(item, x, y) {
+        const run = _runs.get(item);
+        if (!run || !run.place) {
+            return true;
+        }
+        return run.place.some(function(p) {
+            return x >= p.x && x < p.x + p.width && y >= p.y && y < p.y + p.height;
+        });
+    }
+
     function _isText(item) {
         return item.lineLaidOut !== undefined && typeof item.text === "string";
     }
@@ -69,15 +96,17 @@ Item {
             return;
         }
         _watched.add(item);
-        item.visibleChanged.connect(schedule);
-        item.implicitWidthChanged.connect(schedule);
-        item.implicitHeightChanged.connect(schedule);
+        // Connected through `lines` so the signals drop with it: a created box
+        // regroups its lines, and the items outlive the lines they were in.
+        item.visibleChanged.connect(lines, schedule);
+        item.implicitWidthChanged.connect(lines, schedule);
+        item.implicitHeightChanged.connect(lines, schedule);
         if (_isText(item)) {
-            item.textChanged.connect(schedule);
-            item.lineLaidOut.connect(function(line) { _placeLine(item, line); });
+            item.textChanged.connect(lines, schedule);
+            item.lineLaidOut.connect(lines, function(line) { _placeLine(item, line); });
         } else {
-            item.widthChanged.connect(schedule);
-            item.heightChanged.connect(schedule);
+            item.widthChanged.connect(lines, schedule);
+            item.heightChanged.connect(lines, schedule);
         }
     }
 
@@ -92,6 +121,10 @@ Item {
         if (run.place) {
             const at = run.place[line.number];
             if (at) {
+                // Qt spreads a line it justifies to this width.
+                if (at.spread) {
+                    line.width = at.spread;
+                }
                 line.x = at.x;
                 line.y = at.y;
             }
@@ -109,6 +142,53 @@ Item {
     function _plain(item) {
         const text = item.text;
         return item.textFormat === Text.PlainText ? text : text.replace(/<[^>]*>/g, "");
+    }
+
+    // The spaces inside each measured line of a run. Qt says nothing about
+    // which characters a line holds, so its words are walked off by width.
+    function _innerSpaces(item, measured) {
+        runMetrics.font = item.font;
+        const gap = runMetrics.advanceWidth(" ");
+        const words = _plain(item).trim().split(/\s+/);
+        let at = 0;
+        return measured.map(function(m) {
+            let used = 0;
+            let count = 0;
+            while (at < words.length) {
+                const next = used + (count > 0 ? gap : 0) + runMetrics.advanceWidth(words[at]);
+                if (count > 0 && next > m.width + 1) {
+                    break;
+                }
+                used = next;
+                count += 1;
+                at += 1;
+            }
+            return Math.max(0, count - 1);
+        });
+    }
+
+    // Spreads what a justified line has left over across its spaces, those
+    // between its items and those in its text (CSS Text 3 §7.3).
+    function _justify(l, free) {
+        const parts = l.texts.concat(l.boxes).sort(function(a, b) { return a.x - b.x; });
+        let spaces = 0;
+        for (const part of parts) {
+            spaces += (part.gap ? 1 : 0) + (part.inner || 0);
+        }
+        if (spaces === 0) {
+            return;
+        }
+        const extra = free / spaces;
+        let moved = 0;
+        for (const part of parts) {
+            moved += part.gap ? extra : 0;
+            part.x += moved;
+            if (part.inner) {
+                part.spread = part.width + part.inner * extra;
+                part.perSpace = extra;
+                moved += part.inner * extra;
+            }
+        }
     }
 
     // The first line box's edge from the top of `item`, or null with none.
@@ -146,6 +226,10 @@ Item {
             kids.reverse();
         }
         for (const kid of kids) {
+            // A Text with nothing in it has no line, so gives no baseline.
+            if (_isText(kid) && kid.text === "") {
+                continue;
+            }
             const inside = _baselineOf(kid);
             if (inside !== null) {
                 return kid.y + inside;
@@ -195,6 +279,7 @@ Item {
                     start = 0;
                 }
                 line.boxes.push({ item: item, x: start + margin.leftMargin,
+                                  gap: pending && !line.empty,
                                   top: margin.topMargin, bottom: margin.bottomMargin });
                 line.end = start + across + item.width;
                 line.empty = false;
@@ -213,7 +298,9 @@ Item {
                 line.end += marginLeft + marginRight;
                 continue;
             }
-            const keeps = item.textFormat === Text.PlainText || preserveSpace;
+            // A created element's `Text` is AutoText: with no tag, Qt draws its edge spaces.
+            const keeps = item.textFormat === Text.PlainText || preserveSpace
+                || item.textFormat === Text.AutoText && item.text.indexOf("<") === -1;
             if (!preserveSpace && /^\s*$/.test(plain)) {
                 item.width = 0;
                 line.blanks.push({ item: item, x: line.end + (line.empty ? 0 : space) + marginLeft });
@@ -231,6 +318,10 @@ Item {
             const before = (pending || lead) && !line.empty ? space : 0;
             let start = line.end + before + marginLeft;
 
+            const justified = textAlign === Text.AlignJustify && !noWrap;
+            if (justified && item.font.wordSpacing !== 0) {
+                item.font.wordSpacing = 0;
+            }
             const run = { room: room, measured: [], place: null };
             runs.set(item, run);
             _runs.set(item, run);
@@ -248,13 +339,16 @@ Item {
                 first = run.measured[0];
             }
             const ascent = item.baselineOffset - (first ? first.y : 0);
+            const inner = justified ? _innerSpaces(item, run.measured) : [];
             for (let n = 0; n < run.measured.length; ++n) {
                 const m = run.measured[n];
                 const last = n === run.measured.length - 1;
                 const x = n === 0 ? start : 0;
                 const width = m.width - (n === 0 ? leadWidth : 0) - (last ? trailWidth : 0);
                 line.texts.push({ item: item, run: run, number: n, x: x, width: width,
-                                  height: m.height, ascent: ascent, lead: n === 0 ? leadWidth : 0 });
+                                  height: m.height, ascent: ascent, lead: n === 0 ? leadWidth : 0,
+                                  gap: n === 0 && before > 0, inner: inner[n] || 0,
+                                  trail: last ? trailWidth : 0 });
                 line.end = x + width + (last ? marginRight : 0);
                 line.empty = false;
                 if (!last) {
@@ -296,7 +390,12 @@ Item {
             const late = [];
             // Text of the block's font is the strut already; only a larger span adds.
             for (const t of l.texts) {
-                if (lineHeight === 0 && t.height > strutAbove + strutBelow + 1) {
+                const own = _ownLeading.get(t.item);
+                if (own !== undefined) {
+                    const half = (own - t.height) / 2;
+                    above = Math.max(above, t.ascent + Math.floor(half));
+                    below = Math.max(below, t.height - t.ascent + Math.ceil(half));
+                } else if (lineHeight === 0 && t.height > strutAbove + strutBelow + 1) {
                     above = Math.max(above, t.ascent);
                     below = Math.max(below, t.height - t.ascent);
                 }
@@ -347,6 +446,10 @@ Item {
             }
             let shift = 0;
             const free = width - l.end;
+            // The last line stays as it is, as a browser leaves it.
+            if (free > 0 && textAlign === Text.AlignJustify && !noWrap && index < built.length - 1) {
+                _justify(l, free);
+            }
             if (free > 0 && !(noWrap && textAlign === Text.AlignLeft)) {
                 if (textAlign === Text.AlignHCenter) {
                     shift = free / 2;
@@ -373,7 +476,20 @@ Item {
                 if (!t.run.place) {
                     t.run.place = [];
                 }
-                t.run.place[t.number] = { x: t.x + shift - t.lead, y: baseline - t.ascent, width: t.width + t.lead };
+                // A trailing space hangs at the line's end; before more it is in the box.
+                const followed = t.trail > 0 && l.boxes.concat(l.texts).some(function(o) { return o.x > t.x; });
+                t.run.place[t.number] = { x: t.x + shift - t.lead, y: baseline - t.ascent, height: t.height,
+                                          width: (t.spread || t.width) + t.lead + (followed ? t.trail : 0) };
+                if (t.spread) {
+                    // Qt justifies every line of a Text but its last, whose
+                    // words word-spacing spreads when it is the only one.
+                    if (t.run.measured.length === 1) {
+                        t.item.font.wordSpacing = t.perSpace;
+                    } else {
+                        t.item.horizontalAlignment = Text.AlignJustify;
+                        t.run.place[t.number].spread = t.spread + t.lead;
+                    }
+                }
             }
             top += above + below;
         });

@@ -124,20 +124,26 @@ ApplicationWindow {
                                 rightPadding: 17
                                 bottomPadding: 9
                                 leftPadding: 17
-                                implicitHeight: 34
+                                implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 16
                                 contentItem: Text {
                                     text: open.text
                                     font: open.font
                                     color: open.palette.buttonText
                                     horizontalAlignment: Text.AlignHCenter
                                     verticalAlignment: Text.AlignVCenter
+                                    wrapMode: Text.WordWrap
                                     renderType: Text.NativeRendering
                                 }
                                 objectName: "open"
-                                width: Math.min(implicitWidth, blockFlow.width)
+                                width: Math.min(implicitWidth, Math.max(blockFlow.width, Math.ceil(Math.max(...open.text.split(/\s+/).map(w => openWords.advanceWidth(w))) * 1) + leftPadding + rightPadding))
 
                                 Keys.onPressed: (event) => {
                                     event.accepted = !Eldur.fire(open, "keydown", event);
+                                }
+
+                                FontMetrics {
+                                    id: openWords
+                                    font: open.font
                                 }
                             }
                         }

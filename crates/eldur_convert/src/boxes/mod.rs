@@ -132,32 +132,113 @@ pub(crate) fn is_inline_node(doc: &Document, styles: &StyleMap, node: NodeId) ->
 /// A hidden phrasing element among its line's text: showing it puts it in
 /// that line, so a box of its own would split the line for nothing.
 fn stays_in_line(doc: &Document, styles: &StyleMap, node: NodeId) -> bool {
-    const PHRASING: &[&str] = &[
-        "a", "abbr", "b", "bdi", "bdo", "cite", "code", "data", "del", "dfn", "em", "font", "i",
-        "ins", "kbd", "label", "mark", "q", "s", "samp", "small", "span", "strong", "sub", "sup",
-        "time", "u", "var",
-    ];
     let hidden = styles
         .computed(node)
         .is_none_or(|c| c.style.display == Display::None);
-    let phrasing = doc
-        .element(node)
-        .is_some_and(|e| PHRASING.contains(&e.local_name()));
-    if !hidden || !phrasing || doc.element_children(node).next().is_some() {
+    if !hidden || !is_phrasing(doc, node) || !only_phrasing_inside(doc, styles, node) {
         return false;
     }
     let Some(parent) = doc.parent(node) else {
         return false;
     };
+    // A box on the line cuts its text in runs, which hold no hidden node.
+    let boxed = doc.element_children(parent).any(|sibling| {
+        styles
+            .style(sibling)
+            .is_some_and(|s| s.display != Display::None && s.display != Display::Inline)
+            || is_atomic_tag(doc, sibling)
+    });
+    !boxed && has_line_content(doc, styles, node, parent)
+}
+
+/// A hidden element that would be a box on its parent's line when shown: it
+/// waits there, so that showing it does not need a line made around it.
+fn hidden_in_line(doc: &Document, styles: &StyleMap, node: NodeId) -> bool {
+    (is_phrasing(doc, node) || is_atomic_tag(doc, node))
+        && doc.parent(node).is_some_and(|parent| {
+            has_line_content(doc, styles, node, parent) || holds_only_inline(doc, styles, parent)
+        })
+}
+
+/// A parent all of whose elements are inline-level, hidden or not: shown, they
+/// share a line whichever it is.
+fn holds_only_inline(doc: &Document, styles: &StyleMap, parent: NodeId) -> bool {
+    doc.element_children(parent).all(|child| {
+        styles
+            .computed(child)
+            .is_none_or(|c| match c.style.display {
+                Display::None => is_phrasing(doc, child) || is_atomic_tag(doc, child),
+                Display::Inline | Display::InlineBlock | Display::InlineFlex => true,
+                _ => false,
+            })
+    })
+}
+
+/// Whether `parent` has something rendered on a line beside `node`.
+fn has_line_content(doc: &Document, styles: &StyleMap, node: NodeId, parent: NodeId) -> bool {
     doc.children(parent).any(|sibling| {
         sibling != node
             && match doc.text(sibling) {
                 Some(text) => !text.trim().is_empty(),
-                None => styles
-                    .style(sibling)
-                    .is_some_and(|s| s.display == Display::Inline),
+                None => styles.style(sibling).is_some_and(|s| {
+                    matches!(
+                        s.display,
+                        Display::Inline | Display::InlineBlock | Display::InlineFlex
+                    )
+                }),
             }
     })
+}
+
+fn is_phrasing(doc: &Document, node: NodeId) -> bool {
+    const PHRASING: &[&str] = &[
+        "a", "abbr", "b", "bdi", "bdo", "cite", "code", "data", "del", "dfn", "em", "font", "i",
+        "ins", "kbd", "label", "mark", "q", "s", "samp", "small", "span", "strong", "sub", "sup",
+        "time", "u", "var",
+    ];
+    doc.element(node)
+        .is_some_and(|e| PHRASING.contains(&e.local_name()))
+}
+
+fn only_phrasing_inside(doc: &Document, styles: &StyleMap, node: NodeId) -> bool {
+    doc.element_children(node).all(|child| {
+        is_phrasing(doc, child)
+            && styles
+                .computed(child)
+                .is_none_or(|c| matches!(c.style.display, Display::None | Display::Inline))
+            && only_phrasing_inside(doc, styles, child)
+    })
+}
+
+fn is_atomic_tag(doc: &Document, node: NodeId) -> bool {
+    doc.element(node).is_some_and(|e| {
+        matches!(
+            e.local_name(),
+            "button" | "img" | "input" | "select" | "textarea"
+        )
+    })
+}
+
+/// The `display: none` elements of the body a script could show or read as
+/// elements. What never renders whatever a script does (a `<script>`, a
+/// `<datalist>`) has no box to keep.
+pub(crate) fn hidden_elements(doc: &Document, styles: &StyleMap) -> Vec<NodeId> {
+    const NEVER: &[&str] = &[
+        "area", "base", "basefont", "datalist", "link", "meta", "noembed", "noframes", "noscript",
+        "param", "rp", "script", "source", "style", "title", "track",
+    ];
+    let Some(body) = doc.body() else {
+        return Vec::new();
+    };
+    doc.descendants(body)
+        .filter(|&n| {
+            doc.element(n)
+                .is_some_and(|e| e.is_html() && !NEVER.contains(&e.local_name()))
+                && styles
+                    .computed(n)
+                    .is_some_and(|c| c.style.display == Display::None)
+        })
+        .collect()
 }
 
 /// [`build`], also keeping a hidden box for each `display: none` element
@@ -321,8 +402,15 @@ impl<'a> Builder<'a, '_> {
         let style = self.styles.computed(node).map(|s| &s.style);
         let hidden = style.is_none_or(|s| s.display == Display::None);
         if hidden && self.keeps_descendant(node) && !stays_in_line(self.doc, self.styles, node) {
-            if let Some(b) = self.hidden_box(node) {
-                out.push(Child::Block(Box::new(b)));
+            if let Some(mut b) = self.hidden_box(node) {
+                if hidden_in_line(self.doc, self.styles, node) {
+                    let mut style = b.style.into_owned();
+                    style.display = Display::InlineBlock;
+                    b.style = Cow::Owned(style);
+                    out.push(Child::Inline(whitespace::Raw::Atomic(Box::new(b))));
+                } else {
+                    out.push(Child::Block(Box::new(b)));
+                }
             }
             return;
         }

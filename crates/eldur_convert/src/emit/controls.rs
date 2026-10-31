@@ -170,7 +170,7 @@ fn attr_f64(doc: &Document, node: NodeId, name: &str) -> Option<f64> {
         .filter(|v| v.is_finite())
 }
 
-fn line_box(style: &ComputedStyle) -> Option<f32> {
+pub(super) fn line_box(style: &ComputedStyle) -> Option<f32> {
     match style.line_height {
         eldur_css::LineHeight::Normal => None,
         eldur_css::LineHeight::Number(n) => Some(n * style.font_size),
@@ -263,7 +263,7 @@ pub(crate) fn control_fonts_json() -> String {
 
 /// A control's line at `line-height: normal`: Chromium rounds ascent, descent
 /// and line gap each.
-fn normal_line(style: &ComputedStyle) -> f32 {
+pub(super) fn normal_line(style: &ComputedStyle) -> f32 {
     let (ascent, descent) = font_extents(&font_family(&style.font_family));
     let (_, _, gap) = control_font(style);
     let fs = style.font_size;
@@ -277,7 +277,7 @@ fn input_width(style: &ComputedStyle, size: f32) -> f32 {
 }
 
 /// How much wider Chromium's text runs than Qt's whole-pixel font of the same size.
-fn text_scale(style: &ComputedStyle) -> f32 {
+pub(super) fn text_scale(style: &ComputedStyle) -> f32 {
     style.font_size / style.font_size.round().max(1.0)
 }
 

@@ -1836,6 +1836,7 @@ impl DynState {
 
             let mut states = vec![ClassAlt::default()];
             let mut capped = false;
+            let mut later = false;
             for (_, op, pos) in home_ops.into_iter().chain(other_ops) {
                 let frames = function_frames(&pos.path);
                 let group = if frames.starts_with(&home) {
@@ -1844,6 +1845,9 @@ impl DynState {
                     frames
                 };
                 if first_insert(&group).is_some_and(|at| pos.at > at) {
+                    // In the page, it can change to a set no template was written
+                    // for: only the cascade knows what that shows or hides.
+                    later = true;
                     continue;
                 }
                 let applied = apply_class_op(&states, op);
@@ -1867,7 +1871,7 @@ impl DynState {
                 .iter()
                 .map(|s| s.names.iter().cloned().collect())
                 .collect();
-            let open_classes = capped || states.iter().any(|s| s.open);
+            let open_classes = capped || later || states.iter().any(|s| s.open);
 
             let mut parents: Vec<ElementRef> = Vec::new();
             for (_, parent, _) in &inserts {

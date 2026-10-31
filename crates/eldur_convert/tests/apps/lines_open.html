@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Lines of text and boxes, an open page</title>
+<style>
+body { margin: 8px; font-family: Arial, sans-serif; font-size: 16px; }
+.w { width: 300px; }
+.ib { display: inline-block; width: 40px; height: 30px; background: #ccc; }
+.mid { vertical-align: middle; }
+.top { vertical-align: top; }
+.just { text-align: justify; width: 200px; }
+.mask { width: 120px; }
+</style>
+</head>
+<body>
+<div class="w" id="w0">Some <span class="ib" id="x0"></span> and</div>
+<div class="w" id="w1">Some words here <span class="ib" id="x1"></span> and a longer run of words that must wrap <span class="ib mid" id="x2"></span> then <span class="ib top" id="x3"></span> end</div>
+<div class="w" id="w3">Some <span class="ib" id="x4"></span> and</div>
+<div id="w2">x <button id="b2">B</button></div>
+<p id="e0" style="width:50px"><button id="m1">Long one</button></p>
+<p id="e1" style="white-space:nowrap;width:50px"><button id="n1">Long one</button> <button id="n2">Long two</button></p>
+<p id="e2" style="width:50px;white-space:nowrap">a<input id="g1" style="width:80px">b</p>
+<p id="e3" style="width:320px">one <span class="ib" id="f1" style="width:320px"></span> two</p>
+<p id="j0" class="just">Words spread out <span class="ib" id="j1"></span> across this whole line and on over more of them</p>
+<p id="mask" class="mask"><span id="sp">A much longer first line then short</span></p>
+<p id="v">below</p>
+<button id="go">go</button>
+<script>
+var get = function (id) { return document.getElementById(id); };
+var openName = "plain"; if (false) get("v").className = openName;
+document.getElementById("x4").style.color = "red";
+document.getElementById("w3").appendChild(document.createTextNode(" more"));
+var clicks = 0;
+get("mask").addEventListener("click", function (e) { clicks += 1; console.log("press " + clicks + " " + e.target.id); });
+get("go").addEventListener("click", function () {
+  get("w0").appendChild(document.createTextNode(" more"));
+  get("x0").style.color = "red";
+  get("v").textContent = "changed";
+});
+</script>
+</body>
+</html>
