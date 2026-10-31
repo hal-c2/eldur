@@ -133,15 +133,16 @@ ApplicationWindow {
 
                                     // <li>
                                     Text {
-                                        text: "<font color=\"#3d4659\"><small>Product</small></font>"
-                                        textFormat: Text.StyledText
-                                        color: "#1a1f2b"
+                                        text: "Product"
+                                        textFormat: Text.PlainText
+                                        color: "#3d4659"
                                         font.family: "sans-serif"
-                                        font.pixelSize: 16
+                                        font.pixelSize: 15
+                                        font.weight: 500
                                         lineHeight: 24
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 2.8
+                                            y: 3.38
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
@@ -159,42 +160,16 @@ ApplicationWindow {
 
                                     // <li>
                                     Text {
-                                        text: "<font color=\"#3d4659\"><small>Solutions</small></font>"
-                                        textFormat: Text.StyledText
-                                        color: "#1a1f2b"
+                                        text: "Solutions"
+                                        textFormat: Text.PlainText
+                                        color: "#3d4659"
                                         font.family: "sans-serif"
-                                        font.pixelSize: 16
+                                        font.pixelSize: 15
+                                        font.weight: 500
                                         lineHeight: 24
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 2.8
-                                        }
-                                        wrapMode: Text.WordWrap
-                                        Layout.fillWidth: true
-                                        Layout.maximumWidth: Math.ceil(implicitWidth)
-                                        Layout.alignment: Qt.AlignVCenter
-                                        Layout.leftMargin: 28
-
-                                        TapHandler {
-                                            onTapped: root.scrollToFragment("#")
-                                        }
-
-                                        HoverHandler {
-                                            cursorShape: Qt.PointingHandCursor
-                                        }
-                                    }
-
-                                    // <li>
-                                    Text {
-                                        text: "<font color=\"#3d4659\"><small>Pricing</small></font>"
-                                        textFormat: Text.StyledText
-                                        color: "#1a1f2b"
-                                        font.family: "sans-serif"
-                                        font.pixelSize: 16
-                                        lineHeight: 24
-                                        lineHeightMode: Text.FixedHeight
-                                        transform: Translate {
-                                            y: 2.8
+                                            y: 3.38
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
@@ -213,15 +188,44 @@ ApplicationWindow {
 
                                     // <li>
                                     Text {
-                                        text: "<font color=\"#3d4659\"><small>Docs</small></font>"
-                                        textFormat: Text.StyledText
-                                        color: "#1a1f2b"
+                                        text: "Pricing"
+                                        textFormat: Text.PlainText
+                                        color: "#3d4659"
                                         font.family: "sans-serif"
-                                        font.pixelSize: 16
+                                        font.pixelSize: 15
+                                        font.weight: 500
                                         lineHeight: 24
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 2.8
+                                            y: 3.38
+                                        }
+                                        wrapMode: Text.WordWrap
+                                        Layout.fillWidth: true
+                                        Layout.maximumWidth: Math.ceil(implicitWidth)
+                                        Layout.alignment: Qt.AlignVCenter
+                                        Layout.leftMargin: 28
+
+                                        TapHandler {
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
+                                        }
+                                    }
+
+                                    // <li>
+                                    Text {
+                                        text: "Docs"
+                                        textFormat: Text.PlainText
+                                        color: "#3d4659"
+                                        font.family: "sans-serif"
+                                        font.pixelSize: 15
+                                        font.weight: 500
+                                        lineHeight: 24
+                                        lineHeightMode: Text.FixedHeight
+                                        transform: Translate {
+                                            y: 3.38
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true

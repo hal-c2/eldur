@@ -66,6 +66,11 @@ impl Emitter<'_, '_> {
         items: &[Inline<'_>],
         line: Option<u32>,
     ) -> Object {
+        let hoisted = whole_span(style, items);
+        let (style, raise) = match &hoisted {
+            Some((s, raise)) => (s, *raise),
+            None => (style, 0.0),
+        };
         let mut text = Object::new("Text");
         let state = State {
             bold: style.font_weight >= 600,
@@ -133,6 +138,21 @@ impl Emitter<'_, '_> {
                     );
                 }
             }
+        }
+        if raise.abs() >= 0.5 && !markup.html {
+            let shift = match text.get("transform") {
+                Some(Value::Object(t)) => match t.get("y") {
+                    Some(Value::Number(y)) => *y as f32,
+                    _ => 0.0,
+                },
+                _ => 0.0,
+            };
+            text.set(
+                "transform",
+                Value::Object(Box::new(
+                    Object::new("Translate").prop("y", round(shift + raise)),
+                )),
+            );
         }
         if let Some(&link) = markup.link_colors.first() {
             // RichText colours each link itself.
@@ -590,6 +610,78 @@ fn inline_space(style: &ComputedStyle, side: Side) -> f32 {
         border.width
     };
     padding.as_px().unwrap_or(0.0).max(0.0) + border
+}
+
+/// When `items` is one inline box that draws nothing of its own, the
+/// block's style with that box's font, and how far to move the text down
+/// from where `font` puts it. Its text is then the block's own, so Qt
+/// applies its `letter-spacing` and `text-transform`; the line box is the
+/// strut and the inline box aligned on their baseline (CSS 2.2 §10.8).
+fn whole_span(block: &ComputedStyle, items: &[Inline<'_>]) -> Option<(ComputedStyle, f32)> {
+    let [Inline::Span(span)] = items else {
+        return None;
+    };
+    let s = span.style;
+    let bordered = [
+        &s.border.top,
+        &s.border.right,
+        &s.border.bottom,
+        &s.border.left,
+    ]
+    .iter()
+    .any(|b| {
+        b.width > 0.0
+            && !matches!(
+                b.style,
+                eldur_css::BorderStyle::None | eldur_css::BorderStyle::Hidden
+            )
+    });
+    let padded = [
+        &s.padding.top,
+        &s.padding.right,
+        &s.padding.bottom,
+        &s.padding.left,
+    ]
+    .iter()
+    .any(|p| p.as_px() != Some(0.0));
+    if bordered
+        || padded
+        || !s.background_color.is_transparent()
+        || !s.background_layers.is_empty()
+        || s.vertical_align != VerticalAlign::Baseline
+        || span.children.iter().any(|c| matches!(c, Inline::Atomic(_)))
+    {
+        return None;
+    }
+    let mut style = block.clone();
+    style.font_size = s.font_size;
+    style.font_family.clone_from(&s.font_family);
+    style.font_weight = s.font_weight;
+    style.font_style = s.font_style;
+    style.small_caps = s.small_caps;
+    style.color = s.color;
+    style.letter_spacing = s.letter_spacing;
+    style.word_spacing = s.word_spacing;
+    style.text_transform = s.text_transform;
+    style.line_height = s.line_height;
+    // Ascent and descent of each inline box, half-leading included.
+    let metrics = |st: &ComputedStyle| {
+        let lh = super::inline::line_height(st);
+        let ascent = super::inline::text_baseline(st);
+        (ascent, lh - ascent)
+    };
+    let (strut_up, strut_down) = metrics(block);
+    let (span_up, span_down) = metrics(s);
+    let up = strut_up.max(span_up);
+    let line = up + strut_down.max(span_down);
+    if (line - super::inline::line_height(s)).abs() < 0.5 {
+        return Some((style, 0.0));
+    }
+    style.line_height = LineHeight::Px(line);
+    // `font` centres the glyphs in the line; the baseline is the taller
+    // ascent's.
+    let centred = (line - CONTENT_AREA * s.font_size) / 2.0 + super::inline::ASCENT * s.font_size;
+    Some((style, up - centred))
 }
 
 /// Whether a run in `items` needs RichText: another font family, a

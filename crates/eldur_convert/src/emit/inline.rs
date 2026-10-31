@@ -22,7 +22,7 @@ use crate::boxes::{BoxKind, Content, Inline, LayoutBox, Span, node_line};
 
 /// Ascent of the common fallback fonts as a fraction of the font size
 /// (Liberation Sans: 0.905).
-const ASCENT: f32 = 0.905;
+pub(super) const ASCENT: f32 = 0.905;
 
 /// The width of a created inline element or text run in a `Flow`: its
 /// natural width, no wider than the line.

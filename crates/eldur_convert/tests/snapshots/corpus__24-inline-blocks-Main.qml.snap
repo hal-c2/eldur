@@ -1115,15 +1115,15 @@ ApplicationWindow {
                                 }
 
                                 Text {
-                                    text: "<font color=\"#92400e\"><small>open issues</small></font>"
-                                    textFormat: Text.StyledText
-                                    color: "#1b2231"
+                                    text: "open issues"
+                                    textFormat: Text.PlainText
+                                    color: "#92400e"
                                     font.family: "Liberation Sans"
-                                    font.pixelSize: 16
+                                    font.pixelSize: 13
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2.8
+                                        y: 5.52
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
@@ -1176,15 +1176,15 @@ ApplicationWindow {
                                 }
 
                                 Text {
-                                    text: "<font color=\"#92400e\"><small>releases</small></font>"
-                                    textFormat: Text.StyledText
-                                    color: "#1b2231"
+                                    text: "releases"
+                                    textFormat: Text.PlainText
+                                    color: "#92400e"
                                     font.family: "Liberation Sans"
-                                    font.pixelSize: 16
+                                    font.pixelSize: 13
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2.8
+                                        y: 5.52
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true

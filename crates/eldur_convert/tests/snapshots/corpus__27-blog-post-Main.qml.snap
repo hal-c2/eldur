@@ -73,16 +73,21 @@ ApplicationWindow {
 
                     Text {
                         id: mastheadText
-                        text: "<div style=\"line-height:28.8px\"><b><span style=\"font-size:22px;font-family:'sans-serif'\">Field Notes</span></b></div>"
-                        textFormat: Text.RichText
+                        text: "Field Notes"
+                        textFormat: Text.PlainText
                         color: "#2e2a26"
-                        font.family: "serif"
-                        font.pixelSize: 18
+                        font.family: "sans-serif"
+                        font.pixelSize: 22
+                        font.weight: 700
+                        font.letterSpacing: 4.4
+                        font.capitalization: Font.AllUppercase
+                        lineHeight: 35.2
+                        lineHeightMode: Text.FixedHeight
+                        transform: Translate {
+                            y: 4.95
+                        }
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.WordWrap
-                        transform: Translate {
-                            y: -4.05
-                        }
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.top: parent.top
