@@ -299,18 +299,23 @@ ApplicationWindow {
                                 property string eldurWs: "\n    "
                                 property string eldurWsEnd: "\n    "
 
-                                implicitWidth: Math.ceil(Array.from(filtersFlow.children).reduce((sum, item) => sum + item.implicitWidth, 0))
+                                implicitWidth: filtersFlow.implicitWidth
                                 implicitHeight: filtersFlow.implicitHeight
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignVCenter
 
-                                Flow {
+                                EldurLines {
                                     id: filtersFlow
+                                    color: "#4a5568"
+                                    font.family: "Arial"
+                                    font.pixelSize: 13
+                                    lineHeight: 18.2
                                     anchors.left: parent.left
                                     anchors.right: parent.right
                                     anchors.top: parent.top
 
+                                    // <button id="f-all" class="current">
                                     Button {
                                         id: fAll
                                         property var eldurAttrs: ({ "data-filter": "all" })
@@ -349,19 +354,16 @@ ApplicationWindow {
                                     }
 
                                     Text {
-                                        text: " "
+                                        text: " "
                                         textFormat: Text.PlainText
                                         color: "#4a5568"
                                         font.family: "Arial"
                                         font.pixelSize: 13
-                                        lineHeight: 18.2
-                                        lineHeightMode: Text.FixedHeight
-                                        transform: Translate {
-                                            y: 1
-                                        }
+                                        wrapMode: Text.WordWrap
                                         renderType: Text.NativeRendering
                                     }
 
+                                    // <button id="f-active">
                                     Button {
                                         id: fActive
                                         property var eldurAttrs: ({ "data-filter": "active" })
@@ -399,19 +401,16 @@ ApplicationWindow {
                                     }
 
                                     Text {
-                                        text: " "
+                                        text: " "
                                         textFormat: Text.PlainText
                                         color: "#4a5568"
                                         font.family: "Arial"
                                         font.pixelSize: 13
-                                        lineHeight: 18.2
-                                        lineHeightMode: Text.FixedHeight
-                                        transform: Translate {
-                                            y: 1
-                                        }
+                                        wrapMode: Text.WordWrap
                                         renderType: Text.NativeRendering
                                     }
 
+                                    // <button id="f-done">
                                     Button {
                                         id: fDone
                                         property var eldurAttrs: ({ "data-filter": "done" })

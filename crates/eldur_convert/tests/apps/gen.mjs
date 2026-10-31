@@ -35,6 +35,7 @@ async function center(selector) {
 }
 
 async function act(step) {
+  if (step.viewport) await page.setViewportSize({ width: step.viewport[0], height: step.viewport[1] });
   if (step.click) {
     const { x, y } = await center(step.click);
     await page.mouse.click(x, y);
@@ -84,6 +85,7 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
   const name = file.slice(0, -5);
   const spec = JSON.parse(fs.readFileSync(path.join(here, `${name}.json`), "utf8"));
   log = [];
+  await page.setViewportSize({ width: 1280, height: 800 });
   await page.mouse.move(1200, 790);
   await page.goto("file://" + path.join(here, file), { waitUntil: "load" });
   const steps = [await state("load", spec.watch)];

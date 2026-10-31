@@ -303,17 +303,21 @@ ApplicationWindow {
                         }
 
                         // <div>
-                        Flow {
+                        EldurLines {
                             id: divFlow
                             property string eldurTag: "div"
                             property string eldurWs: "\n  "
                             property string eldurWsEnd: "\n  "
 
+                            color: "#1a202c"
+                            font.family: "Arial"
+                            font.pixelSize: 16
+                            lineHeight: 24
                             Layout.fillWidth: true
-                            Layout.preferredWidth: Math.ceil(Array.from(children).reduce((sum, item) => sum + item.implicitWidth, 0))
-                            Layout.maximumWidth: Math.ceil(Array.from(children).reduce((sum, item) => sum + item.implicitWidth, 0))
+                            Layout.maximumWidth: Math.ceil(implicitWidth)
                             Layout.alignment: Qt.AlignVCenter
 
+                            // <button id="compact">
                             Button {
                                 id: compact
                                 property string eldurTag: "button"
@@ -353,19 +357,16 @@ ApplicationWindow {
                             }
 
                             Text {
-                                text: " "
+                                text: " "
                                 textFormat: Text.PlainText
                                 color: "#1a202c"
                                 font.family: "Arial"
                                 font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
+                                wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
                             }
 
+                            // <button id="toggle">
                             Button {
                                 id: toggle
                                 property string eldurTag: "button"

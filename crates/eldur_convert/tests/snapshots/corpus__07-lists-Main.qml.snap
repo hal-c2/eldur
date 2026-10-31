@@ -996,8 +996,12 @@ ApplicationWindow {
                                             Layout.preferredHeight: implicitHeight
 
                                             // <li>
-                                            ColumnLayout {
-                                                spacing: 0
+                                            EldurLines {
+                                                id: liFlow
+                                                color: "#1d2233"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 16
+                                                lineHeight: 24
                                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
 
                                                 // <a>
@@ -1007,6 +1011,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText.implicitWidth + 28
                                                     implicitHeight: aText.implicitHeight + 12
+                                                    width: Math.min(implicitWidth, liFlow.width)
                                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {
@@ -1039,8 +1044,12 @@ ApplicationWindow {
                                             }
 
                                             // <li>
-                                            ColumnLayout {
-                                                spacing: 0
+                                            EldurLines {
+                                                id: liFlow2
+                                                color: "#1d2233"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 16
+                                                lineHeight: 24
                                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
 
                                                 // <a>
@@ -1050,6 +1059,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText2.implicitWidth + 28
                                                     implicitHeight: aText2.implicitHeight + 12
+                                                    width: Math.min(implicitWidth, liFlow2.width)
                                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {
@@ -1082,8 +1092,12 @@ ApplicationWindow {
                                             }
 
                                             // <li>
-                                            ColumnLayout {
-                                                spacing: 0
+                                            EldurLines {
+                                                id: liFlow3
+                                                color: "#1d2233"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 16
+                                                lineHeight: 24
                                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
 
                                                 // <a>
@@ -1093,6 +1107,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText3.implicitWidth + 28
                                                     implicitHeight: aText3.implicitHeight + 12
+                                                    width: Math.min(implicitWidth, liFlow3.width)
                                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {
@@ -1125,8 +1140,12 @@ ApplicationWindow {
                                             }
 
                                             // <li>
-                                            ColumnLayout {
-                                                spacing: 0
+                                            EldurLines {
+                                                id: liFlow4
+                                                color: "#1d2233"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 16
+                                                lineHeight: 24
                                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
 
                                                 // <a>
@@ -1136,6 +1155,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText4.implicitWidth + 28
                                                     implicitHeight: aText4.implicitHeight + 12
+                                                    width: Math.min(implicitWidth, liFlow4.width)
                                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {
@@ -1168,8 +1188,12 @@ ApplicationWindow {
                                             }
 
                                             // <li>
-                                            ColumnLayout {
-                                                spacing: 0
+                                            EldurLines {
+                                                id: liFlow5
+                                                color: "#1d2233"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 16
+                                                lineHeight: 24
                                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
 
                                                 // <a>
@@ -1179,6 +1203,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText5.implicitWidth + 28
                                                     implicitHeight: aText5.implicitHeight + 12
+                                                    width: Math.min(implicitWidth, liFlow5.width)
                                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {
@@ -1211,8 +1236,12 @@ ApplicationWindow {
                                             }
 
                                             // <li>
-                                            ColumnLayout {
-                                                spacing: 0
+                                            EldurLines {
+                                                id: liFlow6
+                                                color: "#1d2233"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 16
+                                                lineHeight: 24
                                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
 
                                                 // <a>
@@ -1222,6 +1251,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText6.implicitWidth + 28
                                                     implicitHeight: aText6.implicitHeight + 12
+                                                    width: Math.min(implicitWidth, liFlow6.width)
                                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {
@@ -1254,8 +1284,12 @@ ApplicationWindow {
                                             }
 
                                             // <li>
-                                            ColumnLayout {
-                                                spacing: 0
+                                            EldurLines {
+                                                id: liFlow7
+                                                color: "#1d2233"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 16
+                                                lineHeight: 24
                                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
 
                                                 // <a>
@@ -1265,6 +1299,7 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText7.implicitWidth + 28
                                                     implicitHeight: aText7.implicitHeight + 12
+                                                    width: Math.min(implicitWidth, liFlow7.width)
                                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     Text {

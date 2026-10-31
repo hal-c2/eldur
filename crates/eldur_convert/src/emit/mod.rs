@@ -15,6 +15,7 @@ mod grid;
 mod ids;
 mod image;
 mod inline;
+pub(crate) use inline::ELDUR_LINES_QML;
 mod inline_model;
 mod links;
 mod lists;

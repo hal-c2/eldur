@@ -1880,7 +1880,7 @@ ApplicationWindow {
                                                 // <div class="progress-group">
                                                 ColumnLayout {
                                                     id: progressGroup
-                                                    property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + 0.9 + 0.000001
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + blockFlow.eldurCarry + 0.000001
 
                                                     spacing: 0
                                                     Layout.fillWidth: true
@@ -1926,39 +1926,52 @@ ApplicationWindow {
                                                         }
                                                     }
 
-                                                    // <progress>
-                                                    ProgressBar {
-                                                        id: progressControl
-                                                        from: 0
-                                                        to: 100
-                                                        value: 68
-                                                        implicitWidth: 140
-                                                        implicitHeight: 12
-                                                        background: Item {
-                                                            Rectangle {
-                                                                width: parent.width
-                                                                y: parent.height / 4
-                                                                height: parent.height / 2
-                                                                radius: height / 2
-                                                                color: "#efefef"
-                                                                border.color: "#b2b2b2"
-                                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
-                                                            }
-                                                        }
-                                                        contentItem: Item {
-                                                            Rectangle {
-                                                                width: progressControl.visualPosition * parent.width
-                                                                y: parent.height / 4
-                                                                height: parent.height / 2
-                                                                radius: height / 2
-                                                                color: "#4f46e5"
-                                                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
-                                                            }
-                                                        }
+                                                    EldurLines {
+                                                        id: blockFlow
+                                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
+                                                        color: "#111827"
+                                                        font.family: "sans-serif"
+                                                        font.pixelSize: 14
                                                         Layout.fillWidth: true
-                                                        Layout.preferredHeight: 12
-                                                        Layout.topMargin: 11.47
-                                                        Layout.bottomMargin: 0.63
+                                                        Layout.topMargin: 8
+                                                        Layout.preferredHeight: implicitHeight
+
+                                                        // <progress>
+                                                        ProgressBar {
+                                                            id: progressControl
+                                                            property string eldurVAlign: "length"
+                                                            property real eldurVShift: -2.8
+
+                                                            from: 0
+                                                            to: 100
+                                                            value: 68
+                                                            implicitWidth: 140
+                                                            implicitHeight: 12
+                                                            background: Item {
+                                                                Rectangle {
+                                                                    width: parent.width
+                                                                    y: parent.height / 4
+                                                                    height: parent.height / 2
+                                                                    radius: height / 2
+                                                                    color: "#efefef"
+                                                                    border.color: "#b2b2b2"
+                                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                                                                }
+                                                            }
+                                                            contentItem: Item {
+                                                                Rectangle {
+                                                                    width: progressControl.visualPosition * parent.width
+                                                                    y: parent.height / 4
+                                                                    height: parent.height / 2
+                                                                    radius: height / 2
+                                                                    color: "#4f46e5"
+                                                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                                                                }
+                                                            }
+                                                            width: blockFlow.width * 1 + 0
+                                                            height: 12
+                                                        }
                                                     }
                                                 }
 
@@ -2485,11 +2498,11 @@ ApplicationWindow {
 
                                                     Rectangle {
                                                         readonly property var tableSlot: [1, 4, 1, 1]
-                                                        readonly property real minContentWidth: implicitWidth
+                                                        readonly property real minContentWidth: tableFont2.advanceWidth("") + 28
 
                                                         color: "#00000000"
-                                                        implicitWidth: tdContent.implicitWidth + 28
-                                                        implicitHeight: tdContent.implicitHeight + 25
+                                                        implicitWidth: tdFlow.implicitWidth + 28
+                                                        implicitHeight: tdFlow.implicitHeight + 25
                                                         anchors.alignWhenCentered: false
                                                         Layout.row: 1
                                                         Layout.column: 4
@@ -2504,9 +2517,11 @@ ApplicationWindow {
                                                             color: "#e5e7eb"
                                                         }
 
-                                                        ColumnLayout {
-                                                            id: tdContent
-                                                            spacing: 0
+                                                        EldurLines {
+                                                            id: tdFlow
+                                                            color: "#111827"
+                                                            font.family: "sans-serif"
+                                                            font.pixelSize: 14
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
@@ -2521,7 +2536,7 @@ ApplicationWindow {
                                                                 radius: 999
                                                                 implicitWidth: pillText.implicitWidth + 20
                                                                 implicitHeight: pillText.implicitHeight + 6
-                                                                Layout.preferredHeight: implicitHeight
+                                                                width: Math.min(implicitWidth, tdFlow.width)
                                                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                                 Text {
@@ -2708,11 +2723,11 @@ ApplicationWindow {
 
                                                     Rectangle {
                                                         readonly property var tableSlot: [2, 4, 1, 1]
-                                                        readonly property real minContentWidth: implicitWidth
+                                                        readonly property real minContentWidth: tableFont2.advanceWidth("") + 28
 
                                                         color: "#00000000"
-                                                        implicitWidth: tdContent2.implicitWidth + 28
-                                                        implicitHeight: tdContent2.implicitHeight + 25
+                                                        implicitWidth: tdFlow2.implicitWidth + 28
+                                                        implicitHeight: tdFlow2.implicitHeight + 25
                                                         anchors.alignWhenCentered: false
                                                         Layout.row: 2
                                                         Layout.column: 4
@@ -2727,9 +2742,11 @@ ApplicationWindow {
                                                             color: "#e5e7eb"
                                                         }
 
-                                                        ColumnLayout {
-                                                            id: tdContent2
-                                                            spacing: 0
+                                                        EldurLines {
+                                                            id: tdFlow2
+                                                            color: "#111827"
+                                                            font.family: "sans-serif"
+                                                            font.pixelSize: 14
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
@@ -2744,7 +2761,7 @@ ApplicationWindow {
                                                                 radius: 999
                                                                 implicitWidth: pillText2.implicitWidth + 20
                                                                 implicitHeight: pillText2.implicitHeight + 6
-                                                                Layout.preferredHeight: implicitHeight
+                                                                width: Math.min(implicitWidth, tdFlow2.width)
                                                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                                 Text {
@@ -2931,11 +2948,11 @@ ApplicationWindow {
 
                                                     Rectangle {
                                                         readonly property var tableSlot: [3, 4, 1, 1]
-                                                        readonly property real minContentWidth: implicitWidth
+                                                        readonly property real minContentWidth: tableFont2.advanceWidth("") + 28
 
                                                         color: "#00000000"
-                                                        implicitWidth: tdContent3.implicitWidth + 28
-                                                        implicitHeight: tdContent3.implicitHeight + 25
+                                                        implicitWidth: tdFlow3.implicitWidth + 28
+                                                        implicitHeight: tdFlow3.implicitHeight + 25
                                                         anchors.alignWhenCentered: false
                                                         Layout.row: 3
                                                         Layout.column: 4
@@ -2950,9 +2967,11 @@ ApplicationWindow {
                                                             color: "#e5e7eb"
                                                         }
 
-                                                        ColumnLayout {
-                                                            id: tdContent3
-                                                            spacing: 0
+                                                        EldurLines {
+                                                            id: tdFlow3
+                                                            color: "#111827"
+                                                            font.family: "sans-serif"
+                                                            font.pixelSize: 14
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
@@ -2967,7 +2986,7 @@ ApplicationWindow {
                                                                 radius: 999
                                                                 implicitWidth: pillText3.implicitWidth + 20
                                                                 implicitHeight: pillText3.implicitHeight + 6
-                                                                Layout.preferredHeight: implicitHeight
+                                                                width: Math.min(implicitWidth, tdFlow3.width)
                                                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                                 Text {
@@ -3154,11 +3173,11 @@ ApplicationWindow {
 
                                                     Rectangle {
                                                         readonly property var tableSlot: [4, 4, 1, 1]
-                                                        readonly property real minContentWidth: implicitWidth
+                                                        readonly property real minContentWidth: tableFont2.advanceWidth("") + 28
 
                                                         color: "#00000000"
-                                                        implicitWidth: tdContent4.implicitWidth + 28
-                                                        implicitHeight: tdContent4.implicitHeight + 25
+                                                        implicitWidth: tdFlow4.implicitWidth + 28
+                                                        implicitHeight: tdFlow4.implicitHeight + 25
                                                         anchors.alignWhenCentered: false
                                                         Layout.row: 4
                                                         Layout.column: 4
@@ -3173,9 +3192,11 @@ ApplicationWindow {
                                                             color: "#e5e7eb"
                                                         }
 
-                                                        ColumnLayout {
-                                                            id: tdContent4
-                                                            spacing: 0
+                                                        EldurLines {
+                                                            id: tdFlow4
+                                                            color: "#111827"
+                                                            font.family: "sans-serif"
+                                                            font.pixelSize: 14
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
@@ -3190,7 +3211,7 @@ ApplicationWindow {
                                                                 radius: 999
                                                                 implicitWidth: pillText4.implicitWidth + 20
                                                                 implicitHeight: pillText4.implicitHeight + 6
-                                                                Layout.preferredHeight: implicitHeight
+                                                                width: Math.min(implicitWidth, tdFlow4.width)
                                                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                                 Text {
@@ -3405,11 +3426,11 @@ ApplicationWindow {
 
                                                     Rectangle {
                                                         readonly property var tableSlot: [5, 4, 1, 1]
-                                                        readonly property real minContentWidth: implicitWidth
+                                                        readonly property real minContentWidth: tableFont2.advanceWidth("") + 28
 
                                                         color: "#00000000"
-                                                        implicitWidth: tdContent5.implicitWidth + 28
-                                                        implicitHeight: tdContent5.implicitHeight + 26
+                                                        implicitWidth: tdFlow5.implicitWidth + 28
+                                                        implicitHeight: tdFlow5.implicitHeight + 26
                                                         anchors.alignWhenCentered: false
                                                         Layout.row: 5
                                                         Layout.column: 4
@@ -3432,9 +3453,11 @@ ApplicationWindow {
                                                             color: "#e5e7eb"
                                                         }
 
-                                                        ColumnLayout {
-                                                            id: tdContent5
-                                                            spacing: 0
+                                                        EldurLines {
+                                                            id: tdFlow5
+                                                            color: "#111827"
+                                                            font.family: "sans-serif"
+                                                            font.pixelSize: 14
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
@@ -3448,7 +3471,7 @@ ApplicationWindow {
                                                                 radius: 999
                                                                 implicitWidth: pillText5.implicitWidth + 20
                                                                 implicitHeight: pillText5.implicitHeight + 6
-                                                                Layout.preferredHeight: implicitHeight
+                                                                width: Math.min(implicitWidth, tdFlow5.width)
                                                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                                 Text {

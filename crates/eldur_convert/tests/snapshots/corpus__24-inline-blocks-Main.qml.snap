@@ -57,507 +57,109 @@ ApplicationWindow {
                         Layout.maximumWidth: 480
                         Layout.preferredHeight: implicitHeight
 
-                        Flow {
+                        EldurLines {
                             id: pFlow
+                            color: "#1b2231"
+                            font.family: "Liberation Sans"
+                            font.pixelSize: 16
+                            lineHeight: 24
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.top: parent.top
 
                             Text {
-                                text: "Release "
+                                text: "Release notes for "
                                 textFormat: Text.PlainText
                                 color: "#1b2231"
                                 font.family: "Liberation Sans"
                                 font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
+                                wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
                             }
 
-                            Text {
-                                text: "notes "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
+                            // <span class="badge">
+                            Rectangle {
+                                color: "#e0e7ff"
+                                radius: 10
+                                implicitWidth: badgeText.implicitWidth + 16
+                                implicitHeight: badgeText.implicitHeight + 4
+                                width: Math.min(implicitWidth, pFlow.width)
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
-                            Text {
-                                text: "for "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Item {
-                                width: badgeBox.width
-                                height: badgeBox.height + 3.32
-
-                                Rectangle {
-                                    id: badgeBox
-                                    color: "#e0e7ff"
-                                    radius: 10
-                                    implicitWidth: badgeText.implicitWidth + 16
-                                    implicitHeight: badgeText.implicitHeight + 4
-                                    width: Math.min(implicitWidth, pFlow.width)
-                                    y: 3.32
-                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
-
-                                    Text {
-                                        id: badgeText
-                                        text: "NEW"
-                                        textFormat: Text.PlainText
-                                        color: "#3730a3"
-                                        font.family: "Liberation Sans"
-                                        font.pixelSize: 12
-                                        font.weight: 700
-                                        lineHeight: 16
-                                        lineHeightMode: Text.FixedHeight
-                                        transform: Translate {
-                                            y: 1
-                                        }
-                                        wrapMode: Text.WordWrap
-                                        anchors.left: parent.left
-                                        anchors.right: parent.right
-                                        anchors.top: parent.top
-                                        anchors.leftMargin: 8
-                                        anchors.rightMargin: 8
-                                        anchors.topMargin: 2
-                                        renderType: Text.NativeRendering
+                                Text {
+                                    id: badgeText
+                                    text: "NEW"
+                                    textFormat: Text.PlainText
+                                    color: "#3730a3"
+                                    font.family: "Liberation Sans"
+                                    font.pixelSize: 12
+                                    font.weight: 700
+                                    lineHeight: 16
+                                    lineHeightMode: Text.FixedHeight
+                                    transform: Translate {
+                                        y: 1
                                     }
+                                    wrapMode: Text.WordWrap
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.top: parent.top
+                                    anchors.leftMargin: 8
+                                    anchors.rightMargin: 8
+                                    anchors.topMargin: 2
+                                    renderType: Text.NativeRendering
                                 }
                             }
 
                             Text {
-                                text: " "
+                                text: " features and "
                                 textFormat: Text.PlainText
                                 color: "#1b2231"
                                 font.family: "Liberation Sans"
                                 font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
+                                wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
                             }
 
-                            Text {
-                                text: "features "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
+                            // <span class="badge">
+                            Rectangle {
+                                color: "#e0e7ff"
+                                radius: 10
+                                implicitWidth: badgeText2.implicitWidth + 16
+                                implicitHeight: badgeText2.implicitHeight + 4
+                                width: Math.min(implicitWidth, pFlow.width)
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
-                            Text {
-                                text: "and "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Item {
-                                width: badgeBox2.width
-                                height: badgeBox2.height + 3.32
-
-                                Rectangle {
-                                    id: badgeBox2
-                                    color: "#e0e7ff"
-                                    radius: 10
-                                    implicitWidth: badgeText2.implicitWidth + 16
-                                    implicitHeight: badgeText2.implicitHeight + 4
-                                    width: Math.min(implicitWidth, pFlow.width)
-                                    y: 3.32
-                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
-
-                                    Text {
-                                        id: badgeText2
-                                        text: "BETA"
-                                        textFormat: Text.PlainText
-                                        color: "#3730a3"
-                                        font.family: "Liberation Sans"
-                                        font.pixelSize: 12
-                                        font.weight: 700
-                                        lineHeight: 16
-                                        lineHeightMode: Text.FixedHeight
-                                        transform: Translate {
-                                            y: 1
-                                        }
-                                        wrapMode: Text.WordWrap
-                                        anchors.left: parent.left
-                                        anchors.right: parent.right
-                                        anchors.top: parent.top
-                                        anchors.leftMargin: 8
-                                        anchors.rightMargin: 8
-                                        anchors.topMargin: 2
-                                        renderType: Text.NativeRendering
+                                Text {
+                                    id: badgeText2
+                                    text: "BETA"
+                                    textFormat: Text.PlainText
+                                    color: "#3730a3"
+                                    font.family: "Liberation Sans"
+                                    font.pixelSize: 12
+                                    font.weight: 700
+                                    lineHeight: 16
+                                    lineHeightMode: Text.FixedHeight
+                                    transform: Translate {
+                                        y: 1
                                     }
+                                    wrapMode: Text.WordWrap
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.top: parent.top
+                                    anchors.leftMargin: 8
+                                    anchors.rightMargin: 8
+                                    anchors.topMargin: 2
+                                    renderType: Text.NativeRendering
                                 }
                             }
 
                             Text {
-                                text: " "
+                                text: " previews, with a badge in the middle of a sentence that is long enough to wrap onto a second line in the page."
                                 textFormat: Text.PlainText
                                 color: "#1b2231"
                                 font.family: "Liberation Sans"
                                 font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "previews, "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "with "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "a "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "badge "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "in "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "the "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "middle "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "of "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "a "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "sentence "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "that "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "is "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "long "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "enough "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "to "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "wrap "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "onto "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "a "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "second "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "line "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "in "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "the "
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
-                                text: "page."
-                                textFormat: Text.PlainText
-                                color: "#1b2231"
-                                font.family: "Liberation Sans"
-                                font.pixelSize: 16
-                                lineHeight: 24
-                                lineHeightMode: Text.FixedHeight
-                                transform: Translate {
-                                    y: 3
-                                }
+                                wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
                             }
                         }
@@ -580,8 +182,12 @@ ApplicationWindow {
                     Layout.preferredHeight: implicitHeight
                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
-                    Flow {
+                    EldurLines {
                         id: narrowFlow
+                        color: "#1b2231"
+                        font.family: "Liberation Sans"
+                        font.pixelSize: 16
+                        lineHeight: 24
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.top: parent.top
@@ -589,7 +195,9 @@ ApplicationWindow {
                         anchors.rightMargin: 13
                         anchors.topMargin: 13
 
+                        // <span class="tag">
                         Item {
+                            implicitWidth: tagBox.implicitWidth + 8
                             width: tagBox.width + 8
                             height: tagBox.height + 8
 
@@ -629,21 +237,18 @@ ApplicationWindow {
                         }
 
                         Text {
-                            text: " "
+                            text: " "
                             textFormat: Text.PlainText
                             color: "#1b2231"
                             font.family: "Liberation Sans"
                             font.pixelSize: 16
-                            lineHeight: 24
-                            lineHeightMode: Text.FixedHeight
-                            transform: Translate {
-                                y: 3
-                            }
-                            topPadding: 2.34
+                            wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
                         }
 
+                        // <span class="tag">
                         Item {
+                            implicitWidth: tagBox2.implicitWidth + 8
                             width: tagBox2.width + 8
                             height: tagBox2.height + 8
 
@@ -683,21 +288,18 @@ ApplicationWindow {
                         }
 
                         Text {
-                            text: " "
+                            text: " "
                             textFormat: Text.PlainText
                             color: "#1b2231"
                             font.family: "Liberation Sans"
                             font.pixelSize: 16
-                            lineHeight: 24
-                            lineHeightMode: Text.FixedHeight
-                            transform: Translate {
-                                y: 3
-                            }
-                            topPadding: 2.34
+                            wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
                         }
 
+                        // <span class="tag">
                         Item {
+                            implicitWidth: tagBox3.implicitWidth + 8
                             width: tagBox3.width + 8
                             height: tagBox3.height + 8
 
@@ -737,21 +339,18 @@ ApplicationWindow {
                         }
 
                         Text {
-                            text: " "
+                            text: " "
                             textFormat: Text.PlainText
                             color: "#1b2231"
                             font.family: "Liberation Sans"
                             font.pixelSize: 16
-                            lineHeight: 24
-                            lineHeightMode: Text.FixedHeight
-                            transform: Translate {
-                                y: 3
-                            }
-                            topPadding: 2.34
+                            wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
                         }
 
+                        // <span class="tag">
                         Item {
+                            implicitWidth: tagBox4.implicitWidth + 8
                             width: tagBox4.width + 8
                             height: tagBox4.height + 8
 
@@ -791,21 +390,18 @@ ApplicationWindow {
                         }
 
                         Text {
-                            text: " "
+                            text: " "
                             textFormat: Text.PlainText
                             color: "#1b2231"
                             font.family: "Liberation Sans"
                             font.pixelSize: 16
-                            lineHeight: 24
-                            lineHeightMode: Text.FixedHeight
-                            transform: Translate {
-                                y: 3
-                            }
-                            topPadding: 2.34
+                            wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
                         }
 
+                        // <span class="tag">
                         Item {
+                            implicitWidth: tagBox5.implicitWidth + 8
                             width: tagBox5.width + 8
                             height: tagBox5.height + 8
 
@@ -845,21 +441,18 @@ ApplicationWindow {
                         }
 
                         Text {
-                            text: " "
+                            text: " "
                             textFormat: Text.PlainText
                             color: "#1b2231"
                             font.family: "Liberation Sans"
                             font.pixelSize: 16
-                            lineHeight: 24
-                            lineHeightMode: Text.FixedHeight
-                            transform: Translate {
-                                y: 3
-                            }
-                            topPadding: 2.34
+                            wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
                         }
 
+                        // <span class="tag">
                         Item {
+                            implicitWidth: tagBox6.implicitWidth + 8
                             width: tagBox6.width + 8
                             height: tagBox6.height + 8
 
@@ -912,9 +505,13 @@ ApplicationWindow {
                     Layout.topMargin: 24 - narrow.eldurCarry
                     Layout.preferredHeight: implicitHeight
 
-                    Flow {
+                    EldurLines {
                         id: centeredFlow
-                        leftPadding: { const used = Array.from(children).reduce((sum, item) => sum + item.width, 0); return Math.max(0, Math.floor((width - used) / 2)); }
+                        color: "#1b2231"
+                        font.family: "Liberation Sans"
+                        font.pixelSize: 16
+                        lineHeight: 24
+                        textAlign: Text.AlignHCenter
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.top: parent.top
@@ -922,61 +519,51 @@ ApplicationWindow {
                         anchors.rightMargin: 16
                         anchors.topMargin: 16
 
-                        Item {
-                            width: buttonBox.width
-                            height: buttonBox.height + 2
+                        // <a class="button">
+                        Rectangle {
+                            color: "#2563eb"
+                            radius: 6
+                            implicitWidth: buttonText.implicitWidth + 40
+                            implicitHeight: buttonText.implicitHeight + 20
+                            width: Math.min(implicitWidth, centeredFlow.width)
+                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
-                            Rectangle {
-                                id: buttonBox
-                                color: "#2563eb"
-                                radius: 6
-                                implicitWidth: buttonText.implicitWidth + 40
-                                implicitHeight: buttonText.implicitHeight + 20
-                                width: Math.min(implicitWidth, centeredFlow.width)
-                                y: 2
-                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
-
-                                Text {
-                                    id: buttonText
-                                    text: "Get started"
-                                    textFormat: Text.PlainText
-                                    color: "#ffffff"
-                                    font.family: "Liberation Sans"
-                                    font.pixelSize: 16
-                                    font.weight: 700
-                                    lineHeight: 24
-                                    lineHeightMode: Text.FixedHeight
-                                    transform: Translate {
-                                        y: 3
-                                    }
-                                    horizontalAlignment: Text.AlignHCenter
-                                    wrapMode: Text.WordWrap
-                                    anchors.left: parent.left
-                                    anchors.right: parent.right
-                                    anchors.top: parent.top
-                                    anchors.leftMargin: 20
-                                    anchors.rightMargin: 20
-                                    anchors.topMargin: 10
-                                    renderType: Text.NativeRendering
+                            Text {
+                                id: buttonText
+                                text: "Get started"
+                                textFormat: Text.PlainText
+                                color: "#ffffff"
+                                font.family: "Liberation Sans"
+                                font.pixelSize: 16
+                                font.weight: 700
+                                lineHeight: 24
+                                lineHeightMode: Text.FixedHeight
+                                transform: Translate {
+                                    y: 3
                                 }
+                                horizontalAlignment: Text.AlignHCenter
+                                wrapMode: Text.WordWrap
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.top: parent.top
+                                anchors.leftMargin: 20
+                                anchors.rightMargin: 20
+                                anchors.topMargin: 10
+                                renderType: Text.NativeRendering
                             }
                         }
 
                         Text {
-                            text: " "
+                            text: " "
                             textFormat: Text.PlainText
                             color: "#1b2231"
                             font.family: "Liberation Sans"
                             font.pixelSize: 16
-                            lineHeight: 24
-                            lineHeightMode: Text.FixedHeight
-                            transform: Translate {
-                                y: 3
-                            }
-                            topPadding: 12
+                            wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
                         }
 
+                        // <a class="button ghost">
                         Rectangle {
                             color: "#00000000"
                             radius: 6
@@ -1015,30 +602,32 @@ ApplicationWindow {
                 }
 
                 // <section>
-                Flow {
+                EldurLines {
                     id: sectionFlow
                     property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
+                    color: "#1b2231"
+                    font.family: "Liberation Sans"
+                    font.pixelSize: 16
+                    lineHeight: 24
                     Layout.fillWidth: true
                     Layout.topMargin: 24 - centered.eldurCarry
                     Layout.preferredHeight: implicitHeight
 
                     Text {
-                        text: "Status: "
+                        text: "Status: "
                         textFormat: Text.PlainText
                         color: "#1b2231"
                         font.family: "Liberation Sans"
                         font.pixelSize: 16
-                        lineHeight: 24
-                        lineHeightMode: Text.FixedHeight
-                        transform: Translate {
-                            y: 3
-                        }
-                        topPadding: 1.34
+                        wrapMode: Text.WordWrap
                         renderType: Text.NativeRendering
                     }
 
+                    // <span class="chip">
                     Rectangle {
+                        property string eldurBaseline: "first"
+
                         color: "#dcfce7"
                         radius: 999
                         implicitWidth: chipContent.implicitWidth + 24
@@ -1098,61 +687,34 @@ ApplicationWindow {
                     }
 
                     Text {
-                        text: " "
+                        text: " since Monday."
                         textFormat: Text.PlainText
                         color: "#1b2231"
                         font.family: "Liberation Sans"
                         font.pixelSize: 16
-                        lineHeight: 24
-                        lineHeightMode: Text.FixedHeight
-                        transform: Translate {
-                            y: 3
-                        }
-                        topPadding: 1.34
-                        renderType: Text.NativeRendering
-                    }
-
-                    Text {
-                        text: "since "
-                        textFormat: Text.PlainText
-                        color: "#1b2231"
-                        font.family: "Liberation Sans"
-                        font.pixelSize: 16
-                        lineHeight: 24
-                        lineHeightMode: Text.FixedHeight
-                        transform: Translate {
-                            y: 3
-                        }
-                        topPadding: 1.34
-                        renderType: Text.NativeRendering
-                    }
-
-                    Text {
-                        text: "Monday."
-                        textFormat: Text.PlainText
-                        color: "#1b2231"
-                        font.family: "Liberation Sans"
-                        font.pixelSize: 16
-                        lineHeight: 24
-                        lineHeightMode: Text.FixedHeight
-                        transform: Translate {
-                            y: 3
-                        }
-                        topPadding: 1.34
+                        wrapMode: Text.WordWrap
                         renderType: Text.NativeRendering
                     }
                 }
 
                 // <section>
-                Flow {
+                EldurLines {
                     id: sectionFlow2
                     property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
+                    color: "#1b2231"
+                    font.family: "Liberation Sans"
+                    font.pixelSize: 16
+                    lineHeight: 24
                     Layout.fillWidth: true
                     Layout.topMargin: 24 - sectionFlow.eldurCarry
                     Layout.preferredHeight: implicitHeight
 
+                    // <div class="stat">
                     Item {
+                        property string eldurVAlign: "top"
+
+                        implicitWidth: statBox.implicitWidth + 16
                         width: statBox.width + 16
                         height: statBox.height
 
@@ -1160,7 +722,7 @@ ApplicationWindow {
                             id: statBox
                             color: "#fef3c7"
                             radius: 8
-                            implicitWidth: statContent.implicitWidth + 24
+                            implicitWidth: 164
                             implicitHeight: statContent.implicitHeight + 24
                             width: 164
                             antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
@@ -1216,7 +778,11 @@ ApplicationWindow {
                         }
                     }
 
+                    // <div class="stat">
                     Item {
+                        property string eldurVAlign: "top"
+
+                        implicitWidth: statBox2.implicitWidth + 16
                         width: statBox2.width + 16
                         height: statBox2.height
 
@@ -1224,7 +790,7 @@ ApplicationWindow {
                             id: statBox2
                             color: "#fef3c7"
                             radius: 8
-                            implicitWidth: statContent2.implicitWidth + 24
+                            implicitWidth: 164
                             implicitHeight: statContent2.implicitHeight + 24
                             width: 164
                             antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0

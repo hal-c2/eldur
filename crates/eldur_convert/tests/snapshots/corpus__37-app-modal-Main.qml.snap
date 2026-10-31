@@ -91,43 +91,54 @@ ApplicationWindow {
                             renderType: Text.NativeRendering
                         }
 
-                        // <button id="open" class="btn">
-                        Button {
-                            id: open
-                            property string eldurTag: "button"
-                            property string eldurClasses: "btn"
-                            property string eldurWs: "\n  "
-                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 34) - Layout.topMargin - 34 + 0.000001) : h1.eldurCarry
+                        EldurLines {
+                            id: blockFlow
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
-                            text: "Invite someone"
-                            palette.buttonText: "#ffffff"
+                            color: "#000000"
                             font.family: "Arial"
-                            font.pixelSize: 14
-                            background: Rectangle {
-                                color: "#1a56db"
-                                radius: 4
-                                border.width: 1
-                                border.color: "#1a56db"
-                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
-                            }
-                            topPadding: 9
-                            rightPadding: 17
-                            bottomPadding: 9
-                            leftPadding: 17
-                            implicitHeight: 34
-                            contentItem: Text {
-                                text: open.text
-                                font: open.font
-                                color: open.palette.buttonText
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                                renderType: Text.NativeRendering
-                            }
-                            objectName: "open"
+                            font.pixelSize: 16
+                            Layout.fillWidth: true
                             Layout.topMargin: 21.44 - h1.eldurCarry
+                            Layout.preferredHeight: implicitHeight
 
-                            Keys.onPressed: (event) => {
-                                event.accepted = !Eldur.fire(open, "keydown", event);
+                            // <button id="open" class="btn">
+                            Button {
+                                id: open
+                                property string eldurTag: "button"
+                                property string eldurClasses: "btn"
+                                property string eldurWs: "\n  "
+
+                                text: "Invite someone"
+                                palette.buttonText: "#ffffff"
+                                font.family: "Arial"
+                                font.pixelSize: 14
+                                background: Rectangle {
+                                    color: "#1a56db"
+                                    radius: 4
+                                    border.width: 1
+                                    border.color: "#1a56db"
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                                }
+                                topPadding: 9
+                                rightPadding: 17
+                                bottomPadding: 9
+                                leftPadding: 17
+                                implicitHeight: 34
+                                contentItem: Text {
+                                    text: open.text
+                                    font: open.font
+                                    color: open.palette.buttonText
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    renderType: Text.NativeRendering
+                                }
+                                objectName: "open"
+                                width: Math.min(implicitWidth, blockFlow.width)
+
+                                Keys.onPressed: (event) => {
+                                    event.accepted = !Eldur.fire(open, "keydown", event);
+                                }
                             }
                         }
 
@@ -146,7 +157,7 @@ ApplicationWindow {
                             objectName: "result"
                             Layout.preferredHeight: text === "" ? 0 : -1
                             Layout.fillWidth: true
-                            Layout.topMargin: 16 - open.eldurCarry
+                            Layout.topMargin: 16 - blockFlow.eldurCarry
                             Layout.bottomMargin: 16
                             renderType: Text.NativeRendering
                         }
@@ -271,36 +282,52 @@ ApplicationWindow {
                         }
                     }
 
-                    // <input id="email">
-                    TextField {
-                        id: email
-                        property string eldurTag: "input"
-                        property string eldurWs: "\n    "
-                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 29) - Layout.topMargin - 29 + 0.000001) : label.eldurCarry
+                    EldurLines {
+                        id: blockFlow2
+                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                         color: "#000000"
                         font.family: "Arial"
-                        font.pixelSize: 13
-                        verticalAlignment: TextInput.AlignVCenter
-                        background: Rectangle {
-                            color: "#ffffff"
-                            border.width: 1
-                            border.color: "#aaaaaa"
-                        }
-                        topPadding: 7
-                        rightPadding: 9
-                        bottomPadding: 7
-                        leftPadding: 9
-                        implicitHeight: 29
-                        implicitWidth: 195
-                        Accessible.name: "Email"
-                        objectName: "email"
+                        font.pixelSize: 16
                         Layout.fillWidth: true
                         Layout.topMargin: 4 - label.eldurCarry
-                        renderType: Text.NativeRendering
+                        Layout.preferredHeight: implicitHeight
 
-                        Keys.onPressed: (event) => {
-                            event.accepted = !Eldur.fire(email, "keydown", event);
+                        // <input id="email">
+                        Item {
+                            implicitWidth: email.implicitWidth
+                            width: email.width
+                            height: email.height + 16
+
+                            TextField {
+                                id: email
+                                property string eldurTag: "input"
+                                property string eldurWs: "\n    "
+
+                                color: "#000000"
+                                font.family: "Arial"
+                                font.pixelSize: 13
+                                verticalAlignment: TextInput.AlignVCenter
+                                background: Rectangle {
+                                    color: "#ffffff"
+                                    border.width: 1
+                                    border.color: "#aaaaaa"
+                                }
+                                topPadding: 7
+                                rightPadding: 9
+                                bottomPadding: 7
+                                leftPadding: 9
+                                implicitHeight: 29
+                                implicitWidth: 195
+                                Accessible.name: "Email"
+                                objectName: "email"
+                                width: blockFlow2.width * 1 + 0
+                                renderType: Text.NativeRendering
+
+                                Keys.onPressed: (event) => {
+                                    event.accepted = !Eldur.fire(email, "keydown", event);
+                                }
+                            }
                         }
                     }
 
@@ -314,7 +341,7 @@ ApplicationWindow {
                         spacing: 0
                         Layout.fillWidth: true
                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                        Layout.topMargin: 16 - email.eldurCarry
+                        Layout.topMargin: -blockFlow2.eldurCarry
 
                         Item {
                             Layout.fillWidth: true

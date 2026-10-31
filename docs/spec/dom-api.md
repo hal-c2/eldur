@@ -405,6 +405,8 @@ Why this and not one QML object per element, or splitting the block whenever a s
 - Created block children of a `<div>` that was empty at conversion are not stacked: the div is a `Text`, and they overlap at its top.
 - `dataset` writes do not recompute styles.
 
+**Lines with boxes.** Each run on an `EldurLines` line (layout.md §2) has its own inline model, so inline elements there are nodes as elsewhere, an empty `<span id>` included, and a run's text is a text node to a script, not an element. Changing text, adding, removing or hiding a box lays the line out again. A press goes to the piece under it. `textContent` on the block replaces everything and leaves the line in place.
+
 ## 13. Created elements
 
 Whether a page's created elements are styled by templates or at run time is
@@ -468,6 +470,8 @@ container filled with inline-level children (`_gFillsLine`).
   the page leaves its border and background to the UA is still written twice:
   `NATIVE_BORDER` in Rust, the created sources in the runtime.
 - A SpinBox has no empty state: a `type=number` nobody wrote reads `""` and shows 0.
+
+**Created elements on lines.** A created inline-level element under a static parent joins its line: a static `Text` becomes the line's first run, and an empty parent gets an anonymous line. Whitespace before the reference node becomes a text node there. A created `<span>` the rules make `inline-block` is a box even with no template for it. A created box's own children still use the older `_gLines` layouter, which does not place text beside boxes.
 
 ## 14. Realistic pages
 

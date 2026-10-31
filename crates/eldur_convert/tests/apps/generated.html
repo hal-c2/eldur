@@ -1,0 +1,32 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Generated text</title>
+<style>
+  body { margin: 8px; font: 16px sans-serif; }
+  table { border-collapse: collapse; width: 400px; }
+  th, td { border: 1px solid #888; padding: 4px; text-align: left; }
+  th.up::after { content: " ▲"; }
+  th.down::after { content: " ▼"; }
+  p.mark::before { content: "> "; }
+  p.mark::after { content: " [" attr(title) "]"; }
+  p.mark.strong::after { content: " !"; }
+  #static-one::after { content: " kept"; }
+</style></head><body>
+<table><thead><tr><th id="name">Name</th><th id="age">Age</th></tr></thead>
+<tbody><tr><td>A long enough name to take up the room</td><td>41</td></tr></tbody></table>
+<p id="note" title="why" style="display:inline-block">Note</p>
+<p id="static-one" style="display:inline-block">Static</p>
+<button id="up">up</button><button id="mark">mark</button><button id="strong">strong</button><button id="text">text</button><button id="off">off</button>
+<script>
+  var age = document.getElementById("age"), note = document.getElementById("note");
+  function say(what) {
+    console.log(what, JSON.stringify(note.textContent), JSON.stringify(age.textContent),
+      JSON.stringify(document.getElementById("static-one").textContent));
+  }
+  document.getElementById("up").onclick = function () { age.className = age.className === "up" ? "down" : "up"; say("up"); };
+  document.getElementById("mark").onclick = function () { note.className = "mark"; say("mark"); };
+  document.getElementById("strong").onclick = function () { note.classList.add("strong"); say("strong"); };
+  document.getElementById("text").onclick = function () { note.textContent = "Changed"; say("text"); };
+  document.getElementById("off").onclick = function () { note.className = ""; age.className = ""; say("off"); };
+  say("load");
+</script>
+</body></html>

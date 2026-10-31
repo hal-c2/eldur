@@ -50,7 +50,10 @@ pub(crate) fn collapse(raw: Vec<Raw<'_>>) -> Vec<Inline<'_>> {
     {
         tokens.clear();
     }
-    rebuild(tokens)
+    // Between boxes an empty span still has a place on the line: a script can
+    // measure it or give it text, and each run keeps its own model of them.
+    let keep_empty = tokens.iter().any(|t| matches!(t, Token::Atomic(_)));
+    rebuild(tokens, keep_empty)
 }
 
 fn flatten<'a>(raw: Vec<Raw<'a>>, out: &mut Vec<Token<'a>>) {
@@ -146,6 +149,7 @@ fn expand_tabs(text: &str) -> String {
 /// Phase I across nodes and phase II: a collapsible space after another
 /// space, at the start of a line or at the end of one, is removed.
 fn remove_line_edge_spaces(tokens: Vec<Token<'_>>) -> Vec<Token<'_>> {
+    let keep_empty = tokens.iter().any(|t| matches!(t, Token::Atomic(_)));
     let mut out: Vec<Token<'_>> = Vec::with_capacity(tokens.len());
     // Line start counts as "after a space".
     let mut after_space = true;
@@ -174,6 +178,12 @@ fn remove_line_edge_spaces(tokens: Vec<Token<'_>>) -> Vec<Token<'_>> {
                 after_space = false;
                 out.push(Token::Atomic(b));
             }
+            // The model keeps this space for when the span gets text; the
+            // `Text` drops it again while the span is empty.
+            Token::Close if keep_empty && matches!(out.last(), Some(Token::Open(Some(_), _))) => {
+                after_space = false;
+                out.push(Token::Close);
+            }
             other => out.push(other),
         }
     }
@@ -200,7 +210,7 @@ fn trim_trailing_space(out: &mut Vec<Token<'_>>) {
     }
 }
 
-fn rebuild(tokens: Vec<Token<'_>>) -> Vec<Inline<'_>> {
+fn rebuild(tokens: Vec<Token<'_>>, keep_empty: bool) -> Vec<Inline<'_>> {
     let mut stack: Vec<Span<'_>> = Vec::new();
     let mut root: Vec<Inline<'_>> = Vec::new();
     for token in tokens {
@@ -215,7 +225,9 @@ fn rebuild(tokens: Vec<Token<'_>>) -> Vec<Inline<'_>> {
             }
             Token::Close => match stack.pop() {
                 // Empty inline boxes have no effect on the text.
-                Some(span) if span.children.is_empty() => continue,
+                Some(span) if span.children.is_empty() && !(keep_empty && span.node.is_some()) => {
+                    continue;
+                }
                 Some(span) => Inline::Span(span),
                 None => continue,
             },

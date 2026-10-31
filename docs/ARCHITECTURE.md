@@ -96,10 +96,12 @@ one `Text { textFormat: Text.StyledText; wrapMode: Text.Wrap }` with
 `Layout.fillWidth: true`, using StyledText tags for `b/strong/i/em/u/s/a/
 br/sub/sup/code` and `<font color>` for colour changes. Links get
 `onLinkActivated: (link) => Qt.openUrlExternally(link)`. The run is split
-into a `Flow` of separate items only when an inline box needs something
-StyledText cannot draw: background, border, padding, a replaced element
-(img, input), a script or `:hover` target. The block's font, colour, line
-height, alignment and letter spacing go on the `Text`.
+into separate items only when an inline box needs something StyledText cannot
+draw: background, border, padding, a script or `:hover` target. The block's font, colour, line
+height, alignment and letter spacing go on the `Text`. A run holding
+an atomic box (a replaced element, a control, `inline-block`) is laid out by
+`EldurLines.qml`, written beside `Main.qml`: the text between boxes stays whole
+`Text` runs and the boxes sit on CSS line boxes (`docs/spec/layout.md` §2).
 
 **Flexbox → `RowLayout`/`ColumnLayout`, `Flow` for wrapping.** `gap` →
 `spacing`; `flex-grow` > 0 → `Layout.fillWidth/fillHeight` with

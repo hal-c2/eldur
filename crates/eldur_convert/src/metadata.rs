@@ -387,6 +387,35 @@ pub(crate) fn inline_rules_decl(rules: &[eldur_css::InlineRule]) -> Member {
     )
 }
 
+/// `root.eldurPseudoRules`: what `::before` and `::after` generate, for the
+/// runtime to follow classes a script sets.
+pub(crate) fn pseudo_rules_decl(rules: &[eldur_css::PseudoRule]) -> Member {
+    let list: Vec<serde_json::Value> = rules
+        .iter()
+        .map(|r| {
+            let parts: Vec<serde_json::Value> = r
+                .content
+                .iter()
+                .map(|p| match p {
+                    eldur_css::PseudoPart::Text(t) => serde_json::json!(t),
+                    eldur_css::PseudoPart::Attr(a) => serde_json::json!({ "attr": a }),
+                })
+                .collect();
+            serde_json::json!({
+                "sel": r.selector,
+                "after": r.after,
+                "spec": [r.specificity.0, r.specificity.1, r.specificity.2],
+                "parts": parts,
+            })
+        })
+        .collect();
+    decl(
+        "string",
+        "eldurPseudoRules",
+        Value::String(serde_json::Value::Array(list).to_string()),
+    )
+}
+
 /// The same property with all a created element can use (`eldur_runtime.js`
 /// reads either).
 pub(crate) fn runtime_rules_decl(rules: &[eldur_css::RuntimeRule]) -> Member {

@@ -421,13 +421,18 @@ ApplicationWindow {
                                         Layout.alignment: Qt.AlignVCenter
                                         Layout.rightMargin: 26.67
 
-                                        Flow {
+                                        EldurLines {
                                             id: blockFlow
                                             property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
+                                            color: "#ffffff"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 16
+                                            lineHeight: 25.6
                                             Layout.fillWidth: true
                                             Layout.preferredHeight: implicitHeight
 
+                                            // <span class="eyebrow">
                                             Rectangle {
                                                 color: "#2effffff"
                                                 radius: 999

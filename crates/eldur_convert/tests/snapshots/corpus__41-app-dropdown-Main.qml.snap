@@ -125,40 +125,50 @@ ApplicationWindow {
                                 anchors.right: parent.right
                                 anchors.top: parent.top
 
-                                // <button id="btn" class="menu-btn">
-                                Button {
-                                    id: btn
-                                    property var eldurAttrs: ({ "aria-haspopup": "true", "aria-expanded": "false" })
-                                    property string eldurTag: "button"
-                                    property string eldurClasses: "menu-btn"
-                                    property string eldurWs: "\n    "
-                                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : 0
+                                EldurLines {
+                                    id: blockFlow
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
-                                    text: "Account ▾"
-                                    palette.buttonText: "#ffffff"
+                                    color: "#ffffff"
                                     font.family: "Arial"
-                                    font.pixelSize: 13
-                                    background: Rectangle {
-                                        color: "#444d56"
-                                        radius: 4
-                                        antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
-                                    }
-                                    topPadding: 8
-                                    rightPadding: 12
-                                    bottomPadding: 8
-                                    leftPadding: 12
-                                    implicitHeight: Math.max(15, contentItem.implicitHeight) + 16
-                                    contentItem: Text {
-                                        text: btn.text
-                                        font: btn.font
-                                        color: btn.palette.buttonText
-                                        horizontalAlignment: Text.AlignHCenter
-                                        verticalAlignment: Text.AlignVCenter
-                                        renderType: Text.NativeRendering
-                                    }
-                                    implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
-                                    objectName: "btn"
+                                    font.pixelSize: 14
+                                    Layout.fillWidth: true
                                     Layout.preferredHeight: implicitHeight
+
+                                    // <button id="btn" class="menu-btn">
+                                    Button {
+                                        id: btn
+                                        property var eldurAttrs: ({ "aria-haspopup": "true", "aria-expanded": "false" })
+                                        property string eldurTag: "button"
+                                        property string eldurClasses: "menu-btn"
+                                        property string eldurWs: "\n    "
+
+                                        text: "Account ▾"
+                                        palette.buttonText: "#ffffff"
+                                        font.family: "Arial"
+                                        font.pixelSize: 13
+                                        background: Rectangle {
+                                            color: "#444d56"
+                                            radius: 4
+                                            antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                                        }
+                                        topPadding: 8
+                                        rightPadding: 12
+                                        bottomPadding: 8
+                                        leftPadding: 12
+                                        implicitHeight: Math.max(15, contentItem.implicitHeight) + 16
+                                        contentItem: Text {
+                                            text: btn.text
+                                            font: btn.font
+                                            color: btn.palette.buttonText
+                                            horizontalAlignment: Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                            renderType: Text.NativeRendering
+                                        }
+                                        implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
+                                        objectName: "btn"
+                                        width: Math.min(implicitWidth, blockFlow.width)
+                                    }
                                 }
 
                                 Item {
@@ -166,7 +176,7 @@ ApplicationWindow {
                                     property Item eldurBox: list
 
                                     visible: false
-                                    Layout.topMargin: -btn.eldurCarry
+                                    Layout.topMargin: -blockFlow.eldurCarry
                                     Layout.preferredHeight: implicitHeight
                                 }
                             }

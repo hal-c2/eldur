@@ -164,7 +164,7 @@ fn layout_kinds_are_kept() {
             "<style>.f{display:flex}.g{display:grid}</style><body>\
              <div class=f>a</div><div class=g>b</div><img src=x.png><table><tr><td>c</td></tr></table></body>"
         ),
-        "block <html>\n  block <body>\n    flex <div> [\"a\"]\n    grid <div> [\"b\"]\n    replaced <img>\n    table <table>\n      table <tbody>\n        table <tr>\n          table <td> [\"c\"]\n"
+        "block <html>\n  block <body>\n    flex <div> [\"a\"]\n    grid <div> [\"b\"]\n    block anon [atomic:replaced<img>]\n    table <table>\n      table <tbody>\n        table <tr>\n          table <td> [\"c\"]\n"
     );
 }
 
@@ -311,9 +311,9 @@ fn anonymous_box_inherits_text_style() {
 }
 
 #[test]
-fn an_inline_block_alone_in_its_parent_keeps_its_box() {
+fn an_inline_block_alone_in_its_parent_is_atomic_in_a_line() {
     let tree = outline("<div><a style=\"display:inline-block\" href=\"#\">x</a> </div>");
-    assert!(tree.contains("block <a>"), "{tree}");
+    assert!(tree.contains("atomic:block<a>"), "{tree}");
 }
 
 #[test]

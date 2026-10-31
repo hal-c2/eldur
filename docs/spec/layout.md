@@ -200,7 +200,11 @@ Snapping a rounded box's position instead (`Translate` or margins) needs its sce
 
 ## 2. Inline formatting context
 
-**Decision:** one `Text` per inline formatting context, with `textFormat: Text.StyledText`. Use `Flow` only when inline-block elements sit in the line. Inline images use the StyledText `<img>` tag.
+**Decision:** one `Text` per inline formatting context, with `textFormat: Text.StyledText`. When the content holds an atomic box (a replaced element, a control, `inline-block`, `inline-flex`) it is laid out by `EldurLines`: see below.
+
+**Lines with boxes.** `EldurLines.qml` is one line layouter for static and script pages, written beside `Main.qml` when the page uses it or has a runtime. Its children are the content in order. Text is cut only at boxes: each run between two boxes stays one `Text`, shaped whole, so no ligature or kerning is lost at a word boundary, and `lineLaidOut` places that `Text`'s lines. The tradeoff is that a scriptless page with such a line now has JavaScript functions in QML, though not `eldur_runtime.js`. Heights follow CSS 2.2 §10.8 with Chromium's rounding: the strut is `round(ascent) + floor(leading / 2)` above and `round(descent) + ceil(leading / 2)` below, and `normal` is `round(size * 1.15)`. A box's baseline is its text's (rounded ascent), the bottom border edge for a check box, radio or slider, the bottom margin edge for a textarea or a box with no line. A line with nothing on it has no strut. The layouter runs a frame after a width change, because a table reads implicit sizes while working out that width; a script's read settles it first.
+
+**Not done:** `text-align: justify` on a line with boxes is not spread, since a `Text` cut by a box cannot share the line's free space between its words; such a line keeps its natural positions.
 
 **HTML/CSS**
 ```html
@@ -237,12 +241,12 @@ Text {
 | `line-height` | Full | `lineHeight` + `ProportionalHeight` (or `FixedHeight` for lengths). |
 | `letter-spacing`, `word-spacing` | Full | `font.letterSpacing`, `font.wordSpacing`. |
 | `white-space: pre` | Approx | `wrapMode: Text.NoWrap` with `textFormat: Text.PlainText`. Collapse whitespace for the normal modes at convert time, before emitting. |
-| `text-align` | Full | `horizontalAlignment`. An inline-level box (control, `inline-block`) laid out as a block takes its place from its parent's `text-align`, not its own: a `<button>`'s UA `center` applies to its label. |
+| `text-align` | Full | `horizontalAlignment`. A line with boxes aligns as a whole; `justify` is not spread there. |
 | `text-decoration` | Full | `<u>`, `<s>`, or `font.underline`/`font.strikeout` (whole `Text` only). |
 | `text-shadow` | Approx | Second `Text` behind, offset by `x`/`y` in the shadow colour (blur is lost), or `style: Text.Raised` with `styleColor` for a 1px shadow. |
 | Inline `img` | Full | `<img src="…" width="W" height="H" align="middle">` inside the StyledText. |
-| `inline-block` | Emulated | Build a `Flow` of per-word `Text` items and the block. Baselines are aligned by offsetting `y` using `baselineOffset`. |
-| `vertical-align` | Approx | `y` offset from `baselineOffset`, only in the `Flow` emulation. |
+| `inline-block` | Full | A box on an `EldurLines` line, with the text around it in whole `Text` runs. |
+| `vertical-align` | Full on a box, Approx on text | On `EldurLines`: `baseline`, `middle`, `top`, `bottom`, `text-top`, `text-bottom`, `sub`, `super`, lengths and percentages. |
 
 **Pitfalls**
 - StyledText is not HTML and its parser is strict: tags must close and nest. Escape `<`, `>`, `&` in text runs.

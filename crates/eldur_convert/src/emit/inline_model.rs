@@ -118,6 +118,24 @@ impl Emitter<'_, '_> {
         node: NodeId,
         gen_boxes: &std::collections::BTreeMap<NodeId, (Option<Json>, Option<Json>)>,
     ) -> Option<Json> {
+        self.dom_node_with(node, gen_boxes, false)
+    }
+
+    /// `dom_node` without its children.
+    fn dom_node_shallow(
+        &mut self,
+        node: NodeId,
+        gen_boxes: &std::collections::BTreeMap<NodeId, (Option<Json>, Option<Json>)>,
+    ) -> Option<Json> {
+        self.dom_node_with(node, gen_boxes, true)
+    }
+
+    fn dom_node_with(
+        &mut self,
+        node: NodeId,
+        gen_boxes: &std::collections::BTreeMap<NodeId, (Option<Json>, Option<Json>)>,
+        shallow: bool,
+    ) -> Option<Json> {
         match &self.doc.node(node).data {
             NodeData::Text(t) => Some(json!({ "text": t })),
             NodeData::Element(e) => {
@@ -127,10 +145,14 @@ impl Emitter<'_, '_> {
                     .map(|a| json!([&*a.name.local, a.value.as_str()]))
                     .collect();
                 let children: Vec<NodeId> = self.doc.children(node).collect();
-                let kids: Vec<Json> = children
-                    .into_iter()
-                    .filter_map(|c| self.dom_node(c, gen_boxes))
-                    .collect();
+                let kids: Vec<Json> = if shallow {
+                    Vec::new()
+                } else {
+                    children
+                        .into_iter()
+                        .filter_map(|c| self.dom_node(c, gen_boxes))
+                        .collect()
+                };
                 self.inline_covered.insert(node);
                 let mut out = json!({ "tag": e.local_name(), "attrs": attrs, "kids": kids });
                 // Its handler attribute finds it by this, id or no id.
@@ -176,6 +198,60 @@ impl Emitter<'_, '_> {
         out
     }
 
+    /// Like `item_nodes`, for a run cut at boxes: a span the cut went through is
+    /// built from the piece in this run, and only its first piece is the element.
+    fn run_nodes(
+        &mut self,
+        items: &[Inline<'_>],
+        gen_boxes: &std::collections::BTreeMap<NodeId, (Option<Json>, Option<Json>)>,
+    ) -> Vec<Json> {
+        let mut out = Vec::new();
+        for item in items {
+            let Inline::Span(s) = item else {
+                out.extend(self.item_nodes(std::slice::from_ref(item), gen_boxes));
+                continue;
+            };
+            match s.node {
+                Some(n) if !self.all_inline(n) => {
+                    if self.inline_covered.contains(&n) {
+                        out.push(json!({ "gen": generated(s) }));
+                        continue;
+                    }
+                    let Some(mut node) = self.dom_node_shallow(n, gen_boxes) else {
+                        continue;
+                    };
+                    node["kids"] = Json::Array(self.run_nodes(&s.children, gen_boxes));
+                    // The boxes cut out of it name it by this.
+                    node["key"] = json!(n.index());
+                    out.push(node);
+                }
+                _ => out.extend(self.item_nodes(std::slice::from_ref(item), gen_boxes)),
+            }
+        }
+        out
+    }
+
+    /// `declare_inline_model` for one run of text in `b`'s lines.
+    pub(super) fn declare_run_model(
+        &mut self,
+        text: &mut Object,
+        b: &LayoutBox<'_>,
+        decoration: TextDecorationLine,
+        items: &[Inline<'_>],
+    ) {
+        if !items
+            .iter()
+            .any(|i| matches!(i, Inline::Span(_) | Inline::LineBreak))
+        {
+            return;
+        }
+        let mut gen_boxes = std::collections::BTreeMap::new();
+        collect_generated(items, &mut gen_boxes);
+        let mut model = self.model_head(&b.style, decoration, items);
+        model["kids"] = Json::Array(self.run_nodes(items, &gen_boxes));
+        declare(text, &model);
+    }
+
     /// Declares `eldurInline` on the `Text` of `b`'s inline content, when
     /// there is an element in it for a script to reach.
     pub(super) fn declare_inline_model(
@@ -198,20 +274,7 @@ impl Emitter<'_, '_> {
         }
         let mut gen_boxes = std::collections::BTreeMap::new();
         collect_generated(items, &mut gen_boxes);
-        let mut model = json!({
-            "k": computed(style),
-            "hoisted": whole_span(style, items).is_some(),
-            "bare": matches!(items, [Inline::Span(s)] if !decoration.underline
-                && super::text::link_href(self.doc, s).is_some()
-                && !s.style.text_decoration_line.underline),
-            "html": needs_html(items, &super::text::font_family(&style.font_family)),
-            "pre": !matches!(style.white_space, WhiteSpace::Normal | WhiteSpace::NoWrap),
-            "underline": decoration.underline,
-            "strike": decoration.line_through,
-        });
-        if let Some(lh) = line_height(style) {
-            model["lh"] = json!(lh);
-        }
+        let mut model = self.model_head(style, decoration, items);
         let kids = match whole_element {
             Some(n) => {
                 let children: Vec<NodeId> = self.doc.children(n).collect();
@@ -219,7 +282,7 @@ impl Emitter<'_, '_> {
                     .into_iter()
                     .filter_map(|c| self.dom_node(c, &gen_boxes))
                     .collect();
-                // The block's own generated boxes come through as items.
+                // The block's own generated boxes come through the items.
                 if let Some(Inline::Span(s)) = items.first()
                     && s.node.is_none()
                 {
@@ -237,6 +300,29 @@ impl Emitter<'_, '_> {
         };
         model["kids"] = Json::Array(kids);
         declare(text, &model);
+    }
+
+    fn model_head(
+        &self,
+        style: &ComputedStyle,
+        decoration: TextDecorationLine,
+        items: &[Inline<'_>],
+    ) -> Json {
+        let mut model = json!({
+            "k": computed(style),
+            "hoisted": whole_span(style, items).is_some(),
+            "bare": matches!(items, [Inline::Span(s)] if !decoration.underline
+                && super::text::link_href(self.doc, s).is_some()
+                && !s.style.text_decoration_line.underline),
+            "html": needs_html(items, &super::text::font_family(&style.font_family)),
+            "pre": !matches!(style.white_space, WhiteSpace::Normal | WhiteSpace::NoWrap),
+            "underline": decoration.underline,
+            "strike": decoration.line_through,
+        });
+        if let Some(lh) = line_height(style) {
+            model["lh"] = json!(lh);
+        }
+        model
     }
 
     /// Declares `eldurInline` on the `ComboBox` of `<select>` `node`.

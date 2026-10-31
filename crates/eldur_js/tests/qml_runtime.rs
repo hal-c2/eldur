@@ -4803,3 +4803,54 @@ function start(id) {
     assert!(warned("fixed"), "{output}");
     assert!(!warned("relative"), "{output}");
 }
+
+// Expected lines recorded from Chromium: /tmp/cornercheck/srt/page.html through
+// `tools/visual`, and the same probes with typed arrays.
+#[test]
+fn qml6_sort_rejects_a_bad_compare_and_sorts_typed_arrays_as_chromium_does() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default();
+    let (output, _) = run_page(
+        &resolver,
+        r#"
+function start() {
+    try { [1].sort(5); console.log("S badcmp=none"); } catch (e) { console.log("S badcmp=" + e.name); }
+    try { [1].sort(null); console.log("S nullcmp=none"); } catch (e) { console.log("S nullcmp=" + e.name); }
+    console.log("S undef=" + [1, 2].sort(undefined).join());
+    var t = new Int32Array([3, 1, 2]);
+    var same = t.sort() === t;
+    console.log("S typed=" + Array.from(t).join() + " same=" + same);
+    var f = new Float64Array([10, NaN, -1, 2]);
+    f.sort();
+    console.log("S float=" + Array.from(f).join());
+    var d = new Int32Array([1, 2, 3]);
+    d.sort(function(a, b) { return b - a; });
+    console.log("S desc=" + Array.from(d).join());
+    try { new Int32Array([1]).sort(5); console.log("S typedbad=none"); } catch (e) { console.log("S typedbad=" + e.name); }
+    console.log("ELDUR_DONE");
+}
+"#,
+        r#"Item {
+    id: root
+    Component.onCompleted: {
+        (Page.__eldur_init || Eldur.init)(root);
+        Page.start();
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(output.contains("ELDUR_DONE"), "{output}");
+    for line in [
+        "S badcmp=TypeError",
+        "S nullcmp=TypeError",
+        "S undef=1,2",
+        "S typed=1,2,3 same=true",
+        "S float=-1,2,10,NaN",
+        "S desc=3,2,1",
+        "S typedbad=TypeError",
+    ] {
+        assert!(output.contains(line), "{line} missing:\n{output}");
+    }
+}

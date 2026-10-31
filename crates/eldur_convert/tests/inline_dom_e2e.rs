@@ -237,7 +237,19 @@ fn a_created_element_that_stays_an_object_keeps_its_note() {
 <script>document.getElementById("b").onclick=function(){
 var s=document.createElement("section");s.textContent="x";
 document.getElementById("line").appendChild(s)}</script>"#;
-    let notes = notes(html);
+    // A template now stands apart from the line its probe sat on, so this one
+    // has an item and nothing to note.
+    assert!(
+        !notes(html)
+            .iter()
+            .any(|n| n.contains("has no item of its own")),
+    );
+    // A control has no place for an element's item, so there is still no template.
+    let html = html.replace(
+        r#"<p id="line">one</p>"#,
+        r#"<button id="line">one</button>"#,
+    );
+    let notes = notes(&html);
     assert!(
         notes.iter().any(|n| n.contains("a created <section>")),
         "{notes:?}"
