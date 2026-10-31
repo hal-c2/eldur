@@ -14,6 +14,7 @@ import "page.js" as Page
 ApplicationWindow {
     id: root
     property string baseUrl: Qt.resolvedUrl("Main.qml")
+    property string documentUrl: Qt.resolvedUrl("Main.qml")
     property var h2qStyledClasses: ["app", "app-header", "btn", "composer", "counter", "delete", "done", "empty", "footer-note", "todo-item", "todo-list", "todo-text"]
     readonly property var h2qTemplates: ({ "li.done.todo-item@todoList": h2qT_li_0, "li.todo-item@todoList": h2qT_li_0, "input[type=checkbox]@h2qT_li_0": h2qT_input_1, "span.todo-text@h2qT_li_0": h2qT_span_2, "button.delete@h2qT_li_0": h2qT_button_3, "li.done.todo-item@*": h2qT_li_0, "li.todo-item@*": h2qT_li_0, "input[type=checkbox]@*": h2qT_input_4, "button.delete@*": h2qT_button_5 })
 

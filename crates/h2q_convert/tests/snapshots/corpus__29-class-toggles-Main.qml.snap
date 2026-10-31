@@ -13,6 +13,7 @@ import "page.js" as Page
 ApplicationWindow {
     id: root
     property string baseUrl: Qt.resolvedUrl("Main.qml")
+    property string documentUrl: Qt.resolvedUrl("Main.qml")
     property bool h2qAnimate: false
     property var h2qStyledClasses: ["active", "compact", "d-none", "done", "item", "list", "ok", "panel", "status", "tab", "tabs", "toolbar", "warn"]
 

@@ -114,7 +114,10 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
             gated |= added.gated;
             extra_imports.extend(added.imports);
         }
-        let mut decls = vec![metadata::base_url_decl(&doc, &input.url)];
+        let mut decls = vec![
+            metadata::base_url_decl(&doc, &input.url),
+            metadata::document_url_decl(&input.url),
+        ];
         if gated {
             decls.push(Member::PropertyDecl {
                 ty: "bool".to_owned(),
