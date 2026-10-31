@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import io
 import json
+import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -177,8 +179,12 @@ Item {
             appwin_png = tmp_dir / "appwin.png"
             item_png = tmp_dir / "item.png"
 
-            w1 = render_qml.render_qml(appwin_dir, appwin_png, width=200, height=120, strict=True)
-            w2 = render_qml.render_qml(item_dir, item_png, width=200, height=120, strict=True)
+            w1 = render_qml.render_qml(
+                appwin_dir, appwin_png, width=200, height=120, strict=True, backend="software"
+            )
+            w2 = render_qml.render_qml(
+                item_dir, item_png, width=200, height=120, strict=True, backend="software"
+            )
             self.assertEqual(w1, [])
             self.assertEqual(w2, [])
 
@@ -205,7 +211,7 @@ Item {
             )
             err_buf = io.StringIO()
             with redirect_stderr(err_buf):
-                rc = render_qml.main([str(tmp_dir), str(tmp_dir / "out.png")])
+                rc = render_qml.main([str(tmp_dir), str(tmp_dir / "out.png"), "--backend", "software"])
             self.assertEqual(rc, 1)
             self.assertIn("Main.qml", err_buf.getvalue())
 
@@ -224,16 +230,344 @@ Rectangle {
             )
             out_png = tmp_dir / "out.png"
 
-            warnings = render_qml.render_qml(tmp_dir, out_png, width=120, height=80, strict=False)
+            warnings = render_qml.render_qml(
+                tmp_dir, out_png, width=120, height=80, strict=False, backend="software"
+            )
             self.assertTrue(any("ReferenceError" in line for line in warnings), warnings)
 
             err_buf = io.StringIO()
             with redirect_stderr(err_buf):
                 rc = render_qml.main(
-                    [str(tmp_dir), str(out_png), "--width", "120", "--height", "80", "--strict"]
+                    [str(tmp_dir), str(out_png), "--width", "120", "--height", "80", "--strict",
+                     "--backend", "software"]
                 )
             self.assertEqual(rc, 1)
             self.assertIn("ReferenceError", err_buf.getvalue())
+
+
+SHADOW_QML = """import QtQuick
+import QtQuick.Effects
+
+Item {
+    RectangularShadow {
+        x: 40
+        y: 30
+        width: 80
+        height: 40
+        blur: 12
+        color: "#000000"
+    }
+    Rectangle {
+        x: 40
+        y: 30
+        width: 80
+        height: 40
+        color: "#ffffff"
+    }
+}
+"""
+
+
+# The final appearance arrives only after five changes 50 ms apart, as text
+# wrapping around a float settles through callLater/forceLayout chains. Each
+# change is visible, so a grab before the chain ends shows a wrong colour or a
+# wrong wrap width.
+DELAYED_QML = """import QtQuick
+
+Item {
+    id: page
+    property int step: 0
+    readonly property var colours: ["#ff0000", "#ffff00", "#0000ff", "#ff00ff", "#00ffff", "#00ff00"]
+    Rectangle {
+        id: box
+        x: 0; y: 0; width: 160; height: 60
+        color: page.colours[page.step]
+    }
+    Rectangle {
+        x: 0; y: 60
+        width: 40 + page.step * 24; height: 40
+        color: "#000000"
+    }
+    Timer {
+        interval: 50
+        repeat: true
+        running: page.step < 5
+        onTriggered: page.step += 1
+    }
+}
+"""
+
+# Never quiet: Shot.qml must still grab, but warn that the page did not settle.
+RESTLESS_QML = """import QtQuick
+
+Rectangle {
+    width: 40; height: 40
+    color: "#ff0000"
+    RotationAnimation on rotation { from: 0; to: 360; duration: 1000; loops: Animation.Infinite }
+}
+"""
+
+
+def _assert_delayed_final_state(test: unittest.TestCase, png: Path) -> None:
+    arr = compare.load_rgb(png)
+    test.assertEqual(arr[30, 80].tolist(), [0, 255, 0], "box colour is not the final step's")
+    # The bar ends at x = 40 + 5 * 24 = 160.
+    test.assertEqual(arr[80, 155].tolist(), [0, 0, 0], "bar is not at its final width")
+    test.assertEqual(arr[80, 165].tolist(), [255, 255, 255], "bar is wider than its final width")
+
+
+class RenderQmlSettleTests(unittest.TestCase):
+    def test_software_capture_waits_for_delayed_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text(DELAYED_QML, encoding="utf-8")
+            out_png = tmp_dir / "out.png"
+            warnings = render_qml.render_qml(
+                tmp_dir, out_png, width=200, height=120, strict=True, backend="software"
+            )
+            self.assertEqual(warnings, [])
+            _assert_delayed_final_state(self, out_png)
+
+    @unittest.skipUnless(shutil.which("sway"), "sway is not installed")
+    def test_gl_capture_waits_for_delayed_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text(DELAYED_QML, encoding="utf-8")
+            out_png = tmp_dir / "out.png"
+            warnings = render_qml.render_qml(
+                tmp_dir, out_png, width=200, height=120, strict=True, backend="gl",
+                gl_text="native",
+            )
+            self.assertEqual(warnings, [])
+            _assert_delayed_final_state(self, out_png)
+
+    def test_page_that_never_settles_is_grabbed_with_a_warning(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text(RESTLESS_QML, encoding="utf-8")
+            out_png = tmp_dir / "out.png"
+            with mock.patch.object(render_qml, "SETTLE_MAX_MS", 600):
+                warnings = render_qml.render_qml(
+                    tmp_dir, out_png, width=120, height=80, backend="software"
+                )
+            self.assertTrue(out_png.is_file())
+            self.assertTrue(any("did not settle" in line for line in warnings), warnings)
+
+    def test_scene_graph_other_than_the_requested_backend_fails(self) -> None:
+        # The software scene graph, told it should be OpenGL, as when Qt cannot
+        # initialise GL and quietly falls back.
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text("import QtQuick\nItem {}\n", encoding="utf-8")
+            out_png = tmp_dir / "out.png"
+            env = dict(
+                os.environ,
+                QT_QPA_PLATFORM="offscreen",
+                QT_QUICK_BACKEND="software",
+                QT_FORCE_STDERR_LOGGING="1",
+            )
+            proc = subprocess.run(
+                ["qml6", "--software", str(render_qml.SHOT_QML), "--",
+                 (tmp_dir / "Main.qml").as_uri(), "60", "40", str(out_png), "50", "2000", "gl"],
+                env=env, capture_output=True, text=True, timeout=10, check=False,
+            )
+            self.assertEqual(proc.returncode, 3, proc.stderr)
+            self.assertIn("scene graph API", proc.stderr)
+            self.assertFalse(out_png.exists())
+
+
+class RenderQmlBackendTests(unittest.TestCase):
+    def test_gl_backend_without_sway_fails_clearly(self) -> None:
+        real_which = render_qml.shutil.which
+
+        def which(name: str) -> str | None:
+            return None if name == "sway" else real_which(name)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text("import QtQuick\nItem {}\n", encoding="utf-8")
+            with mock.patch.object(render_qml.shutil, "which", side_effect=which):
+                with self.assertRaisesRegex(render_qml.QmlRenderError, "needs sway"):
+                    render_qml.render_qml(tmp_dir, tmp_dir / "out.png", backend="gl")
+
+    def test_unknown_backend_is_rejected(self) -> None:
+        with self.assertRaisesRegex(render_qml.QmlRenderError, "Unknown backend"):
+            render_qml.render_qml(Path("."), Path("out.png"), backend="vulkan")
+        with self.assertRaisesRegex(render_qml.QmlRenderError, "Unknown gl_text"):
+            render_qml.render_qml(Path("."), Path("out.png"), backend="gl", gl_text="subpixel")
+
+    def test_default_backend_is_gl_with_native_text(self) -> None:
+        for parser in (render_qml.build_parser(), visual_run.build_parser()):
+            args = parser.parse_args(["x", "y"] if parser.prog == "render_qml.py" else [])
+            self.assertEqual((args.backend, args.gl_text), ("gl", "native"))
+        self.assertEqual((render_qml.DEFAULT_BACKEND, render_qml.DEFAULT_GL_TEXT), ("gl", "native"))
+
+    def test_default_without_sway_says_to_pass_software_instead_of_falling_back(self) -> None:
+        real_which = render_qml.shutil.which
+
+        def which(name: str) -> str | None:
+            return None if name == "sway" else real_which(name)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text("import QtQuick\nItem {}\n", encoding="utf-8")
+            with mock.patch.object(render_qml.shutil, "which", side_effect=which):
+                err = io.StringIO()
+                with redirect_stderr(err):
+                    rc = render_qml.main([str(tmp_dir), str(tmp_dir / "out.png")])
+                self.assertEqual(rc, 1)
+                self.assertIn("pass --backend software", err.getvalue())
+                self.assertFalse((tmp_dir / "out.png").exists())
+
+                err = io.StringIO()
+                with redirect_stdout(io.StringIO()), redirect_stderr(err):
+                    rc = visual_run.main(["--selftest", "--out", str(tmp_dir / "vis")])
+                self.assertEqual(rc, 1)
+                self.assertIn("pass --backend software", err.getvalue())
+                self.assertFalse((tmp_dir / "vis" / "report.json").exists())
+
+    def test_gl_unavailable_stops_the_run(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            calls: list[str] = []
+
+            def fake_render_qml(*_args: object, **_kwargs: object) -> list[str]:
+                calls.append("qml")
+                raise render_qml.GlUnavailableError("no GL; pass --backend software")
+
+            with (
+                mock.patch.object(render_qml, "HeadlessSway"),
+                mock.patch.object(visual_run, "render_html"),
+                mock.patch.object(render_qml, "render_qml", side_effect=fake_render_qml),
+            ):
+                with self.assertRaisesRegex(visual_run.HarnessError, "pass --backend software"):
+                    visual_run.evaluate_cases(
+                        [("a", tmp_dir), ("b", tmp_dir)],
+                        out_dir=tmp_dir / "out",
+                        width=100,
+                        height=100,
+                        selftest=True,
+                        convert_cmd="",
+                        baseline_scores=None,
+                        backend="gl",
+                    )
+            self.assertEqual(calls, ["qml"])
+
+    def test_runner_stops_sway_when_the_run_is_interrupted(self) -> None:
+        started: list[mock.MagicMock] = []
+
+        def fake_sway(*_args: object) -> mock.MagicMock:
+            inst = mock.MagicMock()
+            started.append(inst)
+            return inst
+
+        with (
+            mock.patch.object(render_qml, "HeadlessSway", side_effect=fake_sway),
+            mock.patch.object(visual_run, "_evaluate_cases", side_effect=KeyboardInterrupt),
+        ):
+            with self.assertRaises(KeyboardInterrupt):
+                visual_run.evaluate_cases(
+                    [],
+                    out_dir=Path("unused"),
+                    width=1280,
+                    height=800,
+                    selftest=True,
+                    convert_cmd="",
+                    baseline_scores=None,
+                    backend="gl",
+                )
+        self.assertEqual(len(started), 1)
+        started[0].start.assert_called_once()
+        started[0].stop.assert_called_once()
+
+
+@unittest.skipUnless(shutil.which("sway"), "sway is not installed")
+class RenderQmlGlTests(unittest.TestCase):
+    def test_gl_renders_exact_size_and_stops_sway(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text(
+                """import QtQuick
+
+Item {
+    Rectangle { x: 0; y: 0; width: 200; height: 10; color: "#ef4444" }
+    Rectangle { x: 190; y: 110; width: 10; height: 10; color: "#2563eb" }
+}
+""",
+                encoding="utf-8",
+            )
+            out_png = tmp_dir / "out.png"
+            with render_qml.HeadlessSway(200, 120) as sway:
+                runtime_dir = sway.runtime_dir
+                proc = sway._proc
+                warnings = render_qml.render_qml(
+                    tmp_dir, out_png, width=200, height=120, strict=True, backend="gl", sway=sway
+                )
+            self.assertEqual(warnings, [])
+            assert runtime_dir is not None and proc is not None
+            self.assertFalse(runtime_dir.exists())
+            self.assertIsNotNone(proc.poll())
+
+            # A window resized by the compositor would be stretched by the grab,
+            # moving these edge rectangles off their pixels.
+            arr = compare.load_rgb(out_png)
+            self.assertEqual(arr.shape, (120, 200, 3))
+            self.assertEqual(arr[0, 0].tolist(), [239, 68, 68])
+            self.assertEqual(arr[9, 199].tolist(), [239, 68, 68])
+            self.assertEqual(arr[10, 100].tolist(), [255, 255, 255])
+            self.assertEqual(arr[110, 190].tolist(), [37, 99, 235])
+            self.assertEqual(arr[109, 189].tolist(), [255, 255, 255])
+
+    def test_gl_draws_rectangular_shadow_that_software_omits(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text(SHADOW_QML, encoding="utf-8")
+            sw_png = tmp_dir / "sw.png"
+            gl_png = tmp_dir / "gl.png"
+            render_qml.render_qml(tmp_dir, sw_png, width=160, height=100, backend="software")
+            render_qml.render_qml(tmp_dir, gl_png, width=160, height=100, backend="gl")
+            sw = compare.load_rgb(sw_png)
+            gl = compare.load_rgb(gl_png)
+            # Just outside the white box's bottom edge, inside the blur radius.
+            self.assertEqual(sw[72, 80].tolist(), [255, 255, 255])
+            self.assertLess(int(gl[72, 80].max()), 250)
+
+    def test_gl_native_text_matches_software_glyph_placement(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text(
+                """import QtQuick
+
+Item {
+    Text { x: 10; y: 10; text: "Glyph placement"; font.pixelSize: 16; color: "#000000" }
+}
+""",
+                encoding="utf-8",
+            )
+            pngs = {}
+            for name, backend, gl_text in (
+                ("sw", "software", "distancefield"),
+                ("df", "gl", "distancefield"),
+                ("native", "gl", "native"),
+            ):
+                pngs[name] = tmp_dir / f"{name}.png"
+                render_qml.render_qml(
+                    tmp_dir, pngs[name], width=200, height=40, backend=backend, gl_text=gl_text
+                )
+
+            def ink_box(path: Path) -> tuple[int, int, int, int]:
+                ys, xs = np.nonzero(compare.load_rgb(path).min(axis=2) < 128)
+                return int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max())
+
+            # Same layout in all three; native and distance-field glyphs differ.
+            sw_box = ink_box(pngs["sw"])
+            for name in ("df", "native"):
+                box = ink_box(pngs[name])
+                for got, want in zip(box, sw_box):
+                    self.assertLessEqual(abs(got - want), 1, (name, box, sw_box))
+            self.assertFalse(
+                np.array_equal(compare.load_rgb(pngs["df"]), compare.load_rgb(pngs["native"]))
+            )
 
 
 class RenderHtmlAndRunnerTests(unittest.TestCase):
@@ -325,6 +659,8 @@ color = Path(sys.argv[4]).read_text().strip() if len(sys.argv) > 4 else "#2563eb
             with redirect_stdout(io.StringIO()):
                 rc1 = visual_run.main(
                     [
+                        "--backend",
+                        "software",
                         "--corpus",
                         str(corpus),
                         "--out",
@@ -357,6 +693,8 @@ color = Path(sys.argv[4]).read_text().strip() if len(sys.argv) > 4 else "#2563eb
             with redirect_stdout(io.StringIO()), redirect_stderr(err_buf):
                 rc2 = visual_run.main(
                     [
+                        "--backend",
+                        "software",
                         "--corpus",
                         str(corpus),
                         "--out",
@@ -414,6 +752,8 @@ out_dir.mkdir(parents=True, exist_ok=True)
                 with redirect_stdout(io.StringIO()):
                     rc = visual_run.main(
                         [
+                            "--backend",
+                            "software",
                             "--corpus",
                             str(corpus),
                             "--out",
@@ -491,6 +831,8 @@ out_dir.mkdir(parents=True, exist_ok=True)
             with redirect_stdout(io.StringIO()):
                 rc_seed = visual_run.main(
                     [
+                        "--backend",
+                        "software",
                         "--corpus",
                         str(corpus),
                         "--out",
@@ -520,6 +862,8 @@ out_dir.mkdir(parents=True, exist_ok=True)
             with redirect_stdout(io.StringIO()):
                 rc_partial = visual_run.main(
                     [
+                        "--backend",
+                        "software",
                         "--corpus",
                         str(corpus),
                         "--out",
@@ -551,6 +895,8 @@ out_dir.mkdir(parents=True, exist_ok=True)
             with redirect_stdout(io.StringIO()):
                 rc_fail_keep = visual_run.main(
                     [
+                        "--backend",
+                        "software",
                         "--corpus",
                         str(corpus),
                         "--out",
@@ -596,6 +942,8 @@ out_dir.mkdir(parents=True, exist_ok=True)
             with redirect_stderr(err_buf):
                 rc = visual_run.main(
                     [
+                        "--backend",
+                        "software",
                         "--corpus",
                         str(corpus),
                         "--out",
@@ -646,6 +994,8 @@ out_dir.mkdir(parents=True, exist_ok=True)
             with redirect_stdout(io.StringIO()):
                 rc_strict = visual_run.main(
                     [
+                        "--backend",
+                        "software",
                         "--corpus",
                         str(corpus),
                         "--out",
@@ -681,6 +1031,8 @@ out_dir.mkdir(parents=True, exist_ok=True)
             with redirect_stdout(io.StringIO()), redirect_stderr(err_buf):
                 rc_reg = visual_run.main(
                     [
+                        "--backend",
+                        "software",
                         "--corpus",
                         str(corpus),
                         "--out",
@@ -702,6 +1054,8 @@ out_dir.mkdir(parents=True, exist_ok=True)
             with redirect_stdout(io.StringIO()):
                 rc_nostrict = visual_run.main(
                     [
+                        "--backend",
+                        "software",
                         "--corpus",
                         str(corpus),
                         "--out",
