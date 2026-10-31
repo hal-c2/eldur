@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Created styles</title>
+<style>
+:root { --accent: rgb(40, 90, 200); }
+body { margin: 0; font: 16px/20px sans-serif; color: rgb(30, 30, 30); }
+#board { padding: 12px; background: rgb(240, 242, 248); }
+.card { margin-bottom: 8px; padding: 8px 12px; background: white; border: 1px solid rgb(200, 205, 220); border-radius: 6px; }
+.card.hot { background: var(--accent); color: white; }
+.card .title { font-size: 18px; line-height: 24px; font-weight: bold; }
+.row { display: flex; column-gap: 8px; }
+.chip { width: 60px; height: 24px; background: rgb(220, 226, 245); border-radius: 12px; }
+.pill { padding: 4px 8px; border: 1px solid rgb(40, 90, 200); }
+</style>
+</head>
+<body>
+<div id="board"></div>
+<script>
+function make(tag, cls, text) {
+  var el = document.createElement(tag);
+  if (cls) el.className = cls;
+  if (text) el.textContent = text;
+  return el;
+}
+var board = document.getElementById('board');
+['first', 'second'].forEach(function (name, i) {
+  var card = make('div', i ? 'card hot' : 'card');
+  card.appendChild(make('p'.replace('p', 'div'), 'title', name));
+  var row = make('div', 'row');
+  for (var c = 0; c < 3; c++) row.appendChild(make('div', 'chip'));
+  card.appendChild(row);
+  board.appendChild(card);
+});
+board.appendChild(make('button', 'pill', 'Add'));
+</script>
+</body>
+</html>

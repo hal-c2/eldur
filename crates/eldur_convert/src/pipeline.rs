@@ -82,6 +82,7 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     // so a script that wants one finds it at run time.
     let runtime_dom = !scripts.is_empty()
         && (scripts.analysis.runtime_dom
+            || scripts.analysis.open_elements
             || wanted
                 .iter()
                 .any(|&n| crate::boxes::is_inline_node(&doc, &styles, n)));
@@ -133,6 +134,7 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         });
         // The page's links and spans may be an event's target, named or not.
         let delegated = scripts.analysis.dispatch_by_path && has_inline_model(&root);
+        let open_elements = scripts.analysis.open_elements;
         let inline_rules = runtime_dom
             && (delegated
                 || !inline_covered.is_empty()
@@ -164,7 +166,32 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         if runtime_dom {
             let classes = eldur_css::styled_classes(&sheets);
             decls.push(metadata::styled_classes_decl(&classes));
-            if inline_rules {
+            if open_elements {
+                let rules = eldur_css::runtime_rules(&sheets, &options.viewport);
+                // Any element of the page may take a rule like this at run time,
+                // and leaves the flow for the block the runtime needs here.
+                let leaves_flow = rules.iter().any(|r| {
+                    r.declarations
+                        .iter()
+                        .any(|(p, v, _)| p == "position" && (v == "absolute" || v == "fixed"))
+                });
+                if leaves_flow
+                    && !root.members.iter().any(|m| {
+                        matches!(m, Member::PropertyDecl { name, .. } if name == "eldurInitialBlock")
+                    })
+                {
+                    crate::emit::declare_initial_block(&mut root);
+                }
+                decls.push(metadata::runtime_rules_decl(&rules));
+                let literal = scripts
+                    .analysis
+                    .class_writes
+                    .iter()
+                    .flat_map(|w| w.names.iter().map(String::as_str))
+                    .collect();
+                decls.push(metadata::literal_classes_decl(&literal));
+                decls.push(metadata::open_elements_decl());
+            } else if inline_rules {
                 decls.push(metadata::inline_rules_decl(&eldur_css::inline_rules(
                     &sheets,
                     &options.viewport,

@@ -1,0 +1,12 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.on{background:rgb(0,128,0);height:44px;color:rgb(1,2,3);border-radius:4px;margin-top:6px}.big{font-size:24px}.hide{display:none}.par .kid{height:9px;background:rgb(0,0,9)}#end{height:10px}</style></head><body><div id="s1">static</div><div id="s2" class="base">x</div><div id="s3">three</div><div id="s4"><div id="k" class="kid">k</div></div><div id="end"></div>
+<script>
+function box(id){var b=document.getElementById(id).getBoundingClientRect();return id+" "+Math.round(b.left)+","+Math.round(b.top)+" "+Math.round(b.width)+"x"+Math.round(b.height)}
+function geo(){console.log("CS "+Array.prototype.map.call(arguments,box).join(" | "))}
+function cs(id){var s=getComputedStyle(document.getElementById(id)),o=[];for(var i=1;i<arguments.length;i++)o.push(arguments[i]+"="+s[arguments[i]]);console.log("CS "+id+" "+o.join(" "))}
+var names=["on","big","hide","par"];function el(id){return document.getElementById(id)}
+el("s1").className=names[0];geo("s1","s2","end");cs("s1","backgroundColor","height","color","borderTopLeftRadius","marginTop");
+el("s2").classList.add(names[1]);cs("s2","fontSize");
+el("s3").classList.add(names[2]);geo("s3","s4","end");cs("s3","display");el("s3").classList.remove(names[2]);geo("s3","end");
+el("s4").classList.add(names[3]);geo("k","end");cs("k","backgroundColor");
+el("s1").className="";geo("s1","end");cs("s1","backgroundColor")
+</script></body></html>

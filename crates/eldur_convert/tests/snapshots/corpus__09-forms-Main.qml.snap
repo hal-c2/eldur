@@ -201,7 +201,7 @@ ApplicationWindow {
                                         bottomPadding: 10
                                         leftPadding: 13
                                         implicitHeight: 41
-                                        implicitWidth: 191
+                                        implicitWidth: 225.13
                                         placeholderText: "Ada Lovelace"
                                         placeholderTextColor: "#757575"
                                         Accessible.name: "Full name"
@@ -282,7 +282,7 @@ ApplicationWindow {
                                         bottomPadding: 10
                                         leftPadding: 13
                                         implicitHeight: 41
-                                        implicitWidth: 191
+                                        implicitWidth: 225.13
                                         placeholderText: "you@example.com"
                                         placeholderTextColor: "#757575"
                                         inputMethodHints: Qt.ImhEmailCharactersOnly
@@ -364,7 +364,7 @@ ApplicationWindow {
                                         bottomPadding: 10
                                         leftPadding: 13
                                         implicitHeight: 41
-                                        implicitWidth: 191
+                                        implicitWidth: 225.13
                                         placeholderText: "At least 8 characters"
                                         placeholderTextColor: "#757575"
                                         echoMode: TextInput.Password
@@ -424,7 +424,6 @@ ApplicationWindow {
                                         textRole: "text"
                                         valueRole: "value"
                                         currentIndex: 1
-                                        implicitContentWidthPolicy: ComboBox.WidestText
                                         font.family: "sans-serif"
                                         font.pixelSize: 15
                                         background: Rectangle {
@@ -465,6 +464,7 @@ ApplicationWindow {
                                             font.pixelSize: 12
                                             renderType: Text.NativeRendering
                                         }
+                                        implicitWidth: Math.ceil(contentItem.implicitWidth) + leftPadding + rightPadding - 2
                                         Accessible.name: "Team size"
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
@@ -932,7 +932,7 @@ ApplicationWindow {
                                             bottomPadding: 10
                                             leftPadding: 13
                                             implicitHeight: 41
-                                            implicitWidth: 191
+                                            implicitWidth: 225.13
                                             up.indicator.visible: false
                                             up.indicator.width: 0
                                             up.indicator.height: 0

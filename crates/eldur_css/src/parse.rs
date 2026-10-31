@@ -511,14 +511,15 @@ fn process_qualified_rule(
     }
 
     let outer_text = ctx.selector_text.take();
-    ctx.selector_text = parent_selectors
-        .is_none()
-        .then(|| {
-            ctx.cm
-                .span_to_snippet(Span::new(qr.span.lo, qr.block.span.lo))
-                .ok()
-        })
-        .flatten();
+    let written = ctx
+        .cm
+        .span_to_snippet(Span::new(qr.span.lo, qr.block.span.lo))
+        .ok();
+    ctx.selector_text = match (parent_selectors, &outer_text) {
+        (None, _) => written,
+        (Some(_), Some(outer)) => written.map(|own| nested_selector_text(outer, &own)),
+        (Some(_), None) => None,
+    };
     process_style_block_contents(
         ctx,
         &qr.block,
@@ -527,6 +528,30 @@ fn process_qualified_rule(
         layer_stack,
     );
     ctx.selector_text = outer_text;
+}
+
+/// What a nested rule's selector means written out: `.a, .b { &.c, > .d {} }`.
+fn nested_selector_text(parent: &str, own: &str) -> String {
+    let mut parts = Vec::new();
+    for outer in crate::inline_rules::split_list(parent) {
+        // `&` stands for all of the parent, as `:is()` does.
+        let single = outer
+            .chars()
+            .all(|c| !c.is_whitespace() && !matches!(c, '>' | '+' | '~'));
+        for inner in crate::inline_rules::split_list(own) {
+            parts.push(if inner.contains('&') {
+                let whole = if single {
+                    outer.to_owned()
+                } else {
+                    format!(":is({outer})")
+                };
+                inner.replace('&', &whole)
+            } else {
+                format!("{outer} {inner}")
+            });
+        }
+    }
+    parts.join(", ")
 }
 
 /// Processes a style rule's `{ ... }` block (or a `@media`/`@supports`/`@layer` block

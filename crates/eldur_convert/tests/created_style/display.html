@@ -1,0 +1,19 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.row{display:flex;gap:10px;height:30px}.row>div{width:50px;background:#eee}.grow{flex:1}.jc{display:flex;justify-content:space-between;width:300px;height:20px}.jc>div{width:40px}.center{display:flex;justify-content:center;align-items:center;width:300px;height:50px}.center>div{width:40px;height:10px}.col{display:flex;flex-direction:column;gap:5px}.col>div{height:10px}.gr{display:grid;grid-template-columns:100px 1fr;gap:4px 6px}.gr>div{height:15px}.ib{display:inline-block;width:30px;height:20px;background:#ccc}.none{display:none}.blk{display:block;height:13px}#end{height:10px}</style></head><body><div id="list"></div><div id="end"></div>
+<script>
+function box(id){var b=document.getElementById(id).getBoundingClientRect();return id+" "+Math.round(b.left)+","+Math.round(b.top)+" "+Math.round(b.width)+"x"+Math.round(b.height)}
+function geo(){console.log("CS "+Array.prototype.map.call(arguments,box).join(" | "))}
+function cs(id){var s=getComputedStyle(document.getElementById(id)),o=[];for(var i=1;i<arguments.length;i++)o.push(arguments[i]+"="+s[arguments[i]]);console.log("CS "+id+" "+o.join(" "))}
+var l=document.getElementById("list");function mk(p,c,id){var e=document.createElement("div");if(c)e.className=c;if(id)e.id=id;p.appendChild(e);return e}
+var r=mk(l,"row","r");mk(r,"","r1");var r2=mk(r,"grow","r2");mk(r,"","r3");
+var j=mk(l,"jc","j");mk(j,"","j1");mk(j,"","j2");mk(j,"","j3");
+var ce=mk(l,"center","ce");mk(ce,"","ce1");
+var co=mk(l,"col","co");mk(co,"","co1");mk(co,"","co2");
+var g=mk(l,"gr","g");mk(g,"","g1");mk(g,"","g2");mk(g,"","g3");
+var w=mk(l,"","w");mk(w,"ib","i1");mk(w,"ib","i2");
+var n=mk(l,"none","n");mk(n,"","n1");
+var s=document.createElement("span");s.className="blk";s.id="s";l.appendChild(s);
+var t=mk(l,"blk","t");t.className="none";t.className="blk";
+var u=mk(l,"row","u");mk(u,"","u1");mk(u,"","u2");u.className="col";
+geo("r","r1","r2","r3","j1","j2","j3","ce1","co","co1","co2","g1","g2","g3","w","i1","i2","s","t","u1","u2","end");
+cs("r","display","columnGap","flexDirection");cs("n","display");cs("i1","display");cs("s","display");cs("g","display")
+</script></body></html>

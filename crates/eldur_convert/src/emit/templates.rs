@@ -19,7 +19,7 @@ use eldur_js::{CreatedElement, DomQuery, ElementRef};
 use eldur_qml::{Member, Object, Value};
 
 use super::dynamic::{self, Inputs, Probe};
-use super::{ICB_ID, Target, ensure_initial_block, lists};
+use super::{Target, lists};
 use crate::boxes::{describe, is_containing_block, is_fixed_containing_block, is_out_of_flow};
 use crate::diag::Diagnostics;
 use crate::metadata::class_prop;
@@ -1134,11 +1134,7 @@ pub(crate) fn add(
         .map(|key| format!("{}: {}", eldur_qml::quote_string(key), names[keys[key]]))
         .collect();
     if has_out_of_flow {
-        ensure_initial_block(root);
-        root.members.insert(
-            0,
-            decl("var", "eldurInitialBlock", Value::expr(ICB_ID), true),
-        );
+        super::declare_initial_block(root);
     }
     root.members.insert(
         0,

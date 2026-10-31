@@ -208,6 +208,7 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
     emitter.images = cx.images.clone();
     emitter.runtime_dom = cx.runtime_dom;
     if let Some(scripts) = cx.scripts {
+        emitter.open_elements = scripts.analysis.open_elements;
         emitter.gains.clone_from(&scripts.gains.nodes);
         emitter.gains_any_empty = scripts.gains.any_empty;
     }
@@ -1015,6 +1016,7 @@ impl Dynamic<'_, '_> {
         emitter.images = cx.images.clone();
         emitter.runtime_dom = cx.runtime_dom;
         if let Some(scripts) = cx.scripts {
+            emitter.open_elements = scripts.analysis.open_elements;
             emitter.gains.clone_from(&scripts.gains.nodes);
             emitter.gains_any_empty = scripts.gains.any_empty;
         }

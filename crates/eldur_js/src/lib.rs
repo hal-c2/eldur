@@ -158,6 +158,12 @@ pub struct Analysis {
     /// Scripts can read attributes the markup wrote (`getAttribute`, `dataset`,
     /// `[attr]` selectors, `matches`): every element needs `eldurAttrs`.
     pub reads_attributes: bool,
+    /// Analysis cannot name what some element is or what classes it gets
+    /// (`createElement(tag)`, `el.className = name`, a variable reassigned to
+    /// another created element, markup with a computed tag or class), so no
+    /// template can be written for it and the runtime resolves it from the
+    /// page's rules.
+    pub open_elements: bool,
 }
 
 impl Analysis {

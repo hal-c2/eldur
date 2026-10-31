@@ -1,0 +1,11 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.x{box-sizing:content-box;width:200px;height:50px;margin:5px 10px 7px 20px;padding:3px 4px 6px 8px;border:2px solid #123456;background:#abcdef;border-radius:6px;opacity:.5;color:#112233;font-size:20px;font-weight:700;font-style:italic;text-align:right;line-height:30px}.bb{box-sizing:border-box;width:100px;height:40px;padding:10px;border:1px solid red}.pct{width:50%;height:12px;background:red}.em{font-size:10px;margin-left:2em;height:3em;padding-top:1em}.auto{width:100px;height:9px;margin:0 auto}.calc{width:calc(50% - 20px);height:calc(10px + 1em)}.mm{min-height:30px;max-width:300px}.sides{border-top:3px solid red;border-left:1px dashed blue;height:10px}.pad{padding:7px;line-height:22px}#end{height:10px}</style></head><body><div id="list"></div><div id="end"></div>
+<script>
+function box(id){var b=document.getElementById(id).getBoundingClientRect();return id+" "+Math.round(b.left)+","+Math.round(b.top)+" "+Math.round(b.width)+"x"+Math.round(b.height)}
+function geo(){console.log("CS "+Array.prototype.map.call(arguments,box).join(" | "))}
+function cs(id){var s=getComputedStyle(document.getElementById(id)),o=[];for(var i=1;i<arguments.length;i++)o.push(arguments[i]+"="+s[arguments[i]]);console.log("CS "+id+" "+o.join(" "))}
+var l=document.getElementById("list");function mk(c,id,t){var e=document.createElement("div");e.className=c;e.id=id;if(t)e.textContent=t;l.appendChild(e);return e}
+mk("x","x","hello");mk("bb","bb");mk("pct","pct");mk("em","em");mk("auto","auto");mk("calc","calc");mk("mm","mm");mk("sides","sides");mk("pad","pad","text");
+geo("x","bb","pct","em","auto","calc","mm","sides","pad","end");
+cs("x","width","height","marginTop","marginRight","marginBottom","marginLeft","paddingTop","paddingRight","paddingBottom","paddingLeft","borderTopWidth","borderTopColor","borderTopStyle","backgroundColor","borderTopLeftRadius","opacity","color","fontSize","fontWeight","fontStyle","textAlign","lineHeight","boxSizing","display","position");
+cs("em","fontSize","marginLeft","height","paddingTop");cs("sides","borderTopWidth","borderLeftWidth","borderLeftStyle","borderRightWidth");cs("calc","width","height")
+</script></body></html>

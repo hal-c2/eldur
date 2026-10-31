@@ -331,6 +331,9 @@ function init(rootItem, baseUrl, documentUrl) {
         // What the converter wrote for a `Text` holds until the rules that
         // match its nodes change, so they must be read before any write.
         _walkItems(_root, function() { return false; });
+        _gLive = [];
+        _gStaticBase = null;
+        _gSnapshotStatics();
     }
     _startTime = Date.now();
     if (_root) {
@@ -1536,6 +1539,7 @@ function _afterClassMutation(raw, m) {
     }
     _vChanged(null);
     _layoutChanged(curRaw);
+    _gTouch();
     _syncEldurClasses(curRaw, m);
     if (_isCreatedElement(curRaw) && _isConnected(curRaw)) {
         _connectSubtree(curRaw);
@@ -1669,6 +1673,9 @@ function dataset(item) {
 // An empty box has only the `Text` for its `textContent`, and the column
 // made here takes its place in the box's height.
 function _appendTarget(raw) {
+    if (_gIsBox(raw)) {
+        return raw;
+    }
     if (raw.contentItem) {
         return raw.contentItem;
     }
@@ -1902,6 +1909,7 @@ function _keepCollapsing(layout) {
 }
 
 function _settleLayouts() {
+    _gSettle();
     var dirty = _layoutDirty;
     _layoutDirty = [];
     var done = [];
@@ -1941,6 +1949,8 @@ function _layoutForRead() {
     }
     _settleLayouts();
     _polishDown(_root);
+    _gAfterPolish();
+    _polishDown(_root);
 }
 
 function _polishDown(item) {
@@ -1963,6 +1973,7 @@ function _detachNode(raw) {
         _vRemove(raw);
         return;
     }
+    _gTouch();
     var box = raw.eldurBox || raw;
     var place = box.eldurSlot || box;
     if (place.parent) {
@@ -2278,6 +2289,7 @@ function setText(item, value) {
         _vSetText(raw, value);
         return;
     }
+    _gTouch();
     var vKnown = _isPlainJsObject(raw) ? null : _vExisting(raw);
     if (vKnown) {
         _vSetText(vKnown, value);
@@ -2480,6 +2492,10 @@ function setStyle(item, prop, value) {
     if (rawName !== name) {
         m.styles[rawName] = str;
     }
+    _gTouch();
+    if (_gIsBox(raw)) {
+        return;
+    }
 
     if (_isPlainJsObject(raw)) {
         if (!raw.style) {
@@ -2614,6 +2630,15 @@ function getComputedStyle(item) {
     }
     function computeProp(prop) {
         var p = String(prop);
+        if (_gActive() && raw && typeof raw === "object") {
+            _layoutForRead();
+            // Settling may have replaced the item.
+            raw = _gCurrent(raw);
+            var settled = _gComputed(raw, p);
+            if (settled !== null) {
+                return settled;
+            }
+        }
         var explicit = getStyle(raw, p);
         if (explicit !== "") {
             return explicit;
@@ -2720,6 +2745,7 @@ function setAttribute(item, attrName, attrValue) {
         m.dataset[_kebabToCamel(name.slice(5))] = val;
         return;
     }
+    _gTouch();
     if (name === "id" && typeof raw.objectName === "string") {
         raw.objectName = val;
     } else if (name === "type" && m.createdTag === "input") {
@@ -2921,11 +2947,11 @@ function blur(item) {
 
 function getBoundingClientRect(item) {
     _layoutForRead();
-    var raw = _unwrap(item);
+    var raw = _gCurrent(_unwrap(item));
     if (raw && raw.__eldurInline) {
         return _vClientRect(raw);
     }
-    if (!raw) {
+    if (!raw || (_gActive() && raw.visible === false)) {
         return { x: 0, y: 0, top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0 };
     }
     var w = typeof raw.width === "number" ? raw.width : 0;
@@ -2936,7 +2962,7 @@ function getBoundingClientRect(item) {
         var pt = raw.mapToItem(null, 0, 0);
         if (pt) {
             x = pt.x;
-            y = pt.y;
+            y = pt.y - (_gActive() ? _gGlyphShift(raw) : 0);
         }
     }
     return {
@@ -4009,6 +4035,7 @@ function _insertRawNodesBefore(container, rawNodes, rawRef) {
 
 function _insertInFlow(container, rawNodes, rawRef) {
     _layoutChanged(container);
+    _gTouch();
     if (!rawRef && container.children
         && (typeof container.spacing === "number" || typeof container.columnSpacing === "number")) {
         for (var s = container.children.length - 1; s >= 0 && _isLayoutSpacer(container.children[s]); --s) {
@@ -4067,6 +4094,9 @@ function _insertInFlow(container, rawNodes, rawRef) {
 }
 
 function _genericElementSource(tag, inputType) {
+    if (_gActive() && _gWantsBox(tag) && !_vInlineTag(tag)) {
+        return _gBoxSource(tag, false);
+    }
     if (tag === "input") {
         return _inputSource(inputType || "text");
     }
@@ -4213,6 +4243,15 @@ function _lookupTemplate(raw) {
     var templates = _root.eldurTemplates;
     var keys = _buildTemplateKeys(raw);
     var exact = keys[0];
+    if (_gActive()) {
+        // A template is right when the converter wrote it for exactly this: the
+        // same classes, and a place that either is the one it wrote it for or
+        // that no matching selector asks about.
+        if (templates[exact] && _gTemplateFits(raw, exact)) {
+            return { component: templates[exact], exactKey: exact, step: exact };
+        }
+        return { component: null, exactKey: exact, step: "generic" };
+    }
     if (templates[exact]) {
         return { component: templates[exact], exactKey: exact, step: exact };
     }
@@ -4236,6 +4275,46 @@ function _lookupTemplate(raw) {
         console.warn("eldur: no style template for " + exact + "; using generic");
     }
     return { component: null, exactKey: exact, step: "generic" };
+}
+
+// What one form cannot paint and a template can: a created box has no gradient,
+// shadow, transform or animation, and no state of its own to take a `:hover` in.
+var _G_TEMPLATE_ONLY = /^(background-image|box-shadow|transform|filter|transition-property|animation-name)$/;
+var _G_STATE = /::?(hover|focus-within|focus-visible|focus|active|before|after)\b/g;
+
+function _gTemplateFits(raw, key) {
+    var tag = _nodeTag(raw);
+    if (!_gWantsBox(tag)) {
+        return true;
+    }
+    ++_gGen;
+    var rules = _vLoadRules();
+    var matched = _gMatched(raw);
+    for (var i = 0; i < matched.length; ++i) {
+        var decls = rules[matched[i]].decls;
+        for (var d = 0; d < decls.length; ++d) {
+            if (_G_TEMPLATE_ONLY.test(decls[d][0]) && decls[d][1] !== "none" && decls[d][1] !== "initial") {
+                return true;
+            }
+        }
+    }
+    for (var r = 0; r < rules.length; ++r) {
+        if (rules[r].sel.search(_G_STATE) === -1) {
+            continue;
+        }
+        _G_STATE.lastIndex = 0;
+        if (rules[r].stateless === undefined) {
+            try {
+                rules[r].stateless = _parseSelector(rules[r].sel.replace(_G_STATE, ""));
+            } catch (e) {
+                rules[r].stateless = null;
+            }
+        }
+        if (rules[r].stateless && _matchesList(raw, rules[r].stateless)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function _syncUpPointersOnItem(raw) {
@@ -4337,6 +4416,9 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
         if (next && next.parent !== undefined) {
             next.parent = parentContainer;
         }
+        if (_gActive() && m.createdTag) {
+            _gLive.push(next);
+        }
         m.templateComponent = null;
     }
 
@@ -4353,10 +4435,23 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
     _itemMeta.delete(oldRaw);
     _itemMeta.set(next, m);
     m.raw = next;
+    if (_gActive()) {
+        _gReplaced.set(oldRaw, next);
+        var liveAt = _gLive.indexOf(oldRaw);
+        if (liveAt !== -1) {
+            _gLive.splice(liveAt, 1);
+        }
+    }
     if (typeof m._setRaw === "function") {
         m._setRaw(next);
     }
-    oldRaw.destroy();
+    // The page's own items are read by id from bindings written beside them.
+    if (m.gKeepReplaced) {
+        oldRaw.visible = false;
+        oldRaw.parent = null;
+    } else {
+        oldRaw.destroy();
+    }
     // A new item starts with its template's place.
     _renumber(parentContainer);
 
@@ -4511,7 +4606,11 @@ function _materializeSubtree(raw) {
     if (_isCreatedElement(cur)) {
         var m = _meta(cur);
         var res = _lookupTemplate(cur);
-        if (res) {
+        if (res && !res.component && _gActive() && !_gIsBox(cur) && _gWantsBox(m.createdTag)
+            && _gStyle(cur).display !== "inline") {
+            cur = _swapRawItem(cur, null, _gBoxSource(m.createdTag, false));
+            _gLive.push(cur);
+        } else if (res) {
             if (res.component) {
                 var schema = _getComponentSchema(res.component);
                 var sameComp = (m.templateComponent === res.component)
@@ -6201,13 +6300,20 @@ function _vLoadRules() {
     _vRules = [];
     var table = _vHasRules() && _root.eldurInlineRules !== "" ? JSON.parse(_root.eldurInlineRules) : [];
     for (var i = 0; i < table.length; ++i) {
-        var decls = table[i].decls.filter(function(d) { return _vProps.indexOf(d[0]) !== -1; });
-        if (decls.length > 0 && table[i].sel.indexOf("::") === -1) {
+        var decls = table[i].decls;
+        if (decls.length > 0) {
             var last = /([.#]?)([\w-]+)$/.exec(table[i].sel);
+            // `a:hover` ends in no element's name.
+            if (last && table[i].sel[last.index - 1] === ":") {
+                last = null;
+            }
             _vRules.push({
                 sel: table[i].sel,
                 rank: table[i].spec[0] * 1000000 + table[i].spec[1] * 1000 + table[i].spec[2],
                 ua: table[i].ua,
+                layer: table[i].layer,
+                paintsInline: table[i].sel.indexOf("::") === -1
+                    && decls.some(function(d) { return _vProps.indexOf(d[0]) !== -1; }),
                 decls: decls,
                 lastKind: last ? last[1] : null,
                 lastName: last ? last[2] : null,
@@ -6219,8 +6325,12 @@ function _vLoadRules() {
 }
 
 function _vRuleMatches(rule, v, m) {
+    return _vRuleMatchesFor(rule, v, m, v.eldurTag, v.objectName);
+}
+
+function _vRuleMatchesFor(rule, v, m, tag, id) {
     if (rule.lastKind === "") {
-        if (rule.lastName !== v.eldurTag) {
+        if (rule.lastName !== tag) {
             return false;
         }
     } else if (rule.lastKind === ".") {
@@ -6228,7 +6338,7 @@ function _vRuleMatches(rule, v, m) {
             return false;
         }
     } else if (rule.lastKind === "#") {
-        if (rule.lastName !== v.objectName) {
+        if (rule.lastName !== id) {
             return false;
         }
     }
@@ -6257,7 +6367,7 @@ function _vMatched(v) {
     var m = _meta(v);
     var out = [];
     for (var i = 0; i < rules.length; ++i) {
-        if (_vRuleMatches(rules[i], v, m)) {
+        if (rules[i].paintsInline && _vRuleMatches(rules[i], v, m)) {
             out.push(i);
         }
     }
@@ -6406,6 +6516,16 @@ function _vApply(out, prop, value, pc) {
     }
 }
 
+// origin, then cascade layer, then specificity.
+var _V_ORIGIN_BAND = 1000000000000;
+var _V_LAYER_BAND = 10000000000;
+
+// An inline node's variables are its nearest box's, plus what its own rules say.
+function _vVars(v) {
+    var box = v.model && v.model.text ? _logicalParent(v.model.text) : null;
+    return box && !box.__eldurInline ? _gStyle(box).vars : {};
+}
+
 function _vCascade(v, pc) {
     var rules = _vLoadRules();
     var matched = _vMatched(v);
@@ -6415,13 +6535,21 @@ function _vCascade(v, pc) {
             won[prop] = { value: value, weight: weight };
         }
     }
-    var band = 10000000000;
+    var band = _V_ORIGIN_BAND;
+    var vars = null;
     for (var i = 0; i < matched.length; ++i) {
         var rule = rules[matched[i]];
         for (var d = 0; d < rule.decls.length; ++d) {
             var decl = rule.decls[d];
-            var origin = decl[2] ? (rule.ua ? 4 : 3) : (rule.ua ? 0 : 1);
-            offer(decl[0], decl[1], origin * band + rule.rank);
+            var written = decl[1];
+            if (written.indexOf("var(") !== -1) {
+                vars = vars || _vVars(v);
+                written = _gSubstitute(written, vars, []);
+                if (written === null) {
+                    continue;
+                }
+            }
+            offer(decl[0], written, _gWeight(rule, decl[2]));
         }
     }
     var m = _meta(v);
@@ -7243,9 +7371,21 @@ function _vExisting(raw) {
     return text ? _vModelOf(text) : null;
 }
 
+function _vInlineTag(tag) {
+    return /^(#text|a|abbr|b|bdi|bdo|br|cite|code|data|del|dfn|em|font|i|ins|kbd|label|mark|q|s|samp|small|span|strike|strong|sub|sup|time|tt|u|var|wbr)$/.test(tag);
+}
+
 function _vStaysInline(node) {
     var tag = node.__eldurInline ? node.eldurTag : String(_meta(node).createdTag || "");
-    return /^(#text|a|abbr|b|bdi|bdo|br|cite|code|data|del|dfn|em|font|i|ins|kbd|label|mark|q|s|samp|small|span|strike|strong|sub|sup|time|tt|u|var|wbr)$/.test(tag);
+    if (!_vInlineTag(tag)) {
+        return false;
+    }
+    // A span the page's CSS makes a box is a box.
+    if (!node.__eldurInline && tag !== "#text" && _gActive()) {
+        ++_gGen;
+        return _gStyle(node).display === "inline";
+    }
+    return true;
 }
 
 // Where `nodes` go, if a line of text takes them; else they are real items.
@@ -8140,6 +8280,9 @@ var document = {
         var qmlSrc = _genericElementSource(tag, "text");
         var created = Qt.createQmlObject(qmlSrc, _qobjectParent(), "eldur_el_" + tag);
         _meta(created).createdTag = tag;
+        if (_gActive()) {
+            _gLive.push(created);
+        }
         if (tag === "input") {
             _meta(created).lastGenericInputSource = qmlSrc;
         }
@@ -8267,3 +8410,1930 @@ var window = {
         return dispatchEvent(window, ev);
     }
 };
+
+// ---------------------------------------------------------------------------
+// Created elements (docs/spec/dom-api.md, Created elements).
+//
+// A script's elements take the page's CSS here, from the same rule table the
+// inline nodes use: which rules match is only known when the script runs. Their
+// boxes have one form and are placed by this pass, since a Qt layout has no
+// margin collapsing, no baseline line boxes and no synchronous answer for a
+// script reading a size back right after an insert. The boxes it places answer
+// to the page's own layouts through their implicit size and `Layout.*`.
+// ---------------------------------------------------------------------------
+
+var _gDirty = false;
+var _gGen = 0;
+var _gLive = [];
+var _gMetricsCache = {};
+var _gRunning = false;
+var _gStaticBase = null;
+var _gReplaced = new Map();
+
+var _G_CONTROL = /^(button|input|textarea|select|img|table|thead|tbody|tfoot|tr|td|th|caption|colgroup|col|canvas|video|audio|svg|iframe)$/;
+var _G_INHERITED = ["color", "font-family", "font-weight", "font-style", "text-align", "visibility", "white-space"];
+var _G_INITIAL = {
+    "display": "inline", "position": "static", "box-sizing": "content-box", "opacity": "1",
+    "background-color": "rgba(0, 0, 0, 0)", "flex-direction": "row", "flex-wrap": "nowrap",
+    "justify-content": "normal", "align-items": "normal", "align-self": "auto", "flex-grow": "0",
+    "flex-shrink": "1", "flex-basis": "auto", "order": "0", "row-gap": "normal", "column-gap": "normal",
+    "width": "auto", "height": "auto", "min-width": "auto", "min-height": "auto", "max-width": "none",
+    "max-height": "none", "top": "auto", "right": "auto", "bottom": "auto", "left": "auto", "z-index": "auto",
+    "margin-top": "0px", "margin-right": "0px", "margin-bottom": "0px", "margin-left": "0px",
+    "padding-top": "0px", "padding-right": "0px", "padding-bottom": "0px", "padding-left": "0px",
+    "border-top-width": "medium", "border-right-width": "medium", "border-bottom-width": "medium",
+    "border-left-width": "medium", "border-top-style": "none", "border-right-style": "none",
+    "border-bottom-style": "none", "border-left-style": "none", "border-top-left-radius": "0px",
+    "border-top-right-radius": "0px", "border-bottom-right-radius": "0px", "border-bottom-left-radius": "0px",
+    "overflow-x": "visible", "overflow-y": "visible", "grid-template-columns": "none"
+};
+// A browser's controls before the page says otherwise: the box a `<button>`
+// has around its line, whatever the system's style draws.
+var _G_CONTROL_BOX = {
+    button: { padV: 1, padH: 6, border: 2 },
+    input: { padV: 1, padH: 2, border: 2 },
+    select: { padV: 0, padH: 0, border: 1 },
+    textarea: { padV: 2, padH: 2, border: 1 }
+};
+
+// A settle may swap the item a read started out with.
+function _gCurrent(raw) {
+    while (raw && typeof raw === "object" && _gReplaced.has(raw)) {
+        raw = _gReplaced.get(raw);
+    }
+    return raw;
+}
+
+function _gActive() {
+    return Boolean(_root) && _root.eldurOpenElements === true;
+}
+
+function _gTouch() {
+    if (!_gActive() || !_root) {
+        return;
+    }
+    _gDirty = true;
+    _layoutChanged(_root);
+}
+
+function _gIsBox(raw) {
+    return Boolean(raw) && raw.eldurCreatedBox === true;
+}
+
+// The one form of a created element that is neither a control nor a line of an
+// inline node. `eldurFlowForm` boxes wait in a slot: see `_leaveFlow`.
+function _gBoxSource(tag, outOfFlow) {
+    return "import QtQuick; import QtQuick.Layouts; Rectangle { color: \"transparent\"; "
+        + "property bool eldurCreatedBox: true; "
+        + (outOfFlow ? "property Item eldurSlot: null; property var eldurBlock: \"parent\"; " : "")
+        + "property real eldurMt: 0; property real eldurMr: 0; property real eldurMb: 0; property real eldurMl: 0; "
+        + "property real eldurPw: -1; property bool eldurFill: false; property int eldurAlign: 0; "
+        + "Layout.topMargin: eldurMt; Layout.rightMargin: eldurMr; Layout.bottomMargin: eldurMb; Layout.leftMargin: eldurMl; "
+        + "Layout.fillWidth: eldurFill; Layout.preferredWidth: eldurPw; Layout.alignment: eldurAlign; "
+        + "Text { " + _NATIVE_TEXT + "visible: text !== \"\"; wrapMode: Text.Wrap; color: \"black\"; font.pixelSize: 16 } }";
+}
+
+function _gWantsBox(tag) {
+    return !_G_CONTROL.test(tag) && !/^(#text|option|optgroup|script|style|template)$/.test(tag);
+}
+
+// --- The cascade -----------------------------------------------------------
+
+function _gMatched(raw) {
+    var m = _meta(raw);
+    if (m.gMatchGen === _gGen && m.gMatched) {
+        return m.gMatched;
+    }
+    var rules = _vLoadRules();
+    var tag = _nodeTag(raw);
+    var id = _elementIdOf(raw, m);
+    var out = [];
+    for (var i = 0; i < rules.length; ++i) {
+        if (rules[i].sel.indexOf("::") === -1 && _vRuleMatchesFor(rules[i], raw, m, tag, id)) {
+            out.push(i);
+        }
+    }
+    m.gMatched = out;
+    m.gMatchGen = _gGen;
+    return out;
+}
+
+function _elementIdOf(raw, m) {
+    if (raw.objectName) {
+        return raw.objectName;
+    }
+    return m.attrs && m.attrs.id ? String(m.attrs.id) : "";
+}
+
+// The later of two declarations of equal weight wins, so `>=`.
+function _gOffer(won, prop, value, weight) {
+    if (!won[prop] || weight >= won[prop].weight) {
+        won[prop] = { value: value, weight: weight };
+    }
+}
+
+function _gWeight(rule, important) {
+    var origin = important ? (rule.ua ? 4 : 3) : (rule.ua ? 0 : 1);
+    // An `!important` declaration in an earlier layer beats a later one's.
+    var layer = rule.layer === undefined ? (important ? 0 : 99) : (important ? 98 - rule.layer : rule.layer);
+    return origin * _V_ORIGIN_BAND + layer * _V_LAYER_BAND + rule.rank;
+}
+
+function _gInlineDecls(raw, m) {
+    var out = [];
+    var keys = Object.keys(m.styles);
+    if (m.staticStyle === undefined) {
+        m.staticStyle = typeof raw.eldurStyle === "string" ? raw.eldurStyle : "";
+    }
+    var seen = {};
+    var push = function(prop, text) {
+        var important = /!\s*important\s*$/i.test(text);
+        out.push([prop, text.replace(/!\s*important\s*$/i, "").trim(), important]);
+    };
+    var parts = m.staticStyle.split(";");
+    for (var p = 0; p < parts.length; ++p) {
+        var colon = parts[p].indexOf(":");
+        if (colon > 0) {
+            push(parts[p].slice(0, colon).trim().toLowerCase(), parts[p].slice(colon + 1).trim());
+        }
+    }
+    for (var s = 0; s < keys.length; ++s) {
+        var kebab = keys[s].indexOf("--") === 0 ? keys[s] : _camelToKebab(keys[s]);
+        if (!seen[kebab] && String(m.styles[keys[s]]) !== "") {
+            seen[kebab] = true;
+            push(kebab, String(m.styles[keys[s]]));
+        }
+    }
+    return out;
+}
+
+function _gVars(raw, parent) {
+    var inherited = parent ? _gStyle(parent).vars : {};
+    var own = null;
+    var rules = _vLoadRules();
+    var matched = _gMatched(raw);
+    var won = {};
+    for (var i = 0; i < matched.length; ++i) {
+        var rule = rules[matched[i]];
+        for (var d = 0; d < rule.decls.length; ++d) {
+            if (rule.decls[d][0].indexOf("--") === 0) {
+                _gOffer(won, rule.decls[d][0], rule.decls[d][1], _gWeight(rule, rule.decls[d][2]));
+            }
+        }
+    }
+    var inline = _gInlineDecls(raw, _meta(raw));
+    for (var n = 0; n < inline.length; ++n) {
+        if (inline[n][0].indexOf("--") === 0) {
+            _gOffer(won, inline[n][0], inline[n][1], (inline[n][2] ? 3.5 : 2) * _V_ORIGIN_BAND);
+        }
+    }
+    var names = Object.keys(won);
+    if (names.length === 0) {
+        return inherited;
+    }
+    own = Object.assign({}, inherited);
+    for (var k = 0; k < names.length; ++k) {
+        var written = won[names[k]].value;
+        if (written === "inherit" || written === "unset" || written === "revert") {
+            own[names[k]] = inherited[names[k]];
+        } else if (written === "initial") {
+            delete own[names[k]];
+        } else {
+            own[names[k]] = written;
+        }
+    }
+    // A variable may name another declared on this element.
+    for (var v = 0; v < names.length; ++v) {
+        if (own[names[v]] !== undefined) {
+            var resolved = _gSubstitute(own[names[v]], own, [names[v]]);
+            if (resolved === null) {
+                delete own[names[v]];
+            } else {
+                own[names[v]] = resolved;
+            }
+        }
+    }
+    return own;
+}
+
+// `var(--x, fallback)` written out; `null` when nothing is left of it, which
+// makes the declaration "invalid at computed-value time".
+function _gSubstitute(value, vars, path) {
+    var text = String(value);
+    for (var at = text.indexOf("var("); at !== -1; at = text.indexOf("var(")) {
+        var depth = 0;
+        var end = -1;
+        var comma = -1;
+        for (var i = at + 3; i < text.length; ++i) {
+            if (text[i] === "(") {
+                ++depth;
+            } else if (text[i] === ")") {
+                if (--depth === 0) {
+                    end = i;
+                    break;
+                }
+            } else if (text[i] === "," && depth === 1 && comma === -1) {
+                comma = i;
+            }
+        }
+        if (end === -1) {
+            return null;
+        }
+        var name = text.slice(at + 4, comma === -1 ? end : comma).trim();
+        var fallback = comma === -1 ? null : text.slice(comma + 1, end).trim();
+        var got = null;
+        if (vars[name] !== undefined && path.indexOf(name) === -1) {
+            got = _gSubstitute(vars[name], vars, path.concat([name]));
+        }
+        if (got === null && fallback !== null) {
+            got = _gSubstitute(fallback, vars, path);
+        }
+        if (got === null) {
+            return null;
+        }
+        text = text.slice(0, at) + got + text.slice(end + 1);
+    }
+    return text;
+}
+
+function _gSplitValue(text) {
+    var parts = [];
+    var depth = 0;
+    var cur = "";
+    for (var i = 0; i < text.length; ++i) {
+        var c = text[i];
+        if (c === "(") {
+            ++depth;
+        } else if (c === ")") {
+            --depth;
+        }
+        if (depth === 0 && /\s/.test(c)) {
+            if (cur) {
+                parts.push(cur);
+            }
+            cur = "";
+        } else {
+            cur += c;
+        }
+    }
+    if (cur) {
+        parts.push(cur);
+    }
+    return parts;
+}
+
+function _gSides(parts) {
+    var a = parts[0];
+    var b = parts[1] !== undefined ? parts[1] : a;
+    var c = parts[2] !== undefined ? parts[2] : a;
+    var d = parts[3] !== undefined ? parts[3] : b;
+    return [a, b, c, d];
+}
+
+// Only a shorthand whose value held `var()` reaches the runtime whole: the
+// converter expanded the others.
+function _gExpand(prop, value) {
+    var names = ["top", "right", "bottom", "left"];
+    var out = [];
+    var parts = _gSplitValue(value);
+    if (prop === "margin" || prop === "padding") {
+        var sides = _gSides(parts);
+        for (var i = 0; i < 4; ++i) {
+            out.push([prop + "-" + names[i], sides[i]]);
+        }
+    } else if (prop === "inset") {
+        var insets = _gSides(parts);
+        for (var n = 0; n < 4; ++n) {
+            out.push([names[n], insets[n]]);
+        }
+    } else if (prop === "border-radius") {
+        var corners = _gSides(parts);
+        var cornerNames = ["top-left", "top-right", "bottom-right", "bottom-left"];
+        for (var r = 0; r < 4; ++r) {
+            out.push(["border-" + cornerNames[r] + "-radius", corners[r]]);
+        }
+    } else if (prop === "gap") {
+        out.push(["row-gap", parts[0]], ["column-gap", parts[1] !== undefined ? parts[1] : parts[0]]);
+    } else if (prop === "background") {
+        out.push(["background-color", value]);
+    } else if (/^border(-(top|right|bottom|left))?$/.test(prop)) {
+        var which = prop === "border" ? names : [prop.slice(7)];
+        var width = "medium";
+        var style = "none";
+        var color = "currentcolor";
+        for (var p = 0; p < parts.length; ++p) {
+            if (/^(none|hidden|dotted|dashed|solid|double|groove|ridge|inset|outset)$/.test(parts[p])) {
+                style = parts[p];
+            } else if (/^(thin|medium|thick|[-+.\d].*|calc\(.*)$/.test(parts[p])) {
+                width = parts[p];
+            } else {
+                color = parts[p];
+            }
+        }
+        for (var w = 0; w < which.length; ++w) {
+            out.push(["border-" + which[w] + "-width", width], ["border-" + which[w] + "-style", style],
+                ["border-" + which[w] + "-color", color]);
+        }
+    } else if (/^border-(width|style|color)$/.test(prop)) {
+        var vals = _gSides(parts);
+        for (var b = 0; b < 4; ++b) {
+            out.push(["border-" + names[b] + prop.slice(6), vals[b]]);
+        }
+    } else {
+        out.push([prop, value]);
+    }
+    return out;
+}
+
+function _gOfferDecl(won, prop, value, weight, vars) {
+    var text = value;
+    if (text.indexOf("var(") !== -1) {
+        text = _gSubstitute(text, vars, []);
+        if (text === null) {
+            text = "unset";
+        }
+    }
+    var longhands = _gExpand(prop, text);
+    for (var i = 0; i < longhands.length; ++i) {
+        _gOffer(won, longhands[i][0], longhands[i][1], weight);
+    }
+}
+
+function _gNumber(text) {
+    var n = parseFloat(text);
+    return isNaN(n) ? 0 : n;
+}
+
+// `calc()` of lengths, in px. `basis` is what a percentage is of; `null` makes
+// a percentage unresolvable, and the whole value with it.
+function _gPx(value, basis, size, rootSize) {
+    var text = String(value).trim().toLowerCase();
+    if (text === "" || text === "auto" || text === "none" || text === "normal") {
+        return null;
+    }
+    var pos = 0;
+    var failed = false;
+    function skip() {
+        while (pos < text.length && /\s/.test(text[pos])) {
+            ++pos;
+        }
+    }
+    function atom() {
+        skip();
+        if (text[pos] === "(" ) {
+            ++pos;
+            var inner = sum();
+            skip();
+            ++pos;
+            return inner;
+        }
+        if (text.indexOf("calc(", pos) === pos) {
+            pos += 4;
+            return atom();
+        }
+        var match = /^[-+]?(\d*\.\d+|\d+)(e[-+]?\d+)?([a-z%]*)/.exec(text.slice(pos));
+        if (!match) {
+            failed = true;
+            pos = text.length;
+            return 0;
+        }
+        pos += match[0].length;
+        var n = parseFloat(match[0]);
+        switch (match[3]) {
+        case "": return { n: n, unitless: true };
+        case "px": return { n: n };
+        case "em": return { n: n * size };
+        case "rem": return { n: n * rootSize };
+        case "%":
+            if (basis === null || basis === undefined) {
+                failed = true;
+                return { n: 0 };
+            }
+            return { n: n * basis / 100 };
+        case "vw": return { n: n * _root.width / 100 };
+        case "vh": return { n: n * _root.height / 100 };
+        case "vmin": return { n: n * Math.min(_root.width, _root.height) / 100 };
+        case "vmax": return { n: n * Math.max(_root.width, _root.height) / 100 };
+        case "pt": return { n: n * 96 / 72 };
+        case "pc": return { n: n * 16 };
+        case "in": return { n: n * 96 };
+        case "cm": return { n: n * 96 / 2.54 };
+        case "mm": return { n: n * 96 / 25.4 };
+        default:
+            failed = true;
+            return { n: 0 };
+        }
+    }
+    function product() {
+        var left = atom();
+        for (;;) {
+            skip();
+            var op = text[pos];
+            if (op !== "*" && op !== "/") {
+                return left;
+            }
+            ++pos;
+            var right = atom();
+            left = { n: op === "*" ? left.n * right.n : left.n / right.n, unitless: left.unitless && right.unitless };
+        }
+    }
+    function sum() {
+        var left = product();
+        for (;;) {
+            skip();
+            var op = text[pos];
+            if (op !== "+" && op !== "-") {
+                return left;
+            }
+            ++pos;
+            var right = product();
+            left = { n: op === "+" ? left.n + right.n : left.n - right.n };
+        }
+    }
+    var got = sum();
+    return failed ? null : got.n;
+}
+
+function _gWeightNumber(text) {
+    if (text === "normal") {
+        return 400;
+    }
+    if (text === "bold") {
+        return 700;
+    }
+    return parseFloat(text) || 400;
+}
+
+function _gParent(raw) {
+    var p = _logicalParent(raw);
+    if (p && p.__eldurInline) {
+        return null;
+    }
+    if (p && p === raw) {
+        return null;
+    }
+    return p || null;
+}
+
+// What a script's element computes to, by DOM place.
+function _gStyle(raw) {
+    var m = _meta(raw);
+    if (m.gStyle && m.gStyleGen === _gGen) {
+        return m.gStyle;
+    }
+    var parent = _gParent(raw);
+    var inherited = parent ? _gStyle(parent) : null;
+    var vars = _gVars(raw, parent);
+    var rules = _vLoadRules();
+    var matched = _gMatched(raw);
+    var won = {};
+    for (var i = 0; i < matched.length; ++i) {
+        var rule = rules[matched[i]];
+        for (var d = 0; d < rule.decls.length; ++d) {
+            var decl = rule.decls[d];
+            if (decl[0].indexOf("--") !== 0) {
+                _gOfferDecl(won, decl[0], decl[1], _gWeight(rule, decl[2]), vars);
+            }
+        }
+    }
+    var inline = _gInlineDecls(raw, m);
+    for (var n = 0; n < inline.length; ++n) {
+        if (inline[n][0].indexOf("--") !== 0) {
+            _gOfferDecl(won, inline[n][0], inline[n][1], (inline[n][2] ? 3.5 : 2) * _V_ORIGIN_BAND, vars);
+        }
+    }
+    var tag = _nodeTag(raw);
+    var s = { vars: vars, tag: tag, won: won };
+    var value = function(prop) {
+        var got = won[prop] ? won[prop].value : undefined;
+        var inheritable = _G_INHERITED.indexOf(prop) !== -1 || prop === "font-size" || prop === "line-height";
+        if (got === "revert" || got === "revert-layer" || got === "unset") {
+            got = inheritable ? "inherit" : "initial";
+        }
+        if (got === undefined) {
+            got = inheritable ? "inherit" : "initial";
+        }
+        return got;
+    };
+    var control = _G_CONTROL_BOX[tag];
+    // font-size first: every em below is of it.
+    var parentSize = inherited ? inherited.fontSize : 16;
+    var sizeText = value("font-size");
+    var keywordSizes = { "xx-small": 9, "x-small": 10, small: 13, medium: 16, large: 18, "x-large": 24, "xx-large": 32, "xxx-large": 48 };
+    var rootSize = _gRootFontSize(raw, parent);
+    if (sizeText === "inherit") {
+        s.fontSize = parentSize;
+    } else if (sizeText === "initial") {
+        s.fontSize = 16;
+    } else if (keywordSizes[sizeText] !== undefined) {
+        s.fontSize = keywordSizes[sizeText];
+    } else if (sizeText === "smaller") {
+        s.fontSize = parentSize / 1.2;
+    } else if (sizeText === "larger") {
+        s.fontSize = parentSize * 1.2;
+    } else {
+        var sized = _gPx(sizeText, parentSize, parentSize, rootSize);
+        s.fontSize = sized === null ? parentSize : sized;
+    }
+    s.rootSize = rootSize === null || !parent ? s.fontSize : rootSize;
+    var lineText = value("line-height");
+    if (lineText === "inherit") {
+        s.lineFactor = inherited ? inherited.lineFactor : null;
+        s.linePx = inherited ? inherited.linePx : null;
+    } else if (lineText === "normal" || lineText === "initial") {
+        s.lineFactor = null;
+        s.linePx = null;
+    } else if (/^[-+.\d]+$/.test(lineText)) {
+        s.lineFactor = parseFloat(lineText);
+        s.linePx = null;
+    } else {
+        s.lineFactor = null;
+        s.linePx = _gPx(lineText, s.fontSize, s.fontSize, s.rootSize);
+    }
+    for (var h = 0; h < _G_INHERITED.length; ++h) {
+        var name = _G_INHERITED[h];
+        var text = value(name);
+        if (text === "initial") {
+            text = { "color": "rgb(0, 0, 0)", "font-family": "", "font-weight": "400", "font-style": "normal", "text-align": "start", "visibility": "visible", "white-space": "normal" }[name];
+        } else if (text === "inherit") {
+            if (inherited) {
+                text = inherited[name];
+            } else {
+                text = { "color": "rgb(0, 0, 0)", "font-family": "", "font-weight": "400", "font-style": "normal", "text-align": "start", "visibility": "visible", "white-space": "normal" }[name];
+            }
+        }
+        s[name] = text;
+    }
+    s.color = s.color === undefined ? s["color"] : s.color;
+    var color = _gColor(s["color"], inherited ? inherited["color"] : "rgb(0, 0, 0)");
+    s["color"] = color;
+    s["font-weight"] = String(_gResolveWeight(s["font-weight"], inherited ? inherited["font-weight"] : "400"));
+    var initialNames = Object.keys(_G_INITIAL);
+    for (var q = 0; q < initialNames.length; ++q) {
+        var key = initialNames[q];
+        var own = value(key);
+        if (own === "inherit") {
+            s[key] = inherited ? inherited[key] : _G_INITIAL[key];
+        } else {
+            s[key] = own === "initial" ? _G_INITIAL[key] : own;
+        }
+    }
+    s["background-color"] = _gColor(s["background-color"], color);
+    var sides = ["top", "right", "bottom", "left"];
+    for (var b = 0; b < 4; ++b) {
+        var side = sides[b];
+        var borderColor = value("border-" + side + "-color");
+        s["border-" + side + "-color"] = _gColor(borderColor === "initial" || borderColor === "inherit" ? "currentcolor" : borderColor, color);
+        var style = s["border-" + side + "-style"];
+        var widthText = s["border-" + side + "-width"];
+        var known = { thin: 1, medium: 3, thick: 5 };
+        var px = known[widthText] !== undefined ? known[widthText] : (_gPx(widthText, null, s.fontSize, s.rootSize) || 0);
+        s["border-" + side + "-px"] = style === "none" || style === "hidden" ? 0 : px;
+    }
+    _gControlDefaults(s, won, control);
+    var flexParent = inherited && (inherited.display === "flex" || inherited.display === "grid" || inherited.display === "inline-flex" || inherited.display === "inline-grid");
+    if (flexParent && (s.display === "inline" || s.display === "inline-block")) {
+        s.display = "block";
+    }
+    if ((s.position === "absolute" || s.position === "fixed") && (s.display === "inline" || s.display === "inline-block")) {
+        s.display = "block";
+    }
+    m.gStyle = s;
+    m.gStyleGen = _gGen;
+    return s;
+}
+
+function _gRootFontSize(raw, parent) {
+    if (!parent) {
+        return null;
+    }
+    var top = parent;
+    for (var up = _gParent(top); up; up = _gParent(top)) {
+        top = up;
+    }
+    return _gStyle(top).fontSize;
+}
+
+function _gResolveWeight(text, parentWeight) {
+    if (text === "bolder") {
+        return _gWeightNumber(parentWeight) >= 600 ? 900 : 700;
+    }
+    if (text === "lighter") {
+        return _gWeightNumber(parentWeight) >= 600 ? 400 : 100;
+    }
+    return _gWeightNumber(text);
+}
+
+function _gColor(text, current) {
+    var value = String(text).trim();
+    if (value.toLowerCase() === "currentcolor") {
+        return current;
+    }
+    if (value.toLowerCase() === "transparent") {
+        return "rgba(0, 0, 0, 0)";
+    }
+    return _vColor(value, current);
+}
+
+// QML's colour strings have no `rgb()`, and take an unknown one as black.
+function _gQtColor(text) {
+    var m = /^rgba?\(([^)]*)\)$/.exec(String(text).trim());
+    if (!m) {
+        return String(text);
+    }
+    var v = m[1].split(/[\s,/]+/).map(Number);
+    return Qt.rgba(v[0] / 255, v[1] / 255, v[2] / 255, v.length > 3 ? v[3] : 1);
+}
+
+function _gControlDefaults(s, won, control) {
+    if (!control) {
+        return;
+    }
+    var has = function(prop) {
+        return Boolean(won[prop]);
+    };
+    var sides = ["top", "right", "bottom", "left"];
+    for (var i = 0; i < 4; ++i) {
+        var side = sides[i];
+        if (!has("padding-" + side)) {
+            s["padding-" + side] = (i % 2 === 0 ? control.padV : control.padH) + "px";
+        }
+        if (!has("border-" + side + "-width") && !has("border-" + side + "-style")) {
+            s["border-" + side + "-px"] = control.border;
+            s["border-" + side + "-style"] = "outset";
+        }
+    }
+}
+
+function _gMetrics(s) {
+    var family = s["font-family"] || "";
+    var key = family + "|" + s.fontSize + "|" + s["font-weight"] + "|" + s["font-style"];
+    if (!_gMetricsCache[key]) {
+        var metrics = Qt.createQmlObject("import QtQuick; FontMetrics {}", _qobjectParent(), "eldur_metrics");
+        metrics.font = _gFontOf(s);
+        _gMetricsCache[key] = metrics;
+    }
+    return _gMetricsCache[key];
+}
+
+// `font.pixelSize` is an int, as the converter's static text has it.
+function _gFontOf(s) {
+    var family = _gFamily(s["font-family"]);
+    var font = { pixelSize: Math.max(Math.round(s.fontSize), 1), weight: _gWeightNumber(s["font-weight"]), italic: s["font-style"] === "italic" };
+    if (family) {
+        font.family = family;
+    }
+    return Qt.font(font);
+}
+
+function _gFamily(list) {
+    var first = String(list || "").split(",")[0].trim().replace(/^["']|["']$/g, "");
+    return first;
+}
+
+function _gLineHeight(s) {
+    if (s.linePx !== null && s.linePx !== undefined) {
+        return s.linePx;
+    }
+    if (s.lineFactor !== null && s.lineFactor !== undefined) {
+        return s.lineFactor * s.fontSize;
+    }
+    return null;
+}
+
+// --- Used values -----------------------------------------------------------
+
+function _gEdges(raw, s, basis) {
+    var at = function(prop) {
+        return _gPx(s[prop], basis, s.fontSize, s.rootSize);
+    };
+    return {
+        mt: at("margin-top"), mr: at("margin-right"), mb: at("margin-bottom"), ml: at("margin-left"),
+        pt: at("padding-top") || 0, pr: at("padding-right") || 0, pb: at("padding-bottom") || 0, pl: at("padding-left") || 0,
+        bt: s["border-top-px"], br: s["border-right-px"], bb: s["border-bottom-px"], bl: s["border-left-px"]
+    };
+}
+
+function _gKids(raw) {
+    return _rawKids(raw, false).filter(function(kid) {
+        return !kid.__eldurInline;
+    });
+}
+
+function _gOutOfFlow(s) {
+    return s.position === "absolute" || s.position === "fixed";
+}
+
+function _gInlineLevel(s) {
+    return s.display === "inline" || s.display === "inline-block" || s.display === "inline-flex" || s.display === "inline-grid";
+}
+
+function _gMerge(a, b) {
+    if (a >= 0 && b >= 0) {
+        return Math.max(a, b);
+    }
+    if (a <= 0 && b <= 0) {
+        return Math.min(a, b);
+    }
+    return a + b;
+}
+
+function _gTextOf(raw) {
+    if (!_gIsBox(raw)) {
+        return null;
+    }
+    return _findTextChild(raw);
+}
+
+function _gIsFlex(s) {
+    return s.display === "flex" || s.display === "inline-flex";
+}
+
+function _gIsGrid(s) {
+    return s.display === "grid" || s.display === "inline-grid";
+}
+
+// The width of a box's content on one line.
+function _gIntrinsic(raw, s) {
+    var e = _gEdges(raw, s, 0);
+    var frame = e.pl + e.pr + e.bl + e.br;
+    if (!_gIsBox(raw)) {
+        return _gPx(s.width, null, s.fontSize, s.rootSize) !== null
+            ? _gOuterWidth(s, e, _gPx(s.width, null, s.fontSize, s.rootSize))
+            : (raw.implicitWidth || 0) + (_gControlFrame(raw) ? frame : 0);
+    }
+    var fixed = _gPx(s.width, null, s.fontSize, s.rootSize);
+    if (fixed !== null) {
+        return _gOuterWidth(s, e, fixed);
+    }
+    var best = 0;
+    var text = _gTextOf(raw);
+    if (text && text.text !== "") {
+        best = Math.ceil(text.implicitWidth);
+    }
+    var kids = _gKids(raw);
+    var row = _gIsFlex(s) && String(s["flex-direction"]).indexOf("row") === 0;
+    var line = 0;
+    var gap = _gPx(s["column-gap"], null, s.fontSize, s.rootSize) || 0;
+    var count = 0;
+    for (var i = 0; i < kids.length; ++i) {
+        var ks = _gStyle(kids[i]);
+        if (ks.display === "none" || _gOutOfFlow(ks)) {
+            continue;
+        }
+        var ke = _gEdges(kids[i], ks, 0);
+        var outer = _gIntrinsic(kids[i], ks) + (ke.ml || 0) + (ke.mr || 0);
+        if (row || _gInlineLevel(ks)) {
+            line += outer + (count > 0 && row ? gap : 0);
+            ++count;
+        } else {
+            best = Math.max(best, line, outer);
+            line = 0;
+            count = 0;
+        }
+    }
+    return Math.max(best, line) + frame;
+}
+
+function _gOuterWidth(s, e, content) {
+    return s["box-sizing"] === "border-box" ? Math.max(content, e.pl + e.pr + e.bl + e.br) : content + e.pl + e.pr + e.bl + e.br;
+}
+
+function _gOuterHeight(s, e, content) {
+    return s["box-sizing"] === "border-box" ? Math.max(content, e.pt + e.pb + e.bt + e.bb) : content + e.pt + e.pb + e.bt + e.bb;
+}
+
+function _gControlFrame(raw) {
+    return !_gIsBox(raw) && _meta(raw).createdTag && !raw.background;
+}
+
+// Places a box in `avail` px of its container's width: sets its width, height
+// and what's inside. `opts`: shrink (take the content's width), forceW / forceH
+// (a flex or grid container says). Returns `{ mt, mb }`, the margins that show
+// outside it once its first and last children's have collapsed through it.
+function _gPlace(raw, avail, opts, heightBasis) {
+    opts = opts || {};
+    var s = _gStyle(raw);
+    var e = _gEdges(raw, s, avail);
+    var frameW = e.pl + e.pr + e.bl + e.br;
+    var frameH = e.pt + e.pb + e.bt + e.bb;
+    var size = function(prop, basis) {
+        return _gPx(s[prop], basis, s.fontSize, s.rootSize);
+    };
+    var box = _gIsBox(raw);
+    var width = size("width", avail);
+    var used;
+    if (opts.forceW !== undefined) {
+        used = opts.forceW;
+    } else if (width !== null) {
+        used = _gOuterWidth(s, e, width);
+    } else if (opts.shrink || !box && _gInlineLevel(s)) {
+        used = Math.min(_gIntrinsic(raw, s), Math.max(avail - (e.ml || 0) - (e.mr || 0), 0));
+        if (opts.shrink === "max") {
+            used = _gIntrinsic(raw, s);
+        }
+    } else {
+        used = Math.max(avail - (e.ml || 0) - (e.mr || 0), frameW);
+    }
+    var maxW = size("max-width", avail);
+    if (maxW !== null && opts.forceW === undefined) {
+        used = Math.min(used, _gOuterWidth(s, e, maxW));
+    }
+    var minW = size("min-width", avail);
+    if (minW !== null && opts.forceW === undefined) {
+        used = Math.max(used, _gOuterWidth(s, e, minW));
+    }
+    if (raw.width !== used) {
+        raw.width = used;
+    }
+    var innerW = Math.max(used - frameW, 0);
+    var basisH = heightBasis === undefined ? null : heightBasis;
+    var height = opts.forceH !== undefined ? null : size("height", basisH);
+    var fixedH = opts.forceH !== undefined ? opts.forceH : (height !== null ? _gOuterHeight(s, e, height) : null);
+    var margins = { mt: e.mt || 0, mb: e.mb || 0 };
+    if (!box) {
+        return _gPlaceLeaf(raw, s, e, used, fixedH, margins, frameH);
+    }
+    var content = { height: 0, top: 0, bottom: 0, through: false };
+    var innerH = fixedH === null ? null : Math.max(fixedH - frameH, 0);
+    if (_gIsFlex(s)) {
+        content.height = _gLayoutFlex(raw, s, e, innerW, innerH);
+    } else if (_gIsGrid(s)) {
+        content.height = _gLayoutGrid(raw, s, e, innerW, innerH);
+    } else {
+        content = _gLayoutFlow(raw, s, e, innerW, fixedH === null, innerH);
+    }
+    var usedH = fixedH !== null ? fixedH : content.height + frameH;
+    var maxH = size("max-height", basisH);
+    if (maxH !== null && opts.forceH === undefined) {
+        usedH = Math.min(usedH, _gOuterHeight(s, e, maxH));
+    }
+    var minH = size("min-height", basisH);
+    if (minH !== null && opts.forceH === undefined) {
+        usedH = Math.max(usedH, _gOuterHeight(s, e, minH));
+    }
+    if (raw.height !== usedH) {
+        raw.height = usedH;
+    }
+    if (raw.implicitHeight !== usedH) {
+        raw.implicitHeight = usedH;
+    }
+    if (raw.implicitWidth !== used) {
+        raw.implicitWidth = used;
+    }
+    margins.mt = _gMerge(margins.mt, content.top);
+    margins.mb = _gMerge(margins.mb, content.bottom);
+    margins.empty = content.through && usedH === 0;
+    _gPaintBox(raw, s, e);
+    return margins;
+}
+
+function _gPlaceLeaf(raw, s, e, used, fixedH, margins, frameH) {
+    _gPaintControl(raw, s, e);
+    var height = fixedH;
+    if (height === null) {
+        height = raw.implicitHeight;
+    }
+    if (raw.height !== height) {
+        raw.height = height;
+    }
+    return margins;
+}
+
+// Block children stack, with their margins collapsing; inline-level ones share
+// lines. The box's own `Text` is the anonymous line before them.
+function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
+    var x = e.bl + e.pl;
+    var top = e.bt + e.pt;
+    var y = top;
+    var pending = 0;
+    var first = true;
+    var through = 0;
+    var collapseTop = e.pt === 0 && e.bt === 0 && s["overflow-y"] === "visible" && s.display !== "inline-block" && s.display !== "flow-root";
+    var collapseBottom = autoH && e.pb === 0 && e.bb === 0 && s["overflow-y"] === "visible" && s.display !== "inline-block" && s.display !== "flow-root";
+    var text = _gTextOf(raw);
+    if (text && text.text !== "") {
+        _gPaintText(text, s, innerW);
+        text.x = x;
+        text.y = y + _gLineShift(s);
+        y += text.height;
+        first = false;
+    } else if (text) {
+        _gPaintText(text, s, innerW);
+        text.x = x;
+        text.y = y;
+    }
+    var kids = _gKids(raw);
+    var line = [];
+    var flush = function() {
+        if (line.length === 0) {
+            return;
+        }
+        if (first && collapseTop) {
+            through = pending;
+        } else {
+            y += pending;
+        }
+        pending = 0;
+        first = false;
+        y += _gLines(line, s, innerW, x, y);
+        line = [];
+    };
+    for (var i = 0; i < kids.length; ++i) {
+        var kid = kids[i];
+        var ks = _gStyle(kid);
+        if (ks.display === "none") {
+            _gHide(kid);
+            continue;
+        }
+        kid.visible = true;
+        if (_gInlineLevel(ks) && !_gOutOfFlow(ks)) {
+            line.push(kid);
+            continue;
+        }
+        flush();
+        var ke = _gEdges(kid, ks, innerW);
+        var got = _gPlace(kid, innerW, null, innerH);
+        var kidWidth = kid.width;
+        var left = ke.ml === null && ke.mr === null ? (innerW - kidWidth) / 2
+            : ke.ml === null ? innerW - kidWidth - (ke.mr || 0)
+            : ke.ml;
+        kid.x = x + left;
+        var merged = _gMerge(pending, got.mt);
+        if (got.empty) {
+            kid.y = y + merged;
+            pending = _gMerge(merged, got.mb);
+            continue;
+        }
+        if (first && collapseTop) {
+            through = merged;
+            kid.y = y;
+        } else {
+            kid.y = y + merged;
+        }
+        y = kid.y + kid.height;
+        pending = got.mb;
+        first = false;
+    }
+    flush();
+    var bottom = 0;
+    if (collapseBottom && !first) {
+        bottom = pending;
+    } else if (!first) {
+        y += pending;
+    } else if (collapseTop && collapseBottom) {
+        through = pending;
+    }
+    return { height: y - top, top: through, bottom: bottom, through: first && collapseTop && collapseBottom };
+}
+
+// A browser centres the glyphs in a line on a whole-pixel baseline; a fixed QML
+// line puts them at its top (`whole_baseline` in the converter's text.rs).
+function _gLineShift(s) {
+    var line = _gLineHeight(s);
+    if (line === null) {
+        return 0;
+    }
+    var metrics = _gMetrics(s);
+    var ascent = Math.round(metrics.ascent);
+    return Math.floor((line - ascent - Math.round(metrics.descent)) / 2);
+}
+
+function _gBaseline(raw, s) {
+    var text = _gTextOf(raw);
+    if (text && text.text !== "") {
+        var metrics = _gMetrics(s);
+        var line = _gLineHeight(s);
+        var height = line === null ? metrics.ascent + metrics.descent : line;
+        var e = _gEdges(raw, s, 0);
+        // A browser places text on whole-pixel ascent and descent, as in `_gLines`.
+        var ascent = Math.round(metrics.ascent);
+        return e.bt + e.pt + (text.lineCount - 1) * height
+            + Math.floor((height - ascent - Math.round(metrics.descent)) / 2) + ascent;
+    }
+    if (_G_CONTROL_BOX[s.tag] && raw.contentItem) {
+        var controlLine = _gLineHeight(s);
+        if (controlLine === null) {
+            controlLine = _gControlLine(s);
+        }
+        var fm = _gMetrics(s);
+        var up = Math.round(fm.ascent);
+        var edges = _gEdges(raw, s, 0);
+        return edges.bt + edges.pt + Math.floor((controlLine - up - Math.round(fm.descent)) / 2) + up;
+    }
+    if (typeof raw.baselineOffset === "number" && !_gIsBox(raw) && raw.baselineOffset > 0) {
+        return raw.baselineOffset;
+    }
+    return raw.height;
+}
+
+function _gLines(kids, s, innerW, x, y) {
+    var metrics = _gMetrics(s);
+    var lineHeight = _gLineHeight(s);
+    var strut = lineHeight === null ? metrics.ascent + metrics.descent : lineHeight;
+    // A browser places a line on whole-pixel ascent and descent.
+    var ascent = Math.round(metrics.ascent);
+    var strutUp = ascent + Math.floor((strut - ascent - Math.round(metrics.descent)) / 2);
+    var strutDown = strut - strutUp;
+    var lines = [];
+    var cur = { items: [], width: 0 };
+    for (var i = 0; i < kids.length; ++i) {
+        var ks = _gStyle(kids[i]);
+        var ke = _gEdges(kids[i], ks, innerW);
+        _gPlace(kids[i], innerW, { shrink: true }, null);
+        var outer = kids[i].width + (ke.ml || 0) + (ke.mr || 0);
+        if (cur.items.length > 0 && cur.width + outer > innerW) {
+            lines.push(cur);
+            cur = { items: [], width: 0 };
+        }
+        cur.items.push({ kid: kids[i], e: ke, s: ks, outer: outer });
+        cur.width += outer;
+    }
+    lines.push(cur);
+    var total = 0;
+    var align = s["text-align"];
+    for (var l = 0; l < lines.length; ++l) {
+        var up = strutUp;
+        var down = strutDown;
+        var items = lines[l].items;
+        for (var a = 0; a < items.length; ++a) {
+            var it = items[a];
+            it.base = _gBaseline(it.kid, it.s) + (it.e.mt || 0);
+            up = Math.max(up, it.base);
+            down = Math.max(down, it.kid.height + (it.e.mt || 0) + (it.e.mb || 0) - it.base);
+        }
+        var cx = x;
+        var free = innerW - lines[l].width;
+        if (align === "center" || align === "-webkit-center") {
+            cx += free / 2;
+        } else if (align === "right" || align === "end" || align === "-webkit-right") {
+            cx += free;
+        }
+        for (var p = 0; p < items.length; ++p) {
+            items[p].kid.x = cx + (items[p].e.ml || 0);
+            items[p].kid.y = y + total + up - items[p].base + (items[p].e.mt || 0);
+            cx += items[p].outer;
+        }
+        total += up + down;
+    }
+    return total;
+}
+
+function _gHide(kid) {
+    kid.visible = false;
+}
+
+function _gLayoutFlex(raw, s, e, innerW, innerH) {
+    var row = String(s["flex-direction"]).indexOf("row") === 0;
+    var reversed = String(s["flex-direction"]).indexOf("reverse") !== -1;
+    var wrap = s["flex-wrap"] !== "nowrap";
+    var rowGap = _gPx(s["row-gap"], innerH, s.fontSize, s.rootSize) || 0;
+    var colGap = _gPx(s["column-gap"], innerW, s.fontSize, s.rootSize) || 0;
+    var mainGap = row ? colGap : rowGap;
+    var crossGap = row ? rowGap : colGap;
+    var mainSize = row ? innerW : innerH;
+    var items = [];
+    var kids = _gKids(raw);
+    for (var i = 0; i < kids.length; ++i) {
+        var ks = _gStyle(kids[i]);
+        if (ks.display === "none") {
+            _gHide(kids[i]);
+            continue;
+        }
+        kids[i].visible = true;
+        if (_gOutOfFlow(ks)) {
+            continue;
+        }
+        var ke = _gEdges(kids[i], ks, innerW);
+        var basis = _gPx(ks["flex-basis"], mainSize, ks.fontSize, ks.rootSize);
+        var content = null;
+        if (row) {
+            var kw = basis !== null ? basis : _gPx(ks.width, innerW, ks.fontSize, ks.rootSize);
+            content = kw !== null ? _gOuterWidth(ks, ke, kw) : _gIntrinsic(kids[i], ks);
+        } else {
+            var kh = basis !== null ? basis : _gPx(ks.height, innerH, ks.fontSize, ks.rootSize);
+            if (kh !== null) {
+                content = _gOuterHeight(ks, ke, kh);
+            } else {
+                _gPlace(kids[i], innerW, null, null);
+                content = kids[i].height;
+            }
+        }
+        var marginMain = row ? (ke.ml || 0) + (ke.mr || 0) : (ke.mt || 0) + (ke.mb || 0);
+        items.push({
+            kid: kids[i], s: ks, e: ke, size: content, margin: marginMain, order: _gNumber(ks.order), at: items.length,
+            grow: _gNumber(ks["flex-grow"]), shrink: _gNumber(ks["flex-shrink"])
+        });
+    }
+    items.sort(function(a, b) {
+        return a.order - b.order || a.at - b.at;
+    });
+    if (reversed) {
+        items.reverse();
+    }
+    var lines = [];
+    var cur = [];
+    var used = 0;
+    for (var n = 0; n < items.length; ++n) {
+        var need = items[n].size + items[n].margin;
+        if (wrap && mainSize !== null && cur.length > 0 && used + mainGap + need > mainSize) {
+            lines.push(cur);
+            cur = [];
+            used = 0;
+        }
+        used += need + (cur.length > 0 ? mainGap : 0);
+        cur.push(items[n]);
+    }
+    lines.push(cur);
+    var frameX = e.bl + e.pl;
+    var frameY = e.bt + e.pt;
+    var crossAt = 0;
+    var mainEnd = 0;
+    var align = s["align-items"];
+    for (var l = 0; l < lines.length; ++l) {
+        var line = lines[l];
+        var taken = 0;
+        var grows = 0;
+        var shrinks = 0;
+        for (var t = 0; t < line.length; ++t) {
+            taken += line[t].size + line[t].margin + (t > 0 ? mainGap : 0);
+            grows += line[t].grow;
+            shrinks += line[t].shrink * line[t].size;
+        }
+        var free = mainSize === null ? 0 : mainSize - taken;
+        for (var g = 0; g < line.length; ++g) {
+            if (free > 0 && grows > 0) {
+                line[g].size += free * line[g].grow / Math.max(grows, 1);
+            } else if (free < 0 && shrinks > 0) {
+                line[g].size = Math.max(line[g].size + free * line[g].shrink * line[g].size / shrinks, 0);
+            }
+        }
+        var lineCross = 0;
+        for (var c = 0; c < line.length; ++c) {
+            var it = line[c];
+            if (row) {
+                _gPlace(it.kid, innerW, { forceW: it.size }, innerH);
+                it.cross = it.kid.height;
+                it.crossMargin = (it.e.mt || 0) + (it.e.mb || 0);
+            } else {
+                var fits = _gPx(it.s.width, innerW, it.s.fontSize, it.s.rootSize) === null
+                    && (it.s["align-self"] === "auto" ? align : it.s["align-self"]);
+                var stretch = !fits || fits === "normal" || fits === "stretch";
+                _gPlace(it.kid, innerW, stretch ? { forceH: it.size } : { forceH: it.size, shrink: true }, innerH);
+                it.cross = it.kid.width;
+                it.crossMargin = (it.e.ml || 0) + (it.e.mr || 0);
+            }
+            lineCross = Math.max(lineCross, it.cross + it.crossMargin);
+        }
+        var crossRoom = row ? innerH : innerW;
+        if (lines.length === 1 && crossRoom !== null) {
+            lineCross = Math.max(lineCross, crossRoom);
+        }
+        var rest = mainSize === null ? 0 : mainSize - _gLineTaken(line, mainGap);
+        var start = 0;
+        var between = mainGap;
+        var justify = s["justify-content"];
+        var count = line.length;
+        if (rest > 0) {
+            if (justify === "center") {
+                start = rest / 2;
+            } else if (justify === "flex-end" || justify === "end" || justify === "right") {
+                start = rest;
+            } else if (justify === "space-between" && count > 1) {
+                between = mainGap + rest / (count - 1);
+            } else if (justify === "space-around") {
+                start = rest / count / 2;
+                between = mainGap + rest / count;
+            } else if (justify === "space-evenly") {
+                start = rest / (count + 1);
+                between = mainGap + rest / (count + 1);
+            }
+        }
+        var pos = start;
+        for (var q = 0; q < line.length; ++q) {
+            var item = line[q];
+            var self = item.s["align-self"] === "auto" ? align : item.s["align-self"];
+            var sizeAuto = row
+                ? _gPx(item.s.height, innerH, item.s.fontSize, item.s.rootSize) === null
+                : _gPx(item.s.width, innerW, item.s.fontSize, item.s.rootSize) === null;
+            if ((self === "normal" || self === "stretch") && sizeAuto) {
+                var want = lineCross - item.crossMargin;
+                if (row && item.kid.height !== want) {
+                    _gPlace(item.kid, innerW, { forceW: item.size, forceH: want }, innerH);
+                } else if (!row && item.kid.width !== want) {
+                    _gPlace(item.kid, innerW, { forceW: want, forceH: item.size }, innerH);
+                }
+                item.cross = row ? item.kid.height : item.kid.width;
+            }
+            var crossFree = lineCross - item.cross - item.crossMargin;
+            var crossOffset = self === "center" ? crossFree / 2
+                : self === "flex-end" || self === "end" ? crossFree : 0;
+            if (row) {
+                item.kid.x = frameX + pos + (item.e.ml || 0);
+                item.kid.y = frameY + crossAt + crossOffset + (item.e.mt || 0);
+                pos += item.size + item.margin + between;
+            } else {
+                item.kid.y = frameY + pos + (item.e.mt || 0);
+                item.kid.x = frameX + crossAt + crossOffset + (item.e.ml || 0);
+                pos += item.size + item.margin + between;
+            }
+        }
+        mainEnd = Math.max(mainEnd, pos - (line.length > 0 ? between : 0));
+        crossAt += lineCross + (l < lines.length - 1 ? crossGap : 0);
+    }
+    return row ? crossAt : mainEnd;
+}
+
+function _gLineTaken(line, gap) {
+    var taken = 0;
+    for (var i = 0; i < line.length; ++i) {
+        taken += line[i].size + line[i].margin + (i > 0 ? gap : 0);
+    }
+    return taken;
+}
+
+function _gTracks(text, width, s, gap) {
+    var tokens = _gSplitValue(String(text));
+    var expanded = [];
+    for (var i = 0; i < tokens.length; ++i) {
+        var repeat = /^repeat\(\s*(\d+)\s*,(.*)\)$/.exec(tokens[i]);
+        if (repeat) {
+            var inner = _gSplitValue(repeat[2].trim());
+            for (var r = 0; r < parseInt(repeat[1], 10); ++r) {
+                expanded = expanded.concat(inner);
+            }
+        } else {
+            expanded.push(tokens[i]);
+        }
+    }
+    return expanded;
+}
+
+// Items take the next cell; `grid-column` and `grid-row` are not in the table.
+function _gLayoutGrid(raw, s, e, innerW, innerH) {
+    var rowGap = _gPx(s["row-gap"], innerH, s.fontSize, s.rootSize) || 0;
+    var colGap = _gPx(s["column-gap"], innerW, s.fontSize, s.rootSize) || 0;
+    var written = s["grid-template-columns"];
+    var tracks = written === "none" ? ["1fr"] : _gTracks(written);
+    var kids = [];
+    var all = _gKids(raw);
+    for (var i = 0; i < all.length; ++i) {
+        var ks = _gStyle(all[i]);
+        if (ks.display === "none") {
+            _gHide(all[i]);
+        } else if (!_gOutOfFlow(ks)) {
+            all[i].visible = true;
+            kids.push(all[i]);
+        }
+    }
+    var n = tracks.length;
+    var room = innerW - colGap * (n - 1);
+    var sizes = [];
+    var fr = 0;
+    var fixed = 0;
+    for (var t = 0; t < n; ++t) {
+        var track = tracks[t];
+        if (/fr$/.test(track)) {
+            sizes.push(null);
+            fr += parseFloat(track);
+        } else if (track === "auto" || /^(min|max)-content$/.test(track)) {
+            var widest = 0;
+            for (var k = t; k < kids.length; k += n) {
+                widest = Math.max(widest, _gIntrinsic(kids[k], _gStyle(kids[k])));
+            }
+            sizes.push(widest);
+            fixed += widest;
+        } else {
+            var minmax = /^minmax\(.*,\s*(.*)\)$/.exec(track);
+            var px = _gPx(minmax ? minmax[1] : track, innerW, s.fontSize, s.rootSize);
+            sizes.push(px === null ? 0 : px);
+            fixed += px === null ? 0 : px;
+        }
+    }
+    var unit = fr > 0 ? Math.max(room - fixed, 0) / fr : 0;
+    var lefts = [];
+    var left = e.bl + e.pl;
+    for (var c = 0; c < n; ++c) {
+        if (sizes[c] === null) {
+            sizes[c] = unit * parseFloat(tracks[c]);
+        }
+        lefts.push(left);
+        left += sizes[c] + colGap;
+    }
+    var y = 0;
+    var rows = Math.ceil(kids.length / n);
+    for (var r = 0; r < rows; ++r) {
+        var tallest = 0;
+        for (var a = 0; a < n && r * n + a < kids.length; ++a) {
+            var kid = kids[r * n + a];
+            var kidStyle = _gStyle(kid);
+            var kidEdges = _gEdges(kid, kidStyle, sizes[a]);
+            _gPlace(kid, sizes[a], null, null);
+            tallest = Math.max(tallest, kid.height + (kidEdges.mt || 0) + (kidEdges.mb || 0));
+        }
+        for (var b = 0; b < n && r * n + b < kids.length; ++b) {
+            var cell = kids[r * n + b];
+            var cellStyle = _gStyle(cell);
+            var cellEdges = _gEdges(cell, cellStyle, sizes[b]);
+            if (_gPx(cellStyle.height, null, cellStyle.fontSize, cellStyle.rootSize) === null) {
+                _gPlace(cell, sizes[b], { forceH: tallest - (cellEdges.mt || 0) - (cellEdges.mb || 0) }, null);
+            }
+            cell.x = lefts[b] + (cellEdges.ml || 0);
+            cell.y = e.bt + e.pt + y + (cellEdges.mt || 0);
+        }
+        y += tallest + (r < rows - 1 ? rowGap : 0);
+    }
+    return y;
+}
+
+// --- Paint -----------------------------------------------------------------
+
+function _gSet(item, prop, value) {
+    if (item[prop] !== value) {
+        item[prop] = value;
+    }
+}
+
+function _gPaintText(text, s, innerW) {
+    text.font = _gFontOf(s);
+    text.color = _gQtColor(s["color"]);
+    var line = _gLineHeight(s);
+    if (line !== null) {
+        _gSet(text, "lineHeightMode", 1);
+        _gSet(text, "lineHeight", line);
+    } else {
+        _gSet(text, "lineHeightMode", 0);
+        _gSet(text, "lineHeight", 1);
+    }
+    var align = s["text-align"];
+    _gSet(text, "horizontalAlignment", align === "center" ? 4 : align === "right" || align === "end" ? 2 : align === "justify" ? 8 : 1);
+    _gSet(text, "width", innerW);
+    // Qt gives a fixed line the font's height when that is taller; CSS doesn't.
+    _gSet(text, "height", text.text === "" ? 0 : line !== null ? line * text.lineCount : text.implicitHeight);
+}
+
+function _gPaintBox(raw, s, e) {
+    raw.color = _gQtColor(s["background-color"]);
+    var radius = _gPx(s["border-top-left-radius"], raw.width, s.fontSize, s.rootSize) || 0;
+    _gSet(raw, "radius", radius);
+    _gSet(raw, "opacity", s.visibility === "hidden" ? 0 : _gNumber(s.opacity));
+    var uniform = e.bt === e.br && e.bt === e.bb && e.bt === e.bl
+        && s["border-top-color"] === s["border-right-color"] && s["border-top-color"] === s["border-bottom-color"]
+        && s["border-top-color"] === s["border-left-color"];
+    _gSet(raw.border, "width", uniform ? e.bt : 0);
+    if (uniform && e.bt > 0) {
+        raw.border.color = _gQtColor(s["border-top-color"]);
+    }
+    _gPaintEdges(raw, s, e, !uniform);
+    var z = s["z-index"] === "auto" ? (s.position !== "static" ? 1 : 0) : _gNumber(s["z-index"]);
+    _gSet(raw, "z", z);
+    _gSet(raw, "clip", s["overflow-x"] !== "visible" || s["overflow-y"] !== "visible");
+    _gPlaceRelative(raw, s);
+}
+
+// A Rectangle's border is one width and colour; unequal sides are four strips.
+function _gPaintEdges(raw, s, e, shown) {
+    var m = _meta(raw);
+    if (!shown && !m.gEdges) {
+        return;
+    }
+    if (!m.gEdges) {
+        // `eldurSlot: null` keeps it out of the DOM, as for an out-of-flow box.
+        m.gEdges = Qt.createQmlObject("import QtQuick; Item { property Item eldurSlot: null; anchors.fill: parent; "
+            + "Rectangle { id: t; anchors { left: parent.left; right: parent.right; top: parent.top } } "
+            + "Rectangle { id: r; anchors { right: parent.right; top: parent.top; bottom: parent.bottom } } "
+            + "Rectangle { id: b; anchors { left: parent.left; right: parent.right; bottom: parent.bottom } } "
+            + "Rectangle { id: l; anchors { left: parent.left; top: parent.top; bottom: parent.bottom } } "
+            + "function set(side, size, shade) { const strip = [t, r, b, l][side]; strip.color = shade; "
+            + "if (side % 2 === 0) strip.height = size; else strip.width = size; strip.visible = size > 0; } }", raw, "eldur_edges");
+    }
+    m.gEdges.visible = shown;
+    if (shown) {
+        m.gEdges.set(0, e.bt, _gQtColor(s["border-top-color"]));
+        m.gEdges.set(1, e.br, _gQtColor(s["border-right-color"]));
+        m.gEdges.set(2, e.bb, _gQtColor(s["border-bottom-color"]));
+        m.gEdges.set(3, e.bl, _gQtColor(s["border-left-color"]));
+    }
+}
+
+function _gPlaceRelative(raw, s) {
+    var m = _meta(raw);
+    var dx = 0;
+    var dy = 0;
+    if (s.position === "relative" || s.position === "sticky") {
+        var parentWidth = raw.parent ? raw.parent.width : 0;
+        var left = _gPx(s.left, parentWidth, s.fontSize, s.rootSize);
+        var right = _gPx(s.right, parentWidth, s.fontSize, s.rootSize);
+        var top = _gPx(s.top, null, s.fontSize, s.rootSize);
+        var bottom = _gPx(s.bottom, null, s.fontSize, s.rootSize);
+        dx = left !== null ? left : right !== null ? -right : 0;
+        dy = top !== null ? top : bottom !== null ? -bottom : 0;
+    }
+    if (!m.gShift && dx === 0 && dy === 0) {
+        return;
+    }
+    if (!m.gShift) {
+        m.gShift = Qt.createQmlObject("import QtQuick; Translate {}", raw, "eldur_shift");
+        var list = [];
+        for (var i = 0; i < raw.transform.length; ++i) {
+            list.push(raw.transform[i]);
+        }
+        list.push(m.gShift);
+        raw.transform = list;
+    }
+    m.gShift.x = dx;
+    m.gShift.y = dy;
+}
+
+// A control keeps its form: the cascade reaches what it has.
+function _gPaintControl(raw, s, e) {
+    if (!_meta(raw).createdTag) {
+        return;
+    }
+    if (raw.background !== undefined && raw.background !== null && raw.font !== undefined) {
+        var control = _G_CONTROL_BOX[s.tag];
+        if (control) {
+            _gSet(raw, "topPadding", e.pt + e.bt);
+            _gSet(raw, "bottomPadding", e.pb + e.bb);
+            _gSet(raw, "leftPadding", e.pl + e.bl);
+            _gSet(raw, "rightPadding", e.pr + e.br);
+            _gSet(raw, "topInset", 0);
+            _gSet(raw, "bottomInset", 0);
+            _gSet(raw, "leftInset", 0);
+            _gSet(raw, "rightInset", 0);
+        }
+        var line = _gLineHeight(s);
+        if (raw.contentItem && raw.contentItem.font !== undefined) {
+            _gPaintFontOnly(raw, s);
+            if (line === null) {
+                line = _gControlLine(s);
+            }
+            var frame = e.pt + e.pb + e.bt + e.bb;
+            _gSet(raw, "implicitHeight", line + frame);
+        }
+        if (s.won["background-color"] && raw.background.color !== undefined) {
+            raw.background.color = _gQtColor(s["background-color"]);
+        }
+        if (s.won["border-top-color"] && raw.background.border !== undefined) {
+            raw.background.border.color = _gQtColor(s["border-top-color"]);
+        }
+    }
+}
+
+// A line of a control's text at "normal" line height, as a browser rounds it.
+function _gControlLine(s) {
+    var metrics = _gMetrics(s);
+    return Math.round(metrics.ascent) + Math.round(metrics.descent);
+}
+
+function _gPaintFontOnly(raw, s) {
+    raw.font = _gFontOf(s);
+    if (raw.palette && s.won["color"]) {
+        raw.palette.buttonText = s["color"];
+    }
+}
+
+// --- The pass --------------------------------------------------------------
+
+function _gPrune() {
+    var seen = new Set();
+    _gLive = _gLive.filter(function(raw) {
+        var alive = Boolean(raw) && !seen.has(raw);
+        seen.add(raw);
+        return alive;
+    });
+}
+
+function _gContainerMargins(container) {
+    var kids = container.children;
+    var pending = 0;
+    var seen = false;
+    for (var i = 0; i < kids.length; ++i) {
+        var kid = kids[i];
+        if (!kid || kid.eldurSlot !== undefined || _isLayoutSpacer(kid) || !kid.visible) {
+            continue;
+        }
+        if (_gIsBox(kid)) {
+            var got = _meta(kid).gMargins || { mt: 0, mb: 0 };
+            var s = _gStyle(kid);
+            var e = _gEdges(kid, s, container.width);
+            var side = container.eldurPackRow === true || typeof container.columnSpacing === "number";
+            _gSet(kid, "eldurMl", e.ml || 0);
+            _gSet(kid, "eldurMr", e.mr || 0);
+            if (side) {
+                _gSet(kid, "eldurMt", got.mt);
+                _gSet(kid, "eldurMb", got.mb);
+                continue;
+            }
+            var merged = _gMerge(pending, got.mt);
+            if (got.empty) {
+                _gSet(kid, "eldurMt", 0);
+                _gSet(kid, "eldurMb", 0);
+                pending = _gMerge(merged, got.mb);
+                seen = true;
+                continue;
+            }
+            // The previous sibling's own bottom margin is already in the layout.
+            _gSet(kid, "eldurMt", seen ? merged - pending : merged);
+            _gSet(kid, "eldurMb", got.mb);
+            pending = got.mb;
+            seen = true;
+        } else {
+            var ss = typeof kid.eldurTag === "string" || _meta(kid).createdTag ? _gStyle(kid) : null;
+            pending = ss ? (_gEdges(kid, ss, container.width).mb || 0) : 0;
+            seen = true;
+        }
+    }
+}
+
+// A box the page's own layout holds says what it wants through `Layout.*`.
+function _gAttached(raw, s, e) {
+    var parent = raw.parent;
+    if (!parent) {
+        return;
+    }
+    var inLayout = typeof parent.spacing === "number" || typeof parent.columnSpacing === "number";
+    var avail = parent.width;
+    var width = _gPx(s.width, avail, s.fontSize, s.rootSize);
+    var shrinks = _gInlineLevel(s) || parent.eldurPackRow === true
+        || (typeof parent.spacing === "number" && typeof parent.columnSpacing !== "number"
+            && String(parent).indexOf("RowLayout") !== -1);
+    if (!inLayout) {
+        return;
+    }
+    if (width !== null) {
+        _gSet(raw, "eldurFill", false);
+        _gSet(raw, "eldurPw", _gOuterWidth(s, e, width));
+    } else if (shrinks) {
+        _gSet(raw, "eldurFill", _gNumber(s["flex-grow"]) > 0);
+        _gSet(raw, "eldurPw", _gIntrinsic(raw, s));
+    } else {
+        var maxW = _gPx(s["max-width"], avail, s.fontSize, s.rootSize);
+        _gSet(raw, "eldurFill", maxW === null);
+        _gSet(raw, "eldurPw", maxW === null ? -1 : Math.min(avail, _gOuterWidth(s, e, maxW)));
+    }
+    var centred = e.ml === null && e.mr === null;
+    // Qt.AlignHCenter, Qt.AlignRight, Qt.AlignLeft.
+    _gSet(raw, "eldurAlign", centred ? 4 : e.ml === null ? 2 : 0);
+}
+
+function _gLayoutRoots() {
+    var containers = [];
+    var outOfFlow = [];
+    for (var i = 0; i < _gLive.length; ++i) {
+        var raw = _gLive[i];
+        if (!raw.parent || _gIsBox(raw.parent) || !_isConnected(raw)) {
+            continue;
+        }
+        var s = _gStyle(raw);
+        if (!_gIsBox(raw)) {
+            _gPaintControl(raw, s, _gEdges(raw, s, raw.parent.width));
+            continue;
+        }
+        if (s.display === "none") {
+            raw.visible = false;
+            continue;
+        }
+        raw.visible = true;
+        var abs = _gOutOfFlow(s);
+        var avail = raw.parent.width;
+        var e = _gEdges(raw, s, avail);
+        if (abs) {
+            outOfFlow.push(raw);
+            continue;
+        }
+        _gAttached(raw, s, e);
+        var inLayout = typeof raw.parent.spacing === "number" || typeof raw.parent.columnSpacing === "number";
+        var fill = inLayout && raw.eldurFill;
+        var given = avail - (e.ml || 0) - (e.mr || 0);
+        var opts = _gInlineLevel(s) || (inLayout && raw.eldurPw >= 0) ? { shrink: true } : null;
+        if (fill) {
+            opts = { forceW: Math.max(given, 0) };
+        }
+        var margins = _gPlace(raw, Math.max(avail, 0), opts, null);
+        _meta(raw).gMargins = margins;
+        if (containers.indexOf(raw.parent) === -1) {
+            containers.push(raw.parent);
+        }
+    }
+    for (var c = 0; c < containers.length; ++c) {
+        if (typeof containers[c].spacing === "number" || typeof containers[c].columnSpacing === "number") {
+            _gContainerMargins(containers[c]);
+        }
+    }
+    return outOfFlow;
+}
+
+function _gContainingBlock(raw, s) {
+    if (s.position === "fixed") {
+        return null;
+    }
+    for (var p = _gParent(raw); p; p = _gParent(p)) {
+        if (_gStyle(p).position !== "static") {
+            return p;
+        }
+    }
+    return null;
+}
+
+// Out of flow: in the coordinates of the item its slot's gate is the size of.
+function _gPlaceOutOfFlow(raw) {
+    var s = _gStyle(raw);
+    var m = _meta(raw);
+    var block = _gContainingBlock(raw, s);
+    var wanted = s.position === "fixed" ? "window" : (block || "initial");
+    if (raw.eldurBlock !== wanted) {
+        raw.eldurBlock = wanted;
+        _leaveFlow(raw);
+    }
+    var gate = m.outOfFlowGate;
+    var cs = block ? _gStyle(block) : null;
+    var ce = block ? _gEdges(block, cs, 0) : { bl: 0, bt: 0, br: 0, bb: 0 };
+    var w = (gate ? gate.width : _root.width) - ce.bl - ce.br;
+    var h = (gate ? gate.height : _root.height) - ce.bt - ce.bb;
+    var at = function(prop, basis) {
+        return _gPx(s[prop], basis, s.fontSize, s.rootSize);
+    };
+    var e = _gEdges(raw, s, w);
+    var left = at("left", w);
+    var right = at("right", w);
+    var top = at("top", h);
+    var bottom = at("bottom", h);
+    var opts = at("width", w) === null && !(left !== null && right !== null) ? { shrink: true } : null;
+    if (at("width", w) === null && left !== null && right !== null) {
+        opts = { forceW: Math.max(w - left - right - (e.ml || 0) - (e.mr || 0), 0) };
+    }
+    _gPlace(raw, w, opts, h);
+    raw.x = ce.bl + (left !== null ? left + (e.ml || 0) : right !== null ? w - right - raw.width - (e.mr || 0) : (e.ml || 0));
+    raw.y = ce.bt + (top !== null ? top + (e.mt || 0) : bottom !== null ? h - bottom - raw.height - (e.mb || 0) : (e.mt || 0));
+}
+
+// A box leaves the flow or returns to it by changing form: only an out-of-flow
+// box declares the slot the rest of the runtime looks for.
+function _gSyncFlowForm(raw) {
+    var m = _meta(raw);
+    var s = _gStyle(raw);
+    var wantOut = _gOutOfFlow(s) && s.display !== "none";
+    var isOut = raw.eldurBlock !== undefined;
+    if (wantOut === isOut) {
+        return raw;
+    }
+    var slot = raw.eldurSlot;
+    var kept = wantOut ? null : slot;
+    var next = _swapRawItem(raw, null, _gBoxSource(m.createdTag, wantOut));
+    _gLive.push(next);
+    if (wantOut) {
+        var place = _slotFor(next);
+        var container = next.parent;
+        next.parent = null;
+        _insertInFlow(container, [place], null);
+        next.eldurBlock = "initial";
+        _leaveFlow(next);
+    } else if (kept) {
+        var holder = kept.parent;
+        _insertInFlow(holder, [next], kept);
+        kept.parent = null;
+        kept.destroy();
+    }
+    return next;
+}
+
+function _gSettle() {
+    if (_gRunning || !_gActive() || !_gDirty) {
+        return;
+    }
+    // Only a read right after a pass asks; holding more keeps dead items alive.
+    _gReplaced.clear();
+    _gRunning = true;
+    _gDirty = false;
+    ++_gGen;
+    _gPrune();
+    _gStaticChanges();
+    var snapshot = _gLive.slice();
+    for (var i = 0; i < snapshot.length; ++i) {
+        if (_isConnected(snapshot[i])) {
+            _gFillsLine(snapshot[i]);
+        }
+    }
+    _gPrune();
+    snapshot = _gLive.slice();
+    for (var j = 0; j < snapshot.length; ++j) {
+        if (_gIsBox(snapshot[j]) && _isConnected(snapshot[j])) {
+            _gSyncFlowForm(snapshot[j]);
+        }
+    }
+    _gPrune();
+    _gReposition();
+    _gRunning = false;
+}
+
+// Lines are only made inside a box. A page's empty container that a script
+// fills with inline-level children becomes one, as nothing of its own is lost.
+function _gFillsLine(raw) {
+    if (!raw.parent || _gIsBox(raw.parent) || !_gInlineLevel(_gStyle(raw))) {
+        return;
+    }
+    var parent = _gParent(raw);
+    if (!parent || _gIsBox(parent) || _meta(parent).createdTag || /^(body|html)$/.test(_nodeTag(parent))) {
+        return;
+    }
+    var all = _rawElementChildren(parent);
+    for (var i = 0; i < all.length; ++i) {
+        if (!_meta(all[i]).createdTag) {
+            return;
+        }
+    }
+    _gAdopt(parent);
+}
+
+function _gReposition() {
+    var outs = _gLayoutRoots();
+    for (var i = 0; i < _gLive.length; ++i) {
+        var raw = _gLive[i];
+        if (raw.eldurBlock !== undefined && _isConnected(raw) && _gStyle(raw).display !== "none") {
+            _gPlaceOutOfFlow(raw);
+        }
+    }
+    return outs;
+}
+
+// Widths a layout hands down arrive only once it is polished.
+function _gAfterPolish() {
+    if (_gRunning || !_gActive() || _gLive.length === 0) {
+        return;
+    }
+    _gRunning = true;
+    _gPrune();
+    _gReposition();
+    _gRunning = false;
+}
+
+// --- The page's own elements ------------------------------------------------
+
+// Taken before a script runs: which rules each of the page's elements was
+// converted under.
+function _gSnapshotStatics() {
+    if (!_gActive() || _gStaticBase !== null) {
+        return;
+    }
+    _gStaticBase = [];
+    _walkItems(_root, function(item) {
+        if (typeof item.eldurTag === "string" && !_meta(item).createdTag) {
+            _gStaticBase.push({ raw: item, sig: _gMatched(item).join(","), classes: _meta(item).classes.slice() });
+        }
+        return false;
+    });
+}
+
+// A class no variant of the converter's reaches, on this element, an ancestor
+// or an earlier sibling, is what a selector can only have learned now.
+function _gUncovered(entry) {
+    var raw = entry.raw;
+    var now = _meta(raw).classes;
+    var changed = now.filter(function(c) { return entry.classes.indexOf(c) === -1; })
+        .concat(entry.classes.filter(function(c) { return now.indexOf(c) === -1; }));
+    for (var i = 0; i < changed.length; ++i) {
+        if (typeof raw[_sanitizeClassProp(changed[i])] !== "boolean" || !_gVariantSupports(raw, changed[i])) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// The converter also declares a variant for a class it only saw computed; such
+// a variant cannot say a box's size, so only a literal one counts.
+function _gVariantSupports(raw, name) {
+    var literal = _root.eldurLiteralClasses;
+    return literal !== undefined && literal.indexOf(name) !== -1;
+}
+
+function _gStaticChanges() {
+    if (_gStaticBase === null) {
+        return;
+    }
+    ++_gGen;
+    var open = [];
+    for (var i = 0; i < _gStaticBase.length; ++i) {
+        open.push(_gStaticBase[i]);
+    }
+    var byRaw = new Map();
+    for (var u = 0; u < open.length; ++u) {
+        byRaw.set(open[u].raw, _gUncovered(open[u]));
+    }
+    var causes = function(raw) {
+        for (var p = _gParent(raw); p; p = _gParent(p)) {
+            if (byRaw.get(p) === true) {
+                return true;
+            }
+        }
+        var parent = _gParent(raw);
+        var sibs = parent ? _rawElementChildren(parent) : [];
+        for (var k = 0; k < sibs.length && sibs[k] !== raw; ++k) {
+            if (byRaw.get(sibs[k]) === true) {
+                return true;
+            }
+        }
+        return false;
+    };
+    var keep = [];
+    for (var n = 0; n < open.length; ++n) {
+        var entry = open[n];
+        if (entry.raw.parent === null) {
+            continue;
+        }
+        var sig = _gMatched(entry.raw).join(",");
+        if (sig !== entry.sig && (byRaw.get(entry.raw) === true || causes(entry.raw))) {
+            _gAdopt(entry.raw);
+        } else {
+            keep.push(entry);
+        }
+    }
+    _gStaticBase = keep;
+    ++_gGen;
+}
+
+// From now on the element is the same as one a script made. The item stays, for
+// bindings that read it by id, but nothing is left of it on screen.
+function _gAdopt(raw) {
+    var m = _meta(raw);
+    var tag = _nodeTag(raw);
+    if (!_gWantsBox(tag) || _rawHasNoFlowParent(raw)) {
+        return;
+    }
+    m.createdTag = tag;
+    var name = raw.objectName;
+    m.gKeepReplaced = true;
+    var next = _swapRawItem(raw, null, _gBoxSource(tag, false));
+    delete m.gKeepReplaced;
+    next.objectName = name;
+    _gLive.push(next);
+}
+
+function _rawHasNoFlowParent(raw) {
+    return !raw.parent;
+}
+
+// --- Reading it back --------------------------------------------------------
+
+// What the converter moved a static line by to put its glyphs where a browser
+// does; the box stays where it was.
+function _gGlyphShift(raw) {
+    if (typeof raw.lineHeightMode !== "number" || !raw.transform || raw.transform.length !== 1
+        || raw.transform[0].y === undefined || _gStyle(raw).won["transform"]) {
+        return 0;
+    }
+    return raw.transform[0].y;
+}
+
+function _gNumberText(n) {
+    return String(Number(n.toPrecision(6)));
+}
+
+function _gComputed(raw, prop) {
+    if (raw.__eldurInline || typeof raw.visible !== "boolean") {
+        return null;
+    }
+    var name = prop.indexOf("--") === 0 ? prop : _camelToKebab(prop);
+    var s = _gStyle(raw);
+    if (name.indexOf("--") === 0) {
+        return s.vars[name] !== undefined ? String(s.vars[name]).trim() : "";
+    }
+    var parentWidth = raw.parent ? raw.parent.width : 0;
+    var length = function(written) {
+        var px = _gPx(written, parentWidth, s.fontSize, s.rootSize);
+        return px === null ? String(written) : _gNumberText(px) + "px";
+    };
+    if (name === "width" || name === "height") {
+        if (s.display === "none" || s.display === "inline") {
+            return s.display === "none" ? length(s[name]) : "auto";
+        }
+        var frame = 0;
+        if (s["box-sizing"] !== "border-box") {
+            var edges = _gEdges(raw, s, parentWidth);
+            frame = name === "width" ? edges.pl + edges.pr + edges.bl + edges.br : edges.pt + edges.pb + edges.bt + edges.bb;
+        }
+        return _gNumberText(raw[name] - frame) + "px";
+    }
+    if (name === "opacity") {
+        return _gNumberText(_gNumber(s.opacity));
+    }
+    if (name === "font-size") {
+        return _gNumberText(s.fontSize) + "px";
+    }
+    if (name === "line-height") {
+        var line = _gLineHeight(s);
+        return line === null ? "normal" : _gNumberText(line) + "px";
+    }
+    if (/^border-(top|right|bottom|left)-width$/.test(name)) {
+        return _gNumberText(s[name.replace("width", "px")]) + "px";
+    }
+    if (/^(margin|padding)-/.test(name)) {
+        var used = _gPx(s[name], parentWidth, s.fontSize, s.rootSize);
+        return _gNumberText(used === null ? 0 : used) + "px";
+    }
+    if (/radius$/.test(name) || /^(top|right|bottom|left)$/.test(name) || /^(min|max)-/.test(name)
+        || name === "row-gap" || name === "column-gap" || name === "flex-basis") {
+        return length(s[name]);
+    }
+    return s[name] === undefined ? null : String(s[name]);
+}

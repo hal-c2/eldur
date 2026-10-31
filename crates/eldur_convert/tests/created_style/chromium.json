@@ -1,0 +1,175 @@
+{
+ "cascade": {
+  "log": [
+   "CS v1 0,0 1280x25 | v2 0,25 1280x9 | sh 0,35 1280x4 | pa 0,40 1280x8 | pk 0,40 1280x9 | pc 0,49 1280x12 | pm 0,48 1280x10 | nk 0,58 1280x0 | la 0,58 1280x30 | im 0,88 1280x2 | un 0,90 1280x3 | w 0,93 1280x7 | wh 0,100 1280x14 | q 0,114 1280x16 | m 0,130 1280x23 | m2 0,153 1280x27 | end 0,180 1280x10",
+   "CS v1 color=rgb(9, 8, 7) height=21px backgroundColor=rgb(1, 2, 3) paddingTop=2px paddingLeft=3px",
+   "CS v2 color=rgb(100, 0, 0) height=5px",
+   "CS sh borderTopWidth=2px borderTopColor=rgb(0, 0, 255) marginTop=1px marginLeft=0px",
+   "CS la color=rgb(0, 1, 0) height=30px"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "context": {
+  "log": [
+   "CS lf 0,0 1280x11",
+   "CS lf color=rgb(10, 20, 30) fontSize=20px fontWeight=700 lineHeight=24px",
+   "CS lf 0,24 1280x22",
+   "CS lf color=rgb(1, 2, 3) fontSize=16px",
+   "CS aa 0,46 1280x0 | bb 0,46 1280x33 | cc 0,79 1280x44",
+   "CS bb 0,46 1280x0 | cc 0,46 1280x0",
+   "CS dl 0,123 1280x5",
+   "CS dl 0,123 1280x17",
+   "CS sl 0,140 1280x19",
+   "CS sl color=rgb(7, 8, 9)",
+   "CS dc color=rgb(50, 60, 70)",
+   "CS dc color=rgb(70, 60, 50)",
+   "CS o 0,0 1280x24 | ot 0,24 1280x22 | plain 0,0 1280x0 | deep 0,0 1280x24 | txt 0,0 1280x24 | end 0,159 1280x10",
+   "CS txt color=rgb(10, 20, 30) fontSize=20px lineHeight=24px fontWeight=700",
+   "CS plain color=rgb(10, 20, 30)"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "controls": {
+  "log": [
+   "CS s1 21 s2 26 c1 21 c2 21 c3 28 c4 26",
+   "CS c1 fontSize=13.3333px paddingTop=1px paddingLeft=6px borderTopWidth=2px display=inline-block",
+   "CS c3 fontSize=14px paddingTop=4px borderTopWidth=1px",
+   "CS end 0,117 1280x10"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "display": {
+  "log": [
+   "CS r 0,0 1280x30 | r1 0,0 50x30 | r2 60,0 1160x30 | r3 1230,0 50x30 | j1 0,30 40x20 | j2 130,30 40x20 | j3 260,30 40x20 | ce1 130,70 40x10 | co 0,100 1280x25 | co1 0,100 1280x10 | co2 0,115 1280x10 | g1 0,125 100x15 | g2 106,125 1174x15 | g3 0,144 100x15 | w 0,159 1280x25 | i1 0,159 30x20 | i2 30,159 30x20 | s 0,184 1280x13 | t 0,197 1280x13 | u1 0,210 1280x10 | u2 0,225 1280x10 | end 0,235 1280x10",
+   "CS r display=flex columnGap=10px flexDirection=row",
+   "CS n display=none",
+   "CS i1 display=inline-block",
+   "CS s display=block",
+   "CS g display=grid"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "helper": {
+  "log": [
+   "CS 0+40 44+60 104+40 148+60 208+10",
+   "CS children=4 t=2 color=rgb(255, 0, 0)"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "markup": {
+  "log": [
+   "CS a 0,16 1280x40 | at 0,16 1280x10 | b 0,60 1280x62 | bh 5,68 1270x22 | bu 5,93 1270x24 | li1 15,93 1260x12 | li2 15,105 1260x12 | end 0,122 1280x10",
+   "CS a backgroundColor=rgb(1, 1, 1) height=40px",
+   "CS at color=rgb(255, 0, 0)",
+   "CS bh fontSize=18px marginTop=3px",
+   "CS a 0,0 1280x62 | end 0,124 1280x10",
+   "CS c 0,124 1280x40 | end 0,168 1280x10"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "names": {
+  "log": [
+   "CS f 0,177 1280x40",
+   "CS a 0,0 1280x40 | b 0,44 1280x60 | c 0,104 1280x33 | named 0,137 1280x25 | e 0,162 1280x15 | f 0,177 1280x11 | g 0,188 1280x60 | end 0,248 1280x10",
+   "CS a backgroundColor=rgb(221, 238, 255) height=40px marginBottom=4px",
+   "CS named backgroundColor=rgb(1, 2, 3)",
+   "CS g backgroundColor=rgb(255, 238, 221)",
+   "CS q 2 1"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "paint": {
+  "log": [
+   "CS painted"
+  ],
+  "clicks": [],
+  "probes": [
+   {
+    "id": "host",
+    "x": 2,
+    "y": 2,
+    "color": "#f0f2f8"
+   },
+   {
+    "id": "a",
+    "x": 30,
+    "y": 30,
+    "color": "#ffffff"
+   },
+   {
+    "id": "ab",
+    "x": 11,
+    "y": 82,
+    "color": "#0a781e"
+   },
+   {
+    "id": "b",
+    "x": 30,
+    "y": 134,
+    "color": "#285ac8"
+   },
+   {
+    "id": "w",
+    "x": 12,
+    "y": 168,
+    "color": "#f0f2f8"
+   },
+   {
+    "id": "c",
+    "x": 36,
+    "y": 182,
+    "color": "#c80000"
+   },
+   {
+    "id": "g",
+    "x": 30,
+    "y": 208,
+    "color": "#f0f2f8"
+   }
+  ]
+ },
+ "position": {
+  "log": [
+   "CS r 5,7 1280x20 | h 0,20 420x120 | a 30,35 50x25 | b 390,115 20x20 | st 10,30 400x0 | f 3,4 6x8 | p 100,200 10x10 | later 30,35 50x25 | end 0,140 1280x10",
+   "CS a position=absolute left=30px top=15px zIndex=5",
+   "CS r position=relative left=5px",
+   "CS st position=static"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "props": {
+  "log": [
+   "CS x 20,5 216x63 | bb 0,75 100x40 | pct 0,115 640x12 | em 20,127 1260x40 | auto 590,167 100x9 | calc 0,176 620x26 | mm 0,202 300x30 | sides 0,232 1280x13 | pad 0,245 1280x36 | end 0,281 1280x10",
+   "CS x width=200px height=50px marginTop=5px marginRight=10px marginBottom=7px marginLeft=20px paddingTop=3px paddingRight=4px paddingBottom=6px paddingLeft=8px borderTopWidth=2px borderTopColor=rgb(18, 52, 86) borderTopStyle=solid backgroundColor=rgb(171, 205, 239) borderTopLeftRadius=6px opacity=0.5 color=rgb(17, 34, 51) fontSize=20px fontWeight=700 fontStyle=italic textAlign=right lineHeight=30px boxSizing=content-box display=block position=static",
+   "CS em fontSize=10px marginLeft=20px height=30px paddingTop=10px",
+   "CS sides borderTopWidth=3px borderLeftWidth=1px borderLeftStyle=dashed borderRightWidth=0px",
+   "CS calc width=620px height=26px"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "statics": {
+  "log": [
+   "CS s1 0,6 1280x44 | s2 0,50 1280x20 | end 0,110 1280x10",
+   "CS s1 backgroundColor=rgb(0, 128, 0) height=44px color=rgb(1, 2, 3) borderTopLeftRadius=4px marginTop=6px",
+   "CS s2 fontSize=24px",
+   "CS s3 0,0 0x0 | s4 0,70 1280x20 | end 0,90 1280x10",
+   "CS s3 display=none",
+   "CS s3 0,70 1280x20 | end 0,110 1280x10",
+   "CS k 0,90 1280x9 | end 0,99 1280x10",
+   "CS k backgroundColor=rgb(0, 0, 9)",
+   "CS s1 0,0 1280x20 | end 0,69 1280x10",
+   "CS s1 backgroundColor=rgba(0, 0, 0, 0)"
+  ],
+  "clicks": [],
+  "probes": []
+ }
+}
