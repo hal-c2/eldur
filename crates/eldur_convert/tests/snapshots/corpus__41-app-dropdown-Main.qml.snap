@@ -47,6 +47,8 @@ ApplicationWindow {
             // <body>
             ColumnLayout {
                 property string eldurTag: "body"
+                property string eldurWs: "\n"
+                property string eldurWsEnd: "\n\n\n"
 
                 spacing: 0
                 Layout.fillWidth: true
@@ -55,6 +57,8 @@ ApplicationWindow {
                 // <header>
                 Rectangle {
                     property string eldurTag: "header"
+                    property string eldurWs: "\n"
+                    property string eldurWsEnd: "\n"
 
                     color: "#24292e"
                     implicitWidth: headerContent.implicitWidth + 40
@@ -78,6 +82,7 @@ ApplicationWindow {
                         Text {
                             property string eldurTag: "div"
                             property string eldurClasses: "logo"
+                            property string eldurWs: "\n  "
 
                             text: "Acme"
                             textFormat: Text.PlainText
@@ -102,6 +107,8 @@ ApplicationWindow {
                             property string eldurTag: "div"
                             property string eldurClasses: "menu"
                             property bool cls_open: false
+                            property string eldurWs: "\n  "
+                            property string eldurWsEnd: "\n  "
 
                             implicitWidth: menuContent.implicitWidth
                             implicitHeight: menuContent.implicitHeight
@@ -124,11 +131,12 @@ ApplicationWindow {
                                     property var eldurAttrs: ({ "aria-haspopup": "true", "aria-expanded": "false" })
                                     property string eldurTag: "button"
                                     property string eldurClasses: "menu-btn"
+                                    property string eldurWs: "\n    "
                                     property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                                     text: "Account ▾"
                                     palette.buttonText: "#ffffff"
-                                    font.family: "sans-serif"
+                                    font.family: "Arial"
                                     font.pixelSize: 13
                                     background: Rectangle {
                                         color: "#444d56"
@@ -139,6 +147,7 @@ ApplicationWindow {
                                     rightPadding: 12
                                     bottomPadding: 8
                                     leftPadding: 12
+                                    implicitHeight: Math.max(15, contentItem.implicitHeight) + 16
                                     contentItem: Text {
                                         text: btn.text
                                         font: btn.font
@@ -147,6 +156,7 @@ ApplicationWindow {
                                         verticalAlignment: Text.AlignVCenter
                                         renderType: Text.NativeRendering
                                     }
+                                    implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
                                     objectName: "btn"
                                     Layout.preferredHeight: implicitHeight
                                 }
@@ -166,6 +176,8 @@ ApplicationWindow {
                                 property Item eldurSlot: menuListSlot
                                 property string eldurTag: "ul"
                                 property string eldurClasses: "menu-list"
+                                property string eldurWs: "\n    "
+                                property string eldurWsEnd: "\n    "
 
                                 color: "#ffffff"
                                 radius: 4
@@ -202,12 +214,14 @@ ApplicationWindow {
                                     anchors.topMargin: 5
 
                                     // <li id="m-profile">
-                                    Item {
+                                    Rectangle {
                                         id: mProfile
                                         property var eldurAttrs: ({ "data-action": "profile" })
                                         property string eldurTag: "li"
+                                        property string eldurWs: "\n      "
                                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
+                                        color: mProfileHover.hovered ? "#0366d6" : "#00000000"
                                         implicitWidth: mProfileText.implicitWidth + 24
                                         implicitHeight: mProfileText.implicitHeight + 12
                                         objectName: "m-profile"
@@ -218,7 +232,7 @@ ApplicationWindow {
                                             id: mProfileText
                                             text: "Your profile"
                                             textFormat: Text.PlainText
-                                            color: "#24292e"
+                                            color: mProfileHover.hovered ? "#ffffff" : "#24292e"
                                             font.family: "Arial"
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
@@ -230,15 +244,21 @@ ApplicationWindow {
                                             anchors.topMargin: 6
                                             renderType: Text.NativeRendering
                                         }
+
+                                        HoverHandler {
+                                            id: mProfileHover
+                                        }
                                     }
 
                                     // <li id="m-settings">
-                                    Item {
+                                    Rectangle {
                                         id: mSettings
                                         property var eldurAttrs: ({ "data-action": "settings" })
                                         property string eldurTag: "li"
+                                        property string eldurWs: "\n      "
                                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : mProfile.eldurCarry
 
+                                        color: mSettingsHover.hovered ? "#0366d6" : "#00000000"
                                         implicitWidth: mSettingsText.implicitWidth + 24
                                         implicitHeight: mSettingsText.implicitHeight + 12
                                         objectName: "m-settings"
@@ -250,7 +270,7 @@ ApplicationWindow {
                                             id: mSettingsText
                                             text: "Settings"
                                             textFormat: Text.PlainText
-                                            color: "#24292e"
+                                            color: mSettingsHover.hovered ? "#ffffff" : "#24292e"
                                             font.family: "Arial"
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
@@ -262,6 +282,10 @@ ApplicationWindow {
                                             anchors.topMargin: 6
                                             renderType: Text.NativeRendering
                                         }
+
+                                        HoverHandler {
+                                            id: mSettingsHover
+                                        }
                                     }
 
                                     // <li class="sep">
@@ -269,22 +293,29 @@ ApplicationWindow {
                                         id: sep
                                         property string eldurTag: "li"
                                         property string eldurClasses: "sep"
+                                        property string eldurWs: "\n      "
                                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 1) - Layout.topMargin - 1 + 0.000001) : mSettings.eldurCarry
 
-                                        color: "#e1e4e8"
+                                        color: sepHover.hovered ? "#0366d6" : "#e1e4e8"
                                         implicitWidth: 0
                                         implicitHeight: 0
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: 1
                                         Layout.topMargin: 4 - mSettings.eldurCarry
+
+                                        HoverHandler {
+                                            id: sepHover
+                                        }
                                     }
 
                                     // <li id="m-logout">
-                                    Item {
+                                    Rectangle {
                                         id: mLogout
                                         property var eldurAttrs: ({ "data-action": "logout" })
                                         property string eldurTag: "li"
+                                        property string eldurWs: "\n      "
 
+                                        color: mLogoutHover.hovered ? "#0366d6" : "#00000000"
                                         implicitWidth: mLogoutText.implicitWidth + 24
                                         implicitHeight: mLogoutText.implicitHeight + 12
                                         objectName: "m-logout"
@@ -296,7 +327,7 @@ ApplicationWindow {
                                             id: mLogoutText
                                             text: "Sign out"
                                             textFormat: Text.PlainText
-                                            color: "#24292e"
+                                            color: mLogoutHover.hovered ? "#ffffff" : "#24292e"
                                             font.family: "Arial"
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
@@ -308,6 +339,10 @@ ApplicationWindow {
                                             anchors.topMargin: 6
                                             renderType: Text.NativeRendering
                                         }
+
+                                        HoverHandler {
+                                            id: mLogoutHover
+                                        }
                                     }
                                 }
                             }
@@ -318,6 +353,8 @@ ApplicationWindow {
                 // <main>
                 Item {
                     property string eldurTag: "main"
+                    property string eldurWs: "\n"
+                    property string eldurWsEnd: "\n"
 
                     implicitWidth: mainContent.implicitWidth + 40
                     implicitHeight: mainContent.implicitHeight + 40
@@ -337,6 +374,7 @@ ApplicationWindow {
                         Text {
                             id: p
                             property string eldurTag: "p"
+                            property string eldurWs: "\n  "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                             text: "Welcome back. Pick something from the menu."
@@ -354,6 +392,7 @@ ApplicationWindow {
                         Text {
                             id: status
                             property string eldurTag: "p"
+                            property string eldurWs: "\n  "
 
                             text: "Nothing chosen yet."
                             textFormat: Text.PlainText

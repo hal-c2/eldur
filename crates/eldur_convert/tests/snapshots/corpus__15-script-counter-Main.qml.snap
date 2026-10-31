@@ -46,6 +46,8 @@ ApplicationWindow {
             // <body>
             Item {
                 property string eldurTag: "body"
+                property string eldurWs: "\n"
+                property string eldurWsEnd: "\n\n\n"
 
                 implicitWidth: bodyContent.implicitWidth + 32
                 implicitHeight: bodyContent.implicitHeight + 96
@@ -71,6 +73,8 @@ ApplicationWindow {
                     Rectangle {
                         property string eldurTag: "main"
                         property string eldurClasses: "widget"
+                        property string eldurWs: "\n"
+                        property string eldurWsEnd: "\n"
 
                         color: "#ffffff"
                         radius: 16
@@ -105,6 +109,7 @@ ApplicationWindow {
                             Text {
                                 id: h1
                                 property string eldurTag: "h1"
+                                property string eldurWs: "\n  "
                                 property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                                 text: "Counter"
@@ -130,6 +135,7 @@ ApplicationWindow {
                                     font.pixelSize: 96
                                     font.weight: 800
                                 }
+                                property string eldurWs: "\n\n  "
                                 property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h1.eldurCarry
 
                                 text: "0"
@@ -157,6 +163,8 @@ ApplicationWindow {
                                 id: controls
                                 property string eldurTag: "div"
                                 property string eldurClasses: "controls"
+                                property string eldurWs: "\n\n  "
+                                property string eldurWsEnd: "\n  "
                                 property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : count.eldurCarry
 
                                 spacing: 0
@@ -173,10 +181,11 @@ ApplicationWindow {
                                     id: dec
                                     property string eldurTag: "button"
                                     property string eldurClasses: "btn"
+                                    property string eldurWs: "\n    "
 
                                     text: "−"
                                     palette.buttonText: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: "Arial"
                                     font.pixelSize: 18
                                     font.weight: 600
                                     background: Rectangle {
@@ -190,6 +199,7 @@ ApplicationWindow {
                                     rightPadding: 19
                                     bottomPadding: 11
                                     leftPadding: 19
+                                    implicitHeight: Math.max(21, contentItem.implicitHeight) + 22
                                     contentItem: Text {
                                         text: dec.text
                                         font: dec.font
@@ -215,10 +225,11 @@ ApplicationWindow {
                                     id: inc
                                     property string eldurTag: "button"
                                     property string eldurClasses: "btn btn-primary"
+                                    property string eldurWs: "\n    "
 
                                     text: "+"
                                     palette.buttonText: "#ffffff"
-                                    font.family: "sans-serif"
+                                    font.family: "Arial"
                                     font.pixelSize: 18
                                     font.weight: 600
                                     background: Rectangle {
@@ -232,6 +243,7 @@ ApplicationWindow {
                                     rightPadding: 19
                                     bottomPadding: 11
                                     leftPadding: 19
+                                    implicitHeight: 43
                                     contentItem: Text {
                                         text: inc.text
                                         font: inc.font
@@ -258,10 +270,11 @@ ApplicationWindow {
                                     id: reset
                                     property string eldurTag: "button"
                                     property string eldurClasses: "btn btn-reset"
+                                    property string eldurWs: "\n    "
 
                                     text: "Reset"
                                     palette.buttonText: "#5c6578"
-                                    font.family: "sans-serif"
+                                    font.family: "Arial"
                                     font.pixelSize: 16
                                     font.weight: 500
                                     background: Rectangle {
@@ -275,6 +288,7 @@ ApplicationWindow {
                                     rightPadding: 19
                                     bottomPadding: 11
                                     leftPadding: 19
+                                    implicitHeight: 40
                                     contentItem: Text {
                                         text: reset.text
                                         font: reset.font
@@ -306,6 +320,7 @@ ApplicationWindow {
                                 id: field
                                 property string eldurTag: "label"
                                 property string eldurClasses: "field"
+                                property string eldurWs: "\n\n  "
                                 property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : controls.eldurCarry
 
                                 text: "Live text"
@@ -331,10 +346,11 @@ ApplicationWindow {
                                 id: mirrorInput
                                 property string eldurTag: "input"
                                 property string eldurClasses: "text-input"
-                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : field.eldurCarry
+                                property string eldurWs: "\n  "
+                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 40) - Layout.topMargin - 40 + 0.000001) : field.eldurCarry
 
                                 color: "#1f2430"
-                                font.family: "sans-serif"
+                                font.family: "Arial"
                                 font.pixelSize: 16
                                 verticalAlignment: TextInput.AlignVCenter
                                 background: Rectangle {
@@ -348,14 +364,14 @@ ApplicationWindow {
                                 rightPadding: 13
                                 bottomPadding: 11
                                 leftPadding: 13
-                                implicitWidth: 238.4
+                                implicitHeight: 40
+                                implicitWidth: 232.72
                                 placeholderText: "Start typing…"
                                 placeholderTextColor: "#757575"
                                 Accessible.name: "Live text"
                                 objectName: "mirror-input"
                                 Layout.fillWidth: true
                                 Layout.topMargin: 8 - field.eldurCarry
-                                Layout.preferredHeight: implicitHeight
                                 renderType: Text.NativeRendering
 
                                 onTextEdited: {
@@ -368,6 +384,7 @@ ApplicationWindow {
                                 id: mirrorOutput
                                 property string eldurTag: "p"
                                 property string eldurClasses: "mirror"
+                                property string eldurWs: "\n  "
 
                                 color: "#f7f9fc"
                                 radius: 8
@@ -401,6 +418,8 @@ ApplicationWindow {
                             RowLayout {
                                 property string eldurTag: "label"
                                 property string eldurClasses: "toggle"
+                                property string eldurWs: "\n\n  "
+                                property string eldurWsEnd: "\n  "
 
                                 spacing: 0
                                 Layout.fillWidth: true
@@ -413,6 +432,7 @@ ApplicationWindow {
                                     id: detailsToggle
                                     property string eldurTag: "input"
                                     property string value: "on"
+                                    property string eldurWs: "\n    "
 
                                     implicitWidth: 13
                                     implicitHeight: 13
@@ -453,6 +473,7 @@ ApplicationWindow {
                                 // <span>
                                 Text {
                                     property string eldurTag: "span"
+                                    property string eldurWs: "\n    "
 
                                     text: "Show details"
                                     textFormat: Text.PlainText
@@ -483,6 +504,8 @@ ApplicationWindow {
                                 id: details
                                 property string eldurTag: "section"
                                 property string eldurClasses: "panel"
+                                property string eldurWs: "\n\n  "
+                                property string eldurWsEnd: "\n  "
 
                                 color: "#f1f5ff"
                                 topLeftRadius: 0
@@ -519,6 +542,7 @@ ApplicationWindow {
                                     // <h2>
                                     Text {
                                         property string eldurTag: "h2"
+                                        property string eldurWs: "\n    "
 
                                         text: "About this widget"
                                         textFormat: Text.PlainText
@@ -540,6 +564,7 @@ ApplicationWindow {
                                     Text {
                                         id: p
                                         property string eldurTag: "p"
+                                        property string eldurWs: "\n    "
                                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                                         text: "The counter goes negative below zero and turns red. Text typed above is mirrored as you type."

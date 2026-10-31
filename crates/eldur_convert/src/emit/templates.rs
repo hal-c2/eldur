@@ -429,6 +429,17 @@ fn export_name(state: PseudoState) -> Option<&'static str> {
     })
 }
 
+/// A template's element is placed by the script: where its source put it says
+/// nothing of what is around it, and must not keep equal templates apart.
+fn strip_whitespace(obj: &mut Object) {
+    obj.members.retain(
+        |m| !matches!(m, Member::PropertyDecl { name, .. } if name == "eldurWs" || name == "eldurWsEnd"),
+    );
+    for child in obj.children_mut() {
+        strip_whitespace(child);
+    }
+}
+
 /// `obj` with ids renamed in order of appearance and its template name
 /// left out, for finding templates that are the same.
 fn canonical(obj: &Object) -> Object {
@@ -923,6 +934,7 @@ pub(crate) fn add(
         let Some(obj) = obj else {
             continue;
         };
+        strip_whitespace(obj);
         let mut decls = vec![decl("string", "eldurTemplate", Value::string(""), false)];
         for d in &ups[i] {
             decls.push(decl(

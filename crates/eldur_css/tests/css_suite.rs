@@ -873,6 +873,19 @@ fn state_variants_hover_focus_within_visited_and_multi_dynamic_rejection() {
     assert_eq!(link_vars[0].changed[0].1.color, Rgba::new(120, 0, 180, 255));
 }
 
+// A script can show the list, so the hover condition has to exist from the start.
+#[test]
+fn state_variants_list_conditions_under_a_display_none_ancestor() {
+    let doc = Document::parse(r#"<ul id="list"><li id="item">x</li></ul>"#);
+    let (sheet, _) = parse_author("ul { display: none; } li:hover { color: rgb(1, 2, 3); }");
+    let map = compute_styles(&doc, &[sheet], &Viewport::default());
+    let item = doc.element_by_id("item").expect("item");
+    let variants: Vec<_> = map.variants_of(item).collect();
+    assert_eq!(variants.len(), 1);
+    assert_eq!(variants[0].state, PseudoState::Hover);
+    assert!(variants[0].changed.is_empty());
+}
+
 #[test]
 fn state_variants_nested_has_nth_child_of_and_logical_combinations() {
     let doc = Document::parse(
@@ -1040,27 +1053,23 @@ fn state_variants_nested_has_nth_child_of_and_logical_combinations() {
     assert!(map.variants_of(li_skip).next().is_none());
 
     // 3. Nested logical combination `.panel:is(:has(.trigger:focus))` records condition element
-    // `#panel-trigger` and updates `#panel` plus inherited `color` on `#panel-trigger` and `#panel-body`.
+    // `#panel-trigger` and updates `#panel` plus inherited `color` on `#panel-body`. The button
+    // keeps the UA sheet's own colour: Chromium reports rgb(0, 0, 0) for it under a coloured parent.
     let trigger_focus = map
         .variants_of(panel_trigger)
         .find(|v| v.state == PseudoState::Focus)
         .expect("panel-trigger focus variant");
     assert_eq!(trigger_focus.node, panel_trigger);
-    assert_eq!(trigger_focus.changed.len(), 3);
+    assert_eq!(trigger_focus.changed.len(), 2);
     assert_eq!(trigger_focus.changed[0].0, panel);
     assert_eq!(trigger_focus.changed[0].1.margin.top, px(18.0));
     assert_eq!(
         trigger_focus.changed[0].1.color,
         Rgba::new(140, 20, 200, 255)
     );
-    assert_eq!(trigger_focus.changed[1].0, panel_trigger);
+    assert_eq!(trigger_focus.changed[1].0, panel_body);
     assert_eq!(
         trigger_focus.changed[1].1.color,
-        Rgba::new(140, 20, 200, 255)
-    );
-    assert_eq!(trigger_focus.changed[2].0, panel_body);
-    assert_eq!(
-        trigger_focus.changed[2].1.color,
         Rgba::new(140, 20, 200, 255)
     );
 }

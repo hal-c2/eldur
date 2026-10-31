@@ -397,13 +397,19 @@ pub(crate) fn compute_styles(
     // 5. Dynamic state variants (`StyleMap::variants`).
     let mut variants = Vec::new();
     for (cond_node, state) in variant_candidates {
-        // An element without a box in the base style (or under a `display: none`
-        // ancestor) cannot be hovered/focused/activated.
+        // Without a box in the base style nothing can be compared yet, but a
+        // script may show it: the condition stays listed, and what it changes
+        // comes from `conditional_styles`, together with what shows it.
         if styles
             .get(cond_node.index())
             .and_then(Option::as_ref)
             .is_none()
         {
+            variants.push(StateVariant {
+                node: cond_node,
+                state,
+                changed: Vec::new(),
+            });
             continue;
         }
         let facts = DynamicFacts::single_state(cond_node, state);
@@ -886,6 +892,14 @@ impl<'a> CascadeEngine<'a> {
         if parent_hidden || elem_style.style.display == Display::None {
             styles[node.index()] = None;
             element_cascades[node.index()] = None;
+            // A script can show the subtree; its states must exist by then.
+            let bloom = self.ancestor_blooms[node.index()];
+            self.variant_prefixes
+                .for_each_candidate(elem, bloom, |prefix_sel, &state| {
+                    if matches_selector(prefix_sel, node, &match_ctx) {
+                        variant_candidates.insert((node, state));
+                    }
+                });
             let child_box_display = Some(elem_style.style.display);
             hidden[node.index()] = Some(elem_style);
             for child in self.doc.element_children(node) {
@@ -1266,6 +1280,11 @@ impl<'a> CascadeEngine<'a> {
 
             if let Some(mut cands) = longhand_candidates.remove(&l) {
                 cands.sort_by(|(ka, _), (kb, _)| ka.cmp(kb));
+                let author = cands
+                    .last()
+                    .is_some_and(|(k, _)| k.tier.origin() == Origin::Author);
+                style.author_background |= author && properties::is_background(l);
+                style.author_border |= author && properties::is_border(l);
                 let action = select_winning_longhand_action(l, &cands, &style.custom_properties);
                 if let Some(casc) = cascade_out.as_deref_mut() {
                     casc.base_actions.insert(l, action.clone());

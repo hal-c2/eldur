@@ -1,0 +1,2 @@
+{"steps":[{"name":"hide","click":"#hide"},{"name":"show","click":"#show"},{"name":"off","click":"#off"}],
+ "watch":[{"sel":"#f"},{"sel":"#t","attrs":["class"]},{"sel":"#never","attrs":["class"]}]}

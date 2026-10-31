@@ -715,7 +715,7 @@ pub(super) fn whole_span(
 /// (layout.md §1.2). Any other font gets Liberation Sans's numbers, and its
 /// glyphs can land a row off. How to obtain real metrics, also for
 /// `line-height: normal`, is undecided; replace this function then.
-fn font_extents(family: &str) -> (f32, f32) {
+pub(super) fn font_extents(family: &str) -> (f32, f32) {
     match family {
         "serif" | "Times" | "Times New Roman" | "Georgia" | "Liberation Serif" => (0.891, 0.216),
         "monospace" => (1.02, 0.3),

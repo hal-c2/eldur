@@ -412,6 +412,7 @@ ApplicationWindow {
                                                     rightPadding: 16
                                                     bottomPadding: 12
                                                     leftPadding: 16
+                                                    implicitHeight: 41
                                                     contentItem: Text {
                                                         text: buttonControl.text
                                                         font: buttonControl.font
@@ -423,7 +424,6 @@ ApplicationWindow {
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
                                                     Layout.topMargin: 16
-                                                    Layout.preferredHeight: implicitHeight
                                                     hoverEnabled: true
                                                 }
                                             }
@@ -620,6 +620,7 @@ ApplicationWindow {
                                                     rightPadding: 16
                                                     bottomPadding: 12
                                                     leftPadding: 16
+                                                    implicitHeight: 41
                                                     contentItem: Text {
                                                         text: buttonControl2.text
                                                         font: buttonControl2.font
@@ -631,7 +632,6 @@ ApplicationWindow {
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
                                                     Layout.topMargin: 16
-                                                    Layout.preferredHeight: implicitHeight
                                                     hoverEnabled: true
                                                 }
                                             }
@@ -828,6 +828,7 @@ ApplicationWindow {
                                                     rightPadding: 16
                                                     bottomPadding: 12
                                                     leftPadding: 16
+                                                    implicitHeight: 41
                                                     contentItem: Text {
                                                         text: buttonControl3.text
                                                         font: buttonControl3.font
@@ -839,7 +840,6 @@ ApplicationWindow {
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
                                                     Layout.topMargin: 16
-                                                    Layout.preferredHeight: implicitHeight
                                                     hoverEnabled: true
                                                 }
                                             }
@@ -1036,6 +1036,7 @@ ApplicationWindow {
                                                     rightPadding: 16
                                                     bottomPadding: 12
                                                     leftPadding: 16
+                                                    implicitHeight: 41
                                                     contentItem: Text {
                                                         text: buttonControl4.text
                                                         font: buttonControl4.font
@@ -1047,7 +1048,6 @@ ApplicationWindow {
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
                                                     Layout.topMargin: 16
-                                                    Layout.preferredHeight: implicitHeight
                                                     hoverEnabled: true
                                                 }
                                             }
@@ -1244,6 +1244,7 @@ ApplicationWindow {
                                                     rightPadding: 16
                                                     bottomPadding: 12
                                                     leftPadding: 16
+                                                    implicitHeight: 41
                                                     contentItem: Text {
                                                         text: buttonControl5.text
                                                         font: buttonControl5.font
@@ -1255,7 +1256,6 @@ ApplicationWindow {
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
                                                     Layout.topMargin: 16
-                                                    Layout.preferredHeight: implicitHeight
                                                     hoverEnabled: true
                                                 }
                                             }
@@ -1452,6 +1452,7 @@ ApplicationWindow {
                                                     rightPadding: 16
                                                     bottomPadding: 12
                                                     leftPadding: 16
+                                                    implicitHeight: 41
                                                     contentItem: Text {
                                                         text: buttonControl6.text
                                                         font: buttonControl6.font
@@ -1463,7 +1464,6 @@ ApplicationWindow {
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
                                                     Layout.topMargin: 16
-                                                    Layout.preferredHeight: implicitHeight
                                                     hoverEnabled: true
                                                 }
                                             }

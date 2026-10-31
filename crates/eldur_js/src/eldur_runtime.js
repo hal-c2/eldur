@@ -1614,6 +1614,8 @@ function classList(item) {
                 var idx = m.classes.indexOf(cls);
                 if (idx !== -1) {
                     m.classes.splice(idx, 1);
+                    // The attribute stays, empty; one that was never there does not come.
+                    m.classAttr = true;
                 }
                 _syncClassProp(curRaw, cls, false);
             }
@@ -1630,6 +1632,7 @@ function classList(item) {
                 }
             } else if (idx !== -1) {
                 m.classes.splice(idx, 1);
+                m.classAttr = true;
             }
             _syncClassProp(curRaw, cls, shouldHave);
             _afterClassMutation(curRaw, m);
@@ -1806,6 +1809,281 @@ function _flowInText(text) {
 // and their ancestors, ahead of the frame.
 var _layoutDirty = [];
 
+var _TABLE_PARTS = { table: true, thead: true, tbody: true, tfoot: true, tr: true };
+var _TABLE_SECTION = { thead: 0, tbody: 1, tfoot: 2 };
+
+function _tablePartTag(item) {
+    var tag = _meta(item).createdTag || item.eldurTag;
+    return typeof tag === "string" ? tag.toLowerCase() : "";
+}
+
+// What a script's rows belong to: a static table's grid, whose solver then counts
+// them too, or a table the script made.
+function _tableHost(item) {
+    for (var cur = item; cur; cur = cur.parent) {
+        // A table with no static cell has no grid, and is laid out like a created one.
+        if (cur.columnSpecs !== undefined || _tablePartTag(cur) === "table") {
+            return cur;
+        }
+    }
+    return null;
+}
+
+// The rows under a section in order; a static section's flow sits a level down.
+function _tableRowsIn(item, out) {
+    var kids = item.children || [];
+    for (var i = 0; i < kids.length; ++i) {
+        var tag = _meta(kids[i]).createdTag;
+        if (tag === "tr") {
+            if (kids[i].visible !== false || !kids[i].parent) {
+                out.push(kids[i]);
+            }
+        } else if (!_isCreatedElement(kids[i]) && kids[i].tableSlot === undefined && !kids[i].eldurTag
+            || tag in _TABLE_SECTION || _TABLE_SECTION[kids[i].eldurTag] !== undefined) {
+            _tableRowsIn(kids[i], out);
+        }
+    }
+    return out;
+}
+
+function _tableSpan(cell, name) {
+    var n = parseInt(getAttribute(cell, name), 10);
+    return n > 0 ? n : 1;
+}
+
+var _tableMetrics = null;
+
+// As the converter's `min_content`: the longest word, and what is around the text.
+function _tableMinContent(cell, text) {
+    if (!text) {
+        return cell.implicitWidth;
+    }
+    if (!_tableMetrics) {
+        _tableMetrics = Qt.createQmlObject("import QtQuick; FontMetrics {}", _root, "eldur_table_metrics");
+    }
+    _tableMetrics.font = text.font;
+    var words = String(text.text).split(/\s+/);
+    var longest = 0;
+    for (var i = 0; i < words.length; ++i) {
+        longest = Math.max(longest, _tableMetrics.advanceWidth(words[i]));
+    }
+    return Math.ceil(longest) + cell.implicitWidth - text.implicitWidth;
+}
+
+// The HTML forming algorithm's slots, for what a script made: rows are indexes
+// into `rows`, and a rowspan stops at its section's end as the converter's does.
+function _tablePlace(rows) {
+    var cells = [];
+    var taken = {};
+    var columns = 0;
+    for (var r = 0; r < rows.length; ++r) {
+        var kids = rows[r].item.children;
+        var c = 0;
+        for (var i = 0; i < kids.length; ++i) {
+            if (!/^t[dh]$/.test(_tablePartTag(kids[i]))) {
+                continue;
+            }
+            while (taken[r + ":" + c]) {
+                ++c;
+            }
+            var across = _tableSpan(kids[i], "colspan");
+            var down = Math.min(_tableSpan(kids[i], "rowspan"), rows[r].end - r);
+            for (var y = r; y < r + down; ++y) {
+                for (var x = c; x < c + across; ++x) {
+                    taken[y + ":" + x] = true;
+                }
+            }
+            cells.push({ item: kids[i], row: r, column: c, rowSpan: down, columnSpan: across });
+            c += across;
+            columns = Math.max(columns, c);
+        }
+    }
+    return { cells: cells, columns: columns };
+}
+
+function _tableSpacing(host) {
+    if (host.columnSpacing !== undefined) {
+        return [host.columnSpacing, host.rowSpacing];
+    }
+    var styles = _meta(host).styles || {};
+    var won = _gHasCascade() ? _gStyle(host).won : {};
+    var written = function(camel, kebab) {
+        return String(styles[camel] || styles[kebab] || (won[kebab] ? won[kebab].value : ""));
+    };
+    if (written("borderCollapse", "border-collapse").trim() === "collapse") {
+        return [0, 0];
+    }
+    var parts = written("borderSpacing", "border-spacing").split(/\s+/).map(parseFloat).filter(function(v) { return !isNaN(v); });
+    if (parts.length === 0) {
+        return [2, 2];
+    }
+    return [parts[0], parts.length > 1 ? parts[1] : parts[0]];
+}
+
+// A cell's CSS width is a floor on its column, as its text is.
+function _tableCellWidth(item) {
+    var wanted = Math.ceil(item.implicitWidth);
+    if (_gHasCascade()) {
+        var s = _gStyle(item);
+        var px = /px$/.test(String(s.width)) ? _gPx(s.width, 0, s.fontSize, s.rootSize) : null;
+        if (px !== null) {
+            var edges = _gEdges(item, s, 0);
+            var frame = s["box-sizing"] === "border-box" ? 0 : edges.pl + edges.pr + edges.bl + edges.br;
+            wanted = Math.max(wanted, Math.ceil(px + frame));
+        }
+    }
+    return wanted;
+}
+
+function _tableLayout(host) {
+    var isStatic = host.columnSpecs !== undefined;
+    var sections = [];
+    if (isStatic) {
+        for (var g = 0; g < host.children.length; ++g) {
+            if (_TABLE_SECTION[host.children[g].eldurTag] !== undefined) {
+                sections.push({ rows: _tableRowsIn(host.children[g], []) });
+            }
+        }
+    } else {
+        var parts = host.children;
+        for (var o = 0; o < 3; ++o) {
+            for (var p = 0; p < parts.length; ++p) {
+                if (_TABLE_SECTION[_tablePartTag(parts[p])] === o) {
+                    sections.push({ rows: _tableRowsIn(parts[p], []), item: parts[p] });
+                }
+            }
+        }
+        // Rows put straight in a table are a body of their own.
+        var loose = [];
+        for (var q = 0; q < parts.length; ++q) {
+            if (_tablePartTag(parts[q]) === "tr") {
+                loose.push(parts[q]);
+            }
+        }
+        if (loose.length > 0) {
+            sections.push({ rows: loose });
+        }
+    }
+    var rows = [];
+    sections.forEach(function(group) {
+        var end = rows.length + group.rows.length;
+        group.rows.forEach(function(item) {
+            rows.push({ item: item, end: end });
+        });
+    });
+    var placed = _tablePlace(rows);
+    // What a cell needs changes as its text wraps in the width given below, and
+    // whenever a script writes to it afterwards.
+    placed.cells.forEach(function(c) {
+        var cm = _meta(c.item);
+        if (!cm.tableWatched) {
+            cm.tableWatched = true;
+            var again = function() { _layoutChanged(c.item); };
+            c.item.implicitHeightChanged.connect(again);
+            c.item.implicitWidthChanged.connect(again);
+        }
+    });
+    var measure = function() {
+        return placed.cells.map(function(c) {
+            var text = _findTextChild(c.item);
+            return {
+                tableSlot: [c.row, c.column, c.rowSpan, c.columnSpan],
+                // Columns come out whole pixels; a text must not wrap by a fraction.
+                implicitWidth: _tableCellWidth(c.item),
+                implicitHeight: c.item.implicitHeight,
+                minContentWidth: _tableMinContent(c.item, text)
+            };
+        });
+    };
+    var spacing = _tableSpacing(host);
+    var adapters = measure();
+    var widths;
+    if (isStatic) {
+        host.eldurCreatedCells = adapters;
+        widths = host.columnWidths;
+    } else {
+        var specs = [];
+        for (var n = 0; n < placed.columns; ++n) {
+            specs.push(null);
+        }
+        var solver = { children: adapters, columnSpacing: spacing[0], rowSpacing: spacing[1], width: 0 };
+        // Auto width is max-content, up to what the table is in.
+        var room = host.parent && host.parent.width > 0 ? host.parent.width - 2 * spacing[0] : Infinity;
+        var given = /^[\d.]+px$/.test(String(_meta(host).styles.width)) ? parseFloat(_meta(host).styles.width) : NaN;
+        solver.width = !isNaN(given) ? given - 2 * spacing[0]
+            : Math.min(_root.tableMaxContentWidth(solver, specs, false), room);
+        widths = _root.tableColumnWidths(solver, specs, false);
+    }
+    var left = [];
+    var edge = 0;
+    for (var w = 0; w < widths.length; ++w) {
+        left.push(edge);
+        edge += widths[w] + spacing[0];
+    }
+    var total = Math.max(edge - spacing[0], 0);
+    var acrossFrom = function(c) {
+        var sum = spacing[0] * (c.columnSpan - 1);
+        for (var k = c.column; k < c.column + c.columnSpan && k < widths.length; ++k) {
+            sum += widths[k];
+        }
+        return sum;
+    };
+    placed.cells.forEach(function(c) {
+        c.item.x = left[c.column] || 0;
+        c.item.width = acrossFrom(c);
+    });
+    // Text wraps in the width it now has.
+    var zeros = rows.map(function() { return 0; });
+    var heights = rows.length > 0
+        ? _root.tableRowHeights({ children: measure(), rowSpacing: spacing[1] }, zeros)
+        : [];
+    placed.cells.forEach(function(c) {
+        var sum = spacing[1] * (c.rowSpan - 1);
+        for (var k = c.row; k < c.row + c.rowSpan; ++k) {
+            sum += heights[k];
+        }
+        c.item.y = 0;
+        c.item.height = sum;
+    });
+    rows.forEach(function(row, r) {
+        row.item.implicitWidth = total;
+        row.item.implicitHeight = heights[r];
+        if (row.item.parent && row.item.parent.spacing !== undefined) {
+            row.item.parent.spacing = spacing[1];
+        }
+    });
+    if (!isStatic) {
+        // A table's border-spacing runs around its rows too.
+        host.spacing = spacing[1];
+        host.implicitWidth = total + 2 * spacing[0];
+        for (var e = 0; e < host.children.length; ++e) {
+            var kid = host.children[e];
+            if (kid.eldurSide !== undefined) {
+                kid.eldurSide = spacing[0];
+                kid.eldurTop = e === 0 ? spacing[1] : 0;
+                kid.eldurBottom = e === host.children.length - 1 ? spacing[1] : 0;
+            }
+        }
+    }
+}
+
+function _tableSettle(dirty) {
+    var hosts = [];
+    for (var i = 0; i < dirty.length; ++i) {
+        var host = null;
+        var pair = [dirty[i], dirty[i].parent];
+        for (var q = 0; q < pair.length && !host; ++q) {
+            if (pair[q] && (_TABLE_PARTS[_tablePartTag(pair[q])] || /^t[dh]$/.test(_tablePartTag(pair[q])))) {
+                host = _tableHost(pair[q]);
+            }
+        }
+        if (host && hosts.indexOf(host) < 0) {
+            hosts.push(host);
+        }
+    }
+    hosts.forEach(_tableLayout);
+}
+
 function _layoutChanged(item) {
     if (!item || typeof item !== "object") {
         return;
@@ -1977,6 +2255,7 @@ function _settleLayouts() {
     _gSettle();
     var dirty = _layoutDirty;
     _layoutDirty = [];
+    _tableSettle(dirty);
     var done = [];
     var numbered = [];
     for (var n = 0; n < dirty.length; ++n) {
@@ -2034,6 +2313,9 @@ function _polishDown(item) {
 // Takes a node out of the DOM. Never destroys it: a script may hold it and put
 // it back, as with a modal, and bindings of the page may read it by id.
 function _detachNode(raw) {
+    if (!raw.__eldurInline) {
+        _wsLeave(raw);
+    }
     if (raw.__eldurInline) {
         _vRemove(raw);
         return;
@@ -2321,7 +2603,8 @@ function getText(item) {
     }
     var vRun = _findTextChild(raw);
     if (vRun && _vAnonText(vRun)) {
-        return _rawKids(raw, true).map(getText).join("");
+        return _rawKids(raw, true).map(function(kid) { return _wsText(_wsBefore(kid)) + getText(kid); }).join("")
+            + _wsText(_wsEnd(raw));
     }
     if (_isPlainJsObject(raw) && ("textContent" in raw || "innerText" in raw)) {
         return raw.textContent !== undefined ? raw.textContent : raw.innerText;
@@ -2329,6 +2612,10 @@ function getText(item) {
     var run = _meta(raw).runText;
     if (run !== undefined) {
         return run;
+    }
+    // What is typed in an input is its value; it has no content.
+    if (raw.eldurTag === "input" || _meta(raw).createdTag === "input") {
+        return "";
     }
     if (typeof raw.text === "string") {
         return raw.text;
@@ -2344,8 +2631,207 @@ function getText(item) {
     if (m.explicitText !== undefined) {
         return String(m.explicitText);
     }
-    // `textContent` is the text of everything inside.
-    return _rawElementChildren(raw).map(getText).join("");
+    // `textContent` is the text of everything inside, the whitespace between too.
+    var inside = _rawElementChildren(raw).map(function(kid) { return _wsText(_wsBefore(kid)) + getText(kid); });
+    return inside.join("") + _wsText(_wsEnd(raw));
+}
+
+// The converter's record of whitespace between elements (`declare_whitespace`),
+// as text nodes until a script moves something; no item stands for it. Each
+// stays a node of its own, as a removal between two leaves two.
+function _wsRuns(raw, key, declared) {
+    if (!raw || raw.__eldurInline) {
+        return [];
+    }
+    var m = _meta(raw);
+    if (!m[key]) {
+        var given = raw[declared];
+        m[key] = typeof given === "string" && given !== "" && !_isCreatedElement(raw)
+            ? [_vLeaf(given, null, null)] : [];
+        m[key].forEach(function(leaf) { leaf.wsOwner = raw; leaf.wsKey = key; });
+    }
+    return m[key];
+}
+
+// Whitespace in markup a script gives, kept like the converter's.
+function _wsGiven(raw, key, text) {
+    if (text && !raw.__eldurInline) {
+        var leaf = _vLeaf(text, null, null);
+        leaf.wsOwner = raw;
+        leaf.wsKey = key;
+        _wsRuns(raw, key, "").push(leaf);
+    }
+}
+
+function _wsBefore(raw) {
+    return _wsRuns(raw, "ws", "eldurWs");
+}
+
+function _wsEnd(raw) {
+    return _wsRuns(raw, "wsEnd", "eldurWsEnd");
+}
+
+function _wsText(runs) {
+    return runs.map(function(leaf) { return leaf.data; }).join("");
+}
+
+function _wsMove(runs, owner, key, front) {
+    var into = key === "ws" ? _wsBefore(owner) : _wsEnd(owner);
+    runs.forEach(function(leaf) {
+        leaf.wsOwner = owner;
+        leaf.wsKey = key;
+        leaf.vparent = key === "ws" ? _logicalParent(owner) : owner;
+    });
+    if (front) {
+        Array.prototype.unshift.apply(into, runs);
+    } else {
+        Array.prototype.push.apply(into, runs);
+    }
+    runs.length = 0;
+}
+
+// A removed element's whitespace stays where it was, before what comes next.
+function _wsLeave(raw) {
+    var runs = _wsBefore(raw);
+    if (runs.length === 0) {
+        return;
+    }
+    var parent = _logicalParent(raw);
+    if (!parent) {
+        return;
+    }
+    var kids = _rawElementChildren(parent);
+    var next = kids[kids.indexOf(raw) + 1];
+    if (next) {
+        _wsMove(runs, next, "ws", true);
+    } else {
+        _wsMove(runs, parent, "wsEnd", true);
+    }
+}
+
+// What is inserted goes after the whitespace that was at that place.
+function _wsEnter(count, ref, container) {
+    var owner = _meta(container).hostBox || container;
+    // Looked up, as insertion can swap an element for its template's form.
+    var kids = _rawElementChildren(owner);
+    var first = kids[(ref ? kids.indexOf(ref) : kids.length) - count];
+    if (!first || first.__eldurInline || (ref && ref.__eldurInline)) {
+        return;
+    }
+    _wsMove(ref ? _wsBefore(ref) : _wsEnd(owner), first, "ws", false);
+}
+
+// `display` by element, as a page's closed form has no computed styles to ask.
+var _IT_BLOCK = /^(address|article|aside|blockquote|center|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|h[1-6]|header|hgroup|hr|li|main|menu|nav|ol|p|pre|section|summary|table|tbody|tfoot|thead|ul)$/;
+
+// The HTML standard's rendered text collection: what is shown, with a line
+// between blocks, two around a paragraph, and a tab between cells.
+function _itCollect(raw, out) {
+    if (raw.__eldurInline) {
+        if (raw.vtext) {
+            out.push(raw.data);
+            return;
+        }
+        if (raw.eldurTag === "br") {
+            out.push("\n");
+            return;
+        }
+    } else if (_itHidden(raw)) {
+        return;
+    }
+    var tag = _inferTagName(raw).toLowerCase();
+    if (tag === "br") {
+        out.push("\n");
+        return;
+    }
+    var edge = tag === "p" ? 2 : _IT_BLOCK.test(tag) ? 1 : 0;
+    if (edge) {
+        out.push(edge);
+    }
+    var model = raw.__eldurInline ? raw : _vOwnModel(raw);
+    if (model && model.kids) {
+        model.kids.filter(_vIsRendered).forEach(function(k) { _itCollect(k, out); });
+    } else {
+        var kids = _rawKids(raw, true);
+        if (kids.length === 0) {
+            out.push(getText(raw));
+        } else if (kids[0].tableSlot) {
+            _itGrid(kids, out);
+        } else {
+            _itCells(kids, tag, out);
+        }
+    }
+    if (edge) {
+        out.push(edge);
+    }
+}
+
+// The cells of a static table are one list; each knows its row.
+function _itGrid(kids, out) {
+    var row = -1;
+    kids.forEach(function(kid) {
+        if (kid.tableSlot) {
+            if (row >= 0) {
+                out.push(kid.tableSlot[0] !== row ? 1 : "\t");
+            }
+            row = kid.tableSlot[0];
+            _itCollect(kid, out);
+        } else {
+            _itCollect(kid, out);
+        }
+    });
+}
+
+function _itCells(kids, tag, out) {
+    kids.forEach(function(kid, i) {
+        _itCollect(kid, out);
+        if (tag === "tr" && i < kids.length - 1) {
+            out.push("\t");
+        }
+    });
+    if (tag === "tr") {
+        out.push(1);
+    }
+}
+
+function getInnerText(item) {
+    var raw = _unwrap(item);
+    return raw ? _innerText(raw) : "";
+}
+
+function _itHidden(raw) {
+    // Until the window shows, `visible` says no of everything.
+    return !raw.__eldurInline && raw.visible === false
+        && (_root.contentItem ? _root.contentItem.visible : _root.visible) !== false;
+}
+
+function _innerText(raw) {
+    // An element not being rendered reads as its textContent.
+    if (_itHidden(raw)) {
+        return getText(raw);
+    }
+    var out = [];
+    _itCollect(raw, out);
+    var text = "";
+    var pending = 0;
+    for (var i = 0; i < out.length; ++i) {
+        if (typeof out[i] === "number") {
+            pending = Math.max(pending, out[i]);
+            continue;
+        }
+        var piece = out[i];
+        if (piece.trim() === "" && piece !== "\t" && piece !== "\n" && (pending > 0 || text === "" || /\s$/.test(text))) {
+            continue;
+        }
+        if (pending > 0 && text !== "") {
+            text = text.replace(/ +$/, "") + "\n\n".slice(0, pending);
+        }
+        pending = 0;
+        text += piece;
+    }
+    return text.replace(/[ \t\r\f]*\n[ \t\r\f]*(?=\S)/g, function(m) { return m.replace(/[^\n]/g, ""); })
+        .replace(/[ \r\f\n]+/g, function(m) { return m.indexOf("\n") >= 0 ? m.replace(/[^\n]/g, "") : " "; })
+        .replace(/^ +| +$/g, "");
 }
 
 function setText(item, value) {
@@ -2508,8 +2994,10 @@ function _replaceWithMarkup(raw, str) {
     for (var i = 0; i < old.length; ++i) {
         _detachNode(old[i]);
     }
-    var nodes = _expandInsertRawNodes(_parseHtmlFragmentNodes(str));
+    var parsed = _parseHtmlFragmentNodes(str);
+    var nodes = _expandInsertRawNodes(parsed);
     _insertRawNodesBefore(_appendTarget(raw), nodes, null);
+    _wsGiven(raw, "wsEnd", parsed.wsEnd);
 }
 
 function _rememberMarkup(raw, str) {
@@ -2911,7 +3399,7 @@ function getAttribute(item, attrName) {
     if (name === "id" && typeof raw.objectName === "string" && raw.objectName.length > 0) {
         return raw.objectName;
     }
-    if (name === "class" && m.classes.length > 0) {
+    if (name === "class" && (m.classes.length > 0 || m.classAttr)) {
         return m.classes.join(" ");
     }
     if (name === "src" && raw.source !== undefined && String(raw.source) !== "") {
@@ -2999,6 +3487,18 @@ function toggleAttribute(item, attrName, force) {
         removeAttribute(item, name);
     }
     return false;
+}
+
+// A browser takes focus off what stops being rendered. Qt only moves activeFocus and
+// leaves `focus` set, which would hand it back when the element shows again.
+function _focusGone(raw) {
+    if (raw.visible !== false || !_root || _root.visible !== true) {
+        return false;
+    }
+    if (raw.focus === true) {
+        raw.focus = false;
+    }
+    return true;
 }
 
 function focus(item) {
@@ -4019,6 +4519,9 @@ function _buttonSource(signals) {
 // Created elements have no computed style, since CSS is applied at
 // conversion; these are a browser's unstyled controls, whatever the system
 // palette is.
+// What these say with no `value`, which is still "" to a script.
+var _G_INPUT_LABEL = { submit: "Submit", reset: "Reset" };
+
 function _inputSource(type) {
     if (type === "checkbox" || type === "radio") {
         var isRadio = type === "radio";
@@ -4042,7 +4545,8 @@ function _inputSource(type) {
             + "Component.onCompleted: contentItem.renderType = Text.NativeRendering }";
     }
     if (type === "submit" || type === "button" || type === "reset") {
-        return _buttonSource(_KEY_SIGNALS);
+        var label = _G_INPUT_LABEL[type];
+        return _buttonSource(_KEY_SIGNALS + (label ? "text: \"" + label + "\"; " : ""));
     }
     return _NATIVE_IMPORTS + "TextField { " + _NATIVE_TEXT + _KEY_SIGNALS + "color: \"black\"; "
         + "background: Rectangle { color: \"white\"; border.color: \"#767676\"; radius: 2 } }";
@@ -4149,12 +4653,14 @@ function _insertRawNodesBefore(container, rawNodes, rawRef) {
     if (!container || rawNodes.length === 0) {
         return;
     }
+    rawNodes.forEach(_wsLeave);
     var places = [];
     for (var n = 0; n < rawNodes.length; ++n) {
         var node = rawNodes[n];
         places.push(node && node.eldurBlock !== undefined ? _slotFor(node) : (node && node.eldurSlot) || node);
     }
     _insertInFlow(container, places, (rawRef && rawRef.eldurSlot) || rawRef);
+    _wsEnter(rawNodes.length, rawRef, container);
     for (var o = 0; o < rawNodes.length; ++o) {
         if (rawNodes[o] && rawNodes[o].eldurBlock !== undefined) {
             _leaveFlow(rawNodes[o]);
@@ -4232,11 +4738,29 @@ function _genericElementSource(tag, inputType) {
     if (tag === "textarea") {
         return _NATIVE_IMPORTS + "TextArea { " + _NATIVE_TEXT + "color: \"black\"; background: Rectangle { color: \"white\"; border.color: \"#767676\" } }";
     }
+    if (tag === "select") {
+        return _NATIVE_IMPORTS + "ComboBox { id: control; " + _KEY_SIGNALS
+            // A static select's model starts from its markup; this one from none.
+            + "property string eldurInline: '{\"select\":true,\"kids\":[]}'; "
+            + "textRole: \"text\"; valueRole: \"value\"; model: []; "
+            + "contentItem: Text { " + _NATIVE_TEXT + "text: control.displayText; font: control.font; color: \"black\"; "
+            + "verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight } "
+            + "indicator: Text { " + _NATIVE_TEXT + "x: control.width - width - 4; y: (control.height - height) / 2; text: \"\\u25be\"; font.pixelSize: 12 } "
+            + "background: Rectangle { color: \"white\"; border.color: \"#767676\"; radius: 2 } }";
+    }
     if (tag === "li") {
         return "import QtQuick; import QtQuick.Layouts; RowLayout { Layout.fillWidth: true; spacing: 8 }";
     }
+    // `_tableSettle` places a row's cells: they may span rows, which no row-wide
+    // layout could hold.
     if (tag === "tr") {
-        return "import QtQuick; import QtQuick.Layouts; RowLayout { spacing: 0 }";
+        return "import QtQuick; import QtQuick.Layouts; Item { Layout.fillWidth: true; Layout.preferredHeight: implicitHeight; property real eldurSide: 0; property real eldurTop: 0; property real eldurBottom: 0; Layout.leftMargin: eldurSide; Layout.rightMargin: eldurSide; Layout.topMargin: eldurTop; Layout.bottomMargin: eldurBottom; }";
+    }
+    if (tag === "table") {
+        return "import QtQuick; import QtQuick.Layouts; ColumnLayout { Layout.fillWidth: false; spacing: 0 }";
+    }
+    if (tag === "thead" || tag === "tbody" || tag === "tfoot") {
+        return "import QtQuick; import QtQuick.Layouts; ColumnLayout { Layout.fillWidth: true; spacing: 0; property real eldurSide: 0; property real eldurTop: 0; property real eldurBottom: 0; Layout.leftMargin: eldurSide; Layout.rightMargin: eldurSide; Layout.topMargin: eldurTop; Layout.bottomMargin: eldurBottom; }";
     }
     if (tag === "ul" || tag === "ol") {
         return "import QtQuick; import QtQuick.Layouts; ColumnLayout { Layout.fillWidth: true; spacing: 0 }";
@@ -4365,8 +4889,9 @@ function _lookupTemplate(raw) {
     if (!_root || !_root.eldurTemplates || typeof _root.eldurTemplates !== "object") {
         return null;
     }
-    // A row has no form of its own for a template to describe.
-    if (_meta(raw).createdTag === "tr") {
+    // A row has no form of its own for a template to describe, nor has a table
+    // whose rows are not there yet.
+    if (_TABLE_PARTS[_meta(raw).createdTag]) {
         return null;
     }
     var templates = _root.eldurTemplates;
@@ -4855,9 +5380,13 @@ function _applyAttrsFromHtml(el, attrStr) {
     }
 }
 
+var _HTML_INLINE = /^(a|abbr|b|bdi|bdo|cite|code|data|dfn|em|i|kbd|mark|q|s|samp|small|span|strong|sub|sup|time|u|var)$/i;
+
 function _parseHtmlFragmentNodes(html) {
     var src = String(html === null || html === undefined ? "" : html);
     var nodes = [];
+    var gap = "";
+    var lastTag = "";
     var pos = 0;
     var tagOpenRe = /<([a-zA-Z][a-zA-Z0-9-]*)(\s[^>]*)?\s*(\/?)>/g;
     var voidTags = { area: true, base: true, br: true, col: true, embed: true, hr: true, img: true, input: true, link: true, meta: true, source: true, track: true, wbr: true };
@@ -4869,6 +5398,8 @@ function _parseHtmlFragmentNodes(html) {
             var trailing = src.slice(pos);
             if (trailing.trim()) {
                 nodes.push(document.createTextNode(_unescapeHtmlText(trailing)));
+            } else {
+                nodes.wsEnd = trailing;
             }
             break;
         }
@@ -4876,13 +5407,21 @@ function _parseHtmlFragmentNodes(html) {
             var lead = src.slice(pos, m.index);
             if (lead.trim()) {
                 nodes.push(document.createTextNode(_unescapeHtmlText(lead)));
+            } else if (nodes.length > 0 && _HTML_INLINE.test(lastTag) && _HTML_INLINE.test(m[1])) {
+                // Between inline elements a space is drawn: it is text.
+                nodes.push(document.createTextNode(" "));
+            } else {
+                gap = lead;
             }
         }
+        lastTag = m[1];
         var tag = m[1].toLowerCase();
         var attrStr = m[2] || "";
         var selfClosing = m[3] === "/" || Boolean(voidTags[tag]);
         var el = document.createElement(tag);
         _applyAttrsFromHtml(el, attrStr);
+        _wsGiven(_unwrap(el), "ws", gap);
+        gap = "";
 
         var afterOpen = tagOpenRe.lastIndex;
         if (selfClosing) {
@@ -4922,6 +5461,7 @@ function _parseHtmlFragmentNodes(html) {
         var inner = src.slice(afterOpen, closeStart);
         if (/<[a-zA-Z]/.test(inner)) {
             var childWrappers = _parseHtmlFragmentNodes(inner);
+            _wsGiven(_unwrap(el), "wsEnd", childWrappers.wsEnd);
             for (var c = 0; c < childWrappers.length; ++c) {
                 el.appendChild(childWrappers[c]);
             }
@@ -5157,7 +5697,7 @@ function wrap(rawItem) {
         get baseURI() { return _getDocumentBaseUrl(); },
         get textContent() { return getText(rawItem); },
         set textContent(v) { setText(rawItem, v); },
-        get innerText() { return getText(rawItem); },
+        get innerText() { return _innerText(rawItem); },
         set innerText(v) { setText(rawItem, v); },
         get outerHTML() { return _serializeElement(rawItem); },
         set outerHTML(v) {
@@ -5286,6 +5826,15 @@ function wrap(rawItem) {
             // Before `text`: a checkbox's `text` is not its form value.
             if (typeof rawItem.checked === "boolean" && typeof rawItem.value === "string") {
                 return rawItem.value;
+            }
+            var unset = m.explicitValue === undefined && getAttribute(rawItem, "value") === null;
+            var label = _G_INPUT_LABEL[getAttribute(rawItem, "type") || m.inputType];
+            if (unset && label && rawItem.text === label) {
+                return "";
+            }
+            // A SpinBox has no empty state. Zero nobody wrote stands for one.
+            if (unset && rawItem.value === 0 && typeof rawItem.editable === "boolean") {
+                return "";
             }
             if (typeof rawItem.text === "string") {
                 return rawItem.text;
@@ -5489,6 +6038,10 @@ function wrap(rawItem) {
             }
             setAttribute(rawItem, "height", String(n));
         },
+        get colSpan() { return _tableSpan(rawItem, "colspan"); },
+        set colSpan(v) { setAttribute(rawItem, "colspan", String(v)); },
+        get rowSpan() { return _tableSpan(rawItem, "rowspan"); },
+        set rowSpan(v) { setAttribute(rawItem, "rowspan", String(v)); },
         get className() { return getClassName(rawItem); },
         set className(v) { setClassName(rawItem, v); },
         get classList() { return classList(rawItem); },
@@ -5882,8 +6435,11 @@ function wrap(rawItem) {
                 var kids = _rawElementChildren(rawItem);
                 if (kids.length > 0) {
                     for (var c = 0; c < kids.length; ++c) {
-                        clone.appendChild(wrap(kids[c]).cloneNode(true));
+                        var copy = wrap(kids[c]).cloneNode(true);
+                        _wsGiven(_unwrap(copy), "ws", _wsText(_wsBefore(kids[c])));
+                        clone.appendChild(copy);
                     }
+                    _wsGiven(_unwrap(clone), "wsEnd", _wsText(_wsEnd(rawItem)));
                 } else {
                     var txt = getText(rawItem);
                     if (txt) {
@@ -7418,6 +7974,13 @@ function _vToReal(v) {
 }
 
 function _vRemove(node) {
+    if (node.wsOwner) {
+        var runs = _meta(node.wsOwner)[node.wsKey];
+        runs.splice(runs.indexOf(node), 1);
+        node.wsOwner = null;
+        node.vparent = null;
+        return;
+    }
     var owner = node.vparent || node.model;
     if (!owner) {
         return;
@@ -7573,6 +8136,11 @@ function _vSyncSelect(model) {
     combo.model = opts.map(function(o) { return { text: _vOptionText(o), value: _vOptionValue(o) }; });
     combo.currentIndex = _vSelected(model);
     _vSyncing = false;
+    // A created select is as wide as its options, and they come after it.
+    if (_meta(combo).createdTag && combo.parent) {
+        var style = _gStyle(combo);
+        _gControlWidth(combo, style, _gEdges(combo, style, combo.parent.width));
+    }
     _layoutChanged(combo);
 }
 
@@ -7688,7 +8256,19 @@ function _rawChildNodes(raw) {
     if (own) {
         return own.kids.filter(_vIsRendered);
     }
-    return _rawKids(raw, true);
+    var out = [];
+    var withLeaves = function(leaves, leaf) {
+        leaves.forEach(function(l) {
+            l.vparent = raw;
+            out.push(l);
+        });
+        if (leaf) {
+            out.push(leaf);
+        }
+    };
+    _rawKids(raw, true).forEach(function(kid) { withLeaves(_wsBefore(kid), kid); });
+    withLeaves(_wsEnd(raw), null);
+    return out;
 }
 
 function _walkItems(node, visitor) {
@@ -8478,13 +9058,16 @@ var document = {
     get hidden() { return false; },
     get visibilityState() { return "visible"; },
     get activeElement() {
+        if (_activeElement && _focusGone(_activeElement)) {
+            _activeElement = null;
+        }
         if (_activeElement && (_activeElement.activeFocus || _activeElement.focus)) {
             return wrap(_activeElement);
         }
         var focused = null;
         if (_root) {
             _walkItems(_root, function(node) {
-                if (node !== _root && (node.activeFocus || node.focus)) {
+                if (node !== _root && (node.activeFocus || node.focus) && !_focusGone(node)) {
                     focused = node;
                 }
                 return false;
@@ -8706,14 +9289,9 @@ var _G_INITIAL = {
     "transition-delay": "0s", "transition-timing-function": "ease", "background-size": "auto",
     "background-position-x": "0%", "background-position-y": "0%", "background-repeat": "repeat"
 };
-// A browser's controls before the page says otherwise: the box a `<button>`
-// has around its line, whatever the system's style draws.
-var _G_CONTROL_BOX = {
-    button: { padV: 1, padH: 6, border: 2 },
-    input: { padV: 1, padH: 2, border: 2 },
-    select: { padV: 0, padH: 0, border: 1 },
-    textarea: { padV: 2, padH: 2, border: 1 }
-};
+// The controls whose box the UA sheet in the rule table describes: padding and
+// border are the control's insets.
+var _G_FRAMED = { button: true, input: true, select: true, textarea: true };
 
 // A settle may swap the item a read started out with.
 function _gCurrent(raw) {
@@ -9001,7 +9579,8 @@ function _gExpand(prop, value) {
             out.push(["background-color", whole.color === null ? "rgba(0, 0, 0, 0)" : whole.color],
                 ["background-image", whole.image === null ? "none" : whole.image]);
         } else {
-            out.push(["background-color", value]);
+            // `background: none` names no colour: the shorthand resets it.
+            out.push(["background-color", /^none$/i.test(String(value).trim()) ? "rgba(0, 0, 0, 0)" : value]);
         }
     } else if (/^border(-(top|right|bottom|left))?$/.test(prop)) {
         var which = prop === "border" ? names : [prop.slice(7)];
@@ -9202,11 +9781,6 @@ function _gStyle(raw) {
         }
         return got;
     };
-    var control = _G_CONTROL_BOX[tag];
-    // A checkbox or a radio is only its indicator, without a field's box.
-    if (tag === "input" && (m.inputType === "checkbox" || m.inputType === "radio")) {
-        control = undefined;
-    }
     // font-size first: every em below is of it.
     var parentSize = inherited ? inherited.fontSize : 16;
     var sizeText = value("font-size");
@@ -9253,10 +9827,6 @@ function _gStyle(raw) {
                 text = { "color": "rgb(0, 0, 0)", "font-family": "", "font-weight": "400", "font-style": "normal", "text-align": "start", "visibility": "visible", "white-space": "normal" }[name];
             }
         }
-        // A control's text colour is its own, not its parent's.
-        if (name === "color" && control && !won.color) {
-            text = "rgb(0, 0, 0)";
-        }
         s[name] = text;
     }
     s.color = s.color === undefined ? s["color"] : s.color;
@@ -9285,7 +9855,6 @@ function _gStyle(raw) {
         var px = known[widthText] !== undefined ? known[widthText] : (_gPx(widthText, null, s.fontSize, s.rootSize) || 0);
         s["border-" + side + "-px"] = style === "none" || style === "hidden" ? 0 : px;
     }
-    _gControlDefaults(s, won, control);
     var flexParent = inherited && (inherited.display === "flex" || inherited.display === "grid" || inherited.display === "inline-flex" || inherited.display === "inline-grid");
     if (flexParent && (s.display === "inline" || s.display === "inline-block")) {
         s.display = "block";
@@ -9338,26 +9907,6 @@ function _gQtColor(text) {
     }
     var v = m[1].split(/[\s,/]+/).map(Number);
     return Qt.rgba(v[0] / 255, v[1] / 255, v[2] / 255, v.length > 3 ? v[3] : 1);
-}
-
-function _gControlDefaults(s, won, control) {
-    if (!control) {
-        return;
-    }
-    var has = function(prop) {
-        return Boolean(won[prop]);
-    };
-    var sides = ["top", "right", "bottom", "left"];
-    for (var i = 0; i < 4; ++i) {
-        var side = sides[i];
-        if (!has("padding-" + side)) {
-            s["padding-" + side] = (i % 2 === 0 ? control.padV : control.padH) + "px";
-        }
-        if (!has("border-" + side + "-width") && !has("border-" + side + "-style")) {
-            s["border-" + side + "-px"] = control.border;
-            s["border-" + side + "-style"] = "outset";
-        }
-    }
 }
 
 function _gMetrics(s) {
@@ -9710,7 +10259,7 @@ function _gBaseline(raw, s) {
         return e.bt + e.pt + (text.lineCount - 1) * height
             + Math.floor((height - ascent - Math.round(metrics.descent)) / 2) + ascent;
     }
-    if (_G_CONTROL_BOX[s.tag] && raw.contentItem) {
+    if (_G_FRAMED[s.tag] && raw.contentItem) {
         var controlLine = _gLineHeight(s);
         if (controlLine === null) {
             controlLine = _gControlLine(s);
@@ -10700,8 +11249,7 @@ function _gPaintControl(raw, s, e) {
         return;
     }
     if (raw.background !== undefined && raw.background !== null && raw.font !== undefined) {
-        var control = _G_CONTROL_BOX[s.tag];
-        if (control) {
+        if (_G_FRAMED[s.tag]) {
             _gSet(raw, "topPadding", e.pt + e.bt);
             _gSet(raw, "bottomPadding", e.pb + e.bb);
             _gSet(raw, "leftPadding", e.pl + e.bl);
@@ -10710,6 +11258,7 @@ function _gPaintControl(raw, s, e) {
             _gSet(raw, "bottomInset", 0);
             _gSet(raw, "leftInset", 0);
             _gSet(raw, "rightInset", 0);
+            _gControlWidth(raw, s, e);
         }
         var inLayout = raw.parent && _gIsLayout(raw.parent);
         if (inLayout && (s.width !== "auto" || s.height !== "auto")) {
@@ -10725,23 +11274,90 @@ function _gPaintControl(raw, s, e) {
             _gPaintFontOnly(raw, s);
             if (line === null) {
                 line = _gControlLine(s);
+                // As `emit/controls.rs`: a fallback font's glyph makes the line taller.
+                if (/[^\u0000-\u00ff]/.test(String(raw.text))) {
+                    line = Math.max(line, raw.contentItem.implicitHeight);
+                }
             }
             var frame = e.pt + e.pb + e.bt + e.bb;
             _gSet(raw, "implicitHeight", line + frame);
         }
-        if (s.won["background-color"] && raw.background.color !== undefined) {
-            raw.background.color = _gQtColor(s["background-color"]);
-        }
-        if (s.won["border-top-color"] && raw.background.border !== undefined) {
-            raw.background.border.color = _gQtColor(s["border-top-color"]);
-        }
-        if (s.won["border-top-width"] && raw.background.border !== undefined) {
-            raw.background.border.width = e.bt;
-        }
-        if (s.won["border-top-left-radius"] && typeof raw.background.radius === "number") {
-            raw.background.radius = _gPx(s["border-top-left-radius"], raw.width, s.fontSize, s.rootSize) || 0;
+        // Native until the page sets a border or background, as with
+        // `appearance: auto`: the source's own line then stands for the UA's.
+        if (_gAuthorBox(s)) {
+            if (raw.background.color !== undefined) {
+                raw.background.color = _gQtColor(s["background-color"]);
+            }
+            if (raw.background.border !== undefined) {
+                raw.background.border.color = _gQtColor(s["border-top-color"]);
+                raw.background.border.width = e.bt;
+            }
+            if (typeof raw.background.radius === "number") {
+                raw.background.radius = _gPx(s["border-top-left-radius"], raw.width, s.fontSize, s.rootSize) || 0;
+            }
         }
     }
+}
+
+// The converter's `CONTROL_FONTS`: what `size` and `cols` count in this family.
+function _gControlFont(s) {
+    var table = _root && _root.eldurControlFonts ? JSON.parse(_root.eldurControlFonts) : [];
+    var family = _gFamily(s["font-family"]);
+    for (var i = 0; i < table.length; ++i) {
+        if (table[i].names.length === 0 || table[i].names.indexOf(family) !== -1) {
+            return s.fontSize < 14.5 ? table[i].small : table[i].large;
+        }
+    }
+    return null;
+}
+
+// A created control's width when nothing else says: as `emit/controls.rs` works
+// out a static one's.
+function _gControlWidth(raw, s, e) {
+    var frame = e.pl + e.pr + e.bl + e.br;
+    var font = _gControlFont(s);
+    var whole = Math.max(Math.round(s.fontSize), 1);
+    if (s.tag === "select") {
+        var metrics = _gMetrics(s);
+        var options = _vSelectModel(raw);
+        var widest = (options ? _vOptions(options) : []).reduce(function(w, o) {
+            return Math.max(w, metrics.advanceWidth(_vOptionText(o)));
+        }, 0);
+        // Its frame around the text is 22 with the arrow; 2 of that is the border.
+        raw.rightPadding = e.pr + e.br + 20;
+        _gSet(raw, "implicitWidth", Math.ceil(widest * s.fontSize / whole) + frame + 20);
+        return;
+    }
+    if (!font) {
+        return;
+    }
+    var attr = function(name, fallback) {
+        var n = parseInt(getAttribute(raw, name), 10);
+        return n > 0 ? n : fallback;
+    };
+    if (s.tag === "textarea") {
+        _gSet(raw, "implicitWidth", attr("cols", 20) * font[0] * s.fontSize + 15 + frame);
+        var line = _gLineHeight(s);
+        _gSet(raw, "implicitHeight", attr("rows", 2) * (line === null ? _gControlLine(s) : line) + e.pt + e.pb + e.bt + e.bb);
+    } else if (s.tag === "input" && !/^(checkbox|radio|range|submit|button|reset)$/.test(_meta(raw).inputType || "")) {
+        _gSet(raw, "implicitWidth", Math.round((attr("size", 20) * font[0] + font[1]) * s.fontSize) + frame);
+    }
+}
+
+// Whether a rule of the page, not the UA sheet, sets `prop`.
+function _gAuthor(s, prop) {
+    return Boolean(s.won[prop]) && s.won[prop].weight >= _V_ORIGIN_BAND;
+}
+
+function _gAuthorBox(s) {
+    var props = ["background-color", "background-image"];
+    var sides = ["top", "right", "bottom", "left"];
+    for (var i = 0; i < 4; ++i) {
+        props.push("border-" + sides[i] + "-width", "border-" + sides[i] + "-style", "border-" + sides[i] + "-color");
+    }
+    return props.some(function(prop) {
+        return _gAuthor(s, prop);
+    });
 }
 
 // A line of a control's text at "normal" line height, as a browser rounds it.
@@ -10752,7 +11368,7 @@ function _gControlLine(s) {
 
 function _gPaintFontOnly(raw, s) {
     raw.font = _gFontOf(s);
-    if (raw.palette && s.won["color"]) {
+    if (raw.palette) {
         raw.palette.buttonText = _gQtColor(s["color"]);
     }
 }
@@ -10949,6 +11565,10 @@ function _gApplyGaps(gaps, trailing) {
 }
 
 function _gColumnMargins(column, owner) {
+    // Between a table's parts is border-spacing, which `_tableLayout` sets.
+    if (_TABLE_PARTS[_meta(column).createdTag]) {
+        return;
+    }
     var kids = _gFlowKids(column);
     // A template's Text keeps a line for text that hasn't come; a box has none.
     for (var t = 0; t < kids.length; ++t) {
@@ -11285,6 +11905,8 @@ function _gSettle() {
         _gDirty = false;
         ++_gGen;
         _gMarginPass();
+        // Templates paint the states, but what a script reads comes from the rules.
+        _gWatchStates();
         _gRunning = false;
         return;
     }

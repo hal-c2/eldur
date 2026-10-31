@@ -1,0 +1,2 @@
+{"steps":[{"name":"change","click":"#change"}],
+ "watch":[{"sel":"#out"},{"sel":"#never-rendered"}]}

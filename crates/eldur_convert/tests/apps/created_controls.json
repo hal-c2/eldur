@@ -1,0 +1,69 @@
+{
+ "steps": [],
+ "watch": [
+  {
+   "sel": "button",
+   "props": [
+    "font-family",
+    "font-size",
+    "color",
+    "background-color",
+    "border-top-width",
+    "border-top-style",
+    "border-top-color",
+    "padding-top",
+    "padding-left",
+    "box-sizing",
+    "display"
+   ]
+  },
+  {
+   "sel": "input",
+   "props": [
+    "font-family",
+    "font-size",
+    "color",
+    "background-color",
+    "border-top-width",
+    "border-top-style",
+    "border-top-color",
+    "padding-top",
+    "padding-left",
+    "box-sizing",
+    "display"
+   ]
+  },
+  {
+   "sel": "textarea",
+   "props": [
+    "font-family",
+    "font-size",
+    "color",
+    "background-color",
+    "border-top-width",
+    "border-top-style",
+    "border-top-color",
+    "padding-top",
+    "padding-left",
+    "box-sizing",
+    "display"
+   ]
+  },
+  {
+   "sel": "select",
+   "props": [
+    "font-family",
+    "font-size",
+    "color",
+    "background-color",
+    "border-top-width",
+    "border-top-style",
+    "border-top-color",
+    "padding-top",
+    "padding-left",
+    "box-sizing",
+    "display"
+   ]
+  }
+ ]
+}

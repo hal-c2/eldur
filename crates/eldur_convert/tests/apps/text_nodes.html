@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>What a script reads of whitespace between elements</title>
+<style>
+body { font: 14px Arial, sans-serif; }
+.hidden { display: none; }
+</style></head>
+<body>
+<div id="blocks">
+  <div>one</div>
+  <div>two</div>
+
+  <p>three</p>
+  <h2>four</h2>
+</div>
+<ul id="list">
+  <li>a</li>
+  <li>b <b>bold</b></li>
+</ul>
+<table id="grid">
+  <thead><tr><th>H1</th><th>H2</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>c1</td>
+      <td>c2</td>
+    </tr>
+  </tbody>
+</table>
+<div id="with-hidden">
+  <div>shown</div>
+  <div class="hidden">gone</div>
+</div>
+<div id="tight"><div>x</div><div>y</div></div>
+<div id="mutated">
+  <div id="m1">first</div>
+  <div id="m2">second</div>
+</div>
+<div id="emptied">
+  <div>gone</div>
+  <div>too</div>
+</div>
+<div id="made"></div>
+<label id="field"><input id="typed" value="typed"></label>
+<pre id="out"></pre>
+<pre id="never-rendered"></pre>
+<button id="change">Change</button>
+<script>
+function read(id) {
+  var el = document.getElementById(id);
+  return [id, el.textContent, el.innerText];
+}
+function nodes(id) {
+  var el = document.getElementById(id);
+  return [id, el.childNodes.length, el.children.length, el.firstChild && el.firstChild.nodeType, el.firstChild && el.firstChild.nodeValue, el.lastChild && el.lastChild.nodeType];
+}
+document.getElementById("made").innerHTML = "\n  <div>m one</div>\n  <p><b>m two</b> <i>m three</i></p>\n";
+function report() {
+  document.getElementById("out").textContent = JSON.stringify([
+    read("blocks"), read("list"), read("grid"), read("tight"), read("mutated"), read("made"), read("field"), nodes("made"),
+    nodes("blocks"), nodes("list"), nodes("tight"), nodes("mutated")
+  ]);
+}
+report();
+document.getElementById("never-rendered").textContent = JSON.stringify([read("with-hidden"), nodes("with-hidden")]);
+document.getElementById("change").addEventListener("click", function () {
+  var host = document.getElementById("mutated");
+  host.removeChild(document.getElementById("m1"));
+  var added = document.createElement("div");
+  added.textContent = "added";
+  host.appendChild(added);
+  var emptied = document.getElementById("emptied");
+  while (emptied.firstChild) emptied.removeChild(emptied.firstChild);
+  added.id = String(emptied.childNodes.length);
+  report();
+});
+</script>
+</body>
+</html>

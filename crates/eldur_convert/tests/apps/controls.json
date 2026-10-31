@@ -1,0 +1,88 @@
+{
+ "steps": [],
+ "watch": [
+  {
+   "sel": "button",
+   "props": [
+    "font-family",
+    "font-size",
+    "font-weight",
+    "color",
+    "background-color",
+    "border-top-width",
+    "border-top-style",
+    "border-top-color",
+    "border-left-width",
+    "padding-top",
+    "padding-left",
+    "margin-top",
+    "margin-left",
+    "box-sizing",
+    "display"
+   ]
+  },
+  {
+   "sel": "input",
+   "props": [
+    "font-family",
+    "font-size",
+    "font-weight",
+    "color",
+    "background-color",
+    "border-top-width",
+    "border-top-style",
+    "border-top-color",
+    "border-left-width",
+    "padding-top",
+    "padding-left",
+    "margin-top",
+    "margin-left",
+    "box-sizing",
+    "display"
+   ]
+  },
+  {
+   "sel": "textarea",
+   "props": [
+    "font-family",
+    "font-size",
+    "font-weight",
+    "color",
+    "background-color",
+    "border-top-width",
+    "border-top-style",
+    "border-top-color",
+    "border-left-width",
+    "padding-top",
+    "padding-left",
+    "margin-top",
+    "margin-left",
+    "box-sizing",
+    "display"
+   ]
+  },
+  {
+   "sel": "select",
+   "props": [
+    "font-family",
+    "font-size",
+    "font-weight",
+    "color",
+    "background-color",
+    "border-top-width",
+    "border-top-style",
+    "border-top-color",
+    "border-left-width",
+    "padding-top",
+    "padding-left",
+    "margin-top",
+    "margin-left",
+    "box-sizing",
+    "display"
+   ]
+  },
+  {
+   "sel": "#end"
+  }
+ ]
+}

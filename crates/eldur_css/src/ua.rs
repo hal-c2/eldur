@@ -325,10 +325,31 @@ legend {
 input, button, select, textarea {
     display: inline-block;
     font-size: 13.3333px;
-    font-family: sans-serif;
+    font-family: Arial;
     font-weight: normal;
     font-style: normal;
     line-height: normal;
+    color: black;
+    text-align: start;
+}
+
+input {
+    border: 2px inset #767676;
+    padding: 1px 2px;
+    background-color: white;
+}
+
+textarea {
+    font-family: monospace;
+    border: 1px solid #767676;
+    padding: 2px;
+    background-color: white;
+}
+
+select {
+    box-sizing: border-box;
+    border: 1px solid #767676;
+    background-color: #efefef;
 }
 
 button,
@@ -337,15 +358,35 @@ input[type="submit" i],
 input[type="reset" i] {
     text-align: center;
     box-sizing: border-box;
+    border: 2px outset black;
+    padding: 1px 6px;
+    background-color: #efefef;
+}
+
+input[type="search" i] {
+    box-sizing: border-box;
 }
 
 input[type="checkbox" i],
 input[type="radio" i] {
     box-sizing: border-box;
-    margin: 3px;
+    border: 0 none;
+    padding: 0;
+    background-color: transparent;
+    margin: 3px 3px 3px 4px;
 }
 
-select,
+input[type="radio" i] {
+    margin: 3px 3px 0 5px;
+}
+
+input[type="range" i] {
+    border: 0 none;
+    padding: 0;
+    margin: 2px;
+    color: #9d968e;
+}
+
 input[type="color" i],
 progress,
 meter {

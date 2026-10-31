@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Focus and class attributes</title></head>
+<body>
+<form id="f"><button type="button" id="hide">hide</button></form>
+<div><button type="button" id="show">show</button></div>
+<div><button type="button" id="off">off</button></div>
+<div id="t" class="a">toggled</div>
+<div id="never">never</div>
+<script>
+const f = document.getElementById('f');
+document.getElementById('hide').addEventListener('click', () => { f.style.display = 'none'; });
+document.getElementById('show').addEventListener('click', (e) => { f.style.display = 'block'; e.currentTarget.blur(); });
+document.getElementById('off').addEventListener('click', (e) => {
+  document.getElementById('t').classList.toggle('a');
+  // Nothing to take away: the attribute must not appear.
+  document.getElementById('never').classList.remove('a');
+  e.currentTarget.blur();
+});
+</script>
+</body>
+</html>

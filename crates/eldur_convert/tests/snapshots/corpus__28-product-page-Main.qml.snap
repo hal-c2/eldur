@@ -824,7 +824,7 @@ ApplicationWindow {
                                             contentItem: Text {
                                                 text: colour.displayText
                                                 font: colour.font
-                                                color: "#1d2329"
+                                                color: "#000000"
                                                 verticalAlignment: Text.AlignVCenter
                                                 elide: Text.ElideRight
                                                 renderType: Text.NativeRendering
@@ -833,14 +833,19 @@ ApplicationWindow {
                                                 x: colour.width - width - 11
                                                 y: (colour.height - height) / 2
                                                 text: "▾"
-                                                color: "#1d2329"
+                                                color: "#000000"
                                                 font.pixelSize: 12
                                                 renderType: Text.NativeRendering
                                             }
-                                            implicitWidth: Math.ceil(contentItem.implicitWidth) + leftPadding + rightPadding - 2
+                                            implicitWidth: Math.ceil(model.reduce((w, o) => Math.max(w, colourMetrics.advanceWidth(o.text)), 0) * 1) + leftPadding + rightPadding - 2
                                             Accessible.name: "Colour"
                                             Layout.fillWidth: true
                                             Layout.topMargin: 4 - label.eldurCarry
+
+                                            FontMetrics {
+                                                id: colourMetrics
+                                                font: colour.font
+                                            }
                                         }
                                     }
 
@@ -906,7 +911,7 @@ ApplicationWindow {
                                             bottomPadding: 9
                                             leftPadding: 11
                                             implicitHeight: 40.5
-                                            implicitWidth: 221.13
+                                            implicitWidth: 215.8
                                             up.indicator.visible: false
                                             up.indicator.width: 0
                                             up.indicator.height: 0
@@ -916,7 +921,7 @@ ApplicationWindow {
                                             contentItem: TextInput {
                                                 text: qty.displayText
                                                 font: qty.font
-                                                color: "#1d2329"
+                                                color: "#000000"
                                                 verticalAlignment: Qt.AlignVCenter
                                                 readOnly: !qty.editable
                                                 validator: qty.validator

@@ -190,6 +190,7 @@ ApplicationWindow {
                                                 rightPadding: 22
                                                 bottomPadding: 0
                                                 leftPadding: 22
+                                                implicitHeight: 40
                                                 contentItem: Text {
                                                     text: buttonControl.text
                                                     font: buttonControl.font
@@ -198,6 +199,7 @@ ApplicationWindow {
                                                     verticalAlignment: Text.AlignVCenter
                                                     renderType: Text.NativeRendering
                                                 }
+                                                implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0133333) + leftPadding + rightPadding
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.preferredHeight: 40
@@ -217,6 +219,7 @@ ApplicationWindow {
                                                 rightPadding: 22
                                                 bottomPadding: 0
                                                 leftPadding: 22
+                                                implicitHeight: 40
                                                 contentItem: Text {
                                                     text: buttonControl2.text
                                                     font: buttonControl2.font
@@ -225,6 +228,7 @@ ApplicationWindow {
                                                     verticalAlignment: Text.AlignVCenter
                                                     renderType: Text.NativeRendering
                                                 }
+                                                implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0133333) + leftPadding + rightPadding
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.preferredHeight: 40
@@ -622,10 +626,11 @@ ApplicationWindow {
                                                 }
                                             }
                                         }
-                                        topPadding: 2
-                                        rightPadding: 2
-                                        bottomPadding: 2
-                                        leftPadding: 2
+                                        topPadding: 3
+                                        rightPadding: 8
+                                        bottomPadding: 3
+                                        leftPadding: 8
+                                        implicitHeight: 50
                                         contentItem: Text {
                                             text: buttonControl3.text
                                             font: buttonControl3.font
@@ -1057,10 +1062,11 @@ ApplicationWindow {
                                             border.width: 2
                                             border.color: "#2563eb"
                                         }
-                                        topPadding: 2
-                                        rightPadding: 2
-                                        bottomPadding: 2
-                                        leftPadding: 2
+                                        topPadding: 3
+                                        rightPadding: 8
+                                        bottomPadding: 3
+                                        leftPadding: 8
+                                        implicitHeight: 50
                                         contentItem: Text {
                                             text: buttonControl4.text
                                             font: buttonControl4.font
@@ -1533,10 +1539,11 @@ ApplicationWindow {
                                                 }
                                             }
                                         }
-                                        topPadding: 2
-                                        rightPadding: 2
-                                        bottomPadding: 2
-                                        leftPadding: 2
+                                        topPadding: 3
+                                        rightPadding: 8
+                                        bottomPadding: 3
+                                        leftPadding: 8
+                                        implicitHeight: 50
                                         contentItem: Text {
                                             text: buttonControl5.text
                                             font: buttonControl5.font

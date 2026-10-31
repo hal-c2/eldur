@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Tables a script fills or builds</title>
+<style>
+body { margin: 8px; font: 14px Arial, sans-serif; }
+table { margin-bottom: 12px; }
+td, th { padding: 3px 6px; border: 1px solid #999; text-align: left; }
+#spaced { border-spacing: 6px 4px; }
+#tight { border-collapse: collapse; width: 400px; }
+</style></head>
+<body>
+<table id="appended"><thead><tr><th>Id</th><th>Name</th></tr></thead><tbody id="a-body"></tbody></table>
+<table id="spaced"><thead><tr><td id="s0">A</td><td id="s1">B</td></tr></thead><tbody id="s-body"></tbody></table>
+<table id="tight"><thead><tr><th>Left</th><th>Right</th></tr></thead><tbody id="t-body"></tbody></table>
+<div id="host"></div>
+<button id="grow">Grow</button>
+<button id="shrink">Shrink</button>
+<script>
+function row(body, cells, at) {
+  var tr = document.createElement("tr");
+  cells.forEach(function (c) {
+    var td = document.createElement("td");
+    td.textContent = c.text;
+    if (c.colspan) td.colSpan = c.colspan;
+    if (c.rowspan) td.rowSpan = c.rowspan;
+    if (c.id) td.id = c.id;
+    tr.appendChild(td);
+  });
+  if (at === undefined) body.appendChild(tr);
+  else body.insertBefore(tr, body.children[at]);
+  return tr;
+}
+var a = document.getElementById("a-body");
+row(a, [{ text: "1" }, { text: "A rather long name here" }]);
+row(a, [{ text: "2" }, { text: "Bo" }]);
+var s = document.getElementById("s-body");
+row(s, [{ text: "Wider than the first", id: "s2" }, { text: "C", id: "s3" }]);
+row(document.getElementById("t-body"), [{ text: "x" }, { text: "a longer cell" }]);
+var built = document.createElement("table");
+built.id = "built";
+built.style.borderSpacing = "3px";
+var body = document.createElement("tbody");
+built.appendChild(body);
+row(body, [{ text: "spans two", colspan: 2 }, { text: "down", rowspan: 2 }]);
+row(body, [{ text: "one" }, { text: "another one" }]);
+document.getElementById("host").appendChild(built);
+document.getElementById("grow").addEventListener("click", function () {
+  row(a, [{ text: "0" }, { text: "An even longer name than the long one" }], 0);
+});
+document.getElementById("shrink").addEventListener("click", function () {
+  a.removeChild(a.children[0]);
+  a.removeChild(a.children[0]);
+});
+</script>
+</body>
+</html>

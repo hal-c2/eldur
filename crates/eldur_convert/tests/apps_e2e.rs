@@ -28,32 +28,37 @@ const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 /// between the two text engines.
 const GEOMETRY_TOLERANCE: f64 = 2.0;
 
-const WS: &str = "text: inter-element whitespace between blocks is not kept, so textContent runs them together (dom-api.md §12)";
-const UA: &str = "static controls lack the UA 2px border and 13.33px Arial; adding them changes script-less pages";
-const UAFOLLOW: &str = "follows from static controls being smaller than Chromium's";
-const UAPAINT: &str = "computed paint of a static control: its UA background and border colours are not in the cascade";
+const COMPACT: &str = "the button sits 2px left of Chromium's; cause not isolated";
+const ROWS: &str =
+    "table rows are whole pixels: 33 against Chromium's 32.59, adding up down the table";
+const CONTROLROW: &str = "13.4px lower than Chromium from the fields above; cause not isolated";
 const INLINE: &str =
     "a checkbox beside inline text is block-level: no inline replaced elements (boxes/mod.rs)";
+const STRUT: &str = "a control alone in a line box sits on the line's baseline, here at its top: no inline replaced elements (boxes/mod.rs)";
 const FONT: &str = "Helvetica: Qt's fontconfig match has line height 23 where Chromium's has 18";
 const FONTFOLLOW: &str = "follows from the Helvetica line height and width difference";
-const TABLE: &str = "created rows do not take part in the table's auto column sizing";
-const CLASS: &str = "classList.remove on an element with no class attribute leaves no attribute, Chromium an empty one";
-const HOVER: &str = "li:hover under a list that starts display:none gets no hover tracking";
-const FOCUS: &str = "hiding the form leaves focus on its hidden button";
+const COLLAPSE: &str =
+    "the column solver counts a collapsed cell's whole border and columns are whole pixels";
+const AFTER: &str =
+    "a ::after that depends on a class a script sets is not generated, so its column does not grow";
+const NEVER: &str =
+    "a display:none element no script names has no item: it is neither text nor a child node";
+const NEVER_SCRIPT: &str =
+    "a script in the body makes no item, so its source is not in the body's textContent";
+const CREATED_P: &str =
+    "a paragraph's bottom margin, made by innerHTML, does not collapse through its empty parent";
+const NO_ROW: &str = "a static table's row has no QML object, so a query does not find it";
 
 /// `(page, what differs, why)`. `what` starts a difference's name, as printed by a
 /// failing test, `<step> <selector>[<row>] <field>:`; `*` stands for any text.
 const KNOWN: &[(&str, &str, &str)] = &[
-    ("tabs", "* .panel[*] text:", WS),
-    ("theme", "* #compact[*] x:", UA),
-    ("theme", "* .card[*] text:", WS),
-    ("theme", "* .top[*] text:", WS),
-    ("theme", "* body[*] text:", WS),
+    ("controls", "* *[*] y:", STRUT),
+    ("created_controls", "* *[*] y:", STRUT),
+    ("theme", "* #compact[*] x:", COMPACT),
     ("cards", "* #cart[*] height:", FONT),
     ("cards", "* .buy[*] y:", FONTFOLLOW),
     ("cards", "* .card[*] y:", FONTFOLLOW),
     ("cards", "* .card[*] height:", FONTFOLLOW),
-    ("cards", "* .card[*] text:", WS),
     ("cards", "* h3[*] y:", FONTFOLLOW),
     ("cards", "* h3[*] height:", FONT),
     ("cards", "* .desc[*] y:", FONTFOLLOW),
@@ -63,43 +68,33 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("cards", "* .price[*] width:", FONT),
     ("cards", "* #cart[*] x:", FONT),
     ("cards", "* #cart[*] width:", FONT),
-    ("accordion", "* details[*] text:", WS),
-    ("table", "* #filter[*] width:", UA),
-    ("table", "* #filter[*] height:", UA),
-    ("table", "* #people[*] y:", UAFOLLOW),
-    ("table", "* #people[*] height:", UAFOLLOW),
-    ("table", "* #people[*] text:", WS),
-    ("table", "* #summary[*] y:", UAFOLLOW),
-    ("table", "* td[*] y:", UAFOLLOW),
-    ("table", "* td[*] width:", TABLE),
-    ("table", "* td[*] x:", TABLE),
-    ("table", "* tr[*] y:", UAFOLLOW),
-    ("table", "* tr[*] width:", TABLE),
-    ("table", "* th[*] y:", UAFOLLOW),
-    ("table", "* th[*] width:", TABLE),
-    ("table", "* th[*] x:", TABLE),
-    ("table", "* th[*] class:", CLASS),
-    ("dropdown", "* #list[*] text:", WS),
-    ("dropdown", "* #m-settings[*] background-color:", HOVER),
-    ("dropdown", "* #m-settings[*] color:", HOVER),
-    ("modal", "* #overlay[*] text:", WS),
-    ("modal", "* .dialog[*] text:", WS),
-    ("form", "* #email[*] border-top-color:", UAPAINT),
-    ("form", "* #go[*] y:", UAFOLLOW),
-    ("form", "* #go[*] width:", UA),
-    ("form", "* #go[*] height:", UA),
-    ("form", "* #name[*] background-color:", UAPAINT),
-    ("form", "* #name[*] border-top-color:", UAPAINT),
+    ("text_nodes", "* #never-rendered[*] text:", NEVER),
+    ("text_nodes", "* #never-rendered[*] y:", CREATED_P),
+    ("text_nodes", "* #out[*] y:", CREATED_P),
+    ("theme", "* body[*] text:", NEVER_SCRIPT),
+    ("created_tables", "* tr count:", NO_ROW),
+    ("created_tables", "* td[*] width:", COLLAPSE),
+    ("created_tables", "* th[3] width:", COLLAPSE),
+    ("table", "* th[1] x:", COLLAPSE),
+    ("table", "* tbody td[*] x:", COLLAPSE),
+    ("table", "sort age th[*] x:", AFTER),
+    ("table", "sort age th[*] width:", AFTER),
+    ("table", "sort age tbody td[*] x:", AFTER),
+    ("table", "sort age tbody td[*] width:", AFTER),
+    ("table", "filter th[*] x:", AFTER),
+    ("table", "filter th[*] width:", AFTER),
+    ("table", "filter tbody td[*] x:", AFTER),
+    ("table", "filter tbody td[*] width:", AFTER),
+    ("table", "* #people[*] height:", ROWS),
+    ("table", "* #summary[*] y:", ROWS),
+    ("table", "* td[*] y:", ROWS),
+    ("table", "* tr[*] y:", ROWS),
+    ("form", "* #go[*] y:", CONTROLROW),
     ("form", "* #signup[*] height:", INLINE),
-    ("form", "* #signup[*] text:", WS),
     ("form", "* #terms[*] y:", INLINE),
-    ("form", "* .field[*] text:", WS),
     ("form", "* .field[*] height:", INLINE),
-    ("form", "* .error[*] y:", UAFOLLOW),
-    ("form", "* (focus):", FOCUS),
-    ("form", "* #done[*] y:", UAFOLLOW),
-    ("todo", "* .app[*] text:", WS),
-    ("todo", "* li.item[*] text:", WS),
+    ("form", "* .error[*] y:", CONTROLROW),
+    ("form", "* #done[*] y:", CONTROLROW),
 ];
 
 const TEST: &str = r##"
@@ -370,6 +365,21 @@ fn page(name: &str) {
 }
 
 #[test]
+fn controls() {
+    page("controls");
+}
+
+#[test]
+fn created_tables() {
+    page("created_tables");
+}
+
+#[test]
+fn created_controls() {
+    page("created_controls");
+}
+
+#[test]
 fn tabs() {
     page("tabs");
 }
@@ -377,6 +387,16 @@ fn tabs() {
 #[test]
 fn accordion() {
     page("accordion");
+}
+
+#[test]
+fn hidden_focus() {
+    page("hidden_focus");
+}
+
+#[test]
+fn text_nodes() {
+    page("text_nodes");
 }
 
 #[test]

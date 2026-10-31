@@ -22,8 +22,10 @@ ApplicationWindow {
         const min = new Array(n).fill(0)
         const max = new Array(n).fill(0)
         const spanning = []
-        for (let i = 0; i < grid.children.length; ++i) {
-            const cell = grid.children[i]
+        // Rows a script added are not in the grid; the runtime says what their cells need.
+        const cells = Array.from(grid.children).concat(grid.eldurCreatedCells || [])
+        for (let i = 0; i < cells.length; ++i) {
+            const cell = cells[i]
             const slot = cell.tableSlot
             if (!slot)
                 continue
@@ -853,7 +855,7 @@ ApplicationWindow {
                                         // <input class="search">
                                         TextField {
                                             id: inputControl
-                                            color: "#111827"
+                                            color: "#000000"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
                                             verticalAlignment: TextInput.AlignVCenter
@@ -868,6 +870,7 @@ ApplicationWindow {
                                             rightPadding: 13
                                             bottomPadding: 1
                                             leftPadding: 13
+                                            implicitHeight: 36
                                             implicitWidth: 211.85
                                             placeholderText: "Search orders"
                                             placeholderTextColor: "#757575"

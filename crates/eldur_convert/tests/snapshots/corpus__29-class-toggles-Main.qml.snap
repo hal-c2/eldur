@@ -47,6 +47,8 @@ ApplicationWindow {
             // <body>
             Item {
                 property string eldurTag: "body"
+                property string eldurWs: "\n"
+                property string eldurWsEnd: "\n\n\n"
 
                 implicitWidth: bodyContent.implicitWidth + 64
                 implicitHeight: bodyContent.implicitHeight + 64
@@ -66,6 +68,7 @@ ApplicationWindow {
                     Text {
                         id: h1
                         property string eldurTag: "h1"
+                        property string eldurWs: "\n"
                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                         text: "Class toggles"
@@ -84,6 +87,8 @@ ApplicationWindow {
                         id: toolbar
                         property string eldurTag: "div"
                         property string eldurClasses: "toolbar"
+                        property string eldurWs: "\n\n"
+                        property string eldurWsEnd: "\n"
                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h1.eldurCarry
 
                         spacing: 0
@@ -95,6 +100,7 @@ ApplicationWindow {
                         Button {
                             id: compact
                             property string eldurTag: "button"
+                            property string eldurWs: "\n  "
 
                             text: "Compact"
                             palette.buttonText: "#1f2430"
@@ -111,6 +117,7 @@ ApplicationWindow {
                             rightPadding: 15
                             bottomPadding: 7
                             leftPadding: 15
+                            implicitHeight: 32
                             contentItem: Text {
                                 text: compact.text
                                 font: compact.font
@@ -133,6 +140,7 @@ ApplicationWindow {
                         Button {
                             id: ok
                             property string eldurTag: "button"
+                            property string eldurWs: "\n  "
 
                             text: "OK"
                             palette.buttonText: "#1f2430"
@@ -149,6 +157,7 @@ ApplicationWindow {
                             rightPadding: 15
                             bottomPadding: 7
                             leftPadding: 15
+                            implicitHeight: 32
                             contentItem: Text {
                                 text: ok.text
                                 font: ok.font
@@ -172,6 +181,7 @@ ApplicationWindow {
                         Button {
                             id: warn
                             property string eldurTag: "button"
+                            property string eldurWs: "\n  "
 
                             text: "Warn"
                             palette.buttonText: "#1f2430"
@@ -188,6 +198,7 @@ ApplicationWindow {
                             rightPadding: 15
                             bottomPadding: 7
                             leftPadding: 15
+                            implicitHeight: 32
                             contentItem: Text {
                                 text: warn.text
                                 font: warn.font
@@ -211,6 +222,7 @@ ApplicationWindow {
                         Button {
                             id: more
                             property string eldurTag: "button"
+                            property string eldurWs: "\n  "
 
                             text: "More"
                             palette.buttonText: "#1f2430"
@@ -227,6 +239,7 @@ ApplicationWindow {
                             rightPadding: 15
                             bottomPadding: 7
                             leftPadding: 15
+                            implicitHeight: 32
                             contentItem: Text {
                                 text: more.text
                                 font: more.font
@@ -256,6 +269,8 @@ ApplicationWindow {
                         id: tabs
                         property string eldurTag: "div"
                         property string eldurClasses: "tabs"
+                        property string eldurWs: "\n\n"
+                        property string eldurWsEnd: "\n"
                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : toolbar.eldurCarry
 
                         spacing: 0
@@ -269,6 +284,7 @@ ApplicationWindow {
                             property string eldurTag: "div"
                             property string eldurClasses: "tab"
                             property bool cls_active: false
+                            property string eldurWs: "\n  "
 
                             color: tab1.cls_active ? "#3b5bdb" : "#e4e7ef"
                             implicitWidth: tab1Text.implicitWidth + 36
@@ -308,6 +324,7 @@ ApplicationWindow {
                             property string eldurTag: "div"
                             property string eldurClasses: "tab"
                             property bool cls_active: false
+                            property string eldurWs: "\n  "
 
                             color: tab2.cls_active ? "#3b5bdb" : "#e4e7ef"
                             implicitWidth: tab2Text.implicitWidth + 36
@@ -347,6 +364,7 @@ ApplicationWindow {
                             property string eldurTag: "div"
                             property string eldurClasses: "tab"
                             property bool cls_active: false
+                            property string eldurWs: "\n  "
 
                             color: tab3.cls_active ? "#3b5bdb" : "#e4e7ef"
                             implicitWidth: tab3Text.implicitWidth + 36
@@ -391,6 +409,8 @@ ApplicationWindow {
                         property string eldurTag: "div"
                         property string eldurClasses: "list"
                         property bool cls_compact: false
+                        property string eldurWs: "\n\n"
+                        property string eldurWsEnd: "\n"
                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin - (item3.eldurCarry)) - Layout.topMargin + item3.eldurCarry + 0.000001) : tabs.eldurCarry
 
                         color: "#ffffff"
@@ -419,6 +439,7 @@ ApplicationWindow {
                                 property string eldurTag: "div"
                                 property string eldurClasses: "item"
                                 property bool cls_done: false
+                                property string eldurWs: "\n  "
                                 property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                                 color: item1Hover.hovered ? "#eef2ff" : "#00000000"
@@ -471,6 +492,7 @@ ApplicationWindow {
                                 property string eldurTag: "div"
                                 property string eldurClasses: "item"
                                 property bool cls_done: false
+                                property string eldurWs: "\n  "
                                 property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : item1.eldurCarry
 
                                 color: item2Hover.hovered ? "#eef2ff" : "#00000000"
@@ -524,6 +546,7 @@ ApplicationWindow {
                                 property string eldurTag: "div"
                                 property string eldurClasses: "item"
                                 property bool cls_done: false
+                                property string eldurWs: "\n  "
                                 property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : item2.eldurCarry
 
                                 color: item3Hover.hovered ? "#eef2ff" : "#00000000"
@@ -580,6 +603,7 @@ ApplicationWindow {
                         property string eldurClasses: "status"
                         property bool cls_ok: false
                         property bool cls_warn: false
+                        property string eldurWs: "\n\n"
                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : list.eldurCarry
 
                         color: "#ffffff"
@@ -614,6 +638,7 @@ ApplicationWindow {
                         property string eldurTag: "div"
                         property string eldurClasses: "panel d-none"
                         property bool cls_d_none: true
+                        property string eldurWs: "\n\n"
                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : status.eldurCarry
 
                         color: "#fff3bf"

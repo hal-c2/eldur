@@ -34,6 +34,95 @@ pub(crate) fn class_prop(class: &str) -> String {
 
 /// Puts `eldurTag`, `eldurClasses` and, for an element with an HTML id,
 /// `objectName` on the object of `node`, ahead of its other members.
+/// Whitespace-only text between elements makes no item, but scripts read it
+/// (`textContent`, `childNodes`): an element keeps what comes before it, and
+/// what comes after its last child. See `docs/spec/dom-api.md`.
+pub(crate) fn declare_whitespace(obj: &mut Object, doc: &Document, node: NodeId) {
+    let mut before = whitespace_back(doc, doc.prev_siblings(node));
+    let mut up = node;
+    // First in a row that has no item: what is before the row counts too.
+    while before.is_empty_run()
+        && let Some(parent) = doc.parent_element(up)
+        && has_no_item(doc, parent)
+    {
+        let more = whitespace_back(doc, doc.prev_siblings(parent));
+        before.text.insert_str(0, &more.text);
+        before.stopped = more.stopped;
+        up = parent;
+    }
+    if !before.text.is_empty() {
+        obj.members
+            .push(decl("string", "eldurWs", Value::String(before.text)));
+    }
+    let end = whitespace_back(doc, doc.children(node).rev());
+    if !end.text.is_empty() && doc.element_children(node).next().is_some() {
+        obj.members
+            .push(decl("string", "eldurWsEnd", Value::String(end.text)));
+    }
+}
+
+struct WhitespaceRun {
+    text: String,
+    /// An item or real text ended it, so nothing further back joins it.
+    stopped: bool,
+}
+
+impl WhitespaceRun {
+    fn is_empty_run(&self) -> bool {
+        !self.stopped
+    }
+}
+
+/// The whitespace in `nodes`, nearest first, up to an element with an item or
+/// real text; an element without an item is looked through.
+fn whitespace_back(doc: &Document, nodes: impl Iterator<Item = NodeId>) -> WhitespaceRun {
+    let mut text = String::new();
+    for node in nodes {
+        if let Some(t) = doc.text(node) {
+            if !t.trim().is_empty() {
+                return WhitespaceRun {
+                    text,
+                    stopped: true,
+                };
+            }
+            text.insert_str(0, t);
+        } else if doc.element(node).is_some() {
+            if !has_no_item(doc, node) {
+                return WhitespaceRun {
+                    text,
+                    stopped: true,
+                };
+            }
+            let inner = whitespace_back(doc, doc.children(node).rev());
+            text.insert_str(0, &inner.text);
+            if inner.stopped {
+                return WhitespaceRun {
+                    text,
+                    stopped: true,
+                };
+            }
+        }
+    }
+    WhitespaceRun {
+        text,
+        stopped: false,
+    }
+}
+
+/// A table's rows and the groups around them are cells of one grid; a script,
+/// style and the like make no box at all.
+fn has_no_item(doc: &Document, node: NodeId) -> bool {
+    let Some(element) = doc.element(node) else {
+        return false;
+    };
+    match element.local_name() {
+        "tr" => true,
+        "thead" | "tbody" | "tfoot" => doc.element_children(node).next().is_some(),
+        "script" | "style" | "link" | "meta" | "template" | "title" => true,
+        _ => false,
+    }
+}
+
 pub(crate) fn tag(obj: &mut Object, doc: &Document, node: NodeId) {
     let Some(element) = doc.element(node) else {
         return;
@@ -245,6 +334,15 @@ pub(crate) fn styled_classes_decl(classes: &BTreeSet<String>) -> Member {
 /// page's rules, because analysis cannot name them all.
 pub(crate) fn open_elements_decl() -> Member {
     decl("bool", "eldurOpenElements", Value::Bool(true))
+}
+
+/// `root.eldurControlFonts`: what sizes a created control, the converter's table.
+pub(crate) fn control_fonts_decl() -> Member {
+    decl(
+        "string",
+        "eldurControlFonts",
+        Value::string(crate::emit::control_fonts_json()),
+    )
 }
 
 /// `root.eldurLiteralClasses`: the classes a script names outright, which the

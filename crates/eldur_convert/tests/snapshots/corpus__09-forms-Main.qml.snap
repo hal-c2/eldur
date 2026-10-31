@@ -201,7 +201,7 @@ ApplicationWindow {
                                         bottomPadding: 10
                                         leftPadding: 13
                                         implicitHeight: 41
-                                        implicitWidth: 225.13
+                                        implicitWidth: 219.8
                                         placeholderText: "Ada Lovelace"
                                         placeholderTextColor: "#757575"
                                         Accessible.name: "Full name"
@@ -282,7 +282,7 @@ ApplicationWindow {
                                         bottomPadding: 10
                                         leftPadding: 13
                                         implicitHeight: 41
-                                        implicitWidth: 225.13
+                                        implicitWidth: 219.8
                                         placeholderText: "you@example.com"
                                         placeholderTextColor: "#757575"
                                         inputMethodHints: Qt.ImhEmailCharactersOnly
@@ -364,7 +364,7 @@ ApplicationWindow {
                                         bottomPadding: 10
                                         leftPadding: 13
                                         implicitHeight: 41
-                                        implicitWidth: 225.13
+                                        implicitWidth: 219.8
                                         placeholderText: "At least 8 characters"
                                         placeholderTextColor: "#757575"
                                         echoMode: TextInput.Password
@@ -464,11 +464,16 @@ ApplicationWindow {
                                             font.pixelSize: 12
                                             renderType: Text.NativeRendering
                                         }
-                                        implicitWidth: Math.ceil(contentItem.implicitWidth) + leftPadding + rightPadding - 2
+                                        implicitWidth: Math.ceil(model.reduce((w, o) => Math.max(w, teamMetrics.advanceWidth(o.text)), 0) * 1) + leftPadding + rightPadding - 2
                                         Accessible.name: "Team size"
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
                                         Layout.topMargin: 5 - fieldLabel4.eldurCarry
+
+                                        FontMetrics {
+                                            id: teamMetrics
+                                            font: team.font
+                                        }
                                     }
 
                                     Item {
@@ -514,7 +519,7 @@ ApplicationWindow {
                                     // <textarea id="bio" class="input">
                                     ScrollView {
                                         id: bio
-                                        implicitWidth: 191
+                                        implicitWidth: 215.6
                                         implicitHeight: 83
                                         Layout.minimumHeight: 76
                                         Layout.preferredWidth: parent.width
@@ -932,7 +937,7 @@ ApplicationWindow {
                                             bottomPadding: 10
                                             leftPadding: 13
                                             implicitHeight: 41
-                                            implicitWidth: 225.13
+                                            implicitWidth: 219.8
                                             up.indicator.visible: false
                                             up.indicator.width: 0
                                             up.indicator.height: 0
@@ -1038,7 +1043,9 @@ ApplicationWindow {
                                             }
                                             Accessible.name: "Notification volume"
                                             Layout.fillWidth: true
-                                            Layout.topMargin: 5 - fieldLabel7.eldurCarry
+                                            Layout.leftMargin: 2
+                                            Layout.rightMargin: 2
+                                            Layout.topMargin: 7 - fieldLabel7.eldurCarry
                                         }
 
                                         // <p class="hint">
@@ -1055,7 +1062,7 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
-                                            Layout.topMargin: 4 - volume.eldurCarry
+                                            Layout.topMargin: 6 - volume.eldurCarry
                                             Layout.preferredHeight: implicitHeight
                                             renderType: Text.NativeRendering
                                         }

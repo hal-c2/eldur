@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Controls a script creates</title>
+<style>
+body { margin: 8px; font: 20px serif; color: #800; }
+</style></head>
+<body>
+<div id="host"></div>
+<script>
+// Named through a variable, so analysis cannot name them and the page is open.
+var make = [["button","b",null,"Go now"],["input","t"],["input","num","number"],["input","check","checkbox"],
+  ["input","radio","radio"],["input","sub","submit"],["textarea","area"],["select","sel"]];
+var host = document.getElementById("host");
+make.forEach(function (m) {
+  var row = document.createElement("div");
+  var e = document.createElement(m[0]);
+  e.id = m[1];
+  if (m[2]) e.type = m[2];
+  if (m[3]) e.textContent = m[3];
+  if (m[0] === "select") {
+    ["Short", "A much longer option"].forEach(function (s) {
+      var o = document.createElement("option");
+      o.textContent = s;
+      e.appendChild(o);
+    });
+  }
+  row.appendChild(e);
+  host.appendChild(row);
+});
+</script>
+</body>
+</html>

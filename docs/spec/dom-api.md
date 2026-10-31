@@ -190,9 +190,9 @@ every queried element without element children a candidate.
   no height while empty, as an empty CSS box takes none.
 - An empty flex container places its spacers at run time (`eldurPack`), and an
   empty grid gives each item its cell and column size (`eldurTracks`).
-- A table with no rows stacks its sections, and created rows lay out their
-  cells in a `RowLayout`. Column widths come from each cell's own `width`, not
-  from the table's column solver.
+- A table with no rows stacks its sections. Created rows place their cells by
+  coordinates, so a cell can span rows, and share the table's column solver
+  (`docs/spec/layout.md`, §8).
 - Elsewhere the runtime makes the column when a block arrives (`_appendTarget`).
 
 Reading geometry (`getBoundingClientRect`, `offset*`, `client*`, `scroll*`,
@@ -391,7 +391,8 @@ Why this and not one QML object per element, or splitting the block whenever a s
 
 **Known gaps.**
 - A run with an atomic inline (`<img>`, `<button>`, inline-block) stays a `Flow`, and its inline elements have no nodes; the converter's "no QML object of its own" warning stays for them.
-- Whitespace-only text between blocks is not a node, and a real element's `childNodes` adds only its text runs to its element children, so counts differ when whitespace is all there is.
+- Whitespace-only text between elements makes no item. The converter records it on the element after it (`eldurWs`) and on the parent for what ends it (`eldurWsEnd`), so `textContent` and `childNodes` read it, markup a script gives keeps it too, and a removal leaves it behind. A `display:none` element no script names has no item, so it is neither text nor a child, and a `<script>` in the body adds no text.
+- `innerText` follows the standard's rendered text collection by tag (`_itCollect`): a block by its tag, not a computed `display`. Before the window shows, `visible` says nothing, so what a static `visibility` or collapse hides is read as shown then.
 - On a page whose elements analysis can all name (§13) the table holds no `var()`; nested rules and `@layer` order come from the richer table only there too. `:is()` specificity takes the maximum for every match. `text-transform` is not applied to a rewritten run. `display: block` on an inline node paints it inline.
 - A change to a real element's attribute, other than a class, does not recompute inline nodes.
 - A `Text` shown as its one element's style goes back to the block's on first write, using what the converter computed; a later class change on the block is then read live.
@@ -456,11 +457,17 @@ container filled with inline-level children (`_gFillsLine`).
 - Inline-level created elements directly under a static parent with static
   siblings, or under `body`, do not form lines with them.
 - Normal line height comes from Qt's metrics: 17 at 16px where Chromium has 18.
-- Fonts are whole pixels, so control text is 13px against Chromium's 13.3333px
-  and `getComputedStyle` reports `sans-serif` where Chromium says `Arial`.
-- `<select>` is as wide as its current option, not its widest, within Qt's
-  hinted glyph widths. `<input>` width is measured for Arial. `<textarea>` and
-  `type=number` default sizes still differ from Chromium.
+- `QFont` loads whole pixels whatever it is asked (9.75pt, 10pt and 10.2pt all
+  measure as pixelSize 13; `Qt.font({pixelSize: 13.5})` is 13). Control text is
+  therefore painted at 13px against Chromium's 13.3333px. `getComputedStyle`
+  reports the UA sheet's 13.3333px and `Arial`, and a control's box is scaled up
+  to the width Chromium's text takes.
+- Controls' defaults live in the UA sheet (`eldur_css/src/ua.rs`) and their
+  sizing per family in `CONTROL_FONTS` (`emit/controls.rs`), handed to the
+  runtime as `root.eldurControlFonts`. The native line a control paints while
+  the page leaves its border and background to the UA is still written twice:
+  `NATIVE_BORDER` in Rust, the created sources in the runtime.
+- A SpinBox has no empty state: a `type=number` nobody wrote reads `""` and shows 0.
 
 ## 14. Realistic pages
 
@@ -493,5 +500,4 @@ Known gaps these pages show:
 
 - Rows created in a `<tbody>` do not share the table's auto column sizes: they
   sort and filter, but their cells do not line up with the header.
-- `:hover` under a list that starts `display: none` has no hover tracking.
 - Hiding a form does not move focus off the hidden control.

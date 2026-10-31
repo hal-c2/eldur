@@ -204,6 +204,7 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
                     .collect();
                 decls.push(metadata::literal_classes_decl(&literal));
                 decls.push(metadata::open_elements_decl());
+                decls.push(metadata::control_fonts_decl());
             } else if inline_rules {
                 decls.push(metadata::inline_rules_decl(&eldur_css::inline_rules(
                     &sheets,
