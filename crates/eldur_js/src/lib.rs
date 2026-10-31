@@ -164,9 +164,18 @@ pub struct Analysis {
     /// template can be written for it and the runtime resolves it from the
     /// page's rules.
     pub open_elements: bool,
+    /// Some script asks `getComputedStyle`, which is answered from the cascade.
+    pub reads_computed_style: bool,
 }
 
 impl Analysis {
+    /// The runtime has to compute some element's style itself: to read it back,
+    /// or to place what a script creates among the page's margins.
+    #[must_use]
+    pub fn needs_cascade(&self) -> bool {
+        self.open_elements || self.reads_computed_style || !self.created.is_empty()
+    }
+
     /// Every query becomes live: the converter found a mutation the script
     /// alone does not show.
     pub fn mark_all_queries_live(&mut self) {

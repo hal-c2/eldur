@@ -1,0 +1,5 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[css]: index.html:21: a created <div> has a computed class; classes not written literally are not styled (dynamic-context)

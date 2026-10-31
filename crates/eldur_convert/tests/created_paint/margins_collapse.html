@@ -1,0 +1,47 @@
+<!doctype html><html><head><style>
+body{font:16px/20px sans-serif}
+.m{height:20px;margin:12px 0 30px;background:#def}
+.big{height:20px;margin:40px 0 5px;background:#fed}
+#top{margin-top:25px}
+#pad{padding:7px;background:#eee;margin:3px 0}
+#border{border:1px solid #000}
+#row{display:flex;background:#ddd}
+#clip{overflow:hidden;background:#ccc}
+#auto{margin:9px 0}
+#fixed{height:60px;background:#bbb;margin-bottom:6px}
+.st{height:10px;background:#333;margin:15px 0}
+.wrap{margin:20px 0}
+.in{height:10px;margin:33px 0 44px;background:#a00}
+.side{width:30px;height:10px;margin:4px 6px;background:#0a0}
+.empty{margin:11px 0 13px}
+</style></head><body>
+<div id="top"></div>
+<div class="st" id="s0"></div>
+<div id="auto"></div>
+<div class="st" id="s1"></div>
+<div id="pad"></div>
+<div id="border"></div>
+<div id="row"></div>
+<div id="clip"></div>
+<div id="fixed"></div>
+<div class="st" id="s2"></div>
+<div id="nest"></div>
+<div class="st" id="s3"></div>
+<div id="empties"></div>
+<div class="st" id="s4"></div>
+<script>
+function mk(p,c,id){var e=document.createElement('div');e.className=c;e.id=id;document.getElementById(p).appendChild(e);return e}
+mk('top','m','t1');
+mk('auto','big','a1');mk('auto','m','a2');
+mk('pad','m','p1');mk('pad','m','p2');
+mk('border','m','b1');
+mk('row','side','r1');mk('row','side','r2');
+mk('clip','m','c1');
+mk('fixed','m','f1');
+var w=document.createElement('div');w.className='wrap';w.id='w1';document.getElementById('nest').appendChild(w);
+var i=document.createElement('div');i.className='in';i.id='i1';w.appendChild(i);
+mk('empties','empty','e1');mk('empties','m','e2');mk('empties','empty','e3');
+function r(id){var b=document.getElementById(id).getBoundingClientRect();return id+'='+Math.round(b.left)+','+Math.round(b.top)+'+'+Math.round(b.height)}
+var ids=['top','t1','s0','auto','a1','a2','s1','pad','p1','p2','border','b1','row','r1','r2','clip','c1','fixed','f1','s2','nest','w1','i1','s3','empties','e1','e2','s4'];
+for(var k=0;k<ids.length;k+=6)console.log('CS '+ids.slice(k,k+6).map(r).join(' '));
+</script></body></html>

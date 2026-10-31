@@ -102,6 +102,7 @@ fn tracks_listeners_and_property_writes_across_variables_functions_and_loops() {
         listens_unresolved: _,
         opaque_inserts: _,
         open_elements: _,
+        reads_computed_style: _,
     } = analyze(&[s1, s2]);
     // Nothing here can add, remove or rename an element, but
     // `setAttribute("class", …)` can take any class off one.

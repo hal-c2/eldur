@@ -27,13 +27,18 @@ pub(crate) struct Band {
 /// The rings for a blur radius, as fractions of an `alpha`: a point at
 /// depth `d` is covered by every ring with `d < depth`.
 pub(crate) fn inset_bands(blur: f32, alpha: f32) -> Vec<Band> {
+    bands(blur, alpha, 2.0, 12)
+}
+
+/// The same curve in bands about `width` px wide, at most `most` of them.
+pub(crate) fn bands(blur: f32, alpha: f32, width: f32, most: usize) -> Vec<Band> {
     if blur <= 0.0 {
         return vec![Band { depth: 0.0, alpha }];
     }
     let sigma = blur / 2.0;
-    // ±2σ holds 95% of the fade; bands of about 2px, at most 12 of them.
+    // ±2σ holds 95% of the fade.
     let span = 4.0 * sigma;
-    let n = ((span / 2.0).ceil() as usize).clamp(1, 12);
+    let n = ((span / width).ceil() as usize).clamp(1, most);
     let step = span / n as f32;
     let edge = |k: usize| -2.0 * sigma + k as f32 * step;
     let coverage = |d: f32| alpha * (1.0 - phi(d / sigma));

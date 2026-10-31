@@ -1,0 +1,10 @@
+<!doctype html><html><head><style>:root{--h:40px;--c:#ff0000}body{margin:0;font:16px/20px sans-serif}.a{height:var(--h);margin:10px 0;background:#def;color:var(--c)}.w{margin:10px 0}.w p{margin:6px 0}#end{height:10px;background:#333}</style></head><body><div id="l"></div><div id="end"></div>
+<script>
+var l=document.getElementById('l');
+var a=document.createElement('div');a.className='a';a.id='a';l.appendChild(a);
+var b=document.createElement('div');b.className='a';b.id='b';l.appendChild(b);
+var w=document.createElement('div');w.className='w';w.id='w';l.appendChild(w);
+var p=document.createElement('p');p.id='p';p.textContent='text';w.appendChild(p);
+function r(id){var b=document.getElementById(id).getBoundingClientRect();return id+'='+Math.round(b.top)+'+'+Math.round(b.height)}
+console.log('CS '+['a','b','w','p','end'].map(r).join(' ')+' c='+getComputedStyle(a).color);
+</script></body></html>

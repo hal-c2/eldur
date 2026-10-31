@@ -209,8 +209,10 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
     emitter.runtime_dom = cx.runtime_dom;
     if let Some(scripts) = cx.scripts {
         emitter.open_elements = scripts.analysis.open_elements;
+        emitter.cascade_rules = scripts.analysis.needs_cascade();
         emitter.gains.clone_from(&scripts.gains.nodes);
-        emitter.gains_any_empty = scripts.gains.any_empty;
+        // A read needs an element to read: an empty one is not left out.
+        emitter.gains_any_empty = scripts.gains.any_empty || scripts.analysis.reads_computed_style;
     }
     emitter.by_path = cx.scripts.is_some_and(|s| s.analysis.dispatch_by_path);
     emitter.script_attrs = cx.scripts.is_some_and(|s| s.analysis.reads_attributes);

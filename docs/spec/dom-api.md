@@ -435,11 +435,23 @@ adopted to the box form (`_gStaticChanges`, `_gAdopt`), as is a static empty
 container filled with inline-level children (`_gFillsLine`).
 
 **Known gaps.**
-- A closed page's template keeps the converter's picture: margins do not
-  collapse through a template, and `var()` in an inline rule is not seen.
-- On a generic box: hover and other states only through a template, no gradient,
-  shadow or transform unless a template exists; table-family elements keep their
-  old forms.
+- A closed page's template keeps the converter's picture, except its margins:
+  after a script changes the tree, the runtime works out each changed column's
+  gaps, collapse through parents included. It writes one only when it is 2px or
+  more off, as less is what `eldurCarry` keeps of a fractional height, so a gap
+  wrong by under 2px stays. `var()` in an inline rule is not seen.
+- A trailing empty created box sits where its column ends, not after the margins
+  that collapse through it; what follows it is placed right.
+- A generic box paints linear and radial gradients (one image over the padding
+  box: `background-size`, `-position` and `-repeat` warn), box-shadow as bands of
+  a hard or stepped edge, 2-D transforms, opacity and square overflow clips.
+  Rounded clips of children, `filter`, `animation-name`, 3-D transform functions,
+  and values only a script writes (the table holds what the sheets say) warn at
+  run time, naming the element and property. Transitions run on background-color,
+  opacity and transform, with Qt's nearest easing; others warn and apply at once.
+- `:hover`, `:active`, `:focus`, `:checked` on a box or control of an open page;
+  on a closed page only through a template. Table-family elements keep their old
+  forms. A computed read of `em`-based shadows or transforms has no parsed value.
 - Grid is column tracks with auto placement; explicit placement is not honoured.
 - `font` shorthand holding `var()` is not expanded.
 - `@media` is not re-evaluated on a live resize.

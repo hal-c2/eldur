@@ -114,8 +114,99 @@ fn box_property(longhand: Longhand) -> Option<&'static str> {
         L::Filter => "filter",
         L::TransitionProperty => "transition-property",
         L::AnimationName => "animation-name",
+        L::TransformOrigin => "transform-origin",
+        L::TransitionDuration => "transition-duration",
+        L::TransitionTimingFunction => "transition-timing-function",
+        L::TransitionDelay => "transition-delay",
+        // Read only to say that a created box does not paint them.
+        L::BackgroundSize => "background-size",
+        L::BackgroundPositionX => "background-position-x",
+        L::BackgroundPositionY => "background-position-y",
+        L::BackgroundRepeat => "background-repeat",
         _ => return None,
     })
+}
+
+/// One value of a paint property, parsed for the runtime, which has no CSS parser.
+#[derive(Debug, Clone, PartialEq)]
+pub enum PaintValue {
+    /// Layers, top first; `None` for a `none` layer.
+    Images(Vec<Option<crate::Image>>),
+    Shadows(Vec<crate::Shadow>),
+    Transform(Vec<crate::TransformFn>),
+}
+
+pub(crate) fn parse_paint_value(
+    property: &str,
+    text: &str,
+    viewport: &Viewport,
+) -> Option<PaintValue> {
+    // A font-relative length depends on the element, and the runtime looks this
+    // up by the text alone: it says the value was not painted instead.
+    let relative = text.to_ascii_lowercase();
+    if relative.contains("em") && relative.chars().any(|c| c.is_ascii_digit()) {
+        let bytes = relative.as_bytes();
+        let unit = relative.match_indices("em").any(|(at, _)| {
+            let before = at
+                .checked_sub(1)
+                .map(|b| {
+                    if bytes[b] == b'r' {
+                        b.saturating_sub(1)
+                    } else {
+                        b
+                    }
+                })
+                .map(|b| bytes[b]);
+            let after = bytes.get(at + 2).copied();
+            before.is_some_and(|b| b.is_ascii_digit() || b == b'.')
+                && !after.is_some_and(|a| a.is_ascii_alphanumeric())
+        });
+        if unit {
+            return None;
+        }
+    }
+    if relative.contains("currentcolor") {
+        return None;
+    }
+    let longhand = match property {
+        "background-image" => Longhand::BackgroundImage,
+        "box-shadow" => Longhand::BoxShadow,
+        "transform" => Longhand::Transform,
+        _ => return None,
+    };
+    let mut style = crate::ComputedStyle::default();
+    let context = crate::properties::ComputeContext {
+        parent: None,
+        root_font_size: 16.0,
+        viewport,
+    };
+    crate::properties::compute(&mut style, longhand, text, &context).ok()?;
+    Some(match longhand {
+        Longhand::BackgroundImage => PaintValue::Images(
+            style
+                .background_layers
+                .into_iter()
+                .map(|l| l.image)
+                .collect(),
+        ),
+        Longhand::BoxShadow => PaintValue::Shadows(style.box_shadow),
+        _ => PaintValue::Transform(style.transform),
+    })
+}
+
+/// The longhands of a whole `background` value: `(image, colour)`.
+pub(crate) fn background_parts(value: &str) -> Option<(Option<String>, Option<String>)> {
+    let pairs = crate::properties::expand("background", value).ok()?;
+    let find = |wanted: Longhand| {
+        pairs
+            .iter()
+            .find(|(l, _)| *l == wanted)
+            .map(|(_, v)| v.clone())
+    };
+    Some((
+        find(Longhand::BackgroundImage),
+        find(Longhand::BackgroundColor),
+    ))
 }
 
 fn wide(keyword: &CssWide) -> &'static str {

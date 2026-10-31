@@ -180,5 +180,6 @@ mod diag;
 mod emit;
 mod images;
 mod metadata;
+mod paint_values;
 mod pipeline;
 mod scripts;

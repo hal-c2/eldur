@@ -166,6 +166,16 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         if runtime_dom {
             let classes = eldur_css::styled_classes(&sheets);
             decls.push(metadata::styled_classes_decl(&classes));
+            if scripts.analysis.needs_cascade() {
+                let rules = eldur_css::runtime_rules(&sheets, &options.viewport);
+                decls.push(crate::paint_values::paint_values_decl(
+                    &rules,
+                    &options.viewport,
+                ));
+                if !open_elements {
+                    decls.push(metadata::cascade_rules_decl(&rules));
+                }
+            }
             if open_elements {
                 let rules = eldur_css::runtime_rules(&sheets, &options.viewport);
                 // Any element of the page may take a rule like this at run time,

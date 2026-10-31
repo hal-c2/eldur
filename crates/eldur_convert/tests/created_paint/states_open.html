@@ -1,0 +1,33 @@
+<!doctype html><html><head><style>
+body{margin:0;font:16px/20px sans-serif}
+.h{height:30px;width:100px;background:#00f}
+.h:hover{background:#0f0}
+.h:active{background:#f00}
+.o{height:30px;width:100px;background:#888;margin-top:10px}
+.o .i{height:10px;width:20px;background:#000}
+.o:hover .i{background:#fff}
+.t{height:30px;width:100px;background:#000;opacity:1;margin-top:10px;transition:background-color .1s linear,opacity .1s linear}
+.t:hover{background:#fff;opacity:.5}
+.m{height:30px;width:100px;background:#0aa;margin-top:10px;transition:transform .1s ease}
+.m:hover{transform:translateX(40px)}
+.g{height:30px;width:100px;margin-top:10px;background:#111}
+.g:hover{background:linear-gradient(90deg,#f00,#f00)}
+input.c{display:block;width:20px;height:20px;margin:10px 0 0}
+input.c:checked + .n{background:#f0f}
+.n{height:20px;width:100px;background:#ccc}
+input.f{display:block;width:100px;height:24px;margin-top:10px;border:0;padding:0;background:#eee;outline:none}
+input.f:focus{background:#ff0}
+</style></head><body data-steps="hover #eh|press #eh|release #eh|hover #eo|hover #et|hover #em|hover #eg|away|click #ec|click #ef|away">
+<div id="l"></div>
+<script>
+var cn=['h','o','t','m','g'];
+var l=document.getElementById('l');
+var pix={h:'50,15',o:'5,5',t:'50,15',m:'90,15 120,15',g:'50,15'};
+cn.forEach(function(n){var e=document.createElement('div');e.className=n;e.id='e'+n;e.setAttribute('data-pixel',pix[n]);l.appendChild(e)});
+var k=document.createElement('div');k.className='i';document.getElementById('eo').appendChild(k);
+var ic=['c'][0];var c=document.createElement('input');c.type='checkbox';c.className=ic;c.id='ec';l.appendChild(c);
+var nc=['n'][0];var n=document.createElement('div');n.className=nc;n.id='en';n.setAttribute('data-pixel','50,10');l.appendChild(n);
+var fc=['f'][0];var f=document.createElement('input');f.className=fc;f.id='ef';f.setAttribute('data-pixel','90,12');l.appendChild(f);
+window.addEventListener('click',function(){console.log('CS bg='+getComputedStyle(document.getElementById('en')).backgroundColor)});
+console.log('CS ready');
+</script></body></html>

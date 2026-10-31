@@ -910,6 +910,17 @@ fn frame_kind(kind: &AstKind<'_>) -> Option<bool> {
 
 impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
     fn visit_call_expression(&mut self, it: &CallExpression<'a>) {
+        let reads_style = match unwrap_parens(&it.callee) {
+            Expression::Identifier(name) => name.name == "getComputedStyle",
+            Expression::StaticMemberExpression(member) => {
+                member.property.name == "getComputedStyle"
+            }
+            _ => false,
+        };
+        if reads_style {
+            self.analysis.reads_computed_style = true;
+            self.analysis.runtime_dom = true;
+        }
         if let Some(id) = self.eval.created_at.get(&span_key(it.span))
             && let Some(site) = self.dynamic.sites.get_mut(id.0 as usize)
         {

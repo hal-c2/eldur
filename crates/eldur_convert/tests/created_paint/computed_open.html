@@ -1,0 +1,16 @@
+<!doctype html><html><head><style>
+:root{--c:#ff0000}
+body{margin:8px;font:16px/20px Arial,sans-serif}
+.x{color:var(--c);background:#00ff00;height:40px;width:50%;margin:10px 4px;padding:1em;border:2px solid rgba(0,0,255,.5);opacity:.5;font-size:12px;font-family:"Times New Roman",serif;font-weight:bold}
+.y{background-image:linear-gradient(90deg,#f00,#00f);box-shadow:1px 2px 3px 4px rgba(0,0,0,.5);transform:translateX(10px) scale(2)}
+.k{background-image:linear-gradient(to bottom,#f00,#00f)}.j{background-image:linear-gradient(to right bottom,#f00 10%,#00f 90%)}.q{background-image:linear-gradient(to right,rgba(255,0,0,.5),transparent),radial-gradient(#f00,#00f)}
+.z{transform:rotate(90deg);box-shadow:inset 0 0 4px #000,0 0 2px red;background-image:radial-gradient(circle,#f00,#00f)}
+</style></head><body>
+<div class="x" id="sx"></div><div class="y" id="sy"></div><div class="z" id="sz"></div><div class="k" id="sk">k</div><div class="j" id="sj">j</div><div class="q" id="sq">q</div><div id="sp"><span id="sn">t</span></div>
+<script>
+function mk(c,id){var e=document.createElement('div');e.className=c;e.id=id;document.body.appendChild(e);return e}
+var n=['x','y','z'];mk(n[0],'cx');mk(n[1],'cy');mk(n[2],'cz');
+var ps=['color','backgroundColor','backgroundImage','boxShadow','transform','width','height','marginTop','marginLeft','paddingTop','borderTopWidth','borderTopColor','opacity','fontSize','fontFamily','fontWeight','display','position'];
+['sx','cx','sy','cy','sz','cz','sk','sj','sq','sp','sn'].forEach(function(id){var c=getComputedStyle(document.getElementById(id));
+ps.forEach(function(p){console.log('CS '+id+' '+p+'='+c[p])})});
+</script></body></html>
