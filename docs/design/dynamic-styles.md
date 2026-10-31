@@ -135,6 +135,9 @@ mode is for (§11).
 Condition = Class { node, class }        // node has class `class`
           | State { node, state }        // node is :hover / :active / :focus / :focus-visible /
                                          // :focus-within / :checked / :disabled
+          | Structural { node, test }    // node is :first-child / :last-child / :only-child /
+                                         // :nth-child(An+B) / :nth-last-child(An+B) or an
+                                         // of-type form, among its parent's element children
 ```
 
 - **Dynamic classes** of an element `e`, written `D(e)`: classes that
@@ -143,12 +146,20 @@ Condition = Class { node, class }        // node has class `class`
   some selector names). A class `e` has initially and that no script
   touches is not a condition.
 - **States**: the condition elements of today's `StateVariant`s.
+- **Positions** (S9b, §5.5): one condition per child of a container whose
+  children scripts change, and per structural pseudo-class the sheets use
+  (`structural_pseudos`). The cascade treats `Structural { node, test }`
+  as the truth of `test` for `node` in that combination, whatever the
+  document says. Children of containers no script changes keep the
+  document's evaluation.
 - **Scope**: a condition on `n` can affect `n`, its descendants, its
   following siblings and their subtrees (`+`, `~`), and the descendants of
   following siblings (`.a.on + .b .c`). Today `StateVariant` covers only
   `n`'s subtree. The new API covers sibling scope too.
-- **`:has()`, `:nth-*` with dynamic classes, and conditions on later
-  siblings or descendants** (`:has(.x)`): unsupported, with a diagnostic.
+- **`:has()`, `:nth-child(… of S)`, and conditions on later siblings or
+  descendants** (`:has(.x)`): unsupported, with a diagnostic. Sibling
+  combinators across a changing list (`li + li`) are still matched against
+  the document.
 
 For each element `e`, `R(e)` is the set of conditions that change some
 computed value of `e` in at least one combination. `h2q_css` computes
@@ -277,6 +288,48 @@ cascade order of their winning declarations, and emit diagnostic
 `dynamic-combinations`.
 
 ---
+
+### 5.5 Structural pseudo-classes (S9b)
+
+`Analysis.mutated_parents` lists the elements whose children scripts
+insert, remove or replace (`appendChild`, `insertBefore`, `removeChild`,
+`append`, `prepend`, `replaceChildren`, `innerHTML =`, `textContent =`);
+`Analysis.mutated_siblings` lists elements scripts remove or put siblings
+beside (`remove()`, `before`, `after`, `replaceWith`). The containers that
+get position conditions are the static `mutated_parents`, the parents of
+`mutated_siblings`, and the parents of created elements (in the probe
+document, §6.1). Each child of such a container gets one
+`Structural { node, test }` per test the sheets use, so `li:first-child`
+and `li:nth-child(even)` cost two conditions per item, within the 6 of
+§5.4.
+
+A binding reads the place the runtime keeps (§8.1):
+
+| Test | Expression on item `X` |
+|---|---|
+| `:first-child` | `X.h2qIndex === 1` |
+| `:last-child` | `X.h2qIndex === X.h2qCount` |
+| `:only-child` | `X.h2qCount === 1` |
+| `:nth-child(An+B)` | `nth(A, B, X.h2qIndex)`, e.g. `X.h2qIndex % 2 === 0` |
+| `:nth-last-child(An+B)` | the same over `(X.h2qCount - X.h2qIndex + 1)` |
+| of-type forms | the same over `h2qTypeIndex`/`h2qTypeCount` |
+
+`h2qIndex`/`h2qCount` (and the type pair, only when an of-type test is
+read) are declared on the item with the document's values, so the first
+frame matches without the runtime. In a template the element's own tests
+are read locally. A created ancestor exports
+`readonly property bool h2qIs<Test>` (`h2qIsFirstChild`,
+`h2qIsNthChild2n0`, `m` for a minus sign), which descendants read through
+`h2qUpN`. A static ancestor is read through its id.
+
+A combination may change which border sides are drawn (`li:first-child
+{ border-top }`). Instead of a `dynamic-form`, the item gets border strips
+on the union of the sides any combination draws. A side that a
+combination does not draw has width 0 and a transparent colour.
+
+At most **32** element children per container (`MAX_POSITIONED`). A
+larger container keeps the document's positions, with `dynamic-structural`
+(§12).
 
 ## 6. Created elements: templates
 
@@ -513,6 +566,9 @@ through the registry (S9a).
 | `cls_<s>` | `bool`; `s` = class with `[^A-Za-z0-9_]` → `_` (today's `_sanitizeClassProp`) | converter declares and sets the initial value; runtime sets it | bindings |
 | `h2qUp<N>` | `Item`, N ≥ 1 = logical-ancestor distance | runtime, at materialisation | template bindings |
 | `h2qHovered`, `h2qPressed`, `h2qFocused`, `h2qFocusVisible`, `h2qFocusWithin`, `h2qChecked`, `h2qDisabled` | `readonly bool` | converter (in templates) | descendant templates' bindings |
+| `h2qIndex`, `h2qCount` | `int`, 1-based place among element siblings, and their number | converter (document value), runtime (`_renumber`) | structural bindings (§5.5) |
+| `h2qTypeIndex`, `h2qTypeCount` | `int`, the same among siblings with the same tag | converter (only when an of-type test reads it), runtime | structural bindings |
+| `h2qIs<Test>` | `readonly bool`, e.g. `h2qIsFirstChild`, `h2qIsNthChild2n1` | converter (in templates) | descendant templates' bindings |
 | `root.h2qTemplates` | `var` object: key → `Component` | converter | runtime |
 | `root.h2qStyledClasses` | `var` array of strings, sorted | converter | runtime (key building) |
 | `root.baseUrl` | `string` | converter | runtime (`init`, already supported) |
@@ -537,6 +593,17 @@ diagnostic.
   initial properties carry `cls_*` and `h2qClasses`; recorded state is
   replayed; `h2qUpN` is set.
 - Rematerialisation on a form-changing class change.
+- Positions (S9b): `_renumber(container)` rewrites `h2qIndex`/`h2qCount`
+  (and the type pair where declared) on the container's element children
+  after every insert, remove, reorder, template swap, `innerHTML` and
+  `textContent` write. `_settleLayouts` also renumbers each dirty item and
+  its parent. Element children are the raw children minus created text
+  runs and layout spacers (`_isLayoutSpacer`: a bare, childless
+  `QQuickItem` the converter puts at the end of a flex row). Appending
+  inserts before such spacers. `textContent = ''` on a layout child
+  container detaches its static element items (as `removeChild` does)
+  rather than destroying them, because pending bindings may still read
+  them.
 
 The runtime contains **no CSS matching for styling and no CSS→QML mapping**
 beyond the existing `el.style.*` setters.
@@ -606,6 +673,9 @@ pub struct CreatedElement {
 //   /// Scripts reach elements by runtime selectors, traversal, `matches`/`closest`,
 //   /// event targets, or mutate the DOM: every element needs `h2qTag`/`h2qClasses`.
 //   pub runtime_dom: bool,
+// Added in S9b (§5.5):
+//   pub mutated_parents: Vec<ElementRef>,
+//   pub mutated_siblings: Vec<ElementRef>,
 ```
 
 Today's `writes` entries `(q, "classList")` are kept.
@@ -617,7 +687,22 @@ Today's `writes` entries `(q, "classList")` are kept.
 pub enum Condition {
     Class { node: NodeId, class: String },
     State { node: NodeId, state: PseudoState },
+    /// Added in S9b: `node` passes `test` (§5.5).
+    Structural { node: NodeId, test: Structural },
 }
+
+/// S9b: a structural pseudo-class without `of S`.
+pub enum Structural {
+    FirstChild, LastChild, OnlyChild,
+    NthChild { a: i32, b: i32 }, NthLastChild { a: i32, b: i32 },
+    FirstOfType, LastOfType, OnlyOfType,
+    NthOfType { a: i32, b: i32 }, NthLastOfType { a: i32, b: i32 },
+}
+// impl Structural { pub fn of_type(self) -> bool; pub fn matches(self, index: usize, count: usize) -> bool }
+
+/// S9b: the structural pseudo-classes some selector uses.
+#[must_use]
+pub fn structural_pseudos(sheets: &[Stylesheet]) -> BTreeSet<Structural>;
 
 /// The styles of every element some condition affects, for each combination of the
 /// conditions it depends on.
@@ -692,7 +777,7 @@ conditions and templates (one switch for "dynamic styles").
 | S6 | Conditional bindings for static elements: classes and `:hover`/`:focus`/`:checked`/…, `visible` for `display:none`, sticky wrapper, `Behavior`s from `transition`. Removes the "not converted to QML states yet" diagnostic. Corpus 12, 15. | `h2q_convert` | S1, S2, S4 | S5 |
 | S7 | Templates: probe document, Components, grouping by form, registry, `@*` entries, `h2qKey`, `h2qUpN`/`h2q<State>` exports. Corpus 16. | `h2q_convert` | S3, S6 | — |
 | S8 | Oracles and tests: a `run` step in `computed.mjs` (and `--run` in `geometry.mjs`), corpus case `26-class-toggles`, end-to-end qml6 behaviour tests (§13). | `tools/visual`, `tests/corpus`, `h2q_convert/tests` | — (the e2e tests are written first and fail until S6/S7) | all |
-| S9 | Later: `innerHTML` literal markup through the registry (§6.7); structural pseudo-classes for mutated containers (§12). | `h2q_js`, `h2q_convert` | S7 | — |
+| S9 | Later: `innerHTML` literal markup through the registry (§6.7); structural pseudo-classes for mutated containers (S9b, §5.5). | `h2q_js`, `h2q_convert` | S7 | — |
 
 `h2q_convert` slices (S1 → S6 → S7) are sequential. The rest can run in
 parallel.
@@ -736,13 +821,15 @@ line.
 | `dynamic-templates` | More than 16 keys for one created element | Extra keys use the fallback chain. |
 | `dynamic-markup` (`warning[js]`) | Markup given to `innerHTML`/`insertAdjacentHTML` is not literal (§6.7) | Its elements are not predicted and use the fallback chain. |
 | `dynamic-unsupported-selector` | The condition is inside `:has()`, or on a later sibling or a descendant | Not converted. |
+| `dynamic-structural` (`warning[css]`) | A container scripts change has more than 32 element children | Its children keep the document's `:first-child`/`:nth-child()` results. |
 | `dynamic-class-collision` | Two classes sanitise to the same `cls_` name | They share one property. |
 | *(runtime)* `no style template for …` | A key was not predicted | The fallback chain is used. |
 
-Also unsupported for now: structural pseudo-classes (`:first-child`,
-`:last-child`, `:nth-child`) on children of **script-mutated** containers.
-Their values are static at conversion time and are not updated after
-insertions. S9 adds runtime-maintained `h2qIndex`/`h2qLast` conditions.
+Structural pseudo-classes on children of script-mutated containers follow
+the runtime's `h2qIndex`/`h2qCount` (S9b, §5.5). Still static: sibling
+combinators (`li + li`, `li ~ li`) across a changing list,
+`:nth-child(… of S)`, and containers analysis cannot name (a removal
+through `e.target.closest('li').remove()` does not mark its list).
 Attribute selectors on script-written attributes (`[aria-expanded=true]`,
 `[hidden]`) follow the same condition model and are out of scope here.
 
