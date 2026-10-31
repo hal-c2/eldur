@@ -3489,8 +3489,20 @@ function _markupMakesElements(raw) {
 // `sort` as the language has it, stable and undefined last, which a page's table
 // sorted on one column and then another depends on.
 function sort(list, compare) {
-    if (!Array.isArray(list)) {
+    var typed = ArrayBuffer.isView(list) && !(list instanceof DataView);
+    if (!Array.isArray(list) && !typed) {
         return list.sort(compare);
+    }
+    if (compare !== undefined && typeof compare !== "function") {
+        throw new TypeError("The comparison function must be either a function or undefined");
+    }
+    if (typed) {
+        // V4's typed arrays have no `sort`; the default order is numeric here.
+        var values = _mergeSort(Array.from(list), compare || _numericOrder);
+        for (var t = 0; t < values.length; ++t) {
+            list[t] = values[t];
+        }
+        return list;
     }
     var order = compare || function(a, b) {
         var x = String(a), y = String(b);
@@ -3513,6 +3525,20 @@ function sort(list, compare) {
         list[u] = undefined;
     }
     return list;
+}
+
+// %TypedArray%.prototype.sort's default: NaN last, -0 before +0.
+function _numericOrder(a, b) {
+    if (a !== a) {
+        return b !== b ? 0 : 1;
+    }
+    if (b !== b) {
+        return -1;
+    }
+    if (a === 0 && b === 0) {
+        return 1 / a === 1 / b ? 0 : 1 / a < 1 / b ? -1 : 1;
+    }
+    return a - b;
 }
 
 function _mergeSort(items, order) {
