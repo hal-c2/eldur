@@ -949,7 +949,8 @@ ApplicationWindow {
 
                                                 // <a>
                                                 Rectangle {
-                                                    color: "#e6ebff"
+                                                    id: a
+                                                    color: aHover.hovered ? "#d3dcff" : "#e6ebff"
                                                     radius: 999
                                                     implicitWidth: aText.implicitWidth + 28
                                                     implicitHeight: aText.implicitHeight + 12
@@ -975,6 +976,10 @@ ApplicationWindow {
                                                         anchors.rightMargin: 14
                                                         anchors.topMargin: 6
                                                     }
+
+                                                    HoverHandler {
+                                                        id: aHover
+                                                    }
                                                 }
                                             }
 
@@ -985,7 +990,8 @@ ApplicationWindow {
 
                                                 // <a>
                                                 Rectangle {
-                                                    color: "#e6ebff"
+                                                    id: a2
+                                                    color: a2Hover.hovered ? "#d3dcff" : "#e6ebff"
                                                     radius: 999
                                                     implicitWidth: aText2.implicitWidth + 28
                                                     implicitHeight: aText2.implicitHeight + 12
@@ -1011,6 +1017,10 @@ ApplicationWindow {
                                                         anchors.rightMargin: 14
                                                         anchors.topMargin: 6
                                                     }
+
+                                                    HoverHandler {
+                                                        id: a2Hover
+                                                    }
                                                 }
                                             }
 
@@ -1021,7 +1031,8 @@ ApplicationWindow {
 
                                                 // <a>
                                                 Rectangle {
-                                                    color: "#e6ebff"
+                                                    id: a3
+                                                    color: a3Hover.hovered ? "#d3dcff" : "#e6ebff"
                                                     radius: 999
                                                     implicitWidth: aText3.implicitWidth + 28
                                                     implicitHeight: aText3.implicitHeight + 12
@@ -1047,6 +1058,10 @@ ApplicationWindow {
                                                         anchors.rightMargin: 14
                                                         anchors.topMargin: 6
                                                     }
+
+                                                    HoverHandler {
+                                                        id: a3Hover
+                                                    }
                                                 }
                                             }
 
@@ -1057,7 +1072,8 @@ ApplicationWindow {
 
                                                 // <a>
                                                 Rectangle {
-                                                    color: "#e6ebff"
+                                                    id: a4
+                                                    color: a4Hover.hovered ? "#d3dcff" : "#e6ebff"
                                                     radius: 999
                                                     implicitWidth: aText4.implicitWidth + 28
                                                     implicitHeight: aText4.implicitHeight + 12
@@ -1083,6 +1099,10 @@ ApplicationWindow {
                                                         anchors.rightMargin: 14
                                                         anchors.topMargin: 6
                                                     }
+
+                                                    HoverHandler {
+                                                        id: a4Hover
+                                                    }
                                                 }
                                             }
 
@@ -1093,7 +1113,8 @@ ApplicationWindow {
 
                                                 // <a>
                                                 Rectangle {
-                                                    color: "#e6ebff"
+                                                    id: a5
+                                                    color: a5Hover.hovered ? "#d3dcff" : "#e6ebff"
                                                     radius: 999
                                                     implicitWidth: aText5.implicitWidth + 28
                                                     implicitHeight: aText5.implicitHeight + 12
@@ -1119,6 +1140,10 @@ ApplicationWindow {
                                                         anchors.rightMargin: 14
                                                         anchors.topMargin: 6
                                                     }
+
+                                                    HoverHandler {
+                                                        id: a5Hover
+                                                    }
                                                 }
                                             }
 
@@ -1129,7 +1154,8 @@ ApplicationWindow {
 
                                                 // <a>
                                                 Rectangle {
-                                                    color: "#e6ebff"
+                                                    id: a6
+                                                    color: a6Hover.hovered ? "#d3dcff" : "#e6ebff"
                                                     radius: 999
                                                     implicitWidth: aText6.implicitWidth + 28
                                                     implicitHeight: aText6.implicitHeight + 12
@@ -1155,6 +1181,10 @@ ApplicationWindow {
                                                         anchors.rightMargin: 14
                                                         anchors.topMargin: 6
                                                     }
+
+                                                    HoverHandler {
+                                                        id: a6Hover
+                                                    }
                                                 }
                                             }
 
@@ -1165,7 +1195,8 @@ ApplicationWindow {
 
                                                 // <a>
                                                 Rectangle {
-                                                    color: "#e6ebff"
+                                                    id: a7
+                                                    color: a7Hover.hovered ? "#d3dcff" : "#e6ebff"
                                                     radius: 999
                                                     implicitWidth: aText7.implicitWidth + 28
                                                     implicitHeight: aText7.implicitHeight + 12
@@ -1190,6 +1221,10 @@ ApplicationWindow {
                                                         anchors.leftMargin: 14
                                                         anchors.rightMargin: 14
                                                         anchors.topMargin: 6
+                                                    }
+
+                                                    HoverHandler {
+                                                        id: a7Hover
                                                     }
                                                 }
                                             }

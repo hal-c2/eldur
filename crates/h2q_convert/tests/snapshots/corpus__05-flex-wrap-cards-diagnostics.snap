@@ -3,4 +3,3 @@ source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
 info[qml]: index.html:178: items of the wrapping <section class="product-grid"> are not stretched to their line's height
-info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

@@ -387,7 +387,10 @@ ApplicationWindow {
                                     }
 
                                     // <a class="nav-item">
-                                    Item {
+                                    Rectangle {
+                                        id: navItem
+                                        color: navItemHover.hovered ? "#1f2937" : "#00000000"
+                                        radius: 8
                                         implicitWidth: navItemText2.implicitWidth + 24
                                         implicitHeight: navItemText2.implicitHeight + 18
                                         Layout.fillWidth: true
@@ -396,7 +399,7 @@ ApplicationWindow {
                                             id: navItemText2
                                             text: "Analytics"
                                             textFormat: Text.PlainText
-                                            color: "#9ca3af"
+                                            color: navItemHover.hovered ? "#ffffff" : "#9ca3af"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
                                             font.weight: 500
@@ -411,10 +414,17 @@ ApplicationWindow {
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
                                         }
+
+                                        HoverHandler {
+                                            id: navItemHover
+                                        }
                                     }
 
                                     // <a class="nav-item">
-                                    Item {
+                                    Rectangle {
+                                        id: navItem2
+                                        color: navItem2Hover.hovered ? "#1f2937" : "#00000000"
+                                        radius: 8
                                         implicitWidth: navItemText3.implicitWidth + 24
                                         implicitHeight: navItemText3.implicitHeight + 18
                                         Layout.fillWidth: true
@@ -423,7 +433,7 @@ ApplicationWindow {
                                             id: navItemText3
                                             text: "Reports"
                                             textFormat: Text.PlainText
-                                            color: "#9ca3af"
+                                            color: navItem2Hover.hovered ? "#ffffff" : "#9ca3af"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
                                             font.weight: 500
@@ -437,6 +447,10 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
+                                        }
+
+                                        HoverHandler {
+                                            id: navItem2Hover
                                         }
                                     }
 
@@ -458,7 +472,10 @@ ApplicationWindow {
                                     }
 
                                     // <a class="nav-item">
-                                    Item {
+                                    Rectangle {
+                                        id: navItem3
+                                        color: navItem3Hover.hovered ? "#1f2937" : "#00000000"
+                                        radius: 8
                                         implicitWidth: navItemContent.implicitWidth + 24
                                         implicitHeight: navItemContent.implicitHeight + 18
                                         Layout.fillWidth: true
@@ -479,7 +496,7 @@ ApplicationWindow {
                                             Text {
                                                 text: "Orders"
                                                 textFormat: Text.PlainText
-                                                color: "#9ca3af"
+                                                color: navItem3Hover.hovered ? "#ffffff" : "#9ca3af"
                                                 font.family: "sans-serif"
                                                 font.pixelSize: 14
                                                 font.weight: 500
@@ -521,10 +538,17 @@ ApplicationWindow {
                                                 }
                                             }
                                         }
+
+                                        HoverHandler {
+                                            id: navItem3Hover
+                                        }
                                     }
 
                                     // <a class="nav-item">
-                                    Item {
+                                    Rectangle {
+                                        id: navItem4
+                                        color: navItem4Hover.hovered ? "#1f2937" : "#00000000"
+                                        radius: 8
                                         implicitWidth: navItemText4.implicitWidth + 24
                                         implicitHeight: navItemText4.implicitHeight + 18
                                         Layout.fillWidth: true
@@ -533,7 +557,7 @@ ApplicationWindow {
                                             id: navItemText4
                                             text: "Customers"
                                             textFormat: Text.PlainText
-                                            color: "#9ca3af"
+                                            color: navItem4Hover.hovered ? "#ffffff" : "#9ca3af"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
                                             font.weight: 500
@@ -548,10 +572,17 @@ ApplicationWindow {
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
                                         }
+
+                                        HoverHandler {
+                                            id: navItem4Hover
+                                        }
                                     }
 
                                     // <a class="nav-item">
-                                    Item {
+                                    Rectangle {
+                                        id: navItem5
+                                        color: navItem5Hover.hovered ? "#1f2937" : "#00000000"
+                                        radius: 8
                                         implicitWidth: navItemText5.implicitWidth + 24
                                         implicitHeight: navItemText5.implicitHeight + 18
                                         Layout.fillWidth: true
@@ -560,7 +591,7 @@ ApplicationWindow {
                                             id: navItemText5
                                             text: "Products"
                                             textFormat: Text.PlainText
-                                            color: "#9ca3af"
+                                            color: navItem5Hover.hovered ? "#ffffff" : "#9ca3af"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
                                             font.weight: 500
@@ -574,6 +605,10 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
+                                        }
+
+                                        HoverHandler {
+                                            id: navItem5Hover
                                         }
                                     }
 
@@ -595,7 +630,10 @@ ApplicationWindow {
                                     }
 
                                     // <a class="nav-item">
-                                    Item {
+                                    Rectangle {
+                                        id: navItem6
+                                        color: navItem6Hover.hovered ? "#1f2937" : "#00000000"
+                                        radius: 8
                                         implicitWidth: navItemText6.implicitWidth + 24
                                         implicitHeight: navItemText6.implicitHeight + 18
                                         Layout.fillWidth: true
@@ -605,7 +643,7 @@ ApplicationWindow {
                                             id: navItemText6
                                             text: "Team"
                                             textFormat: Text.PlainText
-                                            color: "#9ca3af"
+                                            color: navItem6Hover.hovered ? "#ffffff" : "#9ca3af"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
                                             font.weight: 500
@@ -620,10 +658,17 @@ ApplicationWindow {
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
                                         }
+
+                                        HoverHandler {
+                                            id: navItem6Hover
+                                        }
                                     }
 
                                     // <a class="nav-item">
-                                    Item {
+                                    Rectangle {
+                                        id: navItem7
+                                        color: navItem7Hover.hovered ? "#1f2937" : "#00000000"
+                                        radius: 8
                                         implicitWidth: navItemText7.implicitWidth + 24
                                         implicitHeight: navItemText7.implicitHeight + 18
                                         Layout.fillWidth: true
@@ -632,7 +677,7 @@ ApplicationWindow {
                                             id: navItemText7
                                             text: "Billing"
                                             textFormat: Text.PlainText
-                                            color: "#9ca3af"
+                                            color: navItem7Hover.hovered ? "#ffffff" : "#9ca3af"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
                                             font.weight: 500
@@ -646,6 +691,10 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
+                                        }
+
+                                        HoverHandler {
+                                            id: navItem7Hover
                                         }
                                     }
                                 }

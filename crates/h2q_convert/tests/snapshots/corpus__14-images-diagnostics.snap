@@ -7,4 +7,3 @@ warning[html]: index.html:217: image `photo.jpg` was not found; an empty placeho
 warning[html]: index.html:226: image `avatar.png` was not found; an empty placeholder keeps its space
 warning[html]: index.html:235: image `photo.jpg` was not found; an empty placeholder keeps its space
 warning[html]: index.html:246: image `photo.jpg` was not found; an empty placeholder keeps its space
-info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

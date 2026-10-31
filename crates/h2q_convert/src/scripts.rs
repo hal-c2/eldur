@@ -32,6 +32,11 @@ impl Scripts {
         self.inputs.is_empty()
     }
 
+    /// The elements a literal query finds.
+    pub(crate) fn matches(&self, query: &DomQuery) -> &[NodeId] {
+        self.matches.get(query).map_or(&[], Vec::as_slice)
+    }
+
     /// The node of a key: `keys` holds handler-attribute elements, `wanted`
     /// everything scripts can reach.
     fn keys_to_node(&self, key: ElementKey) -> Option<NodeId> {

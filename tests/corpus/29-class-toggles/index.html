@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Class toggles</title>
+<style>
+body {
+  margin: 0;
+  padding: 32px;
+  font-family: sans-serif;
+  font-size: 16px;
+  color: #1f2430;
+  background: #f4f6fa;
+}
+
+h1 {
+  margin: 0 0 20px;
+  font-size: 24px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.toolbar button {
+  padding: 6px 14px;
+  border: 1px solid #c5cad8;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1f2430;
+  font: inherit;
+}
+
+.tabs {
+  display: flex;
+  margin-bottom: 20px;
+}
+
+.tab {
+  padding: 8px 18px;
+  color: #5a6275;
+  background: #e4e7ef;
+}
+
+.tab.active {
+  color: #ffffff;
+  background: #3b5bdb;
+}
+
+.tab.active + .tab {
+  color: #3b5bdb;
+}
+
+.list {
+  width: 420px;
+  margin-bottom: 20px;
+  border: 1px solid #dde1ea;
+  background: #ffffff;
+}
+
+.item {
+  padding: 10px 14px;
+  opacity: 1;
+  transition: opacity 0.2s;
+}
+
+.list.compact .item {
+  padding: 2px 14px;
+}
+
+.item:hover {
+  background: #eef2ff;
+}
+
+.item.done {
+  opacity: 0.5;
+}
+
+.item.done:hover {
+  opacity: 0.8;
+}
+
+.status {
+  width: 420px;
+  margin: 0 0 20px;
+  padding: 10px 14px;
+  background: #ffffff;
+  color: #1f2430;
+}
+
+.status.ok {
+  color: #2b8a3e;
+}
+
+.status.warn {
+  color: #e67700;
+}
+
+.panel {
+  width: 420px;
+  padding: 12px 14px;
+  background: #fff3bf;
+}
+
+.d-none {
+  display: none;
+}
+</style>
+</head>
+<body>
+<h1>Class toggles</h1>
+
+<div class="toolbar">
+  <button type="button" id="compact">Compact</button>
+  <button type="button" id="ok">OK</button>
+  <button type="button" id="warn">Warn</button>
+  <button type="button" id="more">More</button>
+</div>
+
+<div class="tabs">
+  <div class="tab" id="tab1">One</div>
+  <div class="tab" id="tab2">Two</div>
+  <div class="tab" id="tab3">Three</div>
+</div>
+
+<div class="list" id="list">
+  <div class="item" id="item1">Write the page</div>
+  <div class="item" id="item2">Convert it</div>
+  <div class="item" id="item3">Check the QML</div>
+</div>
+
+<p class="status" id="status">Status</p>
+
+<div class="panel d-none" id="panel">More details</div>
+
+<script>
+  var list = document.getElementById('list');
+  var statusLine = document.getElementById('status');
+  var panel = document.getElementById('panel');
+  var tabs = ['tab1', 'tab2', 'tab3'];
+
+  function select(id) {
+    for (var i = 0; i < tabs.length; i++) {
+      document.getElementById(tabs[i]).classList.toggle('active', tabs[i] === id);
+    }
+  }
+
+  function toggleDone(id) {
+    document.getElementById(id).classList.toggle('done');
+  }
+
+  document.getElementById('compact').addEventListener('click', function () {
+    list.classList.toggle('compact');
+  });
+  document.getElementById('ok').addEventListener('click', function () {
+    statusLine.classList.toggle('ok');
+  });
+  document.getElementById('warn').addEventListener('click', function () {
+    statusLine.classList.toggle('warn');
+  });
+  document.getElementById('more').addEventListener('click', function () {
+    panel.classList.toggle('d-none');
+  });
+  document.getElementById('tab1').addEventListener('click', function () { select('tab1'); });
+  document.getElementById('tab2').addEventListener('click', function () { select('tab2'); });
+  document.getElementById('tab3').addEventListener('click', function () { select('tab3'); });
+  document.getElementById('item1').addEventListener('click', function () { toggleDone('item1'); });
+  document.getElementById('item2').addEventListener('click', function () { toggleDone('item2'); });
+  document.getElementById('item3').addEventListener('click', function () { toggleDone('item3'); });
+
+  document.addEventListener('DOMContentLoaded', function () {
+    select('tab1');
+    toggleDone('item1');
+  });
+</script>
+</body>
+</html>

@@ -163,7 +163,7 @@ ApplicationWindow {
                                         color: "#00000000"
                                         radius: 8
                                         border.width: 1
-                                        border.color: "#c9d1e0"
+                                        border.color: todoInput.activeFocus ? "#00000000" : "#c9d1e0"
                                     }
                                     topPadding: 11
                                     rightPadding: 13
@@ -196,7 +196,7 @@ ApplicationWindow {
                                     font.pixelSize: 16
                                     font.weight: 600
                                     background: Rectangle {
-                                        color: "#1d4ed8"
+                                        color: addBtn.hovered ? "#1a44c2" : "#1d4ed8"
                                         radius: 8
                                     }
                                     topPadding: 10
@@ -207,6 +207,7 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.fillHeight: true
+                                    hoverEnabled: true
 
                                     onClicked: {
                                         Page.__h2q_on_click_addBtn(H2Q.event("click", addBtn, null));

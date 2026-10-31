@@ -77,3 +77,32 @@ fn computed_equals_get_for_rendered_elements() {
         assert!(styles.get(n).is_some());
     }
 }
+
+#[test]
+fn with_styles_moves_subtrees_in_and_out_of_the_boxes() {
+    let (doc, styles) = styles();
+    let panel = doc.element_by_id("panel").expect("panel");
+    let inner = doc.element_by_id("inner").expect("inner");
+    let shown = doc.element_by_id("shown").expect("shown");
+    let shown_p = doc.element_by_id("shown-p").expect("shown-p");
+
+    let mut block = styles.computed(panel).expect("panel").style.clone();
+    block.display = Display::Block;
+    let mut none = styles.style(shown).expect("shown").clone();
+    none.display = Display::None;
+    let swapped = styles.with_styles([(panel, block), (shown, none)]);
+
+    assert_eq!(
+        swapped.style(panel).map(|s| s.color),
+        Some(Rgba::new(255, 0, 0, 255))
+    );
+    assert!(swapped.get(inner).is_some(), "the panel's child is shown");
+    assert!(swapped.get(shown).is_none());
+    assert!(
+        swapped.get(shown_p).is_none(),
+        "and the hidden one's is not"
+    );
+    assert!(swapped.computed(shown_p).is_some());
+    // The original is unchanged.
+    assert!(styles.get(panel).is_none() && styles.get(shown_p).is_some());
+}

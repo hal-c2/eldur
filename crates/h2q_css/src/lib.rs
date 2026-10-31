@@ -255,6 +255,65 @@ impl StyleMap {
         self.get(node).map(|s| &s.style)
     }
 
+    /// A copy with `overrides` as the computed styles of those elements, as
+    /// in one combination of [`ConditionalStyles`]. An element moves in or
+    /// out of [`StyleMap::get`], with its subtree, as its own or an
+    /// ancestor's `display` becomes or stops being `none`.
+    #[must_use]
+    pub fn with_styles(
+        &self,
+        overrides: impl IntoIterator<Item = (NodeId, ComputedStyle)>,
+    ) -> StyleMap {
+        let mut map = self.clone();
+        for (node, style) in overrides {
+            let i = node.index();
+            if let Some(Some(e)) = map.styles.get_mut(i) {
+                e.style = style;
+            } else if let Some(Some(e)) = map.hidden.get_mut(i) {
+                e.style = style;
+            }
+        }
+        let len = map.styles.len().max(map.hidden.len());
+        map.styles.resize(len, None);
+        map.hidden.resize(len, None);
+        let mut rendered: Vec<Option<bool>> = vec![None; len];
+        for i in 0..len {
+            // The chain up to an element whose status is known.
+            let mut chain = Vec::new();
+            let mut at = Some(i);
+            let mut above = true;
+            while let Some(j) = at {
+                if let Some(known) = rendered[j] {
+                    above = known;
+                    break;
+                }
+                chain.push(j);
+                at = map
+                    .parent_elements
+                    .get(j)
+                    .copied()
+                    .flatten()
+                    .map(NodeId::index);
+            }
+            for &j in chain.iter().rev() {
+                let shown = map.styles[j]
+                    .as_ref()
+                    .or(map.hidden[j].as_ref())
+                    .is_none_or(|e| e.style.display != Display::None);
+                above = above && shown;
+                rendered[j] = Some(above);
+            }
+        }
+        for (i, shown) in rendered.into_iter().enumerate() {
+            match shown {
+                Some(true) if map.styles[i].is_none() => map.styles[i] = map.hidden[i].take(),
+                Some(false) if map.styles[i].is_some() => map.hidden[i] = map.styles[i].take(),
+                _ => {}
+            }
+        }
+        map
+    }
+
     /// Variants whose condition element is `node`.
     pub fn variants_of(&self, node: NodeId) -> impl Iterator<Item = &StateVariant> {
         self.variants.iter().filter(move |v| v.node == node)

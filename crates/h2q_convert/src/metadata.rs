@@ -73,7 +73,20 @@ pub(crate) fn declare_classes(
         .element(node)
         .map(|e| e.classes().map(class_prop).collect())
         .unwrap_or_default();
-    let props: BTreeSet<String> = classes.iter().map(|c| class_prop(c)).collect();
+    // A class a condition binds to may be declared already.
+    let declared: BTreeSet<&str> = obj
+        .members
+        .iter()
+        .filter_map(|m| match m {
+            Member::PropertyDecl { name, .. } => Some(name.as_str()),
+            _ => None,
+        })
+        .collect();
+    let props: BTreeSet<String> = classes
+        .iter()
+        .map(|c| class_prop(c))
+        .filter(|p| !declared.contains(p.as_str()))
+        .collect();
     let decls = props.into_iter().map(|prop| {
         let initial = has.contains(&prop);
         decl("bool", &prop, initial.into())
@@ -106,127 +119,6 @@ pub(crate) fn styled_classes_decl(classes: &BTreeSet<String>) -> Member {
         "h2qStyledClasses",
         Value::Expr(format!("[{}]", list.join(", "))),
     )
-}
-
-/// Classes some selector in `css` names.
-///
-/// TODO: switch to `h2q_css::styled_classes` once it lands (dynamic-styles
-/// §9.2); this scans the text because `Stylesheet` keeps its selectors
-/// private. It reads every rule's prelude, outside comments and strings, and
-/// takes each `.ident` there. Declaration blocks are skipped, so `.5em` and
-/// `url(a.png)` are never read as classes.
-pub(crate) fn styled_classes<'t>(css: impl IntoIterator<Item = &'t str>) -> BTreeSet<String> {
-    let mut found = BTreeSet::new();
-    for text in css {
-        scan(text, &mut found);
-    }
-    found
-}
-
-fn scan(text: &str, found: &mut BTreeSet<String>) {
-    let chars: Vec<char> = text.chars().collect();
-    // Whether each open block holds rules (the top level, `@media`, …)
-    // rather than declarations.
-    let mut blocks: Vec<bool> = Vec::new();
-    let mut prelude = String::new();
-    let mut i = 0;
-    while i < chars.len() {
-        let c = chars[i];
-        match c {
-            '/' if chars.get(i + 1) == Some(&'*') => {
-                i += 2;
-                while i < chars.len() && !(chars[i] == '*' && chars.get(i + 1) == Some(&'/')) {
-                    i += 1;
-                }
-                i += 2;
-                prelude.push(' ');
-                continue;
-            }
-            '"' | '\'' => {
-                i += 1;
-                while i < chars.len() && chars[i] != c {
-                    if chars[i] == '\\' {
-                        i += 1;
-                    }
-                    i += 1;
-                }
-                prelude.push(' ');
-            }
-            '\\' => {
-                prelude.push(c);
-                if let Some(&next) = chars.get(i + 1) {
-                    prelude.push(next);
-                }
-                i += 1;
-            }
-            '{' => {
-                let in_rules = blocks.last().copied().unwrap_or(true);
-                let at_rule = prelude.trim_start().starts_with('@');
-                if in_rules && !at_rule {
-                    classes_in(&prelude, found);
-                }
-                // `@media`, `@supports`, `@layer`, `@container` and
-                // `@document` hold rules; `@font-face`, `@page` and style
-                // rules hold declarations (`@keyframes` selectors name no
-                // classes either way).
-                blocks.push(in_rules && at_rule && !is_declaration_at_rule(&prelude));
-                prelude.clear();
-            }
-            '}' => {
-                blocks.pop();
-                prelude.clear();
-            }
-            ';' => prelude.clear(),
-            _ => prelude.push(c),
-        }
-        i += 1;
-    }
-}
-
-fn is_declaration_at_rule(prelude: &str) -> bool {
-    let name: String = prelude
-        .trim_start()
-        .trim_start_matches('@')
-        .chars()
-        .take_while(|c| c.is_ascii_alphanumeric() || *c == '-')
-        .collect();
-    matches!(
-        name.to_ascii_lowercase().as_str(),
-        "font-face" | "page" | "property" | "counter-style" | "font-feature-values"
-    )
-}
-
-/// Each `.ident` in a selector list (CSS Syntax 3 §4.3.11 ident code
-/// points; escapes are decoded only for the common `\<char>` form).
-fn classes_in(selectors: &str, found: &mut BTreeSet<String>) {
-    let chars: Vec<char> = selectors.chars().collect();
-    let ident_char = |c: char| c.is_alphanumeric() || c == '-' || c == '_' || !c.is_ascii();
-    let mut i = 0;
-    while i < chars.len() {
-        if chars[i] != '.' {
-            i += 1;
-            continue;
-        }
-        let mut j = i + 1;
-        let mut name = String::new();
-        while j < chars.len() {
-            if chars[j] == '\\' && j + 1 < chars.len() {
-                name.push(chars[j + 1]);
-                j += 2;
-            } else if ident_char(chars[j]) {
-                name.push(chars[j]);
-                j += 1;
-            } else {
-                break;
-            }
-        }
-        let starts_ok = name.chars().next().is_some_and(|c| !c.is_ascii_digit())
-            && !(name.starts_with('-') && name.chars().nth(1).is_some_and(|c| c.is_ascii_digit()));
-        if starts_ok {
-            found.insert(name);
-        }
-        i = j.max(i + 1);
-    }
 }
 
 /// `root.baseUrl` (dynamic-styles §14, decision 2): an `http(s)` page's
@@ -268,7 +160,8 @@ mod tests {
     use super::*;
 
     fn classes(css: &str) -> Vec<String> {
-        styled_classes([css]).into_iter().collect()
+        let (sheet, _) = h2q_css::Stylesheet::parse(css, h2q_css::Origin::Author, "test.css", None);
+        h2q_css::styled_classes(&[sheet]).into_iter().collect()
     }
 
     #[test]
@@ -277,13 +170,15 @@ mod tests {
             classes(
                 ".a, div.b > .c:not(.d) { margin: .5em; background: url(x.y.png) }\
                  /* .no */ @media (min-width: 1.5em) { .e:hover { color: red } }\
-                 [title='.no'] .f { }\
+                 [title='.no'] .f { color: red }\
                  @font-face { src: url(a.woff) }\
                  @keyframes k { 0% { opacity: .5 } }\
-                 .g\\:h { }"
+                 .g\\:h { color: red }"
             ),
             ["a", "b", "c", "d", "e", "f", "g:h"]
         );
+        // The parser drops a rule without declarations: it styles nothing.
+        assert!(classes(".empty { }").is_empty());
     }
 
     #[test]

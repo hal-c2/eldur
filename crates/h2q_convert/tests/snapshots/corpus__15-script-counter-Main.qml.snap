@@ -128,7 +128,7 @@ ApplicationWindow {
 
                                 text: "0"
                                 textFormat: Text.PlainText
-                                color: "#1d4ed8"
+                                color: count.cls_negative ? "#d62828" : "#1d4ed8"
                                 font.family: "sans-serif"
                                 font.pixelSize: 96
                                 font.weight: 800
@@ -171,7 +171,7 @@ ApplicationWindow {
                                     font.pixelSize: 18
                                     font.weight: 600
                                     background: Rectangle {
-                                        color: "#f7f9fc"
+                                        color: dec.hovered ? "#e9eef8" : "#f7f9fc"
                                         radius: 8
                                         border.width: 1
                                         border.color: "#c9d1e0"
@@ -185,6 +185,7 @@ ApplicationWindow {
                                     Layout.maximumWidth: Math.max(Math.ceil(implicitWidth), 64)
                                     Layout.minimumWidth: 64
                                     Layout.fillHeight: true
+                                    hoverEnabled: true
 
                                     onClicked: {
                                         Page.__h2q_on_click_dec(H2Q.event("click", dec, null));
@@ -203,7 +204,7 @@ ApplicationWindow {
                                     font.pixelSize: 18
                                     font.weight: 600
                                     background: Rectangle {
-                                        color: "#1d4ed8"
+                                        color: inc.hovered ? "#1a44c2" : "#1d4ed8"
                                         radius: 8
                                         border.width: 1
                                         border.color: "#1d4ed8"
@@ -218,6 +219,7 @@ ApplicationWindow {
                                     Layout.minimumWidth: 64
                                     Layout.fillHeight: true
                                     Layout.leftMargin: 12
+                                    hoverEnabled: true
 
                                     onClicked: {
                                         Page.__h2q_on_click_inc(H2Q.event("click", inc, null));
@@ -236,7 +238,7 @@ ApplicationWindow {
                                     font.pixelSize: 16
                                     font.weight: 500
                                     background: Rectangle {
-                                        color: "#f7f9fc"
+                                        color: reset.hovered ? "#e9eef8" : "#f7f9fc"
                                         radius: 8
                                         border.width: 1
                                         border.color: "#c9d1e0"
@@ -251,6 +253,7 @@ ApplicationWindow {
                                     Layout.minimumWidth: 64
                                     Layout.fillHeight: true
                                     Layout.leftMargin: 12
+                                    hoverEnabled: true
 
                                     onClicked: {
                                         Page.__h2q_on_click_reset(H2Q.event("click", reset, null));
@@ -298,7 +301,7 @@ ApplicationWindow {
                                     color: "#ffffff"
                                     radius: 8
                                     border.width: 1
-                                    border.color: "#c9d1e0"
+                                    border.color: mirrorInput.activeFocus ? "#00000000" : "#c9d1e0"
                                 }
                                 topPadding: 11
                                 rightPadding: 13

@@ -6,4 +6,7 @@ info[qml]: index.html:175: <a>: font size 15px inside 16px text is approximated 
 info[qml]: index.html:176: <a>: font size 15px inside 16px text is approximated with <small>
 info[qml]: index.html:177: <a>: font size 15px inside 16px text is approximated with <small>
 info[qml]: index.html:178: <a>: font size 15px inside 16px text is approximated with <small>
-info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet
+info[css]: index.html:175: styles under `:hover` of <a> are left out: it has no item of its own
+info[css]: index.html:176: styles under `:hover` of <a> are left out: it has no item of its own
+info[css]: index.html:177: styles under `:hover` of <a> are left out: it has no item of its own
+info[css]: index.html:178: styles under `:hover` of <a> are left out: it has no item of its own

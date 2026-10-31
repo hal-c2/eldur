@@ -3,4 +3,3 @@ source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
 info[html]: index.html:233: <button class="toggle-btn"> has element children; the Button shows only their text
-info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

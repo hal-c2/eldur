@@ -390,7 +390,7 @@ ApplicationWindow {
                                                     font.pixelSize: 15
                                                     font.weight: 600
                                                     background: Rectangle {
-                                                        color: "#3550d6"
+                                                        color: buttonControl.hovered ? "#2b43b8" : "#3550d6"
                                                         radius: 8
                                                     }
                                                     topPadding: 12
@@ -400,6 +400,7 @@ ApplicationWindow {
                                                     implicitHeight: 46.5
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
+                                                    hoverEnabled: true
                                                 }
                                             }
                                         }
@@ -584,7 +585,7 @@ ApplicationWindow {
                                                     font.pixelSize: 15
                                                     font.weight: 600
                                                     background: Rectangle {
-                                                        color: "#3550d6"
+                                                        color: buttonControl2.hovered ? "#2b43b8" : "#3550d6"
                                                         radius: 8
                                                     }
                                                     topPadding: 12
@@ -594,6 +595,7 @@ ApplicationWindow {
                                                     implicitHeight: 46.5
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
+                                                    hoverEnabled: true
                                                 }
                                             }
                                         }
@@ -778,7 +780,7 @@ ApplicationWindow {
                                                     font.pixelSize: 15
                                                     font.weight: 600
                                                     background: Rectangle {
-                                                        color: "#3550d6"
+                                                        color: buttonControl3.hovered ? "#2b43b8" : "#3550d6"
                                                         radius: 8
                                                     }
                                                     topPadding: 12
@@ -788,6 +790,7 @@ ApplicationWindow {
                                                     implicitHeight: 46.5
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
+                                                    hoverEnabled: true
                                                 }
                                             }
                                         }
@@ -972,7 +975,7 @@ ApplicationWindow {
                                                     font.pixelSize: 15
                                                     font.weight: 600
                                                     background: Rectangle {
-                                                        color: "#3550d6"
+                                                        color: buttonControl4.hovered ? "#2b43b8" : "#3550d6"
                                                         radius: 8
                                                     }
                                                     topPadding: 12
@@ -982,6 +985,7 @@ ApplicationWindow {
                                                     implicitHeight: 46.5
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
+                                                    hoverEnabled: true
                                                 }
                                             }
                                         }
@@ -1166,7 +1170,7 @@ ApplicationWindow {
                                                     font.pixelSize: 15
                                                     font.weight: 600
                                                     background: Rectangle {
-                                                        color: "#3550d6"
+                                                        color: buttonControl5.hovered ? "#2b43b8" : "#3550d6"
                                                         radius: 8
                                                     }
                                                     topPadding: 12
@@ -1176,6 +1180,7 @@ ApplicationWindow {
                                                     implicitHeight: 46.5
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
+                                                    hoverEnabled: true
                                                 }
                                             }
                                         }
@@ -1360,7 +1365,7 @@ ApplicationWindow {
                                                     font.pixelSize: 15
                                                     font.weight: 600
                                                     background: Rectangle {
-                                                        color: "#3550d6"
+                                                        color: buttonControl6.hovered ? "#2b43b8" : "#3550d6"
                                                         radius: 8
                                                     }
                                                     topPadding: 12
@@ -1370,6 +1375,7 @@ ApplicationWindow {
                                                     implicitHeight: 46.5
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
+                                                    hoverEnabled: true
                                                 }
                                             }
                                         }

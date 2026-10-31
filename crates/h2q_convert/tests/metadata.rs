@@ -117,12 +117,20 @@ fn class_writes_declare_their_class_properties() {
     );
     let qml = out.main_qml().expect("Main.qml");
     assert_eq!(
-        lines_with(qml, "cls_"),
+        lines_with(qml, "property bool cls_"),
         [
             "property bool cls_is_done: false",
             "property bool cls_on: true",
             "property bool cls_a_b: false",
             "property bool cls_on: false",
+        ]
+    );
+    // A styled class the script toggles restyles its element.
+    assert_eq!(
+        lines_with(qml, ".cls_on ?"),
+        [
+            r##"color: p.cls_on ? "#ff0000" : "#000000""##,
+            r##"color: q.cls_on ? "#ff0000" : "#000000""##,
         ]
     );
     let collisions: Vec<String> = out

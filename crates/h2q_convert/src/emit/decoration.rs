@@ -127,7 +127,7 @@ impl Emitter<'_, '_> {
         }
         Decoration {
             insets,
-            paints: background || border,
+            paints: background || border || self.force_paint,
             clips,
             gradients,
             shadows,
