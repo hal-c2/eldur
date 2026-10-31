@@ -1827,6 +1827,11 @@ function setInnerHTML(item, html) {
         console.warn("H2Q: <script> and <style> inside innerHTML are unsupported");
         return;
     }
+    if (_markupMakesElements(raw)) {
+        _replaceWithMarkup(raw, str);
+        _meta(raw).innerHTML = str;
+        return;
+    }
     var target = typeof raw.text === "string" ? raw : _findTextChild(raw);
     if (target && typeof target.text === "string") {
         if (typeof target.textFormat === "number") {
@@ -1838,6 +1843,62 @@ function setInnerHTML(item, html) {
         return;
     }
     console.warn("H2Q: innerHTML assignment on non-text QML item is unsupported");
+}
+
+// Whether markup set on `raw` becomes elements, as `createElement` makes
+// them, rather than styled text. A `Text` or control shows it as text. A box
+// does when it has a text child the converter predicted no elements in:
+// inline markup in a paragraph stays one run of text.
+function _markupMakesElements(raw) {
+    if (typeof raw.text === "string") {
+        return false;
+    }
+    if (!_findTextChild(raw)) {
+        return true;
+    }
+    var templates = _root && _root.h2qTemplates;
+    if (!templates || typeof templates !== "object") {
+        return false;
+    }
+    var contexts = [];
+    if (typeof raw.h2qKey === "string" && raw.h2qKey !== "") {
+        contexts.push("@" + raw.h2qKey);
+    }
+    if (typeof raw.h2qTemplate === "string" && raw.h2qTemplate !== "") {
+        contexts.push("@" + raw.h2qTemplate);
+    }
+    var keys = Object.keys(templates);
+    for (var i = 0; i < keys.length; ++i) {
+        for (var c = 0; c < contexts.length; ++c) {
+            var k = keys[i];
+            if (k.length > contexts[c].length && k.slice(-contexts[c].length) === contexts[c]) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+// `innerHTML = markup` on a box: its children are replaced by the markup's
+// nodes, made by `createElement`, so connecting them looks their templates
+// up (§6.7) as for any created element.
+function _replaceWithMarkup(raw, str) {
+    _layoutChanged(raw);
+    var m = _meta(raw);
+    if (_findTextChild(raw)) {
+        setText(raw, "");
+        delete m.explicitText;
+    }
+    var old = _rawElementChildren(raw);
+    for (var i = 0; i < old.length; ++i) {
+        if (old[i].parent !== undefined) {
+            old[i].parent = null;
+        }
+        // As `textContent = x`: `destroy` waits for the event loop.
+        old[i].destroy();
+    }
+    var nodes = _expandInsertRawNodes(_parseHtmlFragmentNodes(str));
+    _insertRawNodesBefore(_appendTarget(raw), nodes, null);
 }
 
 function getInnerHTML(item) {
@@ -3310,9 +3371,12 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
                 initProps["h2qUp" + rank] = anc;
             }
         }
-        next = component.createObject(parentContainer || _qobjectParent(), initProps);
-        if (!parentContainer && next && next.parent !== undefined) {
-            next.parent = null;
+        // Owned by the root, not the container: the container may be a part
+        // of an ancestor that is itself swapped and destroyed later, while
+        // this item is kept and moved into the ancestor's replacement.
+        next = component.createObject(_qobjectParent(), initProps);
+        if (next && next.parent !== undefined) {
+            next.parent = parentContainer;
         }
         m.templateComponent = component;
     } else {

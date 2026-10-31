@@ -452,6 +452,7 @@ dependencies = [
 name = "h2q_js"
 version = "0.1.0"
 dependencies = [
+ "h2q_dom",
  "insta",
  "oxc_allocator",
  "oxc_ast",

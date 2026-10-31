@@ -1082,3 +1082,257 @@ fn handler_attribute_this_is_a_runtime_element() {
     );
     assert_eq!(res.class_writes[0].line, Some(4));
 }
+
+// ---------------------------------------------------------------------------
+// Markup assigned to `innerHTML` or passed to `insertAdjacentHTML`
+// (docs/design/dynamic-styles.md §6.7): its elements are created elements.
+// ---------------------------------------------------------------------------
+
+/// `(tag, input type, class sets, open, parents)` of each created element.
+type Shape = (
+    String,
+    Option<String>,
+    Vec<Vec<String>>,
+    bool,
+    Vec<ElementRef>,
+);
+
+fn shapes(res: &Analysis) -> Vec<Shape> {
+    res.created
+        .iter()
+        .map(|c| {
+            (
+                c.tag.clone(),
+                c.input_type.clone(),
+                c.class_sets.clone(),
+                c.open_classes,
+                c.parents.clone(),
+            )
+        })
+        .collect()
+}
+
+fn shape(tag: &str, classes: &[&[&str]], open: bool, parents: Vec<ElementRef>) -> Shape {
+    (tag.to_string(), None, sets(classes), open, parents)
+}
+
+fn created(id: u32) -> ElementRef {
+    ElementRef::Created(CreatedId(id))
+}
+
+fn markup_diagnostics(res: &Analysis) -> Vec<(Severity, Option<u32>, String)> {
+    res.diagnostics
+        .iter()
+        .filter(|d| d.message.contains("dynamic-markup"))
+        .map(|d| (d.severity, d.line, d.message.clone()))
+        .collect()
+}
+
+#[test]
+fn inner_html_literal_elements_are_created_in_the_target() {
+    let res = analyze(&[classic(
+        "markup.js",
+        r#"
+        const list = document.getElementById("list");
+        list.innerHTML = '<li class="item"><span class="label">First</span></li>'
+            + '<li class="done item"><span class="label">Second</span><input type="CheckBox"></li>';
+        "#,
+    )]);
+    assert!(res.diagnostics.is_empty(), "{:?}", res.diagnostics);
+    assert!(res.mutates_dom);
+    assert!(res.runtime_dom);
+    // Siblings with different classes are different elements, as separate
+    // `createElement` calls are; their children are parented to each.
+    assert_eq!(
+        shapes(&res),
+        vec![
+            shape("li", &[&["item"]], false, vec![by_id("list")]),
+            shape("span", &[&["label"]], false, vec![created(0)]),
+            shape("li", &[&["done", "item"]], false, vec![by_id("list")]),
+            shape("span", &[&["label"]], false, vec![created(2)]),
+            (
+                "input".to_string(),
+                Some("checkbox".to_string()),
+                sets(&[&[]]),
+                false,
+                vec![created(2)],
+            ),
+        ]
+    );
+    let line = Some(3);
+    assert!(
+        res.created.iter().all(|c| c.line == line),
+        "{:?}",
+        res.created
+    );
+    assert!(res.created.iter().all(|c| c.source == "markup.js"));
+    assert_eq!(
+        res.created.iter().map(|c| c.id).collect::<Vec<_>>(),
+        (0..5).map(CreatedId).collect::<Vec<_>>()
+    );
+}
+
+#[test]
+fn identical_sibling_elements_are_one_created_element() {
+    let res = analyze(&[classic(
+        "same.js",
+        r#"
+        document.getElementById("list").innerHTML =
+            "<li class='item'>a</li><li class='item'>b</li><li class=' item '>c</li>";
+        "#,
+    )]);
+    assert!(res.diagnostics.is_empty(), "{:?}", res.diagnostics);
+    assert_eq!(
+        shapes(&res),
+        vec![shape("li", &[&["item"]], false, vec![by_id("list")])]
+    );
+}
+
+#[test]
+fn insert_adjacent_html_parents_follow_the_position() {
+    let res = analyze(&[classic(
+        "adjacent.js",
+        r#"
+        const list = document.getElementById("list");
+        list.insertAdjacentHTML("beforeend", "<li class='a'>x</li>");
+        list.insertAdjacentHTML("AfterBegin", "<li class='b'>y</li>");
+        list.insertAdjacentHTML("beforebegin", "<p class='c'>z</p>");
+        list.insertAdjacentHTML("afterend", "<p class='d'>w</p>");
+        list.insertAdjacentHTML(where, "<p class='e'>v</p>");
+        "#,
+    )]);
+    assert!(res.diagnostics.is_empty(), "{:?}", res.diagnostics);
+    assert_eq!(
+        shapes(&res),
+        vec![
+            shape("li", &[&["a"]], false, vec![by_id("list")]),
+            shape("li", &[&["b"]], false, vec![by_id("list")]),
+            // Beside the target: its parent, which analysis does not know.
+            shape("p", &[&["c"]], false, vec![ElementRef::Unknown]),
+            shape("p", &[&["d"]], false, vec![ElementRef::Unknown]),
+            shape("p", &[&["e"]], false, vec![ElementRef::Unknown]),
+        ]
+    );
+}
+
+#[test]
+fn markup_with_dynamic_text_and_class_values_keeps_its_literal_structure() {
+    let res = analyze(&[classic(
+        "dynamic.js",
+        r#"
+        const list = document.getElementById("list");
+        function add(item) {
+            list.insertAdjacentHTML(
+                "beforeend",
+                '<li class="item' + (item.done ? ' done' : '') + '"><span class="label">'
+                    + item.text + '</span></li>'
+            );
+            list.innerHTML += `<li class="item ${item.kind}" data-id="${item.id}">${item.text}</li>`;
+        }
+        "#,
+    )]);
+    assert!(res.diagnostics.is_empty(), "{:?}", res.diagnostics);
+    // Each class value of the ternary is an element of its own, in
+    // enumeration order.
+    assert_eq!(
+        shapes(&res),
+        vec![
+            shape("li", &[&["done", "item"]], false, vec![by_id("list")]),
+            shape("span", &[&["label"]], false, vec![created(0)]),
+            shape("li", &[&["item"]], false, vec![by_id("list")]),
+            shape("span", &[&["label"]], false, vec![created(2)]),
+            // `item ${kind}`: `item` is literal, the rest is open.
+            shape("li", &[&["item"]], true, vec![by_id("list")]),
+        ]
+    );
+}
+
+#[test]
+fn markup_inside_a_created_element_is_parented_to_it() {
+    let res = analyze(&[classic(
+        "nested.js",
+        r#"
+        const li = document.createElement("li");
+        li.className = "row";
+        li.innerHTML = '<span class="label">x</span>';
+        document.getElementById("list").appendChild(li);
+        "#,
+    )]);
+    assert!(res.diagnostics.is_empty(), "{:?}", res.diagnostics);
+    assert_eq!(
+        shapes(&res),
+        vec![
+            shape("li", &[&["row"]], false, vec![by_id("list")]),
+            shape("span", &[&["label"]], false, vec![created(0)]),
+        ]
+    );
+}
+
+#[test]
+fn empty_and_text_only_markup_creates_nothing() {
+    let res = analyze(&[classic(
+        "empty.js",
+        r#"
+        const list = document.getElementById("list");
+        list.innerHTML = "";
+        list.innerHTML = "no elements &amp; no tags";
+        document.getElementById("msg").innerHTML = "<!-- a comment -->";
+        "#,
+    )]);
+    assert!(res.diagnostics.is_empty(), "{:?}", res.diagnostics);
+    assert!(res.created.is_empty(), "{:?}", res.created);
+    assert!(res.mutates_dom);
+}
+
+#[test]
+fn non_literal_markup_is_a_diagnostic() {
+    let res = analyze(&[classic(
+        "opaque.js",
+        r#"
+        const list = document.getElementById("list");
+        list.innerHTML = rows.map((r) => `<li>${r}</li>`).join("");
+        list.insertAdjacentHTML("beforeend", html);
+        list.innerHTML = '<li class="a">x</li>' + more;
+        list.innerHTML = `<${tag} class="b">y</${tag}>`;
+        list.innerHTML = `<li ${attrs}>z</li>`;
+        "#,
+    )]);
+    let diags = markup_diagnostics(&res);
+    assert_eq!(
+        diags.iter().map(|d| (d.0, d.1)).collect::<Vec<_>>(),
+        vec![
+            (Severity::Unsupported, Some(3)),
+            (Severity::Unsupported, Some(4)),
+            (Severity::Unsupported, Some(5)),
+            (Severity::Unsupported, Some(6)),
+            (Severity::Unsupported, Some(7)),
+        ],
+        "{diags:?}"
+    );
+    assert!(
+        diags.iter().all(|d| d.2.contains("not literal")),
+        "{diags:?}"
+    );
+    // The literal elements beside an unknown part are still predicted; an
+    // element whose tag or attribute names are not literal is not.
+    assert_eq!(
+        shapes(&res),
+        vec![shape("li", &[&["a"]], false, vec![by_id("list")])]
+    );
+}
+
+#[test]
+fn markup_elements_the_runtime_does_not_create_are_left_out() {
+    let res = analyze(&[classic(
+        "skipped.js",
+        r#"
+        document.getElementById("box").innerHTML =
+            '<svg class="icon"><path d="M0 0"/></svg><p class="x">a</p>';
+        "#,
+    )]);
+    assert!(res.diagnostics.is_empty(), "{:?}", res.diagnostics);
+    assert_eq!(
+        shapes(&res),
+        vec![shape("p", &[&["x"]], false, vec![by_id("box")])]
+    );
+}

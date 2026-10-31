@@ -350,6 +350,75 @@ impl AnalysisVisitor<'_, '_> {
         }
     }
 
+    /// Where `insertAdjacentElement`/`insertAdjacentHTML` at `position` puts
+    /// its argument: in the receiver, or beside it in a parent analysis does
+    /// not know.
+    fn adjacent_parent(&self, receiver: &Expression<'_>, position: Option<String>) -> ElementRef {
+        let inside = position
+            .is_some_and(|p| matches!(p.to_ascii_lowercase().as_str(), "afterbegin" | "beforeend"));
+        if inside {
+            self.target(receiver)
+        } else {
+            ElementRef::Unknown
+        }
+    }
+
+    /// The elements of markup inserted into `parent` become created elements
+    /// (`docs/design/dynamic-styles.md` §6.7). Each alternative value is
+    /// parsed by the HTML parser with a sentinel for every part that is not
+    /// literal. Inside an element such a part is taken as text or an
+    /// attribute value; between elements, or in a tag or attribute name, it
+    /// may be markup, which is reported.
+    fn record_markup(&mut self, parent: &ElementRef, value: &Expression<'_>, span: Span) {
+        let alts = self.facts.resolve_str(&self.eval.strings(value), 0);
+        let line = Some(line_for_span(self.input, span));
+        let mut shapes = MarkupShapes::default();
+        let mut opaque = false;
+        for alt in &alts {
+            let mut text = String::new();
+            for piece in alt {
+                match piece {
+                    Piece::Lit(s) => text.push_str(&s.replace(SENTINEL, "")),
+                    Piece::Open | Piece::Sym(_) => text.push(SENTINEL),
+                }
+            }
+            let doc = h2q_dom::Document::parse_fragment(&text);
+            if let Some(top) = doc.html() {
+                opaque |= shapes.walk(&doc, top, None, true);
+            }
+        }
+        if opaque {
+            self.analysis.diagnostics.push(Diagnostic {
+                severity: Severity::Unsupported,
+                source: self.input.name.clone(),
+                line,
+                message: "markup is not literal: only the elements written literally take the page's styles; the rest use generic items (dynamic-markup)".to_string(),
+            });
+        }
+        let base = self.dynamic.sites.len();
+        let id_of = |i: usize| CreatedId(u32::try_from(base + i).unwrap_or(u32::MAX));
+        for (i, shape) in shapes.shapes.into_iter().enumerate() {
+            let id = id_of(i);
+            self.dynamic.sites.push(CreatedSite {
+                tag: shape.tag,
+                source: self.input.name.clone(),
+                line,
+                path: self.path.clone(),
+            });
+            if let Some(ty) = shape.input_type {
+                self.dynamic.input_types.push((id, ty));
+            }
+            let pos = self.pos(span);
+            self.dynamic
+                .class_ops
+                .push((id, ClassOp::Assign(vec![shape.class]), pos.clone()));
+            let into = shape
+                .parent
+                .map_or_else(|| parent.clone(), |p| ElementRef::Created(id_of(p)));
+            self.dynamic.inserts.push((id, into, pos));
+        }
+    }
+
     fn record_input_type(&mut self, object: &Expression<'_>, value: Option<&Expression<'_>>) {
         if let ElementRef::Created(id) = self.target(object) {
             let value = value
@@ -452,15 +521,14 @@ impl AnalysisVisitor<'_, '_> {
                 let parent = self.target(&member.object);
                 self.record_inserts(&parent, args.iter(), it.span);
             }
+            "insertAdjacentHTML" => {
+                let parent = self.adjacent_parent(&member.object, literal_arg(0));
+                if let Some(markup) = args.get(1).and_then(|a| a.as_expression()) {
+                    self.record_markup(&parent, markup, it.span);
+                }
+            }
             "insertAdjacentElement" => {
-                let inside = literal_arg(0).is_some_and(|p| {
-                    matches!(p.to_ascii_lowercase().as_str(), "afterbegin" | "beforeend")
-                });
-                let parent = if inside {
-                    self.target(&member.object)
-                } else {
-                    ElementRef::Unknown
-                };
+                let parent = self.adjacent_parent(&member.object, literal_arg(0));
                 self.record_inserts(&parent, args.get(1), it.span);
             }
             // The parent is the receiver's parent, which analysis does not know.
@@ -510,6 +578,11 @@ impl AnalysisVisitor<'_, '_> {
             }
             ("type", AssignmentOperator::Assign) => {
                 self.record_input_type(&member.object, Some(&it.right));
+            }
+            // `+=` keeps the old children and parses the new markup after them.
+            ("innerHTML", AssignmentOperator::Assign | AssignmentOperator::Addition) => {
+                let parent = self.target(&member.object);
+                self.record_markup(&parent, &it.right, it.span);
             }
             _ => {}
         }
@@ -1233,6 +1306,90 @@ fn apply_class_op(states: &[ClassAlt], op: &ClassOp) -> Vec<ClassAlt> {
         }
     }
     out
+}
+
+/// Stands for a part of markup that is not literal. A private-use character,
+/// so the parser keeps it in names, values and text.
+const SENTINEL: char = '\u{E000}';
+
+/// One element of literal markup. Elements with the same tag, input type
+/// and class value under the same parent, in any alternative of one value,
+/// are one shape: they take the same templates. Siblings with different
+/// classes are different shapes, as separate `createElement` calls are.
+struct MarkupShape {
+    tag: String,
+    /// For `<input>`: its type, `None` when not literal.
+    input_type: Option<Option<String>>,
+    class: ClassAlt,
+    /// Index of the parent shape; `None` for the inserted elements themselves.
+    parent: Option<usize>,
+}
+
+#[derive(Default)]
+struct MarkupShapes {
+    shapes: Vec<MarkupShape>,
+}
+
+impl MarkupShapes {
+    /// Records the element children of `node`. Returns whether some part of
+    /// the markup may not be literal.
+    fn walk(
+        &mut self,
+        doc: &h2q_dom::Document,
+        node: h2q_dom::NodeId,
+        parent: Option<usize>,
+        top: bool,
+    ) -> bool {
+        let mut opaque = false;
+        for child in doc.children(node) {
+            if let Some(text) = doc.text(child) {
+                opaque |= top && text.contains(SENTINEL);
+                continue;
+            }
+            let Some(el) = doc.element(child) else {
+                continue;
+            };
+            let names_open = el.local_name().contains(SENTINEL)
+                || el.attrs.iter().any(|a| a.name.local.contains(SENTINEL));
+            if names_open {
+                opaque = true;
+                continue;
+            }
+            // The runtime makes HTML elements only, and no scripts or styles.
+            if !el.is_html() || matches!(el.local_name(), "script" | "style" | "template") {
+                continue;
+            }
+            let tag = el.local_name().to_string();
+            let input_type = (tag == "input").then(|| {
+                let ty = el.attr("type").unwrap_or("text");
+                (!ty.contains(SENTINEL)).then(|| ty.to_ascii_lowercase())
+            });
+            let mut class = ClassAlt::default();
+            for token in el.classes() {
+                if token.contains(SENTINEL) {
+                    class.open = true;
+                } else {
+                    class.names.insert(token.to_string());
+                }
+            }
+            let at = match self.shapes.iter().position(|s| {
+                s.parent == parent && s.tag == tag && s.input_type == input_type && s.class == class
+            }) {
+                Some(at) => at,
+                None => {
+                    self.shapes.push(MarkupShape {
+                        tag,
+                        input_type,
+                        class,
+                        parent,
+                    });
+                    self.shapes.len() - 1
+                }
+            };
+            opaque |= self.walk(doc, child, Some(at), false);
+        }
+        opaque
+    }
 }
 
 /// A created element as collected, before its class sets are computed.

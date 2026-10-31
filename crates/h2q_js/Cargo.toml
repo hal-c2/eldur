@@ -6,6 +6,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+h2q_dom.workspace = true
 oxc_allocator.workspace = true
 oxc_ast.workspace = true
 oxc_ast_visit.workspace = true

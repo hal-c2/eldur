@@ -1,5 +1,5 @@
 // Records what Chromium reports for the pages `templates_e2e.rs` drives (the
-// focused `page.html` here and corpus 16-script-todo), after the same clicks
+// focused `page.html` and `markup.html` here and corpus 16-script-todo), after the same clicks
 // and typing, so the tests compare the elements the converted scripts create
 // against a browser's.
 //
@@ -19,6 +19,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../../..");
 const pages = {
   T: path.join(here, "page.html"),
+  M: path.join(here, "markup.html"),
   16: path.join(root, "tests/corpus/16-script-todo/index.html"),
 };
 const tools = path.join(root, "tools/visual");
@@ -45,10 +46,21 @@ const S16 = {
   check: [{ click: "#todo-list li:nth-child(1) input" }],
   remove: [{ click: "#todo-list li:nth-child(2) .delete" }],
 };
+const M = {
+  add: [{ click: "#add" }],
+  addTwice: [{ click: "#add" }, { click: "#add" }],
+  toggle: [{ click: "#toggle" }],
+  toggleTwice: [{ click: "#toggle" }, { click: "#toggle" }],
+  reset: [{ click: "#add" }, { click: "#toggle" }, { click: "#reset" }],
+  hover: [{ hover: "#list li:nth-child(1)" }],
+  toggleHover: [{ click: "#toggle" }, { hover: "#list li:nth-child(1)" }],
+};
 const label = (n) => `#list li:nth-child(${n}) .label`;
 const item = (n) => `#list li:nth-child(${n})`;
 const text = (n) => `#todo-list li:nth-child(${n}) .todo-text`;
+const tag = (n) => `#list li:nth-child(${n}) .tag`;
 const LABEL = ["color", "text-decoration-line"];
+const TAG = ["color", "background-color"];
 
 const computed = [
   ["T initial order", "T", [order("#list .label")], "html", ["--h2q-order"]],
@@ -66,6 +78,26 @@ const computed = [
   ["T remove order", "T", [...T.remove, order("#list .label")], "html", ["--h2q-order"]],
   ["T hover label1", "T", T.hover, label(1), LABEL],
   ["T hover label2", "T", T.hover, label(2), LABEL],
+  ["M initial order", "M", [order("#list .label")], "html", ["--h2q-order"]],
+  ["M initial label1", "M", [], label(1), LABEL],
+  ["M initial label2", "M", [], label(2), LABEL],
+  ["M initial item1", "M", [], item(1), ["background-color"]],
+  ["M initial item2", "M", [], item(2), ["background-color"]],
+  ["M initial tag1", "M", [], tag(1), TAG],
+  ["M add order", "M", [...M.addTwice, order("#list .label")], "html", ["--h2q-order"]],
+  ["M add label3", "M", M.addTwice, label(3), LABEL],
+  ["M add item4", "M", M.addTwice, item(4), ["background-color"]],
+  ["M add tag4", "M", M.addTwice, tag(4), TAG],
+  ["M toggle label1", "M", M.toggle, label(1), LABEL],
+  ["M toggle item1", "M", M.toggle, item(1), ["background-color"]],
+  ["M toggle twice label1", "M", M.toggleTwice, label(1), LABEL],
+  ["M toggle twice item1", "M", M.toggleTwice, item(1), ["background-color"]],
+  ["M reset order", "M", [...M.reset, order("#list .label")], "html", ["--h2q-order"]],
+  ["M reset label1", "M", M.reset, label(1), LABEL],
+  ["M reset item1", "M", M.reset, item(1), ["background-color"]],
+  ["M hover label1", "M", M.hover, label(1), LABEL],
+  ["M hover label2", "M", M.hover, label(2), LABEL],
+  ["M toggle hover label1", "M", M.toggleHover, label(1), LABEL],
   ["16 initial order", "16", [order("#todo-list .todo-text")], "html", ["--h2q-order"]],
   ["16 initial text1", "16", [], text(1), LABEL],
   ["16 initial text3", "16", [], text(3), LABEL],
@@ -81,6 +113,10 @@ const geometry = [
   ["T add geometry", "T", T.add, ["#list", "#list li"]],
   ["T compact geometry", "T", T.compact, ["#list", "#list li"]],
   ["T remove geometry", "T", T.remove, ["#list", "#list li"]],
+  ["M initial geometry", "M", [], ["#list", "#list li", "#list .label", "#list .tag"]],
+  ["M add geometry", "M", M.add, ["#list", "#list li", "#list .tag"]],
+  ["M toggle geometry", "M", M.toggle, ["#list", "#list li", "#list .label"]],
+  ["M reset geometry", "M", M.reset, ["#list", "#list li"]],
   ["16 initial geometry", "16", [], ["#todo-list", "#todo-list li", "#todo-list .todo-text", "#todo-list input", "#todo-list .delete"]],
   ["16 add geometry", "16", S16.add, ["#todo-list", "#todo-list li"]],
   ["16 remove geometry", "16", S16.remove, ["#todo-list", "#todo-list li"]],

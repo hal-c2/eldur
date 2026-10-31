@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Markup items</title>
+<style>
+body {
+  margin: 0;
+  padding: 24px;
+  font-family: sans-serif;
+  font-size: 16px;
+  color: #1f2430;
+  background: #f4f6fa;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.list {
+  width: 400px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid #ccd3e0;
+  background: #ffffff;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e3e7ef;
+}
+
+.item.done {
+  background: #f1f3f5;
+}
+
+.label {
+  flex: 1;
+}
+
+.item.done .label {
+  color: #868e96;
+  text-decoration: line-through;
+}
+
+.item:hover .label {
+  color: #1c7ed6;
+}
+
+.tag {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #e7f5ff;
+  color: #1864ab;
+  font-size: 12px;
+}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button type="button" id="add">Add</button>
+  <button type="button" id="toggle">Toggle first</button>
+  <button type="button" id="reset">Reset</button>
+</div>
+<ul class="list" id="list"></ul>
+
+<script>
+  var list = document.getElementById('list');
+  var next = 3;
+
+  function reset() {
+    list.innerHTML =
+      '<li class="item"><span class="label">First</span><span class="tag">new</span></li>' +
+      '<li class="item done"><span class="label">Second</span><span class="tag">old</span></li>';
+    next = 3;
+  }
+
+  document.getElementById('add').addEventListener('click', function () {
+    list.insertAdjacentHTML('beforeend',
+      '<li class="item"><span class="label">Item ' + next + '</span><span class="tag">new</span></li>');
+    next += 1;
+  });
+
+  document.getElementById('toggle').addEventListener('click', function () {
+    list.firstElementChild.classList.toggle('done');
+  });
+
+  document.getElementById('reset').addEventListener('click', reset);
+
+  reset();
+</script>
+</body>
+</html>
