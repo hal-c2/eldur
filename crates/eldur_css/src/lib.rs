@@ -7,7 +7,7 @@
 
 pub mod values;
 
-pub use inline_rules::{InlineRule, RuntimeRule};
+pub use inline_rules::{InlineRule, PaintValue, RuntimeRule};
 
 pub use values::*;
 
@@ -440,6 +440,19 @@ pub fn inline_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<InlineRul
 #[must_use]
 pub fn runtime_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<RuntimeRule> {
     inline_rules::runtime_rules(sheets, viewport)
+}
+
+/// Parses one value of `background-image`, `box-shadow` or `transform` for the
+/// runtime. `None` when it is invalid, or depends on the element it lands on.
+#[must_use]
+pub fn parse_paint_value(property: &str, text: &str, viewport: &Viewport) -> Option<PaintValue> {
+    inline_rules::parse_paint_value(property, text, viewport)
+}
+
+/// A whole `background` value's `(image, colour)` longhands.
+#[must_use]
+pub fn background_parts(value: &str) -> Option<(Option<String>, Option<String>)> {
+    inline_rules::background_parts(value)
 }
 
 /// The structural pseudo-classes (without `of S`) some selector in `sheets`

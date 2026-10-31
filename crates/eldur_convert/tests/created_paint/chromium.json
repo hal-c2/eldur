@@ -1,0 +1,2093 @@
+{
+ "computed_closed": {
+  "log": [
+   "CS sx color=rgb(255, 0, 0)",
+   "CS sx backgroundColor=rgb(0, 255, 0)",
+   "CS sx backgroundImage=none",
+   "CS sx boxShadow=none",
+   "CS sx transform=none",
+   "CS sx width=632px",
+   "CS sx height=40px",
+   "CS sx marginTop=10px",
+   "CS sx marginLeft=4px",
+   "CS sx paddingTop=12px",
+   "CS sx borderTopWidth=2px",
+   "CS sx borderTopColor=rgba(0, 0, 255, 0.5)",
+   "CS sx opacity=0.5",
+   "CS sx fontSize=12px",
+   "CS sx fontFamily=\"Times New Roman\", serif",
+   "CS sx fontWeight=700",
+   "CS sx display=block",
+   "CS sx position=static",
+   "CS cx color=rgb(255, 0, 0)",
+   "CS cx backgroundColor=rgb(0, 255, 0)",
+   "CS cx backgroundImage=none",
+   "CS cx boxShadow=none",
+   "CS cx transform=none",
+   "CS cx width=632px",
+   "CS cx height=40px",
+   "CS cx marginTop=10px",
+   "CS cx marginLeft=4px",
+   "CS cx paddingTop=12px",
+   "CS cx borderTopWidth=2px",
+   "CS cx borderTopColor=rgba(0, 0, 255, 0.5)",
+   "CS cx opacity=0.5",
+   "CS cx fontSize=12px",
+   "CS cx fontFamily=\"Times New Roman\", serif",
+   "CS cx fontWeight=700",
+   "CS cx display=block",
+   "CS cx position=static",
+   "CS sy color=rgb(0, 0, 0)",
+   "CS sy backgroundColor=rgba(0, 0, 0, 0)",
+   "CS sy backgroundImage=linear-gradient(90deg, rgb(255, 0, 0), rgb(0, 0, 255))",
+   "CS sy boxShadow=rgba(0, 0, 0, 0.5) 1px 2px 3px 4px",
+   "CS sy transform=matrix(2, 0, 0, 2, 10, 0)",
+   "CS sy width=1264px",
+   "CS sy height=0px",
+   "CS sy marginTop=0px",
+   "CS sy marginLeft=0px",
+   "CS sy paddingTop=0px",
+   "CS sy borderTopWidth=0px",
+   "CS sy borderTopColor=rgb(0, 0, 0)",
+   "CS sy opacity=1",
+   "CS sy fontSize=16px",
+   "CS sy fontFamily=Arial, sans-serif",
+   "CS sy fontWeight=400",
+   "CS sy display=block",
+   "CS sy position=static",
+   "CS cy color=rgb(0, 0, 0)",
+   "CS cy backgroundColor=rgba(0, 0, 0, 0)",
+   "CS cy backgroundImage=linear-gradient(90deg, rgb(255, 0, 0), rgb(0, 0, 255))",
+   "CS cy boxShadow=rgba(0, 0, 0, 0.5) 1px 2px 3px 4px",
+   "CS cy transform=matrix(2, 0, 0, 2, 10, 0)",
+   "CS cy width=1264px",
+   "CS cy height=0px",
+   "CS cy marginTop=0px",
+   "CS cy marginLeft=0px",
+   "CS cy paddingTop=0px",
+   "CS cy borderTopWidth=0px",
+   "CS cy borderTopColor=rgb(0, 0, 0)",
+   "CS cy opacity=1",
+   "CS cy fontSize=16px",
+   "CS cy fontFamily=Arial, sans-serif",
+   "CS cy fontWeight=400",
+   "CS cy display=block",
+   "CS cy position=static",
+   "CS sz color=rgb(0, 0, 0)",
+   "CS sz backgroundColor=rgba(0, 0, 0, 0)",
+   "CS sz backgroundImage=radial-gradient(circle, rgb(255, 0, 0), rgb(0, 0, 255))",
+   "CS sz boxShadow=rgb(0, 0, 0) 0px 0px 4px 0px inset, rgb(255, 0, 0) 0px 0px 2px 0px",
+   "CS sz transform=matrix(0, 1, -1, 0, 0, 0)",
+   "CS sz width=1264px",
+   "CS sz height=0px",
+   "CS sz marginTop=0px",
+   "CS sz marginLeft=0px",
+   "CS sz paddingTop=0px",
+   "CS sz borderTopWidth=0px",
+   "CS sz borderTopColor=rgb(0, 0, 0)",
+   "CS sz opacity=1",
+   "CS sz fontSize=16px",
+   "CS sz fontFamily=Arial, sans-serif",
+   "CS sz fontWeight=400",
+   "CS sz display=block",
+   "CS sz position=static",
+   "CS cz color=rgb(0, 0, 0)",
+   "CS cz backgroundColor=rgba(0, 0, 0, 0)",
+   "CS cz backgroundImage=radial-gradient(circle, rgb(255, 0, 0), rgb(0, 0, 255))",
+   "CS cz boxShadow=rgb(0, 0, 0) 0px 0px 4px 0px inset, rgb(255, 0, 0) 0px 0px 2px 0px",
+   "CS cz transform=matrix(0, 1, -1, 0, 0, 0)",
+   "CS cz width=1264px",
+   "CS cz height=0px",
+   "CS cz marginTop=0px",
+   "CS cz marginLeft=0px",
+   "CS cz paddingTop=0px",
+   "CS cz borderTopWidth=0px",
+   "CS cz borderTopColor=rgb(0, 0, 0)",
+   "CS cz opacity=1",
+   "CS cz fontSize=16px",
+   "CS cz fontFamily=Arial, sans-serif",
+   "CS cz fontWeight=400",
+   "CS cz display=block",
+   "CS cz position=static",
+   "CS sk color=rgb(0, 0, 0)",
+   "CS sk backgroundColor=rgba(0, 0, 0, 0)",
+   "CS sk backgroundImage=linear-gradient(rgb(255, 0, 0), rgb(0, 0, 255))",
+   "CS sk boxShadow=none",
+   "CS sk transform=none",
+   "CS sk width=1264px",
+   "CS sk height=20px",
+   "CS sk marginTop=0px",
+   "CS sk marginLeft=0px",
+   "CS sk paddingTop=0px",
+   "CS sk borderTopWidth=0px",
+   "CS sk borderTopColor=rgb(0, 0, 0)",
+   "CS sk opacity=1",
+   "CS sk fontSize=16px",
+   "CS sk fontFamily=Arial, sans-serif",
+   "CS sk fontWeight=400",
+   "CS sk display=block",
+   "CS sk position=static",
+   "CS sj color=rgb(0, 0, 0)",
+   "CS sj backgroundColor=rgba(0, 0, 0, 0)",
+   "CS sj backgroundImage=linear-gradient(to right bottom, rgb(255, 0, 0) 10%, rgb(0, 0, 255) 90%)",
+   "CS sj boxShadow=none",
+   "CS sj transform=none",
+   "CS sj width=1264px",
+   "CS sj height=20px",
+   "CS sj marginTop=0px",
+   "CS sj marginLeft=0px",
+   "CS sj paddingTop=0px",
+   "CS sj borderTopWidth=0px",
+   "CS sj borderTopColor=rgb(0, 0, 0)",
+   "CS sj opacity=1",
+   "CS sj fontSize=16px",
+   "CS sj fontFamily=Arial, sans-serif",
+   "CS sj fontWeight=400",
+   "CS sj display=block",
+   "CS sj position=static",
+   "CS sq color=rgb(0, 0, 0)",
+   "CS sq backgroundColor=rgba(0, 0, 0, 0)",
+   "CS sq backgroundImage=linear-gradient(to right, rgba(255, 0, 0, 0.5), rgba(0, 0, 0, 0)), radial-gradient(rgb(255, 0, 0), rgb(0, 0, 255))",
+   "CS sq boxShadow=none",
+   "CS sq transform=none",
+   "CS sq width=1264px",
+   "CS sq height=20px",
+   "CS sq marginTop=0px",
+   "CS sq marginLeft=0px",
+   "CS sq paddingTop=0px",
+   "CS sq borderTopWidth=0px",
+   "CS sq borderTopColor=rgb(0, 0, 0)",
+   "CS sq opacity=1",
+   "CS sq fontSize=16px",
+   "CS sq fontFamily=Arial, sans-serif",
+   "CS sq fontWeight=400",
+   "CS sq display=block",
+   "CS sq position=static",
+   "CS sp color=rgb(0, 0, 0)",
+   "CS sp backgroundColor=rgba(0, 0, 0, 0)",
+   "CS sp backgroundImage=none",
+   "CS sp boxShadow=none",
+   "CS sp transform=none",
+   "CS sp width=1264px",
+   "CS sp height=20px",
+   "CS sp marginTop=0px",
+   "CS sp marginLeft=0px",
+   "CS sp paddingTop=0px",
+   "CS sp borderTopWidth=0px",
+   "CS sp borderTopColor=rgb(0, 0, 0)",
+   "CS sp opacity=1",
+   "CS sp fontSize=16px",
+   "CS sp fontFamily=Arial, sans-serif",
+   "CS sp fontWeight=400",
+   "CS sp display=block",
+   "CS sp position=static",
+   "CS sn color=rgb(0, 0, 0)",
+   "CS sn backgroundColor=rgba(0, 0, 0, 0)",
+   "CS sn backgroundImage=none",
+   "CS sn boxShadow=none",
+   "CS sn transform=none",
+   "CS sn width=auto",
+   "CS sn height=auto",
+   "CS sn marginTop=0px",
+   "CS sn marginLeft=0px",
+   "CS sn paddingTop=0px",
+   "CS sn borderTopWidth=0px",
+   "CS sn borderTopColor=rgb(0, 0, 0)",
+   "CS sn opacity=1",
+   "CS sn fontSize=16px",
+   "CS sn fontFamily=Arial, sans-serif",
+   "CS sn fontWeight=400",
+   "CS sn display=inline",
+   "CS sn position=static"
+  ],
+  "pixels": [],
+  "steps": []
+ },
+ "computed_open": {
+  "log": [
+   "CS sx color=rgb(255, 0, 0)",
+   "CS sx backgroundColor=rgb(0, 255, 0)",
+   "CS sx backgroundImage=none",
+   "CS sx boxShadow=none",
+   "CS sx transform=none",
+   "CS sx width=632px",
+   "CS sx height=40px",
+   "CS sx marginTop=10px",
+   "CS sx marginLeft=4px",
+   "CS sx paddingTop=12px",
+   "CS sx borderTopWidth=2px",
+   "CS sx borderTopColor=rgba(0, 0, 255, 0.5)",
+   "CS sx opacity=0.5",
+   "CS sx fontSize=12px",
+   "CS sx fontFamily=\"Times New Roman\", serif",
+   "CS sx fontWeight=700",
+   "CS sx display=block",
+   "CS sx position=static",
+   "CS cx color=rgb(255, 0, 0)",
+   "CS cx backgroundColor=rgb(0, 255, 0)",
+   "CS cx backgroundImage=none",
+   "CS cx boxShadow=none",
+   "CS cx transform=none",
+   "CS cx width=632px",
+   "CS cx height=40px",
+   "CS cx marginTop=10px",
+   "CS cx marginLeft=4px",
+   "CS cx paddingTop=12px",
+   "CS cx borderTopWidth=2px",
+   "CS cx borderTopColor=rgba(0, 0, 255, 0.5)",
+   "CS cx opacity=0.5",
+   "CS cx fontSize=12px",
+   "CS cx fontFamily=\"Times New Roman\", serif",
+   "CS cx fontWeight=700",
+   "CS cx display=block",
+   "CS cx position=static",
+   "CS sy color=rgb(0, 0, 0)",
+   "CS sy backgroundColor=rgba(0, 0, 0, 0)",
+   "CS sy backgroundImage=linear-gradient(90deg, rgb(255, 0, 0), rgb(0, 0, 255))",
+   "CS sy boxShadow=rgba(0, 0, 0, 0.5) 1px 2px 3px 4px",
+   "CS sy transform=matrix(2, 0, 0, 2, 10, 0)",
+   "CS sy width=1264px",
+   "CS sy height=0px",
+   "CS sy marginTop=0px",
+   "CS sy marginLeft=0px",
+   "CS sy paddingTop=0px",
+   "CS sy borderTopWidth=0px",
+   "CS sy borderTopColor=rgb(0, 0, 0)",
+   "CS sy opacity=1",
+   "CS sy fontSize=16px",
+   "CS sy fontFamily=Arial, sans-serif",
+   "CS sy fontWeight=400",
+   "CS sy display=block",
+   "CS sy position=static",
+   "CS cy color=rgb(0, 0, 0)",
+   "CS cy backgroundColor=rgba(0, 0, 0, 0)",
+   "CS cy backgroundImage=linear-gradient(90deg, rgb(255, 0, 0), rgb(0, 0, 255))",
+   "CS cy boxShadow=rgba(0, 0, 0, 0.5) 1px 2px 3px 4px",
+   "CS cy transform=matrix(2, 0, 0, 2, 10, 0)",
+   "CS cy width=1264px",
+   "CS cy height=0px",
+   "CS cy marginTop=0px",
+   "CS cy marginLeft=0px",
+   "CS cy paddingTop=0px",
+   "CS cy borderTopWidth=0px",
+   "CS cy borderTopColor=rgb(0, 0, 0)",
+   "CS cy opacity=1",
+   "CS cy fontSize=16px",
+   "CS cy fontFamily=Arial, sans-serif",
+   "CS cy fontWeight=400",
+   "CS cy display=block",
+   "CS cy position=static",
+   "CS sz color=rgb(0, 0, 0)",
+   "CS sz backgroundColor=rgba(0, 0, 0, 0)",
+   "CS sz backgroundImage=radial-gradient(circle, rgb(255, 0, 0), rgb(0, 0, 255))",
+   "CS sz boxShadow=rgb(0, 0, 0) 0px 0px 4px 0px inset, rgb(255, 0, 0) 0px 0px 2px 0px",
+   "CS sz transform=matrix(0, 1, -1, 0, 0, 0)",
+   "CS sz width=1264px",
+   "CS sz height=0px",
+   "CS sz marginTop=0px",
+   "CS sz marginLeft=0px",
+   "CS sz paddingTop=0px",
+   "CS sz borderTopWidth=0px",
+   "CS sz borderTopColor=rgb(0, 0, 0)",
+   "CS sz opacity=1",
+   "CS sz fontSize=16px",
+   "CS sz fontFamily=Arial, sans-serif",
+   "CS sz fontWeight=400",
+   "CS sz display=block",
+   "CS sz position=static",
+   "CS cz color=rgb(0, 0, 0)",
+   "CS cz backgroundColor=rgba(0, 0, 0, 0)",
+   "CS cz backgroundImage=radial-gradient(circle, rgb(255, 0, 0), rgb(0, 0, 255))",
+   "CS cz boxShadow=rgb(0, 0, 0) 0px 0px 4px 0px inset, rgb(255, 0, 0) 0px 0px 2px 0px",
+   "CS cz transform=matrix(0, 1, -1, 0, 0, 0)",
+   "CS cz width=1264px",
+   "CS cz height=0px",
+   "CS cz marginTop=0px",
+   "CS cz marginLeft=0px",
+   "CS cz paddingTop=0px",
+   "CS cz borderTopWidth=0px",
+   "CS cz borderTopColor=rgb(0, 0, 0)",
+   "CS cz opacity=1",
+   "CS cz fontSize=16px",
+   "CS cz fontFamily=Arial, sans-serif",
+   "CS cz fontWeight=400",
+   "CS cz display=block",
+   "CS cz position=static",
+   "CS sk color=rgb(0, 0, 0)",
+   "CS sk backgroundColor=rgba(0, 0, 0, 0)",
+   "CS sk backgroundImage=linear-gradient(rgb(255, 0, 0), rgb(0, 0, 255))",
+   "CS sk boxShadow=none",
+   "CS sk transform=none",
+   "CS sk width=1264px",
+   "CS sk height=20px",
+   "CS sk marginTop=0px",
+   "CS sk marginLeft=0px",
+   "CS sk paddingTop=0px",
+   "CS sk borderTopWidth=0px",
+   "CS sk borderTopColor=rgb(0, 0, 0)",
+   "CS sk opacity=1",
+   "CS sk fontSize=16px",
+   "CS sk fontFamily=Arial, sans-serif",
+   "CS sk fontWeight=400",
+   "CS sk display=block",
+   "CS sk position=static",
+   "CS sj color=rgb(0, 0, 0)",
+   "CS sj backgroundColor=rgba(0, 0, 0, 0)",
+   "CS sj backgroundImage=linear-gradient(to right bottom, rgb(255, 0, 0) 10%, rgb(0, 0, 255) 90%)",
+   "CS sj boxShadow=none",
+   "CS sj transform=none",
+   "CS sj width=1264px",
+   "CS sj height=20px",
+   "CS sj marginTop=0px",
+   "CS sj marginLeft=0px",
+   "CS sj paddingTop=0px",
+   "CS sj borderTopWidth=0px",
+   "CS sj borderTopColor=rgb(0, 0, 0)",
+   "CS sj opacity=1",
+   "CS sj fontSize=16px",
+   "CS sj fontFamily=Arial, sans-serif",
+   "CS sj fontWeight=400",
+   "CS sj display=block",
+   "CS sj position=static",
+   "CS sq color=rgb(0, 0, 0)",
+   "CS sq backgroundColor=rgba(0, 0, 0, 0)",
+   "CS sq backgroundImage=linear-gradient(to right, rgba(255, 0, 0, 0.5), rgba(0, 0, 0, 0)), radial-gradient(rgb(255, 0, 0), rgb(0, 0, 255))",
+   "CS sq boxShadow=none",
+   "CS sq transform=none",
+   "CS sq width=1264px",
+   "CS sq height=20px",
+   "CS sq marginTop=0px",
+   "CS sq marginLeft=0px",
+   "CS sq paddingTop=0px",
+   "CS sq borderTopWidth=0px",
+   "CS sq borderTopColor=rgb(0, 0, 0)",
+   "CS sq opacity=1",
+   "CS sq fontSize=16px",
+   "CS sq fontFamily=Arial, sans-serif",
+   "CS sq fontWeight=400",
+   "CS sq display=block",
+   "CS sq position=static",
+   "CS sp color=rgb(0, 0, 0)",
+   "CS sp backgroundColor=rgba(0, 0, 0, 0)",
+   "CS sp backgroundImage=none",
+   "CS sp boxShadow=none",
+   "CS sp transform=none",
+   "CS sp width=1264px",
+   "CS sp height=20px",
+   "CS sp marginTop=0px",
+   "CS sp marginLeft=0px",
+   "CS sp paddingTop=0px",
+   "CS sp borderTopWidth=0px",
+   "CS sp borderTopColor=rgb(0, 0, 0)",
+   "CS sp opacity=1",
+   "CS sp fontSize=16px",
+   "CS sp fontFamily=Arial, sans-serif",
+   "CS sp fontWeight=400",
+   "CS sp display=block",
+   "CS sp position=static",
+   "CS sn color=rgb(0, 0, 0)",
+   "CS sn backgroundColor=rgba(0, 0, 0, 0)",
+   "CS sn backgroundImage=none",
+   "CS sn boxShadow=none",
+   "CS sn transform=none",
+   "CS sn width=auto",
+   "CS sn height=auto",
+   "CS sn marginTop=0px",
+   "CS sn marginLeft=0px",
+   "CS sn paddingTop=0px",
+   "CS sn borderTopWidth=0px",
+   "CS sn borderTopColor=rgb(0, 0, 0)",
+   "CS sn opacity=1",
+   "CS sn fontSize=16px",
+   "CS sn fontFamily=Arial, sans-serif",
+   "CS sn fontWeight=400",
+   "CS sn display=inline",
+   "CS sn position=static"
+  ],
+  "pixels": [],
+  "steps": []
+ },
+ "computed_static": {
+  "log": [
+   "CS sy color=rgb(18, 52, 86)",
+   "CS sy backgroundColor=rgba(0, 0, 0, 0)",
+   "CS sy backgroundImage=linear-gradient(90deg, rgb(255, 0, 0), rgb(0, 0, 255))",
+   "CS sy boxShadow=rgba(0, 0, 0, 0.5) 1px 2px 3px 4px",
+   "CS sy transform=matrix(1, 0, 0, 1, 10, 0)",
+   "CS sy width=1264px",
+   "CS sy height=40px",
+   "CS sy marginTop=0px",
+   "CS sy fontSize=16px",
+   "CS sy fontFamily=sans-serif",
+   "CS sy display=block",
+   "CS sp color=rgb(0, 0, 0)",
+   "CS sp backgroundColor=rgba(0, 0, 0, 0)",
+   "CS sp backgroundImage=none",
+   "CS sp boxShadow=none",
+   "CS sp transform=none",
+   "CS sp width=1264px",
+   "CS sp height=20px",
+   "CS sp marginTop=16px",
+   "CS sp fontSize=16px",
+   "CS sp fontFamily=sans-serif",
+   "CS sp display=block"
+  ],
+  "pixels": [],
+  "steps": []
+ },
+ "margins_closed": {
+  "log": [
+   "CS top=8,25+20 t1=8,25+20 s0=8,75+10 auto=8,125+52 a1=8,125+20 a2=8,157+20",
+   "CS s1=8,207+10 pad=8,232+126 p1=15,251+20 p2=15,301+20 border=8,361+64 b1=9,374+20",
+   "CS row=8,425+18 r1=14,429+10 r2=56,429+10 clip=8,443+62 c1=8,455+20 fixed=8,517+60",
+   "CS f1=8,517+20 s2=8,592+10 nest=8,635+10 w1=8,635+10 i1=8,635+10 s3=8,689+10",
+   "CS empties=8,714+20 e1=8,714+0 e2=8,714+20 s4=8,764+10"
+  ],
+  "pixels": [],
+  "steps": []
+ },
+ "margins_collapse": {
+  "log": [
+   "CS top=8,25+20 t1=8,25+20 s0=8,75+10 auto=8,125+52 a1=8,125+20 a2=8,157+20",
+   "CS s1=8,207+10 pad=8,232+126 p1=15,251+20 p2=15,301+20 border=8,361+64 b1=9,374+20",
+   "CS row=8,425+18 r1=14,429+10 r2=56,429+10 clip=8,443+62 c1=8,455+20 fixed=8,517+60",
+   "CS f1=8,517+20 s2=8,592+10 nest=8,635+10 w1=8,635+10 i1=8,635+10 s3=8,689+10",
+   "CS empties=8,714+20 e1=8,714+0 e2=8,714+20 s4=8,764+10"
+  ],
+  "pixels": [],
+  "steps": []
+ },
+ "margins_lit": {
+  "log": [
+   "CS a=10+40 b=60+40 w=110+20 p=110+20 end=140+10 c=rgb(255, 0, 0)"
+  ],
+  "pixels": [],
+  "steps": []
+ },
+ "paint_open": {
+  "log": [
+   "CS g=20,10,200,40 v=10,60,200,40 c=10,110,200,40 r=10,160,80,80 s=10,250,200,40 b=10,300,200,40 t=30,340,40,80 u=20,430,40,20 q=10,480,200,40 ro=10,530,200,40 bo=10,580,210,50 cl=10,640,100,30 pc=60,680,100,40 in=10,730,100,40"
+  ],
+  "pixels": [
+   {
+    "id": "eg",
+    "at": "0,20",
+    "x": 10,
+    "y": 30,
+    "rgb": [
+     255,
+     255,
+     255
+    ]
+   },
+   {
+    "id": "eg",
+    "at": "100,20",
+    "x": 110,
+    "y": 30,
+    "rgb": [
+     139,
+     0,
+     115
+    ]
+   },
+   {
+    "id": "eg",
+    "at": "199,20",
+    "x": 209,
+    "y": 30,
+    "rgb": [
+     14,
+     0,
+     242
+    ]
+   },
+   {
+    "id": "eg",
+    "at": "-2,20",
+    "x": 8,
+    "y": 30,
+    "rgb": [
+     255,
+     255,
+     255
+    ]
+   },
+   {
+    "id": "eg",
+    "at": "100,-2",
+    "x": 110,
+    "y": 8,
+    "rgb": [
+     194,
+     194,
+     194
+    ]
+   },
+   {
+    "id": "eg",
+    "at": "100,41",
+    "x": 110,
+    "y": 51,
+    "rgb": [
+     194,
+     194,
+     194
+    ]
+   },
+   {
+    "id": "ev",
+    "at": "100,1",
+    "x": 110,
+    "y": 61,
+    "rgb": [
+     7,
+     185,
+     7
+    ]
+   },
+   {
+    "id": "ev",
+    "at": "100,38",
+    "x": 110,
+    "y": 98,
+    "rgb": [
+     184,
+     7,
+     184
+    ]
+   },
+   {
+    "id": "ec",
+    "at": "2,2",
+    "x": 12,
+    "y": 112,
+    "rgb": [
+     245,
+     245,
+     245
+    ]
+   },
+   {
+    "id": "ec",
+    "at": "197,37",
+    "x": 207,
+    "y": 147,
+    "rgb": [
+     9,
+     9,
+     9
+    ]
+   },
+   {
+    "id": "er",
+    "at": "40,40",
+    "x": 50,
+    "y": 200,
+    "rgb": [
+     252,
+     252,
+     3
+    ]
+   },
+   {
+    "id": "er",
+    "at": "3,3",
+    "x": 13,
+    "y": 163,
+    "rgb": [
+     22,
+     22,
+     233
+    ]
+   },
+   {
+    "id": "es",
+    "at": "100,20",
+    "x": 110,
+    "y": 270,
+    "rgb": [
+     255,
+     255,
+     255
+    ]
+   },
+   {
+    "id": "es",
+    "at": "203,20",
+    "x": 213,
+    "y": 270,
+    "rgb": [
+     0,
+     170,
+     0
+    ]
+   },
+   {
+    "id": "es",
+    "at": "100,45",
+    "x": 110,
+    "y": 295,
+    "rgb": [
+     0,
+     115,
+     0
+    ]
+   },
+   {
+    "id": "eb",
+    "at": "100,20",
+    "x": 110,
+    "y": 320,
+    "rgb": [
+     255,
+     255,
+     255
+    ]
+   },
+   {
+    "id": "eb",
+    "at": "100,-1",
+    "x": 110,
+    "y": 299,
+    "rgb": [
+     99,
+     99,
+     99
+    ]
+   },
+   {
+    "id": "eb",
+    "at": "100,-8",
+    "x": 110,
+    "y": 292,
+    "rgb": [
+     0,
+     145,
+     0
+    ]
+   },
+   {
+    "id": "eb",
+    "at": "100,-20",
+    "x": 110,
+    "y": 280,
+    "rgb": [
+     255,
+     255,
+     255
+    ]
+   },
+   {
+    "id": "et",
+    "at": "40,-15",
+    "x": 50,
+    "y": 345,
+    "rgb": [
+     0,
+     136,
+     255
+    ]
+   },
+   {
+    "id": "et",
+    "at": "40,50",
+    "x": 50,
+    "y": 410,
+    "rgb": [
+     0,
+     136,
+     255
+    ]
+   },
+   {
+    "id": "et",
+    "at": "2,20",
+    "x": 12,
+    "y": 380,
+    "rgb": [
+     255,
+     255,
+     255
+    ]
+   },
+   {
+    "id": "eu",
+    "at": "5,5",
+    "x": 15,
+    "y": 435,
+    "rgb": [
+     255,
+     255,
+     255
+    ]
+   },
+   {
+    "id": "eu",
+    "at": "15,5",
+    "x": 25,
+    "y": 435,
+    "rgb": [
+     255,
+     136,
+     0
+    ]
+   },
+   {
+    "id": "eu",
+    "at": "30,15",
+    "x": 40,
+    "y": 445,
+    "rgb": [
+     255,
+     136,
+     0
+    ]
+   },
+   {
+    "id": "eu",
+    "at": "60,5",
+    "x": 70,
+    "y": 435,
+    "rgb": [
+     255,
+     255,
+     255
+    ]
+   },
+   {
+    "id": "eq",
+    "at": "2,20",
+    "x": 12,
+    "y": 500,
+    "rgb": [
+     253,
+     128,
+     129
+    ]
+   },
+   {
+    "id": "eq",
+    "at": "197,20",
+    "x": 207,
+    "y": 500,
+    "rgb": [
+     129,
+     128,
+     254
+    ]
+   },
+   {
+    "id": "ero",
+    "at": "100,20",
+    "x": 110,
+    "y": 550,
+    "rgb": [
+     0,
+     255,
+     0
+    ]
+   },
+   {
+    "id": "ero",
+    "at": "0,0",
+    "x": 10,
+    "y": 530,
+    "rgb": [
+     255,
+     255,
+     255
+    ]
+   },
+   {
+    "id": "ero",
+    "at": "1,1",
+    "x": 11,
+    "y": 531,
+    "rgb": [
+     255,
+     255,
+     255
+    ]
+   },
+   {
+    "id": "ebo",
+    "at": "2,20",
+    "x": 12,
+    "y": 600,
+    "rgb": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "ebo",
+    "at": "100,20",
+    "x": 110,
+    "y": 600,
+    "rgb": [
+     255,
+     255,
+     0
+    ]
+   },
+   {
+    "id": "ecl",
+    "at": "10,25",
+    "x": 20,
+    "y": 665,
+    "rgb": [
+     221,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "ecl",
+    "at": "80,10",
+    "x": 90,
+    "y": 650,
+    "rgb": [
+     221,
+     221,
+     221
+    ]
+   },
+   {
+    "id": "ecl",
+    "at": "-3,10",
+    "x": 7,
+    "y": 650,
+    "rgb": [
+     170,
+     0,
+     170
+    ]
+   },
+   {
+    "id": "ecl",
+    "at": "10,33",
+    "x": 20,
+    "y": 673,
+    "rgb": [
+     170,
+     0,
+     170
+    ]
+   },
+   {
+    "id": "epc",
+    "at": "10,20",
+    "x": 20,
+    "y": 700,
+    "rgb": [
+     255,
+     255,
+     255
+    ]
+   },
+   {
+    "id": "epc",
+    "at": "60,20",
+    "x": 70,
+    "y": 700,
+    "rgb": [
+     0,
+     170,
+     170
+    ]
+   },
+   {
+    "id": "epc",
+    "at": "120,20",
+    "x": 130,
+    "y": 700,
+    "rgb": [
+     0,
+     170,
+     170
+    ]
+   },
+   {
+    "id": "ein",
+    "at": "2,2",
+    "x": 12,
+    "y": 732,
+    "rgb": [
+     0,
+     170,
+     0
+    ]
+   },
+   {
+    "id": "ein",
+    "at": "50,20",
+    "x": 60,
+    "y": 750,
+    "rgb": [
+     255,
+     255,
+     255
+    ]
+   }
+  ],
+  "steps": []
+ },
+ "states_open": {
+  "log": [
+   "CS ready",
+   "CS bg=rgb(204, 204, 204)",
+   "CS bg=rgb(255, 0, 255)",
+   "CS bg=rgb(255, 0, 255)"
+  ],
+  "pixels": [
+   {
+    "id": "eh",
+    "at": "50,15",
+    "x": 50,
+    "y": 15,
+    "rgb": [
+     0,
+     0,
+     255
+    ]
+   },
+   {
+    "id": "eo",
+    "at": "5,5",
+    "x": 5,
+    "y": 45,
+    "rgb": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "et",
+    "at": "50,15",
+    "x": 50,
+    "y": 95,
+    "rgb": [
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "id": "em",
+    "at": "90,15",
+    "x": 90,
+    "y": 135,
+    "rgb": [
+     0,
+     170,
+     170
+    ]
+   },
+   {
+    "id": "em",
+    "at": "120,15",
+    "x": 120,
+    "y": 135,
+    "rgb": [
+     255,
+     255,
+     255
+    ]
+   },
+   {
+    "id": "eg",
+    "at": "50,15",
+    "x": 50,
+    "y": 175,
+    "rgb": [
+     17,
+     17,
+     17
+    ]
+   },
+   {
+    "id": "en",
+    "at": "50,10",
+    "x": 50,
+    "y": 230,
+    "rgb": [
+     204,
+     204,
+     204
+    ]
+   },
+   {
+    "id": "ef",
+    "at": "90,12",
+    "x": 90,
+    "y": 262,
+    "rgb": [
+     238,
+     238,
+     238
+    ]
+   }
+  ],
+  "steps": [
+   {
+    "name": "hover #eh",
+    "verb": "hover",
+    "x": 50,
+    "y": 15,
+    "pixels": [
+     {
+      "id": "eh",
+      "at": "50,15",
+      "x": 50,
+      "y": 15,
+      "rgb": [
+       0,
+       255,
+       0
+      ]
+     },
+     {
+      "id": "eo",
+      "at": "5,5",
+      "x": 5,
+      "y": 45,
+      "rgb": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "et",
+      "at": "50,15",
+      "x": 50,
+      "y": 95,
+      "rgb": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "em",
+      "at": "90,15",
+      "x": 90,
+      "y": 135,
+      "rgb": [
+       0,
+       170,
+       170
+      ]
+     },
+     {
+      "id": "em",
+      "at": "120,15",
+      "x": 120,
+      "y": 135,
+      "rgb": [
+       255,
+       255,
+       255
+      ]
+     },
+     {
+      "id": "eg",
+      "at": "50,15",
+      "x": 50,
+      "y": 175,
+      "rgb": [
+       17,
+       17,
+       17
+      ]
+     },
+     {
+      "id": "en",
+      "at": "50,10",
+      "x": 50,
+      "y": 230,
+      "rgb": [
+       204,
+       204,
+       204
+      ]
+     },
+     {
+      "id": "ef",
+      "at": "90,12",
+      "x": 90,
+      "y": 262,
+      "rgb": [
+       238,
+       238,
+       238
+      ]
+     }
+    ]
+   },
+   {
+    "name": "press #eh",
+    "verb": "press",
+    "x": 50,
+    "y": 15,
+    "pixels": [
+     {
+      "id": "eh",
+      "at": "50,15",
+      "x": 50,
+      "y": 15,
+      "rgb": [
+       255,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "eo",
+      "at": "5,5",
+      "x": 5,
+      "y": 45,
+      "rgb": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "et",
+      "at": "50,15",
+      "x": 50,
+      "y": 95,
+      "rgb": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "em",
+      "at": "90,15",
+      "x": 90,
+      "y": 135,
+      "rgb": [
+       0,
+       170,
+       170
+      ]
+     },
+     {
+      "id": "em",
+      "at": "120,15",
+      "x": 120,
+      "y": 135,
+      "rgb": [
+       255,
+       255,
+       255
+      ]
+     },
+     {
+      "id": "eg",
+      "at": "50,15",
+      "x": 50,
+      "y": 175,
+      "rgb": [
+       17,
+       17,
+       17
+      ]
+     },
+     {
+      "id": "en",
+      "at": "50,10",
+      "x": 50,
+      "y": 230,
+      "rgb": [
+       204,
+       204,
+       204
+      ]
+     },
+     {
+      "id": "ef",
+      "at": "90,12",
+      "x": 90,
+      "y": 262,
+      "rgb": [
+       238,
+       238,
+       238
+      ]
+     }
+    ]
+   },
+   {
+    "name": "release #eh",
+    "verb": "release",
+    "x": 50,
+    "y": 15,
+    "pixels": [
+     {
+      "id": "eh",
+      "at": "50,15",
+      "x": 50,
+      "y": 15,
+      "rgb": [
+       0,
+       255,
+       0
+      ]
+     },
+     {
+      "id": "eo",
+      "at": "5,5",
+      "x": 5,
+      "y": 45,
+      "rgb": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "et",
+      "at": "50,15",
+      "x": 50,
+      "y": 95,
+      "rgb": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "em",
+      "at": "90,15",
+      "x": 90,
+      "y": 135,
+      "rgb": [
+       0,
+       170,
+       170
+      ]
+     },
+     {
+      "id": "em",
+      "at": "120,15",
+      "x": 120,
+      "y": 135,
+      "rgb": [
+       255,
+       255,
+       255
+      ]
+     },
+     {
+      "id": "eg",
+      "at": "50,15",
+      "x": 50,
+      "y": 175,
+      "rgb": [
+       17,
+       17,
+       17
+      ]
+     },
+     {
+      "id": "en",
+      "at": "50,10",
+      "x": 50,
+      "y": 230,
+      "rgb": [
+       204,
+       204,
+       204
+      ]
+     },
+     {
+      "id": "ef",
+      "at": "90,12",
+      "x": 90,
+      "y": 262,
+      "rgb": [
+       238,
+       238,
+       238
+      ]
+     }
+    ]
+   },
+   {
+    "name": "hover #eo",
+    "verb": "hover",
+    "x": 50,
+    "y": 55,
+    "pixels": [
+     {
+      "id": "eh",
+      "at": "50,15",
+      "x": 50,
+      "y": 15,
+      "rgb": [
+       0,
+       0,
+       255
+      ]
+     },
+     {
+      "id": "eo",
+      "at": "5,5",
+      "x": 5,
+      "y": 45,
+      "rgb": [
+       255,
+       255,
+       255
+      ]
+     },
+     {
+      "id": "et",
+      "at": "50,15",
+      "x": 50,
+      "y": 95,
+      "rgb": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "em",
+      "at": "90,15",
+      "x": 90,
+      "y": 135,
+      "rgb": [
+       0,
+       170,
+       170
+      ]
+     },
+     {
+      "id": "em",
+      "at": "120,15",
+      "x": 120,
+      "y": 135,
+      "rgb": [
+       255,
+       255,
+       255
+      ]
+     },
+     {
+      "id": "eg",
+      "at": "50,15",
+      "x": 50,
+      "y": 175,
+      "rgb": [
+       17,
+       17,
+       17
+      ]
+     },
+     {
+      "id": "en",
+      "at": "50,10",
+      "x": 50,
+      "y": 230,
+      "rgb": [
+       204,
+       204,
+       204
+      ]
+     },
+     {
+      "id": "ef",
+      "at": "90,12",
+      "x": 90,
+      "y": 262,
+      "rgb": [
+       238,
+       238,
+       238
+      ]
+     }
+    ]
+   },
+   {
+    "name": "hover #et",
+    "verb": "hover",
+    "x": 50,
+    "y": 95,
+    "pixels": [
+     {
+      "id": "eh",
+      "at": "50,15",
+      "x": 50,
+      "y": 15,
+      "rgb": [
+       0,
+       0,
+       255
+      ]
+     },
+     {
+      "id": "eo",
+      "at": "5,5",
+      "x": 5,
+      "y": 45,
+      "rgb": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "et",
+      "at": "50,15",
+      "x": 50,
+      "y": 95,
+      "rgb": [
+       255,
+       255,
+       255
+      ]
+     },
+     {
+      "id": "em",
+      "at": "90,15",
+      "x": 90,
+      "y": 135,
+      "rgb": [
+       0,
+       170,
+       170
+      ]
+     },
+     {
+      "id": "em",
+      "at": "120,15",
+      "x": 120,
+      "y": 135,
+      "rgb": [
+       255,
+       255,
+       255
+      ]
+     },
+     {
+      "id": "eg",
+      "at": "50,15",
+      "x": 50,
+      "y": 175,
+      "rgb": [
+       17,
+       17,
+       17
+      ]
+     },
+     {
+      "id": "en",
+      "at": "50,10",
+      "x": 50,
+      "y": 230,
+      "rgb": [
+       204,
+       204,
+       204
+      ]
+     },
+     {
+      "id": "ef",
+      "at": "90,12",
+      "x": 90,
+      "y": 262,
+      "rgb": [
+       238,
+       238,
+       238
+      ]
+     }
+    ]
+   },
+   {
+    "name": "hover #em",
+    "verb": "hover",
+    "x": 50,
+    "y": 135,
+    "pixels": [
+     {
+      "id": "eh",
+      "at": "50,15",
+      "x": 50,
+      "y": 15,
+      "rgb": [
+       0,
+       0,
+       255
+      ]
+     },
+     {
+      "id": "eo",
+      "at": "5,5",
+      "x": 5,
+      "y": 45,
+      "rgb": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "et",
+      "at": "50,15",
+      "x": 50,
+      "y": 95,
+      "rgb": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "em",
+      "at": "90,15",
+      "x": 90,
+      "y": 135,
+      "rgb": [
+       0,
+       170,
+       170
+      ]
+     },
+     {
+      "id": "em",
+      "at": "120,15",
+      "x": 120,
+      "y": 135,
+      "rgb": [
+       0,
+       170,
+       170
+      ]
+     },
+     {
+      "id": "eg",
+      "at": "50,15",
+      "x": 50,
+      "y": 175,
+      "rgb": [
+       17,
+       17,
+       17
+      ]
+     },
+     {
+      "id": "en",
+      "at": "50,10",
+      "x": 50,
+      "y": 230,
+      "rgb": [
+       204,
+       204,
+       204
+      ]
+     },
+     {
+      "id": "ef",
+      "at": "90,12",
+      "x": 90,
+      "y": 262,
+      "rgb": [
+       238,
+       238,
+       238
+      ]
+     }
+    ]
+   },
+   {
+    "name": "hover #eg",
+    "verb": "hover",
+    "x": 50,
+    "y": 175,
+    "pixels": [
+     {
+      "id": "eh",
+      "at": "50,15",
+      "x": 50,
+      "y": 15,
+      "rgb": [
+       0,
+       0,
+       255
+      ]
+     },
+     {
+      "id": "eo",
+      "at": "5,5",
+      "x": 5,
+      "y": 45,
+      "rgb": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "et",
+      "at": "50,15",
+      "x": 50,
+      "y": 95,
+      "rgb": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "em",
+      "at": "90,15",
+      "x": 90,
+      "y": 135,
+      "rgb": [
+       0,
+       170,
+       170
+      ]
+     },
+     {
+      "id": "em",
+      "at": "120,15",
+      "x": 120,
+      "y": 135,
+      "rgb": [
+       255,
+       255,
+       255
+      ]
+     },
+     {
+      "id": "eg",
+      "at": "50,15",
+      "x": 50,
+      "y": 175,
+      "rgb": [
+       255,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "en",
+      "at": "50,10",
+      "x": 50,
+      "y": 230,
+      "rgb": [
+       204,
+       204,
+       204
+      ]
+     },
+     {
+      "id": "ef",
+      "at": "90,12",
+      "x": 90,
+      "y": 262,
+      "rgb": [
+       238,
+       238,
+       238
+      ]
+     }
+    ]
+   },
+   {
+    "name": "away",
+    "verb": "away",
+    "x": 1200,
+    "y": 780,
+    "pixels": [
+     {
+      "id": "eh",
+      "at": "50,15",
+      "x": 50,
+      "y": 15,
+      "rgb": [
+       0,
+       0,
+       255
+      ]
+     },
+     {
+      "id": "eo",
+      "at": "5,5",
+      "x": 5,
+      "y": 45,
+      "rgb": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "et",
+      "at": "50,15",
+      "x": 50,
+      "y": 95,
+      "rgb": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "em",
+      "at": "90,15",
+      "x": 90,
+      "y": 135,
+      "rgb": [
+       0,
+       170,
+       170
+      ]
+     },
+     {
+      "id": "em",
+      "at": "120,15",
+      "x": 120,
+      "y": 135,
+      "rgb": [
+       255,
+       255,
+       255
+      ]
+     },
+     {
+      "id": "eg",
+      "at": "50,15",
+      "x": 50,
+      "y": 175,
+      "rgb": [
+       17,
+       17,
+       17
+      ]
+     },
+     {
+      "id": "en",
+      "at": "50,10",
+      "x": 50,
+      "y": 230,
+      "rgb": [
+       204,
+       204,
+       204
+      ]
+     },
+     {
+      "id": "ef",
+      "at": "90,12",
+      "x": 90,
+      "y": 262,
+      "rgb": [
+       238,
+       238,
+       238
+      ]
+     }
+    ]
+   },
+   {
+    "name": "click #ec",
+    "verb": "click",
+    "x": 10,
+    "y": 210,
+    "pixels": [
+     {
+      "id": "eh",
+      "at": "50,15",
+      "x": 50,
+      "y": 15,
+      "rgb": [
+       0,
+       0,
+       255
+      ]
+     },
+     {
+      "id": "eo",
+      "at": "5,5",
+      "x": 5,
+      "y": 45,
+      "rgb": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "et",
+      "at": "50,15",
+      "x": 50,
+      "y": 95,
+      "rgb": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "em",
+      "at": "90,15",
+      "x": 90,
+      "y": 135,
+      "rgb": [
+       0,
+       170,
+       170
+      ]
+     },
+     {
+      "id": "em",
+      "at": "120,15",
+      "x": 120,
+      "y": 135,
+      "rgb": [
+       255,
+       255,
+       255
+      ]
+     },
+     {
+      "id": "eg",
+      "at": "50,15",
+      "x": 50,
+      "y": 175,
+      "rgb": [
+       17,
+       17,
+       17
+      ]
+     },
+     {
+      "id": "en",
+      "at": "50,10",
+      "x": 50,
+      "y": 230,
+      "rgb": [
+       255,
+       0,
+       255
+      ]
+     },
+     {
+      "id": "ef",
+      "at": "90,12",
+      "x": 90,
+      "y": 262,
+      "rgb": [
+       238,
+       238,
+       238
+      ]
+     }
+    ]
+   },
+   {
+    "name": "click #ef",
+    "verb": "click",
+    "x": 50,
+    "y": 262,
+    "pixels": [
+     {
+      "id": "eh",
+      "at": "50,15",
+      "x": 50,
+      "y": 15,
+      "rgb": [
+       0,
+       0,
+       255
+      ]
+     },
+     {
+      "id": "eo",
+      "at": "5,5",
+      "x": 5,
+      "y": 45,
+      "rgb": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "et",
+      "at": "50,15",
+      "x": 50,
+      "y": 95,
+      "rgb": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "em",
+      "at": "90,15",
+      "x": 90,
+      "y": 135,
+      "rgb": [
+       0,
+       170,
+       170
+      ]
+     },
+     {
+      "id": "em",
+      "at": "120,15",
+      "x": 120,
+      "y": 135,
+      "rgb": [
+       255,
+       255,
+       255
+      ]
+     },
+     {
+      "id": "eg",
+      "at": "50,15",
+      "x": 50,
+      "y": 175,
+      "rgb": [
+       17,
+       17,
+       17
+      ]
+     },
+     {
+      "id": "en",
+      "at": "50,10",
+      "x": 50,
+      "y": 230,
+      "rgb": [
+       255,
+       0,
+       255
+      ]
+     },
+     {
+      "id": "ef",
+      "at": "90,12",
+      "x": 90,
+      "y": 262,
+      "rgb": [
+       255,
+       255,
+       0
+      ]
+     }
+    ]
+   },
+   {
+    "name": "away",
+    "verb": "away",
+    "x": 1200,
+    "y": 780,
+    "pixels": [
+     {
+      "id": "eh",
+      "at": "50,15",
+      "x": 50,
+      "y": 15,
+      "rgb": [
+       0,
+       0,
+       255
+      ]
+     },
+     {
+      "id": "eo",
+      "at": "5,5",
+      "x": 5,
+      "y": 45,
+      "rgb": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "et",
+      "at": "50,15",
+      "x": 50,
+      "y": 95,
+      "rgb": [
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "id": "em",
+      "at": "90,15",
+      "x": 90,
+      "y": 135,
+      "rgb": [
+       0,
+       170,
+       170
+      ]
+     },
+     {
+      "id": "em",
+      "at": "120,15",
+      "x": 120,
+      "y": 135,
+      "rgb": [
+       255,
+       255,
+       255
+      ]
+     },
+     {
+      "id": "eg",
+      "at": "50,15",
+      "x": 50,
+      "y": 175,
+      "rgb": [
+       17,
+       17,
+       17
+      ]
+     },
+     {
+      "id": "en",
+      "at": "50,10",
+      "x": 50,
+      "y": 230,
+      "rgb": [
+       255,
+       0,
+       255
+      ]
+     },
+     {
+      "id": "ef",
+      "at": "90,12",
+      "x": 90,
+      "y": 262,
+      "rgb": [
+       255,
+       255,
+       0
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

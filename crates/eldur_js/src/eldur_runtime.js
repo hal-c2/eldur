@@ -327,6 +327,11 @@ function init(rootItem, baseUrl, documentUrl) {
     }
     _vModels = [];
     _vRules = null;
+    _gCascadeRules = null;
+    _gPaintTable = null;
+    _gWarned = {};
+    _gMarginHelper = null;
+    _gStateRules = null;
     if (_vHasRules() && _root) {
         // What the converter wrote for a `Text` holds until the rules that
         // match its nodes change, so they must be read before any write.
@@ -2630,7 +2635,7 @@ function getComputedStyle(item) {
     }
     function computeProp(prop) {
         var p = String(prop);
-        if (_gActive() && raw && typeof raw === "object") {
+        if (_gHasCascade() && raw && typeof raw === "object") {
             _layoutForRead();
             // Settling may have replaced the item.
             raw = _gCurrent(raw);
@@ -2962,7 +2967,17 @@ function getBoundingClientRect(item) {
         var pt = raw.mapToItem(null, 0, 0);
         if (pt) {
             x = pt.x;
-            y = pt.y - (_gActive() ? _gGlyphShift(raw) : 0);
+            y = pt.y - (_gHasCascade() ? _gGlyphShift(raw) : 0);
+        }
+        // A transform moves what a box's rect reports: the corners' bounds.
+        if (_meta(raw).gMatrix) {
+            var corners = [pt, raw.mapToItem(null, w, 0), raw.mapToItem(null, 0, h), raw.mapToItem(null, w, h)];
+            var xs = corners.map(function(c) { return c.x; });
+            var ys = corners.map(function(c) { return c.y; });
+            x = Math.min.apply(null, xs);
+            y = Math.min.apply(null, ys);
+            w = Math.max.apply(null, xs) - x;
+            h = Math.max.apply(null, ys) - y;
         }
     }
     return {
@@ -4295,6 +4310,18 @@ function _gTemplateFits(raw, key) {
         for (var d = 0; d < decls.length; ++d) {
             if (_G_TEMPLATE_ONLY.test(decls[d][0]) && decls[d][1] !== "none" && decls[d][1] !== "initial") {
                 return true;
+            }
+        }
+    }
+    // A template can't be relied on for what a Text doesn't paint, and an open
+    // page's box does follow its states.
+    if (_gActive()) {
+        for (var p = 0; p < matched.length; ++p) {
+            var own = rules[matched[p]].decls;
+            for (var q = 0; q < own.length; ++q) {
+                if (/^(background|box-shadow|border|outline|opacity|transform)/.test(own[q][0])) {
+                    return false;
+                }
             }
         }
     }
@@ -6297,8 +6324,13 @@ function _vLoadRules() {
     if (_vRules) {
         return _vRules;
     }
-    _vRules = [];
-    var table = _vHasRules() && _root.eldurInlineRules !== "" ? JSON.parse(_root.eldurInlineRules) : [];
+    _vRules = _vReadRules(_vHasRules() && _root.eldurInlineRules !== "" ? _root.eldurInlineRules : "[]");
+    return _vRules;
+}
+
+function _vReadRules(text) {
+    var out = [];
+    var table = JSON.parse(text);
     for (var i = 0; i < table.length; ++i) {
         var decls = table[i].decls;
         if (decls.length > 0) {
@@ -6307,7 +6339,7 @@ function _vLoadRules() {
             if (last && table[i].sel[last.index - 1] === ":") {
                 last = null;
             }
-            _vRules.push({
+            out.push({
                 sel: table[i].sel,
                 rank: table[i].spec[0] * 1000000 + table[i].spec[1] * 1000 + table[i].spec[2],
                 ua: table[i].ua,
@@ -6321,7 +6353,7 @@ function _vLoadRules() {
             });
         }
     }
-    return _vRules;
+    return out;
 }
 
 function _vRuleMatches(rule, v, m) {
@@ -6609,12 +6641,15 @@ function _vComputedStyle(v) {
         case "fontStyle": return c.italic ? "italic" : "normal";
         case "display": return c.display;
         case "fontSize": return c.size + "px";
-        case "fontFamily": return c.family;
+        case "fontFamily":
+            var named = _vComputedOther(v, "font-family");
+            var box = v.model && v.model.text ? _logicalParent(v.model.text) : null;
+            return named === "" && box && _gHasCascade() ? _gComputed(box, "font-family") : named || c.family;
         case "backgroundColor": return c.bg;
         case "visibility": return c.visible ? "visible" : "hidden";
         case "textDecorationLine":
             return c.underline ? (c.strike ? "underline line-through" : "underline") : c.strike ? "line-through" : "none";
-        default: return "";
+        default: return _vComputedOther(v, _camelToKebab(String(prop)));
         }
     }
     return new Proxy({ getPropertyValue: read }, {
@@ -6625,6 +6660,39 @@ function _vComputedStyle(v) {
             return typeof prop === "string" ? read(prop) : undefined;
         }
     });
+}
+
+// What the inline painting has no use for still has a value to read.
+function _vComputedOther(v, prop) {
+    if (prop === "width" || prop === "height") {
+        return "auto";
+    }
+    var rules = _gHasCascade() ? _gRules() : _vLoadRules();
+    var m = _meta(v);
+    var best = null;
+    var weight = -1;
+    for (var i = 0; i < rules.length; ++i) {
+        if (_vRuleMatches(rules[i], v, m)) {
+            for (var d = 0; d < rules[i].decls.length; ++d) {
+                var decl = rules[i].decls[d];
+                var w = _gWeight(rules[i], decl[2]);
+                if (decl[0] === prop && w >= weight) {
+                    best = decl[1];
+                    weight = w;
+                }
+            }
+        }
+    }
+    if (prop.indexOf("border-") === 0 && /-color$/.test(prop) && best === null) {
+        return _vStyle(v).color;
+    }
+    if (best === null) {
+        best = _G_INITIAL[prop] !== undefined ? _G_INITIAL[prop] : "";
+    }
+    if (/^border-.*-width$/.test(prop) && best === "medium") {
+        return "0px";
+    }
+    return /^(margin|padding|border-.*-width)/.test(prop) && String(best) === "0" ? "0px" : String(best);
 }
 
 function _vHex(css) {
@@ -7540,8 +7608,8 @@ var _plainPseudos = {
     "focus-within": function(n) {
         return _walkItems(n, function(d) { return d.activeFocus === true; });
     },
-    "hover": function(n) { return n.hovered === true; },
-    "active": function(n) { return n.pressed === true || n.down === true; },
+    "hover": function(n) { return n.hovered === true || _meta(n).gHover === true; },
+    "active": function(n) { return n.pressed === true || n.down === true || _meta(n).gPress === true; },
     "link": function(n) { return _isLink(n); },
     "any-link": function(n) { return _isLink(n); },
     "visited": function() { return false; },
@@ -8429,6 +8497,10 @@ var _gMetricsCache = {};
 var _gRunning = false;
 var _gStaticBase = null;
 var _gReplaced = new Map();
+var _gCascadeRules = null;
+var _gPaintTable = null;
+var _gWarned = {};
+var _gMarginHelper = null;
 
 var _G_CONTROL = /^(button|input|textarea|select|img|table|thead|tbody|tfoot|tr|td|th|caption|colgroup|col|canvas|video|audio|svg|iframe)$/;
 var _G_INHERITED = ["color", "font-family", "font-weight", "font-style", "text-align", "visibility", "white-space"];
@@ -8445,7 +8517,11 @@ var _G_INITIAL = {
     "border-left-width": "medium", "border-top-style": "none", "border-right-style": "none",
     "border-bottom-style": "none", "border-left-style": "none", "border-top-left-radius": "0px",
     "border-top-right-radius": "0px", "border-bottom-right-radius": "0px", "border-bottom-left-radius": "0px",
-    "overflow-x": "visible", "overflow-y": "visible", "grid-template-columns": "none"
+    "overflow-x": "visible", "overflow-y": "visible", "grid-template-columns": "none",
+    "background-image": "none", "box-shadow": "none", "transform": "none", "transform-origin": "50% 50%",
+    "filter": "none", "animation-name": "none", "transition-property": "all", "transition-duration": "0s",
+    "transition-delay": "0s", "transition-timing-function": "ease", "background-size": "auto",
+    "background-position-x": "0%", "background-position-y": "0%", "background-repeat": "repeat"
 };
 // A browser's controls before the page says otherwise: the box a `<button>`
 // has around its line, whatever the system's style draws.
@@ -8468,8 +8544,24 @@ function _gActive() {
     return Boolean(_root) && _root.eldurOpenElements === true;
 }
 
+// A page all of whose elements have templates still holds the rules when it
+// has margins to work out around created elements or styles to read back.
+function _gHasCascade() {
+    return _gActive() || (Boolean(_root) && typeof _root.eldurCascadeRules === "string");
+}
+
+function _gRules() {
+    if (_gActive()) {
+        return _vLoadRules();
+    }
+    if (!_gCascadeRules) {
+        _gCascadeRules = _gHasCascade() ? _vReadRules(_root.eldurCascadeRules) : [];
+    }
+    return _gCascadeRules;
+}
+
 function _gTouch() {
-    if (!_gActive() || !_root) {
+    if (!_gHasCascade()) {
         return;
     }
     _gDirty = true;
@@ -8488,6 +8580,12 @@ function _gBoxSource(tag, outOfFlow) {
         + (outOfFlow ? "property Item eldurSlot: null; property var eldurBlock: \"parent\"; " : "")
         + "property real eldurMt: 0; property real eldurMr: 0; property real eldurMb: 0; property real eldurMl: 0; "
         + "property real eldurPw: -1; property bool eldurFill: false; property int eldurAlign: 0; "
+        + "property int eldurColorMs: 0; property int eldurColorWait: 0; property int eldurColorEase: 0; "
+        + "property int eldurFadeMs: 0; property int eldurFadeWait: 0; property int eldurFadeEase: 0; "
+        + "Behavior on color { enabled: eldurColorMs + eldurColorWait > 0; SequentialAnimation { "
+        + "PauseAnimation { duration: eldurColorWait } ColorAnimation { duration: eldurColorMs; easing.type: eldurColorEase } } } "
+        + "Behavior on opacity { enabled: eldurFadeMs + eldurFadeWait > 0; SequentialAnimation { "
+        + "PauseAnimation { duration: eldurFadeWait } NumberAnimation { duration: eldurFadeMs; easing.type: eldurFadeEase } } } "
         + "Layout.topMargin: eldurMt; Layout.rightMargin: eldurMr; Layout.bottomMargin: eldurMb; Layout.leftMargin: eldurMl; "
         + "Layout.fillWidth: eldurFill; Layout.preferredWidth: eldurPw; Layout.alignment: eldurAlign; "
         + "Text { " + _NATIVE_TEXT + "visible: text !== \"\"; wrapMode: Text.Wrap; color: \"black\"; font.pixelSize: 16 } }";
@@ -8504,7 +8602,7 @@ function _gMatched(raw) {
     if (m.gMatchGen === _gGen && m.gMatched) {
         return m.gMatched;
     }
-    var rules = _vLoadRules();
+    var rules = _gRules();
     var tag = _nodeTag(raw);
     var id = _elementIdOf(raw, m);
     var out = [];
@@ -8570,7 +8668,7 @@ function _gInlineDecls(raw, m) {
 function _gVars(raw, parent) {
     var inherited = parent ? _gStyle(parent).vars : {};
     var own = null;
-    var rules = _vLoadRules();
+    var rules = _gRules();
     var matched = _gMatched(raw);
     var won = {};
     for (var i = 0; i < matched.length; ++i) {
@@ -8715,7 +8813,13 @@ function _gExpand(prop, value) {
     } else if (prop === "gap") {
         out.push(["row-gap", parts[0]], ["column-gap", parts[1] !== undefined ? parts[1] : parts[0]]);
     } else if (prop === "background") {
-        out.push(["background-color", value]);
+        var whole = _gPaintValue("background", value);
+        if (whole) {
+            out.push(["background-color", whole.color === null ? "rgba(0, 0, 0, 0)" : whole.color],
+                ["background-image", whole.image === null ? "none" : whole.image]);
+        } else {
+            out.push(["background-color", value]);
+        }
     } else if (/^border(-(top|right|bottom|left))?$/.test(prop)) {
         var which = prop === "border" ? names : [prop.slice(7)];
         var width = "medium";
@@ -8884,7 +8988,7 @@ function _gStyle(raw) {
     var parent = _gParent(raw);
     var inherited = parent ? _gStyle(parent) : null;
     var vars = _gVars(raw, parent);
-    var rules = _vLoadRules();
+    var rules = _gRules();
     var matched = _gMatched(raw);
     var won = {};
     for (var i = 0; i < matched.length; ++i) {
@@ -9773,7 +9877,11 @@ function _gPaintText(text, s, innerW) {
 }
 
 function _gPaintBox(raw, s, e) {
-    raw.color = _gQtColor(s["background-color"]);
+    var painted = _meta(raw).gPainted === true;
+    // The first paint is where the box starts, not a change to animate.
+    if (painted) {
+        _gPaintTimings(raw, s);
+    }
     var radius = _gPx(s["border-top-left-radius"], raw.width, s.fontSize, s.rootSize) || 0;
     _gSet(raw, "radius", radius);
     _gSet(raw, "opacity", s.visibility === "hidden" ? 0 : _gNumber(s.opacity));
@@ -9789,6 +9897,11 @@ function _gPaintBox(raw, s, e) {
     _gSet(raw, "z", z);
     _gSet(raw, "clip", s["overflow-x"] !== "visible" || s["overflow-y"] !== "visible");
     _gPlaceRelative(raw, s);
+    _gPaintDecor(raw, s, e, radius);
+    if (!painted) {
+        _meta(raw).gPainted = true;
+        _gPaintTimings(raw, s);
+    }
 }
 
 // A Rectangle's border is one width and colour; unequal sides are four strips.
@@ -9816,6 +9929,552 @@ function _gPaintEdges(raw, s, e, shown) {
     }
 }
 
+// --- What the converter parsed for a box's paint ----------------------------
+
+function _gPaintValue(prop, text) {
+    if (_gPaintTable === null) {
+        var written = _root ? _root.eldurPaintValues : undefined;
+        _gPaintTable = typeof written === "string" && written !== "" ? JSON.parse(written) : {};
+    }
+    return _gPaintTable[prop + ":" + String(text).replace(/\s+/g, "")];
+}
+
+function _gDescribe(raw) {
+    var m = _meta(raw);
+    var id = _elementIdOf(raw, m);
+    return "<" + _nodeTag(raw) + (id ? " #" + id : "") + (m.classes && m.classes.length ? " ." + m.classes.join(".") : "") + ">";
+}
+
+function _gWarn(raw, prop, why) {
+    var text = "eldur: " + _gDescribe(raw) + " " + prop + ": " + why;
+    if (!_gWarned[text]) {
+        _gWarned[text] = true;
+        console.warn(text);
+    }
+}
+
+function _gStopsSource(stops, length) {
+    var at = stops.map(function(p) { return p.frac + (length > 0 ? p.px / length : 0); });
+    var first = at[0];
+    var last = at[at.length - 1];
+    // A gradient's stops are 0 to 1: the line is cut to where they are.
+    var span = last > first ? last - first : 1;
+    var parts = stops.map(function(p, i) {
+        return "GradientStop { position: " + (at[i] - first) / span + "; color: \"" + p.c + "\" } ";
+    });
+    return { first: first, last: last > first ? last : first + 1, text: parts.join("") };
+}
+
+function _gGradientPath(layer, w, h, radii) {
+    var fill;
+    var extra = "";
+    var spread = layer.repeating ? "spread: ShapeGradient.RepeatSpread; " : "";
+    if (layer.kind === "linear" || layer.kind === "corner") {
+        var dx, dy, length;
+        if (layer.kind === "linear") {
+            var angle = layer.angle * Math.PI / 180;
+            dx = Math.sin(angle);
+            dy = -Math.cos(angle);
+            length = Math.abs(w * dx) + Math.abs(h * dy);
+        } else {
+            var hyp = Math.max(1, Math.hypot(w, h));
+            dx = (layer.right ? h : -h) / hyp;
+            dy = (layer.bottom ? w : -w) / hyp;
+            length = 2 * w * h / hyp;
+        }
+        var line = _gStopsSource(layer.stops, length);
+        var at = function(f) { return [w / 2 + dx * length * (f - 0.5), h / 2 + dy * length * (f - 0.5)]; };
+        var from = at(line.first);
+        var to = at(line.last);
+        fill = "LinearGradient { " + spread + "x1: " + from[0] + "; y1: " + from[1] + "; x2: " + to[0] + "; y2: " + to[1] + "; " + line.text + "} ";
+    } else {
+        var cx = layer.cx[0] + layer.cx[1] * w / 100;
+        var cy = layer.cy[0] + layer.cy[1] * h / 100;
+        var rx = Math.max(cx, w - cx);
+        var ry = Math.max(cy, h - cy);
+        var r = layer.circle ? Math.hypot(rx, ry) : rx * Math.SQRT2;
+        var round = _gStopsSource(layer.stops, r);
+        fill = "RadialGradient { " + spread + "centerX: " + cx + "; centerY: " + cy + "; centerRadius: " + r * round.last
+            + "; focalX: " + cx + "; focalY: " + cy + "; focalRadius: " + r * round.first + "; " + round.text + "} ";
+        if (!layer.circle && rx > 0) {
+            extra = "fillTransform: PlanarTransform.fromScale(1, " + ry / rx + ", " + cx + ", " + cy + "); ";
+        }
+    }
+    return "ShapePath { strokeWidth: -1; fillGradient: " + fill + extra + _gRectSource(0, 0, w, h, radii) + "} ";
+}
+
+function _gRectSource(x, y, w, h, radii) {
+    return "PathRectangle { x: " + x + "; y: " + y + "; width: " + Math.max(w, 0) + "; height: " + Math.max(h, 0)
+        + "; topLeftRadius: " + Math.max(radii[0], 0) + "; topRightRadius: " + Math.max(radii[1], 0)
+        + "; bottomRightRadius: " + Math.max(radii[2], 0) + "; bottomLeftRadius: " + Math.max(radii[3], 0) + " } ";
+}
+
+function _gBandColor(c, alpha) {
+    var a = Math.max(0, Math.min(255, Math.round(alpha * 255))).toString(16);
+    return "#" + (a.length < 2 ? "0" + a : a) + c.slice(3);
+}
+
+// A hole has to stay clear for a box with no background of its own, and an odd
+// count of edges only says that where the shadow holds the whole box.
+function _gOuterRing(shadow, band, w, h, radii) {
+    var g = shadow.spread + band[0];
+    var x = shadow.x - g;
+    var y = shadow.y - g;
+    var sw = w + 2 * g;
+    var sh = h + 2 * g;
+    if (sw <= 0 || sh <= 0) {
+        return "";
+    }
+    var color = _gBandColor(shadow.c, band[1]);
+    var head = "ShapePath { strokeWidth: -1; fillColor: \"" + color + "\"; ";
+    var grown = radii.map(function(r) { return r > 0 ? r + g : 0; });
+    var holds = x <= 0 && y <= 0 && x + sw >= w && y + sh >= h;
+    var square = radii.every(function(r) { return r === 0; });
+    if (holds || !square) {
+        return head + "fillRule: ShapePath.OddEvenFill; " + _gRectSource(x, y, sw, sh, grown) + _gRectSource(0, 0, w, h, radii) + "} ";
+    }
+    var none = [0, 0, 0, 0];
+    var parts = "";
+    var left = Math.max(x, 0);
+    var right = Math.min(x + sw, w);
+    if (y < 0) {
+        parts += _gRectSource(x, y, sw, Math.min(-y, sh), none);
+    }
+    if (y + sh > h) {
+        var below = Math.max(y, h);
+        parts += _gRectSource(x, below, sw, y + sh - below, none);
+    }
+    var midTop = Math.max(y, 0);
+    var midBottom = Math.min(y + sh, h);
+    if (midBottom > midTop) {
+        if (x < 0) {
+            parts += _gRectSource(x, midTop, Math.min(-x, sw), midBottom - midTop, none);
+        }
+        if (x + sw > w) {
+            var after = Math.max(x, w);
+            parts += _gRectSource(after, midTop, x + sw - after, midBottom - midTop, none);
+        }
+    }
+    return parts === "" || right < left - sw ? "" : head + parts + "} ";
+}
+
+function _gInsetRing(shadow, band, w, h, radii) {
+    var g = shadow.spread + band[0];
+    var top = Math.max(shadow.y + g, 0);
+    var right = Math.max(g - shadow.x, 0);
+    var bottom = Math.max(g - shadow.y, 0);
+    var left = Math.max(shadow.x + g, 0);
+    if (top + right + bottom + left === 0) {
+        return "";
+    }
+    var shrunk = radii.map(function(r) { return r - Math.max(g, 0); });
+    return "ShapePath { strokeWidth: -1; fillColor: \"" + _gBandColor(shadow.c, band[1]) + "\"; fillRule: ShapePath.OddEvenFill; "
+        + _gRectSource(0, 0, w, h, radii) + _gRectSource(left, top, w - left - right, h - top - bottom, shrunk) + "} ";
+}
+
+function _gShapeSource(attrs, paths) {
+    return "import QtQuick; import QtQuick.Shapes; import QtQuick.Layouts; Shape { property Item eldurSlot: null; " + attrs + paths + "}";
+}
+
+function _gReplaceShape(raw, slot, signature, source, host, place) {
+    var m = _meta(raw);
+    if (m[slot + "Sig"] === signature) {
+        return m[slot];
+    }
+    m[slot + "Sig"] = signature;
+    if (m[slot]) {
+        m[slot].visible = false;
+        m[slot].destroy();
+        m[slot] = null;
+    }
+    if (source !== null) {
+        m[slot] = Qt.createQmlObject(source, host, "eldur_paint");
+        place(m[slot]);
+    }
+    return m[slot];
+}
+
+function _gCorners(raw, s) {
+    var names = ["top-left", "top-right", "bottom-right", "bottom-left"];
+    return names.map(function(n) {
+        return _gPx(s["border-" + n + "-radius"], raw.width, s.fontSize, s.rootSize) || 0;
+    });
+}
+
+function _gPaintDecor(raw, s, e, radius) {
+    var w = raw.width;
+    var h = raw.height;
+    var pw = w - e.bl - e.br;
+    var ph = h - e.bt - e.bb;
+    var outerRadii = _gCorners(raw, s);
+    if (!outerRadii.every(function(r) { return r === radius; })) {
+        _gSet(raw, "topLeftRadius", outerRadii[0]);
+        _gSet(raw, "topRightRadius", outerRadii[1]);
+        _gSet(raw, "bottomRightRadius", outerRadii[2]);
+        _gSet(raw, "bottomLeftRadius", outerRadii[3]);
+    }
+    var inner = outerRadii.map(function(r) { return Math.max(r - Math.max(e.bt, e.bl), 0); });
+    var imageText = s["background-image"];
+    var paths = "";
+    if (imageText !== "none") {
+        var images = _gPaintValue("background-image", imageText);
+        if (!images) {
+            _gWarn(raw, "background-image", "`" + imageText + "` is not painted: the converter never saw this value");
+        } else {
+            for (var l = images.layers.length - 1; l >= 0; --l) {
+                var layer = images.layers[l];
+                if (layer.kind === "unpainted") {
+                    _gWarn(raw, "background-image", layer.what + " is not painted on a created box");
+                } else if (layer.kind !== "none") {
+                    paths += _gGradientPath(layer, pw, ph, inner);
+                }
+            }
+            if (s["background-size"] !== "auto" || !/^0(%|px)?$/.test(s["background-position-x"]) || !/^0(%|px)?$/.test(s["background-position-y"])) {
+                _gWarn(raw, "background-size", "a created box paints its image once over the padding box");
+            }
+        }
+    }
+    var at = "x: " + e.bl + "; y: " + e.bt + "; width: " + Math.max(pw, 0) + "; height: " + Math.max(ph, 0) + "; ";
+    var shadowText = s["box-shadow"];
+    var outer = "";
+    var insets = "";
+    if (shadowText !== "none") {
+        var shadows = _gPaintValue("box-shadow", shadowText);
+        if (!shadows) {
+            _gWarn(raw, "box-shadow", "`" + shadowText + "` is not painted: the converter never saw this value");
+        } else {
+            var opaque = _gQtColor(s["background-color"]).a === 1 || imageText !== "none";
+            for (var i = shadows.list.length - 1; i >= 0; --i) {
+                var shadow = shadows.list[i];
+                for (var b = 0; b < shadow.bands.length; ++b) {
+                    if (shadow.inset) {
+                        insets += _gInsetRing(shadow, shadow.bands[b], pw, ph, inner);
+                    } else {
+                        outer += _gOuterRing(shadow, shadow.bands[b], w, h, outerRadii);
+                    }
+                }
+                var round = outerRadii.some(function(r) { return r > 0; });
+                if (!shadow.inset && round && !opaque && (shadow.x !== 0 || shadow.y !== 0)) {
+                    _gWarn(raw, "box-shadow", "an offset shadow of a round box with no background shows through it");
+                }
+            }
+        }
+    }
+    // Only a child with a negative z is below what the box holds, and that is
+    // below the box's own fill too: with layers to show, they take the fill over.
+    var shade = _gQtColor(s["background-color"]);
+    var layered = paths !== "" || insets !== "";
+    raw.color = layered ? "transparent" : shade;
+    var under = "ShapePath { strokeWidth: -1; fillColor: \"" + shade + "\"; "
+        + _gRectSource(-e.bl, -e.bt, w, h, outerRadii) + "} ";
+    var layers = under + paths + insets;
+    var attrs = "z: -1; " + at;
+    _gReplaceShape(raw, "gLayers", layers + at, layered ? _gShapeSource(attrs, layers) : null, raw, function() {});
+    _gPaintOuterShadow(raw, outer, w, h);
+    _gPaintMatrix(raw, s, w, h);
+    if (s.filter !== "none") {
+        _gWarn(raw, "filter", "`" + s.filter + "` is not painted on a created box");
+    }
+    if (s["animation-name"] !== "none") {
+        _gWarn(raw, "animation-name", "`" + s["animation-name"] + "` does not run on a created box");
+    }
+    if (raw.clip && radius > 0 && _rawElementChildren(raw).length > 0) {
+        _gWarn(raw, "border-radius", "overflow clips what this box holds to its square corners");
+    }
+}
+
+// Shadows lie outside the box, where its own clip would take them: a clipping
+// box's goes next to it. A layout leaves alone a child with no size to give.
+function _gPaintOuterShadow(raw, paths, w, h) {
+    var m = _meta(raw);
+    var signature = paths + w + "x" + h + raw.clip;
+    if (m.gOuterSig === signature) {
+        return;
+    }
+    var source = null;
+    if (paths !== "") {
+        // A layout moves its children, so the shape sits in an item of no size
+        // it can move as it likes, and follows the box from there.
+        source = raw.clip && raw.parent
+            ? "import QtQuick; import QtQuick.Shapes; import QtQuick.Layouts; Item { property Item eldurSlot: null; "
+                + "property Item box: null; property alias shape: drawn; Layout.maximumWidth: 0; Layout.maximumHeight: 0; "
+                + "z: box ? box.z : 0; opacity: box ? box.opacity : 1; visible: box ? box.visible : false; "
+                + "Shape { id: drawn; x: box ? box.x - parent.x : 0; y: box ? box.y - parent.y : 0; width: " + w + "; height: " + h + "; " + paths + "} }"
+            : _gShapeSource("z: -2; width: " + w + "; height: " + h + "; ", paths);
+    }
+    _gReplaceShape(raw, "gOuter", signature, source, raw.clip && raw.parent ? raw.parent : raw, function(item) {
+        if (raw.clip) {
+            item.box = raw;
+        }
+    });
+    _gSetTransforms(raw);
+}
+
+function _gSetTransforms(raw) {
+    var m = _meta(raw);
+    var list = [];
+    if (m.gMatrix) {
+        list.push(m.gMatrix);
+    }
+    if (m.gShift) {
+        list.push(m.gShift);
+    }
+    raw.transform = list;
+    // What stands in for the box moves with it.
+    if (m.gOuter && m.gOuter.shape) {
+        m.gOuter.shape.transform = list;
+    }
+}
+
+function _gMultiply(a, b) {
+    return [a[0] * b[0] + a[2] * b[1], a[1] * b[0] + a[3] * b[1], a[0] * b[2] + a[2] * b[3], a[1] * b[2] + a[3] * b[3],
+        a[0] * b[4] + a[2] * b[5] + a[4], a[1] * b[4] + a[3] * b[5] + a[5]];
+}
+
+// The value as `matrix()`, with percentages of this box; `null` for `none`.
+function _gMatrixOf(raw, s, w, h, warn) {
+    var text = s.transform;
+    if (text === "none") {
+        return null;
+    }
+    var value = _gPaintValue("transform", text);
+    if (!value) {
+        if (warn) {
+            _gWarn(raw, "transform", "`" + text + "` is not painted: the converter never saw this value");
+        }
+        return null;
+    }
+    var out = [1, 0, 0, 1, 0, 0];
+    for (var i = 0; i < value.fns.length; ++i) {
+        var f = value.fns[i];
+        if (f.t) {
+            out = _gMultiply(out, [1, 0, 0, 1, f.t[0][0] + f.t[0][1] * w / 100, f.t[1][0] + f.t[1][1] * h / 100]);
+        } else if (f.m) {
+            out = _gMultiply(out, f.m);
+        } else if (warn) {
+            _gWarn(raw, "transform", "`" + f.u + "` has no 2-D form and is left out");
+        }
+    }
+    return out;
+}
+
+function _gOrigin(s, w, h) {
+    var parts = _gSplitValue(s["transform-origin"]);
+    var word = { left: "0%", top: "0%", center: "50%", right: "100%", bottom: "100%" };
+    var axis = function(text, size) {
+        var px = _gPx(word[text] || text, size, s.fontSize, s.rootSize);
+        return px === null ? size / 2 : px;
+    };
+    var first = parts[0] === undefined ? "50%" : parts[0];
+    var second = parts[1] === undefined ? "50%" : parts[1];
+    if (first === "top" || first === "bottom" || second === "left" || second === "right") {
+        var swap = first;
+        first = second;
+        second = swap;
+    }
+    return [axis(first, w), axis(second, h)];
+}
+
+function _gApplyMatrix(raw, v) {
+    _meta(raw).gMatrixNow = v;
+    _meta(raw).gMatrix.matrix = Qt.matrix4x4(v[0], v[2], 0, v[4], v[1], v[3], 0, v[5], 0, 0, 1, 0, 0, 0, 0, 1);
+}
+
+function _gPaintMatrix(raw, s, w, h) {
+    var m = _meta(raw);
+    var written = _gMatrixOf(raw, s, w, h, true);
+    if (!written && !m.gMatrix) {
+        return;
+    }
+    var origin = _gOrigin(s, w, h);
+    var about = _gMultiply(_gMultiply([1, 0, 0, 1, origin[0], origin[1]], written || [1, 0, 0, 1, 0, 0]),
+        [1, 0, 0, 1, -origin[0], -origin[1]]);
+    var first = !m.gMatrix;
+    if (first) {
+        m.gMatrix = Qt.createQmlObject("import QtQuick; Matrix4x4 {}", raw, "eldur_matrix");
+        _gApplyMatrix(raw, about);
+        _gSetTransforms(raw);
+        return;
+    }
+    var now = m.gMatrixNow;
+    if (about.every(function(v, i) { return v === (m.gMatrixGoal || now)[i]; })) {
+        return;
+    }
+    m.gMatrixGoal = about;
+    if (m.gTweenMs + m.gTweenWait > 0) {
+        _gTween(raw, now.slice(), about);
+    } else {
+        if (m.gTween) {
+            m.gTween.stop();
+        }
+        _gApplyMatrix(raw, about);
+    }
+}
+
+function _gTween(raw, from, to) {
+    var m = _meta(raw);
+    if (!m.gTween) {
+        m.gTween = Qt.createQmlObject("import QtQuick; Item { id: tween; property Item eldurSlot: null; property real t: 1; "
+            + "property int wait: 0; property int ms: 0; property int ease: 0; "
+            + "SequentialAnimation { id: run; PauseAnimation { duration: tween.wait } "
+            + "NumberAnimation { target: tween; property: \"t\"; from: 0; to: 1; duration: tween.ms; easing.type: tween.ease } } "
+            + "function go() { run.restart(); } function stop() { run.stop(); } }", raw, "eldur_tween");
+        m.gTween.tChanged.connect(function() {
+            var t = m.gTween.t;
+            _gApplyMatrix(raw, m.gTweenFrom.map(function(v, i) { return v + (m.gTweenTo[i] - v) * t; }));
+        });
+    }
+    m.gTweenFrom = from;
+    m.gTweenTo = to;
+    m.gTween.wait = m.gTweenWait;
+    m.gTween.ms = m.gTweenMs;
+    m.gTween.ease = m.gTweenEase;
+    m.gTween.go();
+}
+
+function _gSeconds(text) {
+    var n = parseFloat(text);
+    return isNaN(n) ? 0 : /ms\s*$/.test(text) ? n : n * 1000;
+}
+
+function _gPaintTimings(raw, s) {
+    var m = _meta(raw);
+    var names = String(s["transition-property"]).split(",");
+    var times = String(s["transition-duration"]).split(",");
+    var waits = String(s["transition-delay"]).split(",");
+    var curves = String(s["transition-timing-function"]).split(/,(?![^(]*\))/);
+    // Easing.Linear, .InQuad, .OutQuad, .InOutQuad: Qt's nearest to CSS's curves.
+    var easeOf = function(text) {
+        return { linear: 0, "ease-in": 1, "ease-out": 2 }[text.trim()] || (text.trim() === "linear" ? 0 : 3);
+    };
+    var got = { color: [0, 0, 3], fade: [0, 0, 3], move: [0, 0, 3] };
+    for (var i = 0; i < names.length; ++i) {
+        var name = names[i].trim();
+        var ms = _gSeconds(times[i % times.length]);
+        var wait = _gSeconds(waits[i % waits.length]);
+        if (name === "none" || ms + wait <= 0) {
+            continue;
+        }
+        var timing = [ms, wait, easeOf(curves[i % curves.length])];
+        if (name === "all" || name === "background-color" || name === "background") {
+            got.color = timing;
+        }
+        if (name === "all" || name === "opacity") {
+            got.fade = timing;
+        }
+        if (name === "all" || name === "transform") {
+            got.move = timing;
+        }
+        if (!/^(all|background-color|background|opacity|transform)$/.test(name)) {
+            _gWarn(raw, "transition", "`" + name + "` changes at once on a created box");
+        }
+    }
+    _gSet(raw, "eldurColorMs", got.color[0]);
+    _gSet(raw, "eldurColorWait", got.color[1]);
+    _gSet(raw, "eldurColorEase", got.color[2]);
+    _gSet(raw, "eldurFadeMs", got.fade[0]);
+    _gSet(raw, "eldurFadeWait", got.fade[1]);
+    _gSet(raw, "eldurFadeEase", got.fade[2]);
+    m.gTweenMs = got.move[0];
+    m.gTweenWait = got.move[1];
+    m.gTweenEase = got.move[2];
+}
+
+// --- :hover and the like ----------------------------------------------------
+
+var _G_STATE_WORD = /:(hover|focus-within|focus-visible|focus|active|checked)\b/g;
+var _gStateRules = null;
+
+// Each compound that names a state, without it: what has to be watched.
+function _gLoadStateRules() {
+    if (_gStateRules) {
+        return _gStateRules;
+    }
+    _gStateRules = [];
+    var rules = _gRules();
+    for (var i = 0; i < rules.length; ++i) {
+        var compounds = rules[i].sel.split(/\s*[>+~\s]\s*(?![^(]*\))/);
+        for (var c = 0; c < compounds.length; ++c) {
+            var kinds = compounds[c].match(_G_STATE_WORD);
+            if (!kinds) {
+                continue;
+            }
+            try {
+                _gStateRules.push({
+                    list: _parseSelector(compounds[c].replace(_G_STATE_WORD, "") || "*"),
+                    kinds: kinds.map(function(k) { return k.slice(1); })
+                });
+            } catch (e) {
+                // A selector no element can match has nothing to watch.
+            }
+        }
+    }
+    return _gStateRules;
+}
+
+function _gWatch(raw, kind) {
+    var m = _meta(raw);
+    m.gWatching = m.gWatching || {};
+    if (m.gWatching[kind]) {
+        return;
+    }
+    m.gWatching[kind] = true;
+    var changed = function() { _gTouch(); };
+    if (kind === "hover") {
+        if (typeof raw.hovered === "boolean") {
+            if (typeof raw.hoverEnabled === "boolean") {
+                raw.hoverEnabled = true;
+            }
+            raw.hoveredChanged.connect(changed);
+        } else {
+            var hover = Qt.createQmlObject("import QtQuick; HoverHandler { blocking: false }", raw, "eldur_hover");
+            hover.hoveredChanged.connect(function() {
+                m.gHover = hover.hovered;
+                _gTouch();
+            });
+        }
+    } else if (kind === "active") {
+        if (typeof raw.pressed === "boolean") {
+            raw.pressedChanged.connect(changed);
+        } else {
+            var tap = Qt.createQmlObject("import QtQuick; TapHandler { gesturePolicy: TapHandler.DragThreshold }", raw, "eldur_press");
+            tap.pressedChanged.connect(function() {
+                m.gPress = tap.pressed;
+                _gTouch();
+            });
+        }
+    } else if (kind === "checked") {
+        if (raw.checkedChanged) {
+            raw.checkedChanged.connect(changed);
+        }
+    } else if (raw.activeFocusChanged) {
+        raw.activeFocusChanged.connect(changed);
+    }
+}
+
+function _gWatchStates() {
+    var rules = _gLoadStateRules();
+    if (rules.length === 0) {
+        return;
+    }
+    _walkItems(_root, function(item) {
+        if (_gIsElement(item)) {
+            for (var r = 0; r < rules.length; ++r) {
+                var matches = false;
+                try {
+                    matches = _matchesList(item, rules[r].list);
+                } catch (e) {
+                    matches = false;
+                }
+                if (matches) {
+                    rules[r].kinds.forEach(function(kind) { _gWatch(item, kind); });
+                }
+            }
+        }
+        return false;
+    });
+}
+
 function _gPlaceRelative(raw, s) {
     var m = _meta(raw);
     var dx = 0;
@@ -9834,12 +10493,7 @@ function _gPlaceRelative(raw, s) {
     }
     if (!m.gShift) {
         m.gShift = Qt.createQmlObject("import QtQuick; Translate {}", raw, "eldur_shift");
-        var list = [];
-        for (var i = 0; i < raw.transform.length; ++i) {
-            list.push(raw.transform[i]);
-        }
-        list.push(m.gShift);
-        raw.transform = list;
+        _gSetTransforms(raw);
     }
     m.gShift.x = dx;
     m.gShift.y = dy;
@@ -9861,6 +10515,15 @@ function _gPaintControl(raw, s, e) {
             _gSet(raw, "bottomInset", 0);
             _gSet(raw, "leftInset", 0);
             _gSet(raw, "rightInset", 0);
+        }
+        var inLayout = raw.parent && _gIsLayout(raw.parent);
+        if (inLayout && (s.width !== "auto" || s.height !== "auto")) {
+            var boxed = s["box-sizing"] === "border-box";
+            var wide = _gPx(s.width, raw.parent.width, s.fontSize, s.rootSize);
+            var tall = _gPx(s.height, null, s.fontSize, s.rootSize);
+            var across = wide === null ? -1 : wide + (boxed ? 0 : e.pl + e.pr + e.bl + e.br);
+            var down = tall === null ? -1 : tall + (boxed ? 0 : e.pt + e.pb + e.bt + e.bb);
+            _gMarginTool().size(raw, across, down);
         }
         var line = _gLineHeight(s);
         if (raw.contentItem && raw.contentItem.font !== undefined) {
@@ -9904,45 +10567,311 @@ function _gPrune() {
     });
 }
 
-function _gContainerMargins(container) {
-    var kids = container.children;
-    var pending = 0;
-    var seen = false;
-    for (var i = 0; i < kids.length; ++i) {
-        var kid = kids[i];
+// A kid's margins the layout already has come from the conversion, which knew
+// nothing of what a script adds: all of a column's gaps are worked out afresh.
+function _gMarginTool() {
+    if (!_gMarginHelper) {
+        _gMarginHelper = Qt.createQmlObject("import QtQuick; import QtQuick.Layouts; QtObject { "
+            + "function set(i, t, b) { i.Layout.topMargin = t; i.Layout.bottomMargin = b; } "
+            + "function side(i, l, r) { i.Layout.leftMargin = l; i.Layout.rightMargin = r; } "
+            + "function size(i, w, h) { i.Layout.preferredWidth = w; i.Layout.minimumWidth = w < 0 ? 0 : w; i.Layout.maximumWidth = w < 0 ? Infinity : w; "
+            + "i.Layout.fillWidth = false; i.Layout.preferredHeight = h; i.Layout.minimumHeight = h < 0 ? 0 : h; i.Layout.maximumHeight = h < 0 ? Infinity : h; } "
+            + "function shut(i, shut) { i.Layout.maximumHeight = shut ? 0 : Infinity; i.Layout.preferredHeight = shut ? 0 : -1; } "
+            + "function top(i) { return i.Layout.topMargin; } "
+            + "function bottom(i) { return i.Layout.bottomMargin; } }", _root, "eldur_margins");
+    }
+    return _gMarginHelper;
+}
+
+function _gIsElement(raw) {
+    return typeof raw.eldurTag === "string" || Boolean(_meta(raw).createdTag);
+}
+
+function _gIsLayout(item) {
+    return Boolean(item) && (typeof item.spacing === "number" || typeof item.columnSpacing === "number");
+}
+
+function _gCollapses(raw, s) {
+    return (s.display === "block" || s.display === "list-item") && !_gOutOfFlow(s)
+        && s["overflow-x"] === "visible" && s["overflow-y"] === "visible" && s.tag !== "html";
+}
+
+function _gHasOwnText(raw) {
+    if (typeof raw.text === "string" && raw.text !== "") {
+        return true;
+    }
+    for (var i = 0; i < raw.children.length; ++i) {
+        var kid = raw.children[i];
+        if (typeof kid.text === "string" && kid.text !== "" && !_gIsElement(kid)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function _gColumnOf(raw) {
+    if (_gIsLayout(raw)) {
+        return raw;
+    }
+    for (var i = 0; i < raw.children.length; ++i) {
+        var kid = raw.children[i];
+        if (_gIsLayout(kid) && !_gIsElement(kid)) {
+            return kid;
+        }
+    }
+    return null;
+}
+
+function _gFlowKids(column) {
+    var out = [];
+    for (var i = 0; i < column.children.length; ++i) {
+        var kid = column.children[i];
         if (!kid || kid.eldurSlot !== undefined || _isLayoutSpacer(kid) || !kid.visible) {
             continue;
         }
-        if (_gIsBox(kid)) {
-            var got = _meta(kid).gMargins || { mt: 0, mb: 0 };
-            var s = _gStyle(kid);
-            var e = _gEdges(kid, s, container.width);
-            var side = container.eldurPackRow === true || typeof container.columnSpacing === "number";
-            _gSet(kid, "eldurMl", e.ml || 0);
-            _gSet(kid, "eldurMr", e.mr || 0);
-            if (side) {
-                _gSet(kid, "eldurMt", got.mt);
-                _gSet(kid, "eldurMb", got.mb);
-                continue;
-            }
-            var merged = _gMerge(pending, got.mt);
-            if (got.empty) {
-                _gSet(kid, "eldurMt", 0);
-                _gSet(kid, "eldurMb", 0);
-                pending = _gMerge(merged, got.mb);
-                seen = true;
-                continue;
-            }
-            // The previous sibling's own bottom margin is already in the layout.
-            _gSet(kid, "eldurMt", seen ? merged - pending : merged);
-            _gSet(kid, "eldurMb", got.mb);
-            pending = got.mb;
-            seen = true;
-        } else {
-            var ss = typeof kid.eldurTag === "string" || _meta(kid).createdTag ? _gStyle(kid) : null;
-            pending = ss ? (_gEdges(kid, ss, container.width).mb || 0) : 0;
-            seen = true;
+        if (_gIsElement(kid) && _gOutOfFlow(_gStyle(kid))) {
+            continue;
         }
+        out.push(kid);
+    }
+    return out;
+}
+
+// What a box's outer edges collapse to, its first and last children's included.
+function _gOuter(kid) {
+    if (!_gIsElement(kid) || _gStyle(kid).display === "inline") {
+        var tool = _gMarginTool();
+        return { mt: tool.top(kid), mb: tool.bottom(kid), empty: false, foreign: true };
+    }
+    if (_gIsBox(kid) && _meta(kid).gMargins) {
+        return _meta(kid).gMargins;
+    }
+    var s = _gStyle(kid);
+    var e = _gEdges(kid, s, kid.parent ? kid.parent.width : 0);
+    var out = { mt: e.mt || 0, mb: e.mb || 0, empty: false };
+    if (!_gCollapses(kid, s) || _gHasOwnText(kid)) {
+        return out;
+    }
+    var column = _gColumnOf(kid);
+    var kids = column ? _gFlowKids(column) : [];
+    var heightless = _gPx(s.height, null, s.fontSize, s.rootSize);
+    var autoHeight = heightless === null && s.height === "auto";
+    var i;
+    if (e.pt + e.bt === 0) {
+        for (i = 0; i < kids.length; ++i) {
+            var first = _gOuter(kids[i]);
+            out.mt = _gMerge(out.mt, first.mt);
+            if (!first.empty) {
+                break;
+            }
+            out.mt = _gMerge(out.mt, first.mb);
+        }
+    }
+    if (e.pb + e.bb === 0 && autoHeight) {
+        for (i = kids.length - 1; i >= 0; --i) {
+            var last = _gOuter(kids[i]);
+            out.mb = _gMerge(out.mb, last.mb);
+            if (!last.empty) {
+                break;
+            }
+            out.mb = _gMerge(out.mb, last.mt);
+        }
+    }
+    var allEmpty = kids.every(function(k) { return _gOuter(k).empty; });
+    out.empty = allEmpty && e.pt + e.bt + e.pb + e.bb === 0 && (autoHeight || heightless === 0)
+        && _G_CONTROL.test(s.tag) === false;
+    return out;
+}
+
+function _gSetMargins(kid, top, bottom) {
+    if (_gIsBox(kid)) {
+        _gSet(kid, "eldurMt", top);
+        _gSet(kid, "eldurMb", bottom);
+        return;
+    }
+    var tool = _gMarginTool();
+    if (Math.abs(tool.top(kid) - top) >= 2 || Math.abs(tool.bottom(kid) - bottom) >= 2) {
+        tool.set(kid, top, bottom);
+    }
+}
+
+function _gMarginTop(kid) {
+    return _gIsBox(kid) ? kid.eldurMt || 0 : _gMarginTool().top(kid);
+}
+
+function _gMarginBottom(kid) {
+    return _gIsBox(kid) ? kid.eldurMb || 0 : _gMarginTool().bottom(kid);
+}
+
+// Only what is two pixels or more off is written. Less is what `eldurCarry` keeps
+// of a fractional height, in a binding worth keeping, and a gap a page's own
+// element already holds as its bottom margin need not move to the next's top.
+function _gApplyGaps(gaps, trailing) {
+    var before = 0;
+    for (var i = 0; i < gaps.length; ++i) {
+        var kid = gaps[i].kid;
+        if (gaps[i].want !== null) {
+            var keep = _gIsBox(kid) ? 0 : _gMarginBottom(kid);
+            if (i === gaps.length - 1 || _gIsBox(kid)) {
+                keep = 0;
+            }
+            var top = gaps[i].want - before;
+            if (_gIsBox(kid) || Math.abs(_gMarginTop(kid) - top) >= 2 || Math.abs(_gMarginBottom(kid) - keep) >= 2) {
+                _gSetMargins(kid, top, keep);
+            }
+        }
+        before = _gMarginBottom(kid);
+    }
+    if (gaps.length > 0 && gaps[gaps.length - 1].want !== null) {
+        var last = gaps[gaps.length - 1].kid;
+        _gSetMargins(last, _gMarginTop(last), trailing);
+    }
+}
+
+function _gColumnMargins(column, owner) {
+    var kids = _gFlowKids(column);
+    // A template's Text keeps a line for text that hasn't come; a box has none.
+    for (var t = 0; t < kids.length; ++t) {
+        if (_meta(kids[t]).createdTag && typeof kids[t].lineCount === "number" && _gStyle(kids[t]).height === "auto") {
+            var shut = kids[t].text === "";
+            // Its height may be a binding: only one this closed is opened again.
+            if (shut || _meta(kids[t]).gShut) {
+                _gMarginTool().shut(kids[t], shut);
+                _meta(kids[t]).gShut = shut;
+            }
+        }
+    }
+    var os = owner ? _gStyle(owner) : null;
+    var oe = owner ? _gEdges(owner, os, owner.parent ? owner.parent.width : 0) : null;
+    var row = column.eldurPackRow === true || typeof column.columnSpacing === "number"
+        || String(column).indexOf("RowLayout") !== -1;
+    var collapses = Boolean(owner) && _gCollapses(owner, os) && !_gHasOwnText(owner);
+    if (row || (os && /(flex|grid)$/.test(os.display))) {
+        // Margins don't collapse across a row, and a template in one was probed
+        // with the ones it has wherever it lands: only a box is told.
+        for (var k = 0; k < kids.length; ++k) {
+            if (_gIsBox(kids[k])) {
+                var got = _gOuter(kids[k]);
+                var ke = _gEdges(kids[k], _gStyle(kids[k]), column.width);
+                _gSetMargins(kids[k], got.mt, got.mb);
+                _gSet(kids[k], "eldurMl", ke.ml || 0);
+                _gSet(kids[k], "eldurMr", ke.mr || 0);
+            }
+        }
+        return;
+    }
+    var throughTop = collapses && oe.pt + oe.bt === 0;
+    var throughBottom = collapses && oe.pb + oe.bb === 0 && os.height === "auto";
+    var pending = 0;
+    var paid = 0;
+    var seen = false;
+    var gaps = [];
+    var lastReal = -1;
+    // A column's first: nothing before it can have moved it.
+    var lastOwn = true;
+    for (var i = 0; i < kids.length; ++i) {
+        var kid = kids[i];
+        var o = _gOuter(kid);
+        if (_gIsBox(kid)) {
+            var be = _gEdges(kid, _gStyle(kid), column.width);
+            _gSet(kid, "eldurMl", be.ml || 0);
+            _gSet(kid, "eldurMr", be.mr || 0);
+        }
+        // Conversion got right the gap between two of the page's own elements,
+        // to the fraction, unless a script's child's margin passes through one.
+        var own = !_meta(kid).createdTag && !_gIsBox(kid) && !o.foreign;
+        var settled = own && !_gEdgeCreated(kid);
+        var inPlace = settled && lastOwn;
+        lastOwn = settled;
+        if (o.foreign) {
+            lastOwn = false;
+            gaps.push({ kid: kid, want: null });
+            pending = o.mb;
+            paid = o.mb;
+            seen = true;
+            lastReal = -1;
+            continue;
+        }
+        if (o.empty) {
+            pending = _gMerge(_gMerge(pending, o.mt), o.mb);
+            // Past the last box the margin is the parent's, not a gap in it.
+            var more = kids.slice(i + 1).some(function(k) { return !_gOuter(k).empty; });
+            if (!seen && throughTop) {
+                gaps.push({ kid: kid, want: 0 });
+                paid = pending;
+            } else if (!more && throughBottom) {
+                gaps.push({ kid: kid, want: 0 });
+            } else {
+                gaps.push({ kid: kid, want: pending - paid });
+                paid = pending;
+            }
+            continue;
+        }
+        var total = _gMerge(pending, o.mt);
+        gaps.push({ kid: kid, want: inPlace ? null : !seen && throughTop ? 0 : total - paid });
+        pending = o.mb;
+        paid = 0;
+        seen = true;
+        lastReal = gaps.length - 1;
+    }
+    var after = lastReal === gaps.length - 1 && lastReal >= 0 ? (throughBottom ? 0 : pending - paid) : 0;
+    _gApplyGaps(gaps, after);
+    if (lastReal >= 0 && lastReal < gaps.length - 1 && !throughBottom && gaps[lastReal].want !== null) {
+        var real = gaps[lastReal].kid;
+        _gSetMargins(real, _gMarginTop(real), pending - paid);
+    }
+}
+
+function _gEdgeCreated(kid) {
+    var column = _gColumnOf(kid);
+    var kids = column ? _gFlowKids(column) : [];
+    if (kids.length === 0) {
+        return false;
+    }
+    var first = kids[0];
+    var last = kids[kids.length - 1];
+    return Boolean(_meta(first).createdTag) || Boolean(_meta(last).createdTag) || _gEdgeCreated(first)
+        || (first !== last && _gEdgeCreated(last));
+}
+
+function _gMarginPass() {
+    var found = [];
+    var add = function(column, owner) {
+        for (var f = 0; f < found.length; ++f) {
+            if (found[f].column === column) {
+                return;
+            }
+        }
+        found.push({ column: column, owner: owner });
+    };
+    var visit = function(raw) {
+        if (!raw.parent || _gIsBox(raw.parent) || !_gIsLayout(raw.parent) || !_isConnected(raw) || raw.eldurSlot !== undefined) {
+            return;
+        }
+        if (_gStyle(raw).display === "none" || _gOutOfFlow(_gStyle(raw))) {
+            return;
+        }
+        var owner = _gParent(raw);
+        add(raw.parent, owner);
+        // Its margins can pass through each ancestor to that one's own column.
+        while (owner && !_gIsBox(owner) && owner.parent && _gIsLayout(owner.parent) && _gCollapses(owner, _gStyle(owner))) {
+            var next = _gParent(owner);
+            add(owner.parent, next);
+            owner = next;
+        }
+    };
+    if (_gActive()) {
+        _gLive.forEach(visit);
+    } else {
+        _walkItems(_root, function(item) {
+            if (_meta(item).createdTag) {
+                visit(item);
+            }
+            return false;
+        });
+    }
+    for (var c = 0; c < found.length; ++c) {
+        _gColumnMargins(found[c].column, found[c].owner);
     }
 }
 
@@ -10016,11 +10945,7 @@ function _gLayoutRoots() {
             containers.push(raw.parent);
         }
     }
-    for (var c = 0; c < containers.length; ++c) {
-        if (typeof containers[c].spacing === "number" || typeof containers[c].columnSpacing === "number") {
-            _gContainerMargins(containers[c]);
-        }
-    }
+    _gMarginPass();
     return outOfFlow;
 }
 
@@ -10099,7 +11024,16 @@ function _gSyncFlowForm(raw) {
 }
 
 function _gSettle() {
-    if (_gRunning || !_gActive() || !_gDirty) {
+    if (_gRunning || !_gHasCascade() || !_gDirty) {
+        return;
+    }
+    if (!_gActive()) {
+        // Templates paint a closed page's elements; only their margins are left.
+        _gRunning = true;
+        _gDirty = false;
+        ++_gGen;
+        _gMarginPass();
+        _gRunning = false;
         return;
     }
     // Only a read right after a pass asks; holding more keeps dead items alive.
@@ -10123,6 +11057,7 @@ function _gSettle() {
         }
     }
     _gPrune();
+    _gWatchStates();
     _gReposition();
     _gRunning = false;
 }
@@ -10316,6 +11251,21 @@ function _gComputed(raw, prop) {
     }
     if (name === "opacity") {
         return _gNumberText(_gNumber(s.opacity));
+    }
+    if (name === "background-image" || name === "box-shadow") {
+        var parsed = s[name] === "none" ? null : _gPaintValue(name, s[name]);
+        return parsed ? parsed.css : String(s[name]);
+    }
+    if (name === "transform") {
+        var matrix = _gMatrixOf(raw, s, raw.width, raw.height, false);
+        return matrix ? "matrix(" + matrix.map(function(v) {
+            return _gNumberText(Number(v.toFixed(6)));
+        }).join(", ") + ")" : "none";
+    }
+    if (name === "font-family") {
+        return s[name] === "" ? "\"Times New Roman\"" : String(s[name]).split(",").map(function(f) {
+            return f.trim().replace(/^'(.*)'$/, "\"$1\"");
+        }).join(", ");
     }
     if (name === "font-size") {
         return _gNumberText(s.fontSize) + "px";

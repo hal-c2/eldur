@@ -3,7 +3,7 @@
 //! [`Emitter::block`] dispatches on [`BoxKind`]; each layout kind has its
 //! own submodule.
 
-mod background;
+pub(crate) mod background;
 mod carry;
 mod controls;
 mod decoration;
@@ -18,7 +18,7 @@ mod inline_model;
 mod links;
 mod lists;
 mod paint;
-mod shadow;
+pub(crate) mod shadow;
 mod table;
 pub(crate) mod templates;
 mod text;
@@ -126,6 +126,8 @@ pub(crate) struct Emitter<'a, 'd> {
     /// The runtime resolves some element from the page's rules, and reads what
     /// each element's markup says about itself.
     pub open_elements: bool,
+    /// The page holds the rule table: the runtime computes styles of its own.
+    pub cascade_rules: bool,
     /// The boxes a script may put block children in.
     gains: HashSet<NodeId>,
     /// A script inserts into something found at run time: any empty box.
@@ -208,6 +210,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             images: BTreeMap::new(),
             runtime_dom: false,
             open_elements: false,
+            cascade_rules: false,
             gains: HashSet::new(),
             gains_any_empty: false,
             line_align: eldur_css::TextAlign::Start,
@@ -826,7 +829,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             && let Some(node) = b.node
         {
             crate::metadata::tag(&mut e.obj, self.doc, node);
-            if self.open_elements {
+            if self.open_elements || self.cascade_rules {
                 crate::metadata::declare_style(&mut e.obj, self.doc, node);
             }
             if self.script_attrs {

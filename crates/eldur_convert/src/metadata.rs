@@ -279,6 +279,25 @@ pub(crate) fn inline_rules_decl(rules: &[eldur_css::InlineRule]) -> Member {
 /// The same property with all a created element can use (`eldur_runtime.js`
 /// reads either).
 pub(crate) fn runtime_rules_decl(rules: &[eldur_css::RuntimeRule]) -> Member {
+    decl(
+        "string",
+        "eldurInlineRules",
+        Value::String(runtime_rules_json(rules)),
+    )
+}
+
+/// `root.eldurCascadeRules`: the same on a page whose elements all have
+/// templates, for what the runtime computes without restyling any: margins
+/// around created elements and `getComputedStyle`.
+pub(crate) fn cascade_rules_decl(rules: &[eldur_css::RuntimeRule]) -> Member {
+    decl(
+        "string",
+        "eldurCascadeRules",
+        Value::String(runtime_rules_json(rules)),
+    )
+}
+
+fn runtime_rules_json(rules: &[eldur_css::RuntimeRule]) -> String {
     let list: Vec<serde_json::Value> = rules
         .iter()
         .map(|r| {
@@ -294,11 +313,7 @@ pub(crate) fn runtime_rules_decl(rules: &[eldur_css::RuntimeRule]) -> Member {
             rule
         })
         .collect();
-    decl(
-        "string",
-        "eldurInlineRules",
-        Value::String(serde_json::Value::Array(list).to_string()),
-    )
+    serde_json::Value::Array(list).to_string()
 }
 
 /// `root.baseUrl` (dynamic-styles §14, decision 2): an `http(s)` page's
