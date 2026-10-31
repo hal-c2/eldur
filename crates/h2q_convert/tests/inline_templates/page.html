@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Created inline elements</title>
+<style>
+body {
+  margin: 0;
+  padding: 24px;
+  font-family: sans-serif;
+  font-size: 16px;
+  color: #1f2430;
+  background: #f4f6fa;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.list {
+  width: 420px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid #ccd3e0;
+  background: #ffffff;
+}
+
+.item {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e3e7ef;
+}
+
+.item.done {
+  color: #868e96;
+  text-decoration: line-through;
+}
+
+.label {
+  color: #2b8a3e;
+}
+
+.label.warn {
+  color: #c92a2a;
+  font-weight: 700;
+}
+
+.item:hover .label {
+  color: #1c7ed6;
+}
+
+a {
+  color: #5f3dc4;
+}
+
+.tag {
+  font-style: italic;
+  background: #fff3bf;
+  padding: 0 4px;
+}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button type="button" id="warn">Warn</button>
+  <button type="button" id="done">Done</button>
+</div>
+<ul class="list" id="list"></ul>
+
+<script>
+  var list = document.getElementById('list');
+
+  function addItem(text, who) {
+    var li = document.createElement('li');
+    li.className = 'item';
+    var label = document.createElement('span');
+    label.className = 'label';
+    label.textContent = text;
+    li.appendChild(label);
+    li.appendChild(document.createTextNode(' by '));
+    var name = document.createElement('strong');
+    name.textContent = who;
+    li.appendChild(name);
+    list.appendChild(li);
+  }
+
+  addItem('First', 'Ada');
+  addItem('Second', 'Grace');
+
+  var row = document.createElement('li');
+  row.className = 'item';
+  row.innerHTML = '<span class="tag">tagged</span> and <a href="#top">a link</a>';
+  list.appendChild(row);
+
+  document.getElementById('warn').addEventListener('click', function () {
+    list.querySelector('.label').classList.toggle('warn');
+  });
+  document.getElementById('done').addEventListener('click', function () {
+    list.children[1].classList.toggle('done');
+  });
+</script>
+</body>
+</html>

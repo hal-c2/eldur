@@ -1,0 +1,219 @@
+[
+ {
+  "name": "initial label1",
+  "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Created inline elements</title>\n<style>\nbody {\n  margin: 0;\n  padding: 24px;\n  font-family: sans-serif;\n  font-size: 16px;\n  color: #1f2430;\n  background: #f4f6fa;\n}\n\n.toolbar {\n  display: flex;\n  gap: 8px;\n  margin-bottom: 16px;\n}\n\n.list {\n  width: 420px;\n  margin: 0;\n  padding: 0;\n  list-style: none;\n  border: 1px solid #ccd3e0;\n  background: #ffffff;\n}\n\n.item {\n  padding: 8px 12px;\n  border-bottom: 1px solid #e3e7ef;\n}\n\n.item.done {\n  color: #868e96;\n  text-decoration: line-through;\n}\n\n.label {\n  color: #2b8a3e;\n}\n\n.label.warn {\n  color: #c92a2a;\n  font-weight: 700;\n}\n\n.item:hover .label {\n  color: #1c7ed6;\n}\n\na {\n  color: #5f3dc4;\n}\n\n.tag {\n  font-style: italic;\n  background: #fff3bf;\n  padding: 0 4px;\n}\n</style>\n</head>\n<body>\n<div class=\"toolbar\">\n  <button type=\"button\" id=\"warn\">Warn</button>\n  <button type=\"button\" id=\"done\">Done</button>\n</div>\n<ul class=\"list\" id=\"list\"></ul>\n\n<script>\n  var list = document.getElementById('list');\n\n  function addItem(text, who) {\n    var li = document.createElement('li');\n    li.className = 'item';\n    var label = document.createElement('span');\n    label.className = 'label';\n    label.textContent = text;\n    li.appendChild(label);\n    li.appendChild(document.createTextNode(' by '));\n    var name = document.createElement('strong');\n    name.textContent = who;\n    li.appendChild(name);\n    list.appendChild(li);\n  }\n\n  addItem('First', 'Ada');\n  addItem('Second', 'Grace');\n\n  var row = document.createElement('li');\n  row.className = 'item';\n  row.innerHTML = '<span class=\"tag\">tagged</span> and <a href=\"#top\">a link</a>';\n  list.appendChild(row);\n\n  document.getElementById('warn').addEventListener('click', function () {\n    list.querySelector('.label').classList.toggle('warn');\n  });\n  document.getElementById('done').addEventListener('click', function () {\n    list.children[1].classList.toggle('done');\n  });\n</script>\n</body>\n</html>\n",
+  "select": "#list li:nth-child(1) .label",
+  "props": [
+   "color",
+   "font-weight",
+   "font-style",
+   "text-decoration-line",
+   "background-color"
+  ],
+  "run": [],
+  "after": 100
+ },
+ {
+  "name": "initial strong1",
+  "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Created inline elements</title>\n<style>\nbody {\n  margin: 0;\n  padding: 24px;\n  font-family: sans-serif;\n  font-size: 16px;\n  color: #1f2430;\n  background: #f4f6fa;\n}\n\n.toolbar {\n  display: flex;\n  gap: 8px;\n  margin-bottom: 16px;\n}\n\n.list {\n  width: 420px;\n  margin: 0;\n  padding: 0;\n  list-style: none;\n  border: 1px solid #ccd3e0;\n  background: #ffffff;\n}\n\n.item {\n  padding: 8px 12px;\n  border-bottom: 1px solid #e3e7ef;\n}\n\n.item.done {\n  color: #868e96;\n  text-decoration: line-through;\n}\n\n.label {\n  color: #2b8a3e;\n}\n\n.label.warn {\n  color: #c92a2a;\n  font-weight: 700;\n}\n\n.item:hover .label {\n  color: #1c7ed6;\n}\n\na {\n  color: #5f3dc4;\n}\n\n.tag {\n  font-style: italic;\n  background: #fff3bf;\n  padding: 0 4px;\n}\n</style>\n</head>\n<body>\n<div class=\"toolbar\">\n  <button type=\"button\" id=\"warn\">Warn</button>\n  <button type=\"button\" id=\"done\">Done</button>\n</div>\n<ul class=\"list\" id=\"list\"></ul>\n\n<script>\n  var list = document.getElementById('list');\n\n  function addItem(text, who) {\n    var li = document.createElement('li');\n    li.className = 'item';\n    var label = document.createElement('span');\n    label.className = 'label';\n    label.textContent = text;\n    li.appendChild(label);\n    li.appendChild(document.createTextNode(' by '));\n    var name = document.createElement('strong');\n    name.textContent = who;\n    li.appendChild(name);\n    list.appendChild(li);\n  }\n\n  addItem('First', 'Ada');\n  addItem('Second', 'Grace');\n\n  var row = document.createElement('li');\n  row.className = 'item';\n  row.innerHTML = '<span class=\"tag\">tagged</span> and <a href=\"#top\">a link</a>';\n  list.appendChild(row);\n\n  document.getElementById('warn').addEventListener('click', function () {\n    list.querySelector('.label').classList.toggle('warn');\n  });\n  document.getElementById('done').addEventListener('click', function () {\n    list.children[1].classList.toggle('done');\n  });\n</script>\n</body>\n</html>\n",
+  "select": "#list li:nth-child(1) strong",
+  "props": [
+   "color",
+   "font-weight",
+   "font-style",
+   "text-decoration-line",
+   "background-color"
+  ],
+  "run": [],
+  "after": 100
+ },
+ {
+  "name": "initial item1",
+  "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Created inline elements</title>\n<style>\nbody {\n  margin: 0;\n  padding: 24px;\n  font-family: sans-serif;\n  font-size: 16px;\n  color: #1f2430;\n  background: #f4f6fa;\n}\n\n.toolbar {\n  display: flex;\n  gap: 8px;\n  margin-bottom: 16px;\n}\n\n.list {\n  width: 420px;\n  margin: 0;\n  padding: 0;\n  list-style: none;\n  border: 1px solid #ccd3e0;\n  background: #ffffff;\n}\n\n.item {\n  padding: 8px 12px;\n  border-bottom: 1px solid #e3e7ef;\n}\n\n.item.done {\n  color: #868e96;\n  text-decoration: line-through;\n}\n\n.label {\n  color: #2b8a3e;\n}\n\n.label.warn {\n  color: #c92a2a;\n  font-weight: 700;\n}\n\n.item:hover .label {\n  color: #1c7ed6;\n}\n\na {\n  color: #5f3dc4;\n}\n\n.tag {\n  font-style: italic;\n  background: #fff3bf;\n  padding: 0 4px;\n}\n</style>\n</head>\n<body>\n<div class=\"toolbar\">\n  <button type=\"button\" id=\"warn\">Warn</button>\n  <button type=\"button\" id=\"done\">Done</button>\n</div>\n<ul class=\"list\" id=\"list\"></ul>\n\n<script>\n  var list = document.getElementById('list');\n\n  function addItem(text, who) {\n    var li = document.createElement('li');\n    li.className = 'item';\n    var label = document.createElement('span');\n    label.className = 'label';\n    label.textContent = text;\n    li.appendChild(label);\n    li.appendChild(document.createTextNode(' by '));\n    var name = document.createElement('strong');\n    name.textContent = who;\n    li.appendChild(name);\n    list.appendChild(li);\n  }\n\n  addItem('First', 'Ada');\n  addItem('Second', 'Grace');\n\n  var row = document.createElement('li');\n  row.className = 'item';\n  row.innerHTML = '<span class=\"tag\">tagged</span> and <a href=\"#top\">a link</a>';\n  list.appendChild(row);\n\n  document.getElementById('warn').addEventListener('click', function () {\n    list.querySelector('.label').classList.toggle('warn');\n  });\n  document.getElementById('done').addEventListener('click', function () {\n    list.children[1].classList.toggle('done');\n  });\n</script>\n</body>\n</html>\n",
+  "select": "#list li:nth-child(1)",
+  "props": [
+   "color",
+   "font-weight",
+   "font-style",
+   "text-decoration-line",
+   "background-color"
+  ],
+  "run": [],
+  "after": 100
+ },
+ {
+  "name": "initial tag",
+  "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Created inline elements</title>\n<style>\nbody {\n  margin: 0;\n  padding: 24px;\n  font-family: sans-serif;\n  font-size: 16px;\n  color: #1f2430;\n  background: #f4f6fa;\n}\n\n.toolbar {\n  display: flex;\n  gap: 8px;\n  margin-bottom: 16px;\n}\n\n.list {\n  width: 420px;\n  margin: 0;\n  padding: 0;\n  list-style: none;\n  border: 1px solid #ccd3e0;\n  background: #ffffff;\n}\n\n.item {\n  padding: 8px 12px;\n  border-bottom: 1px solid #e3e7ef;\n}\n\n.item.done {\n  color: #868e96;\n  text-decoration: line-through;\n}\n\n.label {\n  color: #2b8a3e;\n}\n\n.label.warn {\n  color: #c92a2a;\n  font-weight: 700;\n}\n\n.item:hover .label {\n  color: #1c7ed6;\n}\n\na {\n  color: #5f3dc4;\n}\n\n.tag {\n  font-style: italic;\n  background: #fff3bf;\n  padding: 0 4px;\n}\n</style>\n</head>\n<body>\n<div class=\"toolbar\">\n  <button type=\"button\" id=\"warn\">Warn</button>\n  <button type=\"button\" id=\"done\">Done</button>\n</div>\n<ul class=\"list\" id=\"list\"></ul>\n\n<script>\n  var list = document.getElementById('list');\n\n  function addItem(text, who) {\n    var li = document.createElement('li');\n    li.className = 'item';\n    var label = document.createElement('span');\n    label.className = 'label';\n    label.textContent = text;\n    li.appendChild(label);\n    li.appendChild(document.createTextNode(' by '));\n    var name = document.createElement('strong');\n    name.textContent = who;\n    li.appendChild(name);\n    list.appendChild(li);\n  }\n\n  addItem('First', 'Ada');\n  addItem('Second', 'Grace');\n\n  var row = document.createElement('li');\n  row.className = 'item';\n  row.innerHTML = '<span class=\"tag\">tagged</span> and <a href=\"#top\">a link</a>';\n  list.appendChild(row);\n\n  document.getElementById('warn').addEventListener('click', function () {\n    list.querySelector('.label').classList.toggle('warn');\n  });\n  document.getElementById('done').addEventListener('click', function () {\n    list.children[1].classList.toggle('done');\n  });\n</script>\n</body>\n</html>\n",
+  "select": "#list .tag",
+  "props": [
+   "color",
+   "font-weight",
+   "font-style",
+   "text-decoration-line",
+   "background-color"
+  ],
+  "run": [],
+  "after": 100
+ },
+ {
+  "name": "initial link",
+  "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Created inline elements</title>\n<style>\nbody {\n  margin: 0;\n  padding: 24px;\n  font-family: sans-serif;\n  font-size: 16px;\n  color: #1f2430;\n  background: #f4f6fa;\n}\n\n.toolbar {\n  display: flex;\n  gap: 8px;\n  margin-bottom: 16px;\n}\n\n.list {\n  width: 420px;\n  margin: 0;\n  padding: 0;\n  list-style: none;\n  border: 1px solid #ccd3e0;\n  background: #ffffff;\n}\n\n.item {\n  padding: 8px 12px;\n  border-bottom: 1px solid #e3e7ef;\n}\n\n.item.done {\n  color: #868e96;\n  text-decoration: line-through;\n}\n\n.label {\n  color: #2b8a3e;\n}\n\n.label.warn {\n  color: #c92a2a;\n  font-weight: 700;\n}\n\n.item:hover .label {\n  color: #1c7ed6;\n}\n\na {\n  color: #5f3dc4;\n}\n\n.tag {\n  font-style: italic;\n  background: #fff3bf;\n  padding: 0 4px;\n}\n</style>\n</head>\n<body>\n<div class=\"toolbar\">\n  <button type=\"button\" id=\"warn\">Warn</button>\n  <button type=\"button\" id=\"done\">Done</button>\n</div>\n<ul class=\"list\" id=\"list\"></ul>\n\n<script>\n  var list = document.getElementById('list');\n\n  function addItem(text, who) {\n    var li = document.createElement('li');\n    li.className = 'item';\n    var label = document.createElement('span');\n    label.className = 'label';\n    label.textContent = text;\n    li.appendChild(label);\n    li.appendChild(document.createTextNode(' by '));\n    var name = document.createElement('strong');\n    name.textContent = who;\n    li.appendChild(name);\n    list.appendChild(li);\n  }\n\n  addItem('First', 'Ada');\n  addItem('Second', 'Grace');\n\n  var row = document.createElement('li');\n  row.className = 'item';\n  row.innerHTML = '<span class=\"tag\">tagged</span> and <a href=\"#top\">a link</a>';\n  list.appendChild(row);\n\n  document.getElementById('warn').addEventListener('click', function () {\n    list.querySelector('.label').classList.toggle('warn');\n  });\n  document.getElementById('done').addEventListener('click', function () {\n    list.children[1].classList.toggle('done');\n  });\n</script>\n</body>\n</html>\n",
+  "select": "#list a",
+  "props": [
+   "color",
+   "font-weight",
+   "font-style",
+   "text-decoration-line",
+   "background-color"
+  ],
+  "run": [],
+  "after": 100
+ },
+ {
+  "name": "warn label1",
+  "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Created inline elements</title>\n<style>\nbody {\n  margin: 0;\n  padding: 24px;\n  font-family: sans-serif;\n  font-size: 16px;\n  color: #1f2430;\n  background: #f4f6fa;\n}\n\n.toolbar {\n  display: flex;\n  gap: 8px;\n  margin-bottom: 16px;\n}\n\n.list {\n  width: 420px;\n  margin: 0;\n  padding: 0;\n  list-style: none;\n  border: 1px solid #ccd3e0;\n  background: #ffffff;\n}\n\n.item {\n  padding: 8px 12px;\n  border-bottom: 1px solid #e3e7ef;\n}\n\n.item.done {\n  color: #868e96;\n  text-decoration: line-through;\n}\n\n.label {\n  color: #2b8a3e;\n}\n\n.label.warn {\n  color: #c92a2a;\n  font-weight: 700;\n}\n\n.item:hover .label {\n  color: #1c7ed6;\n}\n\na {\n  color: #5f3dc4;\n}\n\n.tag {\n  font-style: italic;\n  background: #fff3bf;\n  padding: 0 4px;\n}\n</style>\n</head>\n<body>\n<div class=\"toolbar\">\n  <button type=\"button\" id=\"warn\">Warn</button>\n  <button type=\"button\" id=\"done\">Done</button>\n</div>\n<ul class=\"list\" id=\"list\"></ul>\n\n<script>\n  var list = document.getElementById('list');\n\n  function addItem(text, who) {\n    var li = document.createElement('li');\n    li.className = 'item';\n    var label = document.createElement('span');\n    label.className = 'label';\n    label.textContent = text;\n    li.appendChild(label);\n    li.appendChild(document.createTextNode(' by '));\n    var name = document.createElement('strong');\n    name.textContent = who;\n    li.appendChild(name);\n    list.appendChild(li);\n  }\n\n  addItem('First', 'Ada');\n  addItem('Second', 'Grace');\n\n  var row = document.createElement('li');\n  row.className = 'item';\n  row.innerHTML = '<span class=\"tag\">tagged</span> and <a href=\"#top\">a link</a>';\n  list.appendChild(row);\n\n  document.getElementById('warn').addEventListener('click', function () {\n    list.querySelector('.label').classList.toggle('warn');\n  });\n  document.getElementById('done').addEventListener('click', function () {\n    list.children[1].classList.toggle('done');\n  });\n</script>\n</body>\n</html>\n",
+  "select": "#list li:nth-child(1) .label",
+  "props": [
+   "color",
+   "font-weight",
+   "font-style",
+   "text-decoration-line",
+   "background-color"
+  ],
+  "run": [
+   {
+    "click": "#warn"
+   }
+  ],
+  "after": 100
+ },
+ {
+  "name": "warn label2",
+  "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Created inline elements</title>\n<style>\nbody {\n  margin: 0;\n  padding: 24px;\n  font-family: sans-serif;\n  font-size: 16px;\n  color: #1f2430;\n  background: #f4f6fa;\n}\n\n.toolbar {\n  display: flex;\n  gap: 8px;\n  margin-bottom: 16px;\n}\n\n.list {\n  width: 420px;\n  margin: 0;\n  padding: 0;\n  list-style: none;\n  border: 1px solid #ccd3e0;\n  background: #ffffff;\n}\n\n.item {\n  padding: 8px 12px;\n  border-bottom: 1px solid #e3e7ef;\n}\n\n.item.done {\n  color: #868e96;\n  text-decoration: line-through;\n}\n\n.label {\n  color: #2b8a3e;\n}\n\n.label.warn {\n  color: #c92a2a;\n  font-weight: 700;\n}\n\n.item:hover .label {\n  color: #1c7ed6;\n}\n\na {\n  color: #5f3dc4;\n}\n\n.tag {\n  font-style: italic;\n  background: #fff3bf;\n  padding: 0 4px;\n}\n</style>\n</head>\n<body>\n<div class=\"toolbar\">\n  <button type=\"button\" id=\"warn\">Warn</button>\n  <button type=\"button\" id=\"done\">Done</button>\n</div>\n<ul class=\"list\" id=\"list\"></ul>\n\n<script>\n  var list = document.getElementById('list');\n\n  function addItem(text, who) {\n    var li = document.createElement('li');\n    li.className = 'item';\n    var label = document.createElement('span');\n    label.className = 'label';\n    label.textContent = text;\n    li.appendChild(label);\n    li.appendChild(document.createTextNode(' by '));\n    var name = document.createElement('strong');\n    name.textContent = who;\n    li.appendChild(name);\n    list.appendChild(li);\n  }\n\n  addItem('First', 'Ada');\n  addItem('Second', 'Grace');\n\n  var row = document.createElement('li');\n  row.className = 'item';\n  row.innerHTML = '<span class=\"tag\">tagged</span> and <a href=\"#top\">a link</a>';\n  list.appendChild(row);\n\n  document.getElementById('warn').addEventListener('click', function () {\n    list.querySelector('.label').classList.toggle('warn');\n  });\n  document.getElementById('done').addEventListener('click', function () {\n    list.children[1].classList.toggle('done');\n  });\n</script>\n</body>\n</html>\n",
+  "select": "#list li:nth-child(2) .label",
+  "props": [
+   "color",
+   "font-weight",
+   "font-style",
+   "text-decoration-line",
+   "background-color"
+  ],
+  "run": [
+   {
+    "click": "#warn"
+   }
+  ],
+  "after": 100
+ },
+ {
+  "name": "hover label1",
+  "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Created inline elements</title>\n<style>\nbody {\n  margin: 0;\n  padding: 24px;\n  font-family: sans-serif;\n  font-size: 16px;\n  color: #1f2430;\n  background: #f4f6fa;\n}\n\n.toolbar {\n  display: flex;\n  gap: 8px;\n  margin-bottom: 16px;\n}\n\n.list {\n  width: 420px;\n  margin: 0;\n  padding: 0;\n  list-style: none;\n  border: 1px solid #ccd3e0;\n  background: #ffffff;\n}\n\n.item {\n  padding: 8px 12px;\n  border-bottom: 1px solid #e3e7ef;\n}\n\n.item.done {\n  color: #868e96;\n  text-decoration: line-through;\n}\n\n.label {\n  color: #2b8a3e;\n}\n\n.label.warn {\n  color: #c92a2a;\n  font-weight: 700;\n}\n\n.item:hover .label {\n  color: #1c7ed6;\n}\n\na {\n  color: #5f3dc4;\n}\n\n.tag {\n  font-style: italic;\n  background: #fff3bf;\n  padding: 0 4px;\n}\n</style>\n</head>\n<body>\n<div class=\"toolbar\">\n  <button type=\"button\" id=\"warn\">Warn</button>\n  <button type=\"button\" id=\"done\">Done</button>\n</div>\n<ul class=\"list\" id=\"list\"></ul>\n\n<script>\n  var list = document.getElementById('list');\n\n  function addItem(text, who) {\n    var li = document.createElement('li');\n    li.className = 'item';\n    var label = document.createElement('span');\n    label.className = 'label';\n    label.textContent = text;\n    li.appendChild(label);\n    li.appendChild(document.createTextNode(' by '));\n    var name = document.createElement('strong');\n    name.textContent = who;\n    li.appendChild(name);\n    list.appendChild(li);\n  }\n\n  addItem('First', 'Ada');\n  addItem('Second', 'Grace');\n\n  var row = document.createElement('li');\n  row.className = 'item';\n  row.innerHTML = '<span class=\"tag\">tagged</span> and <a href=\"#top\">a link</a>';\n  list.appendChild(row);\n\n  document.getElementById('warn').addEventListener('click', function () {\n    list.querySelector('.label').classList.toggle('warn');\n  });\n  document.getElementById('done').addEventListener('click', function () {\n    list.children[1].classList.toggle('done');\n  });\n</script>\n</body>\n</html>\n",
+  "select": "#list li:nth-child(1) .label",
+  "props": [
+   "color",
+   "font-weight",
+   "font-style",
+   "text-decoration-line",
+   "background-color"
+  ],
+  "run": [
+   {
+    "hover": "#list li:nth-child(1)"
+   }
+  ],
+  "after": 100
+ },
+ {
+  "name": "hover label2",
+  "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Created inline elements</title>\n<style>\nbody {\n  margin: 0;\n  padding: 24px;\n  font-family: sans-serif;\n  font-size: 16px;\n  color: #1f2430;\n  background: #f4f6fa;\n}\n\n.toolbar {\n  display: flex;\n  gap: 8px;\n  margin-bottom: 16px;\n}\n\n.list {\n  width: 420px;\n  margin: 0;\n  padding: 0;\n  list-style: none;\n  border: 1px solid #ccd3e0;\n  background: #ffffff;\n}\n\n.item {\n  padding: 8px 12px;\n  border-bottom: 1px solid #e3e7ef;\n}\n\n.item.done {\n  color: #868e96;\n  text-decoration: line-through;\n}\n\n.label {\n  color: #2b8a3e;\n}\n\n.label.warn {\n  color: #c92a2a;\n  font-weight: 700;\n}\n\n.item:hover .label {\n  color: #1c7ed6;\n}\n\na {\n  color: #5f3dc4;\n}\n\n.tag {\n  font-style: italic;\n  background: #fff3bf;\n  padding: 0 4px;\n}\n</style>\n</head>\n<body>\n<div class=\"toolbar\">\n  <button type=\"button\" id=\"warn\">Warn</button>\n  <button type=\"button\" id=\"done\">Done</button>\n</div>\n<ul class=\"list\" id=\"list\"></ul>\n\n<script>\n  var list = document.getElementById('list');\n\n  function addItem(text, who) {\n    var li = document.createElement('li');\n    li.className = 'item';\n    var label = document.createElement('span');\n    label.className = 'label';\n    label.textContent = text;\n    li.appendChild(label);\n    li.appendChild(document.createTextNode(' by '));\n    var name = document.createElement('strong');\n    name.textContent = who;\n    li.appendChild(name);\n    list.appendChild(li);\n  }\n\n  addItem('First', 'Ada');\n  addItem('Second', 'Grace');\n\n  var row = document.createElement('li');\n  row.className = 'item';\n  row.innerHTML = '<span class=\"tag\">tagged</span> and <a href=\"#top\">a link</a>';\n  list.appendChild(row);\n\n  document.getElementById('warn').addEventListener('click', function () {\n    list.querySelector('.label').classList.toggle('warn');\n  });\n  document.getElementById('done').addEventListener('click', function () {\n    list.children[1].classList.toggle('done');\n  });\n</script>\n</body>\n</html>\n",
+  "select": "#list li:nth-child(2) .label",
+  "props": [
+   "color",
+   "font-weight",
+   "font-style",
+   "text-decoration-line",
+   "background-color"
+  ],
+  "run": [
+   {
+    "hover": "#list li:nth-child(1)"
+   }
+  ],
+  "after": 100
+ },
+ {
+  "name": "warn hover label1",
+  "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Created inline elements</title>\n<style>\nbody {\n  margin: 0;\n  padding: 24px;\n  font-family: sans-serif;\n  font-size: 16px;\n  color: #1f2430;\n  background: #f4f6fa;\n}\n\n.toolbar {\n  display: flex;\n  gap: 8px;\n  margin-bottom: 16px;\n}\n\n.list {\n  width: 420px;\n  margin: 0;\n  padding: 0;\n  list-style: none;\n  border: 1px solid #ccd3e0;\n  background: #ffffff;\n}\n\n.item {\n  padding: 8px 12px;\n  border-bottom: 1px solid #e3e7ef;\n}\n\n.item.done {\n  color: #868e96;\n  text-decoration: line-through;\n}\n\n.label {\n  color: #2b8a3e;\n}\n\n.label.warn {\n  color: #c92a2a;\n  font-weight: 700;\n}\n\n.item:hover .label {\n  color: #1c7ed6;\n}\n\na {\n  color: #5f3dc4;\n}\n\n.tag {\n  font-style: italic;\n  background: #fff3bf;\n  padding: 0 4px;\n}\n</style>\n</head>\n<body>\n<div class=\"toolbar\">\n  <button type=\"button\" id=\"warn\">Warn</button>\n  <button type=\"button\" id=\"done\">Done</button>\n</div>\n<ul class=\"list\" id=\"list\"></ul>\n\n<script>\n  var list = document.getElementById('list');\n\n  function addItem(text, who) {\n    var li = document.createElement('li');\n    li.className = 'item';\n    var label = document.createElement('span');\n    label.className = 'label';\n    label.textContent = text;\n    li.appendChild(label);\n    li.appendChild(document.createTextNode(' by '));\n    var name = document.createElement('strong');\n    name.textContent = who;\n    li.appendChild(name);\n    list.appendChild(li);\n  }\n\n  addItem('First', 'Ada');\n  addItem('Second', 'Grace');\n\n  var row = document.createElement('li');\n  row.className = 'item';\n  row.innerHTML = '<span class=\"tag\">tagged</span> and <a href=\"#top\">a link</a>';\n  list.appendChild(row);\n\n  document.getElementById('warn').addEventListener('click', function () {\n    list.querySelector('.label').classList.toggle('warn');\n  });\n  document.getElementById('done').addEventListener('click', function () {\n    list.children[1].classList.toggle('done');\n  });\n</script>\n</body>\n</html>\n",
+  "select": "#list li:nth-child(1) .label",
+  "props": [
+   "color",
+   "font-weight",
+   "font-style",
+   "text-decoration-line",
+   "background-color"
+  ],
+  "run": [
+   {
+    "click": "#warn"
+   },
+   {
+    "hover": "#list li:nth-child(1)"
+   }
+  ],
+  "after": 100
+ },
+ {
+  "name": "done item2",
+  "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Created inline elements</title>\n<style>\nbody {\n  margin: 0;\n  padding: 24px;\n  font-family: sans-serif;\n  font-size: 16px;\n  color: #1f2430;\n  background: #f4f6fa;\n}\n\n.toolbar {\n  display: flex;\n  gap: 8px;\n  margin-bottom: 16px;\n}\n\n.list {\n  width: 420px;\n  margin: 0;\n  padding: 0;\n  list-style: none;\n  border: 1px solid #ccd3e0;\n  background: #ffffff;\n}\n\n.item {\n  padding: 8px 12px;\n  border-bottom: 1px solid #e3e7ef;\n}\n\n.item.done {\n  color: #868e96;\n  text-decoration: line-through;\n}\n\n.label {\n  color: #2b8a3e;\n}\n\n.label.warn {\n  color: #c92a2a;\n  font-weight: 700;\n}\n\n.item:hover .label {\n  color: #1c7ed6;\n}\n\na {\n  color: #5f3dc4;\n}\n\n.tag {\n  font-style: italic;\n  background: #fff3bf;\n  padding: 0 4px;\n}\n</style>\n</head>\n<body>\n<div class=\"toolbar\">\n  <button type=\"button\" id=\"warn\">Warn</button>\n  <button type=\"button\" id=\"done\">Done</button>\n</div>\n<ul class=\"list\" id=\"list\"></ul>\n\n<script>\n  var list = document.getElementById('list');\n\n  function addItem(text, who) {\n    var li = document.createElement('li');\n    li.className = 'item';\n    var label = document.createElement('span');\n    label.className = 'label';\n    label.textContent = text;\n    li.appendChild(label);\n    li.appendChild(document.createTextNode(' by '));\n    var name = document.createElement('strong');\n    name.textContent = who;\n    li.appendChild(name);\n    list.appendChild(li);\n  }\n\n  addItem('First', 'Ada');\n  addItem('Second', 'Grace');\n\n  var row = document.createElement('li');\n  row.className = 'item';\n  row.innerHTML = '<span class=\"tag\">tagged</span> and <a href=\"#top\">a link</a>';\n  list.appendChild(row);\n\n  document.getElementById('warn').addEventListener('click', function () {\n    list.querySelector('.label').classList.toggle('warn');\n  });\n  document.getElementById('done').addEventListener('click', function () {\n    list.children[1].classList.toggle('done');\n  });\n</script>\n</body>\n</html>\n",
+  "select": "#list li:nth-child(2)",
+  "props": [
+   "color",
+   "font-weight",
+   "font-style",
+   "text-decoration-line",
+   "background-color"
+  ],
+  "run": [
+   {
+    "click": "#done"
+   }
+  ],
+  "after": 100
+ },
+ {
+  "name": "done label2",
+  "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Created inline elements</title>\n<style>\nbody {\n  margin: 0;\n  padding: 24px;\n  font-family: sans-serif;\n  font-size: 16px;\n  color: #1f2430;\n  background: #f4f6fa;\n}\n\n.toolbar {\n  display: flex;\n  gap: 8px;\n  margin-bottom: 16px;\n}\n\n.list {\n  width: 420px;\n  margin: 0;\n  padding: 0;\n  list-style: none;\n  border: 1px solid #ccd3e0;\n  background: #ffffff;\n}\n\n.item {\n  padding: 8px 12px;\n  border-bottom: 1px solid #e3e7ef;\n}\n\n.item.done {\n  color: #868e96;\n  text-decoration: line-through;\n}\n\n.label {\n  color: #2b8a3e;\n}\n\n.label.warn {\n  color: #c92a2a;\n  font-weight: 700;\n}\n\n.item:hover .label {\n  color: #1c7ed6;\n}\n\na {\n  color: #5f3dc4;\n}\n\n.tag {\n  font-style: italic;\n  background: #fff3bf;\n  padding: 0 4px;\n}\n</style>\n</head>\n<body>\n<div class=\"toolbar\">\n  <button type=\"button\" id=\"warn\">Warn</button>\n  <button type=\"button\" id=\"done\">Done</button>\n</div>\n<ul class=\"list\" id=\"list\"></ul>\n\n<script>\n  var list = document.getElementById('list');\n\n  function addItem(text, who) {\n    var li = document.createElement('li');\n    li.className = 'item';\n    var label = document.createElement('span');\n    label.className = 'label';\n    label.textContent = text;\n    li.appendChild(label);\n    li.appendChild(document.createTextNode(' by '));\n    var name = document.createElement('strong');\n    name.textContent = who;\n    li.appendChild(name);\n    list.appendChild(li);\n  }\n\n  addItem('First', 'Ada');\n  addItem('Second', 'Grace');\n\n  var row = document.createElement('li');\n  row.className = 'item';\n  row.innerHTML = '<span class=\"tag\">tagged</span> and <a href=\"#top\">a link</a>';\n  list.appendChild(row);\n\n  document.getElementById('warn').addEventListener('click', function () {\n    list.querySelector('.label').classList.toggle('warn');\n  });\n  document.getElementById('done').addEventListener('click', function () {\n    list.children[1].classList.toggle('done');\n  });\n</script>\n</body>\n</html>\n",
+  "select": "#list li:nth-child(2) .label",
+  "props": [
+   "color",
+   "font-weight",
+   "font-style",
+   "text-decoration-line",
+   "background-color"
+  ],
+  "run": [
+   {
+    "click": "#done"
+   }
+  ],
+  "after": 100
+ },
+ {
+  "name": "done strong2",
+  "html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Created inline elements</title>\n<style>\nbody {\n  margin: 0;\n  padding: 24px;\n  font-family: sans-serif;\n  font-size: 16px;\n  color: #1f2430;\n  background: #f4f6fa;\n}\n\n.toolbar {\n  display: flex;\n  gap: 8px;\n  margin-bottom: 16px;\n}\n\n.list {\n  width: 420px;\n  margin: 0;\n  padding: 0;\n  list-style: none;\n  border: 1px solid #ccd3e0;\n  background: #ffffff;\n}\n\n.item {\n  padding: 8px 12px;\n  border-bottom: 1px solid #e3e7ef;\n}\n\n.item.done {\n  color: #868e96;\n  text-decoration: line-through;\n}\n\n.label {\n  color: #2b8a3e;\n}\n\n.label.warn {\n  color: #c92a2a;\n  font-weight: 700;\n}\n\n.item:hover .label {\n  color: #1c7ed6;\n}\n\na {\n  color: #5f3dc4;\n}\n\n.tag {\n  font-style: italic;\n  background: #fff3bf;\n  padding: 0 4px;\n}\n</style>\n</head>\n<body>\n<div class=\"toolbar\">\n  <button type=\"button\" id=\"warn\">Warn</button>\n  <button type=\"button\" id=\"done\">Done</button>\n</div>\n<ul class=\"list\" id=\"list\"></ul>\n\n<script>\n  var list = document.getElementById('list');\n\n  function addItem(text, who) {\n    var li = document.createElement('li');\n    li.className = 'item';\n    var label = document.createElement('span');\n    label.className = 'label';\n    label.textContent = text;\n    li.appendChild(label);\n    li.appendChild(document.createTextNode(' by '));\n    var name = document.createElement('strong');\n    name.textContent = who;\n    li.appendChild(name);\n    list.appendChild(li);\n  }\n\n  addItem('First', 'Ada');\n  addItem('Second', 'Grace');\n\n  var row = document.createElement('li');\n  row.className = 'item';\n  row.innerHTML = '<span class=\"tag\">tagged</span> and <a href=\"#top\">a link</a>';\n  list.appendChild(row);\n\n  document.getElementById('warn').addEventListener('click', function () {\n    list.querySelector('.label').classList.toggle('warn');\n  });\n  document.getElementById('done').addEventListener('click', function () {\n    list.children[1].classList.toggle('done');\n  });\n</script>\n</body>\n</html>\n",
+  "select": "#list li:nth-child(2) strong",
+  "props": [
+   "color",
+   "font-weight",
+   "font-style",
+   "text-decoration-line",
+   "background-color"
+  ],
+  "run": [
+   {
+    "click": "#done"
+   }
+  ],
+  "after": 100
+ }
+]

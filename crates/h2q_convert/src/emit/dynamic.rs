@@ -79,6 +79,9 @@ pub(crate) struct Probe {
     pub relevant: HashSet<NodeId>,
     /// Every probe element: each is a child its container gains.
     pub nodes: HashSet<NodeId>,
+    /// The probes that are an item of their own when inline: those inside
+    /// a created element or in `<body>` (dynamic-styles.md §6.8).
+    pub inline_items: HashSet<NodeId>,
 }
 
 /// What a probe emission leaves for the templates. Its bindings read each
@@ -191,13 +194,20 @@ pub(crate) fn emit(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
 }
 
 fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
-    let tree = boxes::build_keeping(cx.doc, cx.styles, Some(cx.wanted), diags);
+    let tree = boxes::build_with(
+        cx.doc,
+        cx.styles,
+        Some(cx.wanted),
+        cx.probe.map(|p| &p.inline_items),
+        diags,
+    );
     let body = cx.doc.body().and_then(|b| cx.styles.style(b));
     let mut emitter = Emitter::new(cx.doc, cx.styles, cx.options, diags, cx.wanted);
     emitter.images = cx.images.clone();
     emitter.runtime_dom = cx.runtime_dom;
     if let Some(probe) = cx.probe {
         emitter.markers = true;
+        emitter.inline_items = probe.inline_items.clone();
         for id in &probe.reserved {
             emitter.ids.reserve(id);
         }
@@ -970,12 +980,21 @@ impl Dynamic<'_, '_> {
         collapsed: HashSet<NodeId>,
         diags: &mut Diagnostics,
     ) -> Emitted {
-        let tree = boxes::build_keeping(cx.doc, styles, Some(cx.wanted), diags);
+        let tree = boxes::build_with(
+            cx.doc,
+            styles,
+            Some(cx.wanted),
+            cx.probe.map(|p| &p.inline_items),
+            diags,
+        );
         let body = cx.doc.body().and_then(|b| styles.style(b));
         let mut emitter = Emitter::new(cx.doc, styles, cx.options, diags, cx.wanted);
         emitter.images = cx.images.clone();
         emitter.runtime_dom = cx.runtime_dom;
         emitter.markers = true;
+        if let Some(probe) = cx.probe {
+            emitter.inline_items = probe.inline_items.clone();
+        }
         for id in cx.probe.iter().flat_map(|p| &p.reserved) {
             emitter.ids.reserve(id);
         }

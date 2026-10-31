@@ -1,0 +1,241 @@
+{
+ "initial label1": {
+  "color": "rgb(43, 138, 62)",
+  "font-weight": "400",
+  "font-style": "normal",
+  "text-decoration-line": "none",
+  "background-color": "rgba(0, 0, 0, 0)"
+ },
+ "initial strong1": {
+  "color": "rgb(31, 36, 48)",
+  "font-weight": "700",
+  "font-style": "normal",
+  "text-decoration-line": "none",
+  "background-color": "rgba(0, 0, 0, 0)"
+ },
+ "initial item1": {
+  "color": "rgb(31, 36, 48)",
+  "font-weight": "400",
+  "font-style": "normal",
+  "text-decoration-line": "none",
+  "background-color": "rgba(0, 0, 0, 0)"
+ },
+ "initial tag": {
+  "color": "rgb(31, 36, 48)",
+  "font-weight": "400",
+  "font-style": "italic",
+  "text-decoration-line": "none",
+  "background-color": "rgb(255, 243, 191)"
+ },
+ "initial link": {
+  "color": "rgb(95, 61, 196)",
+  "font-weight": "400",
+  "font-style": "normal",
+  "text-decoration-line": "underline",
+  "background-color": "rgba(0, 0, 0, 0)"
+ },
+ "warn label1": {
+  "color": "rgb(201, 42, 42)",
+  "font-weight": "700",
+  "font-style": "normal",
+  "text-decoration-line": "none",
+  "background-color": "rgba(0, 0, 0, 0)"
+ },
+ "warn label2": {
+  "color": "rgb(43, 138, 62)",
+  "font-weight": "400",
+  "font-style": "normal",
+  "text-decoration-line": "none",
+  "background-color": "rgba(0, 0, 0, 0)"
+ },
+ "hover label1": {
+  "color": "rgb(28, 126, 214)",
+  "font-weight": "400",
+  "font-style": "normal",
+  "text-decoration-line": "none",
+  "background-color": "rgba(0, 0, 0, 0)"
+ },
+ "hover label2": {
+  "color": "rgb(43, 138, 62)",
+  "font-weight": "400",
+  "font-style": "normal",
+  "text-decoration-line": "none",
+  "background-color": "rgba(0, 0, 0, 0)"
+ },
+ "warn hover label1": {
+  "color": "rgb(28, 126, 214)",
+  "font-weight": "700",
+  "font-style": "normal",
+  "text-decoration-line": "none",
+  "background-color": "rgba(0, 0, 0, 0)"
+ },
+ "done item2": {
+  "color": "rgb(134, 142, 150)",
+  "font-weight": "400",
+  "font-style": "normal",
+  "text-decoration-line": "line-through",
+  "background-color": "rgba(0, 0, 0, 0)"
+ },
+ "done label2": {
+  "color": "rgb(43, 138, 62)",
+  "font-weight": "400",
+  "font-style": "normal",
+  "text-decoration-line": "none",
+  "background-color": "rgba(0, 0, 0, 0)"
+ },
+ "done strong2": {
+  "color": "rgb(134, 142, 150)",
+  "font-weight": "700",
+  "font-style": "normal",
+  "text-decoration-line": "none",
+  "background-color": "rgba(0, 0, 0, 0)"
+ },
+ "initial geometry": {
+  "#list": [
+   {
+    "x": 24,
+    "y": 61,
+    "width": 422,
+    "height": 107
+   }
+  ],
+  "#list li": [
+   {
+    "x": 25,
+    "y": 62,
+    "width": 420,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 97,
+    "width": 420,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 132,
+    "width": 420,
+    "height": 35
+   }
+  ],
+  "#list .label": [
+   {
+    "x": 37,
+    "y": 70,
+    "width": 31.109375,
+    "height": 17
+   },
+   {
+    "x": 37,
+    "y": 105,
+    "width": 54.265625,
+    "height": 17
+   }
+  ],
+  "#list strong": [
+   {
+    "x": 93.90625,
+    "y": 70,
+    "width": 30.234375,
+    "height": 17
+   },
+   {
+    "x": 117.0625,
+    "y": 105,
+    "width": 45.375,
+    "height": 17
+   }
+  ],
+  "#list .tag": [
+   {
+    "x": 37,
+    "y": 140,
+    "width": 56.9375,
+    "height": 17
+   }
+  ],
+  "#list a": [
+   {
+    "x": 129.53125,
+    "y": 140,
+    "width": 37.359375,
+    "height": 17
+   }
+  ]
+ },
+ "warn geometry": {
+  "#list": [
+   {
+    "x": 24,
+    "y": 61,
+    "width": 422,
+    "height": 107
+   }
+  ],
+  "#list li": [
+   {
+    "x": 25,
+    "y": 62,
+    "width": 420,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 97,
+    "width": 420,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 132,
+    "width": 420,
+    "height": 35
+   }
+  ],
+  "#list .label": [
+   {
+    "x": 37,
+    "y": 70,
+    "width": 34.671875,
+    "height": 17
+   },
+   {
+    "x": 37,
+    "y": 105,
+    "width": 54.265625,
+    "height": 17
+   }
+  ],
+  "#list strong": [
+   {
+    "x": 97.46875,
+    "y": 70,
+    "width": 30.234375,
+    "height": 17
+   },
+   {
+    "x": 117.0625,
+    "y": 105,
+    "width": 45.375,
+    "height": 17
+   }
+  ],
+  "#list .tag": [
+   {
+    "x": 37,
+    "y": 140,
+    "width": 56.9375,
+    "height": 17
+   }
+  ],
+  "#list a": [
+   {
+    "x": 129.53125,
+    "y": 140,
+    "width": 37.359375,
+    "height": 17
+   }
+  ]
+ }
+}

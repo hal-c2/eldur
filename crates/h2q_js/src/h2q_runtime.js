@@ -1868,6 +1868,10 @@ function getText(item) {
     if (_isPlainJsObject(raw) && ("textContent" in raw || "innerText" in raw)) {
         return raw.textContent !== undefined ? raw.textContent : raw.innerText;
     }
+    var run = _meta(raw).runText;
+    if (run !== undefined) {
+        return run;
+    }
     if (typeof raw.text === "string") {
         return raw.text;
     }
@@ -1891,6 +1895,11 @@ function setText(item, value) {
     var str = value === null || value === undefined ? "" : String(value);
     var m = _meta(raw);
     m.explicitText = str;
+    if (m.runText !== undefined) {
+        m.runText = str;
+        raw.text = _runText(str);
+        return;
+    }
     if (typeof raw.text === "string") {
         raw.text = str;
         return;
@@ -3593,9 +3602,61 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
     return next;
 }
 
+// A text node in a line of created inline elements (a `Flow` with
+// `h2qTextRun`, §6.8) is a `Text` of its own between them, in the line's
+// font and colour. Qt does not measure a trailing space, and the spaces
+// between items are the text's own, so they are no-break spaces.
+function _runText(str) {
+    return String(str).replace(/[ \t\n\r\f]+/g, "\u00a0");
+}
+
+function _materializeTextRun(raw) {
+    var container = raw.parent;
+    var m = _meta(raw);
+    var component = container && container.h2qTextRun;
+    if (!component || typeof component.createObject !== "function"
+        || m.textRunComponent === component) {
+        return raw;
+    }
+    var source = m.runText !== undefined ? m.runText : String(raw.text);
+    var tail = [];
+    var foundOld = false;
+    for (var i = 0; i < container.children.length; ++i) {
+        if (container.children[i] === raw) {
+            foundOld = true;
+        } else if (foundOld) {
+            tail.push(container.children[i]);
+        }
+    }
+    var next = component.createObject(_qobjectParent(), { text: _runText(source) });
+    if (!next) {
+        return raw;
+    }
+    next.parent = container;
+    raw.parent = null;
+    for (var t = 0; t < tail.length; ++t) {
+        tail[t].parent = null;
+        tail[t].parent = container;
+    }
+    _itemMeta.delete(raw);
+    _itemMeta.set(next, m);
+    m.raw = next;
+    m.runText = source;
+    m.textRunComponent = component;
+    if (typeof m._setRaw === "function") {
+        m._setRaw(next);
+    }
+    raw.destroy();
+    _layoutChanged(next);
+    return next;
+}
+
 function _materializeSubtree(raw) {
     if (!raw || typeof raw !== "object") {
         return raw;
+    }
+    if (_meta(raw).createdTag === "#text") {
+        return _materializeTextRun(raw);
     }
     var cur = raw;
     if (_isCreatedElement(cur)) {

@@ -24,6 +24,10 @@ use crate::boxes::{BoxKind, Content, Inline, LayoutBox, Span, node_line};
 /// (Liberation Sans: 0.905).
 const ASCENT: f32 = 0.905;
 
+/// The width of a created inline element or text run in a `Flow`: its
+/// natural width, no wider than the line.
+const OWN_WIDTH: &str = "parent ? Math.min(implicitWidth, parent.width) : implicitWidth";
+
 /// Whether `items` hold an atomic inline-level box, at any depth.
 pub(crate) fn has_atomic(items: &[Inline<'_>]) -> bool {
     items.iter().any(|item| match item {
@@ -120,6 +124,9 @@ enum Part {
         margins: [f32; 4],
         /// From the top margin edge; `None` sits at the top of the row.
         baseline: Option<f32>,
+        /// A created inline element: its object is its template, so it is
+        /// not wrapped.
+        own: bool,
     },
 }
 
@@ -169,9 +176,12 @@ impl Emitter<'_, '_> {
                     Part::Word(text)
                 }
                 Piece::Break => Part::Break,
-                Piece::Atomic(a) => self.atomic(a, &flow_id),
+                Piece::Atomic(a) => self.atomic(a, decoration, &flow_id),
             });
         }
+        let runs = parts
+            .iter()
+            .any(|p| matches!(p, Part::Atomic { own: true, .. }));
         let word_baseline = text_baseline(style);
         let lowest = parts
             .iter()
@@ -218,25 +228,60 @@ impl Emitter<'_, '_> {
                             .prop("height", 0.0),
                     );
                 }
+                Part::Atomic { obj, own: true, .. } => {
+                    flow.push_child(obj);
+                }
                 Part::Atomic {
                     obj,
                     hint,
                     margins,
                     baseline,
+                    own: false,
                 } => {
                     let shift = baseline.map_or(0.0, |b| lowest - margins[2] - b);
                     flow.push_child(self.place_atomic(obj, &hint, margins, shift));
                 }
             }
         }
+        if runs {
+            // The text nodes a script puts between created elements: the
+            // runtime makes each from this, in the block's font and colour.
+            let run_id = self.ids.claim(&format!("{flow_id} run"));
+            let mut run = self.text(style, decoration, &[], line);
+            run.members.retain(|m| {
+                !matches!(m, Member::Property { name, .. }
+                    if name == "horizontalAlignment")
+            });
+            run.set("width", Value::expr(OWN_WIDTH));
+            flow.members.insert(
+                0,
+                Member::PropertyDecl {
+                    ty: "Component".to_owned(),
+                    name: "h2qTextRun".to_owned(),
+                    value: Some(Value::expr(run_id.clone())),
+                    readonly: true,
+                    required: false,
+                },
+            );
+            flow.push_child(Object::new("Component").with_id(run_id).child(run));
+        }
         flow
     }
 
-    fn atomic(&mut self, a: &LayoutBox<'_>, flow_id: &str) -> Part {
+    fn atomic(&mut self, a: &LayoutBox<'_>, decoration: TextDecorationLine, flow_id: &str) -> Part {
         let style = &*a.style;
         let line = a.node.and_then(|n| node_line(self.doc, n));
-        // Text decorations are not propagated into atomic inlines.
-        let emitted = self.item(a, TextDecorationLine::default());
+        let own = a.node.is_some_and(|n| self.inline_items.contains(&n));
+        // Text decorations are not propagated into atomic inlines, but a
+        // created inline element is one only in QML.
+        let emitted = self.item(
+            a,
+            if own {
+                decoration
+            } else {
+                TextDecorationLine::default()
+            },
+        );
         let mut obj = emitted.obj;
         let insets = self.insets(style, line);
         let (extra_w, extra_h) = match style.box_sizing {
@@ -253,6 +298,26 @@ impl Emitter<'_, '_> {
             emitted.top.value().max(0.0),
             emitted.bottom.value().max(0.0),
         ];
+        if own {
+            // Its template is instantiated apart from the Flow, so it cannot
+            // name it, and it has no wrapper to hold margins: a Text keeps
+            // them as padding, a painted box loses them (§6.8).
+            if obj.type_name == "Text" {
+                for (name, m) in [("leftPadding", margins[0]), ("rightPadding", margins[1])] {
+                    if round(m) != 0.0 {
+                        obj.set(name, number(m));
+                    }
+                }
+            }
+            obj.set("width", Value::expr(OWN_WIDTH));
+            return Part::Atomic {
+                obj,
+                hint: super::hint(self.doc, a),
+                margins: [0.0; 4],
+                baseline: None,
+                own: true,
+            };
+        }
         let px = |s: &Size| match s {
             Size::Length(l) => l.as_px(),
             _ => None,
@@ -286,6 +351,7 @@ impl Emitter<'_, '_> {
             hint: super::hint(self.doc, a),
             margins,
             baseline,
+            own: false,
         }
     }
 

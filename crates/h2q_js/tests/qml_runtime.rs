@@ -4438,3 +4438,117 @@ Item {
     assert!(!output.contains("no style template"), "{output}");
     assert!(!output.contains("unsupported"), "{output}");
 }
+
+#[test]
+fn qml6_created_text_nodes_take_the_line_text_run() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("list", 1, "list", TargetKind::Box);
+
+    let (output, out) = run_page(
+        &resolver,
+        r##"
+function describe(item) {
+    return (item.h2qTag || "run") + "=" + JSON.stringify(item.text) + "/" + item.color;
+}
+function verifyRuns() {
+    const list = document.getElementById("list");
+    const li = document.createElement("li");
+    li.className = "item";
+    const label = document.createElement("span");
+    label.className = "label";
+    label.textContent = "First";
+    li.appendChild(label);
+    const by = document.createTextNode(" by ");
+    li.appendChild(by);
+    const who = document.createElement("strong");
+    who.textContent = "Ada";
+    li.appendChild(who);
+    list.appendChild(li);
+    const line = li._item.children[0];
+    const first = Array.prototype.map.call(line.children, describe).join(",");
+    const read = by.textContent;
+    by.textContent = " and ";
+    const second = describe(line.children[1]) + "|" + by.textContent;
+    return [first, read, second, line.children.length].join("|");
+}
+"##,
+        r##"import QtQuick
+
+Item {
+    id: root
+    readonly property var h2qStyledClasses: ["item", "label"]
+    readonly property var h2qTemplates: ({
+        "li.item@list": h2qT_li_0,
+        "span.label@h2qT_li_0": h2qT_span_1,
+        "strong@h2qT_li_0": h2qT_strong_2
+    })
+
+    Component {
+        id: h2qT_li_0
+        Item {
+            property string h2qTag: "li"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_li_0"
+            width: 400
+            height: line.height
+            Flow {
+                id: line
+                readonly property Component h2qTextRun: lineRun
+                width: parent.width
+                spacing: 0
+                Component {
+                    id: lineRun
+                    Text { color: "#868e96" }
+                }
+            }
+        }
+    }
+    Component {
+        id: h2qT_span_1
+        Text {
+            property string h2qTag: "span"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_span_1"
+            color: "#2b8a3e"
+        }
+    }
+    Component {
+        id: h2qT_strong_2
+        Text {
+            property string h2qTag: "strong"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_strong_2"
+            color: "#1f2430"
+            font.weight: 700
+        }
+    }
+
+    Column {
+        id: list
+        objectName: "list"
+        property string h2qTag: "ul"
+        property string h2qKey: "list"
+    }
+
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        console.log("H2Q_OK_RUNS", Page.verifyRuns());
+        Qt.quit();
+    }
+}"##,
+    );
+
+    assert!(
+        output.contains(
+            "H2Q_OK_RUNS \
+             span=\"First\"/#2b8a3e,run=\"\u{a0}by\u{a0}\"/#868e96,strong=\"Ada\"/#1f2430| by |\
+             run=\"\u{a0}and\u{a0}\"/#868e96| and |3"
+        ),
+        "{output}\n{}",
+        out.page_js
+    );
+    assert!(!output.contains("no style template"), "{output}");
+    assert!(!output.contains("unsupported"), "{output}");
+}

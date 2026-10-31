@@ -15,7 +15,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use h2q_css::{Condition, PseudoState, Structural};
 use h2q_dom::{Document, LocalName, NodeId, QualName, ns};
-use h2q_js::{CreatedElement, ElementRef};
+use h2q_js::{CreatedElement, DomQuery, ElementRef};
 use h2q_qml::{Member, Object, Value};
 
 use super::Target;
@@ -119,6 +119,13 @@ impl Builder<'_> {
         if let Some(ty) = &created.input_type {
             self.doc
                 .set_attribute(node, attr("type"), ty.clone())
+                .expect("an element");
+        }
+        if created.tag == "a" {
+            // Analysis does not record attributes besides `type` and
+            // `class`; a link a script makes has an `href` (§6.8).
+            self.doc
+                .set_attribute(node, attr("href"), String::new())
                 .expect("an element");
         }
         let common = common_classes(created);
@@ -495,6 +502,7 @@ pub(crate) fn add(
     // The probes' class conditions: the classes some but not all of its
     // sets have, and those scripts toggle on it.
     let mut classes: BTreeMap<NodeId, BTreeMap<String, bool>> = BTreeMap::new();
+    let mut candidates: HashMap<String, Vec<NodeId>> = HashMap::new();
     for inst in &insts {
         let e = &created[inst.created];
         let common = common_classes(e);
@@ -506,7 +514,25 @@ pub(crate) fn add(
             .cloned()
             .collect();
         for write in &scripts.analysis.class_writes {
-            if write.target == ElementRef::Created(e.id) {
+            // A query or an unattributed target can reach a created element
+            // once it is in the page (`list.querySelector('.label')
+            // .classList.toggle(…)`); for the latter, the style sheet says
+            // which elements the class could style (§2.2).
+            let found = match &write.target {
+                ElementRef::Query(DomQuery::Selector(sel) | DomQuery::SelectorAll(sel)) => {
+                    h2q_css::element_matches(&doc, inst.node, sel) == Some(true)
+                }
+                ElementRef::Unknown => write.names.iter().any(|c| {
+                    candidates
+                        .entry(c.clone())
+                        .or_insert_with(|| h2q_css::class_candidates(&doc, cx.sheets, c))
+                        .contains(&inst.node)
+                }),
+                _ => false,
+            };
+            if found {
+                names.extend(write.names.iter().cloned());
+            } else if write.target == ElementRef::Created(e.id) {
                 // An assignment is where the class sets come from; the
                 // classes all of them have stay.
                 names.extend(
@@ -537,11 +563,19 @@ pub(crate) fn add(
     }
     let mut reserved = BTreeSet::new();
     collect_ids(root, &mut reserved);
+    // Under a static element the page's own object is what the script
+    // appends to, and a static line has no place for an item (§6.8).
+    let inline_items = insts
+        .iter()
+        .filter(|inst| !matches!(inst.context, Context::Static(_)))
+        .map(|inst| inst.node)
+        .collect();
     let probe = Probe {
         classes,
         reserved,
         relevant,
         nodes: probe_nodes.clone(),
+        inline_items,
     };
     let styles = h2q_css::compute_styles(&doc, cx.sheets, &cx.options.viewport);
     let mut wanted = cx.wanted.clone();
@@ -778,6 +812,7 @@ pub(crate) fn add(
     let mut order: Vec<String> = Vec::new();
     let mut counts: HashMap<usize, usize> = HashMap::new();
     let mut capped: BTreeSet<usize> = BTreeSet::new();
+    let mut shadows: HashMap<usize, BTreeSet<usize>> = HashMap::new();
     let mut keyed: Vec<usize> = (0..insts.len()).collect();
     keyed.sort_by_key(|&i| matches!(insts[i].context, Context::Any));
     for i in keyed {
@@ -786,20 +821,47 @@ pub(crate) fn add(
         };
         let inst = &insts[i];
         let e = &created[inst.created];
-        let context = match &inst.context {
-            Context::Static(id) => id.clone(),
-            Context::Any => "*".to_owned(),
+        let contexts: Vec<String> = match &inst.context {
+            Context::Static(id) => vec![id.clone()],
+            Context::Any => vec!["*".to_owned()],
             Context::Probe(p) => match template_of[*p] {
-                Some(pk) => names[pk].clone(),
+                // The runtime finds the parent under the template that won
+                // its key, which may be another probe's.
+                Some(pk) => std::iter::once(pk)
+                    .chain(shadows.get(&pk).into_iter().flatten().copied())
+                    .map(|t| names[t].clone())
+                    .collect(),
                 None => continue,
             },
         };
-        let sets: Vec<Vec<String>> = if e.class_sets.is_empty() {
+        let mut sets: Vec<Vec<String>> = if e.class_sets.is_empty() {
             vec![Vec::new()]
         } else {
             e.class_sets.clone()
         };
-        for set in sets {
+        // The template follows the classes scripts toggle on it, so the
+        // sets a toggle makes are keys of the same template (§6.4 step 3).
+        if let Some(conds) = probe.classes.get(&inst.node) {
+            let toggled: Vec<&String> = conds.keys().collect();
+            let bases = sets.clone();
+            for mask in 1..(1usize << toggled.len().min(4)) {
+                for base in &bases {
+                    let mut set = base.clone();
+                    for (b, c) in toggled.iter().enumerate() {
+                        if mask & (1 << b) != 0 && !set.contains(c) {
+                            set.push((*c).clone());
+                        }
+                    }
+                    if !sets.contains(&set) {
+                        sets.push(set);
+                    }
+                }
+            }
+        }
+        for (context, set) in contexts
+            .iter()
+            .flat_map(|c| sets.iter().map(move |s| (c, s)))
+        {
             let mut set: Vec<&str> = set
                 .iter()
                 .map(String::as_str)
@@ -813,8 +875,11 @@ pub(crate) fn add(
                 key.push_str(c);
             }
             key.push('@');
-            key.push_str(&context);
-            if keys.contains_key(&key) {
+            key.push_str(context);
+            if let Some(&won) = keys.get(&key) {
+                if won != k {
+                    shadows.entry(k).or_default().insert(won);
+                }
                 continue;
             }
             if context != "*" {
