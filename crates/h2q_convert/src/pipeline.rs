@@ -3,11 +3,12 @@ use std::path::PathBuf;
 
 use h2q_css::{Display, LoadedSheet, StylesheetLoader};
 use h2q_dom::Document;
-use h2q_qml::{Import, Member};
+use h2q_qml::{Import, Member, Value};
 
 use crate::diag::Diagnostics;
-use crate::emit::Emitter;
-use crate::{Diagnostic, Input, Options, Output, OutputFile, Resources, Severity, boxes, scripts};
+use crate::{
+    Diagnostic, Input, Options, Output, OutputFile, Resources, Severity, metadata, scripts,
+};
 
 /// `link`ed style sheets and `@import`s come through the caller's
 /// resources, relative to the document.
@@ -66,22 +67,26 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     } else {
         &scripts.wanted
     };
-    let tree = boxes::build_keeping(&doc, &styles, Some(wanted), &mut diags);
-    let body_style = doc.body().and_then(|b| styles.style(b));
-    let mut emitter = Emitter::new(&doc, &styles, options, &mut diags, wanted);
-    let mut root = emitter.document(tree.as_ref(), body_style);
-    let targets = std::mem::take(&mut emitter.targets);
-    let forms = std::mem::take(&mut emitter.forms);
-    let extra_imports = std::mem::take(&mut emitter.imports);
-    drop(emitter);
+    let images = crate::images::collect(&doc, &input.url, resources, &mut diags);
+    let runtime_dom = !scripts.is_empty() && scripts.analysis.runtime_dom;
+    let emission = crate::emit::dynamic::emit(
+        &crate::emit::dynamic::Inputs {
+            doc: &doc,
+            styles: &styles,
+            sheets: &sheets,
+            options,
+            wanted,
+            images: &images.by_node,
+            runtime_dom,
+            scripts: (!scripts.is_empty()).then_some(&scripts),
+        },
+        &mut diags,
+    );
+    let mut root = emission.root;
+    let targets = emission.targets;
+    let forms = emission.forms;
+    let extra_imports = emission.imports;
 
-    if options.state_variants && !styles.variants.is_empty() {
-        diags.info(
-            "css",
-            None,
-            "`:hover`/`:focus`/… styles are not converted to QML states yet".to_owned(),
-        );
-    }
     if options.animations && !styles.keyframes.is_empty() {
         diags.info(
             "css",
@@ -91,7 +96,7 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     }
 
     let mut qml = h2q_qml::Document::default();
-    let mut files = Vec::new();
+    let mut files = images.files;
 
     // 6: page.js, with the ids chosen in step 5.
     if !scripts.is_empty() {
@@ -102,13 +107,41 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
             diags.push(js_diagnostic(d));
         }
         scripts::wire(&mut root, &js, &forms, &scripts, &mut diags);
-        if let Some(init) = &js.init_function {
-            root.members.push(Member::Handler {
-                name: "Component.onCompleted".to_owned(),
-                params: Vec::new(),
-                body: vec![format!("Page.{init}({});", crate::emit::units::ROOT_ID)],
+        scripts::declare_classes(&mut root, &doc, &scripts, &targets, &mut diags);
+        let mut decls = vec![metadata::base_url_decl(&doc, &input.url)];
+        if emission.gated {
+            decls.push(Member::PropertyDecl {
+                ty: "bool".to_owned(),
+                name: "h2qAnimate".to_owned(),
+                value: Some(Value::Bool(false)),
+                readonly: false,
+                required: false,
             });
         }
+        if runtime_dom {
+            let classes = h2q_css::styled_classes(&sheets);
+            decls.push(metadata::styled_classes_decl(&classes));
+        }
+        root.members.splice(0..0, decls);
+        // A page with only functions has no init function, but the runtime
+        // still needs its root (`baseUrl`, queries from the document).
+        let init = js.init_function.as_ref().map_or_else(
+            || format!("H2Q.init({});", crate::emit::units::ROOT_ID),
+            |init| format!("Page.{init}({});", crate::emit::units::ROOT_ID),
+        );
+        root.members.push(Member::Handler {
+            name: "Component.onCompleted".to_owned(),
+            params: Vec::new(),
+            body: if emission.gated {
+                // Transitions start once the document's classes are set.
+                vec![
+                    init,
+                    format!("{}.h2qAnimate = true;", crate::emit::units::ROOT_ID),
+                ]
+            } else {
+                vec![init]
+            },
+        });
         qml.import(Import::path("page.js", Some("Page")));
         qml.import(Import::path("h2q_runtime.js", Some("H2Q")));
         files.push(OutputFile {
@@ -146,7 +179,7 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     }
 }
 
-fn css_diagnostic(d: &h2q_css::Diagnostic) -> Diagnostic {
+pub(crate) fn css_diagnostic(d: &h2q_css::Diagnostic) -> Diagnostic {
     Diagnostic {
         severity: match d.severity {
             h2q_css::Severity::Unsupported => Severity::Warning,

@@ -249,6 +249,16 @@ pub enum Float {
     Right,
 }
 
+/// `clear`; `inline-start`/`inline-end` are the left/right of `ltr` text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Clear {
+    #[default]
+    None,
+    Left,
+    Right,
+    Both,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BoxSizing {
     #[default]
@@ -710,12 +720,21 @@ pub enum TableLayout {
     Fixed,
 }
 
+/// One counter of `counter-reset`, `counter-increment` or `counter-set`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CounterChange {
+    pub name: String,
+    pub value: i32,
+}
+
 /// Generated content of `::before` / `::after` (`content` property).
 #[derive(Debug, Clone, PartialEq)]
 pub enum ContentItem {
     String(String),
     Attr(String),
     Counter(String, ListStyleType),
+    /// `counters(name, separator, style)`: every nested counter of the name.
+    Counters(String, String, ListStyleType),
     OpenQuote,
     CloseQuote,
     Url(String),
@@ -742,6 +761,7 @@ pub struct ComputedStyle {
     /// `None` = `auto`.
     pub z_index: Option<i32>,
     pub float: Float,
+    pub clear: Clear,
     pub box_sizing: BoxSizing,
 
     // Sizing
@@ -868,6 +888,11 @@ pub struct ComputedStyle {
     // Generated content (only set on ::before / ::after styles)
     pub content: Option<Vec<ContentItem>>,
 
+    // Counters (CSS Lists 3 §4), applied by the converter in document order.
+    pub counter_reset: Vec<CounterChange>,
+    pub counter_increment: Vec<CounterChange>,
+    pub counter_set: Vec<CounterChange>,
+
     /// Custom properties (`--name` → token text after `var()` substitution
     /// in their own values). Inherited.
     pub custom_properties: BTreeMap<String, String>,
@@ -886,6 +911,7 @@ impl Default for ComputedStyle {
             left: LengthAuto::Auto,
             z_index: None,
             float: Float::None,
+            clear: Clear::None,
             box_sizing: BoxSizing::ContentBox,
             width: Size::Auto,
             height: Size::Auto,
@@ -978,6 +1004,9 @@ impl Default for ComputedStyle {
             transitions: Vec::new(),
             animations: Vec::new(),
             content: None,
+            counter_reset: Vec::new(),
+            counter_increment: Vec::new(),
+            counter_set: Vec::new(),
             custom_properties: BTreeMap::new(),
         }
     }

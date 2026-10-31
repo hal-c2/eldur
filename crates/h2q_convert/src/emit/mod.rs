@@ -6,10 +6,12 @@
 mod background;
 mod controls;
 mod decoration;
+pub(crate) mod dynamic;
 mod flex;
 mod flow;
 mod grid;
 mod ids;
+mod image;
 mod inline;
 mod links;
 mod lists;
@@ -92,6 +94,22 @@ pub(crate) struct Emitter<'a, 'd> {
     in_float_run: bool,
     /// QML modules the emitted objects need beyond the default imports.
     pub imports: std::collections::BTreeSet<&'static str>,
+    /// The file each `<img>` shows.
+    pub images: BTreeMap<NodeId, crate::images::ImageAsset>,
+    /// Scripts reach elements at run time, so every element object says
+    /// what it is (`h2qTag`, `h2qClasses`).
+    pub runtime_dom: bool,
+    /// Each element's outermost object carries a marker comment naming its
+    /// node, so [`dynamic`] can tell whose properties differ.
+    markers: bool,
+    /// Elements some condition gives paint, padding or a shadow: they keep
+    /// a painting wrapper in every combination, so the forms agree.
+    sticky: HashSet<NodeId>,
+    /// Elements `display: none` in the combination being emitted, laid out
+    /// as shown and hidden with `visible`.
+    collapsed: HashSet<NodeId>,
+    /// The control being emitted is sticky.
+    force_paint: bool,
 }
 
 impl<'a, 'd> Emitter<'a, 'd> {
@@ -129,6 +147,12 @@ impl<'a, 'd> Emitter<'a, 'd> {
             fragment_links: false,
             in_float_run: false,
             imports: std::collections::BTreeSet::new(),
+            images: BTreeMap::new(),
+            runtime_dom: false,
+            markers: false,
+            sticky: HashSet::new(),
+            collapsed: HashSet::new(),
+            force_paint: false,
         }
     }
 
@@ -300,6 +324,15 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     let e = self.control(b, node, control, line);
                     return self.transformed(e, b, line);
                 }
+                if let Some(node) = b.node
+                    && self
+                        .doc
+                        .element(node)
+                        .is_some_and(|e| e.is_html() && e.local_name() == "img")
+                {
+                    let e = self.image(b, node, line);
+                    return self.transformed(e, b, line);
+                }
                 let e = self.replaced(b, line);
                 return self.transformed(e, b, line);
             }
@@ -329,6 +362,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
         let paint_background = b.node.is_none() || b.node != self.canvas_node;
         let mut deco = self.decoration(style, paint_background, line);
         deco.hint = hint(self.doc, b);
+        if b.node.is_some_and(|n| self.sticky.contains(&n)) {
+            deco.paints = true;
+        }
         let wanted = b.node.is_some_and(|n| self.wanted.contains(&n));
         let mt = self.vertical_margin(&style.margin.top, line);
         let mb = self.vertical_margin(&style.margin.bottom, line);
@@ -515,6 +551,20 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 .node
                 .map_or_else(|| "a generated box".to_owned(), |n| describe(self.doc, n));
             self.transform(&mut e.obj, &b.style, &hint(self.doc, b), &what, line);
+        }
+        // Every element box ends here, with its outermost object.
+        if self.runtime_dom
+            && let Some(node) = b.node
+        {
+            crate::metadata::tag(&mut e.obj, self.doc, node);
+        }
+        if let Some(node) = b.node {
+            if self.collapsed.contains(&node) {
+                e.obj.set("visible", false);
+            }
+            if self.markers {
+                e.obj.members.push(Member::Comment(dynamic::marker(node)));
+            }
         }
         e
     }

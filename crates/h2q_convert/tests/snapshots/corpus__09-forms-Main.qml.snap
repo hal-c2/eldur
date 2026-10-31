@@ -171,7 +171,17 @@ ApplicationWindow {
                                             color: "#ffffff"
                                             radius: 8
                                             border.width: 1
-                                            border.color: "#cfd6e4"
+                                            border.color: name.activeFocus ? "#3b6fe0" : "#cfd6e4"
+
+                                            RectangularShadow {
+                                                anchors.fill: parent
+                                                z: -1
+                                                offset: Qt.vector2d(0, 0)
+                                                blur: 0
+                                                color: name.activeFocus ? "#333b6fe0" : "#00000000"
+                                                radius: 8
+                                                spread: name.activeFocus ? 3 : 0
+                                            }
                                         }
                                         topPadding: 10
                                         rightPadding: 13
@@ -236,7 +246,17 @@ ApplicationWindow {
                                             color: "#ffffff"
                                             radius: 8
                                             border.width: 1
-                                            border.color: "#cfd6e4"
+                                            border.color: email.activeFocus ? "#3b6fe0" : "#cfd6e4"
+
+                                            RectangularShadow {
+                                                anchors.fill: parent
+                                                z: -1
+                                                offset: Qt.vector2d(0, 0)
+                                                blur: 0
+                                                color: email.activeFocus ? "#333b6fe0" : "#00000000"
+                                                radius: 8
+                                                spread: email.activeFocus ? 3 : 0
+                                            }
                                         }
                                         topPadding: 10
                                         rightPadding: 13
@@ -302,7 +322,17 @@ ApplicationWindow {
                                             color: "#ffffff"
                                             radius: 8
                                             border.width: 1
-                                            border.color: "#cfd6e4"
+                                            border.color: password.activeFocus ? "#3b6fe0" : "#cfd6e4"
+
+                                            RectangularShadow {
+                                                anchors.fill: parent
+                                                z: -1
+                                                offset: Qt.vector2d(0, 0)
+                                                blur: 0
+                                                color: password.activeFocus ? "#333b6fe0" : "#00000000"
+                                                radius: 8
+                                                spread: password.activeFocus ? 3 : 0
+                                            }
                                         }
                                         topPadding: 10
                                         rightPadding: 13
@@ -371,7 +401,17 @@ ApplicationWindow {
                                             color: "#ffffff"
                                             radius: 8
                                             border.width: 1
-                                            border.color: "#cfd6e4"
+                                            border.color: team.activeFocus ? "#3b6fe0" : "#cfd6e4"
+
+                                            RectangularShadow {
+                                                anchors.fill: parent
+                                                z: -1
+                                                offset: Qt.vector2d(0, 0)
+                                                blur: 0
+                                                color: team.activeFocus ? "#333b6fe0" : "#00000000"
+                                                radius: 8
+                                                spread: team.activeFocus ? 3 : 0
+                                            }
                                         }
                                         topPadding: 10
                                         rightPadding: 31
@@ -454,7 +494,17 @@ ApplicationWindow {
                                                 color: "#ffffff"
                                                 radius: 8
                                                 border.width: 1
-                                                border.color: "#cfd6e4"
+                                                border.color: bio.activeFocus ? "#3b6fe0" : "#cfd6e4"
+
+                                                RectangularShadow {
+                                                    anchors.fill: parent
+                                                    z: -1
+                                                    offset: Qt.vector2d(0, 0)
+                                                    blur: 0
+                                                    color: bio.activeFocus ? "#333b6fe0" : "#00000000"
+                                                    radius: 8
+                                                    spread: bio.activeFocus ? 3 : 0
+                                                }
                                             }
                                             topPadding: 10
                                             rightPadding: 13
@@ -810,7 +860,17 @@ ApplicationWindow {
                                                 color: "#ffffff"
                                                 radius: 8
                                                 border.width: 1
-                                                border.color: "#cfd6e4"
+                                                border.color: seats.activeFocus ? "#3b6fe0" : "#cfd6e4"
+
+                                                RectangularShadow {
+                                                    anchors.fill: parent
+                                                    z: -1
+                                                    offset: Qt.vector2d(0, 0)
+                                                    blur: 0
+                                                    color: seats.activeFocus ? "#333b6fe0" : "#00000000"
+                                                    radius: 8
+                                                    spread: seats.activeFocus ? 3 : 0
+                                                }
                                             }
                                             topPadding: 10
                                             rightPadding: 13
@@ -1033,7 +1093,7 @@ ApplicationWindow {
                                         font.pixelSize: 15
                                         font.weight: 600
                                         background: Rectangle {
-                                            color: "#ffffff"
+                                            color: buttonControl.hovered ? "#f5f7fb" : "#ffffff"
                                             radius: 8
                                             border.width: 1
                                             border.color: "#cfd6e4"
@@ -1046,6 +1106,7 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Math.ceil(implicitWidth)
                                         Layout.fillHeight: true
+                                        hoverEnabled: true
 
                                         onClicked: {
                                             name.text = "";
@@ -1071,7 +1132,7 @@ ApplicationWindow {
                                         font.pixelSize: 15
                                         font.weight: 600
                                         background: Rectangle {
-                                            color: "#3b6fe0"
+                                            color: buttonControl2.hovered ? "#2d5bc4" : "#3b6fe0"
                                             radius: 8
                                             border.width: 1
                                             border.color: "#00000000"
@@ -1085,6 +1146,7 @@ ApplicationWindow {
                                         Layout.maximumWidth: Math.ceil(implicitWidth)
                                         Layout.fillHeight: true
                                         Layout.leftMargin: 10
+                                        hoverEnabled: true
                                     }
                                 }
                             }

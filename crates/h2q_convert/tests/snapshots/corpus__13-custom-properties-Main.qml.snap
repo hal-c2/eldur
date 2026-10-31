@@ -91,6 +91,7 @@ ApplicationWindow {
 
                             // <a>
                             Text {
+                                id: a
                                 text: "Tokens"
                                 textFormat: Text.PlainText
                                 color: "#ffffff"
@@ -106,10 +107,16 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.fillHeight: true
+                                font.underline: aHover.hovered
+
+                                HoverHandler {
+                                    id: aHover
+                                }
                             }
 
                             // <a>
                             Text {
+                                id: a2
                                 text: "Components"
                                 textFormat: Text.PlainText
                                 color: "#ffffff"
@@ -126,10 +133,16 @@ ApplicationWindow {
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.fillHeight: true
                                 Layout.leftMargin: 20
+                                font.underline: a2Hover.hovered
+
+                                HoverHandler {
+                                    id: a2Hover
+                                }
                             }
 
                             // <a>
                             Text {
+                                id: a3
                                 text: "Docs"
                                 textFormat: Text.PlainText
                                 color: "#ffffff"
@@ -146,6 +159,11 @@ ApplicationWindow {
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.fillHeight: true
                                 Layout.leftMargin: 20
+                                font.underline: a3Hover.hovered
+
+                                HoverHandler {
+                                    id: a3Hover
+                                }
                             }
 
                             Item {
@@ -921,7 +939,8 @@ ApplicationWindow {
                                 Layout.topMargin: 15.2
 
                                 Rectangle {
-                                    color: "#3b5bdb"
+                                    id: button
+                                    color: buttonHover.hovered ? "#2f4ac0" : "#3b5bdb"
                                     radius: 6
                                     implicitWidth: buttonText.implicitWidth + 35.2
                                     implicitHeight: buttonText.implicitHeight + 16
@@ -947,6 +966,10 @@ ApplicationWindow {
                                         anchors.leftMargin: 17.6
                                         anchors.rightMargin: 17.6
                                         anchors.topMargin: 8
+                                    }
+
+                                    HoverHandler {
+                                        id: buttonHover
                                     }
                                 }
                             }
@@ -1093,7 +1116,8 @@ ApplicationWindow {
                     radius: 12
                     implicitWidth: statsContent.implicitWidth + 32
                     implicitHeight: statsContent.implicitHeight + 32
-                    Layout.preferredWidth: Math.max(0, parent.width - 32)
+                    Layout.fillWidth: true
+                    Layout.maximumWidth: Math.max(0, parent.width - 32)
                     Layout.alignment: Qt.AlignHCenter
                     Layout.topMargin: 32
 

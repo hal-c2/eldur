@@ -32,7 +32,11 @@ pub struct Options {
     pub root: RootKind,
     /// Emit `// <div class="card">` comments above converted elements.
     pub source_comments: bool,
-    /// Turn `:hover`/`:focus`/… into QML `states` (else ignore them).
+    /// Bind the styles static elements have under conditions: `:hover`,
+    /// `:focus`, `:active`, `:checked` and `:disabled`, and classes the
+    /// page's scripts write (else the document's styles are all there is).
+    /// Also gates templates for elements scripts create
+    /// (`docs/design/dynamic-styles.md` §14, decision 1).
     pub state_variants: bool,
     /// Turn CSS transitions/animations into QML Behaviors/animations.
     pub animations: bool,
@@ -174,5 +178,7 @@ pub fn convert_str(html: &str, options: &Options) -> Output {
 mod boxes;
 mod diag;
 mod emit;
+mod images;
+mod metadata;
 mod pipeline;
 mod scripts;

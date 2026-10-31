@@ -352,3 +352,32 @@ fn a_space_after_an_atomic_inline_at_the_line_end_is_removed() {
         "{tree}"
     );
 }
+
+/// Chromium's layout text (DOMSnapshot) for the same page: a reset's scope
+/// takes in the following siblings, `counters()` joins the nested ones,
+/// `counter-set` applies after `counter-increment`, and a counter nothing
+/// reset is created where it is first incremented.
+#[test]
+fn counters_number_generated_content() {
+    let tree = outline(concat!(
+        "<style>ol{list-style:none;counter-reset:s}li{counter-increment:s}",
+        "li::before{content:counters(s, '.') ') '}",
+        ".x::before{content:counter(s, lower-alpha) '|' counter(t) '|' counter(s, upper-roman) ' '}",
+        ".r{counter-reset:s 4}.inc2{counter-increment:s 2}.set{counter-set:s 10}",
+        "p{counter-increment:t}</style>",
+        "<ol><li>a</li><li class=inc2>b<ol><li>c</li><li class=set>d</li></ol></li><li>e</li></ol>",
+        "<div><p class=x>f</p><p class='x r'>g</p><p class=x>h</p></div>"
+    ));
+    for line in [
+        r#"block <li> [pseudo["1) "]"a"]"#,
+        r#"anon [pseudo["3) "]"b"]"#,
+        r#"block <li> [pseudo["3.1) "]"c"]"#,
+        r#"block <li> [pseudo["3.10) "]"d"]"#,
+        r#"block <li> [pseudo["4) "]"e"]"#,
+        r#"block <p> [pseudo["d|1|IV "]"f"]"#,
+        r#"block <p> [pseudo["d|2|IV "]"g"]"#,
+        r#"block <p> [pseudo["d|3|IV "]"h"]"#,
+    ] {
+        assert!(tree.contains(line), "{line} in\n{tree}");
+    }
+}

@@ -13,7 +13,8 @@ use crate::parse::{
 };
 use crate::properties::{self, ComputeContext, CssWide, Longhand, PropertyKind};
 use crate::selectors::{
-    MatchContext, PseudoElement, RuleIndex, Specificity, compute_ancestor_blooms, matches_selector,
+    DynamicFacts, MatchContext, PseudoElement, RuleIndex, Selector, Specificity,
+    compute_ancestor_blooms, matches_selector,
 };
 use crate::{
     ComputedStyle, Diagnostic, Display, ElementStyle, Float, FontFace, Keyframe, Origin, Position,
@@ -150,6 +151,9 @@ const PROBED_CSS_PROPERTIES: &[&str] = &[
     "transition",
     "animation",
     "content",
+    "counter-reset",
+    "counter-increment",
+    "counter-set",
     "border-collapse",
     "border-spacing",
     "caption-side",
@@ -331,11 +335,17 @@ struct IndexedRule<'a> {
     declarations: &'a [ParsedDecl],
 }
 
-struct CascadeEngine<'a> {
-    doc: &'a Document,
+pub(crate) struct CascadeEngine<'a> {
+    pub(crate) doc: &'a Document,
     viewport: &'a Viewport,
     initial_style: ComputedStyle,
     ancestor_blooms: Vec<u64>,
+    /// Bloom bits of every class a condition may add (`conditional_styles`),
+    /// so ancestors' assumed classes pass the filter. 0 in the base cascade.
+    pub(crate) dynamic_bloom: u64,
+    /// Per node (by index; empty in the base cascade): classes a condition
+    /// may add to it, whose rule buckets must be visited too.
+    pub(crate) dynamic_classes: Vec<Vec<String>>,
     element_rules: RuleIndex<IndexedRule<'a>>,
     pseudo_rules: RuleIndex<(PseudoElement, IndexedRule<'a>)>,
     variant_prefixes: RuleIndex<PseudoState>,
@@ -346,6 +356,23 @@ struct CascadeEngine<'a> {
     inherited_longhands: Vec<Longhand>,
 }
 
+/// Everything the cascade needs before visiting elements.
+pub(crate) struct Prepared<'a> {
+    pub(crate) engine: CascadeEngine<'a>,
+    diagnostics: Vec<Diagnostic>,
+    keyframes: BTreeMap<String, Vec<Keyframe>>,
+    font_faces: Vec<FontFace>,
+}
+
+/// The base cascade's per-element results.
+pub(crate) struct BasePass {
+    pub(crate) styles: Vec<Option<ElementStyle>>,
+    pub(crate) hidden: Vec<Option<ElementStyle>>,
+    element_cascades: Vec<Option<ElementCascade>>,
+    pub(crate) root_font_size: f32,
+    variant_candidates: BTreeSet<(NodeId, PseudoState)>,
+}
+
 /// Runs the full CSS cascade, inheritance, computed-value fix-ups, pseudo-elements,
 /// and dynamic state variants over `doc`.
 pub(crate) fn compute_styles(
@@ -353,6 +380,76 @@ pub(crate) fn compute_styles(
     sheets: &[Stylesheet],
     viewport: &Viewport,
 ) -> StyleMap {
+    let Prepared {
+        engine,
+        diagnostics,
+        keyframes,
+        font_faces,
+    } = prepare(doc, sheets, viewport);
+    let BasePass {
+        styles,
+        hidden,
+        element_cascades,
+        root_font_size,
+        variant_candidates,
+    } = engine.base_pass();
+
+    // 5. Dynamic state variants (`StyleMap::variants`).
+    let mut variants = Vec::new();
+    for (cond_node, state) in variant_candidates {
+        // An element without a box in the base style (or under a `display: none`
+        // ancestor) cannot be hovered/focused/activated.
+        if styles
+            .get(cond_node.index())
+            .and_then(Option::as_ref)
+            .is_none()
+        {
+            continue;
+        }
+        let facts = DynamicFacts::single_state(cond_node, state);
+        let mut variant_root_fs = root_font_size;
+        let mut changed: Vec<(NodeId, Box<ComputedStyle>)> = Vec::new();
+        for child in doc.element_children(doc.root()) {
+            engine.compute_variant_subtree(
+                child,
+                &facts,
+                None,
+                None,
+                &mut variant_root_fs,
+                &styles,
+                &mut changed,
+            );
+        }
+
+        if !changed.is_empty() {
+            variants.push(StateVariant {
+                node: cond_node,
+                state,
+                changed,
+            });
+        }
+    }
+
+    StyleMap {
+        styles,
+        hidden,
+        parent_elements: engine.parent_elements(),
+        element_cascades,
+        root_font_size,
+        viewport: viewport.clone(),
+        variants,
+        keyframes,
+        font_faces,
+        diagnostics,
+    }
+}
+
+/// Parses inline styles, orders layers and indexes the rules of `sheets`.
+pub(crate) fn prepare<'a>(
+    doc: &'a Document,
+    sheets: &'a [Stylesheet],
+    viewport: &'a Viewport,
+) -> Prepared<'a> {
     let ua_sheet = ua::stylesheet();
     let mut longhand_set: BTreeSet<Longhand> =
         statically_known_longhands().iter().copied().collect();
@@ -361,10 +458,7 @@ pub(crate) fn compute_styles(
     //    their diagnostics and discovering any referenced longhands.
     let mut diagnostics: Vec<Diagnostic> = Vec::new();
     let mut inline_styles: Vec<Vec<ParsedDecl>> = vec![Vec::new(); doc.len()];
-    let mut parent_elements: Vec<Option<NodeId>> = vec![None; doc.len()];
-
     for node in doc.descendants(doc.root()) {
-        parent_elements[node.index()] = doc.parent_element(node);
         let Some(elem) = doc.element(node) else {
             continue;
         };
@@ -484,6 +578,8 @@ pub(crate) fn compute_styles(
         viewport,
         initial_style: ComputedStyle::default(),
         ancestor_blooms: compute_ancestor_blooms(doc),
+        dynamic_bloom: 0,
+        dynamic_classes: Vec::new(),
         element_rules,
         pseudo_rules,
         variant_prefixes,
@@ -492,72 +588,76 @@ pub(crate) fn compute_styles(
         inherited_longhands,
     };
 
-    // 4. Base cascade traversal in document pre-order.
-    let mut styles: Vec<Option<ElementStyle>> = vec![None; doc.len()];
-    let mut hidden: Vec<Option<ElementStyle>> = vec![None; doc.len()];
-    let mut element_cascades: Vec<Option<ElementCascade>> = vec![None; doc.len()];
-    let mut root_font_size: f32 = engine.initial_style.font_size;
-    let mut variant_candidates: BTreeSet<(NodeId, PseudoState)> = BTreeSet::new();
+    Prepared {
+        engine,
+        diagnostics,
+        keyframes,
+        font_faces,
+    }
+}
 
-    for child in doc.element_children(doc.root()) {
-        engine.compute_base_subtree(
-            child,
-            None,
-            None,
-            &mut root_font_size,
-            &mut styles,
-            &mut hidden,
-            &mut element_cascades,
-            &mut variant_candidates,
+impl CascadeEngine<'_> {
+    fn extra_classes(&self, node: NodeId) -> &[String] {
+        self.dynamic_classes
+            .get(node.index())
+            .map_or(&[], Vec::as_slice)
+    }
+
+    /// Visits the selector of every element rule that could match `node`,
+    /// counting the classes conditions may add.
+    pub(crate) fn for_each_element_selector(
+        &self,
+        node: NodeId,
+        elem: &Element,
+        mut visit: impl FnMut(&Selector),
+    ) {
+        let bloom = self.ancestor_blooms[node.index()] | self.dynamic_bloom;
+        self.element_rules.for_each_candidate_with(
+            elem,
+            bloom,
+            self.extra_classes(node),
+            |sel, _| {
+                visit(sel);
+            },
         );
     }
 
-    // 5. Dynamic state variants (`StyleMap::variants`).
-    let mut variants = Vec::new();
-    for (cond_node, state) in variant_candidates {
-        // An element without a box in the base style (or under a `display: none`
-        // ancestor) cannot be hovered/focused/activated.
-        if styles
-            .get(cond_node.index())
-            .and_then(Option::as_ref)
-            .is_none()
-        {
-            continue;
+    fn parent_elements(&self) -> Vec<Option<NodeId>> {
+        let mut parent_elements = vec![None; self.doc.len()];
+        for node in self.doc.descendants(self.doc.root()) {
+            parent_elements[node.index()] = self.doc.parent_element(node);
         }
-        let mut variant_root_fs = root_font_size;
-        let mut changed: Vec<(NodeId, Box<ComputedStyle>)> = Vec::new();
-        for child in doc.element_children(doc.root()) {
-            engine.compute_variant_subtree(
-                child,
-                (cond_node, state),
-                None,
-                None,
-                &mut variant_root_fs,
-                &styles,
-                &mut changed,
-            );
-        }
-
-        if !changed.is_empty() {
-            variants.push(StateVariant {
-                node: cond_node,
-                state,
-                changed,
-            });
-        }
+        parent_elements
     }
 
-    StyleMap {
-        styles,
-        hidden,
-        parent_elements,
-        element_cascades,
-        root_font_size,
-        viewport: viewport.clone(),
-        variants,
-        keyframes,
-        font_faces,
-        diagnostics,
+    /// The cascade of the document as loaded, in pre-order.
+    pub(crate) fn base_pass(&self) -> BasePass {
+        let doc = self.doc;
+        let mut styles: Vec<Option<ElementStyle>> = vec![None; doc.len()];
+        let mut hidden: Vec<Option<ElementStyle>> = vec![None; doc.len()];
+        let mut element_cascades: Vec<Option<ElementCascade>> = vec![None; doc.len()];
+        let mut root_font_size: f32 = self.initial_style.font_size;
+        let mut variant_candidates: BTreeSet<(NodeId, PseudoState)> = BTreeSet::new();
+
+        for child in doc.element_children(doc.root()) {
+            self.compute_base_subtree(
+                child,
+                None,
+                None,
+                &mut root_font_size,
+                &mut styles,
+                &mut hidden,
+                &mut element_cascades,
+                &mut variant_candidates,
+            );
+        }
+        BasePass {
+            styles,
+            hidden,
+            element_cascades,
+            root_font_size,
+            variant_candidates,
+        }
     }
 }
 
@@ -756,7 +856,7 @@ impl<'a> CascadeEngine<'a> {
         let is_root = self.doc.parent(node) == Some(self.doc.root());
         let match_ctx = MatchContext {
             doc: self.doc,
-            active_state: None,
+            dynamic: None,
         };
 
         let mut elem_cascade = ElementCascade::default();
@@ -839,7 +939,7 @@ impl<'a> CascadeEngine<'a> {
     fn compute_variant_subtree(
         &self,
         node: NodeId,
-        active_state: (NodeId, PseudoState),
+        facts: &DynamicFacts,
         parent_style: Option<&ComputedStyle>,
         enclosing_box_display: Option<Display>,
         root_font_size: &mut f32,
@@ -853,7 +953,7 @@ impl<'a> CascadeEngine<'a> {
         let is_root = self.doc.parent(node) == Some(self.doc.root());
         let match_ctx = MatchContext {
             doc: self.doc,
-            active_state: Some(active_state),
+            dynamic: Some(facts),
         };
 
         let variant_elem_style = self.compute_single_element(
@@ -899,7 +999,7 @@ impl<'a> CascadeEngine<'a> {
         for child in self.doc.element_children(node) {
             self.compute_variant_subtree(
                 child,
-                active_state,
+                facts,
                 Some(&variant_elem_style.style),
                 child_box_display,
                 root_font_size,
@@ -910,7 +1010,7 @@ impl<'a> CascadeEngine<'a> {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn compute_single_element(
+    pub(crate) fn compute_single_element(
         &self,
         node: NodeId,
         elem: &Element,
@@ -921,11 +1021,12 @@ impl<'a> CascadeEngine<'a> {
         match_ctx: &MatchContext<'_>,
         cascade_out: Option<&mut ElementCascade>,
     ) -> ElementStyle {
-        let bloom = self.ancestor_blooms[node.index()];
+        let bloom = self.ancestor_blooms[node.index()] | self.dynamic_bloom;
+        let extra_classes = self.extra_classes(node);
         let mut matched_decls: Vec<(CascadeKey, &DeclValue)> = Vec::new();
 
         self.element_rules
-            .for_each_candidate(elem, bloom, |sel, rule| {
+            .for_each_candidate_with(elem, bloom, extra_classes, |sel, rule| {
                 if matches_selector(sel, node, match_ctx) {
                     for (offset, decl) in rule.declarations.iter().enumerate() {
                         let key = CascadeKey {
@@ -981,7 +1082,7 @@ impl<'a> CascadeEngine<'a> {
             elem.is_html() && matches!(elem.local_name(), "input" | "textarea");
 
         self.pseudo_rules
-            .for_each_candidate(elem, bloom, |sel, (pe, rule)| {
+            .for_each_candidate_with(elem, bloom, extra_classes, |sel, (pe, rule)| {
                 if *pe == PseudoElement::Placeholder && !supports_placeholder {
                     return;
                 }

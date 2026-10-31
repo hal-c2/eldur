@@ -1,0 +1,642 @@
+[
+ {
+  "name": "desc open=0 #panel",
+  "html": "<style>.panel{display:none;color:rgb(10,20,30)} .open .panel{display:block;color:rgb(200,0,0)}</style><div id=menu><div id=panel class=panel><span id=label>x</span></div></div>",
+  "select": "#panel",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "desc open=0 #label",
+  "html": "<style>.panel{display:none;color:rgb(10,20,30)} .open .panel{display:block;color:rgb(200,0,0)}</style><div id=menu><div id=panel class=panel><span id=label>x</span></div></div>",
+  "select": "#label",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "desc open=1 #panel",
+  "html": "<style>.panel{display:none;color:rgb(10,20,30)} .open .panel{display:block;color:rgb(200,0,0)}</style><div id=menu class=open><div id=panel class=panel><span id=label>x</span></div></div>",
+  "select": "#panel",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "desc open=1 #label",
+  "html": "<style>.panel{display:none;color:rgb(10,20,30)} .open .panel{display:block;color:rgb(200,0,0)}</style><div id=menu class=open><div id=panel class=panel><span id=label>x</span></div></div>",
+  "select": "#label",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "sib on=0 #b",
+  "html": "<style>.on + p{color:rgb(255,0,0)} .on ~ p{font-size:20px}</style><div><span id=a class=\"tab\">a</span><p id=b>b</p><p id=c>c</p></div>",
+  "select": "#b",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "sib on=0 #c",
+  "html": "<style>.on + p{color:rgb(255,0,0)} .on ~ p{font-size:20px}</style><div><span id=a class=\"tab\">a</span><p id=b>b</p><p id=c>c</p></div>",
+  "select": "#c",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "sib on=1 #b",
+  "html": "<style>.on + p{color:rgb(255,0,0)} .on ~ p{font-size:20px}</style><div><span id=a class=\"tab on\">a</span><p id=b>b</p><p id=c>c</p></div>",
+  "select": "#b",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "sib on=1 #c",
+  "html": "<style>.on + p{color:rgb(255,0,0)} .on ~ p{font-size:20px}</style><div><span id=a class=\"tab on\">a</span><p id=b>b</p><p id=c>c</p></div>",
+  "select": "#c",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "hover done=0 hover=0",
+  "html": "<style>.item{opacity:1} .item.hov{opacity:0.9} .item.done{opacity:0.6} .item.done.hov{color:rgb(0,128,0)}</style><ul><li id=i class=\"item\">x</li></ul>",
+  "select": "#i",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "hover done=0 hover=1",
+  "html": "<style>.item{opacity:1} .item.hov{opacity:0.9} .item.done{opacity:0.6} .item.done.hov{color:rgb(0,128,0)}</style><ul><li id=i class=\"item hov\">x</li></ul>",
+  "select": "#i",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "hover done=1 hover=0",
+  "html": "<style>.item{opacity:1} .item.hov{opacity:0.9} .item.done{opacity:0.6} .item.done.hov{color:rgb(0,128,0)}</style><ul><li id=i class=\"item done\">x</li></ul>",
+  "select": "#i",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "hover done=1 hover=1",
+  "html": "<style>.item{opacity:1} .item.hov{opacity:0.9} .item.done{opacity:0.6} .item.done.hov{color:rgb(0,128,0)}</style><ul><li id=i class=\"item done hov\">x</li></ul>",
+  "select": "#i",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "not read=0",
+  "html": "<style>.msg:not(.read){font-weight:700}</style><p id=p class=\"msg\">x</p>",
+  "select": "#p",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "not read=1",
+  "html": "<style>.msg:not(.read){font-weight:700}</style><p id=p class=\"msg read\">x</p>",
+  "select": "#p",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "present warn=0",
+  "html": "<style>.note{color:rgb(0,0,255)} .warn{color:rgb(255,165,0)}</style><p id=p class=\"note\">x</p>",
+  "select": "#p",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "present warn=1",
+  "html": "<style>.note{color:rgb(0,0,255)} .warn{color:rgb(255,165,0)}</style><p id=p class=\"note warn\">x</p>",
+  "select": "#p",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "spec a=0 b=0",
+  "html": "<style>.b.b{color:rgb(0,128,0)} .a{color:rgb(255,0,0)} .b{color:rgb(0,0,255);margin-top:3px} .a{margin-top:5px}</style><p id=p class=\"\">x</p>",
+  "select": "#p",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "spec a=0 b=1",
+  "html": "<style>.b.b{color:rgb(0,128,0)} .a{color:rgb(255,0,0)} .b{color:rgb(0,0,255);margin-top:3px} .a{margin-top:5px}</style><p id=p class=\"b\">x</p>",
+  "select": "#p",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "spec a=1 b=0",
+  "html": "<style>.b.b{color:rgb(0,128,0)} .a{color:rgb(255,0,0)} .b{color:rgb(0,0,255);margin-top:3px} .a{margin-top:5px}</style><p id=p class=\"a \">x</p>",
+  "select": "#p",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "spec a=1 b=1",
+  "html": "<style>.b.b{color:rgb(0,128,0)} .a{color:rgb(255,0,0)} .b{color:rgb(0,0,255);margin-top:3px} .a{margin-top:5px}</style><p id=p class=\"a b\">x</p>",
+  "select": "#p",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "inherit big=0 #t",
+  "html": "<style>.big{font-size:20px;color:rgb(1,2,3)} p{padding-left:1em;margin-top:0}</style><div id=box><p id=t><span id=s>x</span></p></div>",
+  "select": "#t",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "inherit big=0 #s",
+  "html": "<style>.big{font-size:20px;color:rgb(1,2,3)} p{padding-left:1em;margin-top:0}</style><div id=box><p id=t><span id=s>x</span></p></div>",
+  "select": "#s",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "inherit big=1 #t",
+  "html": "<style>.big{font-size:20px;color:rgb(1,2,3)} p{padding-left:1em;margin-top:0}</style><div id=box class=big><p id=t><span id=s>x</span></p></div>",
+  "select": "#t",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "inherit big=1 #s",
+  "html": "<style>.big{font-size:20px;color:rgb(1,2,3)} p{padding-left:1em;margin-top:0}</style><div id=box class=big><p id=t><span id=s>x</span></p></div>",
+  "select": "#s",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "cap ",
+  "html": "<style>.c1{margin-top:1px} .c2{margin-right:2px} .c3{margin-bottom:3px} .c4{margin-left:4px} .c5{padding-top:5px} .c6{padding-right:6px} .c7{padding-bottom:7px}</style><p id=p class=\"\">x</p>",
+  "select": "#p",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "cap 1,2,3,4,5,6",
+  "html": "<style>.c1{margin-top:1px} .c2{margin-right:2px} .c3{margin-bottom:3px} .c4{margin-left:4px} .c5{padding-top:5px} .c6{padding-right:6px} .c7{padding-bottom:7px}</style><p id=p class=\"c1 c2 c3 c4 c5 c6\">x</p>",
+  "select": "#p",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "cap 2,5",
+  "html": "<style>.c1{margin-top:1px} .c2{margin-right:2px} .c3{margin-bottom:3px} .c4{margin-left:4px} .c5{padding-top:5px} .c6{padding-right:6px} .c7{padding-bottom:7px}</style><p id=p class=\"c2 c5\">x</p>",
+  "select": "#p",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "cap 1,2,3,4,5,6,7",
+  "html": "<style>.c1{margin-top:1px} .c2{margin-right:2px} .c3{margin-bottom:3px} .c4{margin-left:4px} .c5{padding-top:5px} .c6{padding-right:6px} .c7{padding-bottom:7px}</style><p id=p class=\"c1 c2 c3 c4 c5 c6 c7\">x</p>",
+  "select": "#p",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "checked on=0",
+  "html": "<style>input:checked + label{color:rgb(0,128,0)}</style><input id=cb type=checkbox><label id=lb>l</label>",
+  "select": "#lb",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "checked on=1",
+  "html": "<style>input:checked + label{color:rgb(0,128,0)}</style><input id=cb type=checkbox checked><label id=lb>l</label>",
+  "select": "#lb",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "var dark=0",
+  "html": "<style>.dark{--fg:rgb(9,9,9)} p{color:var(--fg, rgb(1,1,1))}</style><div id=box><p id=t>x</p></div>",
+  "select": "#t",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "var dark=1",
+  "html": "<style>.dark{--fg:rgb(9,9,9)} p{color:var(--fg, rgb(1,1,1))}</style><div id=box class=dark><p id=t>x</p></div>",
+  "select": "#t",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ }
+]

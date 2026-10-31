@@ -2,19 +2,8 @@
 source: crates/h2q_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-info[qml]: index.html:198: <code>: font size 15.3px inside 17px text is approximated with <small>
-info[qml]: index.html:198: <code>: font family `monospace` inside `serif` text is not converted
-info[qml]: index.html:198: <code>: inline background is not converted
-info[qml]: index.html:198: <code>: inline padding and borders are not converted
-info[qml]: index.html:210: <mark>: inline background is not converted
-info[qml]: index.html:210: <mark>: inline padding and borders are not converted
-info[qml]: index.html:210: <sub>: font size 12.75px inside 17px text is approximated with <small>
+info[qml]: index.html:198: <code>: an inline background has square corners
 info[qml]: index.html:210: <sub>: `vertical-align` on inline text is not converted
-info[qml]: index.html:210: <sup>: font size 12.75px inside 17px text is approximated with <small>
 info[qml]: index.html:210: <sup>: `vertical-align` on inline text is not converted
-info[qml]: index.html:210: <small>: font size 13px inside 17px text is approximated with <small>
-info[qml]: index.html:219: <code>: font size 15.3px inside 17px text is approximated with <small>
-info[qml]: index.html:219: <code>: font family `monospace` inside `serif` text is not converted
-info[qml]: index.html:219: <code>: inline background is not converted
-info[qml]: index.html:219: <code>: inline padding and borders are not converted
+info[qml]: index.html:219: <code>: an inline background has square corners
 warning[css]: index.html:220: `overflow: auto/scroll` clips but does not scroll yet

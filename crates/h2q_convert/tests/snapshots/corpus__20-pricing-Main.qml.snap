@@ -551,15 +551,23 @@ ApplicationWindow {
                                     Button {
                                         id: buttonControl3
                                         text: "Start for free"
-                                        palette.buttonText: "#2563eb"
+                                        palette.buttonText: buttonControl3.hovered ? "#ffffff" : "#2563eb"
                                         font.family: "sans-serif"
                                         font.pixelSize: 16
                                         font.weight: 600
                                         background: Rectangle {
-                                            color: "#00000000"
+                                            color: buttonControl3.hovered ? "#2563eb" : "#00000000"
                                             radius: 12
                                             border.width: 2
                                             border.color: "#2563eb"
+
+                                            Behavior on color {
+                                                ColorAnimation {
+                                                    duration: 150
+                                                    easing.type: Easing.BezierSpline
+                                                    easing.bezierCurve: [0.25, 0.1, 0.25, 1, 1, 1]
+                                                }
+                                            }
                                         }
                                         topPadding: 2
                                         rightPadding: 2
@@ -569,6 +577,7 @@ ApplicationWindow {
                                         Layout.preferredHeight: 50
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
+                                        hoverEnabled: true
                                     }
                                 }
                             }
@@ -1422,15 +1431,23 @@ ApplicationWindow {
                                     Button {
                                         id: buttonControl5
                                         text: "Talk to sales"
-                                        palette.buttonText: "#2563eb"
+                                        palette.buttonText: buttonControl5.hovered ? "#ffffff" : "#2563eb"
                                         font.family: "sans-serif"
                                         font.pixelSize: 16
                                         font.weight: 600
                                         background: Rectangle {
-                                            color: "#00000000"
+                                            color: buttonControl5.hovered ? "#2563eb" : "#00000000"
                                             radius: 12
                                             border.width: 2
                                             border.color: "#2563eb"
+
+                                            Behavior on color {
+                                                ColorAnimation {
+                                                    duration: 150
+                                                    easing.type: Easing.BezierSpline
+                                                    easing.bezierCurve: [0.25, 0.1, 0.25, 1, 1, 1]
+                                                }
+                                            }
                                         }
                                         topPadding: 2
                                         rightPadding: 2
@@ -1440,6 +1457,7 @@ ApplicationWindow {
                                         Layout.preferredHeight: 50
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
+                                        hoverEnabled: true
                                     }
                                 }
                             }

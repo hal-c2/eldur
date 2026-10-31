@@ -5,4 +5,3 @@ expression: "diagnostics.join(\"\\n\")"
 info[qml]: index.html:320: <span class="stat-label">: font size 14px inside 16px text is approximated with <small>
 info[qml]: index.html:324: <span class="stat-label">: font size 14px inside 16px text is approximated with <small>
 info[qml]: index.html:328: <span class="stat-label">: font size 14px inside 16px text is approximated with <small>
-info[css]: index.html: `:hover`/`:focus`/… styles are not converted to QML states yet

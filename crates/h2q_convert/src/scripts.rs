@@ -1,11 +1,12 @@
 //! Steps 3 and 6: the page's scripts, the elements they address, and the
 //! wiring of `page.js` into `Main.qml`.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use h2q_dom::{Document, NodeId};
 use h2q_js::{
-    Analysis, DomQuery, DomResolver, ElementKey, JsOutput, QmlTarget, ScriptInput, ScriptKind,
+    Analysis, DomQuery, DomResolver, ElementKey, ElementRef, JsOutput, QmlTarget, ScriptInput,
+    ScriptKind,
 };
 use h2q_qml::{Member, Object};
 
@@ -29,6 +30,11 @@ pub(crate) struct Scripts {
 impl Scripts {
     pub(crate) fn is_empty(&self) -> bool {
         self.inputs.is_empty()
+    }
+
+    /// The elements a literal query finds.
+    pub(crate) fn matches(&self, query: &DomQuery) -> &[NodeId] {
+        self.matches.get(query).map_or(&[], Vec::as_slice)
     }
 
     /// The node of a key: `keys` holds handler-attribute elements, `wanted`
@@ -230,6 +236,60 @@ pub(crate) fn report_missing(
             format!(
                 "{} is used by a script but has no QML object of its own (inline, hidden or not converted); script access to it does nothing",
                 describe(doc, node)
+            ),
+        );
+    }
+}
+
+/// Declares `cls_<s>` on each static element a script writes classes on,
+/// so the runtime's class changes reach QML, and reports classes that share
+/// one property.
+pub(crate) fn declare_classes(
+    root: &mut Object,
+    doc: &Document,
+    scripts: &Scripts,
+    targets: &BTreeMap<NodeId, Target>,
+    diags: &mut Diagnostics,
+) {
+    let writes = &scripts.analysis.class_writes;
+    let mut by_node: BTreeMap<NodeId, BTreeSet<String>> = BTreeMap::new();
+    for write in writes {
+        let ElementRef::Query(query) = &write.target else {
+            // Created elements get theirs in their templates; elements a
+            // script reaches without a literal query are found from the
+            // style sheet once classes are styled (dynamic-styles §5.1).
+            continue;
+        };
+        for node in scripts.matches.get(query).into_iter().flatten() {
+            by_node
+                .entry(*node)
+                .or_default()
+                .extend(write.names.iter().cloned());
+        }
+    }
+    for (node, classes) in &by_node {
+        let Some(target) = targets.get(node) else {
+            continue;
+        };
+        if let Some(obj) = find_mut(root, &target.qml_id) {
+            crate::metadata::declare_classes(obj, doc, *node, classes);
+        }
+    }
+    let names = writes
+        .iter()
+        .flat_map(|w| w.names.iter().map(String::as_str));
+    for (prop, classes) in crate::metadata::collisions(names) {
+        let list: Vec<String> = classes.iter().map(|c| format!("`{c}`")).collect();
+        let line = writes
+            .iter()
+            .find(|w| w.names.iter().any(|n| classes.contains(n.as_str())))
+            .and_then(|w| w.line);
+        diags.info(
+            "js",
+            line,
+            format!(
+                "classes {} all map to `{prop}`, so QML cannot tell them apart",
+                list.join(" and ")
             ),
         );
     }

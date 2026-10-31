@@ -5,10 +5,10 @@
 use swc_css_ast::ComponentValue;
 
 use crate::{
-    BorderCollapse, BorderStyle, CaptionSide, ComputedStyle, ContentItem, Cursor as CssCursor,
-    Direction, Length, ListStyleType, PointerEvents, Rgba, Shadow, TableLayout, TextAlign,
-    TextDecorationLine, TextOverflow, TextTransform, VerticalAlign, Visibility, WhiteSpace,
-    WordBreak,
+    BorderCollapse, BorderStyle, CaptionSide, ComputedStyle, ContentItem, CounterChange,
+    Cursor as CssCursor, Direction, Length, ListStyleType, PointerEvents, Rgba, Shadow,
+    TableLayout, TextAlign, TextDecorationLine, TextOverflow, TextTransform, VerticalAlign,
+    Visibility, WhiteSpace, WordBreak,
 };
 
 use super::{
@@ -672,7 +672,8 @@ pub(crate) fn parse_content(cvs: &[ComponentValue]) -> Result<Option<Vec<Content
                 }
                 "counters" => {
                     let (name, sty) = parse_counter_fn(fargs, true)?;
-                    items.push(ContentItem::Counter(name, sty));
+                    let separator = counters_separator(fargs)?;
+                    items.push(ContentItem::Counters(name, separator, sty));
                     saw_item = true;
                     continue;
                 }
@@ -696,6 +697,48 @@ fn parse_attr_fn(args: &[ComponentValue]) -> Result<String, String> {
         .ok_or_else(|| "attr() requires an attribute name identifier".to_owned())?;
     cur.expect_eof()?;
     Ok(name.to_owned())
+}
+
+fn counters_separator(args: &[ComponentValue]) -> Result<String, String> {
+    let parts = split_comma_separated(args)?;
+    let mut cur = Cursor::new(parts.get(1).copied().unwrap_or_default());
+    cur.eat_string()
+        .map(str::to_owned)
+        .ok_or_else(|| "counters() requires a separator <string>".to_owned())
+}
+
+/// `counter-reset`, `counter-increment`, `counter-set`: `none` or
+/// `<custom-ident> <integer>?` pairs, the integer `default` when omitted.
+pub(crate) fn parse_counter_changes(
+    cvs: &[ComponentValue],
+    default: i32,
+) -> Result<Vec<CounterChange>, String> {
+    let mut cur = Cursor::new(cvs);
+    let saved = cur.save();
+    if cur
+        .eat_ident()
+        .is_some_and(|i| i.eq_ignore_ascii_case("none"))
+        && cur.is_eof()
+    {
+        return Ok(Vec::new());
+    }
+    cur.restore(saved);
+    let mut changes = Vec::new();
+    while !cur.is_eof() {
+        let name = cur
+            .eat_custom_ident()
+            .filter(|n| !n.eq_ignore_ascii_case("none"))
+            .ok_or_else(|| "expected a counter name".to_owned())?;
+        let value = cur.eat_integer_token().unwrap_or(default);
+        changes.push(CounterChange {
+            name: name.to_owned(),
+            value,
+        });
+    }
+    if changes.is_empty() {
+        return Err("empty counter list".to_owned());
+    }
+    Ok(changes)
 }
 
 fn parse_counter_fn(

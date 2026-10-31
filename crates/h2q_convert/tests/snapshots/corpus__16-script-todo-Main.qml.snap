@@ -13,6 +13,9 @@ import "page.js" as Page
 
 ApplicationWindow {
     id: root
+    property string baseUrl: Qt.resolvedUrl("Main.qml")
+    property var h2qStyledClasses: ["app", "app-header", "btn", "composer", "counter", "delete", "done", "empty", "footer-note", "todo-item", "todo-list", "todo-text"]
+
     visible: true
     color: "#eef1f7"
     title: "Todo List"
@@ -34,11 +37,15 @@ ApplicationWindow {
         // <html>
         ColumnLayout {
             id: page
+            property string h2qTag: "html"
+
             spacing: 0
             width: flickable.width
 
             // <body>
             Item {
+                property string h2qTag: "body"
+
                 implicitWidth: bodyContent.implicitWidth + 32
                 implicitHeight: bodyContent.implicitHeight + 96
                 Layout.fillWidth: true
@@ -55,6 +62,9 @@ ApplicationWindow {
 
                     // <main class="app">
                     Rectangle {
+                        property string h2qTag: "main"
+                        property string h2qClasses: "app"
+
                         color: "#ffffff"
                         radius: 16
                         implicitWidth: appContent.implicitWidth + 56
@@ -84,12 +94,17 @@ ApplicationWindow {
 
                             // <header class="app-header">
                             RowLayout {
+                                property string h2qTag: "header"
+                                property string h2qClasses: "app-header"
+
                                 spacing: 0
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
 
                                 // <h1>
                                 Text {
+                                    property string h2qTag: "h1"
+
                                     text: "Today"
                                     textFormat: Text.PlainText
                                     color: "#3a4256"
@@ -109,6 +124,9 @@ ApplicationWindow {
                                 // <p id="counter" class="counter">
                                 Text {
                                     id: counter
+                                    property string h2qTag: "p"
+                                    property string h2qClasses: "counter"
+
                                     text: "0 items left"
                                     textFormat: Text.PlainText
                                     color: "#6b7280"
@@ -124,6 +142,9 @@ ApplicationWindow {
 
                             // <div class="composer">
                             RowLayout {
+                                property string h2qTag: "div"
+                                property string h2qClasses: "composer"
+
                                 spacing: 8
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
@@ -132,6 +153,8 @@ ApplicationWindow {
                                 // <input id="todo-input">
                                 TextField {
                                     id: todoInput
+                                    property string h2qTag: "input"
+
                                     color: "#1f2430"
                                     font.family: "sans-serif"
                                     font.pixelSize: 16
@@ -140,7 +163,7 @@ ApplicationWindow {
                                         color: "#00000000"
                                         radius: 8
                                         border.width: 1
-                                        border.color: "#c9d1e0"
+                                        border.color: todoInput.activeFocus ? "#00000000" : "#c9d1e0"
                                     }
                                     topPadding: 11
                                     rightPadding: 13
@@ -164,13 +187,16 @@ ApplicationWindow {
                                 // <button id="add-btn" class="btn">
                                 Button {
                                     id: addBtn
+                                    property string h2qTag: "button"
+                                    property string h2qClasses: "btn"
+
                                     text: "Add"
                                     palette.buttonText: "#ffffff"
                                     font.family: "sans-serif"
                                     font.pixelSize: 16
                                     font.weight: 600
                                     background: Rectangle {
-                                        color: "#1d4ed8"
+                                        color: addBtn.hovered ? "#1a44c2" : "#1d4ed8"
                                         radius: 8
                                     }
                                     topPadding: 10
@@ -181,6 +207,7 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.fillHeight: true
+                                    hoverEnabled: true
 
                                     onClicked: {
                                         Page.__h2q_on_click_addBtn(H2Q.event("click", addBtn, null));
@@ -191,6 +218,9 @@ ApplicationWindow {
                             // <ul id="todo-list" class="todo-list">
                             Rectangle {
                                 id: todoList
+                                property string h2qTag: "ul"
+                                property string h2qClasses: "todo-list"
+
                                 color: "#00000000"
                                 implicitWidth: todoListText.implicitWidth
                                 implicitHeight: todoListText.implicitHeight + 1
@@ -224,6 +254,9 @@ ApplicationWindow {
                             // <p id="empty" class="empty">
                             Text {
                                 id: empty
+                                property string h2qTag: "p"
+                                property string h2qClasses: "empty"
+
                                 text: "Nothing here yet."
                                 textFormat: Text.PlainText
                                 color: "#6b7280"
@@ -239,6 +272,9 @@ ApplicationWindow {
 
                             // <p class="footer-note">
                             Text {
+                                property string h2qTag: "p"
+                                property string h2qClasses: "footer-note"
+
                                 text: "Saved in this browser."
                                 textFormat: Text.PlainText
                                 color: "#9aa3b5"

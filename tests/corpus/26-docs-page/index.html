@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Configuration · Tidewater docs</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      color: #24292f;
+      background: #ffffff;
+    }
+
+    a {
+      color: #0969da;
+      text-decoration: none;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      height: 56px;
+      padding: 0 24px;
+      border-bottom: 1px solid #d0d7de;
+      background: #f6f8fa;
+    }
+
+    .brand {
+      font-weight: 700;
+      font-size: 18px;
+      color: #24292f;
+    }
+
+    .version {
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: #ddf4ff;
+      color: #0969da;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .layout {
+      display: flex;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .sidebar {
+      flex: 0 0 240px;
+      padding: 24px 16px;
+      border-right: 1px solid #d0d7de;
+    }
+
+    .sidebar h4 {
+      margin: 16px 0 6px;
+      padding: 0 8px;
+      color: #57606a;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .sidebar h4:first-child {
+      margin-top: 0;
+    }
+
+    .sidebar ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .sidebar li a {
+      display: block;
+      padding: 4px 8px;
+      border-radius: 6px;
+      color: #24292f;
+      font-size: 14px;
+    }
+
+    .sidebar li a.active {
+      background: #ddf4ff;
+      color: #0969da;
+      font-weight: 600;
+    }
+
+    .content {
+      flex: 1;
+      min-width: 0;
+      max-width: 820px;
+      padding: 32px 48px 64px;
+    }
+
+    .content h1 {
+      margin: 0 0 8px;
+      font-size: 32px;
+      line-height: 1.25;
+    }
+
+    .subtitle {
+      margin: 0 0 24px;
+      color: #57606a;
+      font-size: 18px;
+    }
+
+    .content h2 {
+      margin: 32px 0 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #d0d7de;
+      font-size: 22px;
+      line-height: 1.3;
+    }
+
+    .content p {
+      margin: 0 0 16px;
+    }
+
+    code {
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: #eff1f3;
+      font-family: monospace;
+      font-size: 85%;
+    }
+
+    pre {
+      margin: 0 0 16px;
+      padding: 16px;
+      border-radius: 6px;
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+      font-family: monospace;
+      font-size: 13px;
+      line-height: 1.45;
+      overflow: auto;
+    }
+
+    pre code {
+      padding: 0;
+      background: none;
+      font-size: 100%;
+    }
+
+    .callout {
+      margin: 0 0 16px;
+      padding: 12px 16px;
+      border-left: 4px solid #0969da;
+      border-radius: 0 6px 6px 0;
+      background: #ddf4ff;
+    }
+
+    .callout p {
+      margin: 0;
+    }
+
+    .callout-title {
+      display: block;
+      margin-bottom: 4px;
+      color: #0969da;
+      font-weight: 600;
+    }
+
+    table {
+      width: 100%;
+      margin: 0 0 16px;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      padding: 8px 12px;
+      border: 1px solid #d0d7de;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f6f8fa;
+      font-weight: 600;
+    }
+
+    td code {
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#">Tidewater</a>
+    <span class="version">v2.4</span>
+  </header>
+
+  <div class="layout">
+    <nav class="sidebar">
+      <h4>Getting started</h4>
+      <ul>
+        <li><a href="#">Installation</a></li>
+        <li><a href="#">Quick start</a></li>
+        <li><a class="active" href="#">Configuration</a></li>
+      </ul>
+      <h4>Guides</h4>
+      <ul>
+        <li><a href="#">Scheduling jobs</a></li>
+        <li><a href="#">Retries and backoff</a></li>
+        <li><a href="#">Observability</a></li>
+      </ul>
+      <h4>Reference</h4>
+      <ul>
+        <li><a href="#">CLI</a></li>
+        <li><a href="#">HTTP API</a></li>
+      </ul>
+    </nav>
+
+    <main class="content">
+      <h1>Configuration</h1>
+      <p class="subtitle">Tell the scheduler where your queues live and how hard to try.</p>
+
+      <p>Tidewater reads its settings from <code>tidewater.toml</code> in the working directory. Every key can be overridden with an environment variable: <code>queue.url</code> becomes <code>TIDEWATER_QUEUE_URL</code>.</p>
+
+      <div class="callout">
+        <p><span class="callout-title">Note</span>Settings are read once at start-up. Send <code>SIGHUP</code> to reload them without dropping jobs.</p>
+      </div>
+
+      <h2>A minimal file</h2>
+
+      <p>This is enough to run one worker against a local queue:</p>
+
+<pre><code>[queue]
+url = "redis://localhost:6379/0"
+
+[worker]
+concurrency = 4
+max_attempts = 5</code></pre>
+
+      <h2>Options</h2>
+
+      <table>
+        <thead>
+          <tr><th>Key</th><th>Default</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>queue.url</code></td><td>none</td><td>Where jobs are stored. Required.</td></tr>
+          <tr><td><code>worker.concurrency</code></td><td><code>1</code></td><td>Jobs run at the same time by one worker.</td></tr>
+          <tr><td><code>worker.max_attempts</code></td><td><code>3</code></td><td>Tries before a job moves to the dead-letter queue.</td></tr>
+          <tr><td><code>log.level</code></td><td><code>"info"</code></td><td>One of <code>debug</code>, <code>info</code>, <code>warn</code> or <code>error</code>.</td></tr>
+        </tbody>
+      </table>
+    </main>
+  </div>
+</body>
+</html>
