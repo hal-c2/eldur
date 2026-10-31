@@ -1,6 +1,8 @@
 // What a step's state is, in both browsers: this function runs in Chromium for
 // `gen.mjs` and inside the QML test for `apps_e2e.rs`, against each one's DOM.
-function eldurSnapshot(doc, styleOf, watch) {
+// `pixel(x, y)` says what is painted there, for `paint` watches: a cell's colour
+// is often its row's, which no computed style of the cell tells.
+function eldurSnapshot(doc, styleOf, watch, pixel) {
     function clean(s) { return String(s === null || s === undefined ? "" : s).replace(/\s+/g, " ").trim(); }
     function two(n) { return Math.round(n * 100) / 100; }
     function shown(e) {
@@ -24,6 +26,10 @@ function eldurSnapshot(doc, styleOf, watch) {
                 row.text = "";
                 row.value = String(e.value);
                 if (e.type === "checkbox" || e.type === "radio") row.checked = Boolean(e.checked);
+            }
+            if (w.paint && row.shown) {
+                // Inside the corner of the padding: past the border, short of the text.
+                row.paint = pixel(Math.round(r.left) + 2, Math.round(r.top) + 2);
             }
             if (w.props) {
                 const s = styleOf(e);

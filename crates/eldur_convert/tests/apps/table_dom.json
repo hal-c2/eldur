@@ -1,0 +1,148 @@
+{
+"steps": [
+{
+"name": "cell",
+"click": "#z"
+},
+{
+"name": "row-cell",
+"click": "#r3 td"
+},
+{
+"name": "th",
+"click": "#th2"
+},
+{
+"name": "hover",
+"hover": "#hc"
+},
+{
+"name": "away",
+"hover": "#bar"
+},
+{
+"name": "sort",
+"click": "#sort"
+},
+{
+"name": "rev",
+"click": "#rev"
+},
+{
+"name": "hide",
+"click": "#hide"
+},
+{
+"name": "attr",
+"click": "#attr"
+},
+{
+"name": "show",
+"click": "#show"
+},
+{
+"name": "cls",
+"click": "#cls"
+},
+{
+"name": "clsoff",
+"click": "#clsoff"
+},
+{
+"name": "paint",
+"click": "#paint"
+},
+{
+"name": "made",
+"click": "#made"
+},
+{
+"name": "wide",
+"click": "#wide"
+},
+{
+"name": "api",
+"click": "#api"
+},
+{
+"name": "del",
+"click": "#del"
+},
+{
+"name": "move",
+"click": "#move"
+},
+{
+"name": "other",
+"click": "#other"
+},
+{
+"name": "repl",
+"click": "#repl"
+},
+{
+"name": "html",
+"click": "#html"
+},
+{
+"name": "rc",
+"click": "#rc"
+},
+{
+"name": "empty",
+"click": "#empty"
+},
+{
+"name": "sect",
+"click": "#sect"
+}
+],
+"watch": [
+{
+"sel": "#t"
+},
+{
+"sel": "#t tr",
+"props": [
+"background-color",
+"display"
+]
+},
+{
+"sel": "#t td, #t th",
+"paint": true
+},
+{
+"sel": "tbody"
+},
+{
+"sel": "thead"
+},
+{
+"sel": "tfoot"
+},
+{
+"sel": "caption"
+},
+{
+"sel": "#span"
+},
+{
+"sel": "#span tr"
+},
+{
+"sel": "#span td",
+"paint": true
+},
+{
+"sel": "#tight"
+},
+{
+"sel": "#tight td"
+},
+{
+"sel": "#hov td",
+"paint": true
+}
+]
+}

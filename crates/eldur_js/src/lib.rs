@@ -169,6 +169,9 @@ pub struct Analysis {
     pub reads_template_content: bool,
     /// Some script asks `getComputedStyle`, which is answered from the cascade.
     pub reads_computed_style: bool,
+    /// Some script reaches a static table's structure: what its rows and
+    /// sections paint follows from the rules at run time.
+    pub static_tables: bool,
 }
 
 impl Analysis {
@@ -176,7 +179,10 @@ impl Analysis {
     /// or to place what a script creates among the page's margins.
     #[must_use]
     pub fn needs_cascade(&self) -> bool {
-        self.open_elements || self.reads_computed_style || !self.created.is_empty()
+        self.open_elements
+            || self.reads_computed_style
+            || self.static_tables
+            || !self.created.is_empty()
     }
 
     /// Every query becomes live: the converter found a mutation the script

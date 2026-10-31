@@ -1428,6 +1428,29 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             }
         }
 
+        // Qt's engine sorts unstably and its `Array.prototype` can't be patched.
+        if let Expression::StaticMemberExpression(member) = unwrap_parens(&it.callee)
+            && member.property.name == "sort"
+            && !member.optional
+            && !it.optional
+            && it.arguments.len() <= 1
+            && !matches!(
+                it.arguments.first(),
+                Some(oxc_ast::ast::Argument::SpreadElement(_))
+            )
+        {
+            self.visit_expression(&member.object);
+            let object = self.editor.extract_and_consume(member.object.span());
+            let compare = self.render_call_args(&it.arguments);
+            let call = if compare.is_empty() {
+                format!("Eldur.sort({object})")
+            } else {
+                format!("Eldur.sort({object}, {compare})")
+            };
+            self.editor.replace(it.span, call);
+            return;
+        }
+
         walk::walk_call_expression(self, it);
     }
 

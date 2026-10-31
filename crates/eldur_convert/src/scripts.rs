@@ -26,6 +26,8 @@ pub(crate) struct Scripts {
     /// Every element a script can reach statically.
     pub wanted: HashSet<NodeId>,
     pub(crate) gains: Gains,
+    /// The static tables a script can reach into. See [`live_tables`].
+    pub(crate) live_tables: HashSet<NodeId>,
 }
 
 impl Scripts {
@@ -140,6 +142,17 @@ pub(crate) fn collect(
         analysis.dispatch_by_path = true;
         analysis.runtime_dom = true;
     }
+    let live_tables = live_tables(doc, &inputs, &wanted);
+    for &table in &live_tables {
+        wanted.extend(doc.descendants(table).filter(|&n| {
+            doc.element(n)
+                .is_some_and(|e| is_table_part(e.local_name()))
+        }));
+    }
+    if !live_tables.is_empty() {
+        analysis.runtime_dom = true;
+        analysis.static_tables = true;
+    }
     let gains = Gains::of(doc, &analysis, &matches, &wanted);
     Scripts {
         inputs,
@@ -148,7 +161,67 @@ pub(crate) fn collect(
         matches,
         wanted,
         gains,
+        live_tables,
     }
+}
+
+fn is_table_part(tag: &str) -> bool {
+    matches!(
+        tag,
+        "caption" | "colgroup" | "col" | "thead" | "tbody" | "tfoot" | "tr" | "td" | "th"
+    )
+}
+
+/// The tables whose structure is made of objects, for scripts to walk and
+/// move: those a query finds, or finds something in, and on a page whose
+/// scripts talk about table parts at all, every one, since walking the tree or
+/// an event's target reaches them with no query to see. The rest stay one
+/// `GridLayout`, as a page that leaves its tables alone needs nothing more.
+fn live_tables(
+    doc: &Document,
+    inputs: &[ScriptInput],
+    wanted: &HashSet<NodeId>,
+) -> HashSet<NodeId> {
+    const WORDS: &[&str] = &[
+        "tr",
+        "td",
+        "th",
+        "tbody",
+        "thead",
+        "tfoot",
+        "TR",
+        "TD",
+        "TH",
+        "TBODY",
+        "THEAD",
+        "TFOOT",
+        "rows",
+        "cells",
+        "tBodies",
+        "tHead",
+        "tFoot",
+        "insertRow",
+        "deleteRow",
+        "insertCell",
+        "deleteCell",
+        "rowIndex",
+        "sectionRowIndex",
+        "cellIndex",
+        "createTBody",
+        "createTHead",
+    ];
+    let named = inputs.iter().any(|input| {
+        input
+            .source
+            .split(|c: char| !c.is_alphanumeric() && c != '_' && c != '$')
+            .any(|word| WORDS.contains(&word))
+    });
+    doc.descendants(doc.root())
+        .filter(|&n| {
+            doc.element(n).is_some_and(|e| e.local_name() == "table")
+                && (named || doc.descendants(n).any(|d| wanted.contains(&d)))
+        })
+        .collect()
 }
 
 /// The boxes a script may put block children in. An element's form follows

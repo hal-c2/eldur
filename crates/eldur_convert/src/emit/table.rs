@@ -539,6 +539,22 @@ impl<'a> Emitter<'a, '_> {
         value.trim().parse::<usize>().ok()
     }
 
+    /// What a part displays as. One hidden from the start comes as a block
+    /// (`boxes::hidden_box`); its element says what it is.
+    fn part_display(&self, part: &LayoutBox<'_>) -> Display {
+        let tag = part
+            .node
+            .and_then(|n| self.doc.element(n))
+            .map(eldur_dom::Element::local_name);
+        match (part.style.visibility, tag) {
+            (eldur_css::Visibility::Collapse, Some("thead")) => Display::TableHeaderGroup,
+            (eldur_css::Visibility::Collapse, Some("tbody")) => Display::TableRowGroup,
+            (eldur_css::Visibility::Collapse, Some("tfoot")) => Display::TableFooterGroup,
+            (eldur_css::Visibility::Collapse, Some("caption")) => Display::TableCaption,
+            _ => part.style.display,
+        }
+    }
+
     fn table_parts<'t, 'l>(&self, table: &'t LayoutBox<'l>) -> Parts<'t, 'l> {
         let mut captions = Vec::new();
         let mut columns = Vec::new();
@@ -547,7 +563,7 @@ impl<'a> Emitter<'a, '_> {
         let mut footer = Vec::new();
         let span = |b: &LayoutBox<'_>| self.attr_int(b, "span").filter(|&n| n > 0).unwrap_or(1);
         for child in boxes(table) {
-            match child.style.display {
+            match self.part_display(child) {
                 Display::TableCaption => captions.push(child),
                 Display::TableColumn => {
                     columns.extend(std::iter::repeat_n(
@@ -589,7 +605,7 @@ impl<'a> Emitter<'a, '_> {
         let ordered = header.into_iter().chain(body).chain(footer);
         let mut group_index = 0;
         for child in ordered {
-            if is_group(child.style.display) {
+            if is_group(self.part_display(child)) {
                 for row in boxes(child) {
                     rows.push(RowRef {
                         row,
@@ -698,16 +714,33 @@ impl<'a> Emitter<'a, '_> {
         let edges = collapse.then(|| self.collapsed_edges(b, &parts, &slots, columns));
         let specs = self.column_specs(&parts, &slots, columns, fixed, line);
 
+        let live = self.is_live_table(b);
         let grid_id = self.ids.claim(&format!("{} grid", hint(self.doc, b)));
-        let mut grid = Object::new("GridLayout").with_id(&grid_id);
+        let mut grid =
+            Object::new(if live { "ColumnLayout" } else { "GridLayout" }).with_id(&grid_id);
         let (spacing_h, spacing_v) = if collapse {
             (0.0, 0.0)
         } else {
             style.border_spacing
         };
-        grid.set("columns", Value::Number(columns.max(1) as f64));
-        grid.set("columnSpacing", number(spacing_h));
-        grid.set("rowSpacing", number(spacing_v));
+        if live {
+            // The runtime sets each section's distance from the one before:
+            // an empty section has none, which a layout's `spacing` cannot do.
+            grid.set("spacing", 0.0);
+            for (name, value) in [("columnSpacing", spacing_h), ("rowSpacing", spacing_v)] {
+                grid.members.push(Member::PropertyDecl {
+                    ty: "real".to_owned(),
+                    name: name.to_owned(),
+                    value: Some(number(value)),
+                    readonly: true,
+                    required: false,
+                });
+            }
+        } else {
+            grid.set("columns", Value::Number(columns.max(1) as f64));
+            grid.set("columnSpacing", number(spacing_h));
+            grid.set("rowSpacing", number(spacing_v));
+        }
         let specs_expr = format!(
             "[{}]",
             specs.iter().map(|s| s.qml()).collect::<Vec<_>>().join(", ")
@@ -721,7 +754,18 @@ impl<'a> Emitter<'a, '_> {
                 required: false,
             });
         };
-        declare(&mut grid, "var", "columnSpecs", specs_expr);
+        if live {
+            // A script's rows can add columns.
+            grid.members.push(Member::PropertyDecl {
+                ty: "var".to_owned(),
+                name: "columnSpecs".to_owned(),
+                value: Some(Value::expr(specs_expr)),
+                readonly: false,
+                required: false,
+            });
+        } else {
+            declare(&mut grid, "var", "columnSpecs", specs_expr);
+        }
         if self.runtime_dom {
             grid.members.push(Member::PropertyDecl {
                 ty: "var".to_owned(),
@@ -731,46 +775,67 @@ impl<'a> Emitter<'a, '_> {
                 required: false,
             });
         }
-        declare(
-            &mut grid,
-            "var",
-            "columnWidths",
-            format!("{ROOT_ID}.tableColumnWidths(this, columnSpecs, {fixed})"),
-        );
-        let row_minimums = parts
-            .rows
-            .iter()
-            .map(|r| {
-                fmt_number(round(match &r.row.style.height {
-                    Size::Length(h) => h.as_px().unwrap_or(0.0),
-                    _ => 0.0,
-                }))
-            })
-            .collect::<Vec<_>>()
-            .join(", ");
-        declare(
-            &mut grid,
-            "var",
-            "rowHeights",
-            format!("{ROOT_ID}.tableRowHeights(this, [{row_minimums}])"),
-        );
-        declare(
-            &mut grid,
-            "real",
-            "maxContentWidth",
-            format!("{ROOT_ID}.tableMaxContentWidth(this, columnSpecs, {fixed})"),
-        );
-        declare(
-            &mut grid,
-            "real",
-            "minContentWidth",
-            format!("{ROOT_ID}.tableMinContentWidth(this, columnSpecs, {fixed})"),
-        );
+        if live {
+            // The runtime writes these: see `_tableLayout`.
+            let writable = |ty: &str, name: &str, value: &str| Member::PropertyDecl {
+                ty: ty.to_owned(),
+                name: name.to_owned(),
+                value: Some(Value::expr(value)),
+                readonly: false,
+                required: false,
+            };
+            grid.members.push(writable("var", "columnWidths", "[]"));
+            grid.members.push(writable("bool", "eldurEmpty", "false"));
+            grid.members.push(writable("real", "maxContentWidth", "0"));
+            grid.members.push(writable("real", "minContentWidth", "0"));
+            grid.members.push(writable(
+                "bool",
+                "eldurFixed",
+                if fixed { "true" } else { "false" },
+            ));
+        } else {
+            declare(
+                &mut grid,
+                "var",
+                "columnWidths",
+                format!("{ROOT_ID}.tableColumnWidths(this, columnSpecs, {fixed})"),
+            );
+        }
+        if !live {
+            let row_minimums = parts
+                .rows
+                .iter()
+                .map(|r| fmt_number(round(row_minimum(r.row))))
+                .collect::<Vec<_>>()
+                .join(", ");
+            declare(
+                &mut grid,
+                "var",
+                "rowHeights",
+                format!("{ROOT_ID}.tableRowHeights(this, [{row_minimums}])"),
+            );
+        }
+        if !live {
+            declare(
+                &mut grid,
+                "real",
+                "maxContentWidth",
+                format!("{ROOT_ID}.tableMaxContentWidth(this, columnSpecs, {fixed})"),
+            );
+            declare(
+                &mut grid,
+                "real",
+                "minContentWidth",
+                format!("{ROOT_ID}.tableMinContentWidth(this, columnSpecs, {fixed})"),
+            );
+        }
 
         let mut fonts: Vec<(String, String)> = Vec::new();
+        let mut objects: Vec<Vec<Object>> = Vec::new();
         for (row, row_slots) in parts.rows.iter().zip(&slots) {
-            self.table_row_diagnostics(row, line);
+            self.table_row_diagnostics(row, live, line);
             let moves = self.row_translations(row, line);
+            let mut row_objects = Vec::new();
             for (cell, &slot) in boxes(row.row).iter().zip(row_slots) {
                 let mut cell_style = cell.style.clone().into_owned();
                 if !moves.is_empty() {
@@ -790,22 +855,33 @@ impl<'a> Emitter<'a, '_> {
                 painted.style = Cow::Owned(cell_style);
                 let emitted = self.item(&painted, decoration);
                 let mut obj = emitted.obj;
-                self.place_cell(&mut obj, &painted, slot, &grid_id, &mut grid, &mut fonts);
-                grid.push_child(obj);
+                self.place_cell(
+                    &mut obj, &painted, slot, &grid_id, &mut grid, &mut fonts, live,
+                );
+                if live {
+                    row_objects.push(obj);
+                } else {
+                    grid.push_child(obj);
+                }
             }
+            objects.push(row_objects);
         }
 
-        // A script's empty row group to fill: it has no cells to place, but
-        // needs an object the rows it creates can go in.
-        for child in boxes(b) {
-            if is_group(child.style.display)
-                && boxes(child).is_empty()
-                && child.node.is_some_and(|n| self.wanted.contains(&n))
-            {
-                let mut obj = self.item(child, decoration).obj;
-                obj.set("Layout.columnSpan", Value::Number(columns.max(1) as f64));
-                obj.set("Layout.fillWidth", true);
-                grid.push_child(obj);
+        if live {
+            self.live_parts(b, &parts, objects, &mut grid, line);
+        } else {
+            // A script's empty row group to fill: it has no cells to place, but
+            // needs an object the rows it creates can go in.
+            for child in boxes(b) {
+                if is_group(child.style.display)
+                    && boxes(child).is_empty()
+                    && child.node.is_some_and(|n| self.wanted.contains(&n))
+                {
+                    let mut obj = self.item(child, decoration).obj;
+                    obj.set("Layout.columnSpan", Value::Number(columns.max(1) as f64));
+                    obj.set("Layout.fillWidth", true);
+                    grid.push_child(obj);
+                }
             }
         }
 
@@ -906,6 +982,23 @@ impl<'a> Emitter<'a, '_> {
                 "`height` on a table does not stretch its rows".to_owned(),
             );
         }
+        if live && parts.captions.is_empty() {
+            // A table with no rows has no box, border-spacing and all.
+            for name in ["Layout.minimumWidth", "Layout.maximumWidth"] {
+                if let Some(Value::Expr(width)) = obj.get(name).cloned() {
+                    obj.set(
+                        name,
+                        Value::expr(format!("{grid_id}.eldurEmpty ? 0 : {width}")),
+                    );
+                }
+            }
+            obj.set(
+                "Layout.maximumHeight",
+                Value::expr(format!(
+                    "{grid_id}.eldurEmpty ? 0 : Number.POSITIVE_INFINITY"
+                )),
+            );
+        }
         self.name_table(&mut obj, b);
         self.visibility(&mut obj, style);
         let mt = self.vertical_margin(&style.margin.top, line);
@@ -916,6 +1009,144 @@ impl<'a> Emitter<'a, '_> {
             bottom: MarginSet::of(mb),
             collapse_through: false,
         }
+    }
+
+    /// Whether this table's rows and sections are objects of their own. A
+    /// table made of `display` values has no such elements to hand a script.
+    fn is_live_table(&self, b: &LayoutBox<'_>) -> bool {
+        let tag = |p: &LayoutBox<'_>| {
+            p.node
+                .and_then(|n| self.doc.element(n))
+                .map(eldur_dom::Element::local_name)
+        };
+        let row_fits = |row: &LayoutBox<'_>| {
+            tag(row) == Some("tr")
+                && boxes(row)
+                    .iter()
+                    .all(|c| matches!(tag(c), Some("td" | "th")))
+        };
+        b.node.is_some_and(|n| self.live_tables.contains(&n))
+            && tag(b) == Some("table")
+            && boxes(b).iter().all(|part| match tag(part) {
+                Some("thead" | "tbody" | "tfoot") => boxes(part).iter().all(row_fits),
+                Some("caption" | "colgroup" | "col") => true,
+                _ => row_fits(part),
+            })
+    }
+
+    /// A live table's parts in the order they show. Cells are placed by the
+    /// runtime's `_tableLayout`: rows hold them, the columns come from the one
+    /// solver static and created rows share.
+    fn live_parts(
+        &mut self,
+        table: &LayoutBox<'_>,
+        parts: &Parts<'_, '_>,
+        objects: Vec<Vec<Object>>,
+        grid: &mut Object,
+        line: Option<u32>,
+    ) {
+        for part in boxes(table) {
+            if matches!(
+                part.style.display,
+                Display::TableColumn | Display::TableColumnGroup
+            ) {
+                let obj = self.live_column(part, line);
+                grid.push_child(obj);
+            }
+        }
+        let mut rows = objects.into_iter();
+        let mut r = 0;
+        while r < parts.rows.len() {
+            let group = parts.rows[r].group;
+            let index = parts.groups[r];
+            let mut members = Vec::new();
+            while r < parts.rows.len() && parts.groups[r] == index {
+                let cells = rows.next().unwrap_or_default();
+                members.push(self.live_row(parts.rows[r].row, cells, line));
+                r += 1;
+            }
+            match group {
+                Some(section) => {
+                    let obj = self.live_section(section, members, line);
+                    grid.push_child(obj);
+                }
+                None => {
+                    for row in members {
+                        grid.push_child(row);
+                    }
+                }
+            }
+        }
+        // Sections with no rows yet show nothing but are still elements.
+        for part in boxes(table) {
+            if is_section(self.doc, part) && boxes(part).is_empty() {
+                let obj = self.live_section(part, Vec::new(), line);
+                grid.push_child(obj);
+            }
+        }
+    }
+
+    fn live_part(&mut self, mut obj: Object, part: &LayoutBox<'_>, line: Option<u32>) -> Object {
+        self.name_table(&mut obj, part);
+        if part.style.visibility == eldur_css::Visibility::Collapse {
+            obj.set("visible", false);
+        }
+        let emitted = Emitted {
+            obj,
+            top: MarginSet::of(0.0),
+            bottom: MarginSet::of(0.0),
+            collapse_through: false,
+        };
+        self.transformed(emitted, part, line).obj
+    }
+
+    fn live_section(
+        &mut self,
+        section: &LayoutBox<'_>,
+        rows: Vec<Object>,
+        line: Option<u32>,
+    ) -> Object {
+        let mut obj = Object::new("ColumnLayout");
+        obj.set("Layout.fillWidth", true);
+        obj.set("spacing", 0.0);
+        margin_properties(&mut obj);
+        for row in rows {
+            obj.push_child(row);
+        }
+        self.live_part(obj, section, line)
+    }
+
+    fn live_row(&mut self, row: &LayoutBox<'_>, cells: Vec<Object>, line: Option<u32>) -> Object {
+        let mut obj = Object::new("Item");
+        obj.set("Layout.fillWidth", true);
+        obj.set("Layout.preferredHeight", Value::expr("implicitHeight"));
+        margin_properties(&mut obj);
+        let minimum = row_minimum(row);
+        if minimum > 0.0 {
+            obj.members.push(Member::PropertyDecl {
+                ty: "real".to_owned(),
+                name: "eldurMinHeight".to_owned(),
+                value: Some(number(minimum)),
+                readonly: true,
+                required: false,
+            });
+        }
+        for cell in cells {
+            obj.push_child(cell);
+        }
+        self.live_part(obj, row, line)
+    }
+
+    /// `<col>` and `<colgroup>` show only through cells, but a script can
+    /// find them and the runtime reads their backgrounds.
+    fn live_column(&mut self, part: &LayoutBox<'_>, line: Option<u32>) -> Object {
+        let mut obj = Object::new("Item");
+        obj.set("visible", false);
+        for col in boxes(part) {
+            let child = self.live_column(col, line);
+            obj.push_child(child);
+        }
+        self.live_part(obj, part, line)
     }
 
     fn table_caption(&mut self, caption: &LayoutBox<'_>, decoration: TextDecorationLine) -> Object {
@@ -999,7 +1230,7 @@ impl<'a> Emitter<'a, '_> {
         out
     }
 
-    fn table_row_diagnostics(&mut self, row: &RowRef<'_, '_>, table_line: Option<u32>) {
+    fn table_row_diagnostics(&mut self, row: &RowRef<'_, '_>, live: bool, table_line: Option<u32>) {
         for part in [Some(row.row), row.group].into_iter().flatten() {
             let line = part
                 .node
@@ -1009,7 +1240,7 @@ impl<'a> Emitter<'a, '_> {
                 || "a table row".to_owned(),
                 |n| crate::boxes::describe(self.doc, n),
             );
-            if part.node.is_some_and(|n| self.wanted.contains(&n)) {
+            if !live && part.node.is_some_and(|n| self.wanted.contains(&n)) {
                 self.diags.warning(
                     "js",
                     line,
@@ -1213,6 +1444,7 @@ impl<'a> Emitter<'a, '_> {
     }
 
     /// `Layout.*` of a cell and what the solver reads from it.
+    #[allow(clippy::too_many_arguments)]
     fn place_cell(
         &mut self,
         obj: &mut Object,
@@ -1221,6 +1453,7 @@ impl<'a> Emitter<'a, '_> {
         grid_id: &str,
         grid: &mut Object,
         fonts: &mut Vec<(String, String)>,
+        live: bool,
     ) {
         let Slot {
             row,
@@ -1228,13 +1461,15 @@ impl<'a> Emitter<'a, '_> {
             row_span,
             column_span,
         } = slot;
-        obj.set("Layout.row", Value::Number(row as f64));
-        obj.set("Layout.column", Value::Number(column as f64));
-        if row_span > 1 {
-            obj.set("Layout.rowSpan", Value::Number(row_span as f64));
-        }
-        if column_span > 1 {
-            obj.set("Layout.columnSpan", Value::Number(column_span as f64));
+        if !live {
+            obj.set("Layout.row", Value::Number(row as f64));
+            obj.set("Layout.column", Value::Number(column as f64));
+            if row_span > 1 {
+                obj.set("Layout.rowSpan", Value::Number(row_span as f64));
+            }
+            if column_span > 1 {
+                obj.set("Layout.columnSpan", Value::Number(column_span as f64));
+            }
         }
         let sum = |list: &str, spacing: &str, from: usize, span: usize| {
             let mut terms: Vec<String> = (from..from + span)
@@ -1245,14 +1480,16 @@ impl<'a> Emitter<'a, '_> {
             }
             terms.join(" + ")
         };
-        obj.set(
-            "Layout.preferredWidth",
-            Value::expr(sum("columnWidths", "columnSpacing", column, column_span)),
-        );
-        obj.set(
-            "Layout.preferredHeight",
-            Value::expr(sum("rowHeights", "rowSpacing", row, row_span)),
-        );
+        if !live {
+            obj.set(
+                "Layout.preferredWidth",
+                Value::expr(sum("columnWidths", "columnSpacing", column, column_span)),
+            );
+            obj.set(
+                "Layout.preferredHeight",
+                Value::expr(sum("rowHeights", "rowSpacing", row, row_span)),
+            );
+        }
         if let Size::Length(h) = &cell.style.height
             && let Some(px) = h.as_px()
         {
@@ -1275,15 +1512,17 @@ impl<'a> Emitter<'a, '_> {
             }
         }
         let min_content = self.cell_min_content(cell, grid, fonts);
-        obj.members.push(Member::PropertyDecl {
-            ty: "var".to_owned(),
-            name: "tableSlot".to_owned(),
-            value: Some(Value::expr(format!(
-                "[{row}, {column}, {row_span}, {column_span}]"
-            ))),
-            readonly: true,
-            required: false,
-        });
+        if !live {
+            obj.members.push(Member::PropertyDecl {
+                ty: "var".to_owned(),
+                name: "tableSlot".to_owned(),
+                value: Some(Value::expr(format!(
+                    "[{row}, {column}, {row_span}, {column_span}]"
+                ))),
+                readonly: true,
+                required: false,
+            });
+        }
         obj.members.push(Member::PropertyDecl {
             ty: "real".to_owned(),
             name: "minContentWidth".to_owned(),
@@ -1409,6 +1648,38 @@ impl<'a> Emitter<'a, '_> {
             });
         }
     }
+}
+
+fn row_minimum(row: &LayoutBox<'_>) -> f32 {
+    match &row.style.height {
+        Size::Length(h) => h.as_px().unwrap_or(0.0),
+        _ => 0.0,
+    }
+}
+
+/// The margins `_tableLayout` gives a live row or section, as a created one has.
+fn margin_properties(obj: &mut Object) {
+    for (name, margin) in [
+        ("eldurSide", "Layout.leftMargin"),
+        ("eldurTop", "Layout.topMargin"),
+        ("eldurBottom", "Layout.bottomMargin"),
+    ] {
+        obj.members.push(Member::PropertyDecl {
+            ty: "real".to_owned(),
+            name: name.to_owned(),
+            value: Some(Value::Number(0.0)),
+            readonly: false,
+            required: false,
+        });
+        obj.set(margin, Value::expr(name));
+    }
+    obj.set("Layout.rightMargin", Value::expr("eldurSide"));
+}
+
+fn is_section(doc: &eldur_dom::Document, part: &LayoutBox<'_>) -> bool {
+    part.node
+        .and_then(|n| doc.element(n))
+        .is_some_and(|e| matches!(e.local_name(), "thead" | "tbody" | "tfoot"))
 }
 
 enum MinContent {

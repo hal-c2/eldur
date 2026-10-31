@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Staff roster</title>
+<style>
+body { margin: 20px; font: 14px/1.4 Arial, sans-serif; color: #222; }
+h1 { font-size: 22px; margin: 0 0 12px; }
+.tools { margin-bottom: 10px; }
+#filter { padding: 4px; width: 200px; }
+table { border-collapse: separate; border-spacing: 0; width: 640px; }
+caption { text-align: left; color: #555; padding-bottom: 6px; }
+th, td { padding: 6px 10px; border-bottom: 1px solid #ccc; text-align: left; }
+thead th { background: #334; color: #fff; cursor: pointer; }
+thead th.asc::after { content: " \25B2"; }
+thead th.desc::after { content: " \25BC"; }
+tbody tr:nth-child(even) { background: #f2f4f8; }
+tbody tr:hover { background: #ffe9b0; }
+tbody tr.picked { background: #cde; }
+tbody tr.picked td { font-weight: bold; }
+td.num { text-align: right; }
+tfoot td { font-weight: bold; background: #eee; }
+.pager { margin-top: 10px; }
+.pager button { margin-right: 4px; }
+#page-label { margin: 0 8px; }
+</style>
+</head>
+<body>
+<h1>Staff</h1>
+<div class="tools"><input id="filter" placeholder="Filter by name or team"></div>
+<table id="staff">
+  <caption id="count">6 people</caption>
+  <thead id="head">
+    <tr>
+      <th id="by-name" data-key="0">Name</th>
+      <th id="by-team" data-key="1">Team</th>
+      <th id="by-years" data-key="2" data-number="1">Years</th>
+    </tr>
+  </thead>
+  <tbody id="people">
+    <tr id="p1"><td>Nadia Haddad</td><td>Design</td><td class="num">4</td></tr>
+    <tr id="p2"><td>Tomas Berg</td><td>Sales</td><td class="num">11</td></tr>
+    <tr id="p3"><td>Aiko Tanaka</td><td>Design</td><td class="num">2</td></tr>
+    <tr id="p4"><td>Marcus Osei</td><td>Support</td><td class="num">7</td></tr>
+    <tr id="p5"><td>Lena Fischer</td><td>Sales</td><td class="num">1</td></tr>
+    <tr id="p6"><td>Bilal Khan</td><td>Support</td><td class="num">9</td></tr>
+  </tbody>
+  <tfoot><tr><td>Total years</td><td></td><td class="num" id="total">34</td></tr></tfoot>
+</table>
+<div class="pager">
+  <button id="prev">Previous</button><span id="page-label"></span><button id="next">Next</button>
+</div>
+<p id="picked">Nothing picked</p>
+<script>
+var body = document.getElementById("people");
+var filterBox = document.getElementById("filter");
+var label = document.getElementById("page-label");
+var pageSize = 4;
+var page = 0;
+var sortedBy = null;
+var descending = false;
+
+function text(row, column) { return row.cells[column].textContent; }
+
+function render() {
+  var wanted = filterBox.value.toLowerCase();
+  var rows = Array.from(body.rows);
+  var matching = rows.filter(function (row) {
+    return text(row, 0).toLowerCase().indexOf(wanted) >= 0 || text(row, 1).toLowerCase().indexOf(wanted) >= 0;
+  });
+  var pages = Math.max(1, Math.ceil(matching.length / pageSize));
+  page = Math.min(page, pages - 1);
+  rows.forEach(function (row) { row.hidden = true; });
+  var total = 0;
+  matching.forEach(function (row, i) {
+    total += parseInt(text(row, 2), 10);
+    if (i >= page * pageSize && i < (page + 1) * pageSize) row.hidden = false;
+  });
+  document.getElementById("total").textContent = total;
+  document.getElementById("count").textContent = matching.length + " people";
+  label.textContent = "Page " + (page + 1) + " of " + pages;
+  document.getElementById("prev").disabled = page === 0;
+  document.getElementById("next").disabled = page >= pages - 1;
+}
+
+document.getElementById("head").addEventListener("click", function (e) {
+  var th = e.target.closest("th");
+  if (!th) return;
+  descending = sortedBy === th ? !descending : false;
+  sortedBy = th;
+  Array.from(th.parentNode.cells).forEach(function (c) { c.classList.remove("asc", "desc"); });
+  th.classList.add(descending ? "desc" : "asc");
+  var column = th.cellIndex;
+  var numeric = th.dataset.number === "1";
+  Array.from(body.rows).sort(function (a, b) {
+    var x = text(a, column), y = text(b, column);
+    var order = numeric ? x - y : x.localeCompare(y);
+    return descending ? -order : order;
+  }).forEach(function (row) { body.appendChild(row); });
+  render();
+});
+
+body.addEventListener("click", function (e) {
+  var row = e.target.closest("tr");
+  if (!row) return;
+  Array.from(body.rows).forEach(function (r) { r.classList.toggle("picked", r === row); });
+  document.getElementById("picked").textContent = "Picked " + text(row, 0) + ", row " + row.rowIndex;
+});
+
+filterBox.addEventListener("input", function () { page = 0; render(); });
+document.getElementById("prev").addEventListener("click", function () { page -= 1; render(); });
+document.getElementById("next").addEventListener("click", function () { page += 1; render(); });
+render();
+</script>
+</body>
+</html>

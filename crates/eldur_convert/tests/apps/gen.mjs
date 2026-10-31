@@ -55,8 +55,24 @@ async function act(step) {
 
 async function state(name, watch) {
   await page.waitForTimeout(50);
+  // A bitmap of what is on screen, for the page to read `paint` watches from.
+  let canvas = "null";
+  if (watch.some((w) => w.paint)) {
+    const shot = (await page.screenshot()).toString("base64");
+    await page.evaluate(async (data) => {
+      const image = new Image();
+      image.src = "data:image/png;base64," + data;
+      await image.decode();
+      const c = document.createElement("canvas");
+      c.width = image.width;
+      c.height = image.height;
+      window.__shot = c.getContext("2d", { willReadFrequently: true });
+      window.__shot.drawImage(image, 0, 0);
+    }, shot);
+    canvas = "(x, y) => { const d = window.__shot.getImageData(x, y, 1, 1).data; return `rgb(${d[0]}, ${d[1]}, ${d[2]})`; }";
+  }
   const read = await page.evaluate(
-    `(() => { ${snapshot}; return eldurSnapshot(document, getComputedStyle, ${JSON.stringify(watch)}); })()`,
+    `(() => { ${snapshot}; return eldurSnapshot(document, getComputedStyle, ${JSON.stringify(watch)}, ${canvas}); })()`,
   );
   const lines = log;
   log = [];
