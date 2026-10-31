@@ -164,6 +164,9 @@ pub struct Analysis {
     /// template can be written for it and the runtime resolves it from the
     /// page's rules.
     pub open_elements: bool,
+    /// Some script reads a member called `content`: a `<template>`'s contents
+    /// have to be there to clone.
+    pub reads_template_content: bool,
     /// Some script asks `getComputedStyle`, which is answered from the cascade.
     pub reads_computed_style: bool,
 }

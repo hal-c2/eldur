@@ -1,0 +1,35 @@
+<!doctype html><html><head><style>
+body{margin:0;font:16px/20px sans-serif}
+.r{height:30px;background:#def;margin-bottom:1px}
+.h{height:10px;background:#fed;margin:0.5px 0}
+.t{height:10px;background:#efd;margin-top:1.5px}
+.u{height:10.5px;background:#dfe;margin:0 0 0.25px}
+#end{height:10px;background:red}
+#end2{height:10px;background:red}
+#end3{height:10px;background:red}
+#end4{height:10px;background:red}
+</style></head><body>
+<div id="l"></div><div id="end"></div>
+<div id="m"></div><div id="end2"></div>
+<div id="n"></div><div id="end3"></div>
+<div id="o"></div><div id="end4"></div>
+<script>
+var l=document.getElementById('l');
+var a=document.createElement('div');a.className='r';a.id='a';l.appendChild(a);
+var b=document.createElement('div');b.className='r';b.id='b';l.appendChild(b);
+var c=document.createElement('div');c.className='r';c.id='c';l.appendChild(c);
+var m=document.getElementById('m');
+var d=document.createElement('div');d.className='h';d.id='d';m.appendChild(d);
+var f=document.createElement('div');f.className='h';f.id='f';m.appendChild(f);
+var g=document.createElement('div');g.className='h';g.id='g';m.appendChild(g);
+var n=document.getElementById('n');
+var h=document.createElement('div');h.className='t';h.id='h';n.appendChild(h);
+var i=document.createElement('div');i.className='t';i.id='i';n.appendChild(i);
+var o=document.getElementById('o');
+var j=document.createElement('div');j.className='u';j.id='j';o.appendChild(j);
+var k=document.createElement('div');k.className='u';k.id='k';o.appendChild(k);
+var p=document.createElement('div');p.className='u';p.id='p';o.appendChild(p);
+function r(id){var e=document.getElementById(id).getBoundingClientRect();return id+'='+Math.round(e.top*100)/100+'+'+Math.round(e.height*100)/100}
+var ids=['a','b','c','end','d','f','g','end2','h','i','end3','j','k','p','end4'];
+for(var q=0;q<ids.length;q+=5)console.log('CS '+ids.slice(q,q+5).map(r).join(' '));
+</script></body></html>

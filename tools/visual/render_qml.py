@@ -221,6 +221,26 @@ def resolve_main_qml(target: Path) -> tuple[Path, Path]:
     )
 
 
+DEBUG_MARK = "eldur-debug "
+DEBUG_MARK_PATTERN = (
+    f"%{{if-debug}}{DEBUG_MARK}%{{endif}}%{{if-category}}%{{category}}: %{{endif}}%{{message}}"
+)
+
+
+def _without_page_logs(output: str) -> list[str]:
+    """Lines of `output` that matter; the geometry lines `Shot.qml` logs are kept."""
+    kept = []
+    for line in output.splitlines():
+        if not line.strip():
+            continue
+        if line.startswith(DEBUG_MARK):
+            line = line[len(DEBUG_MARK) :]
+            if line.startswith("qml: ") and "eldurGeo " not in line:
+                continue
+        kept.append(line)
+    return kept
+
+
 def render_qml(
     qml_target: Path,
     out_png: Path,
@@ -288,6 +308,9 @@ def render_qml(
     # Qt 6 routes QML/qWarning diagnostics to systemd-journald when stderr is a
     # pipe (non-TTY) unless stderr logging is explicitly forced.
     env["QT_FORCE_STDERR_LOGGING"] = "1"
+    # A page's console.log is its own output, not a warning: mark debug lines so
+    # they can be told from console.warn, which prints the same otherwise.
+    env["QT_MESSAGE_PATTERN"] = DEBUG_MARK_PATTERN
     env["QT_ASSUME_STDERR_HAS_CONSOLE"] = "1"
 
     cmd = [
@@ -326,7 +349,7 @@ def render_qml(
     combined_output = "\n".join(
         part.strip() for part in (proc.stdout, proc.stderr) if part and part.strip()
     )
-    warnings = [line for line in combined_output.splitlines() if line.strip()]
+    warnings = _without_page_logs(combined_output)
 
     if proc.returncode == 3 and backend == "gl":
         raise GlUnavailableError(

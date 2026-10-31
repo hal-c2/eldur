@@ -437,11 +437,8 @@ container filled with inline-level children (`_gFillsLine`).
 **Known gaps.**
 - A closed page's template keeps the converter's picture, except its margins:
   after a script changes the tree, the runtime works out each changed column's
-  gaps, collapse through parents included. It writes one only when it is 2px or
-  more off, as less is what `eldurCarry` keeps of a fractional height, so a gap
-  wrong by under 2px stays. `var()` in an inline rule is not seen.
-- A trailing empty created box sits where its column ends, not after the margins
-  that collapse through it; what follows it is placed right.
+  gaps, collapse through parents included, and holds each by a binding that keeps
+  the carry of a fractional height. `var()` in an inline rule is not seen.
 - A generic box paints linear and radial gradients (one image over the padding
   box: `background-size`, `-position` and `-repeat` warn), box-shadow as bands of
   a hard or stepped edge, 2-D transforms, opacity and square overflow clips.
@@ -464,3 +461,37 @@ container filled with inline-level children (`_gFillsLine`).
 - `<select>` is as wide as its current option, not its widest, within Qt's
   hinted glyph widths. `<input>` width is measured for Arial. `<textarea>` and
   `type=number` default sizes still differ from Chromium.
+
+## 14. Realistic pages
+
+`crates/eldur_convert/tests/apps/` records nine small apps in Chromium and drives
+the converted page through the same real input events; `apps_e2e.rs` holds what
+still differs in `KNOWN`, with why, and fails if an entry stops differing.
+
+What they brought:
+
+- Writing a class, attribute or `dataset` on the root opens the page, and static
+  boxes repaint in place when what matches them, or the variables a matching rule
+  reads, change. Adopting them would lose their layout: their children are not live.
+- `el.style.display` on a page with a cascade goes through `setStyle`, so the
+  next restyle keeps it. A bare `visible` write was undone by it.
+- `template.content` reads the template's markup, declared as `eldurHtmlTemplates`.
+- `palette.buttonText` silently ignores an `rgb(...)` string, so a control's colour
+  goes through `_gQtColor`. A created text leaf is painted from its cascade like a
+  box, and `innerHTML` with block markup on a box holding only an empty `Text`
+  replaces the box.
+- A created control takes its border width and corner radius.
+- `<details>`: the summary toggles it, `open` is a property and an attribute,
+  `toggle` is sent, and the summary takes focus.
+- `innerHTML` with block markup on a `Text` adopts it into a box.
+- A line of nothing but controls lays out as a row, not as a stack. Other inline
+  controls stay block-level (`no inline replaced elements yet`).
+- An empty `<tbody>` a script wants is an object spanning the grid's columns, and
+  an empty block a script wants takes no height until it holds text.
+
+Known gaps these pages show:
+
+- Rows created in a `<tbody>` do not share the table's auto column sizes: they
+  sort and filter, but their cells do not line up with the header.
+- `:hover` under a list that starts `display: none` has no hover tracking.
+- Hiding a form does not move focus off the hidden control.

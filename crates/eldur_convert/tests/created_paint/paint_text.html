@@ -1,0 +1,12 @@
+<!doctype html><html><head><style>
+body{margin:0;font:16px/20px sans-serif}
+.card{width:200px;padding:10px;background:#fff}
+.card button{display:block;width:100px;height:60px;padding:0;margin-top:10px;font-size:40px;background:#111;color:#0f0;border:none}
+.card .price{font-size:40px;line-height:50px;color:#f00}
+</style></head><body><div id="l"></div><script>
+var kinds=[{c:'price',t:'█'}];
+document.getElementById('l').innerHTML=kinds.map(function(k){return '<article class="card"><p>x</p><span class="'+k.c+'" id="sp">'+k.t+'</span><button id="bt">█</button></article>'}).join('');
+document.getElementById('sp').setAttribute('data-pixel','12,25');
+document.getElementById('bt').setAttribute('data-pixel','50,30');
+var r=document.getElementById('bt').getBoundingClientRect();console.log('CS bt '+r.left+' '+r.width+' '+r.height+' '+getComputedStyle(document.getElementById('bt')).color);console.log('CS sp '+getComputedStyle(document.getElementById('sp')).color);
+</script></body></html>

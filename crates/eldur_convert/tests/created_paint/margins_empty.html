@@ -1,0 +1,25 @@
+<!doctype html><html><head><style>
+body{margin:0;font:16px/20px sans-serif}
+.m{height:20px;margin:12px 0 30px;background:#def}
+.e{margin:11px 0 50px}
+.s{margin:11px 0 13px}
+.st{height:10px;background:#333;margin:15px 0}
+#pad{padding-bottom:4px;background:#eee}
+#fixed{height:80px;background:#ddd}
+</style></head><body>
+<div id="mid"></div><div class="st" id="s0"></div>
+<div id="end"></div><div class="st" id="s1"></div>
+<div id="two"></div><div class="st" id="s2"></div>
+<div id="pad"></div><div class="st" id="s3"></div>
+<div id="fixed"></div><div class="st" id="s4"></div>
+<script>
+function mk(p,c,id){var e=document.createElement('div');e.className=c;e.id=id;document.getElementById(p).appendChild(e);return e}
+mk('mid','m','a1');mk('mid','e','a2');mk('mid','m','a3');
+mk('end','m','b1');mk('end','e','b2');
+mk('two','m','c1');mk('two','s','c2');mk('two','e','c3');
+mk('pad','m','d1');mk('pad','s','d2');
+mk('fixed','m','f1');mk('fixed','s','f2');
+function r(id){var b=document.getElementById(id).getBoundingClientRect();return id+'='+Math.round(b.top)+'+'+Math.round(b.height)}
+var ids=['mid','a1','a2','a3','s0','end','b1','b2','s1','two','c1','c2','c3','s2','pad','d1','d2','s3','fixed','f1','f2','s4'];
+for(var k=0;k<ids.length;k+=5)console.log('CS '+ids.slice(k,k+5).map(r).join(' '));
+</script></body></html>

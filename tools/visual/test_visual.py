@@ -216,6 +216,28 @@ Item {
             self.assertEqual(rc, 1)
             self.assertIn("Main.qml", err_buf.getvalue())
 
+    def test_render_qml_a_pages_console_log_is_not_a_warning(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text(
+                """import QtQuick
+
+Rectangle {
+    color: "#2563eb"
+    Component.onCompleted: {
+        console.log("the page said this")
+        console.warn("the page warned")
+    }
+}
+""",
+                encoding="utf-8",
+            )
+            warnings = render_qml.render_qml(
+                tmp_dir, tmp_dir / "out.png", width=120, height=80, backend="software"
+            )
+            self.assertFalse(any("page said" in line for line in warnings), warnings)
+            self.assertTrue(any("page warned" in line for line in warnings), warnings)
+
     def test_render_qml_strict_fails_on_runtime_warnings(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_dir = Path(tmp)

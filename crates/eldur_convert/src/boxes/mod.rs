@@ -502,6 +502,11 @@ impl<'a> Builder<'a, '_> {
             return Level::Contents;
         }
         if is_replaced(self.doc, node) {
+            // A row of controls sits in one line. A control among other inline
+            // content is still a block, as below.
+            if self.is_inline_control(node, style) {
+                return Level::Atomic(BoxKind::Replaced);
+            }
             if !is_block_level(style.display) {
                 self.diags.info(
                     "html",
@@ -548,6 +553,34 @@ impl<'a> Builder<'a, '_> {
             return Level::Block(kind_of(style.display));
         }
         Level::Inline
+    }
+
+    fn is_inline_control(&self, node: NodeId, style: &ComputedStyle) -> bool {
+        let control = |n: NodeId| {
+            self.doc.element(n).is_some_and(|e| {
+                matches!(e.local_name(), "button" | "input" | "select" | "textarea")
+            })
+        };
+        let Some(parent) = self.doc.parent(node) else {
+            return false;
+        };
+        !is_block_level(style.display)
+            && control(node)
+            && !self.is_only_content(node)
+            && self
+                .doc
+                .children(parent)
+                .all(|sibling| match &self.doc.node(sibling).data {
+                    NodeData::Text(t) => t.chars().all(|c| c.is_ascii_whitespace()),
+                    NodeData::Element(_) => {
+                        control(sibling)
+                            || self
+                                .styles
+                                .computed(sibling)
+                                .is_none_or(|s| s.style.display == Display::None)
+                    }
+                    _ => true,
+                })
     }
 
     /// Whether `node` has no sibling that generates anything but whitespace.

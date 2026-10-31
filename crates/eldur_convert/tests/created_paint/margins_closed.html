@@ -46,6 +46,6 @@ var e3=document.createElement('div');e3.className='empty';e3.id='e3';document.ge
 var w1=document.createElement('div');w1.className='wrap';w1.id='w1';document.getElementById('nest').appendChild(w1);
 var i1=document.createElement('div');i1.className='in';i1.id='i1';w1.appendChild(i1);
 function r(id){var b=document.getElementById(id).getBoundingClientRect();return id+'='+Math.round(b.left)+','+Math.round(b.top)+'+'+Math.round(b.height)}
-var ids=['top','t1','s0','auto','a1','a2','s1','pad','p1','p2','border','b1','row','r1','r2','clip','c1','fixed','f1','s2','nest','w1','i1','s3','empties','e1','e2','s4'];
+var ids=['top','t1','s0','auto','a1','a2','s1','pad','p1','p2','border','b1','row','r1','r2','clip','c1','fixed','f1','s2','nest','w1','i1','s3','empties','e1','e2','e3','s4'];
 for(var k=0;k<ids.length;k+=6)console.log('CS '+ids.slice(k,k+6).map(r).join(' '));
 </script></body></html>

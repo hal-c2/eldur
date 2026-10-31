@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sign up</title>
+<style>
+body { font-family: Arial, sans-serif; background: #fff; color: #111; margin: 24px; }
+form { max-width: 380px; }
+.field { margin-bottom: 14px; }
+label { display: block; font-weight: bold; font-size: 14px; margin-bottom: 4px; }
+input[type=text], input[type=email], input[type=password] { width: 100%; box-sizing: border-box; padding: 7px; border: 1px solid #999; border-radius: 3px; font-size: 14px; }
+.invalid input { border-color: #c00; background: #fff5f5; }
+.error { color: #c00; font-size: 12px; margin-top: 3px; display: none; }
+.invalid .error { display: block; }
+.terms label { display: inline; font-weight: normal; }
+button { padding: 8px 18px; font-size: 14px; }
+button:disabled { opacity: 0.5; }
+#strength { font-size: 12px; color: #555; height: 16px; }
+#done { display: none; padding: 12px; background: #e6ffed; border: 1px solid #2c974b; margin-top: 16px; }
+</style>
+</head>
+<body>
+<h1>Create your account</h1>
+<form id="signup" novalidate>
+  <div class="field" id="f-name">
+    <label for="name">Name</label>
+    <input type="text" id="name" required>
+    <div class="error">Please enter your name.</div>
+  </div>
+  <div class="field" id="f-email">
+    <label for="email">Email</label>
+    <input type="email" id="email" required>
+    <div class="error">That doesn't look like an email address.</div>
+  </div>
+  <div class="field" id="f-pass">
+    <label for="pass">Password</label>
+    <input type="password" id="pass" required minlength="8">
+    <div id="strength"></div>
+    <div class="error">Use at least eight characters.</div>
+  </div>
+  <div class="field terms" id="f-terms">
+    <input type="checkbox" id="terms" required>
+    <label for="terms">I accept the terms</label>
+    <div class="error">You have to accept the terms.</div>
+  </div>
+  <button type="submit" id="go">Sign up</button>
+</form>
+<div id="done"></div>
+<script>
+var form = document.getElementById('signup');
+function validEmail(s) { return /^[^@\s]+@[^@\s]+\.[a-z]+$/i.test(s); }
+var rules = {
+  name: function (v) { return v.trim().length > 0; },
+  email: validEmail,
+  pass: function (v) { return v.length >= 8; }
+};
+function check(id) {
+  var input = document.getElementById(id);
+  var ok = rules[id](input.value);
+  input.parentNode.classList.toggle('invalid', !ok);
+  return ok;
+}
+Object.keys(rules).forEach(function (id) {
+  document.getElementById(id).addEventListener('input', function (e) {
+    check(id);
+    if (id === 'pass') {
+      var n = e.target.value.length;
+      document.getElementById('strength').textContent = n === 0 ? '' : n < 8 ? 'Too short' : n < 12 ? 'Good' : 'Strong';
+    }
+    console.log('input ' + id + ' ' + e.target.value.length);
+  });
+});
+form.addEventListener('submit', function (e) {
+  e.preventDefault();
+  var ok = true;
+  Object.keys(rules).forEach(function (id) { if (!check(id)) ok = false; });
+  var terms = document.getElementById('terms');
+  document.getElementById('f-terms').classList.toggle('invalid', !terms.checked);
+  if (!terms.checked) ok = false;
+  console.log('submit ok=' + ok);
+  if (ok) {
+    form.style.display = 'none';
+    var done = document.getElementById('done');
+    done.textContent = 'Welcome, ' + document.getElementById('name').value + '!';
+    done.style.display = 'block';
+  }
+});
+</script>
+</body>
+</html>

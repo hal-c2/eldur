@@ -1,0 +1,2 @@
+{"steps":[{"name":"open details","click":"#s1"},{"name":"close details 2","click":"#s2"},{"name":"open h2","click":"#h2"},{"name":"open h3","click":"#h3"},{"name":"close h3","click":"#h3"}],
+ "watch":[{"sel":"details","props":["background-color"],"attrs":["open"]},{"sel":"details p"},{"sel":"h2"},{"sel":".acc-head","props":["background-color","color"]},{"sel":".acc-body","props":["display"]},{"sel":"#opened"}]}

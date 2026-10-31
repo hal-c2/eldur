@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>People</title>
+<style>
+body { margin: 20px; font: 14px/1.4 Arial, sans-serif; }
+input { padding: 6px; width: 240px; margin-bottom: 12px; }
+table { border-collapse: collapse; width: 100%; max-width: 700px; }
+th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; }
+th { background: #f0f0f0; cursor: pointer; user-select: none; }
+th.asc::after { content: " \25B2"; }
+th.desc::after { content: " \25BC"; }
+tbody tr:nth-child(even) { background: #fafafa; }
+td.num { text-align: right; }
+#summary { margin-top: 10px; color: #555; }
+</style>
+</head>
+<body>
+<h1>People</h1>
+<input id="filter" type="text" placeholder="Filter by name or city">
+<table id="people">
+  <thead><tr><th data-key="name" id="th-name">Name</th><th data-key="city" id="th-city">City</th><th data-key="age" id="th-age">Age</th></tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+<p id="summary"></p>
+<script>
+const people = [
+  { name: 'Ada Lovelace', city: 'London', age: 36 },
+  { name: 'Grace Hopper', city: 'New York', age: 85 },
+  { name: 'Alan Turing', city: 'Manchester', age: 41 },
+  { name: 'Katherine Johnson', city: 'Hampton', age: 101 },
+  { name: 'Edsger Dijkstra', city: 'Austin', age: 72 },
+];
+const state = { key: null, dir: 1, query: '' };
+const rows = document.getElementById('rows');
+function draw() {
+  let shown = people.filter(p => (p.name + ' ' + p.city).toLowerCase().includes(state.query));
+  if (state.key) {
+    shown = shown.slice().sort((a, b) => {
+      const x = a[state.key], y = b[state.key];
+      return (x < y ? -1 : x > y ? 1 : 0) * state.dir;
+    });
+  }
+  rows.innerHTML = '';
+  for (const p of shown) {
+    const tr = document.createElement('tr');
+    for (const k of ['name', 'city', 'age']) {
+      const td = document.createElement('td');
+      td.textContent = p[k];
+      if (k === 'age') td.className = 'num';
+      tr.appendChild(td);
+    }
+    rows.appendChild(tr);
+  }
+  document.getElementById('summary').textContent = `${shown.length} of ${people.length} people`;
+  document.querySelectorAll('th').forEach(th => {
+    th.classList.remove('asc', 'desc');
+    if (th.dataset.key === state.key) th.classList.add(state.dir > 0 ? 'asc' : 'desc');
+  });
+}
+document.querySelectorAll('th').forEach(th => th.addEventListener('click', () => {
+  if (state.key === th.dataset.key) state.dir = -state.dir;
+  else { state.key = th.dataset.key; state.dir = 1; }
+  draw();
+  console.log('sorted', state.key, state.dir);
+}));
+document.getElementById('filter').addEventListener('input', e => {
+  state.query = e.target.value.toLowerCase();
+  draw();
+});
+draw();
+</script>
+</body>
+</html>

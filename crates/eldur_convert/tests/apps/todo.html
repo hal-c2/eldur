@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Todos</title>
+<style>
+:root { --accent: #2f855a; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #edf2f7; font-family: Arial, sans-serif; line-height: 1.4; }
+.app { width: 480px; margin: 32px auto; background: white; padding: 20px; border-radius: 6px; }
+h1 { margin: 0 0 12px; font-size: 24px; color: var(--accent); }
+form { display: flex; gap: 8px; margin-bottom: 12px; }
+#new { flex: 1; padding: 8px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 14px; }
+#add { padding: 8px 12px; background: var(--accent); color: #fff; border: 0; border-radius: 4px; }
+ul { list-style: none; margin: 0; padding: 0; }
+li.item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #edf2f7; }
+li.item .label { flex: 1; }
+li.item.done .label { text-decoration: line-through; color: #a0aec0; }
+.del { background: none; border: none; color: #c53030; cursor: pointer; font-size: 16px; }
+.bar { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 13px; color: #4a5568; }
+.filters button { background: none; border: 1px solid transparent; padding: 2px 6px; border-radius: 3px; cursor: pointer; }
+.filters button.current { border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>Todos</h1>
+  <form id="form">
+    <input id="new" type="text" placeholder="What needs doing?" autocomplete="off">
+    <button id="add" type="submit">Add</button>
+  </form>
+  <ul id="list"></ul>
+  <div class="bar">
+    <span id="count"></span>
+    <div class="filters">
+      <button data-filter="all" class="current" id="f-all">All</button>
+      <button data-filter="active" id="f-active">Active</button>
+      <button data-filter="done" id="f-done">Done</button>
+    </div>
+  </div>
+</div>
+<template id="row">
+  <li class="item">
+    <input type="checkbox" class="check">
+    <span class="label"></span>
+    <button class="del" aria-label="Delete">×</button>
+  </li>
+</template>
+<script>
+let todos = [
+  { id: 1, text: 'Buy milk', done: false },
+  { id: 2, text: 'Walk the dog', done: true },
+  { id: 3, text: 'Call Sam', done: false },
+];
+let nextId = 4;
+let filter = 'all';
+const list = document.getElementById('list');
+const tpl = document.getElementById('row');
+
+function render() {
+  list.innerHTML = '';
+  todos
+    .filter(t => filter === 'all' || (filter === 'done') === t.done)
+    .forEach(t => {
+      const node = tpl.content.cloneNode(true);
+      const li = node.querySelector('li');
+      li.dataset.id = t.id;
+      li.classList.toggle('done', t.done);
+      node.querySelector('.label').textContent = t.text;
+      node.querySelector('.check').checked = t.done;
+      list.appendChild(node);
+    });
+  const left = todos.filter(t => !t.done).length;
+  document.getElementById('count').textContent = `${left} item${left === 1 ? '' : 's'} left`;
+  console.log('render', filter, todos.length);
+}
+
+document.getElementById('form').addEventListener('submit', e => {
+  e.preventDefault();
+  const input = document.getElementById('new');
+  const text = input.value.trim();
+  if (!text) return;
+  todos.push({ id: nextId++, text, done: false });
+  input.value = '';
+  render();
+});
+
+list.addEventListener('click', e => {
+  const li = e.target.closest('li');
+  if (!li) return;
+  const id = Number(li.dataset.id);
+  if (e.target.classList.contains('del')) {
+    todos = todos.filter(t => t.id !== id);
+    render();
+  }
+});
+
+list.addEventListener('change', e => {
+  if (!e.target.classList.contains('check')) return;
+  const todo = todos.find(t => t.id === Number(e.target.closest('li').dataset.id));
+  todo.done = e.target.checked;
+  render();
+});
+
+document.querySelector('.filters').addEventListener('click', e => {
+  if (!e.target.dataset.filter) return;
+  filter = e.target.dataset.filter;
+  document.querySelectorAll('.filters button').forEach(b => b.classList.toggle('current', b === e.target));
+  render();
+});
+
+render();
+</script>
+</body>
+</html>

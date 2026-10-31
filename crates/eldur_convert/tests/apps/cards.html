@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Shop</title>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Helvetica, Arial, sans-serif; background: #fafafa; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; background: #fff; border-bottom: 1px solid #eee; }
+h1 { font-size: 20px; margin: 0; }
+#cart { font-weight: bold; }
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 24px; }
+.card { background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; padding: 16px; }
+.card h3 { margin: 0 0 4px; font-size: 16px; }
+.card .desc { color: #666; font-size: 13px; margin: 0 0 12px; line-height: 1.4; }
+.card .price { font-size: 18px; font-weight: bold; }
+.card button { display: block; width: 100%; margin-top: 10px; padding: 8px; background: #111; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+.card.in-cart { border-color: #2f855a; }
+.card.in-cart button { background: #2f855a; }
+.sale { color: #c53030; }
+</style>
+</head>
+<body>
+<header><h1>Shop</h1><div id="cart">Cart: 0 items, $0.00</div></header>
+<div class="grid" id="grid"></div>
+<script>
+const products = [
+  { id: 'lamp', name: 'Desk lamp', desc: 'Warm light that bends where you need it.', price: 34.5 },
+  { id: 'mug', name: 'Stoneware mug', desc: 'Holds a generous cup.', price: 12, sale: true },
+  { id: 'pen', name: 'Fountain pen', desc: 'Fine nib, refillable, and a pleasure to write with every single day.', price: 48 },
+  { id: 'pad', name: 'Notepad', desc: 'Dotted paper.', price: 6.25 },
+];
+const cart = new Map();
+function money(n) { return '$' + n.toFixed(2); }
+document.getElementById('grid').innerHTML = products.map(p => `
+  <article class="card" id="card-${p.id}" data-id="${p.id}">
+    <h3>${p.name}</h3>
+    <p class="desc">${p.desc}</p>
+    <span class="price ${p.sale ? 'sale' : ''}">${money(p.price)}</span>
+    <button class="buy" id="buy-${p.id}">Add to cart</button>
+  </article>`).join('');
+function total() {
+  let items = 0, sum = 0;
+  cart.forEach((n, id) => {
+    items += n;
+    sum += n * products.find(p => p.id === id).price;
+  });
+  document.getElementById('cart').textContent = `Cart: ${items} item${items === 1 ? '' : 's'}, ${money(sum)}`;
+  console.log('cart', items, money(sum));
+}
+document.getElementById('grid').addEventListener('click', e => {
+  if (!e.target.classList.contains('buy')) return;
+  const card = e.target.closest('.card');
+  const id = card.dataset.id;
+  cart.set(id, (cart.get(id) || 0) + 1);
+  card.classList.add('in-cart');
+  e.target.textContent = `In cart (${cart.get(id)})`;
+  total();
+});
+</script>
+</body>
+</html>

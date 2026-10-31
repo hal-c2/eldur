@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FAQ</title>
+<style>
+body { margin: 0; padding: 32px; font: 15px/1.5 Arial, sans-serif; color: #333; }
+h1 { font-size: 22px; margin: 0 0 16px; }
+h2 { font-size: 16px; margin: 24px 0 8px; }
+details { border: 1px solid #ccc; border-radius: 4px; margin-bottom: 8px; padding: 8px 12px; max-width: 560px; }
+summary { font-weight: bold; cursor: pointer; }
+details[open] { background: #f7f7ff; }
+details p { margin: 8px 0 0; }
+.acc { max-width: 560px; border: 1px solid #ccc; border-radius: 4px; }
+.acc-item + .acc-item { border-top: 1px solid #ccc; }
+.acc-head { display: block; width: 100%; padding: 10px 12px; text-align: left; background: #fafafa; border: none; font: inherit; font-weight: bold; cursor: pointer; }
+.acc-item.open .acc-head { background: #e8efff; color: #123a9c; }
+.acc-body { display: none; padding: 10px 12px; }
+.acc-item.open .acc-body { display: block; }
+#opened { margin-top: 12px; color: #666; }
+</style>
+</head>
+<body>
+<h1>Frequently asked questions</h1>
+<details id="d1">
+  <summary id="s1">How do I reset my password?</summary>
+  <p>Use the link on the sign-in page. We will email you a new one.</p>
+</details>
+<details id="d2" open>
+  <summary id="s2">Can I change my plan?</summary>
+  <p>Yes, at any time from the billing page.</p>
+</details>
+<h2>Shipping</h2>
+<div class="acc" id="acc">
+  <div class="acc-item"><button class="acc-head" id="h1">How long does delivery take?</button><div class="acc-body">Three to five working days in most places.</div></div>
+  <div class="acc-item"><button class="acc-head" id="h2">Do you ship abroad?</button><div class="acc-body">We ship to most of Europe and North America, for a fee worked out at checkout.</div></div>
+  <div class="acc-item"><button class="acc-head" id="h3">Can I return something?</button><div class="acc-body">Within thirty days, unused.</div></div>
+</div>
+<p id="opened">0 open</p>
+<script>
+var acc = document.getElementById('acc');
+acc.addEventListener('click', function (e) {
+  var head = e.target.closest('.acc-head');
+  if (!head) return;
+  var item = head.parentElement;
+  var wasOpen = item.classList.contains('open');
+  acc.querySelectorAll('.acc-item').forEach(function (i) { i.classList.remove('open'); });
+  if (!wasOpen) item.classList.add('open');
+  var n = acc.querySelectorAll('.acc-item.open').length;
+  document.getElementById('opened').textContent = n + ' open';
+  console.log('open now: ' + n);
+});
+document.getElementById('d1').addEventListener('toggle', function () {
+  console.log('d1 open: ' + this.open);
+});
+</script>
+</body>
+</html>

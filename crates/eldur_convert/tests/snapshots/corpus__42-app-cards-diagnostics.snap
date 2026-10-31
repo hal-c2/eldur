@@ -1,0 +1,5 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+warning[js]: inline script #1:35: markup is not literal: only the elements written literally take the page's styles; the rest use generic items (dynamic-markup)

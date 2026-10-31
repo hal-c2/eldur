@@ -1,0 +1,2 @@
+{"steps":[{"name":"buy lamp","click":"#buy-lamp"},{"name":"buy pen","click":"#buy-pen"},{"name":"buy lamp again","click":"#buy-lamp"},{"name":"buy pad","click":"#buy-pad"}],
+ "watch":[{"sel":".card","props":["border-top-color"]},{"sel":".card h3"},{"sel":".desc"},{"sel":".price","props":["color"]},{"sel":".buy","props":["background-color"]},{"sel":"#cart"}]}

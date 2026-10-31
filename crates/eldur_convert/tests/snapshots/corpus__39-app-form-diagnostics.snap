@@ -1,0 +1,11 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[html]: index.html:27: inline <input id="name"> is laid out as a block (no inline replaced elements yet)
+info[html]: index.html:32: inline <input id="email"> is laid out as a block (no inline replaced elements yet)
+info[html]: index.html:37: inline <input id="pass"> is laid out as a block (no inline replaced elements yet)
+info[html]: index.html:42: inline <input id="terms"> is laid out as a block (no inline replaced elements yet)
+info[html]: index.html:46: inline <button id="go"> is laid out as a block (no inline replaced elements yet)
+info[css]: index.html:48: <div id="done"> is `display: none` and used by a script: it is kept invisible, as a block when shown
+info[html]: index.html:43: <label> is inline, part of its paragraph's text: tapping it does not reach its control

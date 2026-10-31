@@ -627,6 +627,17 @@ impl AnalysisVisitor<'_, '_> {
         {
             self.analysis.reads_attributes = true;
         }
+        if matches!(
+            method,
+            "setAttribute" | "removeAttribute" | "toggleAttribute"
+        ) {
+            self.note_root_write(&member.object);
+        }
+        if let Expression::StaticMemberExpression(inner) = unwrap_parens(&member.object)
+            && inner.property.name == "classList"
+        {
+            self.note_root_write(&inner.object);
+        }
         match method {
             "setAttribute" | "removeAttribute" | "toggleAttribute" if dom_receiver => {
                 self.lookups.attrs_change = true;
@@ -670,6 +681,15 @@ impl AnalysisVisitor<'_, '_> {
         }
     }
 
+    /// Everything on the page can depend on the root's attributes, through a
+    /// descendant selector or a custom property, and no variant of an element
+    /// says how: the runtime has to resolve the page from its rules.
+    fn note_root_write(&mut self, object: &Expression<'_>) {
+        if self.target(object) == ElementRef::Query(DomQuery::Selector("html".to_string())) {
+            self.analysis.open_elements = true;
+        }
+    }
+
     /// Facts for [`LookupFacts`] from an assignment to a member.
     fn inspect_lookup_write(&mut self, it: &AssignmentExpression<'_>) {
         let (object, prop) = match &it.left {
@@ -687,6 +707,14 @@ impl AnalysisVisitor<'_, '_> {
             && inner.property.name == "dataset"
         {
             self.class_reads_ok.insert(span_key(inner.span));
+        }
+        if let Expression::StaticMemberExpression(inner) = unwrap_parens(object)
+            && inner.property.name == "dataset"
+        {
+            self.note_root_write(&inner.object);
+        }
+        if matches!(prop.as_deref(), Some("className")) {
+            self.note_root_write(object);
         }
         let target = self.target(object);
         match prop.as_deref() {
@@ -1122,6 +1150,12 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
 
     fn visit_static_member_expression(&mut self, it: &StaticMemberExpression<'a>) {
         let prop = it.property.name.as_str();
+        if prop == "content" {
+            // What a `<template>` holds is made at run time, from the rules.
+            self.analysis.reads_template_content = true;
+            self.analysis.open_elements = true;
+            self.analysis.runtime_dom = true;
+        }
         self.analysis.reads_attributes |= prop == "attributes"
             || (prop == "dataset" && !self.class_reads_ok.contains(&span_key(it.span)));
         let reads_classes = matches!(prop, "className" | "classList")

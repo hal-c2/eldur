@@ -192,6 +192,7 @@ pub(crate) fn rewrite(
 
     let mut shared = SharedRewriteState {
         reads_attributes: analysis.reads_attributes,
+        keeps_cascade: analysis.needs_cascade(),
         ..SharedRewriteState::default()
     };
     let mut claimed_top_names = HashSet::new();

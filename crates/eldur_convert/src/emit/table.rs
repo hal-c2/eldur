@@ -784,6 +784,20 @@ impl<'a> Emitter<'a, '_> {
             }
         }
 
+        // A script's empty row group to fill: it has no cells to place, but
+        // needs an object the rows it creates can go in.
+        for child in boxes(b) {
+            if is_group(child.style.display)
+                && boxes(child).is_empty()
+                && child.node.is_some_and(|n| self.wanted.contains(&n))
+            {
+                let mut obj = self.item(child, decoration).obj;
+                obj.set("Layout.columnSpan", Value::Number(columns.max(1) as f64));
+                obj.set("Layout.fillWidth", true);
+                grid.push_child(obj);
+            }
+        }
+
         // The table's own box. In the collapsing model its border and padding
         // are gone: the border went to the edges, padding does not apply.
         let mut own = style.clone();
