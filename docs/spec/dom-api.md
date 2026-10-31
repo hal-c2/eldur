@@ -16,6 +16,8 @@ JavaScript in HTML documents is transformed into two QML-compatible artifacts:
 
 Rewriting uses **Static Resolution First, Runtime Fallback Second**:
 - If a DOM query (`document.getElementById('save-btn')`) can be statically resolved to a unique `QmlTarget` at compile time, property accesses and event registrations on that reference are rewritten directly to the QML item `id` (`save_btn.text`, `save_btn.visible`, etc.) or `Eldur.wrap(save_btn)` for structural/DOM-specific operations.
+- Static resolution is kept only where it is provably equivalent to asking the live DOM. `Analysis::live_queries` lists the literal lookups a script on the page could change the answer of (id writes, removals, parsed markup, clones, moves of page elements, writes to a class the selector names, text writes that can empty an element); those go to `Eldur.document.*` at runtime. The check is flow-insensitive, because a handler can run at any time.
+- A resolved element is the same object to scripts as a looked-up one: wherever it escapes as a value (argument, `this`, object property, comparison, returned value) it is `Eldur.wrap(<qml_id>)`. Direct property accesses stay on the QML item, where nothing can observe the difference.
 - If a query is dynamic (`document.getElementById(dynamicId)`), returns multiple elements (`querySelectorAll`), or cannot be statically resolved, it falls back to `Eldur.document.*` and `Eldur.wrap(item)` at runtime.
 
 ---

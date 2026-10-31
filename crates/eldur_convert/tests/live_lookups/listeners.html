@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>listeners</title></head>
+<body>
+<input id="i" type="text"><form id="f"><input id="fi" type="text"></form><button id="go">go</button><div id="box" class="b">b</div>
+<script>
+function L(k,v){console.log("LC "+k+" "+v)}
+function ids(l){var r=[];for(var i=0;i<l.length;i++){r.push(l[i].id||l[i].className||l[i].tagName)}return r.join(",")}
+
+var i=document.getElementById("i");
+var go=document.getElementById("go");
+var box=document.querySelector(".b");
+i.addEventListener("input",function(e){L("input",e.target.id+" "+i.value)});
+i.addEventListener("keydown",function(e){L("keydown",e.key)});
+document.getElementById("f").addEventListener("submit",function(e){e.preventDefault();L("submit",e.target.id)});
+box.onclick=function(e){L("onclick",this.id)};
+box.addEventListener("custom",function(e){L("custom",e.type+" "+(e.target===box))});
+go.onclick=function(){L("go",document.querySelectorAll(".n").length);};
+go.addEventListener("click",function(){
+  box.dispatchEvent(new Event("custom"));
+  box.click();
+  i.value="typed";
+  L("value",document.getElementById("i").value);
+  i.dispatchEvent(new Event("input"));
+  L("attr",i.getAttribute("type")+" "+box.getAttribute("class"));
+});
+var n=document.createElement("div");n.className="n";box.appendChild(n);
+box.classList.add("b2");
+L("box",document.querySelector(".b2").id);
+</script>
+</body></html>

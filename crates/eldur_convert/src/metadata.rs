@@ -61,6 +61,53 @@ pub(crate) fn tag(obj: &mut Object, doc: &Document, node: NodeId) {
     }
 }
 
+/// `eldurAttrs`: what the markup says, for scripts that ask. `id` and `class`
+/// have their own properties, `style` was applied, `on*` became handlers.
+pub(crate) fn declare_attrs(obj: &mut Object, doc: &Document, node: NodeId) {
+    let Some(element) = doc.element(node) else {
+        return;
+    };
+    let pairs: Vec<String> = element
+        .attrs
+        .iter()
+        .filter(|a| {
+            let name: &str = &a.name.local;
+            !matches!(name, "id" | "class" | "style") && !name.starts_with("on")
+        })
+        .map(|a| {
+            let name: &str = &a.name.local;
+            format!("{}: {}", js_string(name), js_string(&a.value))
+        })
+        .collect();
+    if pairs.is_empty() {
+        return;
+    }
+    obj.members.insert(
+        0,
+        decl(
+            "var",
+            "eldurAttrs",
+            Value::Expr(format!("({{ {} }})", pairs.join(", "))),
+        ),
+    );
+}
+
+fn js_string(text: &str) -> String {
+    let mut out = String::from("\"");
+    for unit in text.chars() {
+        match unit {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            c if u32::from(c) < 0x20 || matches!(c, '\u{2028}' | '\u{2029}') => {
+                out.push_str(&format!("\\u{:04x}", u32::from(c)));
+            }
+            c => out.push(c),
+        }
+    }
+    out.push('"');
+    out
+}
+
 /// Declares `cls_<s>` on `obj` for each of `classes` (the names scripts
 /// write on it), true when the element has the class in the document.
 pub(crate) fn declare_classes(

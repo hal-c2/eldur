@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>identity</title><style>span,i,b,em{display:block}</style></head>
+<body>
+<div id="a" class="k"><span id="s">s</span></div><div id="b" class="k">b</div><button id="go" onclick="clicked(this,event)">go</button>
+<script>
+function L(k,v){console.log("LC "+k+" "+v)}
+function ids(l){var r=[];for(var i=0;i<l.length;i++){r.push(l[i].id||l[i].className||l[i].tagName)}return r.join(",")}
+
+function idOf(e){return e.id}
+function same(x,y){return x===y}
+var a=document.getElementById("a");
+var viaArg=idOf(a);
+L("arg",viaArg+" "+idOf(document.getElementById("b")));
+L("eq",same(a,document.getElementById("a"))+" "+same(a,document.querySelector("#a"))+" "+same(document.querySelector(".k"),a));
+L("in qsa",same(document.querySelectorAll(".k")[0],a)+" "+document.querySelectorAll(".k")[1].id);
+var arr=[a];
+L("array",arr[0].id+" "+arr.indexOf(document.getElementById("a")));
+var o={el:a};L("object",o.el.id+" "+same(o.el,a));
+var map=new Map();map.set(a,1);L("map",map.get(document.getElementById("a"))+" "+map.has(document.querySelector("#a")));
+var s=document.getElementById("s");
+L("parent",same(s.parentNode,a)+" "+same(a.children[0],s)+" "+same(a.firstElementChild,s)+" "+same(s.parentElement,document.getElementById("a")));
+L("closest",same(s.closest(".k"),a)+" "+a.contains(s)+" "+s.matches("#s"));
+L("tag",a.tagName+" "+a.className+" "+idOf(a).length);
+var c=document.createElement("div");c.id="c";document.body.appendChild(c);
+L("created",same(document.getElementById("c"),c)+" "+same(document.querySelector("#c"),c)+" "+document.querySelector("#c").id);
+let later=null;function keep(e){later=e}keep(a);L("kept",later.id+" "+same(later,a));
+var maybe=document.getElementById("a");maybe=maybe||null;L("reassigned",maybe.id);
+function clicked(t,ev){L("this",t.id+" "+same(t,document.getElementById("go"))+" "+same(ev.target,t)+" "+same(ev.currentTarget,document.getElementById("go")))}
+document.getElementById("go").addEventListener("click",function(ev){L("listener",same(this,document.getElementById("go"))+" "+this.id+" "+same(ev.target,document.querySelector("#go")))});
+</script>
+</body></html>

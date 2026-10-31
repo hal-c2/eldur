@@ -95,7 +95,27 @@ fn tracks_listeners_and_property_writes_across_variables_functions_and_loops() {
         runtime_dom,
         mutated_parents,
         mutated_siblings,
+        live_queries,
+        text_writes,
+        reads_attributes,
     } = analyze(&[s1, s2]);
+    // Nothing here can add, remove or rename an element, but
+    // `setAttribute("class", …)` can take any class off one.
+    assert_eq!(
+        live_queries,
+        vec![
+            DomQuery::SelectorAll(".todo".to_string()),
+            DomQuery::SelectorAll(".row".to_string()),
+        ],
+    );
+    assert_eq!(
+        text_writes,
+        vec![
+            ElementRef::Query(DomQuery::ById("save".to_string())),
+            ElementRef::Query(DomQuery::SelectorAll(".row".to_string())),
+        ]
+    );
+    assert!(!reads_attributes);
     // `textContent` replaces the children of the elements it is written to.
     assert_eq!(
         mutated_parents,

@@ -27,8 +27,8 @@ use crate::resolve::{
     resolve_module_specifier, unwrap_parens,
 };
 use crate::{
-    Analysis, Diagnostic, DomResolver, EventBinding, JsOutput, QmlTarget, ScriptInput, ScriptKind,
-    Severity,
+    Analysis, Diagnostic, DomQuery, DomResolver, ElementKey, EventBinding, JsOutput, QmlTarget,
+    ScriptInput, ScriptKind, Severity,
 };
 
 struct ValidScript<'a> {
@@ -100,11 +100,41 @@ struct PageBuilder<'a> {
     diagnostics: Vec<Diagnostic>,
 }
 
+/// Answers only the queries the page cannot change. Everything downstream asks
+/// the resolver, and an unresolved query already goes through the runtime, so
+/// this one place decides.
+struct StaticOnly<'a> {
+    inner: &'a dyn DomResolver,
+    live: &'a [DomQuery],
+}
+
+impl DomResolver for StaticOnly<'_> {
+    fn resolve(&self, query: &DomQuery) -> Vec<QmlTarget> {
+        if self.live.contains(query) {
+            Vec::new()
+        } else {
+            self.inner.resolve(query)
+        }
+    }
+
+    fn element(&self, key: ElementKey) -> Option<QmlTarget> {
+        self.inner.element(key)
+    }
+
+    fn original(&self, query: &DomQuery) -> Vec<QmlTarget> {
+        self.inner.original(query)
+    }
+}
+
 pub(crate) fn rewrite(
     scripts: &[ScriptInput],
-    _analysis: &Analysis,
+    analysis: &Analysis,
     resolver: &dyn DomResolver,
 ) -> JsOutput {
+    let resolver = &StaticOnly {
+        inner: resolver,
+        live: &analysis.live_queries,
+    };
     let allocator = Allocator::default();
     let mut diagnostics: Vec<Diagnostic> = Vec::new();
     let mut decl_tracker = GlobalDeclTracker::new();
@@ -160,7 +190,10 @@ pub(crate) fn rewrite(
         .collect();
     let cross_script = build_cross_script_query_map(&valid_refs);
 
-    let mut shared = SharedRewriteState::default();
+    let mut shared = SharedRewriteState {
+        reads_attributes: analysis.reads_attributes,
+        ..SharedRewriteState::default()
+    };
     let mut claimed_top_names = HashSet::new();
     // Reserve `__eldur_init` and all user identifiers so generated helper names never collide.
     shared.used_names.insert("__eldur_init".to_string());
@@ -1261,7 +1294,7 @@ impl PageBuffers {
         let fn_name = shared.alloc_fn_name(&format!("__eldur_on_{safe_ev}_{}", target.qml_id));
 
         let call_stmt = if matches!(unwrap_parens(cb_ast), Expression::Identifier(_)) {
-            format!("{cb_str}.call({}, event);", target.qml_id)
+            format!("{cb_str}.call(Eldur.wrap({}), event);", target.qml_id)
         } else {
             format!("({cb_str})(event);")
         };

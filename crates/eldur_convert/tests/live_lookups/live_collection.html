@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>live_collection</title><style>span,i,b,em{display:block}</style></head>
+<body>
+<div id="h"><i id="a" class="m">a</i><i id="b" class="m">b</i></div><div id="z"><b id="y">y</b></div>
+<script>
+function L(k,v){console.log("LC "+k+" "+v)}
+function ids(l){var r=[];for(var i=0;i<l.length;i++){r.push(l[i].id||l[i].className||l[i].tagName)}return r.join(",")}
+
+var h=document.getElementById("h");
+var byClass=document.getElementsByClassName("m");
+var scoped=h.getElementsByClassName("m");
+var byTag=document.getElementsByTagName("i");
+var scopedTag=h.getElementsByTagName("i");
+var fixed=document.querySelectorAll(".m");
+L("start",byClass.length+" "+scoped.length+" "+byTag.length+" "+scopedTag.length+" "+fixed.length);
+var c=document.createElement("i");c.className="m";c.id="n";h.appendChild(c);
+L("added",byClass.length+" "+scoped.length+" "+byTag.length+" "+scopedTag.length+" "+fixed.length);
+L("index",byClass[2].id+" "+byClass.item(2).id+" "+byClass[9]+" "+byClass.item(9));
+document.getElementById("a").remove();
+L("removed",byClass.length+" "+ids(byClass)+" "+ids(fixed));
+document.getElementById("b").classList.remove("m");
+L("class",ids(byClass)+" "+ids(byTag));
+L("forEach",typeof byClass.forEach+" "+typeof fixed.forEach+" "+typeof fixed.item);
+var other=document.createElement("i");other.className="m";other.id="o";
+document.getElementById("z").appendChild(other);
+L("outside",ids(byClass)+" "+ids(scoped));
+var seen=[];for(var e of byClass){seen.push(e.id)}
+L("of",seen.join(","));
+L("from",Array.from(byClass).map(function(e){return e.id}).join(","));
+L("spread",[].slice.call(byClass).length);
+while(byClass.length>0){byClass[0].classList.remove("m")}
+L("drained",byClass.length+" "+ids(byTag));
+var nameCol=document.getElementsByClassName("named");
+var nm=document.createElement("p");nm.className="named";nm.id="nid";document.body.appendChild(nm);
+L("named",nameCol.length+" "+nameCol.namedItem("nid").id+" "+nameCol.namedItem("zz"));
+</script>
+</body></html>

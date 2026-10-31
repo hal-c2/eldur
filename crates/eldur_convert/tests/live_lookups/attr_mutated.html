@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>attr_mutated</title><style>a{display:block}</style></head>
+<body>
+<div id="a" data-x="1">a</div><div id="b">b</div><a id="c" href="#x">c</a><div id="d" title="t">d</div>
+<script>
+function L(k,v){console.log("LC "+k+" "+v)}
+function ids(l){var r=[];for(var i=0;i<l.length;i++){r.push(l[i].id||l[i].className||l[i].tagName)}return r.join(",")}
+
+L("start",ids(document.querySelectorAll("[data-x]")));
+document.getElementById("b").setAttribute("data-x","2");
+L("set",ids(document.querySelectorAll("[data-x]")));
+L("value",ids(document.querySelectorAll("[data-x=\"2\"]")));
+document.getElementById("a").dataset.x="9";
+L("dataset",ids(document.querySelectorAll("[data-x=\"9\"]"))+"|"+ids(document.querySelectorAll("[data-x=\"1\"]")));
+document.getElementById("a").removeAttribute("data-x");
+L("removed",ids(document.querySelectorAll("[data-x]")));
+document.getElementById("c").setAttribute("href","#y");
+L("href",ids(document.querySelectorAll("a[href=\"#y\"]"))+"|"+ids(document.querySelectorAll("a[href=\"#x\"]")));
+document.getElementById("d").title="u";
+L("title",ids(document.querySelectorAll("[title=\"u\"]"))+"|"+ids(document.querySelectorAll("[title=\"t\"]")));
+document.getElementById("d").hidden=true;
+L("hidden",ids(document.querySelectorAll("[hidden]")));
+document.getElementById("d").hidden=false;
+L("shown",ids(document.querySelectorAll("[hidden]")));
+</script>
+</body></html>
