@@ -99,6 +99,53 @@ ScrollView {
 - `Layout.*` attached properties have no effect outside a Layout. `anchors` on a direct child of a Layout logs a warning and gives undefined positioning.
 - Percent widths inside a shrink-to-fit Layout create a binding loop (see §10).
 
+### 1.1 Sub-pixel positions: the carry
+
+Chromium places boxes at fractional offsets and snaps them only when painting. Qt Quick Layouts snap during layout. All of the following was measured in Qt 6.11:
+- A `ColumnLayout` rounds an item's implicit height up. It keeps an explicit `Layout.preferredHeight` as it is.
+- It rounds each cell (top margin + height + bottom margin) up with no tolerance: a 27 px item with a 1e-12 px bottom margin takes 28.
+- It skips an invisible item, margins included.
+- Negative margins are honoured.
+
+A column of 27.2 px paragraphs therefore drifts 0.8 px per paragraph. Before this change, the corpus drifted up to 12.7 px (01-typography).
+
+**The carry** (`emit/carry.rs`, run on every block-flow `ColumnLayout` and every single-line flex column):
+- Each item's top margin takes back what the cell before it was rounded up by. Item k's carry is `ceil(top + H) − top − h`, where `H` is the height Qt lays it out at and `h` is its CSS height.
+- Item k+1's top margin becomes `gap − carry`. Every cell edge is then whole, positions are exact, and the column's height is rounded once.
+- A bottom margin (the strut below an inline replaced box) is folded into the next top margin, so each cell is two terms in Qt as in the binding.
+
+What is known at conversion time stays a number. Only heights known at run time get a binding:
+```qml
+Text {                       // <h1>, line-height 1.2 at 32 px
+    id: h1
+    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+}
+Text {
+    Layout.topMargin: 21.44 - h1.eldurCarry
+}
+Rectangle {                  // height: 40.5px; the next top margin is a number
+    Layout.preferredHeight: 40.5
+}
+Text { Layout.topMargin: 3.5 }   // 4 − (41 − 40.5)
+```
+
+The rules:
+- **Whole heights need nothing.** A column whose heights are all whole is emitted as before.
+- **Painted boxes keep their exact height.** A `Text` paints nothing outside its glyphs, so it keeps its rounded height hint. Any other item gets `Layout.preferredHeight: implicitHeight`, so its background is as tall as in CSS. A column's last `Text` gets it too, so that the column total is rounded once rather than twice.
+- **Fixed heights join the chain.** An item with a numeric `Layout.preferredHeight` is static and takes the carry like any other item. A fill, minimum or maximum height (`Layout.maximumHeight` other than `Number.POSITIVE_INFINITY`) is unknown, and the chain starts again after it.
+- **Nested columns.** A carried column's implicit height is its CSS height plus its last item's carry, its *excess*. The parent sees the column, or a box around it (`inner.implicitHeight + insets`), as whole plus that excess, and hands it on. The column carries its excess in a comment until its parent is built, so the wrapper still names it.
+- **Floating-point residue.** A cell meant to be whole can come out a hair over in floating point (−0.8 + 28.8). Qt then rounds it a whole pixel up, and places a last item after the extra pixel. Each run-time carry is therefore a micropixel (`0.000001`) more than exact. A static top margin whose cell would land within 1e-9 above a whole number is a micropixel less.
+- **Hidden items** (with a `visible` binding, an `objectName`, or reachable by scripts) carry `visible ? own : handed`, so the next item takes back what reached the hidden one. An item before a hideable one keeps its own bottom margin (the hidden item would take it along) and the chain restarts after it.
+- **Spacers.** A flex column's `Item { Layout.fillHeight: true }` spacer sits between two whole cell edges, so the carry passes it.
+- **Runtime-created items.** A template's items cannot name siblings outside the component, so templates are not carried. Their `Text` and other items get `Layout.preferredHeight: implicitHeight`, which keeps the error under a pixel. The e2e test `tests/carry_e2e.rs` checks static and created items against Chromium.
+- **Spacing.** Only whole `spacing` keeps the cell edges whole. A column with fractional or bound spacing is not carried.
+
+**Not carried:**
+- `GridLayout`. It does not round rows: its positions are fractional, and top margins behave differently (measured). A column inside a grid cell is still rounded once (09-forms: 65.59 → 66 per field).
+- `RowLayout` and flex rows along x.
+
+**Painting.** Exact positions put boxes on half pixels where Chromium snaps a box's painted origin to the nearest pixel. Qt draws a border at y = 124.5 across two rows, and rasterises text a pixel row away from Chromium's. Pixel scores for such pages can drop while their geometry gets better (08-table: max |dy| 0.5 → 0).
+
 ## 2. Inline formatting context
 
 **Decision:** one `Text` per inline formatting context, with `textFormat: Text.StyledText`. Use `Flow` only when inline-block elements sit in the line. Inline images use the StyledText `<img>` tag.
