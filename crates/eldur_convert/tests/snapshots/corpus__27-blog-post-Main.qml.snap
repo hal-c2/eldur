@@ -193,6 +193,9 @@ ApplicationWindow {
 
                                     onLineLaidOut: (line) => {
                                         const fixed = lineHeightMode === Text.FixedHeight;
+                                        if (fixed) {
+                                            line.y = line.number * lineHeight;
+                                        }
                                         const top = y + (fixed ? line.number * lineHeight : line.y);
                                         const bottom = top + (fixed ? lineHeight : line.height);
                                         if (top < floats.childrenRect.y + floats.childrenRect.height && bottom > floats.childrenRect.y) {
@@ -224,6 +227,9 @@ ApplicationWindow {
 
                                     onLineLaidOut: (line) => {
                                         const fixed = lineHeightMode === Text.FixedHeight;
+                                        if (fixed) {
+                                            line.y = line.number * lineHeight;
+                                        }
                                         const top = y + (fixed ? line.number * lineHeight : line.y);
                                         const bottom = top + (fixed ? lineHeight : line.height);
                                         if (top < floats.childrenRect.y + floats.childrenRect.height && bottom > floats.childrenRect.y) {
@@ -255,6 +261,9 @@ ApplicationWindow {
 
                                     onLineLaidOut: (line) => {
                                         const fixed = lineHeightMode === Text.FixedHeight;
+                                        if (fixed) {
+                                            line.y = line.number * lineHeight;
+                                        }
                                         const top = y + (fixed ? line.number * lineHeight : line.y);
                                         const bottom = top + (fixed ? lineHeight : line.height);
                                         if (top < floats.childrenRect.y + floats.childrenRect.height && bottom > floats.childrenRect.y) {

@@ -312,10 +312,16 @@ impl Emitter<'_, '_> {
                 }
             };
             texts.push(id);
-            // A fixed line height spaces lines evenly from the top; Qt's
-            // own `line.y` is offset within it.
+            // A fixed line height spaces lines evenly from the top. With
+            // this handler Qt puts a fixed line's leading above its glyphs
+            // (`line.y` is offset within the line), where without it the
+            // leading is below, which the `Text`'s half-leading shift
+            // assumes: the line goes back to the top.
             let mut body = vec![
                 "const fixed = lineHeightMode === Text.FixedHeight;".to_owned(),
+                "if (fixed) {".to_owned(),
+                "    line.y = line.number * lineHeight;".to_owned(),
+                "}".to_owned(),
                 "const top = y + (fixed ? line.number * lineHeight : line.y);".to_owned(),
                 "const bottom = top + (fixed ? lineHeight : line.height);".to_owned(),
                 format!("if (top < {rect}.y + {rect}.height && bottom > {rect}.y) {{"),
