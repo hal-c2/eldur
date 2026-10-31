@@ -3,26 +3,31 @@
 
 Usage:
     python3 tools/visual/render_qml.py <dir-with-Main.qml> <out.png> [--width 1280] [--height 800]
-                                       [--strict] [--backend software|gl]
+                                       [--strict] [--backend gl|software]
+                                       [--gl-text native|distancefield]
 
 Two backends, both with deterministic DPI/scale (`QT_FONT_DPI=96`,
-`QT_SCALE_FACTOR=1`) and a 10-second timeout via `Shot.qml`:
+`QT_SCALE_FACTOR=1`) and a 10-second timeout via `Shot.qml`. The default is
+`--backend gl --gl-text native`. When gl cannot run (no sway, or Qt did not
+get an OpenGL scene graph) the render fails and says to pass
+`--backend software`; it never falls back, so scores stay comparable between
+runs.
 
-- `software` (default): `qml6` off-screen (`QT_QPA_PLATFORM=offscreen`) with the
+- `software`: `qml6` off-screen (`QT_QPA_PLATFORM=offscreen`) with the
   software scene graph (`QT_QUICK_BACKEND=software`, `--software`). Needs no
   display or GPU, but the software scene graph does not draw shader effects:
   `RectangularShadow` and `MultiEffect` (box-shadow, focus rings) are missing.
-- `gl`: `qml6` on the Wayland platform with the OpenGL RHI
+- `gl` (default): `qml6` on the Wayland platform with the OpenGL RHI
   (`QSG_RHI_BACKEND=opengl`), as a real Qt app on a GPU renders. The
   compositor is a private headless sway (`HeadlessSway`) with its own
   `XDG_RUNTIME_DIR` under a temp dir; the user's own `WAYLAND_DISPLAY` and
   compositor are never used. The offscreen and minimalegl platforms cannot do
   OpenGL here (offscreen falls back to software; minimalegl with
   `EGL_PLATFORM=surfaceless` finds no EGLConfig), hence the compositor.
-  `--gl-text distancefield` (default) draws `Text.QtRendering` text with
-  distance fields, as a real app on a GPU does; `--gl-text native` sets
-  `QML_DISABLE_DISTANCEFIELD=1` so glyphs are rasterised like the software
-  backend (and closer to Chromium) while shader effects still draw. Neither
+  `--gl-text native` (default) sets `QML_DISABLE_DISTANCEFIELD=1` so glyphs
+  are rasterised like the software backend (and closer to Chromium) while
+  shader effects still draw; `--gl-text distancefield` draws
+  `Text.QtRendering` text with distance fields, as a real app on a GPU does. Neither
   changes layout: glyph advances come from the same design metrics.
 
 Supports both `ApplicationWindow`/`Window` and `Item` root components without
@@ -52,9 +57,9 @@ DEFAULT_TIMEOUT_SEC = 10.0
 SETTLE_QUIET_MS = 250
 SETTLE_MAX_MS = 4000
 BACKENDS = ("software", "gl")
-DEFAULT_BACKEND = "software"
+DEFAULT_BACKEND = "gl"
 GL_TEXT_MODES = ("distancefield", "native")
-DEFAULT_GL_TEXT = "distancefield"
+DEFAULT_GL_TEXT = "native"
 SWAY_START_TIMEOUT_SEC = 10.0
 
 # Under sway's default tiling a window is resized to its tile minus borders and
@@ -68,6 +73,9 @@ swaybg_command -
 default_border none
 default_floating_border none
 floating_maximum_size -1 x -1
+# sway's default minimum is 75x50: a smaller viewport was enlarged after its
+# first frame, which a grab that waits for the scene to settle then rejects.
+floating_minimum_size 1 x 1
 for_window [app_id=".*"] floating enable, border none
 focus_follows_mouse no
 # Ends sway if the harness dies without running its cleanup (SIGKILL, OOM
@@ -80,6 +88,10 @@ exec "tail --pid={harness_pid} -f /dev/null; swaymsg exit"
 
 class QmlRenderError(RuntimeError):
     """Raised when qml6 fails to load or screenshot the target QML file."""
+
+
+class GlUnavailableError(QmlRenderError):
+    """`--backend gl` cannot render at all here; every page would fail the same way."""
 
 
 class HeadlessSway:
@@ -102,8 +114,8 @@ class HeadlessSway:
         sway_bin = shutil.which("sway")
         if sway_bin is None:
             raise QmlRenderError(
-                "--backend gl needs sway (a headless Wayland compositor) on PATH; "
-                "install sway or use --backend software"
+                "--backend gl (the default) needs sway, a headless Wayland compositor, "
+                "on PATH; install sway or pass --backend software"
             )
         # mkdtemp creates the directory mode 0700, which Wayland requires.
         self.runtime_dir = Path(tempfile.mkdtemp(prefix="eldur-visual-sway-"))
@@ -148,7 +160,10 @@ class HeadlessSway:
 
         log_text = self._read_log()
         self.stop()
-        raise QmlRenderError(f"headless sway did not start a Wayland socket:\n{log_text}")
+        raise QmlRenderError(
+            "headless sway did not start a Wayland socket; fix sway or pass "
+            f"--backend software:\n{log_text}"
+        )
 
     def _read_log(self) -> str:
         if self._log_path is None or not self._log_path.is_file():
@@ -301,6 +316,7 @@ def render_qml(
         str(out_abs),
         str(SETTLE_QUIET_MS),
         str(SETTLE_MAX_MS),
+        backend,
     ]
 
     try:
@@ -325,6 +341,11 @@ def render_qml(
     )
     warnings = [line for line in combined_output.splitlines() if line.strip()]
 
+    if proc.returncode == 3 and backend == "gl":
+        raise GlUnavailableError(
+            f"Qt did not render {main_qml} with OpenGL; check the GL setup (Mesa/EGL "
+            f"under sway) or pass --backend software:\n{combined_output}"
+        )
     if proc.returncode != 0:
         detail = f"\n{combined_output}" if combined_output else "\n(no output from qml6)"
         raise QmlRenderError(
@@ -394,15 +415,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--backend",
         choices=BACKENDS,
         default=DEFAULT_BACKEND,
-        help="software: offscreen software scene graph (default); "
-        "gl: OpenGL on a private headless sway (draws shadows and MultiEffect)",
+        help="gl: OpenGL on a private headless sway, draws shadows and MultiEffect "
+        "(default; fails rather than falling back when sway or GL is missing); "
+        "software: offscreen software scene graph",
     )
     parser.add_argument(
         "--gl-text",
         choices=GL_TEXT_MODES,
         default=DEFAULT_GL_TEXT,
-        help="Text rasterisation under --backend gl: distancefield (Qt's GPU default) "
-        "or native (QML_DISABLE_DISTANCEFIELD=1, like the software backend)",
+        help="Text rasterisation under --backend gl: native (default; "
+        "QML_DISABLE_DISTANCEFIELD=1, like the software backend) or distancefield "
+        "(Qt's GPU default)",
     )
     return parser
 

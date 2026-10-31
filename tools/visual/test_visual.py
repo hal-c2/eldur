@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -178,8 +179,12 @@ Item {
             appwin_png = tmp_dir / "appwin.png"
             item_png = tmp_dir / "item.png"
 
-            w1 = render_qml.render_qml(appwin_dir, appwin_png, width=200, height=120, strict=True)
-            w2 = render_qml.render_qml(item_dir, item_png, width=200, height=120, strict=True)
+            w1 = render_qml.render_qml(
+                appwin_dir, appwin_png, width=200, height=120, strict=True, backend="software"
+            )
+            w2 = render_qml.render_qml(
+                item_dir, item_png, width=200, height=120, strict=True, backend="software"
+            )
             self.assertEqual(w1, [])
             self.assertEqual(w2, [])
 
@@ -206,7 +211,7 @@ Item {
             )
             err_buf = io.StringIO()
             with redirect_stderr(err_buf):
-                rc = render_qml.main([str(tmp_dir), str(tmp_dir / "out.png")])
+                rc = render_qml.main([str(tmp_dir), str(tmp_dir / "out.png"), "--backend", "software"])
             self.assertEqual(rc, 1)
             self.assertIn("Main.qml", err_buf.getvalue())
 
@@ -225,13 +230,16 @@ Rectangle {
             )
             out_png = tmp_dir / "out.png"
 
-            warnings = render_qml.render_qml(tmp_dir, out_png, width=120, height=80, strict=False)
+            warnings = render_qml.render_qml(
+                tmp_dir, out_png, width=120, height=80, strict=False, backend="software"
+            )
             self.assertTrue(any("ReferenceError" in line for line in warnings), warnings)
 
             err_buf = io.StringIO()
             with redirect_stderr(err_buf):
                 rc = render_qml.main(
-                    [str(tmp_dir), str(out_png), "--width", "120", "--height", "80", "--strict"]
+                    [str(tmp_dir), str(out_png), "--width", "120", "--height", "80", "--strict",
+                     "--backend", "software"]
                 )
             self.assertEqual(rc, 1)
             self.assertIn("ReferenceError", err_buf.getvalue())
@@ -345,6 +353,28 @@ class RenderQmlSettleTests(unittest.TestCase):
             self.assertTrue(out_png.is_file())
             self.assertTrue(any("did not settle" in line for line in warnings), warnings)
 
+    def test_scene_graph_other_than_the_requested_backend_fails(self) -> None:
+        # The software scene graph, told it should be OpenGL, as when Qt cannot
+        # initialise GL and quietly falls back.
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text("import QtQuick\nItem {}\n", encoding="utf-8")
+            out_png = tmp_dir / "out.png"
+            env = dict(
+                os.environ,
+                QT_QPA_PLATFORM="offscreen",
+                QT_QUICK_BACKEND="software",
+                QT_FORCE_STDERR_LOGGING="1",
+            )
+            proc = subprocess.run(
+                ["qml6", "--software", str(render_qml.SHOT_QML), "--",
+                 (tmp_dir / "Main.qml").as_uri(), "60", "40", str(out_png), "50", "2000", "gl"],
+                env=env, capture_output=True, text=True, timeout=10, check=False,
+            )
+            self.assertEqual(proc.returncode, 3, proc.stderr)
+            self.assertIn("scene graph API", proc.stderr)
+            self.assertFalse(out_png.exists())
+
 
 class RenderQmlBackendTests(unittest.TestCase):
     def test_gl_backend_without_sway_fails_clearly(self) -> None:
@@ -365,6 +395,63 @@ class RenderQmlBackendTests(unittest.TestCase):
             render_qml.render_qml(Path("."), Path("out.png"), backend="vulkan")
         with self.assertRaisesRegex(render_qml.QmlRenderError, "Unknown gl_text"):
             render_qml.render_qml(Path("."), Path("out.png"), backend="gl", gl_text="subpixel")
+
+    def test_default_backend_is_gl_with_native_text(self) -> None:
+        for parser in (render_qml.build_parser(), visual_run.build_parser()):
+            args = parser.parse_args(["x", "y"] if parser.prog == "render_qml.py" else [])
+            self.assertEqual((args.backend, args.gl_text), ("gl", "native"))
+        self.assertEqual((render_qml.DEFAULT_BACKEND, render_qml.DEFAULT_GL_TEXT), ("gl", "native"))
+
+    def test_default_without_sway_says_to_pass_software_instead_of_falling_back(self) -> None:
+        real_which = render_qml.shutil.which
+
+        def which(name: str) -> str | None:
+            return None if name == "sway" else real_which(name)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text("import QtQuick\nItem {}\n", encoding="utf-8")
+            with mock.patch.object(render_qml.shutil, "which", side_effect=which):
+                err = io.StringIO()
+                with redirect_stderr(err):
+                    rc = render_qml.main([str(tmp_dir), str(tmp_dir / "out.png")])
+                self.assertEqual(rc, 1)
+                self.assertIn("pass --backend software", err.getvalue())
+                self.assertFalse((tmp_dir / "out.png").exists())
+
+                err = io.StringIO()
+                with redirect_stdout(io.StringIO()), redirect_stderr(err):
+                    rc = visual_run.main(["--selftest", "--out", str(tmp_dir / "vis")])
+                self.assertEqual(rc, 1)
+                self.assertIn("pass --backend software", err.getvalue())
+                self.assertFalse((tmp_dir / "vis" / "report.json").exists())
+
+    def test_gl_unavailable_stops_the_run(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            calls: list[str] = []
+
+            def fake_render_qml(*_args: object, **_kwargs: object) -> list[str]:
+                calls.append("qml")
+                raise render_qml.GlUnavailableError("no GL; pass --backend software")
+
+            with (
+                mock.patch.object(render_qml, "HeadlessSway"),
+                mock.patch.object(visual_run, "render_html"),
+                mock.patch.object(render_qml, "render_qml", side_effect=fake_render_qml),
+            ):
+                with self.assertRaisesRegex(visual_run.HarnessError, "pass --backend software"):
+                    visual_run.evaluate_cases(
+                        [("a", tmp_dir), ("b", tmp_dir)],
+                        out_dir=tmp_dir / "out",
+                        width=100,
+                        height=100,
+                        selftest=True,
+                        convert_cmd="",
+                        baseline_scores=None,
+                        backend="gl",
+                    )
+            self.assertEqual(calls, ["qml"])
 
     def test_runner_stops_sway_when_the_run_is_interrupted(self) -> None:
         started: list[mock.MagicMock] = []
@@ -572,6 +659,8 @@ color = Path(sys.argv[4]).read_text().strip() if len(sys.argv) > 4 else "#2563eb
             with redirect_stdout(io.StringIO()):
                 rc1 = visual_run.main(
                     [
+                        "--backend",
+                        "software",
                         "--corpus",
                         str(corpus),
                         "--out",
@@ -604,6 +693,8 @@ color = Path(sys.argv[4]).read_text().strip() if len(sys.argv) > 4 else "#2563eb
             with redirect_stdout(io.StringIO()), redirect_stderr(err_buf):
                 rc2 = visual_run.main(
                     [
+                        "--backend",
+                        "software",
                         "--corpus",
                         str(corpus),
                         "--out",
@@ -661,6 +752,8 @@ out_dir.mkdir(parents=True, exist_ok=True)
                 with redirect_stdout(io.StringIO()):
                     rc = visual_run.main(
                         [
+                            "--backend",
+                            "software",
                             "--corpus",
                             str(corpus),
                             "--out",
@@ -738,6 +831,8 @@ out_dir.mkdir(parents=True, exist_ok=True)
             with redirect_stdout(io.StringIO()):
                 rc_seed = visual_run.main(
                     [
+                        "--backend",
+                        "software",
                         "--corpus",
                         str(corpus),
                         "--out",
@@ -767,6 +862,8 @@ out_dir.mkdir(parents=True, exist_ok=True)
             with redirect_stdout(io.StringIO()):
                 rc_partial = visual_run.main(
                     [
+                        "--backend",
+                        "software",
                         "--corpus",
                         str(corpus),
                         "--out",
@@ -798,6 +895,8 @@ out_dir.mkdir(parents=True, exist_ok=True)
             with redirect_stdout(io.StringIO()):
                 rc_fail_keep = visual_run.main(
                     [
+                        "--backend",
+                        "software",
                         "--corpus",
                         str(corpus),
                         "--out",
@@ -843,6 +942,8 @@ out_dir.mkdir(parents=True, exist_ok=True)
             with redirect_stderr(err_buf):
                 rc = visual_run.main(
                     [
+                        "--backend",
+                        "software",
                         "--corpus",
                         str(corpus),
                         "--out",
@@ -893,6 +994,8 @@ out_dir.mkdir(parents=True, exist_ok=True)
             with redirect_stdout(io.StringIO()):
                 rc_strict = visual_run.main(
                     [
+                        "--backend",
+                        "software",
                         "--corpus",
                         str(corpus),
                         "--out",
@@ -928,6 +1031,8 @@ out_dir.mkdir(parents=True, exist_ok=True)
             with redirect_stdout(io.StringIO()), redirect_stderr(err_buf):
                 rc_reg = visual_run.main(
                     [
+                        "--backend",
+                        "software",
                         "--corpus",
                         str(corpus),
                         "--out",
@@ -949,6 +1054,8 @@ out_dir.mkdir(parents=True, exist_ok=True)
             with redirect_stdout(io.StringIO()):
                 rc_nostrict = visual_run.main(
                     [
+                        "--backend",
+                        "software",
                         "--corpus",
                         str(corpus),
                         "--out",

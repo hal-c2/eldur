@@ -7,7 +7,7 @@ Usage:
                                 [--cases a,b] [--baseline tools/visual/baseline.json]
                                 [--update-baseline] [--strict | --no-strict]
                                 [--width 1280] [--height 800]
-                                [--backend software|gl] [--gl-text distancefield|native]
+                                [--backend gl|software] [--gl-text native|distancefield]
     python3 tools/visual/run.py --selftest
 
 For each case directory containing `index.html`:
@@ -17,10 +17,13 @@ For each case directory containing `index.html`:
      recorded as `convert_failed` and execution continues.
   3. Renders `Main.qml` in `qml6` (`render_qml.py` + `Shot.qml`). Under
      `--strict` (the default), any QML runtime/binding warnings mark the case
-     `qml_warnings` in the report. `--backend software` (default) uses the
-     offscreen software scene graph; `--backend gl` uses OpenGL on one private
-     headless sway started for the run and stopped at its end; `--gl-text`
-     picks distance-field or native glyphs under gl (see `render_qml.py`).
+     `qml_warnings` in the report. `--backend gl --gl-text native` (the
+     default) uses OpenGL with natively rasterised glyphs on one private
+     headless sway started for the run and stopped at its end; when sway or GL
+     is unavailable the run fails and says to pass `--backend software` (the
+     offscreen software scene graph) rather than falling back, so scores stay
+     comparable. `--gl-text distancefield` draws distance-field glyphs (see
+     `render_qml.py`).
   4. Computes `score`, `ssim`, `edge_iou`, `pixel_mismatch`, and a side-by-side
      `diff.png` (`compare.py`), recording `compare_failed` on image errors.
   5. Writes `<out>/report.md` and `<out>/report.json`, validates viewport and
@@ -540,6 +543,10 @@ def _evaluate_cases(
             )
             record["qml_png"] = _rel_posix(qml_png, out_abs)
             record["warnings"] = qml_warnings
+        except render_qml.GlUnavailableError as exc:
+            # Not a property of this page: stop instead of reporting every case
+            # as failed, or tempting a rerun on another backend under one name.
+            raise HarnessError(str(exc)) from exc
         except render_qml.QmlRenderError as exc:
             record["status"] = "qml_render_failed"
             record["error"] = str(exc)
@@ -780,15 +787,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--backend",
         choices=render_qml.BACKENDS,
         default=render_qml.DEFAULT_BACKEND,
-        help="QML renderer: software (offscreen software scene graph, default) or "
-        "gl (OpenGL on a private headless sway; draws shadows and MultiEffect)",
+        help="QML renderer: gl (default; OpenGL on a private headless sway, draws "
+        "shadows and MultiEffect; fails rather than falling back when sway or GL is "
+        "missing) or software (offscreen software scene graph)",
     )
     parser.add_argument(
         "--gl-text",
         choices=render_qml.GL_TEXT_MODES,
         default=render_qml.DEFAULT_GL_TEXT,
-        help="Text rasterisation under --backend gl: distancefield (Qt's GPU default) "
-        "or native (QML_DISABLE_DISTANCEFIELD=1, like the software backend)",
+        help="Text rasterisation under --backend gl: native (default; "
+        "QML_DISABLE_DISTANCEFIELD=1, like the software backend) or distancefield "
+        "(Qt's GPU default)",
     )
     return parser
 
