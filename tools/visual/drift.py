@@ -3,7 +3,7 @@
 
 Usage:
     python3 tools/visual/drift.py tests/corpus/02-block-flow [--qml DIR] [--json OUT]
-                                  [--backend software|gl] [--all]
+                                  [--backend software|gl]
 
 Chromium's boxes come from `geometry.mjs --elements`: every element with a
 box that is not inline, in document order, with the `<tag id class>` text
