@@ -507,7 +507,7 @@ ApplicationWindow {
                                     }
                                     Accessible.name: "I accept the terms"
                                     objectName: "terms"
-                                    width: Math.min(implicitWidth, blockFlow4.width - 7)
+                                    width: implicitWidth
                                     x: 4
                                     y: 3
                                 }

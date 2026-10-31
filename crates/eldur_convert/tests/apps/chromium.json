@@ -16105,6 +16105,821 @@
    }
   }
  ],
+ "lines_justify": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#just": [
+     {
+      "box": [
+       8,
+       16,
+       320,
+       63
+      ],
+      "shown": true,
+      "text": "Justified words run along box this line and carry on over the next line too until it ends"
+     }
+    ],
+    "#ja": [
+     {
+      "box": [
+       195.84,
+       16,
+       37.5,
+       21
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#jc": [
+     {
+      "box": [
+       109.94,
+       37,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
+ "lines_wrap": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#flow": [
+     {
+      "box": [
+       8,
+       8,
+       1264,
+       26
+      ],
+      "shown": true,
+      "text": "Some words one more words and a few more words to fill the line up tail of it two"
+     }
+    ],
+    "#a": [
+     {
+      "box": [
+       101.38,
+       13,
+       38.25,
+       21
+      ],
+      "shown": true,
+      "text": "one"
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       232.09,
+       8,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#i": [
+     {
+      "box": [
+       574.02,
+       13,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       818.59,
+       13,
+       36.75,
+       21
+      ],
+      "shown": true,
+      "text": "two"
+     }
+    ],
+    "#pct": [
+     {
+      "box": [
+       8,
+       42,
+       1264,
+       35
+      ],
+      "shown": true,
+      "text": "xxx"
+     }
+    ],
+    "#vp": [
+     {
+      "box": [
+       16,
+       42,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#vn": [
+     {
+      "box": [
+       84,
+       57,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#end": [
+     {
+      "box": [
+       8,
+       85,
+       1264,
+       21
+      ],
+      "shown": true,
+      "text": "grow"
+     }
+    ],
+    "#grow": [
+     {
+      "box": [
+       8,
+       85,
+       44.89,
+       21
+      ],
+      "shown": true,
+      "text": "grow"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "narrow",
+   "log": [],
+   "state": {
+    "#flow": [
+     {
+      "box": [
+       8,
+       8,
+       384,
+       65
+      ],
+      "shown": true,
+      "text": "Some words one more words and a few more words to fill the line up tail of it two"
+     }
+    ],
+    "#a": [
+     {
+      "box": [
+       101.38,
+       13,
+       38.25,
+       21
+      ],
+      "shown": true,
+      "text": "one"
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       232.09,
+       8,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#i": [
+     {
+      "box": [
+       8,
+       52,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       252.58,
+       52,
+       36.75,
+       21
+      ],
+      "shown": true,
+      "text": "two"
+     }
+    ],
+    "#pct": [
+     {
+      "box": [
+       8,
+       81,
+       384,
+       35
+      ],
+      "shown": true,
+      "text": "xxx"
+     }
+    ],
+    "#vp": [
+     {
+      "box": [
+       16,
+       81,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#vn": [
+     {
+      "box": [
+       84,
+       96,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#end": [
+     {
+      "box": [
+       8,
+       124,
+       384,
+       21
+      ],
+      "shown": true,
+      "text": "grow"
+     }
+    ],
+    "#grow": [
+     {
+      "box": [
+       8,
+       124,
+       44.89,
+       21
+      ],
+      "shown": true,
+      "text": "grow"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "thin",
+   "log": [],
+   "state": {
+    "#flow": [
+     {
+      "box": [
+       8,
+       8,
+       134,
+       141
+      ],
+      "shown": true,
+      "text": "Some words one more words and a few more words to fill the line up tail of it two"
+     }
+    ],
+    "#a": [
+     {
+      "box": [
+       101.38,
+       8,
+       38.25,
+       21
+      ],
+      "shown": true,
+      "text": "one"
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       8,
+       47,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#i": [
+     {
+      "box": [
+       8,
+       107,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       63.14,
+       128,
+       36.75,
+       21
+      ],
+      "shown": true,
+      "text": "two"
+     }
+    ],
+    "#pct": [
+     {
+      "box": [
+       8,
+       157,
+       134,
+       55
+      ],
+      "shown": true,
+      "text": "xxx"
+     }
+    ],
+    "#vp": [
+     {
+      "box": [
+       16,
+       157,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#vn": [
+     {
+      "box": [
+       8,
+       192,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#end": [
+     {
+      "box": [
+       8,
+       220,
+       134,
+       21
+      ],
+      "shown": true,
+      "text": "grow"
+     }
+    ],
+    "#grow": [
+     {
+      "box": [
+       8,
+       220,
+       44.89,
+       21
+      ],
+      "shown": true,
+      "text": "grow"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "wide",
+   "log": [],
+   "state": {
+    "#flow": [
+     {
+      "box": [
+       8,
+       8,
+       1264,
+       26
+      ],
+      "shown": true,
+      "text": "Some words one more words and a few more words to fill the line up tail of it two"
+     }
+    ],
+    "#a": [
+     {
+      "box": [
+       101.38,
+       13,
+       38.25,
+       21
+      ],
+      "shown": true,
+      "text": "one"
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       232.09,
+       8,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#i": [
+     {
+      "box": [
+       574.02,
+       13,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       818.59,
+       13,
+       36.75,
+       21
+      ],
+      "shown": true,
+      "text": "two"
+     }
+    ],
+    "#pct": [
+     {
+      "box": [
+       8,
+       42,
+       1264,
+       35
+      ],
+      "shown": true,
+      "text": "xxx"
+     }
+    ],
+    "#vp": [
+     {
+      "box": [
+       16,
+       42,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#vn": [
+     {
+      "box": [
+       84,
+       57,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#end": [
+     {
+      "box": [
+       8,
+       85,
+       1264,
+       21
+      ],
+      "shown": true,
+      "text": "grow"
+     }
+    ],
+    "#grow": [
+     {
+      "box": [
+       8,
+       85,
+       44.89,
+       21
+      ],
+      "shown": true,
+      "text": "grow"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "grow",
+   "log": [],
+   "state": {
+    "#flow": [
+     {
+      "box": [
+       8,
+       8,
+       1264,
+       26
+      ],
+      "shown": true,
+      "text": "Some words one more words and a few more words to fill the line up tail of it two"
+     }
+    ],
+    "#a": [
+     {
+      "box": [
+       101.38,
+       13,
+       38.25,
+       21
+      ],
+      "shown": true,
+      "text": "one"
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       232.09,
+       8,
+       200,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#i": [
+     {
+      "box": [
+       714.02,
+       13,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       958.59,
+       13,
+       36.75,
+       21
+      ],
+      "shown": true,
+      "text": "two"
+     }
+    ],
+    "#pct": [
+     {
+      "box": [
+       8,
+       42,
+       1264,
+       35
+      ],
+      "shown": true,
+      "text": "xxx"
+     }
+    ],
+    "#vp": [
+     {
+      "box": [
+       16,
+       42,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#vn": [
+     {
+      "box": [
+       84,
+       57,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#end": [
+     {
+      "box": [
+       8,
+       85,
+       1264,
+       21
+      ],
+      "shown": true,
+      "text": "grow"
+     }
+    ],
+    "#grow": [
+     {
+      "box": [
+       8,
+       85,
+       44.89,
+       21
+      ],
+      "shown": true,
+      "text": "grow"
+     }
+    ],
+    "(focus)": "grow"
+   }
+  },
+  {
+   "name": "narrow2",
+   "log": [],
+   "state": {
+    "#flow": [
+     {
+      "box": [
+       8,
+       8,
+       384,
+       66
+      ],
+      "shown": true,
+      "text": "Some words one more words and a few more words to fill the line up tail of it two"
+     }
+    ],
+    "#a": [
+     {
+      "box": [
+       101.38,
+       8,
+       38.25,
+       21
+      ],
+      "shown": true,
+      "text": "one"
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       8,
+       29,
+       200,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#i": [
+     {
+      "box": [
+       105.84,
+       53,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       350.42,
+       53,
+       36.75,
+       21
+      ],
+      "shown": true,
+      "text": "two"
+     }
+    ],
+    "#pct": [
+     {
+      "box": [
+       8,
+       82,
+       384,
+       35
+      ],
+      "shown": true,
+      "text": "xxx"
+     }
+    ],
+    "#vp": [
+     {
+      "box": [
+       16,
+       82,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#vn": [
+     {
+      "box": [
+       84,
+       97,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#end": [
+     {
+      "box": [
+       8,
+       125,
+       384,
+       21
+      ],
+      "shown": true,
+      "text": "grow"
+     }
+    ],
+    "#grow": [
+     {
+      "box": [
+       8,
+       125,
+       44.89,
+       21
+      ],
+      "shown": true,
+      "text": "grow"
+     }
+    ],
+    "(focus)": "grow"
+   }
+  }
+ ],
  "modal": [
   {
    "name": "load",

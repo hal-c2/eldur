@@ -28,14 +28,16 @@ const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 /// between the two text engines.
 const GEOMETRY_TOLERANCE: f64 = 2.0;
 
-const COMPACT: &str = "the button sits 2px left of Chromium's; cause not isolated";
+const COMPACT: &str = "a right-aligned row: its buttons are whole pixels wider (see BUTTONWIDTH), which would start this one 2px left; not confirmed";
 const ROWS: &str =
     "table rows are whole pixels: 33 against Chromium's 32.59, adding up down the table";
 const BUTTONWIDTH: &str = "a button's width is whole pixels (`Math.ceil` in emit/controls.rs): \
                            five on a line add up to 2.2px against Chromium's fractions";
 const MONOLINE: &str = "a created textarea is 40 high, not 42: the runtime measures monospace in Qt \
                         where the converter's font_extents table has Chromium's; what follows is higher";
-const CONTROLROW: &str = "13.4px lower than Chromium from the fields above; cause not isolated";
+const JUSTIFY: &str = "a justified line with boxes is not spread: its boxes keep their natural x, \
+                       and a Text cut by a box cannot share the line's free space between words";
+const CONTROLROW: &str = "with the form between them hidden, the heading's bottom margin of 21.44 looks lost, leaving only #done's 16; not confirmed";
 const FONT: &str = "Helvetica: Qt's fontconfig match has line height 23 where Chromium's has 18";
 const FONTFOLLOW: &str = "follows from the Helvetica line height and width difference";
 const NEVER: &str =
@@ -72,6 +74,8 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("table", "* tr[*] y:", ROWS),
     ("form", "* #done[*] y:", CONTROLROW),
     ("created_lines", "* #reset[*] x:", BUTTONWIDTH),
+    ("lines_justify", "* #ja[*] x:", JUSTIFY),
+    ("lines_justify", "* #jc[*] x:", JUSTIFY),
     ("created_controls", "* select[*] y:", MONOLINE),
 ];
 
@@ -129,6 +133,7 @@ TestCase {
             for (const c of s.type[1]) keyClick(c)
         }
         if (s.key) press(s.key)
+        if (s.viewport) { page.width = s.viewport[0]; page.height = s.viewport[1] }
     }
 
     function test_page() {
@@ -444,6 +449,16 @@ fn generated() {
 #[test]
 fn created_lines() {
     page("created_lines");
+}
+
+#[test]
+fn lines_justify() {
+    page("lines_justify");
+}
+
+#[test]
+fn lines_wrap() {
+    page("lines_wrap");
 }
 
 #[test]

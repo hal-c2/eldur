@@ -492,9 +492,18 @@ impl Emitter<'_, '_> {
                 if let Some(max) = px(&style.max_width) {
                     limit = format!("{}, {limit}", fmt_number(round(max + extra_w)));
                 }
+                // A field keeps its width on a line too narrow; only content can shrink.
+                let fixed = matches!(
+                    obj.type_name.as_str(),
+                    "TextField" | "TextArea" | "ComboBox" | "CheckBox" | "RadioButton" | "Slider"
+                ) && px(&style.max_width).is_none();
                 obj.set(
                     "width",
-                    Value::expr(format!("Math.min(implicitWidth, {limit})")),
+                    Value::expr(if fixed {
+                        "implicitWidth".to_owned()
+                    } else {
+                        format!("Math.min(implicitWidth, {limit})")
+                    }),
                 )
             }
         };
