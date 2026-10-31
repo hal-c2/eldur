@@ -4107,3 +4107,218 @@ Item {
         "{output}"
     );
 }
+
+// Expected values recorded from headless Chromium (Playwright) serving:
+//   <!DOCTYPE html><html><body>
+//     <div id="sec-a" class="panel item"><p id="p-1" class="item lead">Alpha</p><button id="btn-1" class="item action">One</button></div>
+//     <div id="sec-b" class="panel"><p id="p-2" class="item">Beta</p></div>
+//   </body></html>
+// at https://example.com/page1.html:
+//   querySelectorAll(".item").length === 4
+//   Array.from(querySelectorAll(".item"), el => el.id) === ["sec-a", "p-1", "btn-1", "p-2"]
+//   querySelectorAll(".panel .item").length === 3
+//   Array.from(querySelectorAll(".panel .item"), el => el.id) === ["p-1", "btn-1", "p-2"]
+//   getElementsByClassName("item").length === 4
+//   Array.from(getElementsByClassName("item"), el => el.id) === ["sec-a", "p-1", "btn-1", "p-2"]
+//   getElementsByClassName("panel").length === 2
+//   getElementsByTagName("p").length === 2
+//   Array.from(getElementsByTagName("p"), el => el.id) === ["p-1", "p-2"]
+//   getElementsByTagName("div").length === 2
+//   getElementsByTagName("button").length === 1
+//   document.body.children.length === 2
+//   getElementById("sec-a").nextElementSibling.id === "sec-b"
+//   getElementById("sec-b").previousElementSibling.id === "sec-a"
+//   getElementById("sec-a").textContent === "AlphaOne"
+#[test]
+fn qml6_flickable_root_query_selector_all_and_tag_class_collections_visit_once() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default();
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verifyFlickableTraversal() {
+    const dot = ".";
+    const qsaItem = document.querySelectorAll(dot + "item");
+    const qsaNested = document.querySelectorAll(dot + "panel " + dot + "item");
+    const byClassItem = document.getElementsByClassName("item");
+    const byClassPanel = document.getElementsByClassName("panel");
+    const byTagP = document.getElementsByTagName("p");
+    const byTagDiv = document.getElementsByTagName("div");
+    const byTagBtn = document.getElementsByTagName("button");
+    const secA = document.getElementById("sec-a");
+    const secB = document.getElementById("sec-b");
+
+    return [
+        qsaItem.length,
+        Array.from(qsaItem, (el) => el.id).join(","),
+        qsaNested.length,
+        Array.from(qsaNested, (el) => el.id).join(","),
+        byClassItem.length,
+        Array.from(byClassItem, (el) => el.id).join(","),
+        byClassPanel.length,
+        byTagP.length,
+        Array.from(byTagP, (el) => el.id).join(","),
+        byTagDiv.length,
+        byTagBtn.length,
+        document.body.children.length,
+        secA.nextElementSibling.id,
+        secB.previousElementSibling.id,
+        document.getElementById("p-1").textContent
+    ].join("|");
+}
+"##,
+        r#"import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+
+Flickable {
+    id: root
+    width: 800
+    height: 600
+    contentWidth: col.implicitWidth
+    contentHeight: col.implicitHeight
+
+    ColumnLayout {
+        id: col
+        Rectangle {
+            id: secA
+            objectName: "sec-a"
+            property string h2qTag: "div"
+            property string h2qClasses: "panel item"
+            ColumnLayout {
+                Text {
+                    id: p1
+                    objectName: "p-1"
+                    property string h2qTag: "p"
+                    property string h2qClasses: "item lead"
+                    text: "Alpha"
+                }
+                Button {
+                    id: btn1
+                    objectName: "btn-1"
+                    property string h2qTag: "button"
+                    property string h2qClasses: "item action"
+                    text: "One"
+                }
+            }
+        }
+        Rectangle {
+            id: secB
+            objectName: "sec-b"
+            property string h2qTag: "div"
+            property string h2qClasses: "panel"
+            ColumnLayout {
+                Text {
+                    id: p2
+                    objectName: "p-2"
+                    property string h2qTag: "p"
+                    property string h2qClasses: "item"
+                    text: "Beta"
+                }
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        console.log("H2Q_OK_FLICKABLE_WALK", Page.verifyFlickableTraversal());
+        Qt.quit();
+    }
+}"#,
+    );
+
+    assert!(
+        output.contains(
+            "H2Q_OK_FLICKABLE_WALK 4|sec-a,p-1,btn-1,p-2|3|p-1,btn-1,p-2|4|sec-a,p-1,btn-1,p-2|2|2|p-1,p-2|2|1|2|sec-b|sec-a|Alpha"
+        ),
+        "{output}"
+    );
+}
+
+// Expected values recorded from headless Chromium (Playwright) serving:
+//   <!DOCTYPE html><html><head><base href="../api/v2/"></head><body>
+//     <a id="rel" href="users/list.json">Users</a>
+//     <a id="up" href="../v1/ping">Ping</a>
+//     <a id="root" href="/status">Status</a>
+//   </body></html>
+// at https://example.com/docs/guide/index.html:
+//   location.href === "https://example.com/docs/guide/index.html"
+//   location.pathname === "/docs/guide/index.html"
+//   document.baseURI === "https://example.com/docs/api/v2/"
+//   rel.href === "https://example.com/docs/api/v2/users/list.json"
+//   rel.getAttribute("href") === "users/list.json"
+//   up.href === "https://example.com/docs/api/v1/ping"
+//   root.href === "https://example.com/status"
+//   new URL("items/42", document.baseURI).href === "https://example.com/docs/api/v2/items/42"
+#[test]
+fn qml6_base_href_keeps_location_href_as_document_url_and_resolves_base_uri_and_relative_anchor() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default();
+
+    let (output, _) = run_page_allowing_unsupported(
+        &resolver,
+        r##"
+function verifyBaseAndLocation() {
+    const rel = document.createElement("a");
+    rel.setAttribute("href", "users/list.json");
+    const up = document.createElement("a");
+    up.setAttribute("href", "../v1/ping");
+    const rootLink = document.createElement("a");
+    rootLink.setAttribute("href", "/status");
+    const viaUrlCtor = new URL("items/42", document.baseURI).href;
+
+    return [
+        location.href,
+        location.pathname,
+        document.baseURI,
+        rel.href,
+        rel.getAttribute("href"),
+        up.href,
+        rootLink.href,
+        viaUrlCtor
+    ].join("|");
+}
+"##,
+        r#"import QtQuick
+
+Item {
+    id: root
+    property string documentUrl: ""
+    property string baseUrl: "https://example.com/docs/guide/index.html"
+
+    Item {
+        id: baseElem
+        property string h2qTag: "base"
+        property string href: "../api/v2/"
+    }
+
+    Component.onCompleted: {
+        // 1. With a <base href="../api/v2/"> element in the tree and baseUrl as the document URL
+        (Page.__h2q_init || H2Q.init)(root);
+        const withBaseElem = Page.verifyBaseAndLocation();
+
+        // 2. With root.documentUrl and root.baseUrl kept apart on root (without <base> element)
+        baseElem.parent = null;
+        root.documentUrl = "https://example.com/docs/guide/index.html";
+        root.baseUrl = "https://example.com/docs/api/v2/";
+        H2Q.init(root);
+        const withRootProps = Page.verifyBaseAndLocation();
+
+        console.log("H2Q_OK_BASE_URL", withBaseElem + "||" + (withBaseElem === withRootProps));
+        Qt.quit();
+    }
+}"#,
+    );
+
+    assert!(
+        output.contains(
+            "H2Q_OK_BASE_URL https://example.com/docs/guide/index.html|/docs/guide/index.html|https://example.com/docs/api/v2/|https://example.com/docs/api/v2/users/list.json|users/list.json|https://example.com/docs/api/v1/ping|https://example.com/status|https://example.com/docs/api/v2/items/42||true"
+        ),
+        "{output}"
+    );
+}
