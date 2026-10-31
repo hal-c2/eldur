@@ -504,17 +504,15 @@ pub(crate) fn wire(
                 );
             }
             ("focus" | "focusin" | "blur" | "focusout", _) => {
-                let test = if matches!(event, "focus" | "focusin") {
-                    "activeFocus"
+                let body = if matches!(event, "focus" | "focusin") {
+                    format!("if (activeFocus) {{ {} }}", call(event, "null"))
                 } else {
-                    "!activeFocus"
+                    format!(
+                        "if (!activeFocus) {{ Eldur.whenBlurred({id}, {event:?}, function() {{ {} }}); }}",
+                        call(event, "null")
+                    )
                 };
-                add_handler(
-                    obj,
-                    "onActiveFocusChanged",
-                    &[],
-                    vec![format!("if ({test}) {{ {} }}", call(event, "null"))],
-                );
+                add_handler(obj, "onActiveFocusChanged", &[], vec![body]);
             }
             (_, Some(signal)) => {
                 let mut body = call(event, "null");

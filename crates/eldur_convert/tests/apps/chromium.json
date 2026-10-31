@@ -5125,6 +5125,1100 @@
    }
   }
  ],
+ "focus_hide": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "input": [
+     {
+      "box": [
+       8,
+       8,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       29,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       50,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       71,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       92,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       113,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "own-focus",
+   "log": [
+    "focus own"
+   ],
+   "state": {
+    "input": [
+     {
+      "box": [
+       8,
+       8,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       29,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       50,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       71,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       92,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       113,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "(focus)": "own"
+   }
+  },
+  {
+   "name": "own-hide",
+   "log": [
+    "sync own active=own",
+    "blur own",
+    "focusout own",
+    "later own active=BODY"
+   ],
+   "state": {
+    "input": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       8,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       29,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       50,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       71,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       92,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "anc-focus",
+   "log": [
+    "focus anc"
+   ],
+   "state": {
+    "input": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       8,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       29,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       50,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       71,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       92,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "(focus)": "anc"
+   }
+  },
+  {
+   "name": "anc-hide",
+   "log": [
+    "sync anc active=anc",
+    "blur anc",
+    "focusout anc",
+    "later anc active=BODY"
+   ],
+   "state": {
+    "input": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       8,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       29,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       50,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       71,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "cls-focus",
+   "log": [
+    "focus cls"
+   ],
+   "state": {
+    "input": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       8,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       29,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       50,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       71,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "(focus)": "cls"
+   }
+  },
+  {
+   "name": "cls-hide",
+   "log": [
+    "sync cls active=cls",
+    "blur cls",
+    "focusout cls",
+    "later cls active=BODY"
+   ],
+   "state": {
+    "input": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       8,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       29,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       50,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "vis-focus",
+   "log": [
+    "focus vis"
+   ],
+   "state": {
+    "input": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       8,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       29,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       50,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "(focus)": "vis"
+   }
+  },
+  {
+   "name": "vis-hide",
+   "log": [
+    "sync vis active=vis",
+    "blur vis",
+    "focusout vis",
+    "later vis active=BODY"
+   ],
+   "state": {
+    "input": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       8,
+       185,
+       21
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       29,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       50,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "attr-focus",
+   "log": [
+    "focus attr"
+   ],
+   "state": {
+    "input": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       8,
+       185,
+       21
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       29,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       50,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "(focus)": "attr"
+   }
+  },
+  {
+   "name": "attr-hide",
+   "log": [
+    "sync attr active=attr",
+    "blur attr",
+    "focusout attr",
+    "later attr active=BODY"
+   ],
+   "state": {
+    "input": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       8,
+       185,
+       21
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       29,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "show",
+   "log": [
+    "shown active=BODY"
+   ],
+   "state": {
+    "input": [
+     {
+      "box": [
+       8,
+       8,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       29,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       50,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       71,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       92,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       113,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "quiet-focus",
+   "log": [
+    "focus quiet"
+   ],
+   "state": {
+    "input": [
+     {
+      "box": [
+       8,
+       8,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       29,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       50,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       71,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       92,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       113,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "(focus)": "quiet"
+   }
+  },
+  {
+   "name": "quiet-hide",
+   "log": [
+    "blur quiet",
+    "focusout quiet"
+   ],
+   "state": {
+    "input": [
+     {
+      "box": [
+       8,
+       8,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       29,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       50,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       71,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       92,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     },
+     {
+      "box": [
+       8,
+       113,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
  "form": [
   {
    "name": "load",

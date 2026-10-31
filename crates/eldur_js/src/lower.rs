@@ -594,6 +594,10 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
                 "disabled" | "hidden" if self.shared.reads_attributes => {
                     format_assignment(&format!("Eldur.wrap({id}).{prop}"), op, &rhs_str)
                 }
+                // `[hidden]` is a rule of the cascade the runtime answers from.
+                "hidden" if self.shared.keeps_cascade => {
+                    format_assignment(&format!("Eldur.wrap({id}).{prop}"), op, &rhs_str)
+                }
                 "disabled" => {
                     format_inverted_bool_assignment(&format!("{id}.enabled"), op, right, &rhs_str)
                 }

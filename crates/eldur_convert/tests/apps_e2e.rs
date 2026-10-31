@@ -390,6 +390,11 @@ fn accordion() {
 }
 
 #[test]
+fn focus_hide() {
+    page("focus_hide");
+}
+
+#[test]
 fn hidden_focus() {
     page("hidden_focus");
 }

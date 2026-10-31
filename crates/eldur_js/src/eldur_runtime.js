@@ -1595,6 +1595,8 @@ function _afterClassMutation(raw, m) {
 function classList(item) {
     var raw = _unwrap(item);
     var m = _meta(raw);
+    // A class's variant may take the focus as it is set.
+    _holdFocus();
     return {
         add: function() {
             var curRaw = m.raw || raw;
@@ -2335,6 +2337,7 @@ function _detachNode(raw) {
 // Sets whether a node shows of itself. A box painted away from its DOM parent
 // still goes when that parent does.
 function _setShown(raw, shown) {
+    _holdFocus();
     _layoutChanged(raw.parent);
     var slot = raw.eldurSlot;
     if (slot && raw.eldurBlock === undefined) {
@@ -3492,6 +3495,9 @@ function toggleAttribute(item, attrName, force) {
 // A browser takes focus off what stops being rendered. Qt only moves activeFocus and
 // leaves `focus` set, which would hand it back when the element shows again.
 function _focusGone(raw) {
+    if (raw === _focusHeld) {
+        return false;
+    }
     if (raw.visible !== false || !_root || _root.visible !== true) {
         return false;
     }
@@ -3499,6 +3505,98 @@ function _focusGone(raw) {
         raw.focus = false;
     }
     return true;
+}
+
+// A browser notices at its next update, after the script's turn: until then
+// `activeElement` still answers with the element, and only then do `blur` and
+// `focusout` fire. Qt moves activeFocus as soon as an item hides, so what it says
+// about a hidden item waits here.
+var _focusHeld = null;
+var _focusQueue = [];
+var _focusLooked = false;
+
+function _focusIsGhost(raw) {
+    if (_gHasCascade()) {
+        return _gStyle(raw).visibility === "hidden";
+    }
+    for (var p = raw; p; p = p.parent) {
+        if (p.opacity === 0 && p.enabled === false) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function _holdFocus() {
+    if (_focusLooked || !_root) {
+        return;
+    }
+    _focusLooked = true;
+    Qt.callLater(_focusSettle);
+    _focusHeld = _focusIn(_root);
+}
+
+function _focusIn(item) {
+    var kids = item.children || [];
+    for (var i = 0; i < kids.length; ++i) {
+        var found = _focusIn(kids[i]);
+        if (found) {
+            return found;
+        }
+    }
+    return item !== _root && item.activeFocus ? item : null;
+}
+
+// What Qt says when an item's focus goes: `run` hears it now, unless the item went
+// because it stopped being rendered.
+function whenBlurred(raw, type, run) {
+    if (raw !== _focusHeld && (raw.visible !== false || !_root || _root.visible !== true)) {
+        run();
+        return;
+    }
+    if (!_focusLooked) {
+        _focusLooked = true;
+        Qt.callLater(_focusSettle);
+    }
+    _focusHeld = _focusHeld || raw;
+    _focusQueue.push({ type: type, run: run });
+}
+
+function _focusSettle() {
+    _gSettle();
+    // Held from before the turn's click moved it, or found now: Qt can keep
+    // activeFocus on a hidden item until the frame.
+    var found = _root ? _focusIn(_root) : null;
+    var held = found && found.visible === false ? found : _focusHeld;
+    var queue = _focusQueue;
+    _focusHeld = null;
+    _focusQueue = [];
+    _focusLooked = false;
+    if (held) {
+        if (held.visible === false || _focusIsGhost(held)) {
+            // Left set, Qt would hand it back when the element shows again.
+            _focusHeld = held;
+            _focusLooked = true;
+            held.focus = false;
+            _focusHeld = null;
+            _focusLooked = false;
+            queue = queue.concat(_focusQueue);
+            _focusQueue = [];
+            if (_activeElement === held) {
+                _activeElement = null;
+            }
+        } else if (held.activeFocus) {
+            // Hidden and shown again within a turn: a browser saw nothing.
+            queue = [];
+        }
+    }
+    ["blur", "focusout"].forEach(function(type) {
+        queue.forEach(function(entry) {
+            if (entry.type === type) {
+                entry.run();
+            }
+        });
+    });
 }
 
 function focus(item) {
@@ -3551,13 +3649,22 @@ function blur(item) {
     }
 }
 
+function _hiddenByAttribute(raw) {
+    for (var p = raw; p; p = p.parent) {
+        if (_meta(p).explicitHidden === true) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function getBoundingClientRect(item) {
     _layoutForRead();
     var raw = _gCurrent(_unwrap(item));
     if (raw && raw.__eldurInline) {
         return _vClientRect(raw);
     }
-    if (!raw || (_gActive() && raw.visible === false)) {
+    if (!raw || (raw.visible === false && (_gActive() || _hiddenByAttribute(raw)))) {
         return { x: 0, y: 0, top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0 };
     }
     var w = typeof raw.width === "number" ? raw.width : 0;
@@ -4185,11 +4292,11 @@ function _connectSignalOnce(raw, type) {
                     _dispatchDynamic(raw, type, null);
                 }
             } else {
-                if (_activeElement === raw) {
+                if (_activeElement === raw && raw !== _focusHeld) {
                     _activeElement = null;
                 }
                 if (type === "blur" || type === "focusout") {
-                    _dispatchDynamic(raw, type, null);
+                    whenBlurred(raw, type, function() { _dispatchDynamic(raw, type, null); });
                 }
             }
         };
@@ -9058,6 +9165,9 @@ var document = {
     get hidden() { return false; },
     get visibilityState() { return "visible"; },
     get activeElement() {
+        if (_focusHeld && (_focusHeld.visible === false || _focusHeld.activeFocus)) {
+            return wrap(_focusHeld);
+        }
         if (_activeElement && _focusGone(_activeElement)) {
             _activeElement = null;
         }
@@ -9076,7 +9186,8 @@ var document = {
         if (focused) {
             return wrap(focused);
         }
-        if (_activeElement) {
+        // A node with no focus of its own to ask, such as an inline one.
+        if (_activeElement && typeof _activeElement.focus !== "boolean") {
             return wrap(_activeElement);
         }
         return this.body;
@@ -9322,6 +9433,7 @@ function _gRules() {
 }
 
 function _gTouch() {
+    _holdFocus();
     if (!_gHasCascade()) {
         return;
     }

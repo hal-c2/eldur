@@ -1,0 +1,10 @@
+{"steps":[
+ {"name":"own-focus","click":"#own"},{"name":"own-hide","key":"Enter"},
+ {"name":"anc-focus","click":"#anc"},{"name":"anc-hide","key":"Enter"},
+ {"name":"cls-focus","click":"#cls"},{"name":"cls-hide","key":"Enter"},
+ {"name":"vis-focus","click":"#vis"},{"name":"vis-hide","key":"Enter"},
+ {"name":"attr-focus","click":"#attr"},{"name":"attr-hide","key":"Enter"},
+ {"name":"show","click":"#show"},
+ {"name":"quiet-focus","click":"#quiet"},{"name":"quiet-hide","key":"Enter"}
+],
+ "watch":[{"sel":"input"}]}
