@@ -23,6 +23,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 import compare  # noqa: E402
+import drift  # noqa: E402
 import render_qml  # noqa: E402
 import run as visual_run  # noqa: E402
 
@@ -1075,6 +1076,87 @@ out_dir.mkdir(parents=True, exist_ok=True)
             self.assertTrue(
                 any("ReferenceError" in w for w in report_nostrict["cases"][0]["warnings"])
             )
+
+
+class DriftTests(unittest.TestCase):
+    def test_tags_the_object_under_each_source_comment(self) -> None:
+        qml = """Item {
+    // <div class="a">
+    Rectangle {
+        // <p>
+        Text {
+        }
+    }
+    // not an element
+    Item {
+    }
+}
+"""
+        tagged, keys = drift.tag_qml(qml)
+        self.assertEqual(keys, ['<div class="a">', "<p>"])
+        self.assertIn('    Rectangle {\n        property string eldurGeo: "0"', tagged)
+        self.assertIn('        Text {\n            property string eldurGeo: "1"', tagged)
+        self.assertEqual(tagged.count("eldurGeo"), 2)
+
+    def test_matches_the_kth_element_of_each_description(self) -> None:
+        box = lambda d, y: {"describe": d, "x": 0, "y": y, "width": 10, "height": 5}
+        rows, unmatched_chromium, unmatched_qml = drift.match(
+            [box("<p>", 0), box("<div>", 5), box("<p>", 10), box("<p>", 20)],
+            [box("<div>", 6), box("<p>", 0), box("<p>", 12)],
+        )
+        self.assertEqual([(r["describe"], r["dy"]) for r in rows], [("<p>", 0), ("<div>", 1), ("<p>", 2)])
+        self.assertEqual((unmatched_chromium, unmatched_qml), (1, 0))
+
+    def test_measures_layout_rounding_against_chromium(self) -> None:
+        if shutil.which("qml6") is None or shutil.which("node") is None:
+            self.skipTest("needs qml6 and node")
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            page = tmp_dir / "index.html"
+            page.write_text(
+                "<!DOCTYPE html><body style='margin:0'>"
+                "<div class=a style='height:10.5px'></div>"
+                "<p style='margin:0;height:20px'></p></body>",
+                encoding="utf-8",
+            )
+            qml_dir = tmp_dir / "qml"
+            qml_dir.mkdir()
+            (qml_dir / "Main.qml").write_text(
+                """import QtQuick
+import QtQuick.Layouts
+
+Item {
+    width: 200
+    height: 100
+
+    ColumnLayout {
+        spacing: 0
+        width: parent.width
+
+        // <div class="a">
+        Item {
+            implicitHeight: 10.5
+            Layout.fillWidth: true
+        }
+
+        // <p>
+        Item {
+            implicitHeight: 20
+            Layout.fillWidth: true
+        }
+    }
+}
+""",
+                encoding="utf-8",
+            )
+            result = drift.measure(page, qml_dir, backend="software", width=200, height=100)
+        rows = {r["describe"]: r for r in result["rows"]}
+        # Qt Layouts ceil an item's implicit height and its cell: 10.5 -> 11.
+        self.assertEqual(rows['<div class="a">']["qml"]["height"], 11)
+        self.assertEqual(rows['<div class="a">']["dh"], 0.5)
+        self.assertEqual(rows["<p>"]["chromium"]["y"], 10.5)
+        self.assertEqual(rows["<p>"]["dy"], 0.5)
+        self.assertEqual(result["summary"]["unmatched_qml"], 0)
 
 
 if __name__ == "__main__":

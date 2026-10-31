@@ -145,11 +145,33 @@ QtObject {
         return cur;
     }
 
+    // drift.py tags the objects it wants measured with
+    // `property string eldurGeo: "<n>"`; their settled scene geometry is logged
+    // so it is read at the same moment the screenshot is taken. The item's
+    // own `transform` is left out (text baselines are nudged with a
+    // Translate), its ancestors' are not.
+    function dumpGeometry(item: Item) {
+        if (!item)
+            return;
+        const key = item["eldurGeo"];
+        if (typeof key === "string" && item.parent) {
+            const p = item.parent.mapToItem(null, item.x, item.y);
+            console.log("eldurGeo " + JSON.stringify({
+                key: key, x: p.x, y: p.y,
+                width: item.width, height: item.height, visible: item.visible
+            }));
+        }
+        const kids = item.children;
+        for (let i = 0; i < kids.length; ++i)
+            root.dumpGeometry(kids[i]);
+    }
+
     function triggerGrab() {
         if (root.grabStarted || !root.captureRoot || !root.targetWindow)
             return;
         root.grabStarted = true;
         settleWatch.stop();
+        root.dumpGeometry(root.captureRoot);
 
         // grabToImage scales to targetSize, so a window the platform resized
         // (a tiling compositor, a too-small screen) would come out stretched

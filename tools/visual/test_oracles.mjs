@@ -81,5 +81,12 @@ const geo = node("geometry.mjs", [
 check("geometry: created element", geo, [{ select: "#n", index: 0, x: 0, y: 20, width: 40, height: 30 }]);
 const geoNone = node("geometry.mjs", ["--html", "<body style=margin:0><p style=margin:0;height:20px>x</p></body>", "p"]);
 check("geometry: no-run output unchanged", geoNone, [{ select: "p", index: 0, x: 0, y: 0, width: 1280, height: 20 }]);
+const geoAll = node("geometry.mjs", [
+  "--elements", "--html",
+  "<!DOCTYPE html><body style=margin:0><p id=a class=' x  y ' style=margin:0;height:10.5px>x<b>y</b></p><i style=display:none></i><div style=height:5px></div></body>",
+]);
+check("geometry --elements: boxes that are not inline, described", geoAll.map((r) => [r.describe, r.y, r.height]), [
+  ["<html>", 0, 15.5], ["<body>", 0, 15.5], ['<p id="a" class="x y">', 0, 10.5], ["<div>", 10.5, 5],
+]);
 
 process.exit(failed ? 1 : 0);
