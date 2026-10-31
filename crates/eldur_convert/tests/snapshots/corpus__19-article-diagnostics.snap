@@ -1,0 +1,6 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+warning[css]: <style>#1:108: unsupported pseudo-element `::first-letter`
+info[qml]: index.html:273: <code>: an inline background has square corners

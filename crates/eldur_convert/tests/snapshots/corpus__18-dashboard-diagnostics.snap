@@ -1,0 +1,7 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[css]: <style>#1:268: unknown property `accent-color`
+info[css]: <style>#1:309: unknown property `font-variant-numeric`
+info[html]: index.html:442: inline <progress> is laid out as a block (no inline replaced elements yet)

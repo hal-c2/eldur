@@ -56,7 +56,7 @@ node tools/visual/computed.mjs cases.json   # or JSON on stdin
 
 Reports what Chromium's `getComputedStyle()` gives for each case
 (`{name, html, select, props}`), one JSON line per case. Use it to choose the
-expected values in h2q_css tests, so that they assert browser behaviour:
+expected values in eldur_css tests, so that they assert browser behaviour:
 error recovery in particular is easy to misread from the spec.
 
 ### Geometry oracle: `geometry.mjs`
@@ -118,7 +118,7 @@ Passing `--diff <out.png>` writes a labelled three-panel PNG:
 - Discovers every case directory containing `index.html` under `--corpus`
   (default `tests/corpus`), optionally filtered by `--cases a,b`.
 - Renders HTML, runs `--convert-cmd` (default
-  `cargo run -q -p h2q_cli -- convert`), renders QML, compares screenshots, and
+  `cargo run -q -p eldur_cli -- convert`), renders QML, compares screenshots, and
   writes `<out>/report.md` and `<out>/report.json`.
 - Per-case statuses: `ok`, `qml_warnings` (when `--strict` is active, which is
   the default; pass `--no-strict` to keep status `ok` while still recording

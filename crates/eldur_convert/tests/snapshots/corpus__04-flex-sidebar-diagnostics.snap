@@ -1,0 +1,7 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[html]: index.html:236: inline <input> is laid out as a block (no inline replaced elements yet)
+info[qml]: index.html:241: wrapping flex items of <div class="stats"> that grow from one basis are laid out as an auto-fit grid: a short last line keeps the column width
+info[css]: index.html:213: percentage height on <body> is treated as `auto`

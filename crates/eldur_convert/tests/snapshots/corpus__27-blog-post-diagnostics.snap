@@ -1,0 +1,6 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+warning[css]: <style>#1:50: unsupported pseudo-element `::first-letter`
+info[css]: index.html:146: border style `double` is drawn solid

@@ -4,7 +4,7 @@
 /.cargo/config.toml
 mise.local.toml
 /out/
-/.h2q-cache/
+/.eldur-cache/
 *.pending-snap
 *.snap.new
 /.work/

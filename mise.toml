@@ -1,4 +1,4 @@
-# Tooling for html-2-qml. `mise install` installs it; tasks live in mise-tasks/.
+# Tooling for Eldur. `mise install` installs it; tasks live in mise-tasks/.
 [tools]
 rust = { version = "1.98.1", components = "rustfmt,clippy" }
 

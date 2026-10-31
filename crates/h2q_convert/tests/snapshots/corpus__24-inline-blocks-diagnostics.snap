@@ -1,5 +1,0 @@
----
-source: crates/h2q_convert/tests/corpus.rs
-expression: "diagnostics.join(\"\\n\")"
----
-info[qml]: index.html:47: <span>: font size 13px inside 16px text is approximated with <small>

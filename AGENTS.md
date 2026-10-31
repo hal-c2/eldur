@@ -1,6 +1,6 @@
-# Working on html-2-qml
+# Working on Eldur
 
-html-2-qml converts a static HTML5 + CSS + JavaScript page into a runnable
+Eldur converts a static HTML5 + CSS + JavaScript page into a runnable
 Qt Quick (QML, Qt 6.11) application. Read `docs/ARCHITECTURE.md` first; the
 mapping specifications are in `docs/spec/`.
 
@@ -34,7 +34,7 @@ mapping specifications are in `docs/spec/`.
 | Format check, clippy (warnings are errors) | `mise run check` |
 | Rust tests | `mise run test` |
 | Validate generated QML (qmllint + qml6 off-screen) | `mise run qml:check [dir]` |
-| Convert a page | `cargo run -p h2q_cli -- convert page.html -o out/` |
+| Convert a page | `cargo run -p eldur_cli -- convert page.html -o out/` |
 
 ## Conventions
 

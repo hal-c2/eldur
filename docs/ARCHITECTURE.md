@@ -1,8 +1,10 @@
 # Architecture
 
-html-2-qml turns a static web page (HTML5, CSS, classic JavaScript) into a
+Eldur turns a static web page (HTML5, CSS, classic JavaScript) into a
 QML application for Qt 6.11 that looks and behaves like the page did in a
 browser at a given viewport, and stays readable and editable QML.
+
+The project was formerly html-2-qml.
 
 ## Goals
 
@@ -19,24 +21,24 @@ browser at a given viewport, and stays readable and editable QML.
 
 ```mermaid
 flowchart LR
-    cli[h2q_cli<br/>html2qml binary] --> convert[h2q_convert]
-    cli --> cache[h2q_cache]
-    convert --> dom[h2q_dom<br/>html5ever]
-    convert --> css[h2q_css<br/>swc_css_parser]
-    convert --> js[h2q_js<br/>oxc]
-    convert --> qml[h2q_qml<br/>model + writer]
+    cli[eldur_cli<br/>eldur binary] --> convert[eldur_convert]
+    cli --> cache[eldur_cache]
+    convert --> dom[eldur_dom<br/>html5ever]
+    convert --> css[eldur_css<br/>swc_css_parser]
+    convert --> js[eldur_js<br/>oxc]
+    convert --> qml[eldur_qml<br/>model + writer]
     css --> dom
 ```
 
 | Crate | Does | Built on |
 |---|---|---|
-| `h2q_dom` | WHATWG parsing into an arena DOM (`NodeId`) | html5ever 0.40 (own `TreeSink`) |
-| `h2q_css` | Style sheets, selector matching, cascade, inheritance, computed values, `:hover`-style state variants | swc_css_parser 26, csscolorparser |
-| `h2q_js` | Script analysis and rewrite into `page.js`; the `h2q_runtime.js` shim | oxc 0.144 (same as ljos-ui) |
-| `h2q_qml` | QML document model and formatter | — |
-| `h2q_convert` | Box tree and the HTML/CSS → QML mapping | the above |
-| `h2q_cache` | Content-addressed build cache (BLAKE3) | blake3 (ideas from ljos-ui) |
-| `h2q_cli` | `html2qml convert/watch/check` | clap, notify |
+| `eldur_dom` | WHATWG parsing into an arena DOM (`NodeId`) | html5ever 0.40 (own `TreeSink`) |
+| `eldur_css` | Style sheets, selector matching, cascade, inheritance, computed values, `:hover`-style state variants | swc_css_parser 26, csscolorparser |
+| `eldur_js` | Script analysis and rewrite into `page.js`; the `eldur_runtime.js` shim | oxc 0.144 (same as ljos-ui) |
+| `eldur_qml` | QML document model and formatter | — |
+| `eldur_convert` | Box tree and the HTML/CSS → QML mapping | the above |
+| `eldur_cache` | Content-addressed build cache (BLAKE3) | blake3 (ideas from ljos-ui) |
+| `eldur_cli` | `eldur convert/watch/check` | clap, notify |
 
 Why these parsers: html5ever is the spec-complete HTML parser (MIT/Apache).
 swc_css_parser implements CSS Syntax 3 error recovery (a bad declaration
@@ -47,20 +49,20 @@ oxc is what ljos-ui already uses.
 
 ## Pipeline
 
-1. **Parse** the HTML (`h2q_dom`).
+1. **Parse** the HTML (`eldur_dom`).
 2. **Style**: collect `<style>`, `<link rel=stylesheet>`, `@import`; run the
-   cascade with the UA sheet; compute values (`h2q_css::compute_styles`).
+   cascade with the UA sheet; compute values (`eldur_css::compute_styles`).
    Media queries are evaluated against `Options::viewport`.
-3. **Analyse scripts** (`h2q_js::analyze`): which elements scripts query,
+3. **Analyse scripts** (`eldur_js::analyze`): which elements scripts query,
    write and listen to.
-4. **Box tree** (`h2q_convert::boxes`): one box per rendered element;
+4. **Box tree** (`eldur_convert::boxes`): one box per rendered element;
    `display: contents` boxes dissolve; inline runs are gathered into
    *inline formatting contexts*; mixed block/inline children get anonymous
    block boxes; whitespace is collapsed per `white-space`; `::before` and
    `::after` become boxes; list markers are generated.
-5. **Emit QML** (`h2q_convert::emit`): every box chooses a QML form (below).
-6. **Rewrite scripts** (`h2q_js::rewrite`) with the ids chosen in step 5.
-7. **Print** `Main.qml`, `page.js`, `h2q_runtime.js`, `assets/`.
+5. **Emit QML** (`eldur_convert::emit`): every box chooses a QML form (below).
+6. **Rewrite scripts** (`eldur_js::rewrite`) with the ids chosen in step 5.
+7. **Print** `Main.qml`, `page.js`, `eldur_runtime.js`, `assets/`.
 
 ## Mapping decisions
 
@@ -147,8 +149,8 @@ and each changed property becomes a conditional binding
 
 **Scripts.** `page.js` holds every classic script; statically resolvable DOM
 access becomes direct id access; event handlers become QML signal
-handlers that call `Page.<fn>(H2Q.event(...))`; the rest goes through
-`h2q_runtime.js` (`docs/spec/dom-api.md`).
+handlers that call `Page.<fn>(Eldur.event(...))`; the rest goes through
+`eldur_runtime.js` (`docs/spec/dom-api.md`).
 
 **Ids.** HTML `id`s become sanitized QML ids (`main-nav` → `mainNav`, made
 unique); elements scripts or state variants refer to get generated ids
@@ -162,10 +164,10 @@ Borrowed from ljos-ui:
   the shared sccache at `/run/media/…/sccache`, incremental off, 12 jobs;
   `target/` and `TMPDIR` live on the big disk. Worker checkouts share the
   sccache and use their own target directories.
-- *Conversion cache* (`h2q_cache`): BLAKE3 hashes of every input the
+- *Conversion cache* (`eldur_cache`): BLAKE3 hashes of every input the
   conversion read, keyed by entry file + converter version + options;
   outputs stored content-addressed; size+mtime as a fast path before
-  hashing. `html2qml watch` uses `Fingerprints` so touching or re-saving a
+  hashing. `eldur watch` uses `Fingerprints` so touching or re-saving a
   file without changes does nothing.
 
 ## Quality
