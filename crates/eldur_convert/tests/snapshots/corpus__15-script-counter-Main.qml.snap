@@ -116,6 +116,7 @@ ApplicationWindow {
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                renderType: Text.NativeRendering
                             }
 
                             // <div id="count" class="display">
@@ -148,6 +149,7 @@ ApplicationWindow {
                                 objectName: "count"
                                 Layout.fillWidth: true
                                 Layout.topMargin: 24 - h1.eldurCarry
+                                renderType: Text.NativeRendering
                             }
 
                             // <div class="controls">
@@ -188,6 +190,14 @@ ApplicationWindow {
                                     rightPadding: 19
                                     bottomPadding: 11
                                     leftPadding: 19
+                                    contentItem: Text {
+                                        text: dec.text
+                                        font: dec.font
+                                        color: dec.palette.buttonText
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                        renderType: Text.NativeRendering
+                                    }
                                     objectName: "dec"
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.max(Math.ceil(implicitWidth), 64)
@@ -222,6 +232,14 @@ ApplicationWindow {
                                     rightPadding: 19
                                     bottomPadding: 11
                                     leftPadding: 19
+                                    contentItem: Text {
+                                        text: inc.text
+                                        font: inc.font
+                                        color: inc.palette.buttonText
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                        renderType: Text.NativeRendering
+                                    }
                                     objectName: "inc"
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.max(Math.ceil(implicitWidth), 64)
@@ -257,6 +275,14 @@ ApplicationWindow {
                                     rightPadding: 19
                                     bottomPadding: 11
                                     leftPadding: 19
+                                    contentItem: Text {
+                                        text: reset.text
+                                        font: reset.font
+                                        color: reset.palette.buttonText
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                        renderType: Text.NativeRendering
+                                    }
                                     objectName: "reset"
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.max(Math.ceil(implicitWidth), 64)
@@ -291,6 +317,7 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.topMargin: 32 - controls.eldurCarry
+                                renderType: Text.NativeRendering
 
                                 TapHandler {
                                     onTapped: (eventPoint, button) => {
@@ -329,6 +356,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.topMargin: 8 - field.eldurCarry
                                 Layout.preferredHeight: implicitHeight
+                                renderType: Text.NativeRendering
 
                                 onTextEdited: {
                                     Page.__eldur_on_input_mirrorInput(Eldur.event("input", mirrorInput, null));
@@ -365,6 +393,7 @@ ApplicationWindow {
                                     anchors.leftMargin: 12
                                     anchors.rightMargin: 12
                                     anchors.topMargin: 12
+                                    renderType: Text.NativeRendering
                                 }
                             }
 
@@ -405,6 +434,7 @@ ApplicationWindow {
                                             color: "#ffffff"
                                             font.pixelSize: Math.max(1, detailsToggle.height - 2)
                                             visible: detailsToggle.checked
+                                            renderType: Text.NativeRendering
                                         }
                                     }
                                     Accessible.name: "Show details"
@@ -434,6 +464,7 @@ ApplicationWindow {
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.alignment: Qt.AlignVCenter
                                     Layout.leftMargin: 8
+                                    renderType: Text.NativeRendering
                                 }
 
                                 Item {
@@ -502,6 +533,7 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        renderType: Text.NativeRendering
                                     }
 
                                     // <p>
@@ -524,6 +556,7 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.topMargin: 8
                                         Layout.preferredHeight: implicitHeight
+                                        renderType: Text.NativeRendering
                                     }
                                 }
                             }

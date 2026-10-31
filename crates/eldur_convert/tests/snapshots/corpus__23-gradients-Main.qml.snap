@@ -107,6 +107,7 @@ ApplicationWindow {
                             anchors.leftMargin: 12
                             anchors.rightMargin: 12
                             anchors.topMargin: 12
+                            renderType: Text.NativeRendering
                         }
                     }
 
@@ -167,6 +168,7 @@ ApplicationWindow {
                             anchors.leftMargin: 12
                             anchors.rightMargin: 12
                             anchors.topMargin: 12
+                            renderType: Text.NativeRendering
                         }
                     }
 
@@ -233,6 +235,7 @@ ApplicationWindow {
                             anchors.leftMargin: 12
                             anchors.rightMargin: 12
                             anchors.topMargin: 12
+                            renderType: Text.NativeRendering
                         }
                     }
 
@@ -297,6 +300,7 @@ ApplicationWindow {
                             anchors.leftMargin: 12
                             anchors.rightMargin: 12
                             anchors.topMargin: 12
+                            renderType: Text.NativeRendering
                         }
                     }
 
@@ -367,6 +371,7 @@ ApplicationWindow {
                             anchors.leftMargin: 12
                             anchors.rightMargin: 12
                             anchors.topMargin: 12
+                            renderType: Text.NativeRendering
                         }
                     }
 
@@ -427,6 +432,7 @@ ApplicationWindow {
                             anchors.leftMargin: 12
                             anchors.rightMargin: 12
                             anchors.topMargin: 12
+                            renderType: Text.NativeRendering
                         }
                     }
 
@@ -493,6 +499,7 @@ ApplicationWindow {
                             anchors.leftMargin: 12
                             anchors.rightMargin: 12
                             anchors.topMargin: 12
+                            renderType: Text.NativeRendering
                         }
                     }
 
@@ -555,6 +562,7 @@ ApplicationWindow {
                             anchors.leftMargin: 12
                             anchors.rightMargin: 12
                             anchors.topMargin: 12
+                            renderType: Text.NativeRendering
                         }
                     }
 
@@ -626,6 +634,7 @@ ApplicationWindow {
                             anchors.leftMargin: 12
                             anchors.rightMargin: 12
                             anchors.topMargin: 12
+                            renderType: Text.NativeRendering
                         }
                     }
 
@@ -722,6 +731,7 @@ ApplicationWindow {
                             anchors.leftMargin: 12
                             anchors.rightMargin: 12
                             anchors.topMargin: 12
+                            renderType: Text.NativeRendering
                         }
                     }
 
@@ -795,6 +805,7 @@ ApplicationWindow {
                             anchors.leftMargin: 16
                             anchors.rightMargin: 16
                             anchors.topMargin: 16
+                            renderType: Text.NativeRendering
                         }
                     }
                 }
@@ -870,6 +881,7 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
+                            renderType: Text.NativeRendering
                         }
 
                         // <p>
@@ -887,6 +899,7 @@ ApplicationWindow {
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             Layout.topMargin: 8
+                            renderType: Text.NativeRendering
                         }
                     }
                 }

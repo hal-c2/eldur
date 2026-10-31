@@ -116,6 +116,7 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.alignment: Qt.AlignVCenter
+                                    renderType: Text.NativeRendering
                                 }
 
                                 Item {
@@ -148,6 +149,7 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Math.ceil(implicitWidth)
                                         Layout.alignment: Qt.AlignVCenter
+                                        renderType: Text.NativeRendering
 
                                         TapHandler {
                                             onTapped: root.scrollToFragment("#")
@@ -176,6 +178,7 @@ ApplicationWindow {
                                         Layout.maximumWidth: Math.ceil(implicitWidth)
                                         Layout.alignment: Qt.AlignVCenter
                                         Layout.leftMargin: 28
+                                        renderType: Text.NativeRendering
 
                                         TapHandler {
                                             onTapped: root.scrollToFragment("#")
@@ -204,6 +207,7 @@ ApplicationWindow {
                                         Layout.maximumWidth: Math.ceil(implicitWidth)
                                         Layout.alignment: Qt.AlignVCenter
                                         Layout.leftMargin: 28
+                                        renderType: Text.NativeRendering
 
                                         TapHandler {
                                             onTapped: root.scrollToFragment("#")
@@ -232,6 +236,7 @@ ApplicationWindow {
                                         Layout.maximumWidth: Math.ceil(implicitWidth)
                                         Layout.alignment: Qt.AlignVCenter
                                         Layout.leftMargin: 28
+                                        renderType: Text.NativeRendering
 
                                         TapHandler {
                                             onTapped: root.scrollToFragment("#")
@@ -294,6 +299,7 @@ ApplicationWindow {
                                                 anchors.leftMargin: 17
                                                 anchors.rightMargin: 17
                                                 anchors.topMargin: 9
+                                                renderType: Text.NativeRendering
                                             }
 
                                             HoverHandler {
@@ -407,6 +413,7 @@ ApplicationWindow {
                                     anchors.leftMargin: 11
                                     anchors.rightMargin: 11
                                     anchors.topMargin: 5
+                                    renderType: Text.NativeRendering
                                 }
                             }
 
@@ -434,6 +441,7 @@ ApplicationWindow {
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 20 - badge.eldurCarry
+                                renderType: Text.NativeRendering
                             }
 
                             // <h1>
@@ -465,6 +473,7 @@ ApplicationWindow {
                                 Layout.maximumWidth: Math.min(Math.ceil(implicitWidth), 720)
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 20 - eyebrow.eldurCarry
+                                renderType: Text.NativeRendering
                             }
 
                             // <p class="hero-lead">
@@ -488,6 +497,7 @@ ApplicationWindow {
                                 Layout.maximumWidth: Math.min(Math.ceil(implicitWidth), 560)
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 20 - h1.eldurCarry
+                                renderType: Text.NativeRendering
                             }
 
                             // <div class="hero-actions">
@@ -555,6 +565,7 @@ ApplicationWindow {
                                         anchors.leftMargin: 29
                                         anchors.rightMargin: 29
                                         anchors.topMargin: 15
+                                        renderType: Text.NativeRendering
                                     }
 
                                     HoverHandler {
@@ -605,6 +616,7 @@ ApplicationWindow {
                                         anchors.leftMargin: 29
                                         anchors.rightMargin: 29
                                         anchors.topMargin: 15
+                                        renderType: Text.NativeRendering
                                     }
 
                                     HoverHandler {
@@ -635,6 +647,7 @@ ApplicationWindow {
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 20 - heroActions.eldurCarry
+                                renderType: Text.NativeRendering
                             }
 
                             Item {

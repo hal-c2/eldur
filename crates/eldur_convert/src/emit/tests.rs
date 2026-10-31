@@ -1162,6 +1162,92 @@ fn richtext_lines_shift_to_chromiums_baseline() {
     }
 }
 
+/// The `renderType` of the object holding the first `text`.
+fn render_type_of(qml: &str, text: &str) -> Option<String> {
+    let at = qml.find(text).expect("text in the output");
+    let open = qml[..at].rfind('{').expect("object opens");
+    let close = open + qml[open..].find("\n").expect("line") + 1;
+    let indent = qml[close..].len() - qml[close..].trim_start().len();
+    let end = format!("\n{}}}", " ".repeat(indent - 4));
+    let body = &qml[close..close + qml[close..].find(&end).expect("object closes")];
+    body.lines()
+        .find(|l| {
+            l.len() - l.trim_start().len() == indent && l.trim_start().starts_with("renderType:")
+        })
+        .map(|l| l.trim().to_owned())
+}
+
+const NATIVE: &str = "renderType: Text.NativeRendering";
+
+#[test]
+fn text_asks_for_native_glyphs() {
+    // Distance fields are softer than Chromium's glyphs: 89.40 vs 90.45 over
+    // the corpus. A baseline's Translate moves whole pixels and does not count.
+    let (qml, _) = convert(&page(
+        "p{font:15px/22px sans-serif}",
+        "<p>plain</p><p>a <code>rich</code> line</p>",
+    ));
+    assert!(qml.contains("Translate"), "{qml}");
+    assert_eq!(
+        render_type_of(&qml, "\"plain\"").as_deref(),
+        Some(NATIVE),
+        "{qml}"
+    );
+    assert_eq!(
+        render_type_of(&qml, "rich").as_deref(),
+        Some(NATIVE),
+        "{qml}"
+    );
+}
+
+#[test]
+fn text_under_a_scale_or_rotation_keeps_qts_default() {
+    // Native glyphs resample badly: 20-pricing's featured card, 86.21 vs 85.84.
+    for transform in ["scale(1.05)", "rotate(-8deg)", "matrix(1, 0.2, 0, 1, 0, 0)"] {
+        let (qml, _) = convert(&page(
+            &format!(".t{{transform:{transform}}}"),
+            "<div class=t><div><p>turned</p></div></div><p>still</p>",
+        ));
+        assert_eq!(
+            render_type_of(&qml, "\"turned\""),
+            None,
+            "{transform}: {qml}"
+        );
+        assert_eq!(
+            render_type_of(&qml, "\"still\"").as_deref(),
+            Some(NATIVE),
+            "{qml}"
+        );
+    }
+    // Moved by whole pixels the glyphs stay as rasterised.
+    let (qml, _) = convert(&page(
+        ".t{transform:translate(4px,8px)}",
+        "<div class=t><p>moved</p></div>",
+    ));
+    assert_eq!(
+        render_type_of(&qml, "\"moved\"").as_deref(),
+        Some(NATIVE),
+        "{qml}"
+    );
+}
+
+#[test]
+fn control_text_asks_for_native_glyphs() {
+    let (qml, _) = convert(&page(
+        "",
+        "<input value=one><textarea>two</textarea><input type=number>\
+         <button>three</button><select><option>four</select>",
+    ));
+    for item in ["TextField {", "TextArea {", "TextInput {"] {
+        assert!(qml.contains(item), "{item}: {qml}");
+    }
+    assert_eq!(qml.matches(NATIVE).count(), 5 + 1, "{qml}"); // and the arrow
+    let button = &qml[qml.find("Button {").expect("button")..];
+    let label = &button[button.find("contentItem: Text {").expect("label")..];
+    assert!(label.contains(".palette.buttonText"), "{label}");
+    assert!(label.contains(NATIVE), "{label}");
+}
+
 #[test]
 fn a_fractional_caption_keeps_the_table_on_its_exact_y() {
     // Chromium: a 37.5px caption puts the table's rows 37.5px down. A floored

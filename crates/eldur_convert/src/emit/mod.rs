@@ -313,6 +313,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         self.report_inline_labels();
         carry::strip_hints(&mut root);
         paint::snap_rounded_boxes(&mut root, false);
+        paint::native_text(&mut root, false);
         root
     }
 

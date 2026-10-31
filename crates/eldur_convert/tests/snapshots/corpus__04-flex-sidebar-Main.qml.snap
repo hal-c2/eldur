@@ -115,6 +115,7 @@ ApplicationWindow {
                                                 anchors.leftMargin: 12
                                                 anchors.rightMargin: 12
                                                 anchors.topMargin: 8
+                                                renderType: Text.NativeRendering
                                             }
                                         }
 
@@ -181,6 +182,7 @@ ApplicationWindow {
                                                     anchors.leftMargin: 12
                                                     anchors.rightMargin: 12
                                                     anchors.topMargin: 10
+                                                    renderType: Text.NativeRendering
                                                 }
                                             }
 
@@ -218,6 +220,7 @@ ApplicationWindow {
                                                     anchors.leftMargin: 12
                                                     anchors.rightMargin: 12
                                                     anchors.topMargin: 10
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 HoverHandler {
@@ -259,6 +262,7 @@ ApplicationWindow {
                                                     anchors.leftMargin: 12
                                                     anchors.rightMargin: 12
                                                     anchors.topMargin: 10
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 HoverHandler {
@@ -300,6 +304,7 @@ ApplicationWindow {
                                                     anchors.leftMargin: 12
                                                     anchors.rightMargin: 12
                                                     anchors.topMargin: 10
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 HoverHandler {
@@ -341,6 +346,7 @@ ApplicationWindow {
                                                     anchors.leftMargin: 12
                                                     anchors.rightMargin: 12
                                                     anchors.topMargin: 10
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 HoverHandler {
@@ -376,6 +382,7 @@ ApplicationWindow {
                                             Layout.leftMargin: 12
                                             Layout.rightMargin: 12
                                             Layout.topMargin: 20 - menuItem7.eldurCarry
+                                            renderType: Text.NativeRendering
                                         }
 
                                         // <nav class="menu">
@@ -418,6 +425,7 @@ ApplicationWindow {
                                                     anchors.leftMargin: 12
                                                     anchors.rightMargin: 12
                                                     anchors.topMargin: 10
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 HoverHandler {
@@ -459,6 +467,7 @@ ApplicationWindow {
                                                     anchors.leftMargin: 12
                                                     anchors.rightMargin: 12
                                                     anchors.topMargin: 10
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 HoverHandler {
@@ -500,6 +509,7 @@ ApplicationWindow {
                                                     anchors.leftMargin: 12
                                                     anchors.rightMargin: 12
                                                     anchors.topMargin: 10
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 HoverHandler {
@@ -578,6 +588,7 @@ ApplicationWindow {
                                                     Layout.fillWidth: true
                                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                                     Layout.alignment: Qt.AlignVCenter
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 Item {
@@ -616,6 +627,7 @@ ApplicationWindow {
                                                         placeholderText: "Search projects"
                                                         placeholderTextColor: "#8a93a6"
                                                         Layout.preferredWidth: 280
+                                                        renderType: Text.NativeRendering
                                                     }
                                                 }
                                             }
@@ -692,6 +704,7 @@ ApplicationWindow {
                                                                 }
                                                                 wrapMode: Text.WordWrap
                                                                 Layout.fillWidth: true
+                                                                renderType: Text.NativeRendering
                                                             }
 
                                                             // <p class="stat-value">
@@ -710,6 +723,7 @@ ApplicationWindow {
                                                                 wrapMode: Text.WordWrap
                                                                 Layout.fillWidth: true
                                                                 Layout.topMargin: 4 - statLabel.eldurCarry
+                                                                renderType: Text.NativeRendering
                                                             }
                                                         }
                                                     }
@@ -754,6 +768,7 @@ ApplicationWindow {
                                                                 }
                                                                 wrapMode: Text.WordWrap
                                                                 Layout.fillWidth: true
+                                                                renderType: Text.NativeRendering
                                                             }
 
                                                             // <p class="stat-value">
@@ -772,6 +787,7 @@ ApplicationWindow {
                                                                 wrapMode: Text.WordWrap
                                                                 Layout.fillWidth: true
                                                                 Layout.topMargin: 4 - statLabel2.eldurCarry
+                                                                renderType: Text.NativeRendering
                                                             }
                                                         }
                                                     }
@@ -816,6 +832,7 @@ ApplicationWindow {
                                                                 }
                                                                 wrapMode: Text.WordWrap
                                                                 Layout.fillWidth: true
+                                                                renderType: Text.NativeRendering
                                                             }
 
                                                             // <p class="stat-value">
@@ -834,6 +851,7 @@ ApplicationWindow {
                                                                 wrapMode: Text.WordWrap
                                                                 Layout.fillWidth: true
                                                                 Layout.topMargin: 4 - statLabel3.eldurCarry
+                                                                renderType: Text.NativeRendering
                                                             }
                                                         }
                                                     }
@@ -876,6 +894,7 @@ ApplicationWindow {
                                                             }
                                                             wrapMode: Text.WordWrap
                                                             Layout.fillWidth: true
+                                                            renderType: Text.NativeRendering
                                                         }
 
                                                         // <div class="row">
@@ -911,6 +930,7 @@ ApplicationWindow {
                                                                     Layout.fillWidth: true
                                                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                                                     Layout.alignment: Qt.AlignVCenter
+                                                                    renderType: Text.NativeRendering
                                                                 }
 
                                                                 Item {
@@ -947,6 +967,7 @@ ApplicationWindow {
                                                                         anchors.leftMargin: 10
                                                                         anchors.rightMargin: 10
                                                                         anchors.topMargin: 2
+                                                                        renderType: Text.NativeRendering
                                                                     }
                                                                 }
                                                             }
@@ -993,6 +1014,7 @@ ApplicationWindow {
                                                                     Layout.fillWidth: true
                                                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                                                     Layout.alignment: Qt.AlignVCenter
+                                                                    renderType: Text.NativeRendering
                                                                 }
 
                                                                 Item {
@@ -1029,6 +1051,7 @@ ApplicationWindow {
                                                                         anchors.leftMargin: 10
                                                                         anchors.rightMargin: 10
                                                                         anchors.topMargin: 2
+                                                                        renderType: Text.NativeRendering
                                                                     }
                                                                 }
                                                             }
@@ -1075,6 +1098,7 @@ ApplicationWindow {
                                                                     Layout.fillWidth: true
                                                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                                                     Layout.alignment: Qt.AlignVCenter
+                                                                    renderType: Text.NativeRendering
                                                                 }
 
                                                                 Item {
@@ -1111,6 +1135,7 @@ ApplicationWindow {
                                                                         anchors.leftMargin: 10
                                                                         anchors.rightMargin: 10
                                                                         anchors.topMargin: 2
+                                                                        renderType: Text.NativeRendering
                                                                     }
                                                                 }
                                                             }
@@ -1171,6 +1196,7 @@ ApplicationWindow {
                                                     Layout.fillWidth: true
                                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                                     Layout.alignment: Qt.AlignVCenter
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 Item {
@@ -1193,6 +1219,7 @@ ApplicationWindow {
                                                     Layout.fillWidth: true
                                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                                     Layout.alignment: Qt.AlignVCenter
+                                                    renderType: Text.NativeRendering
                                                 }
                                             }
                                         }

@@ -83,6 +83,7 @@ ApplicationWindow {
                             Layout.fillWidth: true
                             Layout.maximumWidth: Math.ceil(implicitWidth)
                             Layout.alignment: Qt.AlignVCenter
+                            renderType: Text.NativeRendering
                         }
 
                         Item {
@@ -113,6 +114,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.fillHeight: true
+                                renderType: Text.NativeRendering
                             }
 
                             // <a>
@@ -132,6 +134,7 @@ ApplicationWindow {
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.fillHeight: true
                                 Layout.leftMargin: 24
+                                renderType: Text.NativeRendering
                             }
 
                             // <a>
@@ -151,6 +154,7 @@ ApplicationWindow {
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.fillHeight: true
                                 Layout.leftMargin: 24
+                                renderType: Text.NativeRendering
                             }
 
                             // <a>
@@ -170,6 +174,7 @@ ApplicationWindow {
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.fillHeight: true
                                 Layout.leftMargin: 24
+                                renderType: Text.NativeRendering
                             }
 
                             Item {
@@ -210,6 +215,7 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
+                            renderType: Text.NativeRendering
                         }
 
                         // <p class="page-subtitle">
@@ -227,6 +233,7 @@ ApplicationWindow {
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             Layout.topMargin: 4
+                            renderType: Text.NativeRendering
                         }
 
                         // <section class="product-grid">
@@ -344,6 +351,7 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="card-price">
@@ -362,6 +370,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 4
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="card-text">
@@ -379,6 +388,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 8
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 Item {
@@ -403,6 +413,14 @@ ApplicationWindow {
                                                     bottomPadding: 12
                                                     leftPadding: 16
                                                     implicitHeight: 46.5
+                                                    contentItem: Text {
+                                                        text: buttonControl.text
+                                                        font: buttonControl.font
+                                                        color: buttonControl.palette.buttonText
+                                                        horizontalAlignment: Text.AlignHCenter
+                                                        verticalAlignment: Text.AlignVCenter
+                                                        renderType: Text.NativeRendering
+                                                    }
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
                                                     Layout.topMargin: 16
@@ -541,6 +559,7 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="card-price">
@@ -559,6 +578,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 4
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="card-text">
@@ -576,6 +596,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 8
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 Item {
@@ -600,6 +621,14 @@ ApplicationWindow {
                                                     bottomPadding: 12
                                                     leftPadding: 16
                                                     implicitHeight: 46.5
+                                                    contentItem: Text {
+                                                        text: buttonControl2.text
+                                                        font: buttonControl2.font
+                                                        color: buttonControl2.palette.buttonText
+                                                        horizontalAlignment: Text.AlignHCenter
+                                                        verticalAlignment: Text.AlignVCenter
+                                                        renderType: Text.NativeRendering
+                                                    }
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
                                                     Layout.topMargin: 16
@@ -738,6 +767,7 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="card-price">
@@ -756,6 +786,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 4
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="card-text">
@@ -773,6 +804,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 8
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 Item {
@@ -797,6 +829,14 @@ ApplicationWindow {
                                                     bottomPadding: 12
                                                     leftPadding: 16
                                                     implicitHeight: 46.5
+                                                    contentItem: Text {
+                                                        text: buttonControl3.text
+                                                        font: buttonControl3.font
+                                                        color: buttonControl3.palette.buttonText
+                                                        horizontalAlignment: Text.AlignHCenter
+                                                        verticalAlignment: Text.AlignVCenter
+                                                        renderType: Text.NativeRendering
+                                                    }
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
                                                     Layout.topMargin: 16
@@ -935,6 +975,7 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="card-price">
@@ -953,6 +994,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 4
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="card-text">
@@ -970,6 +1012,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 8
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 Item {
@@ -994,6 +1037,14 @@ ApplicationWindow {
                                                     bottomPadding: 12
                                                     leftPadding: 16
                                                     implicitHeight: 46.5
+                                                    contentItem: Text {
+                                                        text: buttonControl4.text
+                                                        font: buttonControl4.font
+                                                        color: buttonControl4.palette.buttonText
+                                                        horizontalAlignment: Text.AlignHCenter
+                                                        verticalAlignment: Text.AlignVCenter
+                                                        renderType: Text.NativeRendering
+                                                    }
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
                                                     Layout.topMargin: 16
@@ -1132,6 +1183,7 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="card-price">
@@ -1150,6 +1202,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 4
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="card-text">
@@ -1167,6 +1220,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 8
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 Item {
@@ -1191,6 +1245,14 @@ ApplicationWindow {
                                                     bottomPadding: 12
                                                     leftPadding: 16
                                                     implicitHeight: 46.5
+                                                    contentItem: Text {
+                                                        text: buttonControl5.text
+                                                        font: buttonControl5.font
+                                                        color: buttonControl5.palette.buttonText
+                                                        horizontalAlignment: Text.AlignHCenter
+                                                        verticalAlignment: Text.AlignVCenter
+                                                        renderType: Text.NativeRendering
+                                                    }
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
                                                     Layout.topMargin: 16
@@ -1329,6 +1391,7 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="card-price">
@@ -1347,6 +1410,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 4
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="card-text">
@@ -1364,6 +1428,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 8
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 Item {
@@ -1388,6 +1453,14 @@ ApplicationWindow {
                                                     bottomPadding: 12
                                                     leftPadding: 16
                                                     implicitHeight: 46.5
+                                                    contentItem: Text {
+                                                        text: buttonControl6.text
+                                                        font: buttonControl6.font
+                                                        color: buttonControl6.palette.buttonText
+                                                        horizontalAlignment: Text.AlignHCenter
+                                                        verticalAlignment: Text.AlignVCenter
+                                                        renderType: Text.NativeRendering
+                                                    }
                                                     Layout.preferredWidth: parent.width
                                                     Layout.alignment: Qt.AlignLeft
                                                     Layout.topMargin: 16

@@ -371,7 +371,7 @@ impl Emitter<'_, '_> {
             Control::Number => self.spin_box(node, style, &id, reset, line),
             Control::Range => self.slider(node, &id, reset),
             Control::CheckBox | Control::Radio => self.toggle(node, style, control, &id, reset),
-            Control::Button { .. } => self.button(node, style, line),
+            Control::Button { .. } => self.button(node, style, &id, line),
             Control::Select => self.combo_box(node, style, &id, reset, line),
             Control::Progress | Control::Meter => self.progress(node, style, control, &id, line),
         };
@@ -926,7 +926,13 @@ impl Emitter<'_, '_> {
         id
     }
 
-    fn button(&mut self, node: NodeId, style: &ComputedStyle, line: Option<u32>) -> Object {
+    fn button(
+        &mut self,
+        node: NodeId,
+        style: &ComputedStyle,
+        id: &str,
+        line: Option<u32>,
+    ) -> Object {
         let element = self.doc.element(node);
         let mut obj = Object::new("Button");
         let is_input = element.is_some_and(|e| e.local_name() == "input");
@@ -958,11 +964,19 @@ impl Emitter<'_, '_> {
             eldur_dom::collapse_whitespace(&self.doc.text_content(node))
         };
         obj.set("text", Value::String(text));
-        // The Basic style's IconLabel takes its colour from the palette.
+        // Scripts and hover states change the colour through the palette.
         obj.set("palette.buttonText", color(style.color));
         set_font(&mut obj, style);
         let vertical = self.apply_box(&mut obj, style, line);
         self.line_height_implicit(&mut obj, style, vertical);
+        // The Basic style's IconLabel has no renderType to ask for (paint.rs).
+        let mut label = Object::new("Text");
+        label.set("text", Value::expr(format!("{id}.text")));
+        label.set("font", Value::expr(format!("{id}.font")));
+        label.set("color", Value::expr(format!("{id}.palette.buttonText")));
+        label.set("horizontalAlignment", Value::expr("Text.AlignHCenter"));
+        label.set("verticalAlignment", Value::expr("Text.AlignVCenter"));
+        obj.set("contentItem", object_value(label));
         obj
     }
 

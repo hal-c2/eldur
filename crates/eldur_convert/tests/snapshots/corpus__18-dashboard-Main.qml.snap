@@ -301,6 +301,7 @@ ApplicationWindow {
                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                             Layout.alignment: Qt.AlignVCenter
                                             Layout.leftMargin: 10
+                                            renderType: Text.NativeRendering
                                         }
 
                                         Item {
@@ -333,6 +334,7 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.leftMargin: 12
                                         Layout.rightMargin: 12
+                                        renderType: Text.NativeRendering
                                     }
 
                                     // <a class="nav-item active">
@@ -391,6 +393,7 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -426,6 +429,7 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
 
                                         HoverHandler {
@@ -465,6 +469,7 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
 
                                         HoverHandler {
@@ -490,6 +495,7 @@ ApplicationWindow {
                                         Layout.leftMargin: 12
                                         Layout.rightMargin: 12
                                         Layout.topMargin: 24 - navItem3.eldurCarry
+                                        renderType: Text.NativeRendering
                                     }
 
                                     // <a class="nav-item">
@@ -528,6 +534,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.alignment: Qt.AlignVCenter
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Item {
@@ -560,6 +567,7 @@ ApplicationWindow {
                                                     anchors.leftMargin: 8
                                                     anchors.rightMargin: 8
                                                     anchors.topMargin: 2
+                                                    renderType: Text.NativeRendering
                                                 }
                                             }
                                         }
@@ -601,6 +609,7 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
 
                                         HoverHandler {
@@ -640,6 +649,7 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
 
                                         HoverHandler {
@@ -665,6 +675,7 @@ ApplicationWindow {
                                         Layout.leftMargin: 12
                                         Layout.rightMargin: 12
                                         Layout.topMargin: 24 - navItem6.eldurCarry
+                                        renderType: Text.NativeRendering
                                     }
 
                                     // <a class="nav-item">
@@ -699,6 +710,7 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
 
                                         HoverHandler {
@@ -738,6 +750,7 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
 
                                         HoverHandler {
@@ -807,6 +820,7 @@ ApplicationWindow {
                                             font.letterSpacing: -0.24
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            renderType: Text.NativeRendering
                                         }
 
                                         // <p class="subtitle">
@@ -820,6 +834,7 @@ ApplicationWindow {
                                             Layout.fillWidth: true
                                             Layout.topMargin: 4 - h1.eldurCarry
                                             Layout.preferredHeight: implicitHeight
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -861,6 +876,7 @@ ApplicationWindow {
                                             Layout.maximumWidth: 240
                                             Layout.preferredHeight: 36
                                             Layout.alignment: Qt.AlignVCenter
+                                            renderType: Text.NativeRendering
                                         }
 
                                         // <div class="avatar">
@@ -920,6 +936,7 @@ ApplicationWindow {
                                                 anchors.right: parent.right
                                                 anchors.top: parent.top
                                                 anchors.bottom: parent.bottom
+                                                renderType: Text.NativeRendering
                                             }
                                         }
 
@@ -996,6 +1013,7 @@ ApplicationWindow {
                                                     font.weight: 500
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="stat-value">
@@ -1013,6 +1031,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 8 - statLabel.eldurCarry
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="stat-delta up">
@@ -1027,6 +1046,7 @@ ApplicationWindow {
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 6 - statValue.eldurCarry
                                                     Layout.preferredHeight: implicitHeight
+                                                    renderType: Text.NativeRendering
                                                 }
                                             }
                                         }
@@ -1067,6 +1087,7 @@ ApplicationWindow {
                                                     font.weight: 500
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="stat-value">
@@ -1084,6 +1105,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 8 - statLabel2.eldurCarry
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="stat-delta down">
@@ -1098,6 +1120,7 @@ ApplicationWindow {
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 6 - statValue2.eldurCarry
                                                     Layout.preferredHeight: implicitHeight
+                                                    renderType: Text.NativeRendering
                                                 }
                                             }
                                         }
@@ -1138,6 +1161,7 @@ ApplicationWindow {
                                                     font.weight: 500
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="stat-value">
@@ -1155,6 +1179,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 8 - statLabel3.eldurCarry
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="stat-delta up">
@@ -1169,6 +1194,7 @@ ApplicationWindow {
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 6 - statValue3.eldurCarry
                                                     Layout.preferredHeight: implicitHeight
+                                                    renderType: Text.NativeRendering
                                                 }
                                             }
                                         }
@@ -1209,6 +1235,7 @@ ApplicationWindow {
                                                     font.weight: 500
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="stat-value">
@@ -1226,6 +1253,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 8 - statLabel4.eldurCarry
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="stat-delta down">
@@ -1240,6 +1268,7 @@ ApplicationWindow {
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 6 - statValue4.eldurCarry
                                                     Layout.preferredHeight: implicitHeight
+                                                    renderType: Text.NativeRendering
                                                 }
                                             }
                                         }
@@ -1295,6 +1324,7 @@ ApplicationWindow {
                                                     font.weight: 600
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <div class="bar-row">
@@ -1321,6 +1351,7 @@ ApplicationWindow {
                                                         Layout.minimumWidth: 120
                                                         Layout.maximumWidth: 120
                                                         Layout.alignment: Qt.AlignVCenter
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     // <div class="bar-track">
@@ -1393,6 +1424,7 @@ ApplicationWindow {
                                                         Layout.minimumWidth: 48
                                                         Layout.maximumWidth: 48
                                                         Layout.alignment: Qt.AlignVCenter
+                                                        renderType: Text.NativeRendering
                                                     }
                                                 }
 
@@ -1420,6 +1452,7 @@ ApplicationWindow {
                                                         Layout.minimumWidth: 120
                                                         Layout.maximumWidth: 120
                                                         Layout.alignment: Qt.AlignVCenter
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     // <div class="bar-track">
@@ -1492,6 +1525,7 @@ ApplicationWindow {
                                                         Layout.minimumWidth: 48
                                                         Layout.maximumWidth: 48
                                                         Layout.alignment: Qt.AlignVCenter
+                                                        renderType: Text.NativeRendering
                                                     }
                                                 }
 
@@ -1519,6 +1553,7 @@ ApplicationWindow {
                                                         Layout.minimumWidth: 120
                                                         Layout.maximumWidth: 120
                                                         Layout.alignment: Qt.AlignVCenter
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     // <div class="bar-track">
@@ -1591,6 +1626,7 @@ ApplicationWindow {
                                                         Layout.minimumWidth: 48
                                                         Layout.maximumWidth: 48
                                                         Layout.alignment: Qt.AlignVCenter
+                                                        renderType: Text.NativeRendering
                                                     }
                                                 }
 
@@ -1618,6 +1654,7 @@ ApplicationWindow {
                                                         Layout.minimumWidth: 120
                                                         Layout.maximumWidth: 120
                                                         Layout.alignment: Qt.AlignVCenter
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     // <div class="bar-track">
@@ -1690,6 +1727,7 @@ ApplicationWindow {
                                                         Layout.minimumWidth: 48
                                                         Layout.maximumWidth: 48
                                                         Layout.alignment: Qt.AlignVCenter
+                                                        renderType: Text.NativeRendering
                                                     }
                                                 }
 
@@ -1715,6 +1753,7 @@ ApplicationWindow {
                                                         Layout.minimumWidth: 120
                                                         Layout.maximumWidth: 120
                                                         Layout.alignment: Qt.AlignVCenter
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     // <div class="bar-track">
@@ -1787,6 +1826,7 @@ ApplicationWindow {
                                                         Layout.minimumWidth: 48
                                                         Layout.maximumWidth: 48
                                                         Layout.alignment: Qt.AlignVCenter
+                                                        renderType: Text.NativeRendering
                                                     }
                                                 }
                                             }
@@ -1831,6 +1871,7 @@ ApplicationWindow {
                                                     font.weight: 600
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <div class="progress-group">
@@ -1860,6 +1901,7 @@ ApplicationWindow {
                                                             Layout.fillWidth: true
                                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                                             Layout.fillHeight: true
+                                                            renderType: Text.NativeRendering
                                                         }
 
                                                         Item {
@@ -1877,6 +1919,7 @@ ApplicationWindow {
                                                             Layout.fillWidth: true
                                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                                             Layout.fillHeight: true
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -1940,6 +1983,7 @@ ApplicationWindow {
                                                             Layout.fillWidth: true
                                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                                             Layout.fillHeight: true
+                                                            renderType: Text.NativeRendering
                                                         }
 
                                                         Item {
@@ -1957,6 +2001,7 @@ ApplicationWindow {
                                                             Layout.fillWidth: true
                                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                                             Layout.fillHeight: true
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2070,6 +2115,7 @@ ApplicationWindow {
                                                 font.weight: 600
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                renderType: Text.NativeRendering
                                             }
 
                                             // <table>
@@ -2131,6 +2177,7 @@ ApplicationWindow {
                                                             anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2163,6 +2210,7 @@ ApplicationWindow {
                                                             anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2195,6 +2243,7 @@ ApplicationWindow {
                                                             anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2227,6 +2276,7 @@ ApplicationWindow {
                                                             anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2259,6 +2309,7 @@ ApplicationWindow {
                                                             anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2304,6 +2355,7 @@ ApplicationWindow {
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2343,6 +2395,7 @@ ApplicationWindow {
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2382,6 +2435,7 @@ ApplicationWindow {
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2422,6 +2476,7 @@ ApplicationWindow {
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2481,6 +2536,7 @@ ApplicationWindow {
                                                                     anchors.leftMargin: 10
                                                                     anchors.rightMargin: 10
                                                                     anchors.topMargin: 3
+                                                                    renderType: Text.NativeRendering
                                                                 }
                                                             }
                                                         }
@@ -2522,6 +2578,7 @@ ApplicationWindow {
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2561,6 +2618,7 @@ ApplicationWindow {
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2600,6 +2658,7 @@ ApplicationWindow {
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2640,6 +2699,7 @@ ApplicationWindow {
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2699,6 +2759,7 @@ ApplicationWindow {
                                                                     anchors.leftMargin: 10
                                                                     anchors.rightMargin: 10
                                                                     anchors.topMargin: 3
+                                                                    renderType: Text.NativeRendering
                                                                 }
                                                             }
                                                         }
@@ -2740,6 +2801,7 @@ ApplicationWindow {
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2779,6 +2841,7 @@ ApplicationWindow {
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2818,6 +2881,7 @@ ApplicationWindow {
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2858,6 +2922,7 @@ ApplicationWindow {
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2917,6 +2982,7 @@ ApplicationWindow {
                                                                     anchors.leftMargin: 10
                                                                     anchors.rightMargin: 10
                                                                     anchors.topMargin: 3
+                                                                    renderType: Text.NativeRendering
                                                                 }
                                                             }
                                                         }
@@ -2958,6 +3024,7 @@ ApplicationWindow {
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2997,6 +3064,7 @@ ApplicationWindow {
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -3036,6 +3104,7 @@ ApplicationWindow {
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -3076,6 +3145,7 @@ ApplicationWindow {
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -3135,6 +3205,7 @@ ApplicationWindow {
                                                                     anchors.leftMargin: 10
                                                                     anchors.rightMargin: 10
                                                                     anchors.topMargin: 3
+                                                                    renderType: Text.NativeRendering
                                                                 }
                                                             }
                                                         }
@@ -3183,6 +3254,7 @@ ApplicationWindow {
                                                             anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -3229,6 +3301,7 @@ ApplicationWindow {
                                                             anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -3275,6 +3348,7 @@ ApplicationWindow {
                                                             anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -3322,6 +3396,7 @@ ApplicationWindow {
                                                             anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -3388,6 +3463,7 @@ ApplicationWindow {
                                                                     anchors.leftMargin: 10
                                                                     anchors.rightMargin: 10
                                                                     anchors.topMargin: 3
+                                                                    renderType: Text.NativeRendering
                                                                 }
                                                             }
                                                         }

@@ -4,11 +4,10 @@
 Usage:
     python3 tools/visual/render_qml.py <dir-with-Main.qml> <out.png> [--width 1280] [--height 800]
                                        [--strict] [--backend gl|software]
-                                       [--gl-text native|distancefield]
 
 Two backends, both with deterministic DPI/scale (`QT_FONT_DPI=96`,
 `QT_SCALE_FACTOR=1`) and a 10-second timeout via `Shot.qml`. The default is
-`--backend gl --gl-text native`. When gl cannot run (no sway, or Qt did not
+`--backend gl`. When gl cannot run (no sway, or Qt did not
 get an OpenGL scene graph) the render fails and says to pass
 `--backend software`; it never falls back, so scores stay comparable between
 runs.
@@ -24,11 +23,9 @@ runs.
   compositor are never used. The offscreen and minimalegl platforms cannot do
   OpenGL here (offscreen falls back to software; minimalegl with
   `EGL_PLATFORM=surfaceless` finds no EGLConfig), hence the compositor.
-  `--gl-text native` (default) sets `QML_DISABLE_DISTANCEFIELD=1` so glyphs
-  are rasterised like the software backend (and closer to Chromium) while
-  shader effects still draw; `--gl-text distancefield` draws
-  `Text.QtRendering` text with distance fields, as a real app on a GPU does. Neither
-  changes layout: glyph advances come from the same design metrics.
+  Glyphs are what the output asks for: the converter sets `renderType` where
+  native glyphs are right, and `QML_DISABLE_DISTANCEFIELD` is cleared, so the
+  rest is drawn with distance fields as in a real app on a GPU.
 
 Supports both `ApplicationWindow`/`Window` and `Item` root components without
 opening a second window.
@@ -58,8 +55,6 @@ SETTLE_QUIET_MS = 250
 SETTLE_MAX_MS = 4000
 BACKENDS = ("software", "gl")
 DEFAULT_BACKEND = "gl"
-GL_TEXT_MODES = ("distancefield", "native")
-DEFAULT_GL_TEXT = "native"
 SWAY_START_TIMEOUT_SEC = 10.0
 
 # Under sway's default tiling a window is resized to its tile minus borders and
@@ -236,7 +231,6 @@ def render_qml(
     strict: bool = False,
     backend: str = DEFAULT_BACKEND,
     sway: HeadlessSway | None = None,
-    gl_text: str = DEFAULT_GL_TEXT,
 ) -> list[str]:
     """Render `qml_target` at `width`x`height` into `out_png`.
 
@@ -248,10 +242,6 @@ def render_qml(
     """
     if backend not in BACKENDS:
         raise QmlRenderError(f"Unknown backend {backend!r}; expected one of {', '.join(BACKENDS)}")
-    if gl_text not in GL_TEXT_MODES:
-        raise QmlRenderError(
-            f"Unknown gl_text {gl_text!r}; expected one of {', '.join(GL_TEXT_MODES)}"
-        )
     if backend == "gl" and sway is None:
         with HeadlessSway(width, height) as own_sway:
             return render_qml(
@@ -263,7 +253,6 @@ def render_qml(
                 strict=strict,
                 backend=backend,
                 sway=own_sway,
-                gl_text=gl_text,
             )
     if width <= 0 or height <= 0:
         raise QmlRenderError(f"Invalid viewport dimensions: {width}x{height}")
@@ -289,8 +278,6 @@ def render_qml(
         # Client-side decorations would take part of the window for a title bar.
         env["QT_WAYLAND_DISABLE_WINDOWDECORATION"] = "1"
         env.pop("QML_DISABLE_DISTANCEFIELD", None)
-        if gl_text == "native":
-            env["QML_DISABLE_DISTANCEFIELD"] = "1"
     else:
         env["QT_QPA_PLATFORM"] = "offscreen"
         env["QT_QUICK_BACKEND"] = "software"
@@ -419,14 +406,6 @@ def build_parser() -> argparse.ArgumentParser:
         "(default; fails rather than falling back when sway or GL is missing); "
         "software: offscreen software scene graph",
     )
-    parser.add_argument(
-        "--gl-text",
-        choices=GL_TEXT_MODES,
-        default=DEFAULT_GL_TEXT,
-        help="Text rasterisation under --backend gl: native (default; "
-        "QML_DISABLE_DISTANCEFIELD=1, like the software backend) or distancefield "
-        "(Qt's GPU default)",
-    )
     return parser
 
 
@@ -442,7 +421,6 @@ def main(argv: list[str] | None = None) -> int:
             timeout=args.timeout,
             strict=args.strict,
             backend=args.backend,
-            gl_text=args.gl_text,
         )
     except QmlRenderError as exc:
         print(f"render_qml.py: error: {exc}", file=sys.stderr)

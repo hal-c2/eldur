@@ -112,6 +112,7 @@ ApplicationWindow {
                         anchors.right: parent.right
                         anchors.top: parent.top
                         anchors.topMargin: 20
+                        renderType: Text.NativeRendering
 
                         TapHandler {
                             onTapped: root.scrollToFragment("#")
@@ -169,6 +170,7 @@ ApplicationWindow {
                             bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
+                            renderType: Text.NativeRendering
                         }
 
                         // <p class="meta">
@@ -189,6 +191,7 @@ ApplicationWindow {
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             Layout.topMargin: 6 - h1.eldurCarry
+                            renderType: Text.NativeRendering
                         }
 
                         Item {
@@ -225,6 +228,7 @@ ApplicationWindow {
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
+                                    renderType: Text.NativeRendering
 
                                     onLineLaidOut: (line) => {
                                         const fixed = lineHeightMode === Text.FixedHeight;
@@ -261,6 +265,7 @@ ApplicationWindow {
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.topMargin: 18 - intro.eldurCarry
+                                    renderType: Text.NativeRendering
 
                                     onLineLaidOut: (line) => {
                                         const fixed = lineHeightMode === Text.FixedHeight;
@@ -296,6 +301,7 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     Layout.topMargin: 18 - p.eldurCarry
                                     Layout.preferredHeight: implicitHeight
+                                    renderType: Text.NativeRendering
 
                                     onLineLaidOut: (line) => {
                                         const fixed = lineHeightMode === Text.FixedHeight;
@@ -417,6 +423,7 @@ ApplicationWindow {
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
+                                    renderType: Text.NativeRendering
                                 }
 
                                 // <ol>
@@ -448,6 +455,7 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            renderType: Text.NativeRendering
                                         }
 
                                         // <ol>
@@ -485,6 +493,7 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <li>
@@ -506,6 +515,7 @@ ApplicationWindow {
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: -li.eldurCarry
                                                     Layout.preferredHeight: implicitHeight
+                                                    renderType: Text.NativeRendering
                                                 }
                                             }
                                         }
@@ -529,6 +539,7 @@ ApplicationWindow {
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
                                         Layout.topMargin: -ol.eldurCarry
+                                        renderType: Text.NativeRendering
                                     }
 
                                     // <li>
@@ -550,6 +561,7 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.topMargin: -li3.eldurCarry
                                         Layout.preferredHeight: implicitHeight
+                                        renderType: Text.NativeRendering
                                     }
                                 }
                             }
@@ -594,6 +606,7 @@ ApplicationWindow {
                                 anchors.top: parent.top
                                 anchors.leftMargin: 24
                                 anchors.topMargin: 4
+                                renderType: Text.NativeRendering
                             }
                         }
 
@@ -615,6 +628,7 @@ ApplicationWindow {
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             Layout.topMargin: 24 - blockquote.eldurCarry
+                            renderType: Text.NativeRendering
                         }
 
                         // <figure>
@@ -663,6 +677,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.topMargin: 8
                                 Layout.preferredHeight: implicitHeight
+                                renderType: Text.NativeRendering
                             }
                         }
 
@@ -682,6 +697,7 @@ ApplicationWindow {
                             Layout.fillWidth: true
                             Layout.topMargin: 24 - figure.eldurCarry
                             Layout.bottomMargin: 18
+                            renderType: Text.NativeRendering
                         }
                     }
                 }

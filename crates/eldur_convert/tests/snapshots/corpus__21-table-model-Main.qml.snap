@@ -212,6 +212,7 @@ ApplicationWindow {
                     }
                     wrapMode: Text.WordWrap
                     Layout.fillWidth: true
+                    renderType: Text.NativeRendering
                 }
 
                 // <table class="collapse">
@@ -297,6 +298,7 @@ ApplicationWindow {
                                 anchors.leftMargin: 9
                                 anchors.rightMargin: 8
                                 anchors.verticalCenterOffset: 0.5
+                                renderType: Text.NativeRendering
                             }
                         }
 
@@ -360,6 +362,7 @@ ApplicationWindow {
                                 anchors.leftMargin: 9
                                 anchors.rightMargin: 9
                                 anchors.verticalCenterOffset: 0.5
+                                renderType: Text.NativeRendering
                             }
                         }
 
@@ -421,6 +424,7 @@ ApplicationWindow {
                                 anchors.alignWhenCentered: false
                                 anchors.leftMargin: 9
                                 anchors.rightMargin: 8
+                                renderType: Text.NativeRendering
                             }
                         }
 
@@ -483,6 +487,7 @@ ApplicationWindow {
                                 anchors.leftMargin: 9
                                 anchors.rightMargin: 9
                                 anchors.verticalCenterOffset: 0.5
+                                renderType: Text.NativeRendering
                             }
                         }
 
@@ -549,6 +554,7 @@ ApplicationWindow {
                                 anchors.leftMargin: 9
                                 anchors.rightMargin: 9
                                 anchors.verticalCenterOffset: 0.5
+                                renderType: Text.NativeRendering
                             }
                         }
 
@@ -617,6 +623,7 @@ ApplicationWindow {
                                 anchors.leftMargin: 10
                                 anchors.rightMargin: 9
                                 anchors.verticalCenterOffset: 0.5
+                                renderType: Text.NativeRendering
                             }
                         }
 
@@ -677,6 +684,7 @@ ApplicationWindow {
                                 anchors.leftMargin: 10
                                 anchors.rightMargin: 9
                                 anchors.verticalCenterOffset: 0.5
+                                renderType: Text.NativeRendering
                             }
                         }
 
@@ -738,6 +746,7 @@ ApplicationWindow {
                                 anchors.leftMargin: 9
                                 anchors.rightMargin: 8
                                 anchors.verticalCenterOffset: 0.5
+                                renderType: Text.NativeRendering
                             }
                         }
 
@@ -775,6 +784,7 @@ ApplicationWindow {
                                 anchors.alignWhenCentered: false
                                 anchors.leftMargin: 9
                                 anchors.rightMargin: 9
+                                renderType: Text.NativeRendering
                             }
                         }
                     }
@@ -796,6 +806,7 @@ ApplicationWindow {
                     wrapMode: Text.WordWrap
                     Layout.fillWidth: true
                     Layout.topMargin: 16
+                    renderType: Text.NativeRendering
                 }
 
                 // <table class="spaced">
@@ -866,6 +877,7 @@ ApplicationWindow {
                                 anchors.alignWhenCentered: false
                                 anchors.leftMargin: 8
                                 anchors.rightMargin: 8
+                                renderType: Text.NativeRendering
                             }
                         }
 
@@ -901,6 +913,7 @@ ApplicationWindow {
                                 anchors.alignWhenCentered: false
                                 anchors.leftMargin: 8
                                 anchors.rightMargin: 8
+                                renderType: Text.NativeRendering
                             }
                         }
 
@@ -936,6 +949,7 @@ ApplicationWindow {
                                 anchors.alignWhenCentered: false
                                 anchors.leftMargin: 8
                                 anchors.rightMargin: 8
+                                renderType: Text.NativeRendering
                             }
                         }
 
@@ -971,6 +985,7 @@ ApplicationWindow {
                                 anchors.alignWhenCentered: false
                                 anchors.leftMargin: 8
                                 anchors.rightMargin: 8
+                                renderType: Text.NativeRendering
                             }
                         }
                     }
@@ -992,6 +1007,7 @@ ApplicationWindow {
                     wrapMode: Text.WordWrap
                     Layout.fillWidth: true
                     Layout.topMargin: 16
+                    renderType: Text.NativeRendering
                 }
 
                 // <table class="fixed bottom">
@@ -1079,6 +1095,7 @@ ApplicationWindow {
                                     anchors.leftMargin: 9
                                     anchors.rightMargin: 8
                                     anchors.verticalCenterOffset: 0.5
+                                    renderType: Text.NativeRendering
                                 }
                             }
 
@@ -1131,6 +1148,7 @@ ApplicationWindow {
                                     anchors.leftMargin: 9
                                     anchors.rightMargin: 8
                                     anchors.verticalCenterOffset: 0.5
+                                    renderType: Text.NativeRendering
                                 }
                             }
 
@@ -1191,6 +1209,7 @@ ApplicationWindow {
                                     anchors.leftMargin: 9
                                     anchors.rightMargin: 9
                                     anchors.verticalCenterOffset: 0.5
+                                    renderType: Text.NativeRendering
                                 }
                             }
 
@@ -1243,6 +1262,7 @@ ApplicationWindow {
                                     anchors.leftMargin: 9
                                     anchors.rightMargin: 8
                                     anchors.verticalCenterOffset: 0.5
+                                    renderType: Text.NativeRendering
                                 }
                             }
 
@@ -1295,6 +1315,7 @@ ApplicationWindow {
                                     anchors.leftMargin: 9
                                     anchors.rightMargin: 8
                                     anchors.verticalCenterOffset: 0.5
+                                    renderType: Text.NativeRendering
                                 }
                             }
 
@@ -1355,6 +1376,7 @@ ApplicationWindow {
                                     anchors.leftMargin: 9
                                     anchors.rightMargin: 9
                                     anchors.verticalCenterOffset: 0.5
+                                    renderType: Text.NativeRendering
                                 }
                             }
 
@@ -1414,6 +1436,7 @@ ApplicationWindow {
                                     anchors.alignWhenCentered: false
                                     anchors.leftMargin: 9
                                     anchors.rightMargin: 8
+                                    renderType: Text.NativeRendering
                                 }
                             }
 
@@ -1473,6 +1496,7 @@ ApplicationWindow {
                                     anchors.alignWhenCentered: false
                                     anchors.leftMargin: 9
                                     anchors.rightMargin: 8
+                                    renderType: Text.NativeRendering
                                 }
                             }
 
@@ -1510,6 +1534,7 @@ ApplicationWindow {
                                     anchors.alignWhenCentered: false
                                     anchors.leftMargin: 9
                                     anchors.rightMargin: 9
+                                    renderType: Text.NativeRendering
                                 }
                             }
                         }
@@ -1539,6 +1564,7 @@ ApplicationWindow {
                             anchors.right: parent.right
                             anchors.top: parent.top
                             anchors.topMargin: 6
+                            renderType: Text.NativeRendering
                         }
                     }
                 }
@@ -1559,6 +1585,7 @@ ApplicationWindow {
                     wrapMode: Text.WordWrap
                     Layout.fillWidth: true
                     Layout.topMargin: 16
+                    renderType: Text.NativeRendering
                 }
 
                 // <table class="collapse tall">
@@ -1646,6 +1673,7 @@ ApplicationWindow {
                                 anchors.leftMargin: 9
                                 anchors.rightMargin: 8
                                 anchors.topMargin: 5
+                                renderType: Text.NativeRendering
                             }
                         }
 
@@ -1705,6 +1733,7 @@ ApplicationWindow {
                                 anchors.alignWhenCentered: false
                                 anchors.leftMargin: 9
                                 anchors.rightMargin: 8
+                                renderType: Text.NativeRendering
                             }
                         }
 
@@ -1741,6 +1770,7 @@ ApplicationWindow {
                                 anchors.leftMargin: 9
                                 anchors.rightMargin: 9
                                 anchors.bottomMargin: 5
+                                renderType: Text.NativeRendering
                             }
                         }
                     }

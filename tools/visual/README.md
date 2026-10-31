@@ -24,10 +24,10 @@ python3 tools/visual/run.py --corpus tests/corpus --out target/visual
 mise run visual -- --cases card,two-columns
 mise run visual -- --update-baseline
 
-# The QML side renders with OpenGL and native glyphs by default (needs sway).
+# The QML side renders with OpenGL by default (needs sway), with the glyphs the
+# output asks for.
 # Without sway or GL the run fails; it never falls back on its own. Choose:
 mise run visual -- --backend software
-mise run visual -- --gl-text distancefield
 ```
 
 ## Components
@@ -114,18 +114,18 @@ viewport, unmatched counts). Elements a page converts into one `Text`
 
 ```bash
 python3 tools/visual/render_qml.py <dir-with-Main.qml> <out.png> [--width 1280 --height 800] [--strict]
-                                   [--backend gl|software] [--gl-text native|distancefield]
+                                   [--backend gl|software]
 ```
 
 - Both backends set `QT_FONT_DPI=96`, `QT_SCALE_FACTOR=1`,
   `QML_DISABLE_DISK_CACHE=1`, and a 10 s timeout.
-- The default is `--backend gl --gl-text native`. When gl cannot run (no
+- The default is `--backend gl`. When gl cannot run (no
   sway on `PATH`, sway fails to start, or Qt did not get an OpenGL scene
   graph, which `Shot.qml` checks through `GraphicsInfo.api` before grabbing)
   the render fails with an error that says to pass `--backend software`;
   `run.py` stops the whole run. It never falls back silently: a score is only
   comparable to scores from the same backend, and `report.json` records
-  `backend` and `gl_text`.
+  `backend`.
 - `--backend software` runs `qml6 --software` with
   `QT_QPA_PLATFORM=offscreen` and `QT_QUICK_BACKEND=software`. The software
   scene graph does not draw shader effects, so `RectangularShadow` and
@@ -146,19 +146,15 @@ python3 tools/visual/render_qml.py <dir-with-Main.qml> <out.png> [--width 1280 -
     the window is not the requested size instead of stretching it. The
     config also lowers sway's 75×50 minimum floating size, which enlarged
     small viewports after their first frame.
-  - `--gl-text native` (default) sets `QML_DISABLE_DISTANCEFIELD=1`, which
-    rasterises glyphs like the software backend (and closer to Chromium)
-    while effects still draw. `--gl-text distancefield` is Qt's GPU default
-    for `Text.QtRendering`: distance-field glyphs, lighter and softer than
-    Chromium's.
-    Neither changes layout (advances come from the same design metrics). Text
-    on a fractional y can land 1 px off from software, since the two backends
-    round the baseline differently.
+  - Glyphs are what the output asks for, so the score is what a user sees.
+    The converter sets `renderType: Text.NativeRendering` except under a scale
+    or rotation (`docs/spec/layout.md` §1.2), where Qt draws distance fields.
+    `QML_DISABLE_DISTANCEFIELD` is cleared, so a shell's setting cannot change
+    a score. Text on a fractional y can land 1 px off from software, since the
+    two backends round the baseline differently.
   - Known: text under a scale `transform` is not pixel-reproducible on gl
-    (Mesa radeonsi here). 20-pricing's `Scale { 1.05 }` card gave 4 variants
-    in 10 renders with native glyphs (≤ 7 pixels inside glyphs, same score to
-    four decimals) and a different image every time with distance fields;
-    removing the transform, or `--backend software`, makes it reproducible.
+    (Mesa radeonsi here). 20-pricing's `Scale { 1.05 }` card, drawn with
+    distance fields, gives a different image every time; removing the transform, or `--backend software`, makes it reproducible.
     The render loop (`QSG_RENDER_LOOP=basic`) makes no difference, so it is
     not capture timing.
 - Returns any QML runtime/binding warnings printed by `qml6`; passing `--strict`
@@ -212,8 +208,8 @@ Passing `--diff <out.png>` writes a labelled three-panel PNG:
 - Renders HTML, runs `--convert-cmd` (default
   `cargo run -q -p eldur_cli -- convert`), renders QML, compares screenshots, and
   writes `<out>/report.md` and `<out>/report.json`.
-- `--backend software|gl` and `--gl-text` choose the QML renderer (see
-  `render_qml.py`); the report records both.
+- `--backend software|gl` chooses the QML renderer (see `render_qml.py`); the
+  report records it.
 - Per-case statuses: `ok`, `qml_warnings` (when `--strict` is active, which is
   the default; pass `--no-strict` to keep status `ok` while still recording
   warnings), `convert_failed`, `html_render_failed`, `qml_render_failed`, and

@@ -76,6 +76,7 @@ ApplicationWindow {
                         font.weight: 700
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
+                        renderType: Text.NativeRendering
                     }
 
                     // <div class="toolbar">
@@ -110,6 +111,14 @@ ApplicationWindow {
                             rightPadding: 15
                             bottomPadding: 7
                             leftPadding: 15
+                            contentItem: Text {
+                                text: compact.text
+                                font: compact.font
+                                color: compact.palette.buttonText
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                                renderType: Text.NativeRendering
+                            }
                             objectName: "compact"
                             Layout.fillWidth: true
                             Layout.maximumWidth: Math.ceil(implicitWidth)
@@ -140,6 +149,14 @@ ApplicationWindow {
                             rightPadding: 15
                             bottomPadding: 7
                             leftPadding: 15
+                            contentItem: Text {
+                                text: ok.text
+                                font: ok.font
+                                color: ok.palette.buttonText
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                                renderType: Text.NativeRendering
+                            }
                             objectName: "ok"
                             Layout.fillWidth: true
                             Layout.maximumWidth: Math.ceil(implicitWidth)
@@ -171,6 +188,14 @@ ApplicationWindow {
                             rightPadding: 15
                             bottomPadding: 7
                             leftPadding: 15
+                            contentItem: Text {
+                                text: warn.text
+                                font: warn.font
+                                color: warn.palette.buttonText
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                                renderType: Text.NativeRendering
+                            }
                             objectName: "warn"
                             Layout.fillWidth: true
                             Layout.maximumWidth: Math.ceil(implicitWidth)
@@ -202,6 +227,14 @@ ApplicationWindow {
                             rightPadding: 15
                             bottomPadding: 7
                             leftPadding: 15
+                            contentItem: Text {
+                                text: more.text
+                                font: more.font
+                                color: more.palette.buttonText
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                                renderType: Text.NativeRendering
+                            }
                             objectName: "more"
                             Layout.fillWidth: true
                             Layout.maximumWidth: Math.ceil(implicitWidth)
@@ -259,6 +292,7 @@ ApplicationWindow {
                                 anchors.leftMargin: 18
                                 anchors.rightMargin: 18
                                 anchors.topMargin: 8
+                                renderType: Text.NativeRendering
                             }
 
                             TapHandler {
@@ -297,6 +331,7 @@ ApplicationWindow {
                                 anchors.leftMargin: 18
                                 anchors.rightMargin: 18
                                 anchors.topMargin: 8
+                                renderType: Text.NativeRendering
                             }
 
                             TapHandler {
@@ -335,6 +370,7 @@ ApplicationWindow {
                                 anchors.leftMargin: 18
                                 anchors.rightMargin: 18
                                 anchors.topMargin: 8
+                                renderType: Text.NativeRendering
                             }
 
                             TapHandler {
@@ -415,6 +451,7 @@ ApplicationWindow {
                                     anchors.leftMargin: 14
                                     anchors.rightMargin: 14
                                     anchors.topMargin: list.cls_compact ? 2 : 10
+                                    renderType: Text.NativeRendering
                                 }
 
                                 HoverHandler {
@@ -467,6 +504,7 @@ ApplicationWindow {
                                     anchors.leftMargin: 14
                                     anchors.rightMargin: 14
                                     anchors.topMargin: list.cls_compact ? 2 : 10
+                                    renderType: Text.NativeRendering
                                 }
 
                                 HoverHandler {
@@ -519,6 +557,7 @@ ApplicationWindow {
                                     anchors.leftMargin: 14
                                     anchors.rightMargin: 14
                                     anchors.topMargin: list.cls_compact ? 2 : 10
+                                    renderType: Text.NativeRendering
                                 }
 
                                 HoverHandler {
@@ -565,6 +604,7 @@ ApplicationWindow {
                             anchors.leftMargin: 14
                             anchors.rightMargin: 14
                             anchors.topMargin: 10
+                            renderType: Text.NativeRendering
                         }
                     }
 
@@ -599,6 +639,7 @@ ApplicationWindow {
                             anchors.leftMargin: 14
                             anchors.rightMargin: 14
                             anchors.topMargin: 12
+                            renderType: Text.NativeRendering
                         }
                     }
                 }

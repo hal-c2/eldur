@@ -84,6 +84,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.maximumWidth: 560
+                                renderType: Text.NativeRendering
                             }
 
                             // <h1>
@@ -107,6 +108,7 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.topMargin: -eyebrow.eldurCarry
+                                renderType: Text.NativeRendering
                             }
 
                             // <p>
@@ -130,6 +132,7 @@ ApplicationWindow {
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.maximumWidth: 560
                                 Layout.topMargin: 16 - h1.eldurCarry
+                                renderType: Text.NativeRendering
                             }
 
                             Flow {
@@ -187,6 +190,14 @@ ApplicationWindow {
                                                 bottomPadding: 0
                                                 leftPadding: 22
                                                 implicitHeight: 24.32
+                                                contentItem: Text {
+                                                    text: buttonControl.text
+                                                    font: buttonControl.font
+                                                    color: buttonControl.palette.buttonText
+                                                    horizontalAlignment: Text.AlignHCenter
+                                                    verticalAlignment: Text.AlignVCenter
+                                                    renderType: Text.NativeRendering
+                                                }
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.preferredHeight: 40
@@ -207,6 +218,14 @@ ApplicationWindow {
                                                 bottomPadding: 0
                                                 leftPadding: 22
                                                 implicitHeight: 24.32
+                                                contentItem: Text {
+                                                    text: buttonControl2.text
+                                                    font: buttonControl2.font
+                                                    color: buttonControl2.palette.buttonText
+                                                    horizontalAlignment: Text.AlignHCenter
+                                                    verticalAlignment: Text.AlignVCenter
+                                                    renderType: Text.NativeRendering
+                                                }
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.preferredHeight: 40
@@ -273,6 +292,7 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        renderType: Text.NativeRendering
                                     }
 
                                     // <p class="plan-desc">
@@ -299,6 +319,7 @@ ApplicationWindow {
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -327,6 +348,7 @@ ApplicationWindow {
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                             Layout.alignment: Qt.AlignBaseline
+                                            renderType: Text.NativeRendering
                                         }
 
                                         // <span class="period">
@@ -346,6 +368,7 @@ ApplicationWindow {
                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                             Layout.alignment: Qt.AlignBaseline
                                             Layout.leftMargin: 4
+                                            renderType: Text.NativeRendering
                                         }
 
                                         Item {
@@ -387,6 +410,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.fillHeight: true
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Text {
@@ -405,6 +429,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.fillHeight: true
                                                 Layout.leftMargin: 10
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Item {
@@ -437,6 +462,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.fillHeight: true
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Text {
@@ -455,6 +481,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.fillHeight: true
                                                 Layout.leftMargin: 10
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Item {
@@ -487,6 +514,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.fillHeight: true
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Text {
@@ -505,6 +533,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.fillHeight: true
                                                 Layout.leftMargin: 10
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Item {
@@ -537,6 +566,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.fillHeight: true
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Text {
@@ -555,6 +585,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.fillHeight: true
                                                 Layout.leftMargin: 10
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Item {
@@ -595,6 +626,14 @@ ApplicationWindow {
                                         bottomPadding: 2
                                         leftPadding: 2
                                         implicitHeight: 29.6
+                                        contentItem: Text {
+                                            text: buttonControl3.text
+                                            font: buttonControl3.font
+                                            color: buttonControl3.palette.buttonText
+                                            horizontalAlignment: Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                            renderType: Text.NativeRendering
+                                        }
                                         Layout.preferredHeight: 50
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
@@ -1022,6 +1061,13 @@ ApplicationWindow {
                                         bottomPadding: 2
                                         leftPadding: 2
                                         implicitHeight: 29.6
+                                        contentItem: Text {
+                                            text: buttonControl4.text
+                                            font: buttonControl4.font
+                                            color: buttonControl4.palette.buttonText
+                                            horizontalAlignment: Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
                                         Layout.preferredHeight: 50
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
@@ -1105,6 +1151,7 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        renderType: Text.NativeRendering
                                     }
 
                                     // <p class="plan-desc">
@@ -1131,6 +1178,7 @@ ApplicationWindow {
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -1159,6 +1207,7 @@ ApplicationWindow {
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                             Layout.alignment: Qt.AlignBaseline
+                                            renderType: Text.NativeRendering
                                         }
 
                                         // <span class="period">
@@ -1178,6 +1227,7 @@ ApplicationWindow {
                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                             Layout.alignment: Qt.AlignBaseline
                                             Layout.leftMargin: 4
+                                            renderType: Text.NativeRendering
                                         }
 
                                         Item {
@@ -1219,6 +1269,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.fillHeight: true
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Text {
@@ -1237,6 +1288,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.fillHeight: true
                                                 Layout.leftMargin: 10
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Item {
@@ -1269,6 +1321,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.fillHeight: true
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Text {
@@ -1287,6 +1340,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.fillHeight: true
                                                 Layout.leftMargin: 10
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Item {
@@ -1319,6 +1373,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.fillHeight: true
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Text {
@@ -1337,6 +1392,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.fillHeight: true
                                                 Layout.leftMargin: 10
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Item {
@@ -1369,6 +1425,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.fillHeight: true
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Text {
@@ -1387,6 +1444,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.fillHeight: true
                                                 Layout.leftMargin: 10
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Item {
@@ -1419,6 +1477,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.fillHeight: true
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Text {
@@ -1437,6 +1496,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.fillHeight: true
                                                 Layout.leftMargin: 10
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Item {
@@ -1477,6 +1537,14 @@ ApplicationWindow {
                                         bottomPadding: 2
                                         leftPadding: 2
                                         implicitHeight: 29.6
+                                        contentItem: Text {
+                                            text: buttonControl5.text
+                                            font: buttonControl5.font
+                                            color: buttonControl5.palette.buttonText
+                                            horizontalAlignment: Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                            renderType: Text.NativeRendering
+                                        }
                                         Layout.preferredHeight: 50
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
@@ -1507,6 +1575,7 @@ ApplicationWindow {
                             Layout.fillWidth: true
                             Layout.topMargin: 24 - pricingGrid.eldurCarry
                             Layout.preferredHeight: implicitHeight
+                            renderType: Text.NativeRendering
                         }
                     }
                 }
