@@ -198,10 +198,17 @@ impl Emitter<'_, '_> {
             wrapper.set("clip", true);
         }
         match &inner {
-            Some((_, id)) => {
+            Some((content, id)) => {
+                let width = if super::flex::holds_control_row(content) {
+                    format!(
+                        "Math.ceil(Array.from({id}.children).reduce((sum, item) => sum + item.implicitWidth, 0))"
+                    )
+                } else {
+                    format!("{id}.implicitWidth")
+                };
                 wrapper.set(
                     "implicitWidth",
-                    Value::expr(plus(&format!("{id}.implicitWidth"), insets.horizontal())),
+                    Value::expr(plus(&width, insets.horizontal())),
                 );
                 wrapper.set(
                     "implicitHeight",

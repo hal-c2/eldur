@@ -343,7 +343,48 @@ function init(rootItem, baseUrl, documentUrl) {
     _startTime = Date.now();
     if (_root) {
         _connectControls(_root);
+        _walkItems(_root, function(item) {
+            if (item.eldurTag === "details") {
+                _setUpDetails(item);
+            }
+            return false;
+        });
     }
+}
+
+// A `<details>` shows its summary, and the rest when open.
+function _setUpDetails(raw) {
+    var kids = _rawElementChildren(raw);
+    var summary = kids.filter(function(k) { return _nodeTag(k) === "summary"; })[0];
+    _detailsShow(raw, raw.eldurOpen === true);
+    if (summary) {
+        wrap(summary).addEventListener("click", function() {
+            summary.forceActiveFocus();
+            wrap(raw).open = !_meta(raw).detailsOpen;
+        });
+    }
+}
+
+function _detailsShow(raw, open) {
+    _meta(raw).detailsOpen = open;
+    if (open) {
+        setAttribute(raw, "open", "");
+    } else {
+        removeAttribute(raw, "open");
+    }
+    if (_gHasCascade()) {
+        _gTouch(raw);
+    }
+    _rawElementChildren(raw).forEach(function(kid) {
+        if (_nodeTag(kid) !== "summary") {
+            kid.visible = open && _gStyleAllowsShow(kid);
+        }
+    });
+    _layoutChanged(raw);
+}
+
+function _gStyleAllowsShow(kid) {
+    return !_gHasCascade() || _gStyle(kid).display !== "none";
 }
 
 function _isQObject(obj) {
@@ -1671,7 +1712,26 @@ function getClassName(item) {
 }
 
 function dataset(item) {
-    return _meta(item).dataset;
+    var m = _meta(item);
+    if (!_gHasCascade()) {
+        return m.dataset;
+    }
+    // Plain writes, which the rules' `[data-*]` have to hear of.
+    if (!m.datasetView) {
+        m.datasetView = new Proxy(m.dataset, {
+            set: function(target, key, value) {
+                target[key] = String(value);
+                _gTouch();
+                return true;
+            },
+            deleteProperty: function(target, key) {
+                delete target[key];
+                _gTouch();
+                return true;
+            }
+        });
+    }
+    return m.datasetView;
 }
 
 // The item appended children go in. A box's inner layout, when it has one.
@@ -2274,7 +2334,10 @@ function getText(item) {
         return raw.text;
     }
     var textChild = _findTextChild(raw);
-    if (textChild) {
+    // A row of controls in a Flow: its text item is only the space between them.
+    // A tagged one is an element of its own, read with the others below.
+    if (textChild && !textChild.eldurTag
+        && !(_rawElementChildren(raw).length > 0 && textChild.text.trim() === "")) {
         return String(textChild.text);
     }
     var m = _meta(raw);
@@ -2323,6 +2386,27 @@ function setText(item, value) {
     }
 }
 
+// What a `<template>` holds is parsed when a script first asks for it.
+function _templateContent(raw) {
+    var m = _meta(raw);
+    var written = _root && _root.eldurHtmlTemplates;
+    var markup = typeof written === "string" && _nodeTag(raw) === "template"
+        ? JSON.parse(written)[_nodeId(raw)] : undefined;
+    if (markup === undefined) {
+        return undefined;
+    }
+    if (!m.templateContent) {
+        m.templateContent = document.createDocumentFragment();
+        var nodes = _parseHtmlFragmentNodes(markup);
+        for (var i = 0; i < nodes.length; ++i) {
+            m.templateContent.appendChild(nodes[i]);
+        }
+    }
+    return m.templateContent;
+}
+
+var _G_BLOCK_MARKUP = /<(address|article|aside|blockquote|button|details|div|dl|fieldset|figure|footer|form|h[1-6]|header|hr|input|li|main|nav|ol|p|section|select|table|textarea|ul)\b/i;
+
 function setInnerHTML(item, html) {
     var raw = _unwrap(item);
     if (!raw) {
@@ -2333,6 +2417,9 @@ function setInnerHTML(item, html) {
         console.warn("eldur: <script> and <style> inside innerHTML are unsupported");
         return;
     }
+    if (str === "" && !raw.__eldurInline) {
+        _rawElementChildren(raw).forEach(_detachNode);
+    }
     var vHtml = raw.__eldurInline ? raw : _vExisting(raw);
     if (!vHtml && _vHasRules() && !_markupMakesElements(raw) && typeof raw.text === "string") {
         vHtml = _vOwnModel(raw);
@@ -2340,6 +2427,17 @@ function setInnerHTML(item, html) {
     if (vHtml) {
         _vSetInnerHTML(vHtml, str);
         return;
+    }
+    // Elements a paragraph could not hold: the empty container the converter
+    // wrote as a line of text was never one.
+    if (typeof raw.text === "string" && _gHasCascade() && _G_BLOCK_MARKUP.test(str)
+        && typeof raw.eldurTag === "string" && !_G_CONTROL.test(raw.eldurTag)) {
+        var box = _gAdopt(raw);
+        if (box) {
+            _replaceWithMarkup(box, str);
+            _rememberMarkup(box, str);
+            return;
+        }
     }
     if (_markupMakesElements(raw)) {
         _replaceWithMarkup(raw, str);
@@ -5003,7 +5101,14 @@ function wrap(rawItem) {
         __eldurWrapper: true,
         get _item() { return rawItem; },
         style: styleProxy,
-        get type() { return m.inputType || getAttribute(rawItem, "type") || ""; },
+        get type() {
+            // A static control's QML type is what it was written as.
+            var written = m.inputType || getAttribute(rawItem, "type") || "";
+            if (written === "" && typeof rawItem.checked === "boolean" && typeof rawItem.checkState === "number") {
+                return "checkbox";
+            }
+            return written !== "" || typeof rawItem.checked !== "boolean" ? written : "radio";
+        },
         // `createElement('input')` must return before the script says what
         // type it is, and a QML object cannot change type.
         set type(v) {
@@ -5054,6 +5159,23 @@ function wrap(rawItem) {
         get outerHTML() { return _serializeElement(rawItem); },
         set outerHTML(v) {
             this.replaceWith.apply(this, _parseHtmlFragmentNodes(v));
+        },
+        get content() { return _templateContent(rawItem); },
+        get open() {
+            return _nodeTag(rawItem) === "details" ? m.detailsOpen === true : getAttribute(rawItem, "open") !== null;
+        },
+        set open(v) {
+            if (_nodeTag(rawItem) !== "details") {
+                return;
+            }
+            var next = Boolean(v);
+            if (next === (m.detailsOpen === true)) {
+                return;
+            }
+            _detailsShow(rawItem, next);
+            Qt.callLater(function() {
+                dispatchEvent(wrap(rawItem), new Event("toggle"));
+            });
         },
         get innerHTML() { return getInnerHTML(rawItem); },
         set innerHTML(v) { setInnerHTML(rawItem, v); },
@@ -5722,6 +5844,13 @@ function wrap(rawItem) {
         cloneNode: function(deep) {
             if (rawItem.__eldurInline) {
                 return wrap(_vClone(rawItem, Boolean(deep)));
+            }
+            if (m.isFragment) {
+                var whole = document.createDocumentFragment();
+                _rawElementChildren(rawItem).forEach(function(kid) {
+                    whole.appendChild(wrap(kid).cloneNode(true));
+                });
+                return whole;
             }
             var tag = _inferTagName(rawItem).toLowerCase() || "div";
             var clone = document.createElement(tag);
@@ -6650,6 +6779,8 @@ function _vComputedStyle(v) {
         var c = _vStyle(v);
         switch (_kebabToCamel(String(prop))) {
         case "color": return c.color;
+        case "textDecorationLine":
+            return (c.underline ? ["underline"] : []).concat(c.strike ? ["line-through"] : []).join(" ") || "none";
         case "fontWeight": return String(c.weight);
         case "fontStyle": return c.italic ? "italic" : "normal";
         case "display": return c.display;
@@ -7095,6 +7226,22 @@ function _deepestAt(scene) {
     return _deepestUnder(top, scene) || top;
 }
 
+// Pressing what takes no focus moves it to the page.
+function _blurUnlessFocusable(target) {
+    var raw = target;
+    for (; raw; raw = _gParent(raw)) {
+        if (raw.activeFocusOnTab === true || typeof raw.clicked === "function"
+            || typeof raw.cursorPosition === "number" || getAttribute(raw, "tabindex") !== null
+            || _nodeTag(raw) === "summary") {
+            return;
+        }
+    }
+    var active = document.activeElement;
+    if (active && active.blur && active !== document.body) {
+        active.blur();
+    }
+}
+
 function _beginTap(qtEv, heardBy) {
     var scene = qtEv.scenePosition;
     if (_tap && _tap.x === scene.x && _tap.y === scene.y) {
@@ -7117,6 +7264,7 @@ function _beginTap(qtEv, heardBy) {
         }
     }
     t.target = t.target || _unwrap(document.body) || heardBy;
+    _blurUnlessFocusable(t.target);
     t.ev = event("click", wrap(t.target), qtEv);
     t.ev.target = wrap(t.target);
     t.ev.bubbles = true;
@@ -7509,6 +7657,10 @@ function _vHostOf(raw, nodes, ref) {
     var hasNode = nodes.some(function(n) { return n.__eldurInline; });
     if (_meta(raw).createdTag && hasNode && _vStaysInline(raw)) {
         return _vFromCreated(raw);
+    }
+    // A line after the box's blocks: a model's one Text cannot stand below them.
+    if (_gActive() && _gIsBox(raw) && _rawElementChildren(raw).length > 0) {
+        return null;
     }
     return _vOwnModel(raw) || (_markupMakesElements(raw) ? null : _vBoxModel(raw));
 }
@@ -8523,6 +8675,7 @@ var _gLive = [];
 var _gMetricsCache = {};
 var _gRunning = false;
 var _gStaticBase = null;
+var _gStaticRoot = "";
 var _gReplaced = new Map();
 var _gCascadeRules = null;
 var _gPaintTable = null;
@@ -9047,6 +9200,10 @@ function _gStyle(raw) {
         return got;
     };
     var control = _G_CONTROL_BOX[tag];
+    // A checkbox or a radio is only its indicator, without a field's box.
+    if (tag === "input" && (m.inputType === "checkbox" || m.inputType === "radio")) {
+        control = undefined;
+    }
     // font-size first: every em below is of it.
     var parentSize = inherited ? inherited.fontSize : 16;
     var sizeText = value("font-size");
@@ -9092,6 +9249,10 @@ function _gStyle(raw) {
             } else {
                 text = { "color": "rgb(0, 0, 0)", "font-family": "", "font-weight": "400", "font-style": "normal", "text-align": "start", "visibility": "visible", "white-space": "normal" }[name];
             }
+        }
+        // A control's text colour is its own, not its parent's.
+        if (name === "color" && control && !won.color) {
+            text = "rgb(0, 0, 0)";
         }
         s[name] = text;
     }
@@ -10990,6 +11151,10 @@ function _gLayoutRoots() {
         if (fill) {
             opts = { forceW: Math.max(given, 0) };
         }
+        var track = _gTrackWidth(raw);
+        if (track !== null) {
+            opts = { forceW: track };
+        }
         var margins = _gPlace(raw, Math.max(avail, 0), opts, null);
         _meta(raw).gMargins = margins;
         if (containers.indexOf(raw.parent) === -1) {
@@ -10998,6 +11163,29 @@ function _gLayoutRoots() {
     }
     _gMarginPass();
     return outOfFlow;
+}
+
+// A filled grid's item is as wide as its track, which only the grid knows.
+function _gTrackWidth(raw) {
+    var grid = raw.parent;
+    var tracks = grid.eldurTracks;
+    if (!tracks || tracks.length === 0) {
+        return null;
+    }
+    var column = _rawElementChildren(grid).indexOf(raw) % tracks.length;
+    if (tracks[column] >= 0) {
+        return tracks[column];
+    }
+    var free = grid.width - grid.columnSpacing * (tracks.length - 1);
+    var parts = 0;
+    for (var i = 0; i < tracks.length; ++i) {
+        if (tracks[i] >= 0) {
+            free -= tracks[i];
+        } else {
+            parts -= tracks[i];
+        }
+    }
+    return Math.max(free * -tracks[column] / parts, 0);
 }
 
 function _gContainingBlock(raw, s) {
@@ -11163,12 +11351,31 @@ function _gSnapshotStatics() {
         return;
     }
     _gStaticBase = [];
+    var html = _taggedHtml();
+    _gStaticRoot = html ? _gRootAttrs(html) : "";
     _walkItems(_root, function(item) {
         if (typeof item.eldurTag === "string" && !_meta(item).createdTag) {
-            _gStaticBase.push({ raw: item, sig: _gMatched(item).join(","), classes: _meta(item).classes.slice() });
+            _gStaticBase.push({ raw: item, sig: _gStaticSig(item), classes: _meta(item).classes.slice() });
         }
         return false;
     });
+}
+
+// A rule can match the same and still say something else, through a variable
+// an ancestor's rules changed.
+function _gStaticSig(raw) {
+    var rules = _gRules();
+    var matched = _gMatched(raw);
+    var uses = false;
+    for (var i = 0; i < matched.length && !uses; ++i) {
+        uses = JSON.stringify(rules[matched[i]].decls).indexOf("var(") !== -1;
+    }
+    return matched.join(",") + (uses ? JSON.stringify(_gStyle(raw).vars) : "");
+}
+
+function _gRootAttrs(html) {
+    var m = _meta(html);
+    return m.classes.join(" ") + JSON.stringify(m.dataset);
 }
 
 // A class no variant of the converter's reaches, on this element, an ancestor
@@ -11221,21 +11428,123 @@ function _gStaticChanges() {
         }
         return false;
     };
+    var html = _taggedHtml();
+    var rootMoved = Boolean(html) && _gRootAttrs(html) !== _gStaticRoot;
     var keep = [];
     for (var n = 0; n < open.length; ++n) {
         var entry = open[n];
         if (entry.raw.parent === null) {
             continue;
         }
-        var sig = _gMatched(entry.raw).join(",");
-        if (sig !== entry.sig && (byRaw.get(entry.raw) === true || causes(entry.raw))) {
+        var sig = _gStaticSig(entry.raw);
+        if (sig !== entry.sig && rootMoved) {
+            _gRepaintStatic(entry.raw);
+            entry.sig = sig;
+            keep.push(entry);
+        } else if (sig !== entry.sig && (byRaw.get(entry.raw) === true || causes(entry.raw))) {
             _gAdopt(entry.raw);
         } else {
             keep.push(entry);
         }
     }
     _gStaticBase = keep;
+    if (rootMoved) {
+        _gStaticRoot = _gRootAttrs(html);
+        _gRepaintCanvas(html);
+    }
     ++_gGen;
+}
+
+// The root's attributes change what a whole page says, usually its colours. The
+// page keeps the form it was converted to, children, text and all, and takes
+// the new values.
+function _gRepaintStatic(raw) {
+    var s = _gStyle(raw);
+    if (raw.__eldurInline || s.display === "none") {
+        return;
+    }
+    var e = _gEdges(raw, s, raw.parent ? raw.parent.width : 0);
+    if (raw.background !== undefined && raw.background !== null) {
+        if (raw.background.color !== undefined && s.won["background-color"]) {
+            raw.background.color = _gQtColor(s["background-color"]);
+        }
+        if (raw.background.border !== undefined && s.won["border-top-color"]) {
+            raw.background.border.color = _gQtColor(s["border-top-color"]);
+        }
+        if (raw.contentItem && raw.contentItem.color !== undefined) {
+            raw.contentItem.color = _gQtColor(s["color"]);
+        }
+        return;
+    }
+    if (typeof raw.text === "string" && raw.color !== undefined) {
+        raw.color = _gQtColor(s["color"]);
+        if (raw.linkColor !== undefined) {
+            raw.linkColor = _gLinkColor(raw);
+        }
+        return;
+    }
+    if (raw.border === undefined || raw.color === undefined) {
+        return;
+    }
+    if (_nodeTag(raw) !== "body" && _nodeTag(raw) !== "html") {
+        raw.color = _gQtColor(s["background-color"]);
+    }
+    if (e.bt > 0) {
+        raw.border.color = _gQtColor(s["border-top-color"]);
+    }
+    var kids = raw.children;
+    for (var i = 0; i < kids.length; ++i) {
+        var kid = kids[i];
+        if (typeof kid.eldurTag === "string") {
+            continue;
+        }
+        if (kid.spacing !== undefined) {
+            _gRepadStatic(raw, kid, e);
+        } else if (kid.color !== undefined && kid.children.length === 0) {
+            // A strip for one side: which one, its shape and place say.
+            var across = kid.width >= kid.height;
+            var side = across ? (kid.y > 0 ? "bottom" : "top") : (kid.x > 0 ? "right" : "left");
+            kid.color = _gQtColor(s["border-" + side + "-color"]);
+        }
+    }
+}
+
+function _gRepadStatic(raw, content, e) {
+    var top = e.pt + e.bt;
+    var bottom = e.pb + e.bb;
+    var left = e.pl + e.bl;
+    var right = e.pr + e.br;
+    content.anchors.topMargin = top;
+    content.anchors.leftMargin = left;
+    content.anchors.rightMargin = right;
+    raw.implicitHeight = Qt.binding(function() { return content.implicitHeight + top + bottom; });
+    raw.implicitWidth = Qt.binding(function() { return content.implicitWidth + left + right; });
+}
+
+// A static paragraph holds its links in markup, where no element answers.
+function _gLinkColor(raw) {
+    var rules = _gRules();
+    var won = {};
+    for (var i = 0; i < rules.length; ++i) {
+        if (rules[i].sel.indexOf("::") !== -1 || rules[i].lastName !== "a") {
+            continue;
+        }
+        for (var d = 0; d < rules[i].decls.length; ++d) {
+            if (rules[i].decls[d][0] === "color") {
+                _gOfferDecl(won, "color", rules[i].decls[d][1], _gWeight(rules[i], rules[i].decls[d][2]), _gStyle(raw).vars);
+            }
+        }
+    }
+    return won.color ? _gQtColor(won.color.value) : raw.linkColor;
+}
+
+// A root or body background paints the whole canvas.
+function _gRepaintCanvas(html) {
+    var body = _rawElementChildren(html).filter(function(k) { return _nodeTag(k) === "body"; })[0];
+    var from = _gStyle(html).won["background-color"] ? _gStyle(html) : body ? _gStyle(body) : null;
+    if (from && _root.color !== undefined) {
+        _root.color = from.won["background-color"] ? _gQtColor(from["background-color"]) : "#ffffff";
+    }
 }
 
 // From now on the element is the same as one a script made. The item stays, for
@@ -11253,6 +11562,7 @@ function _gAdopt(raw) {
     delete m.gKeepReplaced;
     next.objectName = name;
     _gLive.push(next);
+    return next;
 }
 
 function _rawHasNoFlowParent(raw) {
@@ -11302,6 +11612,13 @@ function _gComputed(raw, prop) {
     }
     if (name === "opacity") {
         return _gNumberText(_gNumber(s.opacity));
+    }
+    if (name === "text-decoration-line") {
+        var decoration = s.won["text-decoration-line"] || s.won["text-decoration"];
+        var line = decoration ? String(decoration.value).split(/\s+/).filter(function(w) {
+            return w === "underline" || w === "line-through" || w === "overline";
+        }).join(" ") : "";
+        return line === "" ? "none" : line;
     }
     if (name === "background-image" || name === "box-shadow") {
         var parsed = s[name] === "none" ? null : _gPaintValue(name, s[name]);

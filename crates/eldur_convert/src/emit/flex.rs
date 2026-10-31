@@ -481,9 +481,15 @@ impl Emitter<'_, '_> {
         } else if style.flex_shrink > 0.0 && row {
             // Filling up to the preferred size is how Qt shrinks an item.
             obj.set(&format!("Layout.fill{main}"), true);
-            let cap = basis
-                .as_ref()
-                .map_or_else(|| "Math.ceil(implicitWidth)".to_owned(), value_text);
+            // A Flow is as wide as it is given: with nothing given, every item
+            // on a row of its own. Its row of controls says its own width.
+            let natural = if holds_control_row(&obj) {
+                obj.set("Layout.preferredWidth", Value::expr(CONTROL_ROW_WIDTH));
+                CONTROL_ROW_WIDTH.to_owned()
+            } else {
+                "Math.ceil(implicitWidth)".to_owned()
+            };
+            let cap = basis.as_ref().map_or(natural, value_text);
             if let Some(v) = &basis {
                 obj.set(&format!("Layout.preferred{main}"), v.clone());
             }
@@ -734,6 +740,9 @@ impl Emitter<'_, '_> {
                     super::units::fmt_number(n)
                 )),
                 Some(v) => v,
+                None if holds_control_row(&obj) => {
+                    Value::expr(format!("Math.min({CONTROL_ROW_WIDTH}, parent.width)"))
+                }
                 None => Value::expr("Math.min(Math.ceil(implicitWidth), parent.width)"),
             };
             obj.set("width", width);
@@ -860,4 +869,18 @@ fn horizontal_margin(margin: &LengthAuto) -> Option<Value> {
             ))),
         },
     }
+}
+
+const CONTROL_ROW_WIDTH: &str =
+    "Math.ceil(Array.from(children).reduce((sum, item) => sum + item.implicitWidth, 0))";
+
+/// Controls are items of a `Flow` only when they are all its line holds.
+pub(super) fn holds_control_row(obj: &Object) -> bool {
+    obj.type_name == "Flow"
+        && obj.members.iter().any(|m| {
+            matches!(m, Member::Child(c) if matches!(
+                c.type_name.as_str(),
+                "Button" | "TextField" | "TextArea" | "ComboBox" | "CheckBox" | "RadioButton"
+            ))
+        })
 }

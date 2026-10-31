@@ -828,6 +828,17 @@ impl<'a, 'd> Emitter<'a, 'd> {
         if self.runtime_dom
             && let Some(node) = b.node
         {
+            // An empty block has no line box until a script fills it, but an
+            // empty `Text` still sets one.
+            if self.wanted.contains(&node)
+                && e.obj.type_name == "Text"
+                && matches!(e.obj.get("text"), Some(Value::String(t)) if t.is_empty())
+            {
+                e.obj.set(
+                    "Layout.preferredHeight",
+                    Value::expr("text === \"\" ? 0 : -1"),
+                );
+            }
             crate::metadata::tag(&mut e.obj, self.doc, node);
             if self.open_elements || self.cascade_rules {
                 crate::metadata::declare_style(&mut e.obj, self.doc, node);

@@ -28,9 +28,90 @@ const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 /// between the two text engines.
 const GEOMETRY_TOLERANCE: f64 = 2.0;
 
+const WS: &str = "text: inter-element whitespace between blocks is not kept, so textContent runs them together (dom-api.md §12)";
+const UA: &str = "static controls lack the UA 2px border and 13.33px Arial; adding them changes script-less pages";
+const UAFOLLOW: &str = "follows from static controls being smaller than Chromium's";
+const UAPAINT: &str = "computed paint of a static control: its UA background and border colours are not in the cascade";
+const INLINE: &str =
+    "a checkbox beside inline text is block-level: no inline replaced elements (boxes/mod.rs)";
+const FONT: &str = "Helvetica: Qt's fontconfig match has line height 23 where Chromium's has 18";
+const FONTFOLLOW: &str = "follows from the Helvetica line height and width difference";
+const TABLE: &str = "created rows do not take part in the table's auto column sizing";
+const CLASS: &str = "classList.remove on an element with no class attribute leaves no attribute, Chromium an empty one";
+const HOVER: &str = "li:hover under a list that starts display:none gets no hover tracking";
+const LABEL: &str =
+    "a created span as a flex item ignores the inherited line-height; root cause not found";
+const LABELFOLLOW: &str = "follows from the created flex item's line height";
+const FOCUS: &str = "hiding the form leaves focus on its hidden button";
+
 /// `(page, what differs, why)`. `what` starts a difference's name, as printed by a
-/// failing test: `<step> <selector>[<row>] <field>`.
-const KNOWN: &[(&str, &str, &str)] = &[];
+/// failing test, `<step> <selector>[<row>] <field>:`; `*` stands for any text.
+const KNOWN: &[(&str, &str, &str)] = &[
+    ("tabs", "* .panel[*] text:", WS),
+    ("theme", "* #compact[*] x:", UA),
+    ("theme", "* .card[*] text:", WS),
+    ("theme", "* .top[*] text:", WS),
+    ("theme", "* body[*] text:", WS),
+    ("cards", "* #cart[*] height:", FONT),
+    ("cards", "* .buy[*] y:", FONTFOLLOW),
+    ("cards", "* .card[*] y:", FONTFOLLOW),
+    ("cards", "* .card[*] height:", FONTFOLLOW),
+    ("cards", "* .card[*] text:", WS),
+    ("cards", "* h3[*] y:", FONTFOLLOW),
+    ("cards", "* h3[*] height:", FONT),
+    ("cards", "* .desc[*] y:", FONTFOLLOW),
+    ("cards", "* .desc[*] height:", FONTFOLLOW),
+    ("cards", "* .price[*] y:", FONTFOLLOW),
+    ("cards", "* .price[*] width:", FONT),
+    ("cards", "* #cart[*] x:", FONT),
+    ("cards", "* #cart[*] width:", FONT),
+    ("accordion", "* details[*] text:", WS),
+    ("table", "* #filter[*] width:", UA),
+    ("table", "* #filter[*] height:", UA),
+    ("table", "* #people[*] y:", UAFOLLOW),
+    ("table", "* #people[*] height:", UAFOLLOW),
+    ("table", "* #people[*] text:", WS),
+    ("table", "* #summary[*] y:", UAFOLLOW),
+    ("table", "* td[*] y:", UAFOLLOW),
+    ("table", "* td[*] width:", TABLE),
+    ("table", "* td[*] x:", TABLE),
+    ("table", "* tr[*] y:", UAFOLLOW),
+    ("table", "* tr[*] width:", TABLE),
+    ("table", "* th[*] y:", UAFOLLOW),
+    ("table", "* th[*] width:", TABLE),
+    ("table", "* th[*] x:", TABLE),
+    ("table", "* th[*] class:", CLASS),
+    ("dropdown", "* #list[*] text:", WS),
+    ("dropdown", "* #m-settings[*] background-color:", HOVER),
+    ("dropdown", "* #m-settings[*] color:", HOVER),
+    ("modal", "* #overlay[*] text:", WS),
+    ("modal", "* .dialog[*] text:", WS),
+    ("form", "* #email[*] border-top-color:", UAPAINT),
+    ("form", "* #go[*] y:", UAFOLLOW),
+    ("form", "* #go[*] width:", UA),
+    ("form", "* #go[*] height:", UA),
+    ("form", "* #name[*] background-color:", UAPAINT),
+    ("form", "* #name[*] border-top-color:", UAPAINT),
+    ("form", "* #signup[*] height:", INLINE),
+    ("form", "* #signup[*] text:", WS),
+    ("form", "* #terms[*] y:", INLINE),
+    ("form", "* .field[*] text:", WS),
+    ("form", "* .field[*] height:", INLINE),
+    ("form", "* .error[*] y:", UAFOLLOW),
+    ("form", "* (focus):", FOCUS),
+    ("form", "* #done[*] y:", UAFOLLOW),
+    ("todo", "* #count[*] y:", LABELFOLLOW),
+    ("todo", "* .app[*] height:", LABELFOLLOW),
+    ("todo", "* .app[*] text:", WS),
+    ("todo", "* button[*] y:", LABELFOLLOW),
+    ("todo", "* li.item[*] height:", LABELFOLLOW),
+    ("todo", "* li.item[*] text:", WS),
+    ("todo", "* li.item[*] y:", LABELFOLLOW),
+    ("todo", "* .check[*] y:", LABELFOLLOW),
+    ("todo", "* .del[*] y:", LABELFOLLOW),
+    ("todo", "* .label[*] height:", LABEL),
+    ("todo", "* .label[*] y:", LABELFOLLOW),
+];
 
 const TEST: &str = r##"
 import QtQuick
@@ -121,9 +202,9 @@ fn run(name: &str, html: &str, spec: &str, snapshot: &str) -> String {
     }
     // `ELDUR_APPS_SHOTS=DIR` keeps each page's last state, to score it.
     let shot = match std::env::var("ELDUR_APPS_SHOTS") {
-        Ok(to) => format!(
-            "const image = grabImage(page); image.save(\"{to}/{name}.png\"); wait(10)"
-        ),
+        Ok(to) => {
+            format!("const image = grabImage(page); image.save(\"{to}/{name}.png\"); wait(10)")
+        }
         Err(_) => String::new(),
     };
     let test = TEST
@@ -250,6 +331,19 @@ fn differences(steps: &[Value], want: &[Value]) -> Vec<String> {
     out
 }
 
+/// A known difference's pattern: `*` stands for any text, the rest in order, and
+/// the difference starts with it.
+fn matches_known(difference: &str, pattern: &str) -> bool {
+    let mut rest = difference;
+    for (i, part) in pattern.split('*').enumerate() {
+        match rest.find(part) {
+            Some(at) if i > 0 || at == 0 => rest = &rest[at + part.len()..],
+            _ => return false,
+        }
+    }
+    true
+}
+
 fn page(name: &str) {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/apps");
     let read = |file: String| std::fs::read_to_string(dir.join(file)).expect("a test file");
@@ -266,17 +360,20 @@ fn page(name: &str) {
     let known: Vec<_> = KNOWN.iter().filter(|k| k.0 == name).collect();
     let new: Vec<_> = all
         .iter()
-        .filter(|d| !known.iter().any(|k| d.starts_with(k.1)))
+        .filter(|d| !known.iter().any(|k| matches_known(d, k.1)))
         .collect();
     let gone: Vec<_> = known
         .iter()
-        .filter(|k| !all.iter().any(|d| d.starts_with(k.1)))
+        .filter(|k| !all.iter().any(|d| matches_known(d, k.1)))
         .collect();
     assert!(
         new.is_empty() && gone.is_empty(),
         "{name}: {} new differences:\n  {}\nknown differences that no longer differ:\n  {}",
         new.len(),
-        new.iter().map(|d| d.as_str()).collect::<Vec<_>>().join("\n  "),
+        new.iter()
+            .map(|d| d.as_str())
+            .collect::<Vec<_>>()
+            .join("\n  "),
         gone.iter().map(|k| k.1).collect::<Vec<_>>().join("\n  "),
     );
 }

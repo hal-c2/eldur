@@ -42,6 +42,9 @@ pub(crate) struct SharedRewriteState {
     pub dynamic_listener_events: HashSet<(String, String)>,
     /// `Analysis::reads_attributes`.
     pub reads_attributes: bool,
+    /// `Analysis::needs_cascade`: `visible` alone would be undone by the next
+    /// restyle, which only hears about inline `display` through `setStyle`.
+    pub keeps_cascade: bool,
     /// Tracks which `(qml_id, event)` pairs already have a forwarding `EventBinding`
     /// registered for `Eldur.listen` / `Eldur.dispatchEvent`.
     pub dynamic_listener_slots: HashSet<(String, String)>,
@@ -515,7 +518,7 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
             self.visit_expression(right);
             let rhs_str = self.editor.extract_and_consume(right.span());
             let id = &target.qml_id;
-            let replacement = if prop == "display" {
+            let replacement = if prop == "display" && !self.shared.keeps_cascade {
                 let read_expr = format!("({id}.visible ? \"\" : \"none\")");
                 format_setter_call_assignment(&read_expr, op, &rhs_str, |val| {
                     format!("{id}.visible = {val} !== \"none\"")
@@ -840,7 +843,7 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             && let Some(target) = self.resolve_single_target(&style_member.object)
         {
             let id = &target.qml_id;
-            let rep = if prop == "display" {
+            let rep = if prop == "display" && !self.shared.keeps_cascade {
                 format!("({id}.visible ? \"\" : \"none\")")
             } else {
                 format!("Eldur.getStyle({id}, {prop:?})")
@@ -939,7 +942,7 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             && let Some(target) = self.resolve_single_target(&style_member.object)
         {
             let id = &target.qml_id;
-            let rep = if prop == "display" {
+            let rep = if prop == "display" && !self.shared.keeps_cascade {
                 format!("({id}.visible ? \"\" : \"none\")")
             } else {
                 format!("Eldur.getStyle({id}, {prop:?})")

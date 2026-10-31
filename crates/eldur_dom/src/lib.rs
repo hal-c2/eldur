@@ -284,6 +284,64 @@ impl Document {
         })
     }
 
+    /// A `<template>`'s contents written out as markup, for what parses them
+    /// again at run time.
+    #[must_use]
+    pub fn template_markup(&self, id: NodeId) -> Option<String> {
+        let fragment = self.element(id)?.template_contents?;
+        let mut out = String::new();
+        for child in self.children(fragment) {
+            self.write_markup(child, &mut out);
+        }
+        Some(out)
+    }
+
+    fn write_markup(&self, id: NodeId, out: &mut String) {
+        match &self.node(id).data {
+            NodeData::Text(t) => {
+                out.push_str(
+                    &t.replace('&', "&amp;")
+                        .replace('<', "&lt;")
+                        .replace('>', "&gt;"),
+                );
+            }
+            NodeData::Element(e) => {
+                out.push('<');
+                out.push_str(e.local_name());
+                for attr in &e.attrs {
+                    let value = attr.value.replace('&', "&amp;").replace('"', "&quot;");
+                    out.push_str(&format!(" {}=\"{value}\"", attr.name.local));
+                }
+                out.push('>');
+                if matches!(
+                    e.local_name(),
+                    "area"
+                        | "base"
+                        | "br"
+                        | "col"
+                        | "embed"
+                        | "hr"
+                        | "img"
+                        | "input"
+                        | "link"
+                        | "meta"
+                        | "source"
+                        | "track"
+                        | "wbr"
+                ) {
+                    return;
+                }
+                for child in self.children(id) {
+                    self.write_markup(child, out);
+                }
+                out.push_str("</");
+                out.push_str(e.local_name());
+                out.push('>');
+            }
+            _ => {}
+        }
+    }
+
     #[must_use]
     pub fn element_by_id(&self, id: &str) -> Option<NodeId> {
         self.descendants(self.root())

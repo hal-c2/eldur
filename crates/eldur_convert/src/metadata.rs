@@ -43,6 +43,9 @@ pub(crate) fn tag(obj: &mut Object, doc: &Document, node: NodeId) {
         "eldurTag",
         Value::String(element.local_name().to_ascii_lowercase()),
     )];
+    if element.local_name() == "details" && element.has_attr("open") {
+        decls.push(decl("bool", "eldurOpen", Value::Bool(true)));
+    }
     if let Some(classes) = element.attr("class")
         && !classes.trim().is_empty()
     {
@@ -284,6 +287,26 @@ pub(crate) fn runtime_rules_decl(rules: &[eldur_css::RuntimeRule]) -> Member {
         "eldurInlineRules",
         Value::String(runtime_rules_json(rules)),
     )
+}
+
+/// `root.eldurHtmlTemplates`: each `<template id>`'s contents as markup. Nothing
+/// else in the output keeps them: they make no box.
+pub(crate) fn html_templates_decl(doc: &eldur_dom::Document) -> Option<Member> {
+    let mut templates = serde_json::Map::new();
+    for node in doc.descendants(doc.root()) {
+        if let Some(id) = doc.element(node).and_then(eldur_dom::Element::id)
+            && let Some(markup) = doc.template_markup(node)
+        {
+            templates.insert(id.to_owned(), markup.into());
+        }
+    }
+    (!templates.is_empty()).then(|| {
+        decl(
+            "string",
+            "eldurHtmlTemplates",
+            Value::String(serde_json::Value::Object(templates).to_string()),
+        )
+    })
 }
 
 /// `root.eldurCascadeRules`: the same on a page whose elements all have
