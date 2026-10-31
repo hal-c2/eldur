@@ -16,17 +16,39 @@
 //! binding (bottom margins are folded into the next top margin), so the
 //! rounding the binding predicts is the one Qt does.
 //!
+//! A sum meant to be whole can come out a hair over it in floating point,
+//! and Qt then rounds the cell a whole pixel up (and places a last item
+//! after the extra pixel). Each carry computed at run time is a micropixel
+//! more than exact, and a static top margin whose sum would land a hair
+//! over is a micropixel less, so such cells stay whole.
+//!
 //! What is known at conversion time stays a number: a column whose
 //! heights are all whole needs nothing, and a fixed-height box only
 //! shifts the next top margin. A height known only at run time (a `Text`
 //! with a fractional line height, a box around one) gets
 //! `property real eldurCarry`, which the next item's top margin reads.
 
+use std::collections::HashMap;
+
 use eldur_qml::{Member, Object, Value};
 
 use super::Emitter;
 use super::flow::is_layout;
 use super::units::fmt_number;
+
+/// What a carry computed at run time adds, so that the next cell, meant
+/// to be whole, is not a hair over (module docs).
+const NUDGE: f64 = 1e-6;
+
+/// A carried column's last rounding (`Emitter::carry`), by its id.
+#[derive(Debug, Clone, PartialEq)]
+pub(super) enum Excess {
+    Static(f64),
+    Expr(String),
+    /// The last item's carry, declared as its `eldurCarry` once a parent
+    /// reads it (`item` counts the column's children).
+    Pending { item: usize, binding: String },
+}
 
 /// What the next item's top margin takes back.
 #[derive(Debug, Clone, PartialEq)]
@@ -40,7 +62,7 @@ enum Carry {
 }
 
 /// The height an item is laid out at, as far as it is known here.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 enum Height {
     /// Known: Qt lays it out at `qt` (an implicit height rounded up, or a
     /// preferred height as is), CSS at `css`.
@@ -53,6 +75,9 @@ enum Height {
     /// Any other implicit height: laid out at its exact value through
     /// `Layout.preferredHeight`, as a painted box's must be.
     Other,
+    /// A carried column's (or a box around one, `extra` being what Qt
+    /// rounds the box's insets up by): whole, `excess` over its CSS height.
+    Excess { id: String, extra: f64 },
     /// Not its implicit height (it fills, or is clamped): the chain starts
     /// again after it.
     Unknown,
@@ -74,49 +99,85 @@ impl Emitter<'_, '_> {
         if self.no_carry {
             for &i in &indices {
                 let obj = child_mut(layout, i);
-                if matches!(height(obj), Height::Other | Height::Text) {
+                if matches!(height(obj, &self.excess), Height::Other | Height::Text) {
                     obj.set("Layout.preferredHeight", Value::expr("implicitHeight"));
                 }
             }
             return;
         }
         let mut carry = Carry::Static(0.0);
+        let mut last_own = None;
         for (n, &i) in indices.iter().enumerate() {
             let next = indices.get(n + 1).copied();
             let next_hideable = next.is_some_and(|j| hideable(child(layout, j)));
             let obj = child_mut(layout, i);
             let mut top = with_carry(top_margin(obj), &carry);
             set_top(obj, &top);
-            let Some(next) = next else {
-                // The column's last cell is rounded once, not its height
-                // first and then the cell.
-                if matches!(height(obj), Height::Other | Height::Text) {
-                    obj.set("Layout.preferredHeight", Value::expr("implicitHeight"));
-                }
-                break;
-            };
             // The space a line box keeps below an inline replaced box
             // (flow.rs `line_strut`) goes on the next item, so that a
             // cell is two terms. A hidden next item would take it along.
+            // The last cell keeps its own, and only a number is added up.
             let mut bottom = None;
-            if let Some(Value::Number(b)) = obj.get("Layout.bottomMargin").cloned()
-                && b != 0.0
-            {
-                if next_hideable {
-                    carry = Carry::Static(0.0);
-                    continue;
+            let mut last_bottom = 0.0;
+            match obj.get("Layout.bottomMargin").cloned() {
+                Some(Value::Number(b)) if b != 0.0 && next.is_none() => last_bottom = b,
+                Some(Value::Number(b)) if b != 0.0 => {
+                    if next_hideable {
+                        carry = Carry::Static(0.0);
+                        continue;
+                    }
+                    remove(obj, "Layout.bottomMargin");
+                    bottom = Some(b);
                 }
-                remove(obj, "Layout.bottomMargin");
-                bottom = Some(b);
+                Some(Value::Expr(_)) if next.is_none() => break,
+                _ => {}
             }
-            let h = height(obj);
+            let mut h = height(obj, &self.excess);
+            // The last cell is rounded once, not its height first and
+            // then the cell.
+            if next.is_none() && h == Height::Text {
+                h = Height::Other;
+            }
+            // A cell meant to be whole can come out a hair over in floating
+            // point (-0.8 + 28.8 is not 28 for every pair), and Qt rounds
+            // that up a whole pixel, then misplaces a last item by it. A
+            // micropixel less keeps it under.
+            if let (Gap::Static(t), Height::Static { qt, .. }) = (&top, &h) {
+                let cell = t + qt;
+                if cell > cell.round() && cell - cell.round() < 1e-9 {
+                    top = Gap::Static(((t - NUDGE) * 1e6).round() / 1e6);
+                    set_top(obj, &top);
+                }
+            }
             let own = match (h, &top) {
                 (Height::Unknown, _) => None,
-                (Height::Static { qt, css }, Gap::Static(t)) => {
-                    Some(Carry::Static((t + qt).ceil() - t - css))
+                (Height::Static { qt, css }, Gap::Static(t)) => Some(Carry::Static(
+                    (t + qt + last_bottom).ceil() - t - css - last_bottom,
+                )),
+                (Height::Whole, Gap::Static(t)) => {
+                    Some(Carry::Static((t + last_bottom).ceil() - t - last_bottom))
                 }
-                (Height::Whole, Gap::Static(t)) => Some(Carry::Static(t.ceil() - t)),
-                _ => {
+                (Height::Excess { id, extra }, top) => {
+                    let e = self.read_excess(obj, &id, extra);
+                    match (top, e) {
+                        (Gap::Static(t), Carry::Static(e)) => Some(Carry::Static(
+                            (t + last_bottom).ceil() - t - last_bottom + e,
+                        )),
+                        _ if last_bottom != 0.0 => None,
+                        (Gap::Static(t), e) if t.fract() == 0.0 => Some(e),
+                        (Gap::Static(t), e) => Some(Carry::Expr(format!(
+                            "({} + {})",
+                            fmt_carry(t.ceil() - t),
+                            carry_text(&e)
+                        ))),
+                        (Gap::Expr(_), e) => Some(Carry::Binding(format!(
+                            "Math.ceil(Layout.topMargin) - Layout.topMargin + {} + {NUDGE}",
+                            carry_text(&e)
+                        ))),
+                    }
+                }
+                _ if last_bottom != 0.0 => None,
+                (h, _) => {
                     let (qt, css) = match h {
                         Height::Static { qt, css } => (fmt_number(qt), fmt_number(css)),
                         Height::Text => ("Math.ceil(implicitHeight)".to_owned(), "implicitHeight".to_owned()),
@@ -127,7 +188,7 @@ impl Emitter<'_, '_> {
                         _ => ("implicitHeight".to_owned(), "implicitHeight".to_owned()),
                     };
                     Some(Carry::Binding(format!(
-                        "Math.ceil(Layout.topMargin + {qt}) - Layout.topMargin - {css}"
+                        "Math.ceil(Layout.topMargin + {qt}) - Layout.topMargin - {css} + {NUDGE}"
                     )))
                 }
             };
@@ -135,19 +196,13 @@ impl Emitter<'_, '_> {
                 Some(own) if hideable(obj) => Some(self.hideable_carry(obj, own, &carry)),
                 own => own,
             };
+            let Some(next) = next else {
+                last_own = own.map(|c| (n, c));
+                break;
+            };
             carry = match own {
                 None => Carry::Static(0.0),
-                Some(Carry::Binding(e)) => {
-                    let id = self.item_id(obj);
-                    obj.members.push(Member::PropertyDecl {
-                        ty: "real".to_owned(),
-                        name: "eldurCarry".to_owned(),
-                        value: Some(Value::expr(e)),
-                        readonly: false,
-                        required: false,
-                    });
-                    Carry::Expr(format!("{id}.eldurCarry"))
-                }
+                Some(Carry::Binding(e)) => Carry::Expr(self.declare_carry(obj, e)),
                 Some(c) => c,
             };
             if let Some(b) = bottom {
@@ -160,6 +215,60 @@ impl Emitter<'_, '_> {
                 set_top(next, &moved);
             }
         }
+        // What the column's implicit height has over its CSS height, for
+        // the item it is in (`Height::Excess`).
+        let excess = match last_own {
+            Some((_, Carry::Static(v))) if round(v) == 0.0 => return,
+            Some((_, Carry::Static(v))) => Excess::Static(v),
+            Some((_, Carry::Expr(e))) => Excess::Expr(e),
+            Some((item, Carry::Binding(binding))) => Excess::Pending { item, binding },
+            None => return,
+        };
+        let id = self.item_id(layout);
+        self.excess.insert(id, excess);
+    }
+
+    /// A carried column's excess, plus `extra`; the last item declares
+    /// its `eldurCarry` when it is first read.
+    fn read_excess(&mut self, obj: &mut Object, id: &str, extra: f64) -> Carry {
+        let excess = match self.excess.get(id).cloned() {
+            Some(Excess::Pending { item, binding }) => {
+                let layout = find_mut(obj, id).expect("the excess of a column inside");
+                let last = layout
+                    .members
+                    .iter_mut()
+                    .filter_map(|m| match m {
+                        Member::Child(c) => Some(c),
+                        _ => None,
+                    })
+                    .nth(item)
+                    .expect("the column's last item");
+                let e = self.declare_carry(last, binding);
+                self.excess.insert(id.to_owned(), Excess::Expr(e.clone()));
+                Excess::Expr(e)
+            }
+            Some(e) => e,
+            None => Excess::Static(0.0),
+        };
+        match excess {
+            Excess::Static(v) => Carry::Static(v + extra),
+            Excess::Expr(e) if round(extra) == 0.0 => Carry::Expr(e),
+            Excess::Expr(e) => Carry::Expr(format!("({e} + {})", fmt_carry(extra))),
+            Excess::Pending { .. } => unreachable!("declared above"),
+        }
+    }
+
+    /// Declares `eldurCarry` on the item; what reads it.
+    fn declare_carry(&mut self, obj: &mut Object, binding: String) -> String {
+        let id = self.item_id(obj);
+        obj.members.push(Member::PropertyDecl {
+            ty: "real".to_owned(),
+            name: "eldurCarry".to_owned(),
+            value: Some(Value::expr(binding)),
+            readonly: false,
+            required: false,
+        });
+        format!("{id}.eldurCarry")
     }
 
     /// Qt skips a hidden item, margins and all: what it carries then is
@@ -285,7 +394,7 @@ fn hideable(obj: &Object) -> bool {
             .any(|m| matches!(m, Member::PropertyDecl { name, .. } if name == "eldurTag"))
 }
 
-fn height(obj: &Object) -> Height {
+fn height(obj: &Object, excess: &HashMap<String, Excess>) -> Height {
     if matches!(obj.get("Layout.fillHeight"), Some(Value::Bool(true)))
         || obj.get("Layout.minimumHeight").is_some()
         || obj.get("Layout.maximumHeight").is_some()
@@ -297,16 +406,22 @@ fn height(obj: &Object) -> Height {
         Some(_) => return Height::Unknown,
         None => {}
     }
-    implicit_height(obj)
+    implicit_height(obj, excess)
 }
 
-fn implicit_height(obj: &Object) -> Height {
+fn implicit_height(obj: &Object, excess: &HashMap<String, Excess>) -> Height {
     if is_layout(&obj.type_name) {
-        return Height::Whole;
+        return match &obj.id {
+            Some(id) if excess.contains_key(id) => Height::Excess {
+                id: id.clone(),
+                extra: 0.0,
+            },
+            _ => Height::Whole,
+        };
     }
     match obj.get("implicitHeight") {
         Some(Value::Number(n)) => return Height::Static { qt: n.ceil(), css: *n },
-        Some(Value::Expr(e)) => return expr_height(obj, e),
+        Some(Value::Expr(e)) => return expr_height(obj, e, excess),
         _ => {}
     }
     if obj.type_name == "Text" {
@@ -322,7 +437,7 @@ fn implicit_height(obj: &Object) -> Height {
 
 /// `inner.implicitHeight + 12`: whole when the inner item's is and the
 /// insets are.
-fn expr_height(obj: &Object, expr: &str) -> Height {
+fn expr_height(obj: &Object, expr: &str, excess: &HashMap<String, Excess>) -> Height {
     let mut terms = expr.split(" + ");
     let Some(id) = terms.next().and_then(|t| t.strip_suffix(".implicitHeight")) else {
         return Height::Other;
@@ -337,8 +452,12 @@ fn expr_height(obj: &Object, expr: &str) -> Height {
     let Some(inner) = find(obj, id) else {
         return Height::Other;
     };
-    match implicit_height(inner) {
+    match implicit_height(inner, excess) {
         Height::Whole if insets.fract() == 0.0 => Height::Whole,
+        Height::Excess { id, extra } => Height::Excess {
+            id,
+            extra: extra + insets.ceil() - insets,
+        },
         Height::Static { css, .. } => {
             let css = css + insets;
             Height::Static {
@@ -348,6 +467,16 @@ fn expr_height(obj: &Object, expr: &str) -> Height {
         }
         _ => Height::Other,
     }
+}
+
+fn find_mut<'o>(obj: &'o mut Object, id: &str) -> Option<&'o mut Object> {
+    if obj.id.as_deref() == Some(id) {
+        return Some(obj);
+    }
+    obj.members.iter_mut().find_map(|m| match m {
+        Member::Child(c) => find_mut(c, id),
+        _ => None,
+    })
 }
 
 fn find<'o>(obj: &'o Object, id: &str) -> Option<&'o Object> {

@@ -107,6 +107,8 @@ pub(crate) struct Emitter<'a, 'd> {
     /// Set for the templates' probe document: a template's ids are its
     /// own, so it cannot read a sibling's carry (`carry`).
     no_carry: bool,
+    /// Each carried column's last rounding, by its id (`carry`).
+    excess: HashMap<String, carry::Excess>,
     /// Elements some condition gives paint, padding or a shadow: they keep
     /// a painting wrapper in every combination, so the forms agree.
     sticky: HashSet<NodeId>,
@@ -162,6 +164,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             runtime_dom: false,
             markers: false,
             no_carry: false,
+            excess: HashMap::new(),
             sticky: HashSet::new(),
             strips: HashMap::new(),
             collapsed: HashSet::new(),
