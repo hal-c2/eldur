@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>Theme</title>
+<style>
+:root { --bg: #ffffff; --fg: #1a202c; --card: #f7fafc; --line: #e2e8f0; --link: #2b6cb0; }
+[data-theme="dark"] { --bg: #1a202c; --fg: #f7fafc; --card: #2d3748; --line: #4a5568; --link: #90cdf4; }
+html.compact .card { padding: 8px; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: Arial, sans-serif; line-height: 1.5; }
+.top { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--line); }
+.title { font-size: 20px; font-weight: bold; }
+.card { margin: 24px; padding: 20px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+.card h2 { margin: 0 0 8px; font-size: 18px; }
+.card p { margin: 0; }
+.card a { color: var(--link); }
+button { padding: 6px 12px; background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="title">Journal</div>
+  <div>
+    <button id="compact">Compact</button>
+    <button id="toggle">Dark mode</button>
+  </div>
+</div>
+<div class="card" id="card">
+  <h2>Today</h2>
+  <p>Nothing much happened. <a href="#more" id="more">Read more</a> if you must.</p>
+</div>
+<script>
+const root = document.documentElement;
+const toggle = document.getElementById('toggle');
+toggle.addEventListener('click', () => {
+  const dark = root.dataset.theme === 'dark';
+  root.dataset.theme = dark ? 'light' : 'dark';
+  toggle.textContent = dark ? 'Dark mode' : 'Light mode';
+  console.log('theme ' + root.dataset.theme + ' ' + getComputedStyle(document.body).backgroundColor);
+});
+document.getElementById('compact').addEventListener('click', () => {
+  root.classList.toggle('compact');
+  console.log('compact ' + root.classList.contains('compact'));
+});
+</script>
+</body>
+</html>

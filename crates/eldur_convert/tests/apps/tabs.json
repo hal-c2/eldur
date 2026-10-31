@@ -1,0 +1,2 @@
+{"steps":[{"name":"billing","click":"#tab-billing"},{"name":"alerts","click":"#tab-alerts"},{"name":"profile","click":"#tab-profile"}],
+ "watch":[{"sel":".tab","props":["color","font-weight","border-bottom-color"],"attrs":["aria-selected"]},{"sel":".panel","props":["display"]},{"sel":".panel h2"},{"sel":".panel p"}]}

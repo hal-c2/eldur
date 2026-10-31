@@ -1,0 +1,2 @@
+{"steps":[{"name":"open","click":"#btn"},{"name":"hover item","hover":"#m-settings"},{"name":"click outside","clickAt":[300,400]},{"name":"open again","click":"#btn"},{"name":"choose","click":"#m-settings"},{"name":"open third","click":"#btn"},{"name":"close by button","click":"#btn"}],
+ "watch":[{"sel":"#list","props":["display"]},{"sel":"#m-profile","props":["background-color","color"]},{"sel":"#m-settings","props":["background-color","color"]},{"sel":"#m-logout"},{"sel":"#btn","attrs":["aria-expanded"]},{"sel":"#status"},{"sel":".logo"}]}

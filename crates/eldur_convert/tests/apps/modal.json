@@ -1,0 +1,2 @@
+{"steps":[{"name":"open","click":"#open"},{"name":"cancel","click":"#cancel"},{"name":"open again","click":"#open"},{"name":"escape","key":"Escape"},{"name":"open third","click":"#open"},{"name":"backdrop","clickAt":[20,700]},{"name":"open fourth","click":"#open"},{"name":"type","type":["#email","sam@example.com"]},{"name":"send","click":"#send"}],
+ "watch":[{"sel":"#overlay","props":["display","background-color"]},{"sel":".dialog"},{"sel":"#title"},{"sel":"#email"},{"sel":"#cancel"},{"sel":"#send"},{"sel":"#result"},{"sel":"#open"}]}

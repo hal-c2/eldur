@@ -1,0 +1,2 @@
+{"steps":[{"name":"sort name","click":"#th-name"},{"name":"sort name desc","click":"#th-name"},{"name":"sort age","click":"#th-age"},{"name":"filter","type":["#filter","an"]},{"name":"sort city","click":"#th-city"}],
+ "watch":[{"sel":"tbody tr","props":["background-color"]},{"sel":"tbody td","props":["text-align"]},{"sel":"th","attrs":["class"]},{"sel":"#summary"},{"sel":"#filter"},{"sel":"#people"}]}

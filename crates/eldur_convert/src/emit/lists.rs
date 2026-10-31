@@ -204,6 +204,8 @@ impl Emitter<'_, '_> {
             box_id = Some(id);
             let own = match obj.get("visible") {
                 Some(Value::Expr(e)) => Some(e.clone()),
+                // Hidden until a script's class shows it.
+                Some(Value::Bool(false)) => Some("false".to_owned()),
                 _ => None,
             };
             // The slot's parent, as the slot itself is hidden when it does

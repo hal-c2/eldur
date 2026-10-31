@@ -1,0 +1,2 @@
+{"steps":[{"name":"dark","click":"#toggle"},{"name":"compact","click":"#compact"},{"name":"light","click":"#toggle"},{"name":"roomy","click":"#compact"}],
+ "watch":[{"sel":"body","props":["background-color","color"]},{"sel":".top","props":["border-bottom-color"]},{"sel":".card","props":["background-color","border-top-color","padding-top"]},{"sel":".card h2","props":["color"]},{"sel":"#toggle","props":["background-color","color"]},{"sel":"#compact","props":["background-color"]},{"sel":".title","props":["color"]}]}

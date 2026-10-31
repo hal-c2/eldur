@@ -3400,6 +3400,16 @@ function _flushChange(raw) {
     }
 }
 
+function _pageSurface() {
+    var home = _root.contentItem || _root;
+    for (var i = 0; i < home.children.length; ++i) {
+        if (typeof home.children[i].contentY === "number") {
+            return home.children[i];
+        }
+    }
+    return home;
+}
+
 function _connectSignalOnce(raw, type) {
     var m = _meta(raw);
     if (m.connected[type]) {
@@ -3442,8 +3452,11 @@ function _connectSignalOnce(raw, type) {
             m.connected[type] = true;
             return true;
         }
-        if (typeof raw.mapToItem === "function") {
-            var tap = Qt.createQmlObject("import QtQuick; TapHandler {}", raw, "eldur_tap");
+        // The page scrolls in a Flickable, which keeps a press for itself from
+        // whatever is behind it; and a window is no item.
+        var heard = raw === _root ? _pageSurface() : raw;
+        if (typeof heard.mapToItem === "function") {
+            var tap = Qt.createQmlObject("import QtQuick; TapHandler {}", heard, "eldur_tap");
             tap.tapped.connect(function(eventPoint, btn) {
                 _dispatchDynamic(raw, "click", {
                     position: eventPoint.position,
@@ -7053,19 +7066,33 @@ function _vReconnect(node) {
 // turn taken.
 var _tap = null;
 
-function _deepestAt(scene) {
-    var cur = _root.contentItem || _root;
-    var found = cur;
-    while (cur && typeof cur.childAt === "function") {
-        var local = cur.mapFromItem(null, scene.x, scene.y);
-        var next = cur.childAt(local.x, local.y);
-        if (!next) {
-            break;
-        }
-        found = next;
-        cur = next;
+// `childAt` stops at a parent's bounds, where a dropdown's list has only started.
+function _deepestUnder(item, scene) {
+    if (!item.visible || typeof item.mapFromItem !== "function") {
+        return null;
     }
-    return found;
+    var local = item.mapFromItem(null, scene.x, scene.y);
+    var inside = local.x >= 0 && local.y >= 0 && local.x < item.width && local.y < item.height;
+    if (item.clip && !inside) {
+        return null;
+    }
+    var kids = [];
+    for (var i = 0; i < item.children.length; ++i) {
+        kids.push({ at: i, kid: item.children[i] });
+    }
+    kids.sort(function(a, b) { return (b.kid.z - a.kid.z) || (b.at - a.at); });
+    for (var k = 0; k < kids.length; ++k) {
+        var found = _deepestUnder(kids[k].kid, scene);
+        if (found) {
+            return found;
+        }
+    }
+    return inside ? item : null;
+}
+
+function _deepestAt(scene) {
+    var top = _root.contentItem || _root;
+    return _deepestUnder(top, scene) || top;
 }
 
 function _beginTap(qtEv, heardBy) {

@@ -1,0 +1,85 @@
+// Records Chromium for the pages `apps_e2e.rs` converts (`*.html` here, each with
+// its `*.json`: `steps` to run with real input, and what to `watch`). After load
+// and each step it keeps the console lines since the last step and what
+// `snapshot.js` reads.
+//
+//   node crates/eldur_convert/tests/apps/gen.mjs [--shots DIR]
+//
+// writes `chromium.json`, and with `--shots` each page's last state as
+// DIR/<page>.png. Regenerate it; never edit it by hand.
+
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(here, "../../../..");
+const { loadPlaywright } = await import(path.join(root, "tools/visual/playwright.mjs"));
+const shots = process.argv.includes("--shots") ? process.argv[process.argv.indexOf("--shots") + 1] : null;
+
+const { chromium } = await loadPlaywright();
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
+let log = [];
+page.on("console", (m) => log.push(m.text()));
+page.on("pageerror", (e) => {
+  throw new Error(`page threw: ${e.message}`);
+});
+const snapshot = fs.readFileSync(path.join(here, "snapshot.js"), "utf8");
+
+async function center(selector) {
+  return page.evaluate((s) => {
+    const r = document.querySelector(s).getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }, selector);
+}
+
+async function act(step) {
+  if (step.click) {
+    const { x, y } = await center(step.click);
+    await page.mouse.click(x, y);
+  }
+  if (step.clickAt) await page.mouse.click(step.clickAt[0], step.clickAt[1]);
+  if (step.hover) {
+    const { x, y } = await center(step.hover);
+    await page.mouse.move(x, y);
+  }
+  if (step.type) {
+    const { x, y } = await center(step.type[0]);
+    await page.mouse.click(x, y);
+    await page.keyboard.press("End");
+    await page.keyboard.type(step.type[1]);
+  }
+  if (step.key) await page.keyboard.press(step.key);
+}
+
+async function state(name, watch) {
+  await page.waitForTimeout(50);
+  const read = await page.evaluate(
+    `(() => { ${snapshot}; return eldurSnapshot(document, getComputedStyle, ${JSON.stringify(watch)}); })()`,
+  );
+  const lines = log;
+  log = [];
+  return { name, log: lines, state: read };
+}
+
+const out = {};
+for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort()) {
+  const name = file.slice(0, -5);
+  const spec = JSON.parse(fs.readFileSync(path.join(here, `${name}.json`), "utf8"));
+  log = [];
+  await page.mouse.move(1200, 790);
+  await page.goto("file://" + path.join(here, file), { waitUntil: "load" });
+  const steps = [await state("load", spec.watch)];
+  for (const step of spec.steps) {
+    await act(step);
+    steps.push(await state(step.name, spec.watch));
+  }
+  out[name] = steps;
+  if (shots) {
+    fs.mkdirSync(shots, { recursive: true });
+    await page.screenshot({ path: path.join(shots, `${name}.png`) });
+  }
+}
+await browser.close();
+fs.writeFileSync(path.join(here, "chromium.json"), JSON.stringify(out, null, 1) + "\n");

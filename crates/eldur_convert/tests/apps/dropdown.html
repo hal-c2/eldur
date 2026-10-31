@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dropdown</title>
+<style>
+body { margin: 0; font-family: Arial, sans-serif; font-size: 14px; }
+header { display: flex; align-items: center; justify-content: space-between; background: #24292e; color: #fff; padding: 10px 20px; }
+.logo { font-weight: bold; font-size: 18px; }
+.menu { position: relative; }
+.menu-btn { background: #444d56; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
+.menu-list { position: absolute; top: 100%; right: 0; margin: 4px 0 0; padding: 4px 0; list-style: none; width: 180px; background: white; color: #24292e; border: 1px solid #d1d5da; border-radius: 4px; box-shadow: 0 8px 24px rgba(0,0,0,.2); display: none; z-index: 10; }
+.menu.open .menu-list { display: block; }
+.menu-list li { padding: 6px 12px; cursor: pointer; }
+.menu-list li:hover { background: #0366d6; color: white; }
+.menu-list .sep { padding: 0; height: 1px; background: #e1e4e8; margin: 4px 0; }
+main { padding: 20px; }
+#status { color: #586069; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Acme</div>
+  <div class="menu" id="menu">
+    <button class="menu-btn" id="btn" aria-haspopup="true" aria-expanded="false">Account ▾</button>
+    <ul class="menu-list" id="list">
+      <li data-action="profile" id="m-profile">Your profile</li>
+      <li data-action="settings" id="m-settings">Settings</li>
+      <li class="sep"></li>
+      <li data-action="logout" id="m-logout">Sign out</li>
+    </ul>
+  </div>
+</header>
+<main>
+  <p>Welcome back. Pick something from the menu.</p>
+  <p id="status">Nothing chosen yet.</p>
+</main>
+<script>
+const menu = document.getElementById('menu');
+const btn = document.getElementById('btn');
+function setOpen(open) {
+  menu.classList.toggle('open', open);
+  btn.setAttribute('aria-expanded', String(open));
+}
+btn.addEventListener('click', e => {
+  e.stopPropagation();
+  setOpen(!menu.classList.contains('open'));
+  console.log('button, open=' + menu.classList.contains('open'));
+});
+document.getElementById('list').addEventListener('click', e => {
+  const action = e.target.dataset.action;
+  if (!action) return;
+  document.getElementById('status').textContent = 'You chose ' + action;
+  console.log('chose ' + action);
+});
+document.addEventListener('click', e => {
+  if (!menu.contains(e.target)) {
+    setOpen(false);
+    console.log('outside');
+  } else if (e.target.dataset.action) {
+    setOpen(false);
+  }
+});
+</script>
+</body>
+</html>
