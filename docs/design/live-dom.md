@@ -2,9 +2,9 @@
 
 Status: Proposed (rev 2) · Branch: `w/live-design`
 
-This document specifies how `html-2-qml` supports a **live, mutable HTML renderer** inside **Ljós** (`~/dev/ljos-ui`) alongside static QML generation (**one mapping, two back ends**). All existing `src/lib.rs` contracts remain strictly add-only.
+This document specifies how Eldur supports a **live, mutable HTML renderer** inside **Ljós** (`~/dev/ljos-ui`) alongside static QML generation (**one mapping, two back ends**). All existing `src/lib.rs` contracts remain strictly add-only.
 
-**Current repo baseline:** `h2q_convert` (`crates/h2q_convert/src/pipeline.rs`), `h2q_css::cascade`, and `h2q_css::selectors` are `unimplemented!` stubs today, and `tests/corpus/*` contains `index.html` inputs without expected QML snapshots yet. Therefore, `SceneTree` (§1.2) and `h2q_css`'s shared selector matcher (§3.2) are designed as **day-one internal targets** agreed across `h2q_css`, `h2q_convert`, and `h2q_live`, rather than retrofits onto existing implementations.
+**Current repo baseline:** `eldur_convert` (`crates/eldur_convert/src/pipeline.rs`), `eldur_css::cascade`, and `eldur_css::selectors` are `unimplemented!` stubs today, and `tests/corpus/*` contains `index.html` inputs without expected QML snapshots yet. Therefore, `SceneTree` (§1.2) and `eldur_css`'s shared selector matcher (§3.2) are designed as **day-one internal targets** agreed across `eldur_css`, `eldur_convert`, and `eldur_live`, rather than retrofits onto existing implementations.
 
 ---
 
@@ -19,32 +19,32 @@ This document specifies how `html-2-qml` supports a **live, mutable HTML rendere
    - *Not a stable facade contract:* `ljos` only depends on `ljos_ir` behind `dev-qml` (`~/dev/ljos-ui/crates/ljos/Cargo.toml:57,101`), and items outside the `ljos` facade are *"internal in spirit"* and may change without notice (`~/dev/ljos-ui/crates/ljos/src/lib.rs:11–14`).
    - *`ReloadPatch` is dev-only:* While `Engine::reload` tries `reload_in_place` before rebuilding roots (`~/dev/ljos-ui/crates/ljos_engine/src/incubator/reload.rs:724`), it requires dev reload tracking (`ReloadError::NotTracking`, `reload.rs:705`) and must run between frames, outside any batch (`reload.rs:696`).
 3. **Decision — One cold-load & incremental path in live mode:**
-   - **`h2q_convert`** builds `BoxTree → SceneTree` as its single mapping output.
-   - **Static back end** (`h2q_convert::lower_qml`): `SceneTree` → `h2q_qml::Document` → `.qml` text (plus `page.js` / `h2q_runtime.js`). Static AOT Ljós packs compile that `.qml` output at build time via `ljos::build::compile_dir_with_types` (`~/dev/ljos-ui/crates/ljos/src/build.rs:159`).
-   - **Live back end** (`h2q_live` + `h2q_ljos::PatchApplier`): **both** cold loads (diff against an empty `SceneTree`) and DOM mutations emit `Vec<Patch>` applied directly to `ljos::Engine` inside `Engine::batch` (`~/dev/ljos-ui/crates/ljos_engine/src/engine.rs:3094`).
-4. **Known divergences between static and live outputs:** Both share CSS cascade, box construction, and `SceneTree` lowering, but differ where execution models differ: (a) static mode rewrites JS against `h2q_runtime.js` (`crates/h2q_js/src/lib.rs:4–26`), while live mode runs un-rewritten DOM calls against the Rust DOM; (b) `InteractiveSet` comes from `h2q_js::Analysis` statically vs live listener/focus state dynamically; (c) live mode keeps wrapper/IFC promotions sticky across toggles (§3.3).
+   - **`eldur_convert`** builds `BoxTree → SceneTree` as its single mapping output.
+   - **Static back end** (`eldur_convert::lower_qml`): `SceneTree` → `eldur_qml::Document` → `.qml` text (plus `page.js` / `eldur_runtime.js`). Static AOT Ljós packs compile that `.qml` output at build time via `ljos::build::compile_dir_with_types` (`~/dev/ljos-ui/crates/ljos/src/build.rs:159`).
+   - **Live back end** (`eldur_live` + `eldur_ljos::PatchApplier`): **both** cold loads (diff against an empty `SceneTree`) and DOM mutations emit `Vec<Patch>` applied directly to `ljos::Engine` inside `Engine::batch` (`~/dev/ljos-ui/crates/ljos_engine/src/engine.rs:3094`).
+4. **Known divergences between static and live outputs:** Both share CSS cascade, box construction, and `SceneTree` lowering, but differ where execution models differ: (a) static mode rewrites JS against `eldur_runtime.js` (`crates/eldur_js/src/lib.rs:4–26`), while live mode runs un-rewritten DOM calls against the Rust DOM; (b) `InteractiveSet` comes from `eldur_js::Analysis` statically vs live listener/focus state dynamically; (c) live mode keeps wrapper/IFC promotions sticky across toggles (§3.3).
 
 ```mermaid
 flowchart LR
-    dom["h2q_dom::Document"] --> css["h2q_css (cascade / StyleEngine)"]
-    dom --> boxes["h2q_convert::BoxTree"]
+    dom["eldur_dom::Document"] --> css["eldur_css (cascade / StyleEngine)"]
+    dom --> boxes["eldur_convert::BoxTree"]
     css --> boxes
-    boxes --> scene["h2q_convert::SceneTree"]
-    scene -->|static CLI| qml["h2q_qml::Document -> Main.qml"]
-    scene -->|cold & dirty diff| patch["h2q_live::Patch"]
-    patch --> engine["h2q_ljos::PatchApplier (ljos::Engine)"]
+    boxes --> scene["eldur_convert::SceneTree"]
+    scene -->|static CLI| qml["eldur_qml::Document -> Main.qml"]
+    scene -->|cold & dirty diff| patch["eldur_live::Patch"]
+    patch --> engine["eldur_ljos::PatchApplier (ljos::Engine)"]
 ```
 
-### 1.2 Back-End-Neutral `SceneTree` in `h2q_convert`
+### 1.2 Back-End-Neutral `SceneTree` in `eldur_convert`
 
 Every row of `docs/spec/css-properties.md`, `docs/spec/layout.md`, and `docs/spec/html-elements.md` must lower through `SceneTree`. Anonymous inline runs and flex spacers anchor their `ObjectRole` to a DOM child `NodeId` rather than shifting integer ordinals, so inserting a sibling never re-keys unrelated runs or spacers.
 
 ```rust
-// Additions to crates/h2q_convert/src/lib.rs (day-one internal target of h2q_convert)
+// Additions to crates/eldur_convert/src/lib.rs (day-one internal target of eldur_convert)
 
 /// Which DOM elements cannot merge into a parent block's StyledText `Text`.
 pub trait InteractiveSet {
-    fn needs_own_item(&self, node: h2q_dom::NodeId) -> bool;
+    fn needs_own_item(&self, node: eldur_dom::NodeId) -> bool;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -52,7 +52,7 @@ pub struct SceneNodeId(pub u32);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct LiveObjectKey {
-    pub node: h2q_dom::NodeId,
+    pub node: eldur_dom::NodeId,
     pub role: ObjectRole,
 }
 
@@ -61,9 +61,9 @@ pub enum ObjectRole {
     Root, Flickable, ScrollBar, Wrapper, Layout, Control, Replaced,
     Marker, Before, After, HoverSensor, TapSensor,
     /// Anchored to the first DOM child in the run so sibling insertions do not shift keys.
-    InlineRun { first_child: h2q_dom::NodeId },
+    InlineRun { first_child: eldur_dom::NodeId },
     /// `None` = leading justify-content spacer; `Some(n)` = spacer right after flex item `n`.
-    SpacerAfter(Option<h2q_dom::NodeId>),
+    SpacerAfter(Option<eldur_dom::NodeId>),
     /// Box-owned sub-objects: Gradient, GradientStop, Translate, ShapePath, Animation, FontLoader, TextMetrics.
     Aux(u16),
 }
@@ -80,7 +80,7 @@ pub enum PropTarget {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LiteralValue {
-    Bool(bool), Number(f64), String(String), Color(h2q_qml::Color),
+    Bool(bool), Number(f64), String(String), Color(eldur_qml::Color),
     Enum { ty: QmlTypeRef, scope: Option<&'static str>, key: &'static str, value: Option<i64> },
     List(Vec<LiteralValue>),
 }
@@ -129,7 +129,7 @@ pub struct StateDef {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HandlerAction {
     OpenOrEmitLink, // static: `Qt.openUrlExternally(link)`; live: DOM click -> `HtmlView.linkActivated`
-    DomEvent { node: h2q_dom::NodeId, event: &'static str },
+    DomEvent { node: eldur_dom::NodeId, event: &'static str },
     StaticCall { function: String, event: String, target_qml_id: String },
 }
 
@@ -165,11 +165,11 @@ pub struct SceneTree {
 
 ---
 
-## 2. Mutable DOM (`h2q_dom` Additions)
+## 2. Mutable DOM (`eldur_dom` Additions)
 
 ### 2.1 Stable `NodeId`s, Side-Table Liveness, and Quarantined Free List
 
-`h2q_dom` (`crates/h2q_dom/src/lib.rs`) exposes `pub struct NodeId(u32)` and exhaustive `pub enum NodeData`, while `h2q_css::StyleMap` indexes `Vec<Option<ElementStyle>>` by `id.index()` (`crates/h2q_css/src/lib.rs:189,200`).
+`eldur_dom` (`crates/eldur_dom/src/lib.rs`) exposes `pub struct NodeId(u32)` and exhaustive `pub enum NodeData`, while `eldur_css::StyleMap` indexes `Vec<Option<ElementStyle>>` by `id.index()` (`crates/eldur_css/src/lib.rs:189,200`).
 
 1. **`NodeData` is unchanged.** `Document` stores slot state in private side vectors `generations: Vec<u32>` and `alive: Vec<bool>`.
 2. **Connected vs detached vs reclaimed.** `doc.is_connected(id)` is `true` iff `id` reaches `doc.root()` (`NodeId(0)`). `remove_child` **detaches** a node (`parent = None`, `alive = true`). Mutations inside a detached subtree (`!doc.is_connected(target)`) **emit no `MutationRecord`**: once the subtree is inserted under a connected parent, a single `ChildList` record styles and mounts it whole. Detached trees are reclaimed via `destroy_detached(root)` at flush time only when unreferenced (§4.2), setting `alive = false`, bumping `generations[i]`, clearing `children`, and replacing `data` with `NodeData::Comment(String::new())` so `doc.node(id)` stays panic-free with zero retained heap strings.
@@ -178,7 +178,7 @@ pub struct SceneTree {
 ### 2.2 Mutation API & Change Log Signatures
 
 ```rust
-// Additions to crates/h2q_dom/src/lib.rs
+// Additions to crates/eldur_dom/src/lib.rs
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct DomHandle {
@@ -254,7 +254,7 @@ impl Document {
 
 ### 3.1 Composed Selector Invalidation Rules
 
-`h2q_css` implements its selector matcher once for both `compute_styles` and `StyleEngine`. `StyleEngine` indexes every selector in active `Stylesheet`s, recursively expanding `:is(...)`, `:where(...)`, `:not(...)`, `:nth-child(An+B of S)`, and `:has(...)` at their exact combinator position into **composed invalidation targets** (never flat unioned bitflags, because `.a + .b .c` must dirty the matching sibling's *descendants*, not just the sibling):
+`eldur_css` implements its selector matcher once for both `compute_styles` and `StyleEngine`. `StyleEngine` indexes every selector in active `Stylesheet`s, recursively expanding `:is(...)`, `:where(...)`, `:not(...)`, `:nth-child(An+B of S)`, and `:has(...)` at their exact combinator position into **composed invalidation targets** (never flat unioned bitflags, because `.a + .b .c` must dirty the matching sibling's *descendants*, not just the sibling):
 
 - `InvalidationTarget::SelfOnly` (rightmost subject compound: `.a`).
 - `InvalidationTarget::Subtree` (ancestor of ` ` or `>`: `.a .b`, `:not(.a) > .b`).
@@ -270,20 +270,20 @@ impl Document {
 | `CharacterData` | Re-parse sheet if `parent` is `<style>`; dirty `parent` if `:empty` flipped; otherwise **0 style work** (only parent block's IFC `Text` updates). |
 
 **Three mandatory cascade invariants:**
-1. **`display: none` boundary (`crates/h2q_css/src/lib.rs:187–189`):** Elements at or under `display: none` **must** hold `None` in `StyleMap`. Flipping rendered → `display: none` clears `styles[i] = None` across `node` and **all** descendants and emits `(node, StyleDiffKind::BoxStructure)`. Flipping `display: none` → rendered cascades `node` and its entire subtree from scratch. Inheritance early-out never crosses a `display: none` flip.
+1. **`display: none` boundary (`crates/eldur_css/src/lib.rs:187–189`):** Elements at or under `display: none` **must** hold `None` in `StyleMap`. Flipping rendered → `display: none` clears `styles[i] = None` across `node` and **all** descendants and emits `(node, StyleDiffKind::BoxStructure)`. Flipping `display: none` → rendered cascades `node` and its entire subtree from scratch. Inheritance early-out never crosses a `display: none` flip.
 2. **Inheritance early-out (rendered → rendered only):** When both old and new styles exist, if `old == new`, stop. If `old.inherited_eq(&new)` (comparing inherited longhands and `--*` custom properties), clean children are skipped unless `node` was marked `Subtree`.
 3. **`StateVariant` ancestor recomputation (`lib.rs:137–148`):** For every restyled, inserted, or removed node `n`, any node in `{n} ∪ ancestors(n)` that matches a dynamic pseudo-class rule condition (e.g. `.card:hover` on an ancestor when `.title` changes) recomputes its `StateVariant::changed` vector and records the condition node in `RestyleReport::variants_changed`. `MutationBatch::reclaimed` slots are cleared in `StyleMap::styles` and purged from `StyleMap::variants`.
 
-### 3.2 `h2q_css` Contract Additions
+### 3.2 `eldur_css` Contract Additions
 
 ```rust
-// Additions to crates/h2q_css/src/values.rs (re-exported by crates/h2q_css/src/lib.rs)
+// Additions to crates/eldur_css/src/values.rs (re-exported by crates/eldur_css/src/lib.rs)
 impl ComputedStyle {
     /// True when every CSS-inherited property (and custom property) equals `other`.
     #[must_use] pub fn inherited_eq(&self, other: &Self) -> bool;
 }
 
-// Additions to crates/h2q_css/src/lib.rs
+// Additions to crates/eldur_css/src/lib.rs
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StyleDiffKind {
     BoxStructure,
@@ -309,7 +309,7 @@ impl StyleEngine {
     pub fn set_stylesheets(&mut self, sheets: Vec<Stylesheet>);
     #[must_use] pub fn compute_initial(&mut self, doc: &Document) -> StyleMap;
     pub fn update_viewport(&mut self, doc: &Document, styles: &mut StyleMap, vp: Viewport) -> RestyleReport;
-    pub fn restyle(&mut self, doc: &Document, styles: &mut StyleMap, batch: &h2q_dom::MutationBatch) -> RestyleReport;
+    pub fn restyle(&mut self, doc: &Document, styles: &mut StyleMap, batch: &eldur_dom::MutationBatch) -> RestyleReport;
 
     pub fn query_selector(&self, doc: &Document, scope: NodeId, sel: &str) -> Result<Option<NodeId>, SelectorError>;
     pub fn query_selector_all(&self, doc: &Document, scope: NodeId, sel: &str) -> Result<Vec<NodeId>, SelectorError>;
@@ -320,7 +320,7 @@ impl StyleEngine {
 ### 3.3 `Patch` Stream & `PatchApplier` on `ljos::Engine`
 
 ```rust
-// crates/h2q_live/src/patch.rs
+// crates/eldur_live/src/patch.rs
 #[derive(Debug, Clone, PartialEq)]
 pub enum Patch {
     CreateObject { key: LiveObjectKey, ty: QmlTypeRef, parent: Option<LiveObjectKey>, before: Option<LiveObjectKey> },
@@ -358,7 +358,7 @@ In Ljós as built, `#[derive(QmlObject)]` fields are stored struct fields with `
 
 **Exact QML binding reactivity (e.g. `text: page.document.querySelector("h1").textContent`):**
 1. Query methods (`querySelector*`, `getElementById`, `getAttribute`, `matches`) perform a tracked read of `HtmlDocument::REVISION` (`cx.get(HtmlDocument::REVISION)` → `Graph::read`). Any `ChildList` or `Attribute` mutation increments `REVISION` on flush, re-running QML bindings that queried the tree.
-2. Computed getters on `DomElement` read through `Graph::read` on `(wrapper_id, prop_index)`. On flush, `h2q_ljos` calls `Engine::notify(wrapper_id, prop_index)` (`engine.rs:2806`) **only on currently live wrappers** affected by each record (`TEXT_CONTENT`/`INNER_HTML` on live wrappers in `ancestors(node)`, `CHILDREN` on `parent`, sibling props on `prev_sibling`/`next_sibling`, attribute props on `node`). Untouched nodes have no wrapper and cost zero notifications.
+2. Computed getters on `DomElement` read through `Graph::read` on `(wrapper_id, prop_index)`. On flush, `eldur_ljos` calls `Engine::notify(wrapper_id, prop_index)` (`engine.rs:2806`) **only on currently live wrappers** affected by each record (`TEXT_CONTENT`/`INNER_HTML` on live wrappers in `ancestors(node)`, `CHILDREN` on `parent`, sibling props on `prev_sibling`/`next_sibling`, attribute props on `node`). Untouched nodes have no wrapper and cost zero notifications.
 
 ### 4.2 Sound Node, Wrapper & Listener Lifetimes
 
@@ -370,9 +370,9 @@ Holding strong `owner = Some(html_view)` wrappers in a Rust `HashMap` would pin 
 
 ### 4.3 Flush Timing, Forced Style/Layout, Script Scope & Security
 
-- **Flush triggers (no invented microtask hook):** `ljos_engine` has no public end-of-turn hook (`pump_jobs` is internal to `JsHost`, `ARCHITECTURE.md` §9.2 line 836). Instead: (a) every `h2q_ljos`-initiated JS dispatch (`<script>`, event dispatch, `setTimeout` callback, `HtmlView.runScript`) flushes pending mutations **synchronously as soon as `Engine::try_call_value` returns**; (b) direct mutations from QML handlers arm a coalesced `Engine::call_at(engine.now(), ...)` (`~/dev/ljos-ui/crates/ljos_engine/src/qtqml.rs:1033`) cancelled if an immediate flush runs first.
+- **Flush triggers (no invented microtask hook):** `ljos_engine` has no public end-of-turn hook (`pump_jobs` is internal to `JsHost`, `ARCHITECTURE.md` §9.2 line 836). Instead: (a) every `eldur_ljos`-initiated JS dispatch (`<script>`, event dispatch, `setTimeout` callback, `HtmlView.runScript`) flushes pending mutations **synchronously as soon as `Engine::try_call_value` returns**; (b) direct mutations from QML handlers arm a coalesced `Engine::call_at(engine.now(), ...)` (`~/dev/ljos-ui/crates/ljos_engine/src/qtqml.rs:1033`) cancelled if an immediate flush runs first.
 - **Forced style vs layout reads:** `getComputedStyle(el)` flushes pending DOM + `StyleEngine::restyle` synchronously and returns exact computed styles. `getBoundingClientRect()` and `offsetWidth`/`offsetHeight`/`offsetTop`/`offsetLeft` flush pending patches and read `ljos::item::scene_rect` (`~/dev/ljos-ui/crates/ljos/src/item.rs:160–168`). Because Ljós polishes `Layout`s and `Text` during the scene pass (`~/dev/ljos-ui/CONTEXT.md:17–21`), geometry of newly mutated auto-sized items reflects last-frame polish until `ljos::item::polish_scene` (§4.5 #3) lands.
-- **Per-`HtmlView` script scope & `<script>` insertion:** Ljós has **one QuickJS `Runtime` and `Context` per `Engine`** (`ARCHITECTURE.md` §3.2 line 98; `Engine::eval_js` runs globally, `~/dev/ljos-ui/crates/ljos_engine/src/js.rs:1460`). `h2q_live` parses classic `<script>`s with `oxc` (prepending `"use strict";` and hoisting top-level `var`/`function` onto a per-instance `HtmlWindow` `QmlObject`) and invokes `(window, document, self, ...globals) => { ... }` via `Engine::try_call_value` (`qtqml.rs:1415`). Per WHATWG HTML, `<script>` nodes from `innerHTML` never run; a `<script>` built via `createElement("script")` runs **once** upon becoming connected (inline at flush, or after `Platform::fetch` for `src`).
+- **Per-`HtmlView` script scope & `<script>` insertion:** Ljós has **one QuickJS `Runtime` and `Context` per `Engine`** (`ARCHITECTURE.md` §3.2 line 98; `Engine::eval_js` runs globally, `~/dev/ljos-ui/crates/ljos_engine/src/js.rs:1460`). `eldur_live` parses classic `<script>`s with `oxc` (prepending `"use strict";` and hoisting top-level `var`/`function` onto a per-instance `HtmlWindow` `QmlObject`) and invokes `(window, document, self, ...globals) => { ... }` via `Engine::try_call_value` (`qtqml.rs:1415`). Per WHATWG HTML, `<script>` nodes from `innerHTML` never run; a `<script>` built via `createElement("script")` runs **once** upon becoming connected (inline at flush, or after `Platform::fetch` for `src`).
 - **Security policy (`ScriptPolicy::LocalOnly` default):** A JS function wrapper is **not** a sandbox — `Function("return this")()`, shared `Object.prototype`/`Array.prototype`, and engine globals live in the host QuickJS context (plugin sandboxing is unbuilt in Ljós v1, `ARCHITECTURE.md` §16 line 1192). Therefore `HtmlView.scriptPolicy` defaults to `HtmlView.LocalOnly`: scripts run **only** for local/bundled URLs (`!ljos::prelude::is_remote(&url)`, `~/dev/ljos-ui/crates/ljos/src/lib.rs:176`). Remote `http(s):` sources render HTML+CSS+images with scripts disabled unless the app explicitly opts into `HtmlView.AllowRemoteScripts` for trusted first-party endpoints.
 
 ### 4.4 Events, Timers, Platform Inbox & 0 % Idle CPU
@@ -384,7 +384,7 @@ Holding strong `owner = Some(html_view)` wrappers in a Rust `HashMap` would pin 
   - *Keyboard:* **One** focus-scoped `Keys` filter on `HtmlView` reads `ljos::item::active_focus_item(&engine)` (`item.rs:101`), maps it to `NodeId` (else `body`), and dispatches `keydown`/`keyup` once — never attaching `Keys` handlers to ancestor items that would re-fire on QML key propagation.
   - *Control defaults & `preventDefault()`:* `CheckBox`/`RadioButton`/`ComboBox` update before QML signals fire; `PatchApplier` snapshots prior state and reverts it if DOM `click` sets `defaultPrevented` (skipping `change`). `<a href>` `linkActivated` and `<form>` `submit` run only when `!defaultPrevented`.
 - **Timers & 0 % idle CPU (`ljos-ui/AGENTS.md` Rule 6):** `setTimeout`/`setInterval` use `Engine::call_at` / `cancel_call` (`qtqml.rs:1033,1045`) on Ljós's `Clock`. `requestAnimationFrame` toggles one lazy `FrameAnimation` (`running: !raf_queue.is_empty()`). When idle, `engine.next_timer_deadline()` (`qtqml.rs:877`) is `None` and no animation runs.
-- **Off-thread I/O without `UiHandle`:** `h2q_ljos` uses `ljos` with `default-features = false` (which excludes `shell` and `UiHandle`, `~/dev/ljos-ui/crates/ljos/src/lib.rs:383–384`). `Platform::fetch` (`lib.rs:61–69`) and `ljos::task::spawn_for` (`~/dev/ljos-ui/crates/ljos/src/task.rs:1–10,206`) post replies through Ljós's bounded platform inbox drained by the host at frame start — `h2q_ljos` never holds a `UiHandle`. On `Err(PoolFull)` (`task.rs:89,206`), `HtmlView` falls back to synchronous parsing on the Engine thread, cancelling superseded `Task`s (`Task::cancel`, `task.rs:107`) with a generation guard.
+- **Off-thread I/O without `UiHandle`:** `eldur_ljos` uses `ljos` with `default-features = false` (which excludes `shell` and `UiHandle`, `~/dev/ljos-ui/crates/ljos/src/lib.rs:383–384`). `Platform::fetch` (`lib.rs:61–69`) and `ljos::task::spawn_for` (`~/dev/ljos-ui/crates/ljos/src/task.rs:1–10,206`) post replies through Ljós's bounded platform inbox drained by the host at frame start — `eldur_ljos` never holds a `UiHandle`. On `Err(PoolFull)` (`task.rs:89,206`), `HtmlView` falls back to synchronous parsing on the Engine thread, cancelling superseded `Task`s (`Task::cancel`, `task.rs:107`) with a generation guard.
 
 ### 4.5 Proposed General-Purpose Ljós Additions (`~/dev/ljos-ui`)
 
@@ -395,11 +395,11 @@ Nothing HTML/CSS/DOM-specific enters `ljos-ui` (`ljos-ui/AGENTS.md` Rule 2). We 
 
 ---
 
-## 5. `HtmlView` Item (`import H2Q 1.0`)
+## 5. `HtmlView` Item (`import Eldur 1.0`)
 
 ```rust
 #[derive(Default, QmlObject)]
-#[qml(module = "H2Q", name = "HtmlView", extends = Item, enums = Self::enums)]
+#[qml(module = "Eldur", name = "HtmlView", extends = Item, enums = Self::enums)]
 pub struct HtmlView {
     #[qml(base)]                                              pub item: Item,
     #[qml(notify, write = Self::set_source)]                  pub source: Url,
@@ -443,24 +443,24 @@ impl HtmlView {
 
 | Crate | Role | Dependencies |
 |---|---|---|
-| `h2q_dom` | Arena DOM + mutations, `is_connected`, `DomHandle`, quarantined free list, `MutationBatch` | `html5ever`, `thiserror` |
-| `h2q_css` | Shared selector matcher, `ComputedStyle::inherited_eq`, `StyleEngine` (`restyle`, `query_selector*`) | `h2q_dom`, `swc_css_*`, `csscolorparser`, `thiserror` |
-| `h2q_convert` | Day-one `BoxTree → SceneTree` + `lower_qml` (`h2q_qml::Document`) | `h2q_dom`, `h2q_css`, `h2q_js`, `h2q_qml` |
-| `h2q_live` *(new)* | Engine-agnostic `LiveDocument`, `SceneTree` diff → `Vec<Patch>`, 3-phase event router, `oxc` script wrapper | `h2q_dom`, `h2q_css`, `h2q_convert`, `oxc_*`, `indexmap`, `smallvec`, `thiserror` (**no `ljos` dep**) |
-| `h2q_ljos` *(new)* | `HtmlView`, `HtmlDocument`, `DomElement`, `PatchApplier` | `h2q_live`, `ljos` (`default-features = false`, MIT licence per `~/dev/ljos-ui/Cargo.toml:10`); `[dev-dependencies]`: `ljos` (`features = ["testing", "render", "dev-qml"]`) |
+| `eldur_dom` | Arena DOM + mutations, `is_connected`, `DomHandle`, quarantined free list, `MutationBatch` | `html5ever`, `thiserror` |
+| `eldur_css` | Shared selector matcher, `ComputedStyle::inherited_eq`, `StyleEngine` (`restyle`, `query_selector*`) | `eldur_dom`, `swc_css_*`, `csscolorparser`, `thiserror` |
+| `eldur_convert` | Day-one `BoxTree → SceneTree` + `lower_qml` (`eldur_qml::Document`) | `eldur_dom`, `eldur_css`, `eldur_js`, `eldur_qml` |
+| `eldur_live` *(new)* | Engine-agnostic `LiveDocument`, `SceneTree` diff → `Vec<Patch>`, 3-phase event router, `oxc` script wrapper | `eldur_dom`, `eldur_css`, `eldur_convert`, `oxc_*`, `indexmap`, `smallvec`, `thiserror` (**no `ljos` dep**) |
+| `eldur_ljos` *(new)* | `HtmlView`, `HtmlDocument`, `DomElement`, `PatchApplier` | `eldur_live`, `ljos` (`default-features = false`, MIT licence per `~/dev/ljos-ui/Cargo.toml:10`); `[dev-dependencies]`: `ljos` (`features = ["testing", "render", "dev-qml"]`) |
 
 ### 6.2 Milestones & Testable Exit Criteria
 
 0. **M0 — Ljós Prerequisites (`~/dev/ljos-ui`, owner-approved).**
    Write Gherkin scenarios in `~/dev/ljos-ui/features/` and implement `#[qml(read = path)]` computed getters, `PropertyMap` missing-key hooks, and public `Engine::create_script_owned` + `#[qml(destroy = path)]` (+ optional `polish_scene`).
    *Exit:* `mise run features` and `mise run test` pass in `ljos-ui`.
-1. **M1 — `SceneTree` & Cold-Loaded `HtmlView` (depends on static `h2q_css` + `h2q_convert` landing).**
-   Land `BoxTree → SceneTree → h2q_qml::Document` in `h2q_convert` and cold-load `PatchApplier` + `HtmlView { html, source }` in `h2q_ljos`.
-   *Exit:* Corpus snapshots generated via `SceneTree → h2q_qml::Document` pass `mise run qml:check`; `h2q_ljos` renders the corpus in `ljos::testing::TestWindow` with a link check asserting `qml_syntax`/`qml_front` are absent.
-2. **M2 — Mutable `h2q_dom`, Incremental `StyleEngine` & Wrapper GC.**
-   Implement `h2q_dom` mutations/`MutationBatch`, `StyleEngine::restyle`/`query_selector*`, and `JS_OWNED` wrapper lifecycle.
+1. **M1 — `SceneTree` & Cold-Loaded `HtmlView` (depends on static `eldur_css` + `eldur_convert` landing).**
+   Land `BoxTree → SceneTree → eldur_qml::Document` in `eldur_convert` and cold-load `PatchApplier` + `HtmlView { html, source }` in `eldur_ljos`.
+   *Exit:* Corpus snapshots generated via `SceneTree → eldur_qml::Document` pass `mise run qml:check`; `eldur_ljos` renders the corpus in `ljos::testing::TestWindow` with a link check asserting `qml_syntax`/`qml_front` are absent.
+2. **M2 — Mutable `eldur_dom`, Incremental `StyleEngine` & Wrapper GC.**
+   Implement `eldur_dom` mutations/`MutationBatch`, `StyleEngine::restyle`/`query_selector*`, and `JS_OWNED` wrapper lifecycle.
    *Exit:* Randomised mutation fuzzing (`+`, `~`, `:is/:not/:where`, `:nth-child(of S)`, `:has`, `display: none` flips, `StateVariant` ancestors) matches cold `compute_styles(&doc)` with 0 restyles on clean subtrees; 10,000 `innerHTML` cycles with JS-held wrappers, cyclic listeners, and `Engine::collect_garbage()` (`script_owned.rs:174`) keep `doc.len()` and `engine.script_objects_held()` bounded.
-3. **M3 — `h2q_live` Subtree Diffing & Incremental `PatchApplier`.**
+3. **M3 — `eldur_live` Subtree Diffing & Incremental `PatchApplier`.**
    Connect `MutationBatch` → `RestyleReport` → `Vec<Patch>` → `Engine::batch`.
    *Exit:* Across 20 scripted mutation scenarios in `TestWindow`, rendered PNGs (`ljos::render`) match a cold load of the serialized post-mutation HTML (within perceptual tolerance where an IFC split changed `StyledText` to `Flow` of `Text`), and `accessibility_tree()` matches **modulo sticky-promoted wrapper `Item`s and split IFC `Flow` leaves** (flattened leaf text and roles equal).
 4. **M4 — Shared `document` in QML & Page JS + `ScriptPolicy`.**
@@ -480,6 +480,6 @@ impl HtmlView {
 
 1. **Untrusted remote scripts:** Is `ScriptPolicy::LocalOnly` sufficient for v1, or do you want untrusted `http(s):` scripts isolated in a separate pinned QuickJS `Runtime` thread (`ARCHITECTURE.md` §3.2 line 95, §16 line 1192) communicating serialized DOM batches?
 2. **Approve M0 general-purpose `ljos-ui` additions (§4.5)?** Specifically: (a) `#[qml(read = path)]` computed getters + `PropertyMap` missing-key hook, (b) public `Engine::create_script_owned` + `#[qml(destroy = path)]`, and (c) `ljos::item::polish_scene` for synchronous within-turn `getBoundingClientRect` / `offset*` (vs documenting last-frame geometry).
-3. **Workspace dependency wiring to `ljos-ui`:** Git worktrees (`../html-2-qml-wt/<branch>`) sit at a different relative depth from `~/dev/ljos-ui` than the main checkout. Should `Cargo.toml` reference `ljos` by git URL (with local `.cargo/config.toml` `[patch]`), or exclude `crates/h2q_ljos` from default workspace members?
+3. **Workspace dependency wiring to `ljos-ui`:** Git worktrees (`../html-2-qml-wt/<branch>`) sit at a different relative depth from `~/dev/ljos-ui` than the main checkout. Should `Cargo.toml` reference `ljos` by git URL (with local `.cargo/config.toml` `[patch]`), or exclude `crates/eldur_ljos` from default workspace members?
 4. **Sticky live wrapper / IFC-split promotion (§3.3):** Keeping promoted wrappers/IFC-splits sticky makes repeated class toggles O(1) property writes and preserves pixel parity (diffing only by empty un-roled wrapper `Item`s). Approve sticky promotion?
-5. **`HtmlView.linkActivated` & `h2q_dom::NodeData`:** Should `HtmlView` leave external URL opening solely to `onLinkActivated` (matching QML `Text`), and should `NodeData` stay unchanged permanently (side-table liveness) or gain `#[non_exhaustive]` in a coordinated contract update?
+5. **`HtmlView.linkActivated` & `eldur_dom::NodeData`:** Should `HtmlView` leave external URL opening solely to `onLinkActivated` (matching QML `Text`), and should `NodeData` stay unchanged permanently (side-table liveness) or gain `#[non_exhaustive]` in a coordinated contract update?

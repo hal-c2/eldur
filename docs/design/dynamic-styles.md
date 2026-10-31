@@ -6,7 +6,7 @@ This document says how the static QML back end styles a page after its
 scripts change it: classes added and removed with `classList`/`className`,
 elements built with `document.createElement`, and the dynamic
 pseudo-classes (`:hover`, `:focus`, `:checked`, …). It fixes the contract
-between `h2q_css`, `h2q_js` (analysis and runtime) and `h2q_convert`, so
+between `eldur_css`, `eldur_js` (analysis and runtime) and `eldur_convert`, so
 the halves can be built in parallel (§10).
 
 It does not cover the live-DOM renderer (`docs/design/live-dom.md`), where
@@ -16,7 +16,7 @@ the cascade runs natively on every mutation. §11 says how the two relate.
 
 ## 0. Decisions in brief
 
-1. **Static cascade.** The converter runs the real cascade (`h2q_css`) for
+1. **Static cascade.** The converter runs the real cascade (`eldur_css`) for
    every class and state combination that script analysis predicts, and
    emits the results as QML. The runtime never matches CSS rules or maps CSS
    to QML. It only flips booleans and picks precomputed templates.
@@ -34,12 +34,12 @@ the cascade runs natively on every mutation. §11 says how the two relate.
 4. **Created elements use templates.** For each created-element shape that
    analysis predicts (tag, input type, class set, insertion parent), the
    converter emits a `Component` styled with the real cascade in that
-   context. It also emits one registry, `root.h2qTemplates`, that maps a
+   context. It also emits one registry, `root.eldurTemplates`, that maps a
    canonical key string to the Component. When an element becomes
    connected to the document, the runtime *materialises* it from the
    matching template. A fallback chain handles keys that analysis did not
    predict, and the runtime warns once per missing key.
-5. **Metadata gated per page.** `h2qTag`/`h2qClasses` go on every element
+5. **Metadata gated per page.** `eldurTag`/`eldurClasses` go on every element
    that has its own QML object, but only on pages whose scripts reach
    elements at run time. `baseUrl` goes on the root whenever the page has
    scripts.
@@ -50,12 +50,12 @@ the cascade runs natively on every mutation. §11 says how the two relate.
 
 | Area | State on `main` (3509c48) |
 |---|---|
-| Class toggles | `h2q_runtime.js` keeps classes in `_meta(item).classes`. `_syncClassProp` writes `item["cls_" + sanitized]` only when that property is already a `boolean`. `h2q_convert` emits no `cls_*` property and no binding, so `classList.toggle("done")` has no visible effect. |
-| Analysis | `h2q_js::analyze` records `(query, "classList")` in `Analysis::writes` for `classList.add/remove/toggle/replace` and `setAttribute("class")`, and sets `mutates_dom` for `createElement`. It does **not** keep the class names, the `className =` value, the created tag, or where created elements are inserted. |
-| Metadata | `h2qTag`, `h2qClasses` and `baseUrl` are never emitted (`dom-api.md` §11 "Converter Metadata Gap"). `objectName` is emitted only for elements with an HTML `id`. |
-| Created elements | `H2Q.document.createElement` (`h2q_runtime.js` ≈4205) builds a fixed generic source per tag (`li` → `RowLayout { spacing: 8 }`, `span` → `Text { color: "black"; font.pixelSize: 16 }`, …), with no page CSS. Setting `input.type` already *swaps* the QML object behind a stable wrapper (`set type`, ≈3180): this design reuses that swap. |
-| Pseudo-classes | `h2q_css` computes `StyleMap::variants`: one `StateVariant` per `(element, PseudoState)`, covering that element's subtree. `h2q_convert` ignores them and only reports ``info[css]: `:hover`/`:focus`/… styles are not converted to QML states yet`` (`pipeline.rs:78`). Combinations such as `.done:hover` and sibling scope (`:hover + .x`) are not computed. |
-| Transitions | Parsed by `h2q_css` (`transition-*` longhands). No `Behavior` is emitted. |
+| Class toggles | `eldur_runtime.js` keeps classes in `_meta(item).classes`. `_syncClassProp` writes `item["cls_" + sanitized]` only when that property is already a `boolean`. `eldur_convert` emits no `cls_*` property and no binding, so `classList.toggle("done")` has no visible effect. |
+| Analysis | `eldur_js::analyze` records `(query, "classList")` in `Analysis::writes` for `classList.add/remove/toggle/replace` and `setAttribute("class")`, and sets `mutates_dom` for `createElement`. It does **not** keep the class names, the `className =` value, the created tag, or where created elements are inserted. |
+| Metadata | `eldurTag`, `eldurClasses` and `baseUrl` are never emitted (`dom-api.md` §11 "Converter Metadata Gap"). `objectName` is emitted only for elements with an HTML `id`. |
+| Created elements | `Eldur.document.createElement` (`eldur_runtime.js` ≈4205) builds a fixed generic source per tag (`li` → `RowLayout { spacing: 8 }`, `span` → `Text { color: "black"; font.pixelSize: 16 }`, …), with no page CSS. Setting `input.type` already *swaps* the QML object behind a stable wrapper (`set type`, ≈3180): this design reuses that swap. |
+| Pseudo-classes | `eldur_css` computes `StyleMap::variants`: one `StateVariant` per `(element, PseudoState)`, covering that element's subtree. `eldur_convert` ignores them and only reports ``info[css]: `:hover`/`:focus`/… styles are not converted to QML states yet`` (`pipeline.rs:78`). Combinations such as `.done:hover` and sibling scope (`:hover + .x`) are not computed. |
+| Transitions | Parsed by `eldur_css` (`transition-*` longhands). No `Behavior` is emitted. |
 
 Corpus impact: `16-script-todo` builds its whole list with
 `createElement`, so the list renders unstyled (visual score 72).
@@ -100,7 +100,7 @@ of a class value is bounded by the style sheet, not by the script.
 - **Open values** (`'chat-message ' + role`, `` `toast ${type}` ``): the
   candidates are the classes that appear in a compound selector together
   with the known classes or the tag. `.chat-message.user` and
-  `.chat-message.bot` give `{user, bot}`. `h2q_css::class_candidates`
+  `.chat-message.bot` give `{user, bot}`. `eldur_css::class_candidates`
   (§9.2) computes them.
 - **Unattributed targets** (`event.target.classList.toggle('open')`,
   `this.classList…`, `forEach(t => t.classList.remove('active'))` when the
@@ -115,7 +115,7 @@ of a class value is bounded by the style sheet, not by the script.
 
 Option (b), a rule table matched at run time, would put a second selector
 matcher, a second cascade (specificity, `!important`, inheritance, `var()`,
-`em`) and a second CSS→QML mapping into `h2q_runtime.js`. Every
+`em`) and a second CSS→QML mapping into `eldur_runtime.js`. Every
 `css-properties.md` row would then have two implementations that drift
 apart. The decision also follows from where the work is: §2.1 shows the
 inputs are almost always known, and the QML *form* of an element (a `Text`
@@ -162,7 +162,7 @@ Condition = Class { node, class }        // node has class `class`
   the document.
 
 For each element `e`, `R(e)` is the set of conditions that change some
-computed value of `e` in at least one combination. `h2q_css` computes
+computed value of `e` in at least one combination. `eldur_css` computes
 `e`'s style for all `2^|R(e)|` combinations with the real matcher and
 cascade. Specificity and source order between several toggled classes are
 therefore exact by construction: `.item.done` against `.item:hover` against
@@ -182,10 +182,10 @@ therefore exact by construction: `.item.done` against `.item:hover` against
 | Several conditions with precedence: `opacity: cls_done ? 0.6 : hover.hovered ? 0.9 : 1` | Works. The order comes from the precomputed cascade. |
 | `states` with two `when:` conditions both true (`cls_a`, `cls_b`) | **Only the first state applies** (`w = 10`, `h = 0`). A `StateGroup` has one active state, so independent classes would need one group per class, and specificity between groups is not expressible. Rejected. |
 | An inline `Component` in `Main.qml`, instantiated from JS, reads document ids (`list.cls_compact`) | Works. Templates can bind to static context elements directly. |
-| A template reads a *created* ancestor through `property Item h2qUp1` (`h2qUp1 && h2qUp1.cls_done`) | Works, and `qmllint` is clean. |
+| A template reads a *created* ancestor through `property Item eldurUp1` (`eldurUp1 && eldurUp1.cls_done`) | Works, and `qmllint` is clean. |
 | `Behavior on opacity` when a class is toggled | Animates (1 → 0.6 over 200 ms). |
 | `Behavior` when the template is created with `createObject(parent, { cls_done: true })` | **Does not animate** (0.5 at once). Setting `cls_done` after creation does animate. This matches the browser, where an inserted element does not transition from the initial style. Contract: the runtime passes initial `cls_*` values as initial properties (§8.3). |
-| Registry `readonly property var h2qTemplates: ({ "li.done.todo-item@todoList": h2qT_li_0 })`, used from a `.pragma library` | Works. A missing key is detectable. |
+| Registry `readonly property var eldurTemplates: ({ "li.done.todo-item@todoList": eldurT_li_0 })`, used from a `.pragma library` | Works. A missing key is detectable. |
 | `qmllint` on all of the above | Clean. |
 
 ### 4.2 Static elements
@@ -257,7 +257,7 @@ else changes. Properties that are not animatable in CSS (e.g.
 |---|---|
 | `ClassWrite { target: Query(q), names }` | every element `q` resolves to (all of them for `SelectorAll`) |
 | `ClassWrite { target: Created(id) }` | the template(s) of `id` (§6) |
-| `ClassWrite { target: Unknown, names }` | `h2q_css::class_candidates(doc, sheets, c)` for each name (§2.2) |
+| `ClassWrite { target: Unknown, names }` | `eldur_css::class_candidates(doc, sheets, c)` for each name (§2.2) |
 | `open: true` on any of the above | also the open candidates of that target (§2.2) |
 
 ### 5.2 Example: `15-script-counter`
@@ -271,7 +271,7 @@ Text { id: count; property bool cls_negative: false; color: count.cls_negative ?
 
 ### 5.3 Pseudo-classes (`12-hover-states`)
 
-This design converts the `StateVariant`s that `h2q_css` already computes,
+This design converts the `StateVariant`s that `eldur_css` already computes,
 which today only produce the "not converted yet" diagnostic, and it
 replaces that diagnostic. `.btn--primary:hover`, `.lift-card:hover`
 (transform + shadow) and `.link:hover` become conditional bindings on the
@@ -307,20 +307,20 @@ A binding reads the place the runtime keeps (§8.1):
 
 | Test | Expression on item `X` |
 |---|---|
-| `:first-child` | `X.h2qIndex === 1` |
-| `:last-child` | `X.h2qIndex === X.h2qCount` |
-| `:only-child` | `X.h2qCount === 1` |
-| `:nth-child(An+B)` | `nth(A, B, X.h2qIndex)`, e.g. `X.h2qIndex % 2 === 0` |
-| `:nth-last-child(An+B)` | the same over `(X.h2qCount - X.h2qIndex + 1)` |
-| of-type forms | the same over `h2qTypeIndex`/`h2qTypeCount` |
+| `:first-child` | `X.eldurIndex === 1` |
+| `:last-child` | `X.eldurIndex === X.eldurCount` |
+| `:only-child` | `X.eldurCount === 1` |
+| `:nth-child(An+B)` | `nth(A, B, X.eldurIndex)`, e.g. `X.eldurIndex % 2 === 0` |
+| `:nth-last-child(An+B)` | the same over `(X.eldurCount - X.eldurIndex + 1)` |
+| of-type forms | the same over `eldurTypeIndex`/`eldurTypeCount` |
 
-`h2qIndex`/`h2qCount` (and the type pair, only when an of-type test is
+`eldurIndex`/`eldurCount` (and the type pair, only when an of-type test is
 read) are declared on the item with the document's values, so the first
 frame matches without the runtime. In a template the element's own tests
 are read locally. A created ancestor exports
-`readonly property bool h2qIs<Test>` (`h2qIsFirstChild`,
-`h2qIsNthChild2n0`, `m` for a minus sign), which descendants read through
-`h2qUpN`. A static ancestor is read through its id.
+`readonly property bool eldurIs<Test>` (`eldurIsFirstChild`,
+`eldurIsNthChild2n0`, `m` for a minus sign), which descendants read through
+`eldurUpN`. A static ancestor is read through its id.
 
 A combination may change which border sides are drawn (`li:first-child
 { border-top }`). Instead of a `dynamic-form`, the item gets border strips
@@ -335,7 +335,7 @@ larger container keeps the document's positions, with `dynamic-structural`
 
 ### 6.1 What analysis predicts
 
-For every `document.createElement(tagLiteral)` site, `h2q_js::analyze`
+For every `document.createElement(tagLiteral)` site, `eldur_js::analyze`
 follows the variable it is assigned to within its function, through
 `return`, to call sites (one level). It records a `CreatedElement` (§9.1):
 
@@ -358,7 +358,7 @@ For `16-script-todo`: `li {todo-item | todo-item done} → #todo-list`;
 
 For every predicted shape, the converter builds a *probe document*: a clone
 of the page DOM with the shape appended as the last child of each predicted
-parent (`h2q_dom` mutation subset, §9.3), nested for created parents. It
+parent (`eldur_dom` mutation subset, §9.3), nested for created parents. It
 then runs `compute_styles` and `conditional_styles` on that document. Each
 probe element is boxed and emitted with the ordinary emitter into a
 `Component` at the end of the root:
@@ -366,53 +366,53 @@ probe element is boxed and emitted with the ordinary emitter into a
 ```qml
 // <li class="todo-item [done]"> created by script, in #todo-list
 Component {
-    id: h2qT_li_0
+    id: eldurT_li_0
     RowLayout {
-        property string h2qTag: "li"
-        property string h2qClasses: ""
-        property string h2qTemplate: "h2qT_li_0"
+        property string eldurTag: "li"
+        property string eldurClasses: ""
+        property string eldurTemplate: "eldurT_li_0"
         property bool cls_done: false
         spacing: 12
         // padding, border-bottom, … from `.todo-item`
     }
 }
-// <span class="todo-text"> in h2qT_li_0   (.todo-item.done .todo-text)
+// <span class="todo-text"> in eldurT_li_0   (.todo-item.done .todo-text)
 Component {
-    id: h2qT_span_2
+    id: eldurT_span_2
     Text {
-        property string h2qTag: "span"
-        property string h2qClasses: ""
-        property string h2qTemplate: "h2qT_span_2"
-        property Item h2qUp1: null
-        color: h2qUp1 && h2qUp1.cls_done ? "#9aa3b5" : "#1f2430"
-        font.strikeout: !!(h2qUp1 && h2qUp1.cls_done)
+        property string eldurTag: "span"
+        property string eldurClasses: ""
+        property string eldurTemplate: "eldurT_span_2"
+        property Item eldurUp1: null
+        color: eldurUp1 && eldurUp1.cls_done ? "#9aa3b5" : "#1f2430"
+        font.strikeout: !!(eldurUp1 && eldurUp1.cls_done)
         font.pixelSize: 16
         Layout.fillWidth: true
     }
 }
-readonly property var h2qTemplates: ({
-    "li.todo-item@todoList": h2qT_li_0,
-    "li.done.todo-item@todoList": h2qT_li_0,
-    "input[type=checkbox]@h2qT_li_0": h2qT_input_1,
-    "span.todo-text@h2qT_li_0": h2qT_span_2,
-    "button.delete@h2qT_li_0": h2qT_button_3,
-    "li.todo-item@*": h2qT_li_0
+readonly property var eldurTemplates: ({
+    "li.todo-item@todoList": eldurT_li_0,
+    "li.done.todo-item@todoList": eldurT_li_0,
+    "input[type=checkbox]@eldurT_li_0": eldurT_input_1,
+    "span.todo-text@eldurT_li_0": eldurT_span_2,
+    "button.delete@eldurT_li_0": eldurT_button_3,
+    "li.todo-item@*": eldurT_li_0
 })
-readonly property var h2qStyledClasses: ["delete", "done", "todo-item", "todo-text"]
+readonly property var eldurStyledClasses: ["delete", "done", "todo-item", "todo-text"]
 ```
 
 - **Grouping.** Class sets whose probes have the same QML *form* (§4.2)
   share one Component. The classes that differ between them become
   `cls_*` bindings. This is why the two `li` keys above point to the same
-  `h2qT_li_0`. Sets with different forms get different Components.
+  `eldurT_li_0`. Sets with different forms get different Components.
 - **Conditions in templates.**
   - On the element itself: `cls_*`.
   - On a static context element: its id (works, §4.1).
-  - On a created ancestor at logical distance N: `property Item h2qUpN`,
-    read as `h2qUpN && h2qUpN.cls_x`.
+  - On a created ancestor at logical distance N: `property Item eldurUpN`,
+    read as `eldurUpN && eldurUpN.cls_x`.
   - On a created ancestor's state: that template exports
-    `readonly property bool h2qHovered` (also `h2qPressed`, `h2qFocused`,
-    `h2qFocusVisible`, `h2qFocusWithin`, `h2qChecked`, `h2qDisabled`) when
+    `readonly property bool eldurHovered` (also `eldurPressed`, `eldurFocused`,
+    `eldurFocusVisible`, `eldurFocusWithin`, `eldurChecked`, `eldurDisabled`) when
     a descendant template needs it.
 - **Inherited values** (`color`, `font-*`) are already resolved in the
   probe context, so a template is exact for its key.
@@ -423,15 +423,15 @@ readonly property var h2qStyledClasses: ["delete", "done", "todo-item", "todo-te
 key     = tag [ "[type=" type "]" ] { "." class } "@" context
 tag     = lower-case local name
 type    = lower-case input type, only for <input>
-class   = the element's classes ∩ h2qStyledClasses, deduplicated, sorted (code-point order)
-context = parent's h2qTemplate     if the logical parent is a template instance
-        | parent's h2qKey          if the logical parent is a static element with one
+class   = the element's classes ∩ eldurStyledClasses, deduplicated, sorted (code-point order)
+context = parent's eldurTemplate     if the logical parent is a template instance
+        | parent's eldurKey          if the logical parent is a static element with one
         | "*"                      otherwise
 ```
 
 One level of context is enough, because the parent's template name already
 encodes its own context. Static elements that analysis predicts as parents
-get `property string h2qKey: "<qmlId>"`. The runtime cannot read QML ids.
+get `property string eldurKey: "<qmlId>"`. The runtime cannot read QML ids.
 
 ### 6.4 Materialisation (runtime)
 
@@ -440,15 +440,15 @@ get `property string h2qKey: "<qmlId>"`. The runtime cannot read QML ids.
 2. When an insertion makes a subtree **connected** (its logical root
    reaches `_root`), the runtime walks it **top-down**. For each created
    element it computes the key and looks it up (§6.6). If the result is a
-   different Component from the item's current `h2qTemplate`, it
+   different Component from the item's current `eldurTemplate`, it
    *rematerialises*:
    - create the new item with
-     `createObject(appendTarget, { cls_…: true, h2qClasses: "…" })`
+     `createObject(appendTarget, { cls_…: true, eldurClasses: "…" })`
      (initial properties, so no Behavior fires);
    - move the children into it;
    - replay the recorded attributes, text, value, `checked`, `disabled`,
      `hidden`, inline `style.*`, `dataset` and listeners;
-   - set `h2qUpN`;
+   - set `eldurUpN`;
    - swap the item behind the stable wrapper and destroy the old one.
 
    This generalises today's `set type` swap. Children come after their
@@ -480,7 +480,7 @@ up in this order, and the first hit wins:
 5. the generic source (today's behaviour).
 
 A miss at step 1 logs once per key:
-`console.warn("h2q: no style template for li.foo@todoList; using <step>")`.
+`console.warn("eldur: no style template for li.foo@todoList; using <step>")`.
 At conversion time, `Unknown` parents and `open` class values produce
 diagnostic `dynamic-context` (§12). `@*` templates are not exact for
 inherited properties, since they inherit from `<body>`, and the diagnostic
@@ -490,10 +490,10 @@ says so.
 
 The same mechanism applies to markup assigned to `innerHTML` (`=` and
 `+=`) or passed to `insertAdjacentHTML`: analysis parses each alternative
-value with `h2q_dom::Document::parse_fragment` and reports its elements as
+value with `eldur_dom::Document::parse_fragment` and reports its elements as
 `CreatedElement`s whose parent is the target (`afterbegin`/`beforeend`;
 `beforebegin`/`afterend` give an `Unknown` parent). Nested elements are
-parented to their fragment parent. `H2Q.setInnerHTML` then materialises
+parented to their fragment parent. `Eldur.setInnerHTML` then materialises
 through the registry (S9a).
 
 - A value is literal when its structure is: concatenations and template
@@ -534,7 +534,7 @@ created element or in `<body>`:
   `parent ? Math.min(implicitWidth, parent.width) : implicitWidth`, so it
   wraps only when it is wider than the line.
 - **Text nodes.** A text node between the elements becomes a `Text` made
-  from the `Flow`'s `readonly property Component h2qTextRun`, which has
+  from the `Flow`'s `readonly property Component eldurTextRun`, which has
   the block's font, colour and decoration (`_materializeTextRun`). Spaces
   become U+00A0, because Qt does not measure a `Text`'s trailing spaces,
   and the space before `by` would vanish.
@@ -551,7 +551,7 @@ created element or in `<body>`:
 - **Shared keys.** Two probes with the same key (a `li.item` built with
   `createElement` and another built from markup) are two templates. The
   first wins the key, so the second's children are also registered under
-  the winner (`span.tag@h2qT_li_0`); the runtime finds them by the
+  the winner (`span.tag@eldurT_li_0`); the runtime finds them by the
   template the parent actually has.
 
 Limits:
@@ -580,11 +580,11 @@ Limits:
 
 | Property | On | When | Why |
 |---|---|---|---|
-| `h2qTag: "<tag>"` | every element with its own QML object | page has `Analysis::runtime_dom` (§9.1) | tag selectors, `tagName`, `matches`, `closest` |
-| `h2qClasses: "<class attr>"` | same, when the element has classes | same | class selectors, `className`, `classList` initial state |
+| `eldurTag: "<tag>"` | every element with its own QML object | page has `Analysis::runtime_dom` (§9.1) | tag selectors, `tagName`, `matches`, `closest` |
+| `eldurClasses: "<class attr>"` | same, when the element has classes | same | class selectors, `className`, `classList` initial state |
 | `objectName: "<html id>"` | elements with an HTML `id` | always (as today) | `getElementById`, `#id` selectors |
 | `property bool cls_<c>` | elements and templates with `c ∈ D(e)` | when there are conditions | styling (§4) |
-| `h2qKey: "<qmlId>"` | static elements predicted as insertion parents | when there are templates | template context (§6.3) |
+| `eldurKey: "<qmlId>"` | static elements predicted as insertion parents | when there are templates | template context (§6.3) |
 | `property string baseUrl` | root | page has any script | `a.href`/`img.src` resolution, `location` |
 
 - **Size.** About 100 bytes per element. The largest snapshots have 94–104
@@ -592,7 +592,7 @@ Limits:
   pages pay nothing.
 - **Why not "only elements reachable by script"?** `querySelectorAll`,
   `children`, `closest`, `matches` and `event.target` reach elements that
-  no literal query names, and an element without `h2qTag` gives a wrong
+  no literal query names, and an element without `eldurTag` gives a wrong
   answer silently.
 - **Gating.** The flag is per page: `runtime_dom` is false only when every
   DOM access is a statically resolved literal query with no traversal, no
@@ -606,33 +606,33 @@ Limits:
   - Otherwise emit `Qt.resolvedUrl("<file name of Input::url>")`, so
     snapshots stay machine-independent. Relative links then resolve next
     to the converted app, which is a documented divergence.
-- **Sync.** The runtime keeps `h2qClasses` equal to the class list on every
+- **Sync.** The runtime keeps `eldurClasses` equal to the class list on every
   change (when the property exists). `_meta(item).classes` stays the source
   of truth.
 
 ---
 
-## 8. Contract between `h2q_convert` and `h2q_js` (runtime)
+## 8. Contract between `eldur_convert` and `eldur_js` (runtime)
 
 ### 8.1 Names
 
 | Name | Type | Owner (writes) | Reader |
 |---|---|---|---|
-| `h2qTag` | `string`, lower-case | converter (static, templates) | runtime |
-| `h2qClasses` | `string`, space-separated | converter (initial), runtime (on change) | runtime |
-| `h2qTemplate` | `string`, the Component id | converter (in each template) | runtime (key context, swap check) |
-| `h2qKey` | `string`, the QML id | converter | runtime (key context) |
+| `eldurTag` | `string`, lower-case | converter (static, templates) | runtime |
+| `eldurClasses` | `string`, space-separated | converter (initial), runtime (on change) | runtime |
+| `eldurTemplate` | `string`, the Component id | converter (in each template) | runtime (key context, swap check) |
+| `eldurKey` | `string`, the QML id | converter | runtime (key context) |
 | `cls_<s>` | `bool`; `s` = class with `[^A-Za-z0-9_]` → `_` (today's `_sanitizeClassProp`) | converter declares and sets the initial value; runtime sets it | bindings |
-| `h2qUp<N>` | `Item`, N ≥ 1 = logical-ancestor distance | runtime, at materialisation | template bindings |
-| `h2qHovered`, `h2qPressed`, `h2qFocused`, `h2qFocusVisible`, `h2qFocusWithin`, `h2qChecked`, `h2qDisabled` | `readonly bool` | converter (in templates) | descendant templates' bindings |
-| `h2qIndex`, `h2qCount` | `int`, 1-based place among element siblings, and their number | converter (document value), runtime (`_renumber`) | structural bindings (§5.5) |
-| `h2qTypeIndex`, `h2qTypeCount` | `int`, the same among siblings with the same tag | converter (only when an of-type test reads it), runtime | structural bindings |
-| `h2qIs<Test>` | `readonly bool`, e.g. `h2qIsFirstChild`, `h2qIsNthChild2n1` | converter (in templates) | descendant templates' bindings |
-| `h2qTextRun` | `readonly Component` on a created block's line `Flow`: a `Text` with the block's text style | converter (§6.8) | runtime (text nodes in that line) |
-| `root.h2qTemplates` | `var` object: key → `Component` | converter | runtime |
-| `root.h2qStyledClasses` | `var` array of strings, sorted | converter | runtime (key building) |
+| `eldurUp<N>` | `Item`, N ≥ 1 = logical-ancestor distance | runtime, at materialisation | template bindings |
+| `eldurHovered`, `eldurPressed`, `eldurFocused`, `eldurFocusVisible`, `eldurFocusWithin`, `eldurChecked`, `eldurDisabled` | `readonly bool` | converter (in templates) | descendant templates' bindings |
+| `eldurIndex`, `eldurCount` | `int`, 1-based place among element siblings, and their number | converter (document value), runtime (`_renumber`) | structural bindings (§5.5) |
+| `eldurTypeIndex`, `eldurTypeCount` | `int`, the same among siblings with the same tag | converter (only when an of-type test reads it), runtime | structural bindings |
+| `eldurIs<Test>` | `readonly bool`, e.g. `eldurIsFirstChild`, `eldurIsNthChild2n1` | converter (in templates) | descendant templates' bindings |
+| `eldurTextRun` | `readonly Component` on a created block's line `Flow`: a `Text` with the block's text style | converter (§6.8) | runtime (text nodes in that line) |
+| `root.eldurTemplates` | `var` object: key → `Component` | converter | runtime |
+| `root.eldurStyledClasses` | `var` array of strings, sorted | converter | runtime (key building) |
 | `root.baseUrl` | `string` | converter | runtime (`init`, already supported) |
-| Component ids | `h2qT_<tag>_<n>` (n = emission order, from 0) | converter | snapshots only (the runtime goes through the registry) |
+| Component ids | `eldurT_<tag>_<n>` (n = emission order, from 0) | converter | snapshots only (the runtime goes through the registry) |
 
 Two classes whose sanitised names collide (`a-b`, `a_b`) are a conversion
 diagnostic. Both map to the same property.
@@ -646,18 +646,18 @@ diagnostic.
 
 ### 8.3 Runtime owns
 
-- Class bookkeeping (as today), plus writing back to `h2qClasses`.
+- Class bookkeeping (as today), plus writing back to `eldurClasses`.
 - Key building (§6.3) and the fallback chain (§6.6), with one warning per
   missing key.
 - Provisional items, detecting connection, and top-down rematerialisation:
-  initial properties carry `cls_*` and `h2qClasses`; recorded state is
-  replayed; `h2qUpN` is set.
+  initial properties carry `cls_*` and `eldurClasses`; recorded state is
+  replayed; `eldurUpN` is set.
 - Rematerialisation on a form-changing class change.
-- Created text nodes in a line with `h2qTextRun` (§6.8):
+- Created text nodes in a line with `eldurTextRun` (§6.8):
   `_materializeTextRun` remakes the node's `Text` from that Component, in
   place, with spaces as U+00A0. `textContent` reads and writes the text
   as the script set it, and `_layoutChanged` follows each swap.
-- Positions (S9b): `_renumber(container)` rewrites `h2qIndex`/`h2qCount`
+- Positions (S9b): `_renumber(container)` rewrites `eldurIndex`/`eldurCount`
   (and the type pair where declared) on the container's element children
   after every insert, remove, reorder, template swap, `innerHTML` and
   `textContent` write. `_settleLayouts` also renumbers each dirty item and
@@ -674,11 +674,11 @@ beyond the existing `el.style.*` setters.
 
 ### 8.4 Each half's tests stand alone
 
-- Runtime tests (`crates/h2q_js/tests/qml_runtime.rs`) use **hand-written
-  QML fixtures that follow §8.1**: a root with `h2qTemplates`, a few
-  Components and a static parent with `h2qKey`. They assert lookup,
+- Runtime tests (`crates/eldur_js/tests/qml_runtime.rs`) use **hand-written
+  QML fixtures that follow §8.1**: a root with `eldurTemplates`, a few
+  Components and a static parent with `eldurKey`. They assert lookup,
   fallback, the warning, rematerialisation (children, listeners, `checked`,
-  text kept), `h2qUpN`, no Behavior on insertion, and a Behavior on toggle.
+  text kept), `eldurUpN`, no Behavior on insertion, and a Behavior on toggle.
 - Converter tests (insta snapshots, plus `qml:check`) assert the emitted
   names and registry. The end-to-end tests in §13 join the halves.
 
@@ -686,7 +686,7 @@ beyond the existing `el.style.*` setters.
 
 ## 9. Crate API additions (add-only)
 
-### 9.1 `h2q_js` (`src/lib.rs`)
+### 9.1 `eldur_js` (`src/lib.rs`)
 
 ```rust
 /// A created element (`document.createElement` call site) as analysis predicts it.
@@ -735,7 +735,7 @@ pub struct CreatedElement {
 //   pub class_writes: Vec<ClassWrite>,
 //   pub created: Vec<CreatedElement>,
 //   /// Scripts reach elements by runtime selectors, traversal, `matches`/`closest`,
-//   /// event targets, or mutate the DOM: every element needs `h2qTag`/`h2qClasses`.
+//   /// event targets, or mutate the DOM: every element needs `eldurTag`/`eldurClasses`.
 //   pub runtime_dom: bool,
 // Added in S9b (§5.5):
 //   pub mutated_parents: Vec<ElementRef>,
@@ -744,7 +744,7 @@ pub struct CreatedElement {
 
 Today's `writes` entries `(q, "classList")` are kept.
 
-### 9.2 `h2q_css` (`src/lib.rs`)
+### 9.2 `eldur_css` (`src/lib.rs`)
 
 ```rust
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -812,7 +812,7 @@ Inside the crate, `MatchContext.active_state: Option<(NodeId, PseudoState)>`
 becomes a set of active states plus a per-node class override (added and
 removed). `StyleMap::variants` and `StateVariant` stay as they are.
 
-### 9.3 `h2q_dom`
+### 9.3 `eldur_dom`
 
 The probe document needs a subset of live-dom §2.2, with **the same names
 and signatures**, so live mode later extends it rather than replacing it:
@@ -822,7 +822,7 @@ and signatures**, so live mode later extends it rather than replacing it:
 `DomError`. No mutation log is needed for this design. `Document` already
 derives `Clone`.
 
-### 9.4 `h2q_convert`
+### 9.4 `eldur_convert`
 
 No public API change. `Options::state_variants` now also gates class
 conditions and templates (one switch for "dynamic styles").
@@ -833,17 +833,17 @@ conditions and templates (one switch for "dynamic styles").
 
 | # | Slice | Crate(s) | Depends on | Parallel with |
 |---|---|---|---|---|
-| S1 | Runtime metadata emission: `h2qTag`/`h2qClasses` gated by `runtime_dom` (temporarily approximated by `mutates_dom` ∨ any runtime-fallback query), `baseUrl` on the root. Update `dom-api.md` §11. Fixes problem 2 on its own. | `h2q_convert` | — (after the current `h2q_convert` worker lands) | S2, S3, S4, S5 |
-| S2 | `Condition`, `conditional_styles` (joint combinations, sibling scope), `styled_classes`, `class_candidates`, `open_class_candidates`, with unit tests whose values come from Chromium. | `h2q_css` | — | S3, S4, S5 |
-| S3 | `h2q_dom` mutation subset (§9.3). | `h2q_dom` | — | all |
-| S4 | Analysis: `ClassWrite`, `CreatedElement`, `runtime_dom`. Dataflow through locals, one-level returns and `querySelectorAll(...).forEach` callback parameters; enumeration of literal, ternary, `+` and template values. | `h2q_js` (`analyze.rs`) | — | S2, S5 |
-| S5 | Runtime: registry lookup, fallback chain and warning, provisional → rematerialise on connect (generalising `set type`), replay of recorded state, `h2qUpN`, initial-property `cls_*`, `h2qClasses` write-back, form-change swap. qml6 tests on hand-written fixtures (§8.4). | `h2q_js` (`h2q_runtime.js`) | — | S2, S4 |
-| S6 | Conditional bindings for static elements: classes and `:hover`/`:focus`/`:checked`/…, `visible` for `display:none`, sticky wrapper, `Behavior`s from `transition`. Removes the "not converted to QML states yet" diagnostic. Corpus 12, 15. | `h2q_convert` | S1, S2, S4 | S5 |
-| S7 | Templates: probe document, Components, grouping by form, registry, `@*` entries, `h2qKey`, `h2qUpN`/`h2q<State>` exports. Corpus 16. | `h2q_convert` | S3, S6 | — |
-| S8 | Oracles and tests: a `run` step in `computed.mjs` (and `--run` in `geometry.mjs`), corpus case `26-class-toggles`, end-to-end qml6 behaviour tests (§13). | `tools/visual`, `tests/corpus`, `h2q_convert/tests` | — (the e2e tests are written first and fail until S6/S7) | all |
-| S9 | Later: `innerHTML` literal markup through the registry (§6.7); structural pseudo-classes for mutated containers (S9b, §5.5). | `h2q_js`, `h2q_convert` | S7 | — |
+| S1 | Runtime metadata emission: `eldurTag`/`eldurClasses` gated by `runtime_dom` (temporarily approximated by `mutates_dom` ∨ any runtime-fallback query), `baseUrl` on the root. Update `dom-api.md` §11. Fixes problem 2 on its own. | `eldur_convert` | — (after the current `eldur_convert` worker lands) | S2, S3, S4, S5 |
+| S2 | `Condition`, `conditional_styles` (joint combinations, sibling scope), `styled_classes`, `class_candidates`, `open_class_candidates`, with unit tests whose values come from Chromium. | `eldur_css` | — | S3, S4, S5 |
+| S3 | `eldur_dom` mutation subset (§9.3). | `eldur_dom` | — | all |
+| S4 | Analysis: `ClassWrite`, `CreatedElement`, `runtime_dom`. Dataflow through locals, one-level returns and `querySelectorAll(...).forEach` callback parameters; enumeration of literal, ternary, `+` and template values. | `eldur_js` (`analyze.rs`) | — | S2, S5 |
+| S5 | Runtime: registry lookup, fallback chain and warning, provisional → rematerialise on connect (generalising `set type`), replay of recorded state, `eldurUpN`, initial-property `cls_*`, `eldurClasses` write-back, form-change swap. qml6 tests on hand-written fixtures (§8.4). | `eldur_js` (`eldur_runtime.js`) | — | S2, S4 |
+| S6 | Conditional bindings for static elements: classes and `:hover`/`:focus`/`:checked`/…, `visible` for `display:none`, sticky wrapper, `Behavior`s from `transition`. Removes the "not converted to QML states yet" diagnostic. Corpus 12, 15. | `eldur_convert` | S1, S2, S4 | S5 |
+| S7 | Templates: probe document, Components, grouping by form, registry, `@*` entries, `eldurKey`, `eldurUpN`/`eldur<State>` exports. Corpus 16. | `eldur_convert` | S3, S6 | — |
+| S8 | Oracles and tests: a `run` step in `computed.mjs` (and `--run` in `geometry.mjs`), corpus case `26-class-toggles`, end-to-end qml6 behaviour tests (§13). | `tools/visual`, `tests/corpus`, `eldur_convert/tests` | — (the e2e tests are written first and fail until S6/S7) | all |
+| S9 | Later: `innerHTML` literal markup through the registry (§6.7); structural pseudo-classes for mutated containers (S9b, §5.5). | `eldur_js`, `eldur_convert` | S7 | — |
 
-`h2q_convert` slices (S1 → S6 → S7) are sequential. The rest can run in
+`eldur_convert` slices (S1 → S6 → S7) are sequential. The rest can run in
 parallel.
 
 ---
@@ -857,9 +857,9 @@ end's** answer, and it is bounded by what analysis can predict.
 
 The two share:
 
-- the selector matcher and cascade in `h2q_css`. `conditional_styles` is
+- the selector matcher and cascade in `eldur_css`. `conditional_styles` is
   the batch form of what `StyleEngine` does incrementally;
-- the `h2q_dom` mutation API names (§9.3);
+- the `eldur_dom` mutation API names (§9.3);
 - the sticky-wrapper rule (live-dom §3.3);
 - the form choice in the emitter. A conditional binding is a
   `BindingExpr::Cond` over `Read(ObjectProp{… cls_x …})` in live-dom's
@@ -890,7 +890,7 @@ line.
 | *(runtime)* `no style template for …` | A key was not predicted | The fallback chain is used. |
 
 Structural pseudo-classes on children of script-mutated containers follow
-the runtime's `h2qIndex`/`h2qCount` (S9b, §5.5). Still static: sibling
+the runtime's `eldurIndex`/`eldurCount` (S9b, §5.5). Still static: sibling
 combinators (`li + li`, `li ~ li`) across a changing list,
 `:nth-child(… of S)`, and containers analysis cannot name (a removal
 through `e.target.closest('li').remove()` does not mark its list).
@@ -901,7 +901,7 @@ Attribute selectors on script-written attributes (`[aria-expanded=true]`,
 
 ## 13. Test plan
 
-1. **`h2q_css` unit tests (S2).** For each case (ancestor
+1. **`eldur_css` unit tests (S2).** For each case (ancestor
    `.list.compact .item`, sibling `.tab.active + .tab`, conflicting
    `.a.b`/`.b`/source order, `.done:hover`, `!important`, `var()` under a
    class, `display:none` ↔ shown, `em` under a font-size class), the
@@ -927,7 +927,7 @@ Attribute selectors on script-written attributes (`[aria-expanded=true]`,
    Its `DOMContentLoaded` handler toggles classes, so the visual harness
    (initial state) measures the toggled state. Every snapshot passes
    `mise run qml:check`.
-4. **Behaviour tests (S8, `crates/h2q_convert/tests/dynamic_styles_e2e.rs`).**
+4. **Behaviour tests (S8, `crates/eldur_convert/tests/dynamic_styles_e2e.rs`).**
    Convert a page, load it in qml6 off-screen with a probe that calls page
    functions (click, toggle) and prints QML properties after Behaviors
    settle. Compare with Chromium's computed style after the same `run`
