@@ -12125,6 +12125,594 @@
    }
   }
  ],
+ "hidden_closed": [
+  {
+   "name": "load",
+   "log": [
+    "hidden false",
+    "0 0 null none t bold"
+   ],
+   "state": {
+    "#d1": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "written"
+     }
+    ],
+    "#d2": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "bold text",
+      "props": {
+       "display": "none"
+      }
+     }
+    ],
+    "#d2b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "bold"
+     }
+    ],
+    "#p1": [
+     {
+      "box": [
+       8,
+       45,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "before span after"
+     }
+    ],
+    "#s1": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "span"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       81,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "one",
+   "log": [
+    "written block"
+   ],
+   "state": {
+    "#d1": [
+     {
+      "box": [
+       8,
+       35,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#d2": [
+     {
+      "box": [
+       8,
+       71,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "bold text",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#d2b": [
+     {
+      "box": [
+       17,
+       77,
+       33.77,
+       17
+      ],
+      "shown": true,
+      "text": "bold"
+     }
+    ],
+    "#p1": [
+     {
+      "box": [
+       8,
+       117,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "before span after"
+     }
+    ],
+    "#s1": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "span"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       153,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b1"
+   }
+  },
+  {
+   "name": "two",
+   "log": [
+    "0 0"
+   ],
+   "state": {
+    "#d1": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "written"
+     }
+    ],
+    "#d2": [
+     {
+      "box": [
+       8,
+       35,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "bold text",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#d2b": [
+     {
+      "box": [
+       17,
+       41,
+       33.77,
+       17
+      ],
+      "shown": true,
+      "text": "bold"
+     }
+    ],
+    "#p1": [
+     {
+      "box": [
+       8,
+       81,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "before span after"
+     }
+    ],
+    "#s1": [
+     {
+      "box": [
+       57.81,
+       82,
+       34.7,
+       17
+      ],
+      "shown": true,
+      "text": "span"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       117,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b2"
+   }
+  }
+ ],
+ "hidden_created": [
+  {
+   "name": "load",
+   "log": [
+    "c1 zero null \"created one kid\" none",
+    "c2 zero null \"created two\" none",
+    "c1k zero null \" kid\" inline",
+    "c3 zero null \"inline three\" none",
+    "c4 zero null \"\" none",
+    "clicked c1"
+   ],
+   "state": {
+    "#c1": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "created one kid"
+     }
+    ],
+    "#c1k": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "kid"
+     }
+    ],
+    "#c2": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "created two"
+     }
+    ],
+    "#c3": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "inline three"
+     }
+    ],
+    "#c4": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "v"
+     }
+    ],
+    "#line": [
+     {
+      "box": [
+       8,
+       45,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "start inline threemark end"
+     }
+    ],
+    "#anchor": [
+     {
+      "box": [
+       43.56,
+       46,
+       35.56,
+       17
+      ],
+      "shown": true,
+      "text": "mark"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       81,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "one",
+   "log": [
+    "c1 box BODY \"created one kid\" block",
+    "c2 box BODY \"created two\" block",
+    "c1k box BODY \" kid\" inline",
+    "c3 zero null \"inline three\" none",
+    "c4 zero null \"\" none"
+   ],
+   "state": {
+    "#c1": [
+     {
+      "box": [
+       8,
+       35,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "created one kid"
+     }
+    ],
+    "#c1k": [
+     {
+      "box": [
+       101.52,
+       41,
+       27.56,
+       17
+      ],
+      "shown": true,
+      "text": "kid"
+     }
+    ],
+    "#c2": [
+     {
+      "box": [
+       8,
+       71,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "created two"
+     }
+    ],
+    "#c3": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "inline three"
+     }
+    ],
+    "#c4": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "v"
+     }
+    ],
+    "#line": [
+     {
+      "box": [
+       8,
+       117,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "start inline threemark end"
+     }
+    ],
+    "#anchor": [
+     {
+      "box": [
+       43.56,
+       118,
+       35.56,
+       17
+      ],
+      "shown": true,
+      "text": "mark"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       153,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b1"
+   }
+  },
+  {
+   "name": "two",
+   "log": [
+    "c1 zero null \"created one kid\" none",
+    "c2 box BODY \"created two\" block",
+    "c1k zero null \" kid\" inline",
+    "c3 box BODY \"inline three\" inline",
+    "c4 box BODY \"\" inline-block"
+   ],
+   "state": {
+    "#c1": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "created one kid"
+     }
+    ],
+    "#c1k": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "kid"
+     }
+    ],
+    "#c2": [
+     {
+      "box": [
+       8,
+       35,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "created two"
+     }
+    ],
+    "#c3": [
+     {
+      "box": [
+       43.56,
+       82,
+       78.28,
+       17
+      ],
+      "shown": true,
+      "text": "inline three"
+     }
+    ],
+    "#c4": [
+     {
+      "box": [
+       188.55,
+       81,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "v"
+     }
+    ],
+    "#line": [
+     {
+      "box": [
+       8,
+       81,
+       1264,
+       21
+      ],
+      "shown": true,
+      "text": "start inline threemark end"
+     }
+    ],
+    "#anchor": [
+     {
+      "box": [
+       121.84,
+       82,
+       35.56,
+       17
+      ],
+      "shown": true,
+      "text": "mark"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       118,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b2"
+   }
+  }
+ ],
  "hidden_focus": [
   {
    "name": "load",
@@ -12320,6 +12908,5429 @@
      }
     ],
     "(focus)": ""
+   }
+  }
+ ],
+ "hidden_lines": [
+  {
+   "name": "load",
+   "log": [
+    "s1 zero \"hidden one\" none",
+    "s2 zero \"nested bold tail\" none",
+    "s2b zero \"bold\" inline",
+    "s3a zero \"first\" none",
+    "s3b zero \"second\" none",
+    "s4 zero \"and some more words to make it wrap\" none",
+    "s5 zero \"shown beside\" none",
+    "p5 zero \"\" none",
+    "s6 zero \"alone\" none",
+    "kids 1 1 1 3 s2 s5",
+    "text \"before hidden one after\" \"text btn more shown beside tail  z\""
+   ],
+   "state": {
+    "#t1": [
+     {
+      "box": [
+       8,
+       45,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "before hidden one after"
+     }
+    ],
+    "#s1": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "hidden one"
+     }
+    ],
+    "#t2": [
+     {
+      "box": [
+       8,
+       81,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "alpha nested BOLD tail omega"
+     }
+    ],
+    "#s2": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "nested BOLD tail"
+     }
+    ],
+    "#s2b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "BOLD"
+     }
+    ],
+    "#t3": [
+     {
+      "box": [
+       8,
+       117,
+       1264,
+       0
+      ],
+      "shown": true,
+      "text": "firstsecond"
+     }
+    ],
+    "#s3a": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "first"
+     }
+    ],
+    "#s3b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "second"
+     }
+    ],
+    "#t4": [
+     {
+      "box": [
+       8,
+       117,
+       160,
+       20
+      ],
+      "shown": true,
+      "text": "wrap me and some more words to make it wrap end"
+     }
+    ],
+    "#s4": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "and some more words to make it wrap"
+     }
+    ],
+    "#t5": [
+     {
+      "box": [
+       8,
+       153,
+       1264,
+       21
+      ],
+      "shown": true,
+      "text": "text btn more shown beside tail z"
+     }
+    ],
+    "#x5": [
+     {
+      "box": [
+       38.23,
+       153,
+       34.53,
+       21
+      ],
+      "shown": true,
+      "text": "btn"
+     }
+    ],
+    "#s5": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "shown beside"
+     }
+    ],
+    "#p5": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": ""
+     }
+    ],
+    "#t6": [
+     {
+      "box": [
+       8,
+       190,
+       1264,
+       0
+      ],
+      "shown": true,
+      "text": "alone"
+     }
+    ],
+    "#s6": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "alone"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       190,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "one",
+   "log": [
+    "s1 box \"hidden one\" inline",
+    "s2 box \"nested BOLD tail\" inline",
+    "s2b box \"BOLD\" inline"
+   ],
+   "state": {
+    "#t1": [
+     {
+      "box": [
+       8,
+       45,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "before hidden one after"
+     }
+    ],
+    "#s1": [
+     {
+      "box": [
+       57.81,
+       46,
+       79.19,
+       17
+      ],
+      "shown": true,
+      "text": "hidden one"
+     }
+    ],
+    "#t2": [
+     {
+      "box": [
+       8,
+       81,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "alpha nested BOLD tail omega"
+     }
+    ],
+    "#s2": [
+     {
+      "box": [
+       51.59,
+       82,
+       122.72,
+       17
+      ],
+      "shown": true,
+      "text": "nested BOLD tail"
+     }
+    ],
+    "#s2b": [
+     {
+      "box": [
+       104.08,
+       82,
+       45.33,
+       17
+      ],
+      "shown": true,
+      "text": "BOLD"
+     }
+    ],
+    "#t3": [
+     {
+      "box": [
+       8,
+       117,
+       1264,
+       0
+      ],
+      "shown": true,
+      "text": "firstsecond"
+     }
+    ],
+    "#s3a": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "first"
+     }
+    ],
+    "#s3b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "second"
+     }
+    ],
+    "#t4": [
+     {
+      "box": [
+       8,
+       117,
+       160,
+       20
+      ],
+      "shown": true,
+      "text": "wrap me and some more words to make it wrap end"
+     }
+    ],
+    "#s4": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "and some more words to make it wrap"
+     }
+    ],
+    "#t5": [
+     {
+      "box": [
+       8,
+       153,
+       1264,
+       21
+      ],
+      "shown": true,
+      "text": "text btn more shown beside tail z"
+     }
+    ],
+    "#x5": [
+     {
+      "box": [
+       38.23,
+       153,
+       34.53,
+       21
+      ],
+      "shown": true,
+      "text": "btn"
+     }
+    ],
+    "#s5": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "shown beside"
+     }
+    ],
+    "#p5": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": ""
+     }
+    ],
+    "#t6": [
+     {
+      "box": [
+       8,
+       190,
+       1264,
+       0
+      ],
+      "shown": true,
+      "text": "alone"
+     }
+    ],
+    "#s6": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "alone"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       190,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b1"
+   }
+  },
+  {
+   "name": "two",
+   "log": [
+    "s3a box \"first\" inline",
+    "s3b box \"second\" inline"
+   ],
+   "state": {
+    "#t1": [
+     {
+      "box": [
+       8,
+       45,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "before hidden one after"
+     }
+    ],
+    "#s1": [
+     {
+      "box": [
+       57.81,
+       46,
+       79.19,
+       17
+      ],
+      "shown": true,
+      "text": "hidden one"
+     }
+    ],
+    "#t2": [
+     {
+      "box": [
+       8,
+       81,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "alpha nested BOLD tail omega"
+     }
+    ],
+    "#s2": [
+     {
+      "box": [
+       51.59,
+       82,
+       122.72,
+       17
+      ],
+      "shown": true,
+      "text": "nested BOLD tail"
+     }
+    ],
+    "#s2b": [
+     {
+      "box": [
+       104.08,
+       82,
+       45.33,
+       17
+      ],
+      "shown": true,
+      "text": "BOLD"
+     }
+    ],
+    "#t3": [
+     {
+      "box": [
+       8,
+       117,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "firstsecond"
+     }
+    ],
+    "#s3a": [
+     {
+      "box": [
+       8,
+       118,
+       25.78,
+       17
+      ],
+      "shown": true,
+      "text": "first"
+     }
+    ],
+    "#s3b": [
+     {
+      "box": [
+       33.78,
+       118,
+       51.59,
+       17
+      ],
+      "shown": true,
+      "text": "second"
+     }
+    ],
+    "#t4": [
+     {
+      "box": [
+       8,
+       153,
+       160,
+       20
+      ],
+      "shown": true,
+      "text": "wrap me and some more words to make it wrap end"
+     }
+    ],
+    "#s4": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "and some more words to make it wrap"
+     }
+    ],
+    "#t5": [
+     {
+      "box": [
+       8,
+       189,
+       1264,
+       21
+      ],
+      "shown": true,
+      "text": "text btn more shown beside tail z"
+     }
+    ],
+    "#x5": [
+     {
+      "box": [
+       38.23,
+       189,
+       34.53,
+       21
+      ],
+      "shown": true,
+      "text": "btn"
+     }
+    ],
+    "#s5": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "shown beside"
+     }
+    ],
+    "#p5": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": ""
+     }
+    ],
+    "#t6": [
+     {
+      "box": [
+       8,
+       226,
+       1264,
+       0
+      ],
+      "shown": true,
+      "text": "alone"
+     }
+    ],
+    "#s6": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "alone"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       226,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b2"
+   }
+  },
+  {
+   "name": "three",
+   "log": [
+    "s4 box \"and some more words to make it wrap\" inline"
+   ],
+   "state": {
+    "#t1": [
+     {
+      "box": [
+       8,
+       45,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "before hidden one after"
+     }
+    ],
+    "#s1": [
+     {
+      "box": [
+       57.81,
+       46,
+       79.19,
+       17
+      ],
+      "shown": true,
+      "text": "hidden one"
+     }
+    ],
+    "#t2": [
+     {
+      "box": [
+       8,
+       81,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "alpha nested BOLD tail omega"
+     }
+    ],
+    "#s2": [
+     {
+      "box": [
+       51.59,
+       82,
+       122.72,
+       17
+      ],
+      "shown": true,
+      "text": "nested BOLD tail"
+     }
+    ],
+    "#s2b": [
+     {
+      "box": [
+       104.08,
+       82,
+       45.33,
+       17
+      ],
+      "shown": true,
+      "text": "BOLD"
+     }
+    ],
+    "#t3": [
+     {
+      "box": [
+       8,
+       117,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "firstsecond"
+     }
+    ],
+    "#s3a": [
+     {
+      "box": [
+       8,
+       118,
+       25.78,
+       17
+      ],
+      "shown": true,
+      "text": "first"
+     }
+    ],
+    "#s3b": [
+     {
+      "box": [
+       33.78,
+       118,
+       51.59,
+       17
+      ],
+      "shown": true,
+      "text": "second"
+     }
+    ],
+    "#t4": [
+     {
+      "box": [
+       8,
+       153,
+       160,
+       60
+      ],
+      "shown": true,
+      "text": "wrap me and some more words to make it wrap end"
+     }
+    ],
+    "#s4": [
+     {
+      "box": [
+       8,
+       154,
+       157.39,
+       57
+      ],
+      "shown": true,
+      "text": "and some more words to make it wrap"
+     }
+    ],
+    "#t5": [
+     {
+      "box": [
+       8,
+       229,
+       1264,
+       21
+      ],
+      "shown": true,
+      "text": "text btn more shown beside tail z"
+     }
+    ],
+    "#x5": [
+     {
+      "box": [
+       38.23,
+       229,
+       34.53,
+       21
+      ],
+      "shown": true,
+      "text": "btn"
+     }
+    ],
+    "#s5": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "shown beside"
+     }
+    ],
+    "#p5": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": ""
+     }
+    ],
+    "#t6": [
+     {
+      "box": [
+       8,
+       266,
+       1264,
+       0
+      ],
+      "shown": true,
+      "text": "alone"
+     }
+    ],
+    "#s6": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "alone"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       266,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b3"
+   }
+  },
+  {
+   "name": "four",
+   "log": [
+    "s5 box \"shown beside\" inline",
+    "p5 box \"\" inline-block"
+   ],
+   "state": {
+    "#t1": [
+     {
+      "box": [
+       8,
+       45,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "before hidden one after"
+     }
+    ],
+    "#s1": [
+     {
+      "box": [
+       57.81,
+       46,
+       79.19,
+       17
+      ],
+      "shown": true,
+      "text": "hidden one"
+     }
+    ],
+    "#t2": [
+     {
+      "box": [
+       8,
+       81,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "alpha nested BOLD tail omega"
+     }
+    ],
+    "#s2": [
+     {
+      "box": [
+       51.59,
+       82,
+       122.72,
+       17
+      ],
+      "shown": true,
+      "text": "nested BOLD tail"
+     }
+    ],
+    "#s2b": [
+     {
+      "box": [
+       104.08,
+       82,
+       45.33,
+       17
+      ],
+      "shown": true,
+      "text": "BOLD"
+     }
+    ],
+    "#t3": [
+     {
+      "box": [
+       8,
+       117,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "firstsecond"
+     }
+    ],
+    "#s3a": [
+     {
+      "box": [
+       8,
+       118,
+       25.78,
+       17
+      ],
+      "shown": true,
+      "text": "first"
+     }
+    ],
+    "#s3b": [
+     {
+      "box": [
+       33.78,
+       118,
+       51.59,
+       17
+      ],
+      "shown": true,
+      "text": "second"
+     }
+    ],
+    "#t4": [
+     {
+      "box": [
+       8,
+       153,
+       160,
+       60
+      ],
+      "shown": true,
+      "text": "wrap me and some more words to make it wrap end"
+     }
+    ],
+    "#s4": [
+     {
+      "box": [
+       8,
+       154,
+       157.39,
+       57
+      ],
+      "shown": true,
+      "text": "and some more words to make it wrap"
+     }
+    ],
+    "#t5": [
+     {
+      "box": [
+       8,
+       229,
+       1264,
+       22
+      ],
+      "shown": true,
+      "text": "text btn more shown beside tail z"
+     }
+    ],
+    "#x5": [
+     {
+      "box": [
+       38.23,
+       230,
+       34.53,
+       21
+      ],
+      "shown": true,
+      "text": "btn"
+     }
+    ],
+    "#s5": [
+     {
+      "box": [
+       118.11,
+       231,
+       97.84,
+       17
+      ],
+      "shown": true,
+      "text": "shown beside"
+     }
+    ],
+    "#p5": [
+     {
+      "box": [
+       245.3,
+       229,
+       40,
+       16
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#t6": [
+     {
+      "box": [
+       8,
+       267,
+       1264,
+       0
+      ],
+      "shown": true,
+      "text": "alone"
+     }
+    ],
+    "#s6": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "alone"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       267,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b4"
+   }
+  },
+  {
+   "name": "five",
+   "log": [
+    "s6 box \"alone\" inline",
+    "s2 zero \"nested BOLD tail\" none",
+    "s2b zero \"BOLD\" inline",
+    "s5 zero \"shown beside\" none"
+   ],
+   "state": {
+    "#t1": [
+     {
+      "box": [
+       8,
+       45,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "before hidden one after"
+     }
+    ],
+    "#s1": [
+     {
+      "box": [
+       57.81,
+       46,
+       79.19,
+       17
+      ],
+      "shown": true,
+      "text": "hidden one"
+     }
+    ],
+    "#t2": [
+     {
+      "box": [
+       8,
+       81,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "alpha nested BOLD tail omega"
+     }
+    ],
+    "#s2": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "nested BOLD tail"
+     }
+    ],
+    "#s2b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "BOLD"
+     }
+    ],
+    "#t3": [
+     {
+      "box": [
+       8,
+       117,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "firstsecond"
+     }
+    ],
+    "#s3a": [
+     {
+      "box": [
+       8,
+       118,
+       25.78,
+       17
+      ],
+      "shown": true,
+      "text": "first"
+     }
+    ],
+    "#s3b": [
+     {
+      "box": [
+       33.78,
+       118,
+       51.59,
+       17
+      ],
+      "shown": true,
+      "text": "second"
+     }
+    ],
+    "#t4": [
+     {
+      "box": [
+       8,
+       153,
+       160,
+       60
+      ],
+      "shown": true,
+      "text": "wrap me and some more words to make it wrap end"
+     }
+    ],
+    "#s4": [
+     {
+      "box": [
+       8,
+       154,
+       157.39,
+       57
+      ],
+      "shown": true,
+      "text": "and some more words to make it wrap"
+     }
+    ],
+    "#t5": [
+     {
+      "box": [
+       8,
+       229,
+       1264,
+       22
+      ],
+      "shown": true,
+      "text": "text btn more shown beside tail z"
+     }
+    ],
+    "#x5": [
+     {
+      "box": [
+       38.23,
+       230,
+       34.53,
+       21
+      ],
+      "shown": true,
+      "text": "btn"
+     }
+    ],
+    "#s5": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "shown beside"
+     }
+    ],
+    "#p5": [
+     {
+      "box": [
+       143.02,
+       229,
+       40,
+       16
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#t6": [
+     {
+      "box": [
+       8,
+       267,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "alone"
+     }
+    ],
+    "#s6": [
+     {
+      "box": [
+       8,
+       268,
+       39.16,
+       17
+      ],
+      "shown": true,
+      "text": "alone"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       303,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b5"
+   }
+  }
+ ],
+ "hidden_lookup": [
+  {
+   "name": "load",
+   "log": [
+    "hid SPAN rect zero off = = 0 0 null client false false rects 0 text \"q\" display none",
+    "hid2 DIV rect zero off = = 0 0 null client false false rects 0 text \"q2\" display none",
+    "hid3 DIV rect zero off = = 0 0 null client false false rects 0 text \"rs\" display none",
+    "hid4 B rect zero off = = 0 0 null client false false rects 0 text \"r\" display inline",
+    "hid4b I rect zero off = = 0 0 null client false false rects 0 text \"s\" display inline",
+    "hid5 INPUT rect zero off = = 0 0 null client false false rects 0 text \"\" display none",
+    "hid6 DIV rect zero off = = 0 0 null client false false rects 0 text \"attr inner\" display none",
+    "hid6s SPAN rect zero off = = 0 0 null client false false rects 0 text \"inner\" display inline",
+    "anc DIV rect zero off = = 0 0 null client false false rects 0 text \"deep ernested\" display none",
+    "anc-p P rect zero off = = 0 0 null client false false rects 0 text \"deep er\" display block",
+    "anc-em EM rect zero off = = 0 0 null client false false rects 0 text \"er\" display inline",
+    "anc-nest DIV rect zero off = = 0 0 null client false false rects 0 text \"nested\" display none",
+    "f-h INPUT rect zero off = = 0 0 null client false false rects 0 text \"\" display none",
+    "f-n INPUT rect zero off = = 0 0 null client false false rects 0 text \"\" display none",
+    "f-s SELECT rect zero off = = 0 0 null client false false rects 0 text \"XY\" display none",
+    "f-t TEXTAREA rect zero off = = 0 0 null client false false rects 0 text \"tt\" display none",
+    "f-b BUTTON rect zero off = = 0 0 null client false false rects 0 text \"go\" display none",
+    "attr t1 span x card one true true false",
+    "val v5 five y 2 tt tok hidden",
+    "q hid4 3 4 1 1 2 2",
+    "tree 2 hid3 hid3 hid4b hid4 hid2 hid5 hid6 hid3 true 5 anc-em anc-p anc-nest",
+    "form 6 tok 2 f-h y",
+    "fd 1 tok 2 y tt",
+    "tpl null 0 1 in-tpl zero",
+    "click on hid3 from hid4",
+    "click on hid3 from hid3",
+    "clicks 2",
+    "wrote written card one two 1 typed r writtens zero",
+    "v P rect zero off = = 0 0 null client false false rects 0 text \"visible paragraph\" display none",
+    "v P rect box off = = = = BODY client true true rects 1 text \"visible paragraph\" display block",
+    "after P rect box off = = = = BODY client true true rects 1 text \"after\" display block"
+   ],
+   "state": {
+    "#hid": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "written"
+     }
+    ],
+    "#hid2": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "written two",
+      "props": {
+       "display": "none"
+      }
+     }
+    ],
+    "#hid3": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "r writtens",
+      "props": {
+       "display": "none"
+      }
+     }
+    ],
+    "#hid4": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "r written",
+      "props": {
+       "color": "rgb(0, 128, 0)"
+      }
+     }
+    ],
+    "#hid4b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "s"
+     }
+    ],
+    "#hid5": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "typed"
+     }
+    ],
+    "#v": [
+     {
+      "box": [
+       8,
+       45,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "visible paragraph"
+     }
+    ],
+    "#hid6": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "attr inner"
+     }
+    ],
+    "#hid6s": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "inner"
+     }
+    ],
+    "#anc": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep ernested"
+     }
+    ],
+    "#anc-p": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep er"
+     }
+    ],
+    "#anc-em": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "er"
+     }
+    ],
+    "#anc-nest": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "nested"
+     }
+    ],
+    "#f-a": [
+     {
+      "box": [
+       8,
+       81,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1"
+     }
+    ],
+    "#f-n": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "2"
+     }
+    ],
+    "#f-s": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "y"
+     }
+    ],
+    "#f-t": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "tt"
+     }
+    ],
+    "#f-b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "go"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       118,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "class",
+   "log": [
+    "hid3 DIV rect box off = = = = BODY client true true rects 1 text \"r writtens\" display block",
+    "hid4 B rect box off = = = = BODY client false false rects 1 text \"r written\" display inline",
+    "hid4b I rect box off = = = = BODY client false false rects 1 text \"s\" display inline",
+    "after P rect box off = = = = BODY client true true rects 1 text \"after\" display block"
+   ],
+   "state": {
+    "#hid": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "written"
+     }
+    ],
+    "#hid2": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "written two",
+      "props": {
+       "display": "none"
+      }
+     }
+    ],
+    "#hid3": [
+     {
+      "box": [
+       8,
+       35,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "r writtens",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid4": [
+     {
+      "box": [
+       17,
+       41,
+       63.13,
+       17
+      ],
+      "shown": true,
+      "text": "r written",
+      "props": {
+       "color": "rgb(0, 128, 0)"
+      }
+     }
+    ],
+    "#hid4b": [
+     {
+      "box": [
+       80.13,
+       41,
+       8,
+       17
+      ],
+      "shown": true,
+      "text": "s"
+     }
+    ],
+    "#hid5": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "typed"
+     }
+    ],
+    "#v": [
+     {
+      "box": [
+       8,
+       81,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "visible paragraph"
+     }
+    ],
+    "#hid6": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "attr inner"
+     }
+    ],
+    "#hid6s": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "inner"
+     }
+    ],
+    "#anc": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep ernested"
+     }
+    ],
+    "#anc-p": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep er"
+     }
+    ],
+    "#anc-em": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "er"
+     }
+    ],
+    "#anc-nest": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "nested"
+     }
+    ],
+    "#f-a": [
+     {
+      "box": [
+       8,
+       117,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1"
+     }
+    ],
+    "#f-n": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "2"
+     }
+    ],
+    "#f-s": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "y"
+     }
+    ],
+    "#f-t": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "tt"
+     }
+    ],
+    "#f-b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "go"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       154,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b-class"
+   }
+  },
+  {
+   "name": "empty",
+   "log": [
+    "hid SPAN rect box off = = = = BODY client false false rects 1 text \"written\" display inline",
+    "hid2 DIV rect box off = = = = BODY client true true rects 1 text \"written two\" display block",
+    "after P rect box off = = = = BODY client true true rects 1 text \"after\" display block"
+   ],
+   "state": {
+    "#hid": [
+     {
+      "box": [
+       8,
+       30,
+       47.13,
+       17
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#hid2": [
+     {
+      "box": [
+       8,
+       55,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "written two",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid3": [
+     {
+      "box": [
+       8,
+       91,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "r writtens",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid4": [
+     {
+      "box": [
+       17,
+       97,
+       63.13,
+       17
+      ],
+      "shown": true,
+      "text": "r written",
+      "props": {
+       "color": "rgb(0, 128, 0)"
+      }
+     }
+    ],
+    "#hid4b": [
+     {
+      "box": [
+       80.13,
+       97,
+       8,
+       17
+      ],
+      "shown": true,
+      "text": "s"
+     }
+    ],
+    "#hid5": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "typed"
+     }
+    ],
+    "#v": [
+     {
+      "box": [
+       8,
+       137,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "visible paragraph"
+     }
+    ],
+    "#hid6": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "attr inner"
+     }
+    ],
+    "#hid6s": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "inner"
+     }
+    ],
+    "#anc": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep ernested"
+     }
+    ],
+    "#anc-p": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep er"
+     }
+    ],
+    "#anc-em": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "er"
+     }
+    ],
+    "#anc-nest": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "nested"
+     }
+    ],
+    "#f-a": [
+     {
+      "box": [
+       8,
+       173,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1"
+     }
+    ],
+    "#f-n": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "2"
+     }
+    ],
+    "#f-s": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "y"
+     }
+    ],
+    "#f-t": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "tt"
+     }
+    ],
+    "#f-b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "go"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       210,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b-empty"
+   }
+  },
+  {
+   "name": "block",
+   "log": [
+    "hid SPAN rect box off = = = = BODY client true true rects 1 text \"written\" display block",
+    "hid5 INPUT rect box off = = = = BODY client true true rects 1 text \"\" display block",
+    "after P rect box off = = = = BODY client true true rects 1 text \"after\" display block"
+   ],
+   "state": {
+    "#hid": [
+     {
+      "box": [
+       8,
+       29,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#hid2": [
+     {
+      "box": [
+       8,
+       55,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "written two",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid3": [
+     {
+      "box": [
+       8,
+       91,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "r writtens",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid4": [
+     {
+      "box": [
+       17,
+       97,
+       63.13,
+       17
+      ],
+      "shown": true,
+      "text": "r written",
+      "props": {
+       "color": "rgb(0, 128, 0)"
+      }
+     }
+    ],
+    "#hid4b": [
+     {
+      "box": [
+       80.13,
+       97,
+       8,
+       17
+      ],
+      "shown": true,
+      "text": "s"
+     }
+    ],
+    "#hid5": [
+     {
+      "box": [
+       8,
+       127,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "typed"
+     }
+    ],
+    "#v": [
+     {
+      "box": [
+       8,
+       164,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "visible paragraph"
+     }
+    ],
+    "#hid6": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "attr inner"
+     }
+    ],
+    "#hid6s": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "inner"
+     }
+    ],
+    "#anc": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep ernested"
+     }
+    ],
+    "#anc-p": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep er"
+     }
+    ],
+    "#anc-em": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "er"
+     }
+    ],
+    "#anc-nest": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "nested"
+     }
+    ],
+    "#f-a": [
+     {
+      "box": [
+       8,
+       200,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1"
+     }
+    ],
+    "#f-n": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "2"
+     }
+    ],
+    "#f-s": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "y"
+     }
+    ],
+    "#f-t": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "tt"
+     }
+    ],
+    "#f-b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "go"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       237,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b-block"
+   }
+  },
+  {
+   "name": "attr",
+   "log": [
+    "hid6 DIV rect box off = = = = BODY client true true rects 1 text \"attr inner\" display block",
+    "hid6s SPAN rect box off = = = = BODY client false false rects 1 text \"inner\" display inline",
+    "after P rect box off = = = = BODY client true true rects 1 text \"after\" display block"
+   ],
+   "state": {
+    "#hid": [
+     {
+      "box": [
+       8,
+       29,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#hid2": [
+     {
+      "box": [
+       8,
+       55,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "written two",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid3": [
+     {
+      "box": [
+       8,
+       91,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "r writtens",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid4": [
+     {
+      "box": [
+       17,
+       97,
+       63.13,
+       17
+      ],
+      "shown": true,
+      "text": "r written",
+      "props": {
+       "color": "rgb(0, 128, 0)"
+      }
+     }
+    ],
+    "#hid4b": [
+     {
+      "box": [
+       80.13,
+       97,
+       8,
+       17
+      ],
+      "shown": true,
+      "text": "s"
+     }
+    ],
+    "#hid5": [
+     {
+      "box": [
+       8,
+       127,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "typed"
+     }
+    ],
+    "#v": [
+     {
+      "box": [
+       8,
+       164,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "visible paragraph"
+     }
+    ],
+    "#hid6": [
+     {
+      "box": [
+       8,
+       200,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "attr inner"
+     }
+    ],
+    "#hid6s": [
+     {
+      "box": [
+       44.56,
+       206,
+       35.58,
+       17
+      ],
+      "shown": true,
+      "text": "inner"
+     }
+    ],
+    "#anc": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep ernested"
+     }
+    ],
+    "#anc-p": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep er"
+     }
+    ],
+    "#anc-em": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "er"
+     }
+    ],
+    "#anc-nest": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "nested"
+     }
+    ],
+    "#f-a": [
+     {
+      "box": [
+       8,
+       236,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1"
+     }
+    ],
+    "#f-n": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "2"
+     }
+    ],
+    "#f-s": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "y"
+     }
+    ],
+    "#f-t": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "tt"
+     }
+    ],
+    "#f-b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "go"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       273,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b-attr"
+   }
+  },
+  {
+   "name": "ancestor",
+   "log": [
+    "anc DIV rect box off = = = = BODY client true true rects 1 text \"deep ernested\" display block",
+    "anc-p P rect box off = = = = BODY client true true rects 1 text \"deep er\" display block",
+    "anc-em EM rect box off = = = = BODY client false false rects 1 text \"er\" display inline",
+    "anc-nest DIV rect zero off = = 0 0 null client false false rects 0 text \"nested\" display none",
+    "after P rect box off = = = = BODY client true true rects 1 text \"after\" display block"
+   ],
+   "state": {
+    "#hid": [
+     {
+      "box": [
+       8,
+       29,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#hid2": [
+     {
+      "box": [
+       8,
+       55,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "written two",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid3": [
+     {
+      "box": [
+       8,
+       91,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "r writtens",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid4": [
+     {
+      "box": [
+       17,
+       97,
+       63.13,
+       17
+      ],
+      "shown": true,
+      "text": "r written",
+      "props": {
+       "color": "rgb(0, 128, 0)"
+      }
+     }
+    ],
+    "#hid4b": [
+     {
+      "box": [
+       80.13,
+       97,
+       8,
+       17
+      ],
+      "shown": true,
+      "text": "s"
+     }
+    ],
+    "#hid5": [
+     {
+      "box": [
+       8,
+       127,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "typed"
+     }
+    ],
+    "#v": [
+     {
+      "box": [
+       8,
+       164,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "visible paragraph"
+     }
+    ],
+    "#hid6": [
+     {
+      "box": [
+       8,
+       200,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "attr inner"
+     }
+    ],
+    "#hid6s": [
+     {
+      "box": [
+       44.56,
+       206,
+       35.58,
+       17
+      ],
+      "shown": true,
+      "text": "inner"
+     }
+    ],
+    "#anc": [
+     {
+      "box": [
+       8,
+       236,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "deep ernested"
+     }
+    ],
+    "#anc-p": [
+     {
+      "box": [
+       19,
+       243,
+       1242,
+       20
+      ],
+      "shown": true,
+      "text": "deep er"
+     }
+    ],
+    "#anc-em": [
+     {
+      "box": [
+       59.05,
+       244,
+       14.23,
+       17
+      ],
+      "shown": true,
+      "text": "er"
+     }
+    ],
+    "#anc-nest": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "nested"
+     }
+    ],
+    "#f-a": [
+     {
+      "box": [
+       8,
+       276,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1"
+     }
+    ],
+    "#f-n": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "2"
+     }
+    ],
+    "#f-s": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "y"
+     }
+    ],
+    "#f-t": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "tt"
+     }
+    ],
+    "#f-b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "go"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       313,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b-anc"
+   }
+  },
+  {
+   "name": "field",
+   "log": [
+    "f-b BUTTON rect zero off = = 0 0 null client false false rects 0 text \"go\" display none",
+    "f-n INPUT rect box off = = = = BODY client true true rects 1 text \"\" display inline-block",
+    "f-s SELECT rect box off = = = = BODY client true true rects 1 text \"XY\" display inline-block",
+    "f-t TEXTAREA rect box off = = = = BODY client true true rects 1 text \"tt\" display inline-block",
+    "f-b BUTTON rect box off = = = = BODY client true true rects 1 text \"go\" display inline-block",
+    "after P rect box off = = = = BODY client true true rects 1 text \"after\" display block"
+   ],
+   "state": {
+    "#hid": [
+     {
+      "box": [
+       8,
+       29,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#hid2": [
+     {
+      "box": [
+       8,
+       55,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "written two",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid3": [
+     {
+      "box": [
+       8,
+       91,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "r writtens",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid4": [
+     {
+      "box": [
+       17,
+       97,
+       63.13,
+       17
+      ],
+      "shown": true,
+      "text": "r written",
+      "props": {
+       "color": "rgb(0, 128, 0)"
+      }
+     }
+    ],
+    "#hid4b": [
+     {
+      "box": [
+       80.13,
+       97,
+       8,
+       17
+      ],
+      "shown": true,
+      "text": "s"
+     }
+    ],
+    "#hid5": [
+     {
+      "box": [
+       8,
+       127,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "typed"
+     }
+    ],
+    "#v": [
+     {
+      "box": [
+       8,
+       164,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "visible paragraph"
+     }
+    ],
+    "#hid6": [
+     {
+      "box": [
+       8,
+       200,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "attr inner"
+     }
+    ],
+    "#hid6s": [
+     {
+      "box": [
+       44.56,
+       206,
+       35.58,
+       17
+      ],
+      "shown": true,
+      "text": "inner"
+     }
+    ],
+    "#anc": [
+     {
+      "box": [
+       8,
+       236,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "deep ernested"
+     }
+    ],
+    "#anc-p": [
+     {
+      "box": [
+       19,
+       243,
+       1242,
+       20
+      ],
+      "shown": true,
+      "text": "deep er"
+     }
+    ],
+    "#anc-em": [
+     {
+      "box": [
+       59.05,
+       244,
+       14.23,
+       17
+      ],
+      "shown": true,
+      "text": "er"
+     }
+    ],
+    "#anc-nest": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "nested"
+     }
+    ],
+    "#f-a": [
+     {
+      "box": [
+       8,
+       303,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1"
+     }
+    ],
+    "#f-n": [
+     {
+      "box": [
+       193,
+       303,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2"
+     }
+    ],
+    "#f-s": [
+     {
+      "box": [
+       378,
+       304,
+       31,
+       19
+      ],
+      "shown": true,
+      "text": "",
+      "value": "y"
+     }
+    ],
+    "#f-t": [
+     {
+      "box": [
+       409,
+       276,
+       181,
+       42
+      ],
+      "shown": true,
+      "text": "",
+      "value": "tt"
+     }
+    ],
+    "#f-b": [
+     {
+      "box": [
+       590,
+       303,
+       30.83,
+       21
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       340,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b-field"
+   }
+  },
+  {
+   "name": "hide",
+   "log": [
+    "hid3 DIV rect zero off = = 0 0 null client false false rects 0 text \"r writtens\" display none",
+    "anc DIV rect zero off = = 0 0 null client false false rects 0 text \"deep ernested\" display none",
+    "hid4 B rect zero off = = 0 0 null client false false rects 0 text \"r written\" display inline",
+    "anc-em EM rect zero off = = 0 0 null client false false rects 0 text \"er\" display inline",
+    "hid2 DIV rect zero off = = 0 0 null client false false rects 0 text \"written two\" display none",
+    "after P rect box off = = = = BODY client true true rects 1 text \"after\" display block"
+   ],
+   "state": {
+    "#hid": [
+     {
+      "box": [
+       8,
+       29,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#hid2": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "written two",
+      "props": {
+       "display": "none"
+      }
+     }
+    ],
+    "#hid3": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "r writtens",
+      "props": {
+       "display": "none"
+      }
+     }
+    ],
+    "#hid4": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "r written",
+      "props": {
+       "color": "rgb(0, 128, 0)"
+      }
+     }
+    ],
+    "#hid4b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "s"
+     }
+    ],
+    "#hid5": [
+     {
+      "box": [
+       8,
+       49,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "typed"
+     }
+    ],
+    "#v": [
+     {
+      "box": [
+       8,
+       86,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "visible paragraph"
+     }
+    ],
+    "#hid6": [
+     {
+      "box": [
+       8,
+       122,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "attr inner"
+     }
+    ],
+    "#hid6s": [
+     {
+      "box": [
+       44.56,
+       128,
+       35.58,
+       17
+      ],
+      "shown": true,
+      "text": "inner"
+     }
+    ],
+    "#anc": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep ernested"
+     }
+    ],
+    "#anc-p": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep er"
+     }
+    ],
+    "#anc-em": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "er"
+     }
+    ],
+    "#anc-nest": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "nested"
+     }
+    ],
+    "#f-a": [
+     {
+      "box": [
+       8,
+       185,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1"
+     }
+    ],
+    "#f-n": [
+     {
+      "box": [
+       193,
+       185,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2"
+     }
+    ],
+    "#f-s": [
+     {
+      "box": [
+       378,
+       186,
+       31,
+       19
+      ],
+      "shown": true,
+      "text": "",
+      "value": "y"
+     }
+    ],
+    "#f-t": [
+     {
+      "box": [
+       409,
+       158,
+       181,
+       42
+      ],
+      "shown": true,
+      "text": "",
+      "value": "tt"
+     }
+    ],
+    "#f-b": [
+     {
+      "box": [
+       590,
+       185,
+       30.83,
+       21
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       222,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b-hide"
+   }
+  }
+ ],
+ "hidden_open": [
+  {
+   "name": "load",
+   "log": [
+    "hid SPAN rect zero off = = 0 0 null client false false rects 0 text \"q\" display none",
+    "hid2 DIV rect zero off = = 0 0 null client false false rects 0 text \"q2\" display none",
+    "hid3 DIV rect zero off = = 0 0 null client false false rects 0 text \"rs\" display none",
+    "hid4 B rect zero off = = 0 0 null client false false rects 0 text \"r\" display inline",
+    "hid4b I rect zero off = = 0 0 null client false false rects 0 text \"s\" display inline",
+    "hid5 INPUT rect zero off = = 0 0 null client false false rects 0 text \"\" display none",
+    "hid6 DIV rect zero off = = 0 0 null client false false rects 0 text \"attr inner\" display none",
+    "hid6s SPAN rect zero off = = 0 0 null client false false rects 0 text \"inner\" display inline",
+    "anc DIV rect zero off = = 0 0 null client false false rects 0 text \"deep ernested\" display none",
+    "anc-p P rect zero off = = 0 0 null client false false rects 0 text \"deep er\" display block",
+    "anc-em EM rect zero off = = 0 0 null client false false rects 0 text \"er\" display inline",
+    "anc-nest DIV rect zero off = = 0 0 null client false false rects 0 text \"nested\" display none",
+    "f-h INPUT rect zero off = = 0 0 null client false false rects 0 text \"\" display none",
+    "f-n INPUT rect zero off = = 0 0 null client false false rects 0 text \"\" display none",
+    "f-s SELECT rect zero off = = 0 0 null client false false rects 0 text \"XY\" display none",
+    "f-t TEXTAREA rect zero off = = 0 0 null client false false rects 0 text \"tt\" display none",
+    "f-b BUTTON rect zero off = = 0 0 null client false false rects 0 text \"go\" display none",
+    "attr t1 span x card one true true false",
+    "val v5 five y 2 tt tok hidden",
+    "q hid4 3 4 1 1 2 2",
+    "tree 2 hid3 hid3 hid4b hid4 hid2 hid5 hid6 hid3 true 5 anc-em anc-p anc-nest",
+    "form 6 tok 2 f-h y",
+    "fd 1 tok 2 y tt",
+    "tpl null 0 1 in-tpl zero",
+    "click on hid3 from hid4",
+    "click on hid3 from hid3",
+    "clicks 2",
+    "wrote written card one two 1 typed r writtens zero",
+    "v P rect zero off = = 0 0 null client false false rects 0 text \"visible paragraph\" display none",
+    "v P rect box off = = = = BODY client true true rects 1 text \"visible paragraph\" display block",
+    "after P rect box off = = = = BODY client true true rects 1 text \"after\" display block"
+   ],
+   "state": {
+    "#hid": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "written"
+     }
+    ],
+    "#hid2": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "written two",
+      "props": {
+       "display": "none"
+      }
+     }
+    ],
+    "#hid3": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "r writtens",
+      "props": {
+       "display": "none"
+      }
+     }
+    ],
+    "#hid4": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "r written",
+      "props": {
+       "color": "rgb(0, 128, 0)"
+      }
+     }
+    ],
+    "#hid4b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "s"
+     }
+    ],
+    "#hid5": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "typed"
+     }
+    ],
+    "#v": [
+     {
+      "box": [
+       8,
+       45,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "visible paragraph"
+     }
+    ],
+    "#hid6": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "attr inner"
+     }
+    ],
+    "#hid6s": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "inner"
+     }
+    ],
+    "#anc": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep ernested"
+     }
+    ],
+    "#anc-p": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep er"
+     }
+    ],
+    "#anc-em": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "er"
+     }
+    ],
+    "#anc-nest": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "nested"
+     }
+    ],
+    "#f-a": [
+     {
+      "box": [
+       8,
+       81,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1"
+     }
+    ],
+    "#f-n": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "2"
+     }
+    ],
+    "#f-s": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "y"
+     }
+    ],
+    "#f-t": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "tt"
+     }
+    ],
+    "#f-b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "go"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       118,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "class",
+   "log": [
+    "hid3 DIV rect box off = = = = BODY client true true rects 1 text \"r writtens\" display block",
+    "hid4 B rect box off = = = = BODY client false false rects 1 text \"r written\" display inline",
+    "hid4b I rect box off = = = = BODY client false false rects 1 text \"s\" display inline",
+    "after P rect box off = = = = BODY client true true rects 1 text \"after\" display block"
+   ],
+   "state": {
+    "#hid": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "written"
+     }
+    ],
+    "#hid2": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "written two",
+      "props": {
+       "display": "none"
+      }
+     }
+    ],
+    "#hid3": [
+     {
+      "box": [
+       8,
+       35,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "r writtens",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid4": [
+     {
+      "box": [
+       17,
+       41,
+       63.13,
+       17
+      ],
+      "shown": true,
+      "text": "r written",
+      "props": {
+       "color": "rgb(0, 128, 0)"
+      }
+     }
+    ],
+    "#hid4b": [
+     {
+      "box": [
+       80.13,
+       41,
+       8,
+       17
+      ],
+      "shown": true,
+      "text": "s"
+     }
+    ],
+    "#hid5": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "typed"
+     }
+    ],
+    "#v": [
+     {
+      "box": [
+       8,
+       81,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "visible paragraph"
+     }
+    ],
+    "#hid6": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "attr inner"
+     }
+    ],
+    "#hid6s": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "inner"
+     }
+    ],
+    "#anc": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep ernested"
+     }
+    ],
+    "#anc-p": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep er"
+     }
+    ],
+    "#anc-em": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "er"
+     }
+    ],
+    "#anc-nest": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "nested"
+     }
+    ],
+    "#f-a": [
+     {
+      "box": [
+       8,
+       117,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1"
+     }
+    ],
+    "#f-n": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "2"
+     }
+    ],
+    "#f-s": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "y"
+     }
+    ],
+    "#f-t": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "tt"
+     }
+    ],
+    "#f-b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "go"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       154,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b-class"
+   }
+  },
+  {
+   "name": "empty",
+   "log": [
+    "hid SPAN rect box off = = = = BODY client false false rects 1 text \"written\" display inline",
+    "hid2 DIV rect box off = = = = BODY client true true rects 1 text \"written two\" display block",
+    "after P rect box off = = = = BODY client true true rects 1 text \"after\" display block"
+   ],
+   "state": {
+    "#hid": [
+     {
+      "box": [
+       8,
+       30,
+       47.13,
+       17
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#hid2": [
+     {
+      "box": [
+       8,
+       55,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "written two",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid3": [
+     {
+      "box": [
+       8,
+       91,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "r writtens",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid4": [
+     {
+      "box": [
+       17,
+       97,
+       63.13,
+       17
+      ],
+      "shown": true,
+      "text": "r written",
+      "props": {
+       "color": "rgb(0, 128, 0)"
+      }
+     }
+    ],
+    "#hid4b": [
+     {
+      "box": [
+       80.13,
+       97,
+       8,
+       17
+      ],
+      "shown": true,
+      "text": "s"
+     }
+    ],
+    "#hid5": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "typed"
+     }
+    ],
+    "#v": [
+     {
+      "box": [
+       8,
+       137,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "visible paragraph"
+     }
+    ],
+    "#hid6": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "attr inner"
+     }
+    ],
+    "#hid6s": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "inner"
+     }
+    ],
+    "#anc": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep ernested"
+     }
+    ],
+    "#anc-p": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep er"
+     }
+    ],
+    "#anc-em": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "er"
+     }
+    ],
+    "#anc-nest": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "nested"
+     }
+    ],
+    "#f-a": [
+     {
+      "box": [
+       8,
+       173,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1"
+     }
+    ],
+    "#f-n": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "2"
+     }
+    ],
+    "#f-s": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "y"
+     }
+    ],
+    "#f-t": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "tt"
+     }
+    ],
+    "#f-b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "go"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       210,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b-empty"
+   }
+  },
+  {
+   "name": "block",
+   "log": [
+    "hid SPAN rect box off = = = = BODY client true true rects 1 text \"written\" display block",
+    "hid5 INPUT rect box off = = = = BODY client true true rects 1 text \"\" display block",
+    "after P rect box off = = = = BODY client true true rects 1 text \"after\" display block"
+   ],
+   "state": {
+    "#hid": [
+     {
+      "box": [
+       8,
+       29,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#hid2": [
+     {
+      "box": [
+       8,
+       55,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "written two",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid3": [
+     {
+      "box": [
+       8,
+       91,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "r writtens",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid4": [
+     {
+      "box": [
+       17,
+       97,
+       63.13,
+       17
+      ],
+      "shown": true,
+      "text": "r written",
+      "props": {
+       "color": "rgb(0, 128, 0)"
+      }
+     }
+    ],
+    "#hid4b": [
+     {
+      "box": [
+       80.13,
+       97,
+       8,
+       17
+      ],
+      "shown": true,
+      "text": "s"
+     }
+    ],
+    "#hid5": [
+     {
+      "box": [
+       8,
+       127,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "typed"
+     }
+    ],
+    "#v": [
+     {
+      "box": [
+       8,
+       164,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "visible paragraph"
+     }
+    ],
+    "#hid6": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "attr inner"
+     }
+    ],
+    "#hid6s": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "inner"
+     }
+    ],
+    "#anc": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep ernested"
+     }
+    ],
+    "#anc-p": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep er"
+     }
+    ],
+    "#anc-em": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "er"
+     }
+    ],
+    "#anc-nest": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "nested"
+     }
+    ],
+    "#f-a": [
+     {
+      "box": [
+       8,
+       200,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1"
+     }
+    ],
+    "#f-n": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "2"
+     }
+    ],
+    "#f-s": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "y"
+     }
+    ],
+    "#f-t": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "tt"
+     }
+    ],
+    "#f-b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "go"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       237,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b-block"
+   }
+  },
+  {
+   "name": "attr",
+   "log": [
+    "hid6 DIV rect box off = = = = BODY client true true rects 1 text \"attr inner\" display block",
+    "hid6s SPAN rect box off = = = = BODY client false false rects 1 text \"inner\" display inline",
+    "after P rect box off = = = = BODY client true true rects 1 text \"after\" display block"
+   ],
+   "state": {
+    "#hid": [
+     {
+      "box": [
+       8,
+       29,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#hid2": [
+     {
+      "box": [
+       8,
+       55,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "written two",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid3": [
+     {
+      "box": [
+       8,
+       91,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "r writtens",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid4": [
+     {
+      "box": [
+       17,
+       97,
+       63.13,
+       17
+      ],
+      "shown": true,
+      "text": "r written",
+      "props": {
+       "color": "rgb(0, 128, 0)"
+      }
+     }
+    ],
+    "#hid4b": [
+     {
+      "box": [
+       80.13,
+       97,
+       8,
+       17
+      ],
+      "shown": true,
+      "text": "s"
+     }
+    ],
+    "#hid5": [
+     {
+      "box": [
+       8,
+       127,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "typed"
+     }
+    ],
+    "#v": [
+     {
+      "box": [
+       8,
+       164,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "visible paragraph"
+     }
+    ],
+    "#hid6": [
+     {
+      "box": [
+       8,
+       200,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "attr inner"
+     }
+    ],
+    "#hid6s": [
+     {
+      "box": [
+       44.56,
+       206,
+       35.58,
+       17
+      ],
+      "shown": true,
+      "text": "inner"
+     }
+    ],
+    "#anc": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep ernested"
+     }
+    ],
+    "#anc-p": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep er"
+     }
+    ],
+    "#anc-em": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "er"
+     }
+    ],
+    "#anc-nest": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "nested"
+     }
+    ],
+    "#f-a": [
+     {
+      "box": [
+       8,
+       236,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1"
+     }
+    ],
+    "#f-n": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "2"
+     }
+    ],
+    "#f-s": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "y"
+     }
+    ],
+    "#f-t": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "tt"
+     }
+    ],
+    "#f-b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "go"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       273,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b-attr"
+   }
+  },
+  {
+   "name": "ancestor",
+   "log": [
+    "anc DIV rect box off = = = = BODY client true true rects 1 text \"deep ernested\" display block",
+    "anc-p P rect box off = = = = BODY client true true rects 1 text \"deep er\" display block",
+    "anc-em EM rect box off = = = = BODY client false false rects 1 text \"er\" display inline",
+    "anc-nest DIV rect zero off = = 0 0 null client false false rects 0 text \"nested\" display none",
+    "after P rect box off = = = = BODY client true true rects 1 text \"after\" display block"
+   ],
+   "state": {
+    "#hid": [
+     {
+      "box": [
+       8,
+       29,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#hid2": [
+     {
+      "box": [
+       8,
+       55,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "written two",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid3": [
+     {
+      "box": [
+       8,
+       91,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "r writtens",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid4": [
+     {
+      "box": [
+       17,
+       97,
+       63.13,
+       17
+      ],
+      "shown": true,
+      "text": "r written",
+      "props": {
+       "color": "rgb(0, 128, 0)"
+      }
+     }
+    ],
+    "#hid4b": [
+     {
+      "box": [
+       80.13,
+       97,
+       8,
+       17
+      ],
+      "shown": true,
+      "text": "s"
+     }
+    ],
+    "#hid5": [
+     {
+      "box": [
+       8,
+       127,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "typed"
+     }
+    ],
+    "#v": [
+     {
+      "box": [
+       8,
+       164,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "visible paragraph"
+     }
+    ],
+    "#hid6": [
+     {
+      "box": [
+       8,
+       200,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "attr inner"
+     }
+    ],
+    "#hid6s": [
+     {
+      "box": [
+       44.56,
+       206,
+       35.58,
+       17
+      ],
+      "shown": true,
+      "text": "inner"
+     }
+    ],
+    "#anc": [
+     {
+      "box": [
+       8,
+       236,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "deep ernested"
+     }
+    ],
+    "#anc-p": [
+     {
+      "box": [
+       19,
+       243,
+       1242,
+       20
+      ],
+      "shown": true,
+      "text": "deep er"
+     }
+    ],
+    "#anc-em": [
+     {
+      "box": [
+       59.05,
+       244,
+       14.23,
+       17
+      ],
+      "shown": true,
+      "text": "er"
+     }
+    ],
+    "#anc-nest": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "nested"
+     }
+    ],
+    "#f-a": [
+     {
+      "box": [
+       8,
+       276,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1"
+     }
+    ],
+    "#f-n": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "2"
+     }
+    ],
+    "#f-s": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "y"
+     }
+    ],
+    "#f-t": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "",
+      "value": "tt"
+     }
+    ],
+    "#f-b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "go"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       313,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b-anc"
+   }
+  },
+  {
+   "name": "field",
+   "log": [
+    "f-b BUTTON rect zero off = = 0 0 null client false false rects 0 text \"go\" display none",
+    "f-n INPUT rect box off = = = = BODY client true true rects 1 text \"\" display inline-block",
+    "f-s SELECT rect box off = = = = BODY client true true rects 1 text \"XY\" display inline-block",
+    "f-t TEXTAREA rect box off = = = = BODY client true true rects 1 text \"tt\" display inline-block",
+    "f-b BUTTON rect box off = = = = BODY client true true rects 1 text \"go\" display inline-block",
+    "after P rect box off = = = = BODY client true true rects 1 text \"after\" display block"
+   ],
+   "state": {
+    "#hid": [
+     {
+      "box": [
+       8,
+       29,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#hid2": [
+     {
+      "box": [
+       8,
+       55,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "written two",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid3": [
+     {
+      "box": [
+       8,
+       91,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "r writtens",
+      "props": {
+       "display": "block"
+      }
+     }
+    ],
+    "#hid4": [
+     {
+      "box": [
+       17,
+       97,
+       63.13,
+       17
+      ],
+      "shown": true,
+      "text": "r written",
+      "props": {
+       "color": "rgb(0, 128, 0)"
+      }
+     }
+    ],
+    "#hid4b": [
+     {
+      "box": [
+       80.13,
+       97,
+       8,
+       17
+      ],
+      "shown": true,
+      "text": "s"
+     }
+    ],
+    "#hid5": [
+     {
+      "box": [
+       8,
+       127,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "typed"
+     }
+    ],
+    "#v": [
+     {
+      "box": [
+       8,
+       164,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "visible paragraph"
+     }
+    ],
+    "#hid6": [
+     {
+      "box": [
+       8,
+       200,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "attr inner"
+     }
+    ],
+    "#hid6s": [
+     {
+      "box": [
+       44.56,
+       206,
+       35.58,
+       17
+      ],
+      "shown": true,
+      "text": "inner"
+     }
+    ],
+    "#anc": [
+     {
+      "box": [
+       8,
+       236,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "deep ernested"
+     }
+    ],
+    "#anc-p": [
+     {
+      "box": [
+       19,
+       243,
+       1242,
+       20
+      ],
+      "shown": true,
+      "text": "deep er"
+     }
+    ],
+    "#anc-em": [
+     {
+      "box": [
+       59.05,
+       244,
+       14.23,
+       17
+      ],
+      "shown": true,
+      "text": "er"
+     }
+    ],
+    "#anc-nest": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "nested"
+     }
+    ],
+    "#f-a": [
+     {
+      "box": [
+       8,
+       303,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1"
+     }
+    ],
+    "#f-n": [
+     {
+      "box": [
+       193,
+       303,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2"
+     }
+    ],
+    "#f-s": [
+     {
+      "box": [
+       378,
+       304,
+       31,
+       19
+      ],
+      "shown": true,
+      "text": "",
+      "value": "y"
+     }
+    ],
+    "#f-t": [
+     {
+      "box": [
+       409,
+       276,
+       181,
+       42
+      ],
+      "shown": true,
+      "text": "",
+      "value": "tt"
+     }
+    ],
+    "#f-b": [
+     {
+      "box": [
+       590,
+       303,
+       30.83,
+       21
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       340,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b-field"
+   }
+  },
+  {
+   "name": "hide",
+   "log": [
+    "hid3 DIV rect zero off = = 0 0 null client false false rects 0 text \"r writtens\" display none",
+    "anc DIV rect zero off = = 0 0 null client false false rects 0 text \"deep ernested\" display none",
+    "hid4 B rect zero off = = 0 0 null client false false rects 0 text \"r written\" display inline",
+    "anc-em EM rect zero off = = 0 0 null client false false rects 0 text \"er\" display inline",
+    "hid2 DIV rect zero off = = 0 0 null client false false rects 0 text \"written two\" display none",
+    "after P rect box off = = = = BODY client true true rects 1 text \"after\" display block"
+   ],
+   "state": {
+    "#hid": [
+     {
+      "box": [
+       8,
+       29,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#hid2": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "written two",
+      "props": {
+       "display": "none"
+      }
+     }
+    ],
+    "#hid3": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "r writtens",
+      "props": {
+       "display": "none"
+      }
+     }
+    ],
+    "#hid4": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "r written",
+      "props": {
+       "color": "rgb(0, 128, 0)"
+      }
+     }
+    ],
+    "#hid4b": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "s"
+     }
+    ],
+    "#hid5": [
+     {
+      "box": [
+       8,
+       49,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "typed"
+     }
+    ],
+    "#v": [
+     {
+      "box": [
+       8,
+       86,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "visible paragraph"
+     }
+    ],
+    "#hid6": [
+     {
+      "box": [
+       8,
+       122,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "attr inner"
+     }
+    ],
+    "#hid6s": [
+     {
+      "box": [
+       44.56,
+       128,
+       35.58,
+       17
+      ],
+      "shown": true,
+      "text": "inner"
+     }
+    ],
+    "#anc": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep ernested"
+     }
+    ],
+    "#anc-p": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "deep er"
+     }
+    ],
+    "#anc-em": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "er"
+     }
+    ],
+    "#anc-nest": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "nested"
+     }
+    ],
+    "#f-a": [
+     {
+      "box": [
+       8,
+       185,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1"
+     }
+    ],
+    "#f-n": [
+     {
+      "box": [
+       193,
+       185,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2"
+     }
+    ],
+    "#f-s": [
+     {
+      "box": [
+       378,
+       186,
+       31,
+       19
+      ],
+      "shown": true,
+      "text": "",
+      "value": "y"
+     }
+    ],
+    "#f-t": [
+     {
+      "box": [
+       409,
+       158,
+       181,
+       42
+      ],
+      "shown": true,
+      "text": "",
+      "value": "tt"
+     }
+    ],
+    "#f-b": [
+     {
+      "box": [
+       590,
+       185,
+       30.83,
+       21
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       222,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "b-hide"
    }
   }
  ],

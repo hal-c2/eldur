@@ -456,15 +456,15 @@ ApplicationWindow {
                                         property string eldurClasses: "acc-body"
                                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : (h2.visible ? 0.5 : 0)
 
-                                        implicitWidth: accBodyText2.implicitWidth + 24
-                                        implicitHeight: accBodyText2.implicitHeight + 20
+                                        implicitWidth: accBody2Text.implicitWidth + 24
+                                        implicitHeight: accBody2Text.implicitHeight + 20
                                         visible: accItem2.cls_open
                                         Layout.fillWidth: true
                                         Layout.topMargin: -(h2.visible ? 0.5 : 0)
                                         Layout.preferredHeight: implicitHeight
 
                                         Text {
-                                            id: accBodyText2
+                                            id: accBody2Text
                                             text: "We ship to most of Europe and North America, for a fee worked out at checkout."
                                             textFormat: Text.PlainText
                                             color: "#333333"
@@ -558,15 +558,15 @@ ApplicationWindow {
                                         property string eldurClasses: "acc-body"
                                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : (h3.visible ? 0.5 : 0)
 
-                                        implicitWidth: accBodyText3.implicitWidth + 24
-                                        implicitHeight: accBodyText3.implicitHeight + 20
+                                        implicitWidth: accBody3Text.implicitWidth + 24
+                                        implicitHeight: accBody3Text.implicitHeight + 20
                                         visible: accItem3.cls_open
                                         Layout.fillWidth: true
                                         Layout.topMargin: -(h3.visible ? 0.5 : 0)
                                         Layout.preferredHeight: implicitHeight
 
                                         Text {
-                                            id: accBodyText3
+                                            id: accBody3Text
                                             text: "Within thirty days, unused."
                                             textFormat: Text.PlainText
                                             color: "#333333"

@@ -612,6 +612,7 @@ ApplicationWindow {
                         objectName: "status"
                         Layout.preferredWidth: 448
                         Layout.topMargin: 20 - list.eldurCarry
+                        Layout.bottomMargin: panel.cls_d_none ? ((panel.visible ? 0 : 20)) : 0
                         Layout.preferredHeight: implicitHeight
 
                         Text {

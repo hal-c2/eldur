@@ -1,0 +1,2 @@
+{"steps":[{"name":"one","click":"#b1"},{"name":"two","click":"#b2"},{"name":"three","click":"#b3"},{"name":"four","click":"#b4"},{"name":"five","click":"#b5"}],
+ "watch":[{"sel":"#t1"},{"sel":"#s1"},{"sel":"#t2"},{"sel":"#s2"},{"sel":"#s2b"},{"sel":"#t3"},{"sel":"#s3a"},{"sel":"#s3b"},{"sel":"#t4"},{"sel":"#s4"},{"sel":"#t5"},{"sel":"#x5"},{"sel":"#s5"},{"sel":"#p5"},{"sel":"#t6"},{"sel":"#s6"},{"sel":"#after"}]}

@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Hidden created elements</title>
+<style>
+body { margin: 8px; font: 16px/20px Arial, sans-serif; }
+.h { display: none; }
+.card { padding: 4px 8px; border: 1px solid #888; margin: 6px 0; }
+</style>
+</head>
+<body>
+<button id="b1">one</button><button id="b2">two</button>
+<div id="host"></div>
+<p id="line">start <span id="anchor">mark</span> end</p>
+<p id="after">after</p>
+<script>
+var names = ["c1", "c2", "c1k", "c3", "c4"];
+var get = function (id) { return document.getElementById(id); };
+function report() {
+  names.forEach(function (id) {
+    var e = get(id);
+    var r = e.getBoundingClientRect();
+    console.log(id + " " + (r.width === 0 && r.height === 0 ? "zero" : "box") + " " + (e.offsetParent ? e.offsetParent.tagName : "null") + " " + JSON.stringify(e.textContent) + " " + getComputedStyle(e).display);
+  });
+}
+var host = get("host");
+var c1 = document.createElement("div");
+c1.id = "c1";
+c1.className = "card";
+c1.style.display = "none";
+c1.textContent = "created one";
+var k = document.createElement("b");
+k.id = "c1k";
+k.textContent = " kid";
+c1.appendChild(k);
+host.appendChild(c1);
+var c2 = document.createElement("div");
+c2.id = "c2";
+c2.className = "h card";
+c2.textContent = "created two";
+host.appendChild(c2);
+var c3 = document.createElement("span");
+c3.id = "c3";
+c3.style.display = "none";
+c3.textContent = "inline three";
+get("line").insertBefore(c3, get("anchor"));
+var c4 = document.createElement("input");
+c4.id = "c4";
+c4.style.display = "none";
+c4.value = "v";
+get("line").appendChild(c4);
+report();
+c1.addEventListener("click", function () { console.log("clicked c1"); });
+c1.click();
+get("b1").addEventListener("click", function () {
+  c1.style.display = "";
+  c2.classList.remove("h");
+  report();
+});
+get("b2").addEventListener("click", function () {
+  c3.style.display = "";
+  c4.style.display = "inline-block";
+  c1.style.display = "none";
+  report();
+});
+</script>
+</body>
+</html>

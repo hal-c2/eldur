@@ -2024,3 +2024,14 @@ fn an_inline_level_box_takes_its_place_from_the_parents_text_align() {
     );
     assert!(!left.contains("textAlign: Text.AlignHCenter"), "{left}");
 }
+
+#[test]
+fn a_page_without_a_script_emits_nothing_for_hidden_elements() {
+    let (main, _) = convert(
+        r#"<html><head><style>.h{display:none}</style></head><body>
+        <p>shown</p><div class="h"><p>secret one</p></div>
+        <p style="display:none">secret two</p></body></html>"#,
+    );
+    assert!(main.contains("shown"));
+    assert!(!main.contains("secret"), "{main}");
+}

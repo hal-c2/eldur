@@ -846,7 +846,11 @@ impl<'a, 'd> Emitter<'a, 'd> {
             }
             crate::metadata::tag(&mut e.obj, self.doc, node);
             crate::metadata::declare_whitespace(&mut e.obj, self.doc, node, &self.live_tables);
-            if self.open_elements || self.cascade_rules {
+            // A hidden box's `style` attribute may be what hides it.
+            if self.open_elements
+                || self.cascade_rules
+                || b.style.visibility == eldur_css::Visibility::Collapse
+            {
                 crate::metadata::declare_style(&mut e.obj, self.doc, node);
             }
             if self.script_attrs {

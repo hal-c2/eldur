@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Hidden on a closed page</title>
+<style>
+body { margin: 8px; font: 16px/20px Arial, sans-serif; }
+.h { display: none; }
+.card { padding: 4px 8px; border: 1px solid #888; margin: 6px 0; }
+</style>
+</head>
+<body>
+<button id="b1" onclick="one()">one</button>
+<button id="b2" onclick="two()">two</button>
+<div id="d1" style="display:none" class="card">one</div>
+<div id="d2" class="h card" title="t"><b id="d2b">bold</b> text</div>
+<p id="p1">before <span id="s1" class="h">span</span> after</p>
+<p id="after">after</p>
+<script>
+console.log("hidden " + document.getElementById("d1").hidden);
+console.log(document.getElementById("d1").getBoundingClientRect().width + " " + document.getElementById("d1").offsetWidth + " " + document.getElementById("d1").offsetParent + " " + getComputedStyle(document.getElementById("d2")).display + " " + document.getElementById("d2").title + " " + document.getElementById("d2b").textContent);
+document.getElementById("d1").textContent = "written";
+function one() {
+  document.getElementById("d1").style.display = "block";
+  document.getElementById("d2").classList.remove("h");
+  console.log(document.getElementById("d1").textContent + " " + getComputedStyle(document.getElementById("d2")).display);
+}
+function two() {
+  document.getElementById("s1").classList.remove("h");
+  document.getElementById("d1").style.display = "none";
+  console.log(document.getElementById("d1").getBoundingClientRect().height + " " + document.getElementById("d1").offsetHeight);
+}
+</script>
+</body>
+</html>

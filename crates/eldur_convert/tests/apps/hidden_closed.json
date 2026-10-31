@@ -1,0 +1,2 @@
+{"steps":[{"name":"one","click":"#b1"},{"name":"two","click":"#b2"}],
+ "watch":[{"sel":"#d1"},{"sel":"#d2","props":["display"]},{"sel":"#d2b"},{"sel":"#p1"},{"sel":"#s1"},{"sel":"#after"}]}

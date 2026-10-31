@@ -385,6 +385,10 @@ Why this and not one QML object per element, or splitting the block whenever a s
 
 **Events.** Not every handler under the point hears a tap: a link and a control take the press for themselves, and those that do hear hear separately. On a page that dispatches by path (below), the first to hear (`_beginTap`) finds the target and runs the whole path with one shared event; the rest find their turn taken. A control's `clicked`, once any click listener exists on the page, starts the path from the control, so an ancestor hears a control with no listener. A label's tap runs the label's click, then the control's unless prevented. Capture listeners run from the root down, then at the target in registration order, then bubbling from the target up. So `target`, `stopPropagation`, `stopImmediatePropagation` and `preventDefault` behave as in a browser. `onLinkActivated` and a bare link's `onTapped` check `preventDefault`.
 
+**Hidden elements.** On a page with scripts an element under `display:none` is an item all the same, `visible: false`, so lookup, attributes, `textContent`, `dataset`, forms and events reach it; its rect, `offsetWidth`/`Height`, `offsetParent`, `clientWidth`/`Height` and `getClientRects` read as a browser's do for no box. A hidden phrasing element in text stays a node of the line's model; a hidden control there goes in the line's `EldurLines` so that showing it takes its place. A page with no script emits nothing for them. A closed `<details>` keeps its content's boxes, unpainted, as `content-visibility` does.
+
+**A box joining a line of text.** A box a script adds beside the runs of one `Text`, or before one of them, makes each run an item of an `EldurLines` that takes the `Text`'s place in its element; whoever holds a node goes on meaning it.
+
 **Writes.** `textContent`, `innerHTML` (a small inline-markup parser), `className`/`classList`, `style`, attributes, `hidden`, and `append`/`remove`/`insertBefore`/`replaceWith` and the rest. A created element is a QML object until it goes into a line of text, then becomes a node, keeping its wrapper; only tags that are inline by default do. `createElement("option")` is a node from the start.
 
 **Options.** Nodes of their select, with HTML's selectedness on the node: `selected`, `value`, `index`, `text`, `label`, `defaultSelected`, and on the select `options` (live, `length` truncates), `selectedOptions`, `add`, `remove(i)`, `item`, `new Option(...)`. A change rebuilds the `ComboBox`'s `model`; the user picking a line writes the flag back.
@@ -509,6 +513,8 @@ Known gaps these pages show:
 - A `::after` that depends on a class a script sets is not generated, so a sort
   arrow does not widen its column.
 - An empty `<span id>` between buttons has no item, and the buttons stack.
+- A span wrapped across lines measures the space hanging at the end of its first
+  line, about one space wider than a browser says.
 - `table.children` lists sections in display order: a `<tfoot>` written before
   its `<tbody>` reads after it.
 - Collapsed borders stay with each cell as converted, and do not re-resolve when

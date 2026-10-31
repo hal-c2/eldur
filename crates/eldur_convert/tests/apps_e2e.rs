@@ -40,8 +40,8 @@ const JUSTIFY: &str = "a justified line with boxes is not spread: its boxes keep
 const CONTROLROW: &str = "with the form between them hidden, the heading's bottom margin of 21.44 looks lost, leaving only #done's 16; not confirmed";
 const FONT: &str = "Helvetica: Qt's fontconfig match has line height 23 where Chromium's has 18";
 const FONTFOLLOW: &str = "follows from the Helvetica line height and width difference";
-const NEVER: &str =
-    "a display:none element no script names has no item: it is neither text nor a child node";
+const HANGING: &str = "a span wrapped across lines measures the space hanging at its first line's end; \
+                       the scan over the Text's links cannot tell that space from the word before it";
 const NEVER_SCRIPT: &str =
     "a script in the body makes no item, so its source is not in the body's textContent";
 
@@ -62,13 +62,13 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("cards", "* .price[*] width:", FONT),
     ("cards", "* #cart[*] x:", FONT),
     ("cards", "* #cart[*] width:", FONT),
-    ("text_nodes", "* #never-rendered[*] text:", NEVER),
     ("theme", "* body[*] text:", NEVER_SCRIPT),
     ("table", "* #people[*] height:", ROWS),
     ("table", "* #summary[*] y:", ROWS),
     ("table", "* td[*] y:", ROWS),
     ("table", "* tr[*] y:", ROWS),
     ("form", "* #done[*] y:", CONTROLROW),
+    ("hidden_lines", "* #s4[*] width:", HANGING),
     ("created_lines", "* #reset[*] x:", BUTTONWIDTH),
     ("lines_justify", "* #ja[*] x:", JUSTIFY),
     ("lines_justify", "* #jc[*] x:", JUSTIFY),
@@ -460,4 +460,29 @@ fn lines_wrap() {
 #[test]
 fn inline_lines() {
     page("inline_lines");
+}
+
+#[test]
+fn hidden_lookup() {
+    page("hidden_lookup");
+}
+
+#[test]
+fn hidden_open() {
+    page("hidden_open");
+}
+
+#[test]
+fn hidden_closed() {
+    page("hidden_closed");
+}
+
+#[test]
+fn hidden_created() {
+    page("hidden_created");
+}
+
+#[test]
+fn hidden_lines() {
+    page("hidden_lines");
 }

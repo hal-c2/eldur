@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Hidden in lines</title>
+<style>
+body { margin: 8px; font: 16px/20px Arial, sans-serif; }
+.pill { display: inline-block; width: 40px; height: 16px; background: #cde; }
+.h { display: none; }
+.tall { color: #060; }
+</style>
+</head>
+<body>
+<div id="controls"><button id="b1">one</button><button id="b2">two</button><button id="b3">three</button><button id="b4">four</button><button id="b5">five</button></div>
+<p id="t1">before <span id="s1" style="display:none">hidden one</span> after</p>
+<p id="t2">alpha <span id="s2" class="h">nested <b id="s2b">bold</b> tail</span> omega</p>
+<p id="t3"><span id="s3a" class="h">first</span><span id="s3b" class="h">second</span></p>
+<p id="t4" style="width:160px">wrap me <span id="s4" class="h tall">and some more words to make it wrap</span> end</p>
+<p id="t5">text <button id="x5">btn</button> more <span id="s5" class="h">shown beside</span> tail <span id="p5" class="pill h"></span> z</p>
+<div id="t6"><span id="s6" style="display:none">alone</span></div>
+<p id="after">after</p>
+<script>
+var get = function (id) { return document.getElementById(id); };
+function rect(e) { var r = e.getBoundingClientRect(); return r.width === 0 && r.height === 0 ? "zero" : "box"; }
+function report(id) { var e = get(id); console.log(id + " " + rect(e) + " " + JSON.stringify(e.textContent) + " " + getComputedStyle(e).display); }
+["s1", "s2", "s2b", "s3a", "s3b", "s4", "s5", "p5", "s6"].forEach(report);
+console.log("kids " + get("t1").children.length + " " + get("t2").children.length + " " + get("s2").children.length + " " + get("t5").children.length + " " + get("s2b").parentNode.id + " " + get("x5").nextElementSibling.id);
+console.log("text " + JSON.stringify(get("t1").textContent) + " " + JSON.stringify(get("t5").textContent));
+get("s2b").textContent = "BOLD";
+var on = function (id, f) { get(id).addEventListener("click", f); };
+on("b1", function () { get("s1").style.display = "inline"; get("s2").classList.remove("h"); report("s1"); report("s2"); report("s2b"); });
+on("b2", function () { get("s3a").classList.remove("h"); get("s3b").classList.remove("h"); report("s3a"); report("s3b"); });
+on("b3", function () { get("s4").classList.remove("h"); report("s4"); });
+on("b4", function () { get("s5").classList.remove("h"); get("p5").classList.remove("h"); report("s5"); report("p5"); });
+on("b5", function () { get("s6").style.display = ""; report("s6"); get("s2").classList.add("h"); get("s5").classList.add("h"); report("s2"); report("s2b"); report("s5"); });
+</script>
+</body>
+</html>
