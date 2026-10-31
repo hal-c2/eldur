@@ -1821,7 +1821,8 @@ function _tablePartTag(item) {
 // them too, or a table the script made.
 function _tableHost(item) {
     for (var cur = item; cur; cur = cur.parent) {
-        if (cur.columnSpecs !== undefined || _meta(cur).createdTag === "table") {
+        // A table with no static cell has no grid, and is laid out like a created one.
+        if (cur.columnSpecs !== undefined || _tablePartTag(cur) === "table") {
             return cur;
         }
     }
@@ -1905,11 +1906,33 @@ function _tableSpacing(host) {
         return [host.columnSpacing, host.rowSpacing];
     }
     var styles = _meta(host).styles || {};
-    var parts = String(styles.borderSpacing || styles["border-spacing"] || "").split(/\s+/).map(parseFloat).filter(function(v) { return !isNaN(v); });
+    var won = _gHasCascade() ? _gStyle(host).won : {};
+    var written = function(camel, kebab) {
+        return String(styles[camel] || styles[kebab] || (won[kebab] ? won[kebab].value : ""));
+    };
+    if (written("borderCollapse", "border-collapse").trim() === "collapse") {
+        return [0, 0];
+    }
+    var parts = written("borderSpacing", "border-spacing").split(/\s+/).map(parseFloat).filter(function(v) { return !isNaN(v); });
     if (parts.length === 0) {
         return [2, 2];
     }
     return [parts[0], parts.length > 1 ? parts[1] : parts[0]];
+}
+
+// A cell's CSS width is a floor on its column, as its text is.
+function _tableCellWidth(item) {
+    var wanted = Math.ceil(item.implicitWidth);
+    if (_gHasCascade()) {
+        var s = _gStyle(item);
+        var px = /px$/.test(String(s.width)) ? _gPx(s.width, 0, s.fontSize, s.rootSize) : null;
+        if (px !== null) {
+            var edges = _gEdges(item, s, 0);
+            var frame = s["box-sizing"] === "border-box" ? 0 : edges.pl + edges.pr + edges.bl + edges.br;
+            wanted = Math.max(wanted, Math.ceil(px + frame));
+        }
+    }
+    return wanted;
 }
 
 function _tableLayout(host) {
@@ -1966,7 +1989,7 @@ function _tableLayout(host) {
             return {
                 tableSlot: [c.row, c.column, c.rowSpan, c.columnSpan],
                 // Columns come out whole pixels; a text must not wrap by a fraction.
-                implicitWidth: Math.ceil(c.item.implicitWidth),
+                implicitWidth: _tableCellWidth(c.item),
                 implicitHeight: c.item.implicitHeight,
                 minContentWidth: _tableMinContent(c.item, text)
             };
@@ -2035,9 +2058,11 @@ function _tableLayout(host) {
         host.implicitWidth = total + 2 * spacing[0];
         for (var e = 0; e < host.children.length; ++e) {
             var kid = host.children[e];
-            kid.eldurSide = spacing[0];
-            kid.eldurTop = e === 0 ? spacing[1] : 0;
-            kid.eldurBottom = e === host.children.length - 1 ? spacing[1] : 0;
+            if (kid.eldurSide !== undefined) {
+                kid.eldurSide = spacing[0];
+                kid.eldurTop = e === 0 ? spacing[1] : 0;
+                kid.eldurBottom = e === host.children.length - 1 ? spacing[1] : 0;
+            }
         }
     }
 }
