@@ -493,11 +493,19 @@ What they brought:
 - `innerHTML` with block markup on a `Text` adopts it into a box.
 - A line of nothing but controls lays out as a row, not as a stack. Other inline
   controls stay block-level (`no inline replaced elements yet`).
-- An empty `<tbody>` a script wants is an object spanning the grid's columns, and
-  an empty block a script wants takes no height until it holds text.
+- An empty block a script wants takes no height until it holds text.
+- A table a script may reach is emitted live (`docs/spec/layout.md`, §8): its
+  rows and sections are objects, the table API and live collections work on
+  them, and moving, hiding or restyling a row moves what is painted.
+- `Array.prototype.sort` lowers to `Eldur.sort`: Qt's engine sorts unstably and
+  its prototype cannot be patched.
 
 Known gaps these pages show:
 
-- Rows created in a `<tbody>` do not share the table's auto column sizes: they
-  sort and filter, but their cells do not line up with the header.
-- Hiding a form does not move focus off the hidden control.
+- A `::after` that depends on a class a script sets is not generated, so a sort
+  arrow does not widen its column.
+- An empty `<span id>` between buttons has no item, and the buttons stack.
+- `table.children` lists sections in display order: a `<tfoot>` written before
+  its `<tbody>` reads after it.
+- Collapsed borders stay with each cell as converted, and do not re-resolve when
+  a sort moves cells with different borders.

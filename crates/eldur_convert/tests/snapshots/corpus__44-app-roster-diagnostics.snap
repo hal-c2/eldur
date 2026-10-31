@@ -1,0 +1,8 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[html]: index.html:30: inline <input id="filter"> is laid out as a block (no inline replaced elements yet)
+info[html]: index.html:51: inline <button id="prev"> is laid out as a block (no inline replaced elements yet)
+info[html]: index.html:51: inline <button id="next"> is laid out as a block (no inline replaced elements yet)
+warning[js]: index.html:51: <span id="page-label"> is used by a script but has no QML object of its own (inline, hidden or not converted); script access to it does nothing

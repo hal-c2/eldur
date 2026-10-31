@@ -349,6 +349,7 @@ function init(rootItem, baseUrl, documentUrl) {
             }
             return false;
         });
+        _tableSetUp();
     }
 }
 
@@ -1595,6 +1596,8 @@ function _afterClassMutation(raw, m) {
 function classList(item) {
     var raw = _unwrap(item);
     var m = _meta(raw);
+    // A class's variant may take the focus as it is set.
+    _holdFocus();
     return {
         add: function() {
             var curRaw = m.raw || raw;
@@ -1744,6 +1747,9 @@ function _appendTarget(raw) {
     if (_gIsBox(raw)) {
         return raw;
     }
+    if (_meta(raw).tableGrid) {
+        return _meta(raw).tableGrid;
+    }
     if (raw.contentItem) {
         return raw.contentItem;
     }
@@ -1808,6 +1814,7 @@ function _flowInText(text) {
 // subtrees (children first: a layout's implicit size waits for its polish)
 // and their ancestors, ahead of the frame.
 var _layoutDirty = [];
+var _tableHosts = [];
 
 var _TABLE_PARTS = { table: true, thead: true, tbody: true, tfoot: true, tr: true };
 var _TABLE_SECTION = { thead: 0, tbody: 1, tfoot: 2 };
@@ -1822,6 +1829,9 @@ function _tablePartTag(item) {
 function _tableHost(item) {
     for (var cur = item; cur; cur = cur.parent) {
         // A table with no static cell has no grid, and is laid out like a created one.
+        if (_meta(cur).tableGrid) {
+            return _meta(cur).tableGrid;
+        }
         if (cur.columnSpecs !== undefined || _tablePartTag(cur) === "table") {
             return cur;
         }
@@ -1833,7 +1843,7 @@ function _tableHost(item) {
 function _tableRowsIn(item, out) {
     var kids = item.children || [];
     for (var i = 0; i < kids.length; ++i) {
-        var tag = _meta(kids[i]).createdTag;
+        var tag = item.eldurTag ? _tablePartTag(kids[i]) : _meta(kids[i]).createdTag;
         if (tag === "tr") {
             if (kids[i].visible !== false || !kids[i].parent) {
                 out.push(kids[i]);
@@ -1844,6 +1854,120 @@ function _tableRowsIn(item, out) {
         }
     }
     return out;
+}
+
+function _tablePartsOf(raw, tag) {
+    return _rawElementChildren(raw).filter(function(kid) { return _nodeTag(kid) === tag; });
+}
+
+function _tableCellsOf(row) {
+    return _rawElementChildren(row).filter(function(kid) { return /^t[dh]$/.test(_nodeTag(kid)); });
+}
+
+// HTML's `table.rows`: header sections' rows, then the body's and those straight
+// in the table in tree order, then the footer's.
+function _tableAllRows(table) {
+    var head = [];
+    var body = [];
+    var foot = [];
+    _rawElementChildren(table).forEach(function(kid) {
+        var tag = _nodeTag(kid);
+        if (tag === "tr") {
+            body.push(kid);
+        } else if (tag === "thead") {
+            head = head.concat(_tablePartsOf(kid, "tr"));
+        } else if (tag === "tbody") {
+            body = body.concat(_tablePartsOf(kid, "tr"));
+        } else if (tag === "tfoot") {
+            foot = foot.concat(_tablePartsOf(kid, "tr"));
+        }
+    });
+    return head.concat(body, foot);
+}
+
+function _tableFirst(raw, ownTag, tag) {
+    if (_nodeTag(raw) !== ownTag) {
+        return undefined;
+    }
+    var found = _tablePartsOf(raw, tag)[0];
+    return found ? wrap(found) : null;
+}
+
+function _tableOwner(raw) {
+    for (var up = _logicalParent(raw); up; up = _logicalParent(up)) {
+        if (_nodeTag(up) === "table") {
+            return up;
+        }
+    }
+    return null;
+}
+
+function _tableInsertRow(raw, index) {
+    var isTable = _nodeTag(raw) === "table";
+    var list = isTable ? _tableAllRows(raw) : _tablePartsOf(raw, "tr");
+    if (index < -1 || index > list.length) {
+        throw new Error("IndexSizeError: no row " + index);
+    }
+    var row = document.createElement("tr");
+    if (index === -1 || index === list.length) {
+        var into = raw;
+        if (isTable) {
+            var bodies = _tablePartsOf(raw, "tbody");
+            if (list.length > 0) {
+                into = _logicalParent(list[list.length - 1]);
+            } else if (bodies.length > 0) {
+                into = bodies[bodies.length - 1];
+            } else {
+                into = _unwrap(_tableMakePart(raw, "tbody"));
+            }
+        }
+        wrap(into).appendChild(row);
+    } else {
+        wrap(_logicalParent(list[index])).insertBefore(row, wrap(list[index]));
+    }
+    return row;
+}
+
+function _tableMakePart(table, tag) {
+    if (tag !== "tbody") {
+        var have = _tablePartsOf(table, tag)[0];
+        if (have) {
+            return wrap(have);
+        }
+    }
+    var part = document.createElement(tag);
+    var kids = _rawElementChildren(table);
+    var before = null;
+    if (tag === "thead") {
+        before = kids.filter(function(k) { return !/^(caption|colgroup)$/.test(_nodeTag(k)); })[0];
+    } else if (tag === "tbody") {
+        var bodies = _tablePartsOf(table, "tbody");
+        var last = bodies.length > 0 ? bodies[bodies.length - 1] : null;
+        before = last ? kids[kids.indexOf(last) + 1] : kids.filter(function(k) { return /^(tfoot)$/.test(_nodeTag(k)); })[0];
+    } else if (tag === "caption") {
+        before = kids[0];
+    }
+    if (before) {
+        wrap(table).insertBefore(part, wrap(before));
+    } else {
+        wrap(table).appendChild(part);
+    }
+    if (tag === "tbody" && last && before) {
+        // It goes right after the last body, ahead of the whitespace there.
+        _wsMove(_wsBefore(_unwrap(part)), before, "ws", true);
+    }
+    return part;
+}
+
+function _tableDropPart(table, tag) {
+    var have = _tablePartsOf(table, tag)[0];
+    if (have) {
+        wrap(have).remove();
+    }
+}
+
+function _tableIsPart(raw) {
+    return /^(table|caption|thead|tbody|tfoot|tr|td|th)$/.test(_nodeTag(raw));
 }
 
 function _tableSpan(cell, name) {
@@ -1935,10 +2059,116 @@ function _tableCellWidth(item) {
     return wanted;
 }
 
+// A live table's sections show head first and foot last, whichever way a script
+// put them in; a layout goes by its children's order.
+function _tableOrderSections(host) {
+    var kids = [];
+    for (var i = 0; i < host.children.length; ++i) {
+        kids.push(host.children[i]);
+    }
+    var rank = function(item) {
+        var tag = _tablePartTag(item);
+        if (tag === "colgroup" || tag === "col") {
+            return -1;
+        }
+        return tag === "thead" ? 0 : tag === "tfoot" ? 2 : 1;
+    };
+    var sorted = true;
+    for (var k = 1; k < kids.length; ++k) {
+        sorted = sorted && rank(kids[k - 1]) <= rank(kids[k]);
+    }
+    if (sorted) {
+        return;
+    }
+    var order = [-1, 0, 1, 2];
+    order.forEach(function(r) {
+        kids.forEach(function(kid) {
+            if (rank(kid) === r) {
+                kid.parent = null;
+                kid.parent = host;
+            }
+        });
+    });
+}
+
+// A live static table has its own objects for rows and sections, and hands the
+// solver every cell as a created table does; this says where its columns come
+// from: what the page declared, and as many more as its rows now hold.
+function _tableLiveSpecs(host, columns) {
+    var m = _meta(host);
+    if (!m.tableSpecs) {
+        m.tableSpecs = host.columnSpecs.slice();
+        var declared = 0;
+        var count = function(item) {
+            var span = parseInt(getAttribute(item, "span"), 10);
+            return span > 0 ? span : 1;
+        };
+        _rawElementChildren(host).forEach(function(part) {
+            var tag = _tablePartTag(part);
+            if (tag === "col") {
+                declared += count(part);
+            } else if (tag === "colgroup") {
+                var cols = _rawElementChildren(part);
+                declared += cols.length === 0 ? count(part)
+                    : cols.reduce(function(sum, col) { return sum + count(col); }, 0);
+            }
+        });
+        m.tableColumns = declared;
+    }
+    var n = Math.max(columns, m.tableColumns, 1);
+    var same = host.columnSpecs.length === n;
+    if (!same) {
+        var specs = [];
+        for (var c = 0; c < n; ++c) {
+            specs.push(c < m.tableSpecs.length ? m.tableSpecs[c] : null);
+        }
+        host.columnSpecs = specs;
+    }
+}
+
+function _tableIsLive(host) {
+    return host.columnSpecs !== undefined && host.rowHeights === undefined;
+}
+
 function _tableLayout(host) {
+    var live = _tableIsLive(host);
+    if (live) {
+        // Nothing of a hidden table has a size to read; it lays out when shown.
+        if (!host.visible) {
+            return;
+        }
+        var lm = _meta(host);
+        if (lm.tablePlacing) {
+            lm.tableAgain = true;
+            return;
+        }
+        lm.tablePlacing = true;
+        _tableOrderSections(host);
+        _tablePlaceAll(host, live);
+        lm.tablePlacing = false;
+        if (lm.tableAgain) {
+            lm.tableAgain = false;
+            _tableLayout(host);
+        }
+        return;
+    }
+    _tablePlaceAll(host, live);
+}
+
+function _tablePlaceAll(host, live) {
     var isStatic = host.columnSpecs !== undefined;
     var sections = [];
-    if (isStatic) {
+    if (live) {
+        var hostParts = host.children;
+        for (var hp = 0; hp < hostParts.length; ++hp) {
+            var hpTag = _tablePartTag(hostParts[hp]);
+            if (_TABLE_SECTION[hpTag] !== undefined) {
+                sections.push({ rows: _tableRowsIn(hostParts[hp], []), item: hostParts[hp] });
+            } else if (hpTag === "tr" && hostParts[hp].visible !== false) {
+                sections.push({ rows: [hostParts[hp]], item: null });
+            }
+        }
+    } else if (isStatic) {
         for (var g = 0; g < host.children.length; ++g) {
             if (_TABLE_SECTION[host.children[g].eldurTag] !== undefined) {
                 sections.push({ rows: _tableRowsIn(host.children[g], []) });
@@ -1991,7 +2221,7 @@ function _tableLayout(host) {
                 // Columns come out whole pixels; a text must not wrap by a fraction.
                 implicitWidth: _tableCellWidth(c.item),
                 implicitHeight: c.item.implicitHeight,
-                minContentWidth: _tableMinContent(c.item, text)
+                minContentWidth: _tableCellMinimum(c.item, text)
             };
         });
     };
@@ -2000,6 +2230,16 @@ function _tableLayout(host) {
     var widths;
     if (isStatic) {
         host.eldurCreatedCells = adapters;
+        if (live) {
+            _tableLiveSpecs(host, placed.columns);
+            _tableWatchHost(host);
+            var specsNow = host.columnSpecs;
+            // Written, not bound: the width follows from these, and these from
+            // cells this function is about to resize.
+            host.maxContentWidth = _root.tableMaxContentWidth(host, specsNow, host.eldurFixed);
+            host.minContentWidth = _root.tableMinContentWidth(host, specsNow, host.eldurFixed);
+            host.columnWidths = _root.tableColumnWidths(host, specsNow, host.eldurFixed);
+        }
         widths = host.columnWidths;
     } else {
         var specs = [];
@@ -2021,6 +2261,9 @@ function _tableLayout(host) {
         edge += widths[w] + spacing[0];
     }
     var total = Math.max(edge - spacing[0], 0);
+    if (live) {
+        host.eldurEmpty = rows.length === 0;
+    }
     var acrossFrom = function(c) {
         var sum = spacing[0] * (c.columnSpan - 1);
         for (var k = c.column; k < c.column + c.columnSpan && k < widths.length; ++k) {
@@ -2034,6 +2277,9 @@ function _tableLayout(host) {
     });
     // Text wraps in the width it now has.
     var zeros = rows.map(function() { return 0; });
+    rows.forEach(function(row, r) {
+        zeros[r] = row.item.eldurMinHeight || 0;
+    });
     var heights = rows.length > 0
         ? _root.tableRowHeights({ children: measure(), rowSpacing: spacing[1] }, zeros)
         : [];
@@ -2048,11 +2294,25 @@ function _tableLayout(host) {
     rows.forEach(function(row, r) {
         row.item.implicitWidth = total;
         row.item.implicitHeight = heights[r];
-        if (row.item.parent && row.item.parent.spacing !== undefined) {
+        if (row.item.parent && row.item.parent !== host && row.item.parent.spacing !== undefined) {
             row.item.parent.spacing = spacing[1];
         }
     });
-    if (!isStatic) {
+    if (live) {
+        // Border-spacing between what shows: the table's outer spacing is
+        // around all this, and an empty section takes no room.
+        var shown = false;
+        sections.forEach(function(group) {
+            if (group.item) {
+                var filled = group.rows.length > 0;
+                group.item.eldurTop = shown && filled ? spacing[1] : 0;
+                shown = shown || filled;
+            } else {
+                group.rows[0].eldurTop = shown ? spacing[1] : 0;
+                shown = true;
+            }
+        });
+    } else if (!isStatic) {
         // A table's border-spacing runs around its rows too.
         host.spacing = spacing[1];
         host.implicitWidth = total + 2 * spacing[0];
@@ -2065,6 +2325,228 @@ function _tableLayout(host) {
             }
         }
     }
+}
+
+// The width a live table has comes from its parent's polish, after the cells it
+// was first given: a new width lays them out again, and so does being shown.
+function _tableWatchHost(host) {
+    var m = _meta(host);
+    if (m.tableHostWatched) {
+        return;
+    }
+    m.tableHostWatched = true;
+    var lastWidth = -1;
+    host.widthChanged.connect(function() {
+        if (host.width !== lastWidth) {
+            lastWidth = host.width;
+            _tableLayout(host);
+        }
+    });
+    host.visibleChanged.connect(function() {
+        if (host.visible) {
+            _layoutChanged(host);
+        }
+    });
+}
+
+// Text a script can rewrite has to be measured as it is now; a cell with anything
+// else inside holds what the converter worked out.
+function _tableCellMinimum(cell, text) {
+    if (cell.minContentWidth !== undefined && !text && typeof cell.text !== "string") {
+        return cell.minContentWidth;
+    }
+    if (typeof cell.text === "string") {
+        if (cell.textFormat === 1 || String(cell.text).indexOf("<") >= 0) {
+            return cell.minContentWidth !== undefined ? cell.minContentWidth : cell.implicitWidth;
+        }
+        return _tableMinContent(cell, cell);
+    }
+    return _tableMinContent(cell, text);
+}
+
+function _tableLiveHosts() {
+    if (!_root || _root.tableColumnWidths === undefined) {
+        return [];
+    }
+    var hosts = [];
+    _walkItems(_root, function(item) {
+        if (item.columnSpecs !== undefined && _tableIsLive(item)) {
+            hosts.push(item);
+        }
+        return false;
+    });
+    return hosts;
+}
+
+// The object scripts see as the `<table>` holds its grid a level or two down:
+// under the box with its border, and beside the captions.
+function _tableSetUp() {
+    _tableHosts = _tableLiveHosts();
+    _tableHosts.forEach(function(host) {
+        for (var cur = host; cur; cur = cur.parent) {
+            if (cur.eldurTag === "table") {
+                if (cur !== host) {
+                    _meta(cur).tableGrid = host;
+                    _meta(host).hostBox = cur;
+                }
+                break;
+            }
+        }
+        _tableBaseline(host);
+        _layoutChanged(host);
+    });
+    _tableHosts.forEach(function(host) { _tableLayout(host); });
+}
+
+// What a cell's own rule, its row's, its section's and its column's add up to,
+// as the converter flattened them (CSS 2.1 §17.5.1).
+function _tableBackground(cell, column, layers) {
+    var r = 0, g = 0, b = 0, a = 0;
+    layers.concat([cell]).forEach(function(part) {
+        if (!part) {
+            return;
+        }
+        var value = _gStyle(part)["background-color"];
+        var c = value ? Qt.color(_gQtColor(value)) : null;
+        if (!c || c.a === 0) {
+            return;
+        }
+        var out = c.a + a * (1 - c.a);
+        r = (c.r * c.a + r * a * (1 - c.a)) / out;
+        g = (c.g * c.a + g * a * (1 - c.a)) / out;
+        b = (c.b * c.a + b * a * (1 - c.a)) / out;
+        a = out;
+    });
+    return Qt.rgba(r, g, b, a);
+}
+
+function _tableColumns(host) {
+    var columns = [];
+    var span = function(item) {
+        var n = parseInt(getAttribute(item, "span"), 10);
+        return n > 0 ? n : 1;
+    };
+    _rawElementChildren(host).forEach(function(part) {
+        var tag = _nodeTag(part);
+        if (tag === "col") {
+            for (var i = 0; i < span(part); ++i) {
+                columns.push({ group: null, col: part });
+            }
+        } else if (tag === "colgroup") {
+            var cols = _rawElementChildren(part);
+            if (cols.length === 0) {
+                for (var j = 0; j < span(part); ++j) {
+                    columns.push({ group: part, col: null });
+                }
+            }
+            cols.forEach(function(col) {
+                for (var k = 0; k < span(col); ++k) {
+                    columns.push({ group: part, col: col });
+                }
+            });
+        }
+    });
+    return columns;
+}
+
+function _tableCellColor(cell, color) {
+    if (cell.color !== undefined && typeof cell.text !== "string") {
+        cell.color = color;
+        return;
+    }
+    // A cell that painted nothing has no rectangle: it gets one, behind it, that
+    // is no element.
+    var m = _meta(cell);
+    if (!m.tableBacking) {
+        m.tableBacking = Qt.createQmlObject(
+            "import QtQuick; Rectangle { z: -1; anchors.fill: parent; property var eldurBox: null }",
+            cell, "eldur_cell_backing");
+    }
+    m.tableBacking.color = color;
+}
+
+function _tableDisplay(item, baseline) {
+    var m = _meta(item);
+    var none = _gStyle(item).display === "none" || m.explicitHidden === true;
+    if (baseline) {
+        m.tableNone = none;
+        return;
+    }
+    if (none && item.visible) {
+        _setShown(item, false);
+    } else if (!none && m.tableNone) {
+        _setShown(item, true);
+    }
+    m.tableNone = none;
+}
+
+// Which rules hold for a row or its cells changes with its class, its place
+// among its siblings and the pointer. A cell paints all of it: a row is no
+// rectangle, and it could not be under cells that span out of it. The first pass
+// takes what the converter painted as read and a pass writes only what moved
+// since, so what's bound or written otherwise is left alone until then.
+function _tableRepaint(host, baseline) {
+    var columns = _tableColumns(host);
+    var paintRow = function(row, section, taken, r) {
+        _tableDisplay(row, baseline);
+        var c = 0;
+        _tableCellsOf(row).forEach(function(cell) {
+            while (taken[r + ":" + c]) {
+                ++c;
+            }
+            var across = _tableSpan(cell, "colspan");
+            var down = _tableSpan(cell, "rowspan");
+            for (var y = r; y < r + down; ++y) {
+                for (var x = c; x < c + across; ++x) {
+                    taken[y + ":" + x] = true;
+                }
+            }
+            _tableDisplay(cell, baseline);
+            var column = columns[c] || {};
+            var color = _tableBackground(cell, c, [column.group, column.col, section, row]);
+            var text = _gStyle(cell).color;
+            var key = String(color) + "/" + text;
+            var m = _meta(cell);
+            var known = m.tablePaint;
+            m.tablePaint = key;
+            if (!(baseline && !_isCreatedElement(cell)) && (known !== key)) {
+                if (known !== undefined || color.a > 0) {
+                    _tableCellColor(cell, color);
+                }
+                var label = typeof cell.text === "string" ? cell : _findTextChild(cell);
+                if (label && label.color !== undefined && text) {
+                    label.color = _gQtColor(text);
+                }
+            }
+            c += across;
+        });
+    };
+    _rawElementChildren(host).forEach(function(part) {
+        var tag = _nodeTag(part);
+        if (tag === "tr") {
+            paintRow(part, null, {}, 0);
+        } else if (_TABLE_SECTION[tag] !== undefined) {
+            _tableDisplay(part, baseline);
+            var taken = {};
+            _tablePartsOf(part, "tr").forEach(function(row, r) {
+                paintRow(row, part, taken, r);
+            });
+        }
+    });
+}
+
+function _tableBaseline(host) {
+    if (_gHasCascade()) {
+        _tableRepaint(host, true);
+    }
+}
+
+function _tableRepaintAll() {
+    _tableHosts.forEach(function(host) {
+        if (_isConnected(host)) {
+            _tableRepaint(host, false);
+        }
+    });
 }
 
 function _tableSettle(dirty) {
@@ -2335,6 +2817,7 @@ function _detachNode(raw) {
 // Sets whether a node shows of itself. A box painted away from its DOM parent
 // still goes when that parent does.
 function _setShown(raw, shown) {
+    _holdFocus();
     _layoutChanged(raw.parent);
     var slot = raw.eldurSlot;
     if (slot && raw.eldurBlock === undefined) {
@@ -2398,10 +2881,13 @@ function _childContainer(raw) {
         return null;
     }
     var base = (typeof raw.contentHeight === "number" && raw.contentItem) ? raw.contentItem : raw;
+    var m = _meta(raw);
+    if (m.tableGrid) {
+        return m.tableGrid;
+    }
     if (typeof base.spacing === "number" || typeof base.columnSpacing === "number") {
         return base;
     }
-    var m = _meta(raw);
     if (m.flow) {
         return m.flow;
     }
@@ -2446,10 +2932,30 @@ function _rawElementChildren(raw) {
     return _rawKids(raw, false);
 }
 
+function _tableCaptions(raw) {
+    var out = [];
+    if (_meta(raw).tableGrid && typeof raw.spacing === "number") {
+        for (var i = 0; i < raw.children.length; ++i) {
+            if (raw.children[i].eldurTag === "caption") {
+                out.push(raw.children[i]);
+            }
+        }
+    }
+    return out;
+}
+
 function _rawKids(raw, withText) {
     var container = _childContainer(raw);
     if (!container || !container.children) {
         return [];
+    }
+    var captions = raw ? _tableCaptions(raw) : [];
+    if (captions.length > 0) {
+        var below = container.children;
+        for (var bi = 0; bi < below.length; ++bi) {
+            captions.push(below[bi]);
+        }
+        return captions;
     }
     var isLayout = typeof container.spacing === "number" || typeof container.columnSpacing === "number";
     var out = [];
@@ -2980,6 +3486,50 @@ function _markupMakesElements(raw) {
     return false;
 }
 
+// `sort` as the language has it, stable and undefined last, which a page's table
+// sorted on one column and then another depends on.
+function sort(list, compare) {
+    if (!Array.isArray(list)) {
+        return list.sort(compare);
+    }
+    var order = compare || function(a, b) {
+        var x = String(a), y = String(b);
+        return x < y ? -1 : x > y ? 1 : 0;
+    };
+    var kept = [];
+    var missing = 0;
+    for (var i = 0; i < list.length; ++i) {
+        if (list[i] === undefined) {
+            missing++;
+        } else {
+            kept.push(list[i]);
+        }
+    }
+    var merged = _mergeSort(kept, order);
+    for (var j = 0; j < merged.length; ++j) {
+        list[j] = merged[j];
+    }
+    for (var u = merged.length; u < merged.length + missing; ++u) {
+        list[u] = undefined;
+    }
+    return list;
+}
+
+function _mergeSort(items, order) {
+    if (items.length < 2) {
+        return items;
+    }
+    var mid = items.length >> 1;
+    var left = _mergeSort(items.slice(0, mid), order);
+    var right = _mergeSort(items.slice(mid), order);
+    var out = [];
+    var l = 0, r = 0;
+    while (l < left.length && r < right.length) {
+        out.push(order(left[l], right[r]) <= 0 ? left[l++] : right[r++]);
+    }
+    return out.concat(left.slice(l), right.slice(r));
+}
+
 // `innerHTML = markup` on a box: its children are replaced by the markup's
 // nodes, made by `createElement`, so connecting them looks their templates
 // up (§6.7) as for any created element.
@@ -2994,6 +3544,7 @@ function _replaceWithMarkup(raw, str) {
     for (var i = 0; i < old.length; ++i) {
         _detachNode(old[i]);
     }
+    _wsEnd(raw).length = 0;
     var parsed = _parseHtmlFragmentNodes(str);
     var nodes = _expandInsertRawNodes(parsed);
     _insertRawNodesBefore(_appendTarget(raw), nodes, null);
@@ -3492,6 +4043,9 @@ function toggleAttribute(item, attrName, force) {
 // A browser takes focus off what stops being rendered. Qt only moves activeFocus and
 // leaves `focus` set, which would hand it back when the element shows again.
 function _focusGone(raw) {
+    if (raw === _focusHeld) {
+        return false;
+    }
     if (raw.visible !== false || !_root || _root.visible !== true) {
         return false;
     }
@@ -3499,6 +4053,98 @@ function _focusGone(raw) {
         raw.focus = false;
     }
     return true;
+}
+
+// A browser notices at its next update, after the script's turn: until then
+// `activeElement` still answers with the element, and only then do `blur` and
+// `focusout` fire. Qt moves activeFocus as soon as an item hides, so what it says
+// about a hidden item waits here.
+var _focusHeld = null;
+var _focusQueue = [];
+var _focusLooked = false;
+
+function _focusIsGhost(raw) {
+    if (_gHasCascade()) {
+        return _gStyle(raw).visibility === "hidden";
+    }
+    for (var p = raw; p; p = p.parent) {
+        if (p.opacity === 0 && p.enabled === false) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function _holdFocus() {
+    if (_focusLooked || !_root) {
+        return;
+    }
+    _focusLooked = true;
+    Qt.callLater(_focusSettle);
+    _focusHeld = _focusIn(_root);
+}
+
+function _focusIn(item) {
+    var kids = item.children || [];
+    for (var i = 0; i < kids.length; ++i) {
+        var found = _focusIn(kids[i]);
+        if (found) {
+            return found;
+        }
+    }
+    return item !== _root && item.activeFocus ? item : null;
+}
+
+// What Qt says when an item's focus goes: `run` hears it now, unless the item went
+// because it stopped being rendered.
+function whenBlurred(raw, type, run) {
+    if (raw !== _focusHeld && (raw.visible !== false || !_root || _root.visible !== true)) {
+        run();
+        return;
+    }
+    if (!_focusLooked) {
+        _focusLooked = true;
+        Qt.callLater(_focusSettle);
+    }
+    _focusHeld = _focusHeld || raw;
+    _focusQueue.push({ type: type, run: run });
+}
+
+function _focusSettle() {
+    _gSettle();
+    // Held from before the turn's click moved it, or found now: Qt can keep
+    // activeFocus on a hidden item until the frame.
+    var found = _root ? _focusIn(_root) : null;
+    var held = found && found.visible === false ? found : _focusHeld;
+    var queue = _focusQueue;
+    _focusHeld = null;
+    _focusQueue = [];
+    _focusLooked = false;
+    if (held) {
+        if (held.visible === false || _focusIsGhost(held)) {
+            // Left set, Qt would hand it back when the element shows again.
+            _focusHeld = held;
+            _focusLooked = true;
+            held.focus = false;
+            _focusHeld = null;
+            _focusLooked = false;
+            queue = queue.concat(_focusQueue);
+            _focusQueue = [];
+            if (_activeElement === held) {
+                _activeElement = null;
+            }
+        } else if (held.activeFocus) {
+            // Hidden and shown again within a turn: a browser saw nothing.
+            queue = [];
+        }
+    }
+    ["blur", "focusout"].forEach(function(type) {
+        queue.forEach(function(entry) {
+            if (entry.type === type) {
+                entry.run();
+            }
+        });
+    });
 }
 
 function focus(item) {
@@ -3551,13 +4197,23 @@ function blur(item) {
     }
 }
 
+function _hiddenByAttribute(raw) {
+    for (var p = raw; p; p = p.parent) {
+        if (_meta(p).explicitHidden === true) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function getBoundingClientRect(item) {
     _layoutForRead();
     var raw = _gCurrent(_unwrap(item));
     if (raw && raw.__eldurInline) {
         return _vClientRect(raw);
     }
-    if (!raw || (_gActive() && raw.visible === false)) {
+    if (!raw || (raw.visible === false && (_gActive() || _hiddenByAttribute(raw)
+        || _tableIsPart(raw)))) {
         return { x: 0, y: 0, top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0 };
     }
     var w = typeof raw.width === "number" ? raw.width : 0;
@@ -4185,11 +4841,11 @@ function _connectSignalOnce(raw, type) {
                     _dispatchDynamic(raw, type, null);
                 }
             } else {
-                if (_activeElement === raw) {
+                if (_activeElement === raw && raw !== _focusHeld) {
                     _activeElement = null;
                 }
                 if (type === "blur" || type === "focusout") {
-                    _dispatchDynamic(raw, type, null);
+                    whenBlurred(raw, type, function() { _dispatchDynamic(raw, type, null); });
                 }
             }
         };
@@ -5906,6 +6562,10 @@ function wrap(rawItem) {
             if (typeof rawItem.enabled === "boolean") {
                 rawItem.enabled = !v;
             }
+            // `focus` stays set in Qt, and `activeElement` would go on reading it.
+            if (v && rawItem.focus === true) {
+                rawItem.focus = false;
+            }
         },
         get readOnly() {
             if (typeof rawItem.readOnly === "boolean") {
@@ -5923,6 +6583,7 @@ function wrap(rawItem) {
         set hidden(v) {
             m.explicitHidden = Boolean(v);
             _reflectFlag(m, "hidden", v);
+            _gTouch();
             if (rawItem.__eldurInline) {
                 _vChanged(rawItem.model);
             } else if (typeof rawItem.visible === "boolean") {
@@ -6037,6 +6698,96 @@ function wrap(rawItem) {
                 rawItem.height = n;
             }
             setAttribute(rawItem, "height", String(n));
+        },
+        get rows() {
+            var tag = _nodeTag(rawItem);
+            if (tag === "table") {
+                return _liveCollection(function() { return _tableAllRows(rawItem); });
+            }
+            return _TABLE_SECTION[tag] !== undefined
+                ? _liveCollection(function() { return _tablePartsOf(rawItem, "tr"); })
+                : undefined;
+        },
+        get tBodies() {
+            return _nodeTag(rawItem) === "table"
+                ? _liveCollection(function() { return _tablePartsOf(rawItem, "tbody"); })
+                : undefined;
+        },
+        get tHead() { return _tableFirst(rawItem, "table", "thead"); },
+        get tFoot() { return _tableFirst(rawItem, "table", "tfoot"); },
+        get caption() { return _tableFirst(rawItem, "table", "caption"); },
+        insertRow: function(index) { return _tableInsertRow(rawItem, index === undefined ? -1 : Number(index)); },
+        deleteRow: function(index) {
+            var tag = _nodeTag(rawItem);
+            var list = tag === "table" ? _tableAllRows(rawItem) : _tablePartsOf(rawItem, "tr");
+            var at = Number(index);
+            if (at === -1 && list.length === 0) {
+                return;
+            }
+            at = at === -1 ? list.length - 1 : at;
+            if (!(at >= 0 && at < list.length)) {
+                throw new Error("IndexSizeError: no row " + index);
+            }
+            wrap(list[at]).remove();
+        },
+        createTHead: function() { return _tableMakePart(rawItem, "thead"); },
+        createTFoot: function() { return _tableMakePart(rawItem, "tfoot"); },
+        createTBody: function() { return _tableMakePart(rawItem, "tbody"); },
+        createCaption: function() { return _tableMakePart(rawItem, "caption"); },
+        deleteTHead: function() { _tableDropPart(rawItem, "thead"); },
+        deleteTFoot: function() { _tableDropPart(rawItem, "tfoot"); },
+        deleteCaption: function() { _tableDropPart(rawItem, "caption"); },
+        get cells() {
+            return _nodeTag(rawItem) === "tr"
+                ? _liveCollection(function() { return _tableCellsOf(rawItem); })
+                : undefined;
+        },
+        get rowIndex() {
+            if (_nodeTag(rawItem) !== "tr") {
+                return undefined;
+            }
+            var table = _tableOwner(rawItem);
+            return table ? _tableAllRows(table).indexOf(rawItem) : -1;
+        },
+        get sectionRowIndex() {
+            if (_nodeTag(rawItem) !== "tr") {
+                return undefined;
+            }
+            var up = _logicalParent(rawItem);
+            return up ? _tablePartsOf(up, "tr").indexOf(rawItem) : -1;
+        },
+        insertCell: function(index) {
+            var list = _tableCellsOf(rawItem);
+            var at = index === undefined ? -1 : Number(index);
+            if (at < -1 || at > list.length) {
+                throw new Error("IndexSizeError: no cell " + index);
+            }
+            var cell = document.createElement("td");
+            if (at === -1 || at === list.length) {
+                wrap(rawItem).appendChild(cell);
+            } else {
+                wrap(rawItem).insertBefore(cell, wrap(list[at]));
+            }
+            return cell;
+        },
+        deleteCell: function(index) {
+            var list = _tableCellsOf(rawItem);
+            var at = Number(index);
+            if (at === -1 && list.length === 0) {
+                return;
+            }
+            at = at === -1 ? list.length - 1 : at;
+            if (!(at >= 0 && at < list.length)) {
+                throw new Error("IndexSizeError: no cell " + index);
+            }
+            wrap(list[at]).remove();
+        },
+        get cellIndex() {
+            if (!/^t[dh]$/.test(_nodeTag(rawItem))) {
+                return undefined;
+            }
+            var up = _logicalParent(rawItem);
+            return up && _nodeTag(up) === "tr" ? _tableCellsOf(up).indexOf(rawItem) : -1;
         },
         get colSpan() { return _tableSpan(rawItem, "colspan"); },
         set colSpan(v) { setAttribute(rawItem, "colspan", String(v)); },
@@ -6394,6 +7145,7 @@ function wrap(rawItem) {
                     _detachNode(existing[i]);
                 }
             }
+            _wsEnd(rawItem).length = 0;
             var rawNodes = _expandInsertRawNodes(arguments);
             _insertRawNodesBefore(_appendTarget(rawItem), rawNodes, null);
         },
@@ -9058,6 +9810,9 @@ var document = {
     get hidden() { return false; },
     get visibilityState() { return "visible"; },
     get activeElement() {
+        if (_focusHeld && (_focusHeld.visible === false || _focusHeld.activeFocus)) {
+            return wrap(_focusHeld);
+        }
         if (_activeElement && _focusGone(_activeElement)) {
             _activeElement = null;
         }
@@ -9076,7 +9831,8 @@ var document = {
         if (focused) {
             return wrap(focused);
         }
-        if (_activeElement) {
+        // A node with no focus of its own to ask, such as an inline one.
+        if (_activeElement && typeof _activeElement.focus !== "boolean") {
             return wrap(_activeElement);
         }
         return this.body;
@@ -9322,6 +10078,7 @@ function _gRules() {
 }
 
 function _gTouch() {
+    _holdFocus();
     if (!_gHasCascade()) {
         return;
     }
@@ -11907,6 +12664,7 @@ function _gSettle() {
         _gMarginPass();
         // Templates paint the states, but what a script reads comes from the rules.
         _gWatchStates();
+        _tableRepaintAll();
         _gRunning = false;
         return;
     }
@@ -11932,6 +12690,7 @@ function _gSettle() {
     }
     _gPrune();
     _gWatchStates();
+    _tableRepaintAll();
     _gReposition();
     _gRunning = false;
 }

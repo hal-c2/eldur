@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>A static table's structure, from a script</title>
+<style>
+body { margin: 8px; font: 14px Arial, sans-serif; }
+button { margin-right: 2px; }
+table { margin-top: 8px; }
+td, th { padding: 4px 8px; border: 1px solid #888; text-align: left; }
+#t tbody tr:nth-child(even) { background: #dde; }
+#t tr.sel { background: #fd8; }
+#t tr.sel td { color: #a00; }
+#t tr.off { display: none; }
+#t tfoot tr { background: rgb(220, 240, 220); }
+thead { background: #ccc; }
+#hov tr:hover { background: #fcc; }
+#tight { border-collapse: collapse; }
+</style></head>
+<body>
+<div id="bar">
+<button id="sort">sort</button><button id="rev">rev</button><button id="hide">hide</button><button id="attr">attr</button>
+<button id="show">show</button><button id="cls">cls</button><button id="clsoff">clsoff</button><button id="paint">paint</button>
+<button id="made">made</button><button id="wide">wide</button><button id="api">api</button><button id="del">del</button>
+<button id="move">move</button><button id="other">other</button><button id="repl">repl</button><button id="html">html</button>
+<button id="rc">rc</button><button id="empty">empty</button><button id="sect">sect</button>
+</div>
+<table id="t">
+  <caption id="cap">People</caption>
+  <colgroup id="cg"><col id="c1"><col id="c2" style="background: rgb(255, 250, 230)"></colgroup>
+  <thead id="h"><tr id="hr"><th id="th1">Name</th><th id="th2">Age</th></tr></thead>
+  <tbody id="b">
+    <tr id="r1"><td id="z">Zed</td><td>30</td></tr>
+    <tr id="r2" class="x"><td>Amy</td><td>25</td></tr>
+    <tr id="r3"><td>Bob</td><td>40</td></tr>
+  </tbody>
+  <tfoot id="f"><tr id="fr"><td>Total</td><td>95</td></tr></tfoot>
+</table>
+<table id="span"><tbody id="sb">
+  <tr id="s1"><td id="tall" rowspan="2">Tall</td><td id="w2" colspan="2">Across two</td></tr>
+  <tr id="s2"><td>a</td><td>b</td></tr>
+  <tr id="s3"><td>c</td><td>d</td><td>e</td></tr>
+</tbody></table>
+<table id="tight"><tr id="n1"><td>no section</td><td>written</td></tr><tr id="n2"><td>one</td><td>two</td></tr></table>
+<table id="hov"><tbody><tr id="h1"><td id="hc">hover me</td></tr><tr id="h2"><td>not me</td></tr></tbody></table>
+<script>
+function log(s) { console.log(s); }
+var $ = function (id) { return document.getElementById(id); };
+var t = $("t"), b = $("b");
+var names = function (list) { return Array.from(list).map(function (e) { return e.id || e.tagName; }).join(","); };
+var liveRows = t.rows;
+var liveCells = $("r1").cells;
+log("lookup " + b.tagName + " " + $("h").tagName + " " + $("f").tagName + " " + $("r1").tagName);
+log("qsa " + document.querySelectorAll("tbody tr").length + " " + document.querySelectorAll("tr").length
+  + " " + document.querySelectorAll("td").length + " " + (document.querySelector("tr.x") ? "x" : "none")
+  + " " + document.querySelectorAll("col").length + " " + document.querySelectorAll("colgroup").length
+  + " " + document.querySelectorAll("caption").length + " " + document.querySelectorAll("thead tr th").length
+  + " " + document.querySelectorAll("#t > tbody > tr > td").length);
+log("tree " + $("r1").parentNode.id + " " + b.parentNode.id + " " + $("z").parentNode.id + " " + names(t.children)
+  + " " + names(b.children) + " " + $("r1").nextElementSibling.id + " " + $("r2").previousElementSibling.id
+  + " " + $("z").closest("tr").id + " " + $("z").closest("tbody").id + " " + $("z").closest("table").id
+  + " " + $("cap").parentNode.id + " " + $("c1").parentNode.id + " " + $("n1").parentNode.tagName + " " + $("n1").parentNode.parentNode.id);
+log("api " + names(t.rows) + " " + names(t.tBodies) + " " + t.tHead.id + " " + t.tFoot.id + " " + t.caption.id);
+log("row " + $("r2").rowIndex + " " + $("r2").sectionRowIndex + " " + $("fr").rowIndex + " " + names($("r1").cells)
+  + " " + $("r1").cells[1].cellIndex + " " + $("tall").rowSpan + " " + $("w2").colSpan + " " + $("w2").cellIndex + " " + b.rows.length);
+log("text " + b.rows[0].cells[0].textContent + " " + $("r2").textContent.trim());
+log("inner " + JSON.stringify($("tight").innerText) + " " + JSON.stringify($("n1").innerText));
+function order() { return names(b.children) + " tops " + Array.from(b.rows).map(function (r) { return Math.round(r.getBoundingClientRect().top); }).join(","); }
+function on(id, fn) { $(id).addEventListener("click", function () { fn(); log(id + " " + order() + " h=" + Math.round(t.getBoundingClientRect().height) + " live=" + liveRows.length + "," + liveCells.length); }); }
+on("sort", function () {
+  Array.from(b.rows).sort(function (x, y) { return x.cells[0].textContent.localeCompare(y.cells[0].textContent); })
+    .forEach(function (r) { r.parentNode.appendChild(r); });
+});
+on("rev", function () { b.insertBefore(b.rows[2], b.rows[0]); });
+on("hide", function () { $("r2").style.display = "none"; });
+on("attr", function () { $("r3").hidden = true; });
+on("show", function () { $("r2").style.display = ""; $("r3").hidden = false; });
+on("cls", function () { $("r1").classList.add("sel"); $("r3").classList.add("off"); });
+on("clsoff", function () { $("r1").classList.remove("sel"); $("r3").className = ""; });
+on("paint", function () { $("r2").style.backgroundColor = "rgb(200, 255, 200)"; });
+on("made", function () {
+  var tr = document.createElement("tr");
+  tr.id = "m1";
+  var a = document.createElement("td"); a.textContent = "Made by a script, wider"; tr.appendChild(a);
+  var c = document.createElement("td"); c.textContent = "50"; tr.appendChild(c);
+  b.insertBefore(tr, b.rows[1]);
+});
+on("wide", function () {
+  var c = document.createElement("td"); c.textContent = "third"; c.id = "third";
+  $("m1").appendChild(c);
+});
+on("api", function () {
+  var r = t.insertRow(1); r.id = "i1";
+  r.insertCell(0).textContent = "made"; r.insertCell(0).textContent = "first";
+  var x = b.insertRow(-1); x.id = "i2";
+  x.insertCell(-1).textContent = "end";
+  log("made " + r.parentNode.id + " " + r.rowIndex + " " + x.sectionRowIndex + " " + r.cells[0].textContent);
+});
+on("del", function () {
+  $("m1").deleteCell(2);
+  t.deleteRow($("i1").rowIndex);
+  b.deleteRow(-1);
+});
+on("move", function () { $("f").appendChild($("r1")); log("moved " + $("r1").parentNode.id + " " + $("r1").rowIndex + " " + names(t.rows)); });
+on("other", function () { $("sb").appendChild($("r3")); log("other " + $("r3").closest("table").id + " " + names($("span").rows)); });
+on("repl", function () {
+  var tr = document.createElement("tr"); tr.id = "rp";
+  tr.innerHTML = "<td>Swapped in</td><td>1</td>";
+  b.replaceChild(tr, $("m1"));
+});
+on("html", function () {
+  b.innerHTML = '<tr id="q1"><td>Quinn</td><td>9</td></tr><tr id="q2" class="sel"><td>Pat</td><td>8</td></tr>';
+  log("html " + b.rows[1].cells[0].textContent + " " + names(t.rows) + " " + $("q2").closest("table").id);
+});
+on("rc", function () {
+  var tr = document.createElement("tr"); tr.id = "rc1";
+  tr.appendChild(document.createElement("td")).textContent = "only";
+  $("sb").replaceChildren(tr);
+  log("rc " + names($("span").rows));
+});
+on("empty", function () { $("sb").textContent = ""; log("empty " + $("span").rows.length + " " + Math.round($("span").getBoundingClientRect().height)); });
+on("sect", function () {
+  var c = t.createTBody(); c.id = "b2";
+  c.insertRow().insertCell().textContent = "second body";
+  var th = t.tHead;
+  t.deleteTHead();
+  log("sect " + names(t.tBodies) + " " + (t.tHead === null) + " " + (th.parentNode === null));
+  var nh = t.createTHead(); nh.id = "h2";
+  nh.insertRow().insertCell().textContent = "New head";
+  log("sect " + names(t.children) + " " + names(t.rows).length);
+});
+function where(e) { return e.currentTarget.id || e.currentTarget.tagName; }
+["z", "r1", "b", "t"].forEach(function (id) { $(id).addEventListener("click", function (e) { log("heard " + where(e) + " from " + e.target.id); }); });
+t.addEventListener("click", function (e) {
+  var r = e.target.closest("tr");
+  log("delegated " + (r ? r.id : "none") + " " + e.target.tagName);
+});
+$("th2").addEventListener("click", function () { log("th2"); });
+$("r3").addEventListener("click", function () { log("row r3"); });
+</script>
+</body>
+</html>

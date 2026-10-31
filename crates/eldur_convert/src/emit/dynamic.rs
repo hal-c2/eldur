@@ -212,6 +212,7 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
         emitter.cascade_rules = scripts.analysis.needs_cascade();
         // Rows a script makes are sized by the same solver, table or no table.
         emitter.has_table = scripts.analysis.open_elements
+            || !scripts.live_tables.is_empty()
             || scripts.analysis.created.iter().any(|c| {
                 matches!(
                     c.tag.as_str(),
@@ -219,6 +220,7 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
                 )
             });
         emitter.gains.clone_from(&scripts.gains.nodes);
+        emitter.live_tables.clone_from(&scripts.live_tables);
         // A read needs an element to read: an empty one is not left out.
         emitter.gains_any_empty = scripts.gains.any_empty || scripts.analysis.reads_computed_style;
     }
@@ -1030,7 +1032,10 @@ impl Dynamic<'_, '_> {
         if let Some(scripts) = cx.scripts {
             emitter.open_elements = scripts.analysis.open_elements;
             emitter.gains.clone_from(&scripts.gains.nodes);
+            emitter.live_tables.clone_from(&scripts.live_tables);
             emitter.gains_any_empty = scripts.gains.any_empty;
+            // A row's `style` counts toward what its cells paint later.
+            emitter.cascade_rules = scripts.analysis.static_tables;
         }
         emitter.by_path = cx.scripts.is_some_and(|s| s.analysis.dispatch_by_path);
         emitter.script_attrs = cx

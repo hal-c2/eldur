@@ -13,8 +13,10 @@ td, th { padding: 3px 6px; border: 1px solid #999; text-align: left; }
 <table id="spaced"><thead><tr><td id="s0">A</td><td id="s1">B</td></tr></thead><tbody id="s-body"></tbody></table>
 <table id="tight"><thead><tr><th>Left</th><th>Right</th></tr></thead><tbody id="t-body"></tbody></table>
 <div id="host"></div>
+<table id="static"><tbody id="st-body"><tr id="st1"><td>Zed</td><td>a cell</td></tr><tr id="st2"><td>Amy</td><td>b</td></tr></tbody></table>
 <button id="grow">Grow</button>
 <button id="shrink">Shrink</button>
+<button id="sort">Sort</button>
 <script>
 function row(body, cells, at) {
   var tr = document.createElement("tr");
@@ -46,6 +48,12 @@ row(body, [{ text: "one" }, { text: "another one" }]);
 document.getElementById("host").appendChild(built);
 document.getElementById("grow").addEventListener("click", function () {
   row(a, [{ text: "0" }, { text: "An even longer name than the long one" }], 0);
+});
+document.getElementById("sort").addEventListener("click", function () {
+  var rows = Array.from(document.getElementById("st-body").rows);
+  rows.sort(function (x, y) { return x.cells[0].textContent.localeCompare(y.cells[0].textContent); });
+  rows.forEach(function (r) { r.parentNode.appendChild(r); });
+  row(document.getElementById("st-body"), [{ text: "Created among them" }, { text: "c" }], 1);
 });
 document.getElementById("shrink").addEventListener("click", function () {
   a.removeChild(a.children[0]);

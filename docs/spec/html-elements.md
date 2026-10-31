@@ -124,14 +124,14 @@ Inline runs become one `Text`. See "Inline formatting" for when they split.
 
 | Element | Box kind | QML output | Attributes mapped | Support | Notes |
 |---|---|---|---|---|---|
-| table | table-part | `GridLayout` | `border`, `cellpadding` → margins | Approx | `border-collapse` handled by drawn borders |
+| table | table-part | `GridLayout`, or a `ColumnLayout` where a script may reach it (`layout.md` §8) | `border`, `cellpadding` → margins | Approx | `border-collapse` handled by drawn borders |
 | caption | table-part | `Text` above the `GridLayout` | — | Approx | |
 | colgroup | table-part | none (sets column widths) | `span`, `width` → `Layout.preferredWidth` | Approx | |
 | col | table-part | none (sets column width) | `span`, `width` | Approx | |
-| thead | table-part | none (rows are placed in grid) | — | Ignored | Grouping only |
-| tbody | table-part | none | — | Ignored | Grouping only |
-| tfoot | table-part | none | — | Ignored | Grouping only |
-| tr | table-part | row index for children | — | Full | Used for `Layout.row` |
+| thead | table-part | none (rows are placed in grid); live: `ColumnLayout` | — | Ignored | Grouping only, unless live |
+| tbody | table-part | none; live: `ColumnLayout` | — | Ignored | Grouping only, unless live |
+| tfoot | table-part | none; live: `ColumnLayout` | — | Ignored | Grouping only, unless live |
+| tr | table-part | row index for children; live: `Item` | — | Full | Used for `Layout.row` unless live |
 | td | table-part | `Item` with `Layout.row`, `Layout.column`, `Layout.rowSpan`, `Layout.columnSpan` | `colspan`, `rowspan` | Full | |
 | th | table-part | same as td, bold `Text` | `scope` → `Accessible.role` | Full | `scope` decides `ColumnHeader` or `RowHeader` |
 

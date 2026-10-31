@@ -131,6 +131,8 @@ pub(crate) struct Emitter<'a, 'd> {
     pub cascade_rules: bool,
     /// The boxes a script may put block children in.
     gains: HashSet<NodeId>,
+    /// See `scripts::live_tables`.
+    live_tables: HashSet<NodeId>,
     /// A script inserts into something found at run time: any empty box.
     gains_any_empty: bool,
     /// `text-align` of the box whose lines are being laid out: what places
@@ -213,6 +215,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             open_elements: false,
             cascade_rules: false,
             gains: HashSet::new(),
+            live_tables: HashSet::new(),
             gains_any_empty: false,
             line_align: eldur_css::TextAlign::Start,
             by_path: false,
@@ -841,7 +844,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 );
             }
             crate::metadata::tag(&mut e.obj, self.doc, node);
-            crate::metadata::declare_whitespace(&mut e.obj, self.doc, node);
+            crate::metadata::declare_whitespace(&mut e.obj, self.doc, node, &self.live_tables);
             if self.open_elements || self.cascade_rules {
                 crate::metadata::declare_style(&mut e.obj, self.doc, node);
             }

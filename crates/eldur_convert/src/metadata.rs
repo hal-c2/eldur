@@ -2,7 +2,7 @@
 //! (`docs/design/dynamic-styles.md` §7, §8.1): `eldurTag`, `eldurClasses`,
 //! `cls_<s>`, `root.eldurStyledClasses` and `root.baseUrl`.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use eldur_dom::{Document, NodeId};
 use eldur_qml::{Member, Object, Value};
@@ -37,15 +37,20 @@ pub(crate) fn class_prop(class: &str) -> String {
 /// Whitespace-only text between elements makes no item, but scripts read it
 /// (`textContent`, `childNodes`): an element keeps what comes before it, and
 /// what comes after its last child. See `docs/spec/dom-api.md`.
-pub(crate) fn declare_whitespace(obj: &mut Object, doc: &Document, node: NodeId) {
-    let mut before = whitespace_back(doc, doc.prev_siblings(node));
+pub(crate) fn declare_whitespace(
+    obj: &mut Object,
+    doc: &Document,
+    node: NodeId,
+    live: &HashSet<NodeId>,
+) {
+    let mut before = whitespace_back(doc, doc.prev_siblings(node), live);
     let mut up = node;
     // First in a row that has no item: what is before the row counts too.
     while before.is_empty_run()
         && let Some(parent) = doc.parent_element(up)
-        && has_no_item(doc, parent)
+        && has_no_item(doc, parent, live)
     {
-        let more = whitespace_back(doc, doc.prev_siblings(parent));
+        let more = whitespace_back(doc, doc.prev_siblings(parent), live);
         before.text.insert_str(0, &more.text);
         before.stopped = more.stopped;
         up = parent;
@@ -54,7 +59,7 @@ pub(crate) fn declare_whitespace(obj: &mut Object, doc: &Document, node: NodeId)
         obj.members
             .push(decl("string", "eldurWs", Value::String(before.text)));
     }
-    let end = whitespace_back(doc, doc.children(node).rev());
+    let end = whitespace_back(doc, doc.children(node).rev(), live);
     if !end.text.is_empty() && doc.element_children(node).next().is_some() {
         obj.members
             .push(decl("string", "eldurWsEnd", Value::String(end.text)));
@@ -75,7 +80,11 @@ impl WhitespaceRun {
 
 /// The whitespace in `nodes`, nearest first, up to an element with an item or
 /// real text; an element without an item is looked through.
-fn whitespace_back(doc: &Document, nodes: impl Iterator<Item = NodeId>) -> WhitespaceRun {
+fn whitespace_back(
+    doc: &Document,
+    nodes: impl Iterator<Item = NodeId>,
+    live: &HashSet<NodeId>,
+) -> WhitespaceRun {
     let mut text = String::new();
     for node in nodes {
         if let Some(t) = doc.text(node) {
@@ -87,13 +96,13 @@ fn whitespace_back(doc: &Document, nodes: impl Iterator<Item = NodeId>) -> White
             }
             text.insert_str(0, t);
         } else if doc.element(node).is_some() {
-            if !has_no_item(doc, node) {
+            if !has_no_item(doc, node, live) {
                 return WhitespaceRun {
                     text,
                     stopped: true,
                 };
             }
-            let inner = whitespace_back(doc, doc.children(node).rev());
+            let inner = whitespace_back(doc, doc.children(node).rev(), live);
             text.insert_str(0, &inner.text);
             if inner.stopped {
                 return WhitespaceRun {
@@ -111,13 +120,14 @@ fn whitespace_back(doc: &Document, nodes: impl Iterator<Item = NodeId>) -> White
 
 /// A table's rows and the groups around them are cells of one grid; a script,
 /// style and the like make no box at all.
-fn has_no_item(doc: &Document, node: NodeId) -> bool {
+fn has_no_item(doc: &Document, node: NodeId, live: &HashSet<NodeId>) -> bool {
     let Some(element) = doc.element(node) else {
         return false;
     };
+    let in_grid = || !doc.ancestors(node).any(|a| live.contains(&a));
     match element.local_name() {
-        "tr" => true,
-        "thead" | "tbody" | "tfoot" => doc.element_children(node).next().is_some(),
+        "tr" => in_grid(),
+        "thead" | "tbody" | "tfoot" => doc.element_children(node).next().is_some() && in_grid(),
         "script" | "style" | "link" | "meta" | "template" | "title" => true,
         _ => false,
     }

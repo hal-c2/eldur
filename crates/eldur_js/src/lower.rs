@@ -594,6 +594,10 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
                 "disabled" | "hidden" if self.shared.reads_attributes => {
                     format_assignment(&format!("Eldur.wrap({id}).{prop}"), op, &rhs_str)
                 }
+                // `[hidden]` is a rule of the cascade the runtime answers from.
+                "hidden" if self.shared.keeps_cascade => {
+                    format_assignment(&format!("Eldur.wrap({id}).{prop}"), op, &rhs_str)
+                }
                 "disabled" => {
                     format_inverted_bool_assignment(&format!("{id}.enabled"), op, right, &rhs_str)
                 }
@@ -1422,6 +1426,29 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                 );
                 return;
             }
+        }
+
+        // Qt's engine sorts unstably and its `Array.prototype` can't be patched.
+        if let Expression::StaticMemberExpression(member) = unwrap_parens(&it.callee)
+            && member.property.name == "sort"
+            && !member.optional
+            && !it.optional
+            && it.arguments.len() <= 1
+            && !matches!(
+                it.arguments.first(),
+                Some(oxc_ast::ast::Argument::SpreadElement(_))
+            )
+        {
+            self.visit_expression(&member.object);
+            let object = self.editor.extract_and_consume(member.object.span());
+            let compare = self.render_call_args(&it.arguments);
+            let call = if compare.is_empty() {
+                format!("Eldur.sort({object})")
+            } else {
+                format!("Eldur.sort({object}, {compare})")
+            };
+            self.editor.replace(it.span, call);
+            return;
         }
 
         walk::walk_call_expression(self, it);

@@ -1140,11 +1140,11 @@ function updateDom(suffix, extraClass, htmlChunk, fallbackRole, node, state) {
     !saveBtn.enabled || !(saveBtn.enabled = false);
     !saveBtn.enabled && !(saveBtn.enabled = true);
     (!saveBtn.enabled) ?? !(saveBtn.enabled = false);
-    !saveBtn.visible && !(saveBtn.visible = true);
-    !saveBtn.visible || !(saveBtn.visible = false);
-    (!saveBtn.visible) ?? !(saveBtn.visible = true);
+    Eldur.wrap(saveBtn).hidden && (Eldur.wrap(saveBtn).hidden = false);
+    Eldur.wrap(saveBtn).hidden || (Eldur.wrap(saveBtn).hidden = true);
+    Eldur.wrap(saveBtn).hidden ?? (Eldur.wrap(saveBtn).hidden = false);
     !(saveBtn.enabled = !((!saveBtn.enabled) | (true)));
-    !(saveBtn.visible = !((!saveBtn.visible) & (false)));
+    Eldur.wrap(saveBtn).hidden &= false;
 
     roleCombo.currentValue || ((__v) => (roleCombo.currentIndex = roleCombo.indexOfValue(__v), __v))(fallbackRole);
     roleCombo.currentValue && ((__v) => (roleCombo.currentIndex = roleCombo.indexOfValue(__v), __v))("Admin");
@@ -2645,4 +2645,20 @@ fn live_lookups_hand_scripts_a_wrapper_wherever_a_resolved_element_escapes() {
         js.contains("(function () { f(Eldur.wrap(aBox)); })"),
         "{js}"
     );
+}
+
+#[test]
+fn a_sort_goes_through_the_runtime_as_the_engines_is_not_stable() {
+    let script = classic(
+        "sort.js",
+        "function by(list) { return list.map(f).sort(function (a, b) { return a - b; }).slice(1); }\nvar plain = names.sort();\nvar chosen = maybe?.sort();",
+    );
+    let js = run_rewrite(&[script], &FakeResolver::default()).page_js;
+    assert!(
+        js.contains("Eldur.sort(list.map(f), function (a, b) { return a - b; }).slice(1)"),
+        "{js}"
+    );
+    assert!(js.contains("plain = Eldur.sort(names)"), "{js}");
+    // Short-circuits on the object, which a plain call would not.
+    assert!(js.contains("maybe?.sort()"), "{js}");
 }

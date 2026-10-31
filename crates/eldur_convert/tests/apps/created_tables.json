@@ -1,2 +1,1 @@
-{"steps":[{"name":"grow","click":"#grow"},{"name":"shrink","click":"#shrink"}],
- "watch":[{"sel":"table"},{"sel":"tr"},{"sel":"th"},{"sel":"td"},{"sel":"#grow"}]}
+{"steps":[{"name":"grow","click":"#grow"},{"name":"shrink","click":"#shrink"},{"name":"sort","click":"#sort"}],"watch":[{"sel":"table"},{"sel":"tr"},{"sel":"th"},{"sel":"td"},{"sel":"#grow"}]}
