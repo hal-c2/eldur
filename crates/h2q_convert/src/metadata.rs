@@ -155,6 +155,20 @@ pub(crate) fn base_url_decl(doc: &Document, page_url: &str) -> Member {
     decl("string", "baseUrl", base_url(doc, page_url))
 }
 
+/// `root.documentUrl`, what `location` reports: an `http(s)` page's own
+/// URL, a local page's converted `Main.qml`. Unlike `baseUrl`, `<base href>`
+/// does not move it: it sets a document's base URL, not its URL.
+pub(crate) fn document_url(page_url: &str) -> Value {
+    match url::Url::parse(page_url) {
+        Ok(page) if matches!(page.scheme(), "http" | "https") => Value::String(page.into()),
+        _ => Value::Expr("Qt.resolvedUrl(\"Main.qml\")".to_owned()),
+    }
+}
+
+pub(crate) fn document_url_decl(page_url: &str) -> Member {
+    decl("string", "documentUrl", document_url(page_url))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -197,6 +211,22 @@ mod tests {
         assert_eq!(
             found["cls_a_b"].iter().copied().collect::<Vec<_>>(),
             ["a-b", "a_b"]
+        );
+    }
+
+    #[test]
+    fn the_document_url_ignores_base_and_local_pages_are_the_app() {
+        assert_eq!(
+            document_url("https://example.com/docs/guide/index.html"),
+            Value::String("https://example.com/docs/guide/index.html".to_owned())
+        );
+        assert_eq!(
+            document_url("index.html"),
+            Value::Expr("Qt.resolvedUrl(\"Main.qml\")".to_owned())
+        );
+        assert_eq!(
+            document_url("file:///home/me/page/index.html"),
+            Value::Expr("Qt.resolvedUrl(\"Main.qml\")".to_owned())
         );
     }
 }

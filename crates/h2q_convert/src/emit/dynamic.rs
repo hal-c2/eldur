@@ -62,6 +62,87 @@ pub(crate) struct Inputs<'a> {
     pub runtime_dom: bool,
     /// The page's scripts, when it has any.
     pub scripts: Option<&'a Scripts>,
+    /// Set when this is the probe document of the templates.
+    pub probe: Option<&'a Probe>,
+}
+
+/// What a probe emission (`super::templates`) adds: class conditions on
+/// the probe elements, the ids the page already uses, and the elements
+/// whose conditions can reach a template (the probes and their ancestors).
+pub(crate) struct Probe {
+    /// Class, and whether the probe has it, for each probe element.
+    pub classes: BTreeMap<NodeId, BTreeMap<String, bool>>,
+    pub reserved: BTreeSet<String>,
+    pub relevant: HashSet<NodeId>,
+}
+
+/// What a probe emission leaves for the templates. Its bindings read each
+/// condition through [`token`], which each template replaces with its own
+/// expression for it.
+#[derive(Default)]
+pub(crate) struct ProbeOut {
+    /// Each condition, and whether it holds in the probe document.
+    pub conditions: Vec<(Condition, bool)>,
+    /// The expression for a condition inside the template of its element.
+    pub locals: BTreeMap<u16, String>,
+    /// Elements whose form differs under some condition.
+    pub reshaped: BTreeSet<NodeId>,
+}
+
+const TOKEN_START: char = '\u{2}';
+const TOKEN_END: char = '\u{3}';
+
+/// The stand-in for condition `c` in a probe emission's bindings.
+fn token(c: u16) -> String {
+    format!("{TOKEN_START}{c}{TOKEN_END}")
+}
+
+/// `expr` with each [`token`] replaced by `with` of its condition.
+pub(crate) fn replace_tokens(expr: &str, mut with: impl FnMut(u16) -> String) -> String {
+    let mut out = String::with_capacity(expr.len());
+    let mut rest = expr;
+    while let Some(start) = rest.find(TOKEN_START) {
+        out.push_str(&rest[..start]);
+        let after = &rest[start + TOKEN_START.len_utf8()..];
+        let Some(end) = after.find(TOKEN_END) else {
+            break;
+        };
+        match after[..end].parse() {
+            Ok(c) => out.push_str(&with(c)),
+            Err(_) => out.push_str(&rest[start..start + TOKEN_START.len_utf8() + end + 1]),
+        }
+        rest = &after[end + TOKEN_END.len_utf8()..];
+    }
+    out.push_str(rest);
+    out
+}
+
+/// The object of each element, by node index, in a probe emission's tree.
+pub(crate) fn element_paths(root: &Object) -> HashMap<usize, Vec<usize>> {
+    let mut paths = HashMap::new();
+    marker_paths(root, &mut Vec::new(), &mut paths);
+    paths
+        .into_iter()
+        .map(|(n, p)| {
+            let children = p
+                .into_iter()
+                .map(|s| match s {
+                    Step::Child(i) => i,
+                    Step::Prop(_) | Step::Item(_) => unreachable!("markers sit on children"),
+                })
+                .collect();
+            (n, children)
+        })
+        .collect()
+}
+
+/// The element a marked object is of.
+pub(crate) fn marked_node(obj: &Object) -> Option<usize> {
+    marked(obj)
+}
+
+pub(crate) fn remove_markers(obj: &mut Object) {
+    strip_markers(obj);
 }
 
 pub(crate) struct Emission {
@@ -72,6 +153,8 @@ pub(crate) struct Emission {
     /// Some `Behavior` waits for `root.h2qAnimate`, which the page's init
     /// handler must declare and set once the scripts have run.
     pub gated: bool,
+    /// Set for a probe emission; its tree keeps the markers.
+    pub probe: ProbeOut,
 }
 
 /// The QML tree of the page, with conditional bindings when
@@ -108,6 +191,12 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
     let mut emitter = Emitter::new(cx.doc, cx.styles, cx.options, diags, cx.wanted);
     emitter.images = cx.images.clone();
     emitter.runtime_dom = cx.runtime_dom;
+    if let Some(probe) = cx.probe {
+        emitter.markers = true;
+        for id in &probe.reserved {
+            emitter.ids.reserve(id);
+        }
+    }
     let root = emitter.document(tree.as_ref(), body);
     Emission {
         root,
@@ -115,6 +204,7 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
         forms: std::mem::take(&mut emitter.forms),
         imports: std::mem::take(&mut emitter.imports),
         gated: false,
+        probe: ProbeOut::default(),
     }
 }
 
@@ -203,6 +293,20 @@ fn conditions(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Vec<Cond> {
     }
     if let Some(scripts) = cx.scripts {
         class_conditions(cx, scripts, &mut out, diags);
+    }
+    if let Some(probe) = cx.probe {
+        for (&node, classes) in &probe.classes {
+            for (class, &initial) in classes {
+                out.insert(
+                    Condition::Class {
+                        node,
+                        class: class.clone(),
+                    },
+                    initial,
+                );
+            }
+        }
+        out.retain(|c, _| probe.relevant.contains(&node_of(c)));
     }
     out.into_iter()
         .map(|(cond, initial)| Cond { cond, initial })
@@ -565,7 +669,7 @@ impl Dynamic<'_, '_> {
         for (w, tree) in trees.iter().enumerate() {
             diffs.diff(w + 1, &root, tree, &mut Vec::new(), None, self.cx.doc);
         }
-        for owner in &diffs.reshaped {
+        for owner in diffs.reshaped.iter().filter(|_| self.cx.probe.is_none()) {
             let what = owner.map_or_else(|| "the page".to_owned(), |n| describe(self.cx.doc, n));
             self.diags.warning(
                 "css",
@@ -575,7 +679,10 @@ impl Dynamic<'_, '_> {
                 ),
             );
         }
-        let mut sources = Sources::default();
+        let mut sources = Sources {
+            probe: self.cx.probe.is_some(),
+            ..Sources::default()
+        };
         let mut bindings: BTreeMap<Path, Vec<(String, String, Option<Member>)>> = BTreeMap::new();
         let gate = self.cx.scripts.is_some();
         let mut gated = false;
@@ -615,14 +722,29 @@ impl Dynamic<'_, '_> {
                 }
             }
         }
+        let locals = std::mem::take(&mut sources.locals);
         sources.apply(&mut root, self.cx.doc, &mut ids, &mut imports);
-        strip_markers(&mut root);
+        let mut probe = ProbeOut::default();
+        if self.cx.probe.is_some() {
+            probe = ProbeOut {
+                conditions: self
+                    .conds
+                    .iter()
+                    .map(|c| (c.cond.clone(), c.initial))
+                    .collect(),
+                locals,
+                reshaped: diffs.reshaped.iter().flatten().copied().collect(),
+            };
+        } else {
+            strip_markers(&mut root);
+        }
         Emission {
             root,
             targets,
             forms,
             imports,
             gated: gated && gate,
+            probe,
         }
     }
 
@@ -711,6 +833,9 @@ impl Dynamic<'_, '_> {
         emitter.images = cx.images.clone();
         emitter.runtime_dom = cx.runtime_dom;
         emitter.markers = true;
+        for id in cx.probe.iter().flat_map(|p| &p.reserved) {
+            emitter.ids.reserve(id);
+        }
         emitter.sticky = sticky.clone();
         emitter.collapsed = collapsed;
         let root = emitter.document(tree.as_ref(), body);
@@ -1163,6 +1288,10 @@ struct Sources {
     handlers: BTreeMap<Path, Vec<(&'static str, String)>>,
     /// Controls that must report hover.
     hover_enabled: BTreeSet<Path>,
+    /// A probe emission: bindings read [`token`]s, and `locals` has what
+    /// each stands for inside its element's template.
+    probe: bool,
+    locals: BTreeMap<u16, String>,
 }
 
 impl Sources {
@@ -1213,7 +1342,7 @@ impl Sources {
             }
         };
         let control = classify(doc, node);
-        Some(match cond {
+        let expr = match cond {
             Condition::Class { class, .. } => {
                 self.classes
                     .entry(path.clone())
@@ -1256,7 +1385,12 @@ impl Sources {
                 (PseudoState::Disabled, _) => format!("!{id}.enabled"),
                 (PseudoState::FocusWithin | PseudoState::Visited, _) => return None,
             },
-        })
+        };
+        if self.probe {
+            self.locals.insert(c, expr);
+            return Some(token(c));
+        }
+        Some(expr)
     }
 
     /// Adds what the conditions read: `cls_` properties, handlers and

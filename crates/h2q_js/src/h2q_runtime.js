@@ -1401,6 +1401,7 @@ function _syncH2qClasses(raw, m) {
 
 function _afterClassMutation(raw, m) {
     var curRaw = (m && m.raw) ? m.raw : raw;
+    _layoutChanged(curRaw);
     _syncH2qClasses(curRaw, m);
     if (_isCreatedElement(curRaw) && _isConnected(curRaw)) {
         _materializeSubtree(curRaw);
@@ -1572,7 +1573,53 @@ function _appendTarget(raw) {
     return flow;
 }
 
+// Qt delivers its once-per-frame hover before it polishes layouts, so an
+// item a script puts under a resting cursor is hit-tested at its size
+// before layout and stays unhovered until the mouse moves. A browser lays
+// out before it hit-tests: when the script's turn ends, polish the changed
+// subtrees (children first: a layout's implicit size waits for its polish)
+// and their ancestors, ahead of the frame.
+var _layoutDirty = [];
+
+function _layoutChanged(item) {
+    if (!item || typeof item !== "object") {
+        return;
+    }
+    if (_layoutDirty.length === 0) {
+        Qt.callLater(_settleLayouts);
+    }
+    _layoutDirty.push(item);
+}
+
+function _polishSubtree(item) {
+    var kids = item.children || [];
+    for (var i = 0; i < kids.length; ++i) {
+        _polishSubtree(kids[i]);
+    }
+    if (typeof item.ensurePolished === "function") {
+        item.ensurePolished();
+    }
+}
+
+function _settleLayouts() {
+    var dirty = _layoutDirty;
+    _layoutDirty = [];
+    var done = [];
+    for (var i = 0; i < dirty.length; ++i) {
+        if (dirty[i].parent) {
+            _polishSubtree(dirty[i]);
+        }
+        for (var p = dirty[i].parent; p && done.indexOf(p) < 0; p = p.parent) {
+            done.push(p);
+            if (typeof p.ensurePolished === "function") {
+                p.ensurePolished();
+            }
+        }
+    }
+}
+
 function _clearAppended(raw) {
+    _layoutChanged(raw);
     var flow = _meta(raw).flow;
     while (flow && flow.children.length > 0) {
         // `destroy` waits for the event loop, so a handler of a child being
@@ -1643,6 +1690,12 @@ function _rawElementChildren(raw) {
     for (var i = 0; i < container.children.length; ++i) {
         var child = container.children[i];
         if (!child) {
+            continue;
+        }
+        // A control's own parts (Button.background, .contentItem, …) are
+        // children of it but not elements; a Button also has `spacing`.
+        if (child === container.background || child === container.contentItem
+            || child === container.indicator) {
             continue;
         }
         if (!isLayout && _isPlainTextItem(child) && !child.objectName && !_meta(child).createdTag) {
@@ -2974,6 +3027,7 @@ function _insertRawNodesBefore(container, rawNodes, rawRef) {
     if (!container || rawNodes.length === 0) {
         return;
     }
+    _layoutChanged(container);
     if (!rawRef || !container.children) {
         for (var a = 0; a < rawNodes.length; ++a) {
             if (rawNodes[a] && rawNodes[a].parent !== undefined) {
@@ -4139,12 +4193,14 @@ function wrap(rawItem) {
         removeChild: function(child) {
             var rawChild = _unwrap(child);
             if (rawChild && rawChild.parent !== undefined) {
+                _layoutChanged(rawChild.parent);
                 rawChild.parent = null;
             }
             return child;
         },
         remove: function() {
             if (rawItem.parent !== undefined) {
+                _layoutChanged(rawItem.parent);
                 rawItem.parent = null;
             }
         },

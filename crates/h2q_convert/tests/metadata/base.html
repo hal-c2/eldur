@@ -13,6 +13,7 @@ function probe() {
   var abs = document.createElement('a');
   abs.setAttribute('href', '/root.html');
   r.rootHref = abs.href;
+  r.locationHref = location.href;
   return JSON.stringify(r);
 }
 </script></body></html>

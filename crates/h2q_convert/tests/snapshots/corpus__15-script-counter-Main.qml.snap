@@ -14,6 +14,7 @@ import "page.js" as Page
 ApplicationWindow {
     id: root
     property string baseUrl: Qt.resolvedUrl("Main.qml")
+    property string documentUrl: Qt.resolvedUrl("Main.qml")
     property var h2qStyledClasses: ["btn", "btn-primary", "btn-reset", "controls", "display", "field", "mirror", "negative", "panel", "text-input", "toggle", "widget"]
 
     visible: true

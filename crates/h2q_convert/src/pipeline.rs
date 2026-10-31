@@ -69,23 +69,23 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     };
     let images = crate::images::collect(&doc, &input.url, resources, &mut diags);
     let runtime_dom = !scripts.is_empty() && scripts.analysis.runtime_dom;
-    let emission = crate::emit::dynamic::emit(
-        &crate::emit::dynamic::Inputs {
-            doc: &doc,
-            styles: &styles,
-            sheets: &sheets,
-            options,
-            wanted,
-            images: &images.by_node,
-            runtime_dom,
-            scripts: (!scripts.is_empty()).then_some(&scripts),
-        },
-        &mut diags,
-    );
+    let inputs = crate::emit::dynamic::Inputs {
+        doc: &doc,
+        styles: &styles,
+        sheets: &sheets,
+        options,
+        wanted,
+        images: &images.by_node,
+        runtime_dom,
+        scripts: (!scripts.is_empty()).then_some(&scripts),
+        probe: None,
+    };
+    let emission = crate::emit::dynamic::emit(&inputs, &mut diags);
     let mut root = emission.root;
     let targets = emission.targets;
     let forms = emission.forms;
-    let extra_imports = emission.imports;
+    let mut extra_imports = emission.imports;
+    let mut gated = emission.gated;
 
     if options.animations && !styles.keyframes.is_empty() {
         diags.info(
@@ -108,8 +108,17 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         }
         scripts::wire(&mut root, &js, &forms, &scripts, &mut diags);
         scripts::declare_classes(&mut root, &doc, &scripts, &targets, &mut diags);
-        let mut decls = vec![metadata::base_url_decl(&doc, &input.url)];
-        if emission.gated {
+        if let Some(added) =
+            crate::emit::templates::add(&inputs, &scripts, &mut root, &targets, &mut diags)
+        {
+            gated |= added.gated;
+            extra_imports.extend(added.imports);
+        }
+        let mut decls = vec![
+            metadata::base_url_decl(&doc, &input.url),
+            metadata::document_url_decl(&input.url),
+        ];
+        if gated {
             decls.push(Member::PropertyDecl {
                 ty: "bool".to_owned(),
                 name: "h2qAnimate".to_owned(),
@@ -132,7 +141,7 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         root.members.push(Member::Handler {
             name: "Component.onCompleted".to_owned(),
             params: Vec::new(),
-            body: if emission.gated {
+            body: if gated {
                 // Transitions start once the document's classes are set.
                 vec![
                     init,

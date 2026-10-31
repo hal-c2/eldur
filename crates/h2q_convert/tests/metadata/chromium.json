@@ -24,7 +24,8 @@
   "base-https": {
     "relativeHref": "https://example.com/docs/api/v2/sub/page.html",
     "parentHref": "https://example.com/docs/api/up.html",
-    "rootHref": "https://example.com/root.html"
+    "rootHref": "https://example.com/root.html",
+    "locationHref": "https://example.com/docs/guide/index.html"
   },
   "literal-https": {
     "text": "Note",
