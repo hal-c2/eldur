@@ -1404,7 +1404,7 @@ function _afterClassMutation(raw, m) {
     _layoutChanged(curRaw);
     _syncEldurClasses(curRaw, m);
     if (_isCreatedElement(curRaw) && _isConnected(curRaw)) {
-        _materializeSubtree(curRaw);
+        _connectSubtree(curRaw);
     }
 }
 
@@ -3119,6 +3119,21 @@ var _KEY_SIGNALS = "signal eldurKeyDown(var event); signal eldurKeyUp(var event)
     + "Keys.onPressed: (event) => { event.accepted = false; eldurKeyDown(event); } "
     + "Keys.onReleased: (event) => { event.accepted = false; eldurKeyUp(event); } ";
 
+// On a GPU Qt draws text with distance fields unless told otherwise; the
+// converter asks for native glyphs on what it emits (layout.md §1.2), and these
+// sit beside its text on a page.
+var _NATIVE_TEXT = "renderType: Text.NativeRendering; ";
+
+// The Basic style's IconLabel has no renderType to ask for.
+function _buttonSource(signals) {
+    return _NATIVE_IMPORTS + "Button { id: control; " + signals
+        + "palette.buttonText: \"black\"; "
+        + "contentItem: Text { " + _NATIVE_TEXT + "text: control.text; font: control.font; "
+        + "color: control.palette.buttonText; "
+        + "horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter } "
+        + "background: Rectangle { color: \"#efefef\"; border.color: \"#767676\"; radius: 3 } }";
+}
+
 // Created elements have no computed style, since CSS is applied at
 // conversion; these are a browser's unstyled controls, whatever the system
 // palette is.
@@ -3133,19 +3148,21 @@ function _inputSource(type) {
             + "border.color: control.checked ? \"#0075ff\" : \"#767676\"; "
             + (isRadio
                 ? "Rectangle { anchors.centerIn: parent; width: parent.width * 0.6; height: width; radius: width / 2; color: \"#0075ff\"; visible: control.checked } "
-                : "Text { anchors.centerIn: parent; text: \"\\u2713\"; color: \"white\"; font.pixelSize: Math.max(1, control.height - 2); visible: control.checked } ")
+                : "Text { " + _NATIVE_TEXT + "anchors.centerIn: parent; text: \"\\u2713\"; color: \"white\"; font.pixelSize: Math.max(1, control.height - 2); visible: control.checked } ")
             + "} }";
     }
     if (type === "range") {
         return _NATIVE_IMPORTS + "Slider { from: 0; to: 100; value: 50; stepSize: 1; snapMode: Slider.SnapAlways; " + _KEY_SIGNALS + "}";
     }
     if (type === "number") {
-        return _NATIVE_IMPORTS + "SpinBox { editable: true; from: -2147483648; to: 2147483647; " + _KEY_SIGNALS + "}";
+        return _NATIVE_IMPORTS + "SpinBox { editable: true; from: -2147483648; to: 2147483647; " + _KEY_SIGNALS
+            // The style's TextInput is typed Item here, so no grouped property.
+            + "Component.onCompleted: contentItem.renderType = Text.NativeRendering }";
     }
     if (type === "submit" || type === "button" || type === "reset") {
-        return _NATIVE_IMPORTS + "Button { " + _KEY_SIGNALS + "palette.buttonText: \"black\"; background: Rectangle { color: \"#efefef\"; border.color: \"#767676\"; radius: 3 } }";
+        return _buttonSource(_KEY_SIGNALS);
     }
-    return _NATIVE_IMPORTS + "TextField { " + _KEY_SIGNALS + "color: \"black\"; "
+    return _NATIVE_IMPORTS + "TextField { " + _NATIVE_TEXT + _KEY_SIGNALS + "color: \"black\"; "
         + "background: Rectangle { color: \"white\"; border.color: \"#767676\"; radius: 2 } }";
 }
 
@@ -3232,7 +3249,7 @@ function _insertRawNodesBefore(container, rawNodes, rawRef) {
     }
     if (_isConnected(container)) {
         for (var mIdx = 0; mIdx < rawNodes.length; ++mIdx) {
-            _materializeSubtree(rawNodes[mIdx]);
+            _connectSubtree(rawNodes[mIdx]);
         }
     }
     // Before the script reads styles back; removals settle with the layouts.
@@ -3244,7 +3261,7 @@ function _genericElementSource(tag, inputType) {
         return _inputSource(inputType || "text");
     }
     if (tag === "textarea") {
-        return _NATIVE_IMPORTS + "TextArea { color: \"black\"; background: Rectangle { color: \"white\"; border.color: \"#767676\" } }";
+        return _NATIVE_IMPORTS + "TextArea { " + _NATIVE_TEXT + "color: \"black\"; background: Rectangle { color: \"white\"; border.color: \"#767676\" } }";
     }
     if (tag === "li") {
         return "import QtQuick; import QtQuick.Layouts; RowLayout { Layout.fillWidth: true; spacing: 8 }";
@@ -3253,7 +3270,7 @@ function _genericElementSource(tag, inputType) {
         return "import QtQuick; import QtQuick.Layouts; ColumnLayout { Layout.fillWidth: true; spacing: 0 }";
     }
     if (tag === "span" || tag === "p" || tag === "label" || tag === "h1" || tag === "h2" || tag === "h3" || tag === "a") {
-        return "import QtQuick; Text { color: \"black\"; font.pixelSize: 16 }";
+        return "import QtQuick; Text { " + _NATIVE_TEXT + "color: \"black\"; font.pixelSize: 16 }";
     }
     if (tag === "div" || tag === "section" || tag === "article" || tag === "header" || tag === "footer" || tag === "main" || tag === "nav") {
         return "import QtQuick; Rectangle { color: \"transparent\" }";
@@ -3262,7 +3279,7 @@ function _genericElementSource(tag, inputType) {
         return "import QtQuick; Image {}";
     }
     if (tag === "button") {
-        return _NATIVE_IMPORTS + "Button { palette.buttonText: \"black\"; background: Rectangle { color: \"#efefef\"; border.color: \"#767676\"; radius: 3 } }";
+        return _buttonSource("");
     }
     return "import QtQuick; Item {}";
 }
@@ -3693,6 +3710,44 @@ function _materializeSubtree(raw) {
     return cur;
 }
 
+// Whether an item's glyphs reach the screen other than pixel for pixel, as
+// `resamples` in the converter's paint.rs decides. It reads the item's values
+// now; the converter also counts a property that is only bound.
+function _resamples(item) {
+    if (item.rotation !== 0 || item.scale !== 1) {
+        return true;
+    }
+    for (var i = 0; item.transform && i < item.transform.length; ++i) {
+        if (item.transform[i].x === undefined) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Text.QtRendering and Text.NativeRendering; a library script has no `Text`.
+function _fitGlyphs(item, turned) {
+    turned = turned || _resamples(item);
+    var wanted = turned ? 0 : 1;
+    if (typeof item.renderType === "number" && item.renderType !== wanted) {
+        item.renderType = wanted;
+    }
+    for (var i = 0; i < item.children.length; ++i) {
+        _fitGlyphs(item.children[i], turned);
+    }
+}
+
+// Created elements and templates are made native without knowing what they
+// will sit under; only here is it known (layout.md §1.2).
+function _connectSubtree(raw) {
+    var cur = _materializeSubtree(raw);
+    var turned = false;
+    for (var up = cur.parent; up && !turned; up = up.parent) {
+        turned = _resamples(up);
+    }
+    _fitGlyphs(cur, turned);
+}
+
 function _unescapeHtmlText(str) {
     return String(str)
         .replace(/&lt;/g, "<")
@@ -3989,7 +4044,7 @@ function wrap(rawItem) {
                 return;
             }
             if (_isConnected(rawItem) && _root && _root.eldurTemplates && typeof _root.eldurTemplates === "object") {
-                _materializeSubtree(rawItem);
+                _connectSubtree(rawItem);
                 return;
             }
             if (_inputSource(ty) === _inputSource(from) && !m.templateComponent) {
@@ -3997,6 +4052,9 @@ function wrap(rawItem) {
             }
             m.lastGenericInputSource = _inputSource(ty);
             _swapRawItem(rawItem, null, _inputSource(ty));
+            if (_isConnected(m.raw)) {
+                _connectSubtree(m.raw);
+            }
         },
         get id() {
             if (typeof rawItem.objectName === "string" && rawItem.objectName !== "") {
@@ -5046,7 +5104,7 @@ var document = {
         return wrap(created);
     },
     createTextNode: function(text) {
-        var created = Qt.createQmlObject("import QtQuick; Text {}", _qobjectParent(), "eldur_text");
+        var created = Qt.createQmlObject("import QtQuick; Text { " + _NATIVE_TEXT + "}", _qobjectParent(), "eldur_text");
         if (created) {
             created.text = String(text);
             _meta(created).createdTag = "#text";

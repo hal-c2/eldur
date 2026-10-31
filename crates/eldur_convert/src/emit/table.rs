@@ -811,6 +811,8 @@ impl<'a> Emitter<'a, '_> {
                 let item = self.table_caption(caption, decoration);
                 stack.push_child(item);
             }
+            // A fractional caption would move the table by its rounded height.
+            self.carry(&mut stack);
             stack
         };
         // A table is never narrower than its content; with `width: auto` it is
@@ -854,12 +856,6 @@ impl<'a> Emitter<'a, '_> {
         // The caption wraps to the table's width; it does not set it.
         obj.set("Layout.fillWidth", true);
         obj.set("Layout.preferredWidth", Value::Number(0.0));
-        // Layouts round a fractional height up; Chromium paints what follows
-        // on the pixel below (measured: a 37.5px caption moves the table 37px).
-        obj.set(
-            "Layout.preferredHeight",
-            Value::expr("Math.floor(implicitHeight)"),
-        );
         if emitted.top.value() > 0.0 {
             obj.set("Layout.topMargin", number(emitted.top.value()));
         }

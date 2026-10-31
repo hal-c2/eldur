@@ -69,6 +69,7 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
+                            renderType: Text.NativeRendering
                         }
 
                         // <p class="page-lead">
@@ -86,6 +87,7 @@ ApplicationWindow {
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             Layout.topMargin: 4
+                            renderType: Text.NativeRendering
                         }
 
                         // <div class="layout">
@@ -143,6 +145,7 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            renderType: Text.NativeRendering
                                         }
 
                                         // <ul class="list-square">
@@ -187,6 +190,7 @@ ApplicationWindow {
                                                             }
                                                             wrapMode: Text.WordWrap
                                                             Layout.fillWidth: true
+                                                            renderType: Text.NativeRendering
                                                         }
 
                                                         // <ol class="list-roman">
@@ -230,6 +234,7 @@ ApplicationWindow {
                                                                             }
                                                                             wrapMode: Text.WordWrap
                                                                             Layout.fillWidth: true
+                                                                            renderType: Text.NativeRendering
                                                                         }
 
                                                                         // <ul class="list-none">
@@ -266,6 +271,7 @@ ApplicationWindow {
                                                                                         }
                                                                                         wrapMode: Text.WordWrap
                                                                                         Layout.fillWidth: true
+                                                                                        renderType: Text.NativeRendering
                                                                                     }
                                                                                 }
 
@@ -309,6 +315,7 @@ ApplicationWindow {
                                                                                         }
                                                                                         wrapMode: Text.WordWrap
                                                                                         Layout.fillWidth: true
+                                                                                        renderType: Text.NativeRendering
                                                                                     }
                                                                                 }
 
@@ -340,6 +347,7 @@ ApplicationWindow {
                                                                         }
                                                                         wrapMode: Text.NoWrap
                                                                         anchors.right: parent.left
+                                                                        renderType: Text.NativeRendering
                                                                     }
                                                                 }
 
@@ -366,6 +374,7 @@ ApplicationWindow {
                                                                         anchors.left: parent.left
                                                                         anchors.right: parent.right
                                                                         anchors.top: parent.top
+                                                                        renderType: Text.NativeRendering
                                                                     }
 
                                                                     Text {
@@ -381,6 +390,7 @@ ApplicationWindow {
                                                                         }
                                                                         wrapMode: Text.NoWrap
                                                                         anchors.right: parent.left
+                                                                        renderType: Text.NativeRendering
                                                                     }
                                                                 }
                                                             }
@@ -419,6 +429,7 @@ ApplicationWindow {
                                                         anchors.left: parent.left
                                                         anchors.right: parent.right
                                                         anchors.top: parent.top
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     Rectangle {
@@ -453,6 +464,7 @@ ApplicationWindow {
                                                         anchors.left: parent.left
                                                         anchors.right: parent.right
                                                         anchors.top: parent.top
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     Rectangle {
@@ -505,6 +517,7 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            renderType: Text.NativeRendering
                                         }
 
                                         // <ol class="list-alpha">
@@ -545,6 +558,7 @@ ApplicationWindow {
                                                         anchors.left: parent.left
                                                         anchors.right: parent.right
                                                         anchors.top: parent.top
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     Text {
@@ -560,6 +574,7 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.NoWrap
                                                         anchors.right: parent.left
+                                                        renderType: Text.NativeRendering
                                                     }
                                                 }
 
@@ -586,6 +601,7 @@ ApplicationWindow {
                                                         anchors.left: parent.left
                                                         anchors.right: parent.right
                                                         anchors.top: parent.top
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     Text {
@@ -601,6 +617,7 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.NoWrap
                                                         anchors.right: parent.left
+                                                        renderType: Text.NativeRendering
                                                     }
                                                 }
 
@@ -627,6 +644,7 @@ ApplicationWindow {
                                                         anchors.left: parent.left
                                                         anchors.right: parent.right
                                                         anchors.top: parent.top
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     Text {
@@ -642,6 +660,7 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.NoWrap
                                                         anchors.right: parent.left
+                                                        renderType: Text.NativeRendering
                                                     }
                                                 }
 
@@ -668,6 +687,7 @@ ApplicationWindow {
                                                         anchors.left: parent.left
                                                         anchors.right: parent.right
                                                         anchors.top: parent.top
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     Text {
@@ -683,6 +703,7 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.NoWrap
                                                         anchors.right: parent.left
+                                                        renderType: Text.NativeRendering
                                                     }
                                                 }
                                             }
@@ -737,6 +758,7 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            renderType: Text.NativeRendering
                                         }
 
                                         // <dl class="faq">
@@ -766,6 +788,7 @@ ApplicationWindow {
                                                 Layout.minimumWidth: 200
                                                 Layout.maximumWidth: 200
                                                 Layout.fillHeight: true
+                                                renderType: Text.NativeRendering
                                             }
 
                                             // <dd>
@@ -784,6 +807,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.preferredWidth: 0
                                                 Layout.fillHeight: true
+                                                renderType: Text.NativeRendering
                                             }
 
                                             // <dt>
@@ -804,6 +828,7 @@ ApplicationWindow {
                                                 Layout.minimumWidth: 200
                                                 Layout.maximumWidth: 200
                                                 Layout.fillHeight: true
+                                                renderType: Text.NativeRendering
                                             }
 
                                             // <dd>
@@ -822,6 +847,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.preferredWidth: 0
                                                 Layout.fillHeight: true
+                                                renderType: Text.NativeRendering
                                             }
 
                                             // <dt>
@@ -842,6 +868,7 @@ ApplicationWindow {
                                                 Layout.minimumWidth: 200
                                                 Layout.maximumWidth: 200
                                                 Layout.fillHeight: true
+                                                renderType: Text.NativeRendering
                                             }
 
                                             // <dd>
@@ -860,6 +887,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.preferredWidth: 0
                                                 Layout.fillHeight: true
+                                                renderType: Text.NativeRendering
                                             }
 
                                             // <dt>
@@ -880,6 +908,7 @@ ApplicationWindow {
                                                 Layout.minimumWidth: 200
                                                 Layout.maximumWidth: 200
                                                 Layout.fillHeight: true
+                                                renderType: Text.NativeRendering
                                             }
 
                                             // <dd>
@@ -898,6 +927,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.preferredWidth: 0
                                                 Layout.fillHeight: true
+                                                renderType: Text.NativeRendering
                                             }
                                         }
                                     }
@@ -941,6 +971,7 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            renderType: Text.NativeRendering
                                         }
 
                                         // <ul class="tags">
@@ -987,6 +1018,7 @@ ApplicationWindow {
                                                         anchors.leftMargin: 14
                                                         anchors.rightMargin: 14
                                                         anchors.topMargin: 6
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     HoverHandler {
@@ -1029,6 +1061,7 @@ ApplicationWindow {
                                                         anchors.leftMargin: 14
                                                         anchors.rightMargin: 14
                                                         anchors.topMargin: 6
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     HoverHandler {
@@ -1071,6 +1104,7 @@ ApplicationWindow {
                                                         anchors.leftMargin: 14
                                                         anchors.rightMargin: 14
                                                         anchors.topMargin: 6
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     HoverHandler {
@@ -1113,6 +1147,7 @@ ApplicationWindow {
                                                         anchors.leftMargin: 14
                                                         anchors.rightMargin: 14
                                                         anchors.topMargin: 6
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     HoverHandler {
@@ -1155,6 +1190,7 @@ ApplicationWindow {
                                                         anchors.leftMargin: 14
                                                         anchors.rightMargin: 14
                                                         anchors.topMargin: 6
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     HoverHandler {
@@ -1197,6 +1233,7 @@ ApplicationWindow {
                                                         anchors.leftMargin: 14
                                                         anchors.rightMargin: 14
                                                         anchors.topMargin: 6
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     HoverHandler {
@@ -1239,6 +1276,7 @@ ApplicationWindow {
                                                         anchors.leftMargin: 14
                                                         anchors.rightMargin: 14
                                                         anchors.topMargin: 6
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     HoverHandler {

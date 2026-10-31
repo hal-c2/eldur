@@ -126,15 +126,16 @@ impl Emitter<'_, '_> {
                     if name == "lineHeight" || name == "lineHeightMode")
             });
             // RichText puts a fixed line's leading above the glyphs, where
-            // `lineHeight` puts it below: the half-leading is moved up.
+            // `lineHeight` puts it below; both round to a whole row, so a
+            // whole shift lands them on Chromium's (layout.md §1.2).
             if let Some(lh) = line_height(style) {
-                let shift = round((lh - CONTENT_AREA * style.font_size) / 2.0);
+                let shift = rich_shift(style, items, lh) + raise;
                 text.members
                     .retain(|m| !matches!(m, Member::Property { name, .. } if name == "transform"));
-                if shift.abs() >= 0.5 {
+                if shift != 0.0 {
                     text.set(
                         "transform",
-                        Value::Object(Box::new(Object::new("Translate").prop("y", -shift))),
+                        Value::Object(Box::new(Object::new("Translate").prop("y", round(shift)))),
                     );
                 }
             }
@@ -693,14 +694,15 @@ fn whole_span(block: &ComputedStyle, items: &[Inline<'_>]) -> Option<(ComputedSt
 
 /// Ascent and descent, as fractions of the size, of the font `family`
 /// resolves to. A stopgap, and the one place that knows: it is right only
-/// where fontconfig resolves these names to Liberation Serif and Liberation
-/// Sans, as on the machine it was measured on (layout.md §1.2). Any other
-/// font, monospace included, gets Liberation Sans's numbers, and its glyphs
-/// can land a row off. How to obtain real metrics, also for
+/// where fontconfig resolves these names to Liberation Serif, Liberation Sans
+/// and, for `monospace`, JetBrains Mono, as on the machine it was measured on
+/// (layout.md §1.2). Any other font gets Liberation Sans's numbers, and its
+/// glyphs can land a row off. How to obtain real metrics, also for
 /// `line-height: normal`, is undecided; replace this function then.
 fn font_extents(family: &str) -> (f32, f32) {
     match family {
         "serif" | "Times" | "Times New Roman" | "Georgia" | "Liberation Serif" => (0.891, 0.216),
+        "monospace" => (1.02, 0.3),
         _ => (0.905, 0.212),
     }
 }
@@ -723,6 +725,48 @@ pub(super) fn whole_baseline(style: &ComputedStyle, line: f32) -> f32 {
 fn qt_ascent(style: &ComputedStyle) -> f32 {
     let (a, _) = font_extents(&font_family(&style.font_family));
     (a * style.font_size.round().max(1.0)).round()
+}
+
+/// Chromium's baseline less Qt's, for the RichText line holding every run in
+/// `items`. Chromium aligns each inline box's whole baseline on the line's;
+/// Qt puts a fixed line's bottom at `lh`, its descent being its tallest
+/// run's, and when the runs do not fit it grows the line down from their
+/// ascent. A paragraph has one shift, so a line without its tallest run can
+/// land a row off (layout.md §1.2).
+fn rich_shift(style: &ComputedStyle, items: &[Inline<'_>], lh: f32) -> f32 {
+    let mut runs = vec![style];
+    text_runs(items, &mut runs);
+    let chromium = runs
+        .iter()
+        .map(|s| whole_baseline(s, super::inline::line_height(s)))
+        .fold(whole_baseline(style, lh), f32::max);
+    let (mut ascent, mut descent) = (0.0_f32, 0.0_f32);
+    for s in &runs {
+        let (a, d) = font_extents(&font_family(&s.font_family));
+        let size = s.font_size.round().max(1.0);
+        ascent = ascent.max(a * size);
+        descent = descent.max(d * size);
+    }
+    // In Qt's 1/64 px units.
+    let lh = (lh * 64.0).floor() / 64.0;
+    let qt = if ascent + descent > lh {
+        ascent.round()
+    } else {
+        (lh - descent).floor()
+    };
+    chromium - qt
+}
+
+/// The style of each inline box in `items` that holds text directly.
+fn text_runs<'a>(items: &'a [Inline<'_>], runs: &mut Vec<&'a ComputedStyle>) {
+    for item in items {
+        if let Inline::Span(span) = item {
+            if span.children.iter().any(|c| matches!(c, Inline::Text(_))) {
+                runs.push(span.style);
+            }
+            text_runs(&span.children, runs);
+        }
+    }
 }
 
 /// Whether a run in `items` needs RichText: another font family, a

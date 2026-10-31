@@ -1088,6 +1088,200 @@ fn glyphs_sit_on_chromiums_whole_pixel_baseline() {
 }
 
 #[test]
+fn richtext_lines_shift_to_chromiums_baseline() {
+    // The same lines as tools/visual/paint/gen.mjs's RICH; `rich.txt` is what
+    // it measured on both sides.
+    const CODE: &str = "font-family:monospace;background:#eee";
+    let cases = [
+        (
+            "r1",
+            "font:16px/1.6 sans-serif",
+            format!("{CODE};font-size:14px;padding:2px 5px"),
+        ),
+        (
+            "r2",
+            "font:14px/20px sans-serif",
+            format!("{CODE};font-size:12px"),
+        ),
+        (
+            "r3",
+            "font:16px/1.5 sans-serif",
+            format!("{CODE};font-size:16px"),
+        ),
+        (
+            "r4",
+            "font:16px/1.5 sans-serif",
+            format!("{CODE};font-size:24px"),
+        ),
+        (
+            "r5",
+            "font:15px/1.5 sans-serif",
+            "background:#eee;font-family:serif".to_owned(),
+        ),
+        (
+            "r6",
+            "font:16px/1.5 serif",
+            format!("{CODE};font-size:14px"),
+        ),
+        (
+            "r7",
+            "font:16px/1.6 sans-serif",
+            "background:#eee".to_owned(),
+        ),
+        (
+            "r8",
+            "font:14px/1.5 sans-serif",
+            "background:#eee;font-size:24px".to_owned(),
+        ),
+    ];
+    // Qt's line with a monospace run of the body's size came out a row above
+    // anything its metrics predict (layout.md §1.2, known limits).
+    let known = [("r3", "-2")];
+    let measured = include_str!("../../../../tools/visual/paint/rich.txt");
+    for (class, css, run) in cases {
+        let (qml, _) = convert(&page(
+            &format!("p{{margin:0;{css}}}"),
+            &format!("<p class={class}>Hx<span style=\"{run}\">H</span></p>"),
+        ));
+        let line = measured
+            .lines()
+            .find(|l| l.starts_with(class))
+            .unwrap_or_else(|| panic!("{class} in {measured}"));
+        let measured = line.rsplit(' ').next().expect("rich.txt: name shifts");
+        let want = known
+            .iter()
+            .find(|(k, _)| *k == class)
+            .map_or(measured, |(_, v)| v);
+        let p = object_after(&qml, &format!("<p class=\"{class}\">"));
+        assert!(p.contains("Text.RichText"), "{p}");
+        let t = p
+            .find("transform: Translate {")
+            .unwrap_or_else(|| panic!("{p}"));
+        let y = p[t..].lines().nth(1).map(str::trim);
+        assert_eq!(y, Some(format!("y: {want}").as_str()), "{class}: {p}");
+    }
+}
+
+/// The `renderType` of the object holding the first `text`.
+fn render_type_of(qml: &str, text: &str) -> Option<String> {
+    let at = qml.find(text).expect("text in the output");
+    let open = qml[..at].rfind('{').expect("object opens");
+    let close = open + qml[open..].find("\n").expect("line") + 1;
+    let indent = qml[close..].len() - qml[close..].trim_start().len();
+    let end = format!("\n{}}}", " ".repeat(indent - 4));
+    let body = &qml[close..close + qml[close..].find(&end).expect("object closes")];
+    body.lines()
+        .find(|l| {
+            l.len() - l.trim_start().len() == indent && l.trim_start().starts_with("renderType:")
+        })
+        .map(|l| l.trim().to_owned())
+}
+
+const NATIVE: &str = "renderType: Text.NativeRendering";
+
+#[test]
+fn text_asks_for_native_glyphs() {
+    // Distance fields are softer than Chromium's glyphs: 89.40 vs 90.45 over
+    // the corpus. A baseline's Translate moves whole pixels and does not count.
+    let (qml, _) = convert(&page(
+        "p{font:15px/22px sans-serif}",
+        "<p>plain</p><p>a <code>rich</code> line</p>",
+    ));
+    assert!(qml.contains("Translate"), "{qml}");
+    assert_eq!(
+        render_type_of(&qml, "\"plain\"").as_deref(),
+        Some(NATIVE),
+        "{qml}"
+    );
+    assert_eq!(
+        render_type_of(&qml, "rich").as_deref(),
+        Some(NATIVE),
+        "{qml}"
+    );
+}
+
+#[test]
+fn text_under_a_scale_or_rotation_keeps_qts_default() {
+    // Native glyphs resample badly: 20-pricing's featured card, 86.21 vs 85.84.
+    for transform in ["scale(1.05)", "rotate(-8deg)", "matrix(1, 0.2, 0, 1, 0, 0)"] {
+        let (qml, _) = convert(&page(
+            &format!(".t{{transform:{transform}}}"),
+            "<div class=t><div><p>turned</p></div></div><p>still</p>",
+        ));
+        assert_eq!(
+            render_type_of(&qml, "\"turned\""),
+            None,
+            "{transform}: {qml}"
+        );
+        assert_eq!(
+            render_type_of(&qml, "\"still\"").as_deref(),
+            Some(NATIVE),
+            "{qml}"
+        );
+    }
+    // Moved by whole pixels the glyphs stay as rasterised.
+    let (qml, _) = convert(&page(
+        ".t{transform:translate(4px,8px)}",
+        "<div class=t><p>moved</p></div>",
+    ));
+    assert_eq!(
+        render_type_of(&qml, "\"moved\"").as_deref(),
+        Some(NATIVE),
+        "{qml}"
+    );
+}
+
+#[test]
+fn control_text_asks_for_native_glyphs() {
+    let (qml, _) = convert(&page(
+        "",
+        "<input value=one><textarea>two</textarea><input type=number>\
+         <button>three</button><select><option>four</select>",
+    ));
+    for item in ["TextField {", "TextArea {", "TextInput {"] {
+        assert!(qml.contains(item), "{item}: {qml}");
+    }
+    assert_eq!(qml.matches(NATIVE).count(), 5 + 1, "{qml}"); // and the arrow
+    let button = &qml[qml.find("Button {").expect("button")..];
+    let label = &button[button.find("contentItem: Text {").expect("label")..];
+    assert!(label.contains(".palette.buttonText"), "{label}");
+    assert!(label.contains(NATIVE), "{label}");
+}
+
+#[test]
+fn a_fractional_caption_keeps_the_table_on_its_exact_y() {
+    // Chromium: a 37.5px caption puts the table's rows 37.5px down. A floored
+    // caption height moved them half a pixel up (08-table).
+    let (qml, _) = convert(&page(
+        "caption{padding-bottom:12px;font:17px/25.5px sans-serif}",
+        "<table><caption>c</caption><tr><td>a</td></tr></table>",
+    ));
+    assert!(!qml.contains("Math.floor(implicitHeight)"), "{qml}");
+    assert!(qml.contains("eldurCarry"), "{qml}");
+}
+
+#[test]
+fn a_middle_table_cell_centres_exactly() {
+    // A cell's content is centred without Qt's rounding, on both ends of the
+    // anchor; the values behind it are `cN` in tools/visual/paint/gen.mjs.
+    let (qml, _) = convert(&page(
+        "table{border-collapse:collapse} td{border:1px solid #000;padding:4px}",
+        "<table><tr><td>a</td></tr></table>",
+    ));
+    assert_eq!(
+        qml.matches("anchors.alignWhenCentered: false").count(),
+        2,
+        "{qml}"
+    );
+    // `vertical-align: top` is not centred.
+    let (qml, _) = convert(&page(
+        "td{vertical-align:top;padding:4px}",
+        "<table><tr><td>a</td></tr></table>",
+    ));
+    assert!(!qml.contains("alignWhenCentered"), "{qml}");
+}
+
+#[test]
 fn tight_line_height_does_not_grow_the_last_line() {
     // Chromium: `font: 96px/1` is 96px tall and `16px/1` two lines 32px.
     // Qt gives the last fixed-height line the font's own height (108px and

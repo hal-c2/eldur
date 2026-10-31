@@ -74,6 +74,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -87,6 +88,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -100,6 +102,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Item {
@@ -136,6 +139,7 @@ ApplicationWindow {
                                         anchors.leftMargin: 8
                                         anchors.rightMargin: 8
                                         anchors.topMargin: 2
+                                        renderType: Text.NativeRendering
                                     }
                                 }
                             }
@@ -151,6 +155,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -164,6 +169,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -177,6 +183,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Item {
@@ -213,6 +220,7 @@ ApplicationWindow {
                                         anchors.leftMargin: 8
                                         anchors.rightMargin: 8
                                         anchors.topMargin: 2
+                                        renderType: Text.NativeRendering
                                     }
                                 }
                             }
@@ -228,6 +236,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -241,6 +250,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -254,6 +264,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -267,6 +278,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -280,6 +292,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -293,6 +306,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -306,6 +320,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -319,6 +334,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -332,6 +348,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -345,6 +362,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -358,6 +376,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -371,6 +390,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -384,6 +404,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -397,6 +418,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -410,6 +432,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -423,6 +446,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -436,6 +460,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -449,6 +474,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -462,6 +488,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -475,6 +502,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -488,6 +516,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -501,6 +530,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -514,6 +544,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
 
                             Text {
@@ -527,6 +558,7 @@ ApplicationWindow {
                                 transform: Translate {
                                     y: 3
                                 }
+                                renderType: Text.NativeRendering
                             }
                         }
                     }
@@ -591,6 +623,7 @@ ApplicationWindow {
                                     anchors.leftMargin: 11
                                     anchors.rightMargin: 11
                                     anchors.topMargin: 5
+                                    renderType: Text.NativeRendering
                                 }
                             }
                         }
@@ -607,6 +640,7 @@ ApplicationWindow {
                                 y: 3
                             }
                             topPadding: 2.34
+                            renderType: Text.NativeRendering
                         }
 
                         Item {
@@ -643,6 +677,7 @@ ApplicationWindow {
                                     anchors.leftMargin: 11
                                     anchors.rightMargin: 11
                                     anchors.topMargin: 5
+                                    renderType: Text.NativeRendering
                                 }
                             }
                         }
@@ -659,6 +694,7 @@ ApplicationWindow {
                                 y: 3
                             }
                             topPadding: 2.34
+                            renderType: Text.NativeRendering
                         }
 
                         Item {
@@ -695,6 +731,7 @@ ApplicationWindow {
                                     anchors.leftMargin: 11
                                     anchors.rightMargin: 11
                                     anchors.topMargin: 5
+                                    renderType: Text.NativeRendering
                                 }
                             }
                         }
@@ -711,6 +748,7 @@ ApplicationWindow {
                                 y: 3
                             }
                             topPadding: 2.34
+                            renderType: Text.NativeRendering
                         }
 
                         Item {
@@ -747,6 +785,7 @@ ApplicationWindow {
                                     anchors.leftMargin: 11
                                     anchors.rightMargin: 11
                                     anchors.topMargin: 5
+                                    renderType: Text.NativeRendering
                                 }
                             }
                         }
@@ -763,6 +802,7 @@ ApplicationWindow {
                                 y: 3
                             }
                             topPadding: 2.34
+                            renderType: Text.NativeRendering
                         }
 
                         Item {
@@ -799,6 +839,7 @@ ApplicationWindow {
                                     anchors.leftMargin: 11
                                     anchors.rightMargin: 11
                                     anchors.topMargin: 5
+                                    renderType: Text.NativeRendering
                                 }
                             }
                         }
@@ -815,6 +856,7 @@ ApplicationWindow {
                                 y: 3
                             }
                             topPadding: 2.34
+                            renderType: Text.NativeRendering
                         }
 
                         Item {
@@ -851,6 +893,7 @@ ApplicationWindow {
                                     anchors.leftMargin: 11
                                     anchors.rightMargin: 11
                                     anchors.topMargin: 5
+                                    renderType: Text.NativeRendering
                                 }
                             }
                         }
@@ -914,6 +957,7 @@ ApplicationWindow {
                                     anchors.leftMargin: 20
                                     anchors.rightMargin: 20
                                     anchors.topMargin: 10
+                                    renderType: Text.NativeRendering
                                 }
                             }
                         }
@@ -930,6 +974,7 @@ ApplicationWindow {
                                 y: 3
                             }
                             topPadding: 12
+                            renderType: Text.NativeRendering
                         }
 
                         Rectangle {
@@ -963,6 +1008,7 @@ ApplicationWindow {
                                 anchors.leftMargin: 22
                                 anchors.rightMargin: 22
                                 anchors.topMargin: 12
+                                renderType: Text.NativeRendering
                             }
                         }
                     }
@@ -989,6 +1035,7 @@ ApplicationWindow {
                             y: 3
                         }
                         topPadding: 1.34
+                        renderType: Text.NativeRendering
                     }
 
                     Rectangle {
@@ -1041,6 +1088,7 @@ ApplicationWindow {
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignVCenter
                                 Layout.leftMargin: 6
+                                renderType: Text.NativeRendering
                             }
 
                             Item {
@@ -1061,6 +1109,7 @@ ApplicationWindow {
                             y: 3
                         }
                         topPadding: 1.34
+                        renderType: Text.NativeRendering
                     }
 
                     Text {
@@ -1075,6 +1124,7 @@ ApplicationWindow {
                             y: 3
                         }
                         topPadding: 1.34
+                        renderType: Text.NativeRendering
                     }
 
                     Text {
@@ -1089,6 +1139,7 @@ ApplicationWindow {
                             y: 3
                         }
                         topPadding: 1.34
+                        renderType: Text.NativeRendering
                     }
                 }
 
@@ -1143,6 +1194,7 @@ ApplicationWindow {
                                     bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
+                                    renderType: Text.NativeRendering
                                 }
 
                                 Text {
@@ -1158,6 +1210,7 @@ ApplicationWindow {
                                         y: 5
                                     }
                                     Layout.fillWidth: true
+                                    renderType: Text.NativeRendering
                                 }
                             }
                         }
@@ -1205,6 +1258,7 @@ ApplicationWindow {
                                     bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
+                                    renderType: Text.NativeRendering
                                 }
 
                                 Text {
@@ -1220,6 +1274,7 @@ ApplicationWindow {
                                         y: 5
                                     }
                                     Layout.fillWidth: true
+                                    renderType: Text.NativeRendering
                                 }
                             }
                         }

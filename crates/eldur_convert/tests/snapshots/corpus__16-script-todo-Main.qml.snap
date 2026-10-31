@@ -121,6 +121,7 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.alignment: Qt.AlignBaseline
+                                    renderType: Text.NativeRendering
                                 }
 
                                 Item {
@@ -143,6 +144,7 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.alignment: Qt.AlignBaseline
+                                    renderType: Text.NativeRendering
                                 }
                             }
 
@@ -183,6 +185,7 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     Layout.preferredWidth: 0
                                     Layout.fillHeight: true
+                                    renderType: Text.NativeRendering
 
                                     Keys.onPressed: (event) => {
                                         const dom = Eldur.event("keydown", todoInput, event);
@@ -211,6 +214,14 @@ ApplicationWindow {
                                     rightPadding: 18
                                     bottomPadding: 10
                                     leftPadding: 18
+                                    contentItem: Text {
+                                        text: addBtn.text
+                                        font: addBtn.font
+                                        color: addBtn.palette.buttonText
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                        renderType: Text.NativeRendering
+                                    }
                                     objectName: "add-btn"
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
@@ -259,6 +270,7 @@ ApplicationWindow {
                                     anchors.right: parent.right
                                     anchors.top: parent.top
                                     anchors.topMargin: 1
+                                    renderType: Text.NativeRendering
                                 }
                             }
 
@@ -280,6 +292,7 @@ ApplicationWindow {
                                 visible: false
                                 Layout.fillWidth: true
                                 Layout.topMargin: 16 - todoList.eldurCarry
+                                renderType: Text.NativeRendering
                             }
 
                             // <p class="footer-note">
@@ -299,6 +312,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.topMargin: 24 - empty.eldurCarry
                                 Layout.preferredHeight: implicitHeight
+                                renderType: Text.NativeRendering
                             }
                         }
                     }
@@ -377,6 +391,7 @@ ApplicationWindow {
                     color: "#ffffff"
                     font.pixelSize: Math.max(1, inputControl.height - 2)
                     visible: inputControl.checked
+                    renderType: Text.NativeRendering
                 }
             }
             Layout.preferredWidth: 18
@@ -406,6 +421,7 @@ ApplicationWindow {
             Layout.fillWidth: true
             Layout.preferredWidth: 0
             Layout.alignment: Qt.AlignVCenter
+            renderType: Text.NativeRendering
             font.strikeout: (eldurUp1 ? eldurUp1.cls_done : false)
         }
     }
@@ -435,6 +451,14 @@ ApplicationWindow {
             rightPadding: 11
             bottomPadding: 5
             leftPadding: 11
+            contentItem: Text {
+                text: buttonControl.text
+                font: buttonControl.font
+                color: buttonControl.palette.buttonText
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                renderType: Text.NativeRendering
+            }
             Layout.fillWidth: true
             Layout.maximumWidth: Math.ceil(implicitWidth)
             Layout.alignment: Qt.AlignVCenter
@@ -473,6 +497,7 @@ ApplicationWindow {
                     color: "#ffffff"
                     font.pixelSize: Math.max(1, inputControl3.height - 2)
                     visible: inputControl3.checked
+                    renderType: Text.NativeRendering
                 }
             }
             Layout.leftMargin: 3
@@ -498,6 +523,7 @@ ApplicationWindow {
             font.pixelSize: 16
             wrapMode: Text.WrapAtWordBoundaryOrAnywhere
             width: parent ? Math.min(implicitWidth, parent.width) : implicitWidth
+            renderType: Text.NativeRendering
         }
     }
 
@@ -526,6 +552,14 @@ ApplicationWindow {
             rightPadding: 11
             bottomPadding: 5
             leftPadding: 11
+            contentItem: Text {
+                text: buttonControl3.text
+                font: buttonControl3.font
+                color: buttonControl3.palette.buttonText
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                renderType: Text.NativeRendering
+            }
             Layout.alignment: Qt.AlignHCenter
             Layout.preferredHeight: implicitHeight
             hoverEnabled: true

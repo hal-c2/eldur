@@ -283,6 +283,11 @@ impl Emitter<'_, '_> {
                         "anchors.verticalCenterOffset",
                         (insets.top - insets.bottom) / 2.0,
                     ));
+                    // By default Qt rounds an odd height's centre up, on both
+                    // the cell and the content, where CSS centres exactly
+                    // (layout.md §1.2).
+                    inner.set("anchors.alignWhenCentered", false);
+                    wrapper.set("anchors.alignWhenCentered", false);
                 }
                 Some(eldur_css::VerticalAlign::Bottom) => {
                     inner.set("anchors.bottom", Value::expr("parent.bottom"));

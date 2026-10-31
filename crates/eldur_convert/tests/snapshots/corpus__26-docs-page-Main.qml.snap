@@ -238,6 +238,7 @@ ApplicationWindow {
                             Layout.fillWidth: true
                             Layout.maximumWidth: Math.ceil(implicitWidth)
                             Layout.alignment: Qt.AlignVCenter
+                            renderType: Text.NativeRendering
                         }
 
                         // <span class="version">
@@ -272,6 +273,7 @@ ApplicationWindow {
                                 anchors.leftMargin: 8
                                 anchors.rightMargin: 8
                                 anchors.topMargin: 2
+                                renderType: Text.NativeRendering
                             }
                         }
 
@@ -346,6 +348,7 @@ ApplicationWindow {
                                     anchors.top: parent.top
                                     anchors.leftMargin: 8
                                     anchors.rightMargin: 8
+                                    renderType: Text.NativeRendering
                                 }
                             }
 
@@ -394,6 +397,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 8
                                             anchors.rightMargin: 8
                                             anchors.topMargin: 4
+                                            renderType: Text.NativeRendering
                                         }
                                     }
                                 }
@@ -437,6 +441,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 8
                                             anchors.rightMargin: 8
                                             anchors.topMargin: 4
+                                            renderType: Text.NativeRendering
                                         }
                                     }
                                 }
@@ -484,6 +489,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 8
                                             anchors.rightMargin: 8
                                             anchors.topMargin: 4
+                                            renderType: Text.NativeRendering
                                         }
                                     }
                                 }
@@ -521,6 +527,7 @@ ApplicationWindow {
                                     anchors.top: parent.top
                                     anchors.leftMargin: 8
                                     anchors.rightMargin: 8
+                                    renderType: Text.NativeRendering
                                 }
                             }
 
@@ -569,6 +576,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 8
                                             anchors.rightMargin: 8
                                             anchors.topMargin: 4
+                                            renderType: Text.NativeRendering
                                         }
                                     }
                                 }
@@ -612,6 +620,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 8
                                             anchors.rightMargin: 8
                                             anchors.topMargin: 4
+                                            renderType: Text.NativeRendering
                                         }
                                     }
                                 }
@@ -655,6 +664,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 8
                                             anchors.rightMargin: 8
                                             anchors.topMargin: 4
+                                            renderType: Text.NativeRendering
                                         }
                                     }
                                 }
@@ -692,6 +702,7 @@ ApplicationWindow {
                                     anchors.top: parent.top
                                     anchors.leftMargin: 8
                                     anchors.rightMargin: 8
+                                    renderType: Text.NativeRendering
                                 }
                             }
 
@@ -737,6 +748,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 8
                                             anchors.rightMargin: 8
                                             anchors.topMargin: 4
+                                            renderType: Text.NativeRendering
                                         }
                                     }
                                 }
@@ -780,6 +792,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 8
                                             anchors.rightMargin: 8
                                             anchors.topMargin: 4
+                                            renderType: Text.NativeRendering
                                         }
                                     }
                                 }
@@ -822,6 +835,7 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                renderType: Text.NativeRendering
                             }
 
                             // <p class="subtitle">
@@ -842,6 +856,7 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.topMargin: 8
+                                renderType: Text.NativeRendering
                             }
 
                             // <p>
@@ -856,10 +871,11 @@ ApplicationWindow {
                                 font.pixelSize: 16
                                 wrapMode: Text.WordWrap
                                 transform: Translate {
-                                    y: -3.6
+                                    y: -3
                                 }
                                 Layout.fillWidth: true
                                 Layout.topMargin: 16 - subtitle.eldurCarry
+                                renderType: Text.NativeRendering
                             }
 
                             // <div class="callout">
@@ -921,6 +937,7 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            renderType: Text.NativeRendering
                                         }
 
                                         Text {
@@ -934,11 +951,12 @@ ApplicationWindow {
                                             font.pixelSize: 16
                                             wrapMode: Text.WordWrap
                                             transform: Translate {
-                                                y: -3.6
+                                                y: -3
                                             }
                                             Layout.fillWidth: true
                                             Layout.topMargin: 4 - calloutTitle.eldurCarry
                                             Layout.preferredHeight: implicitHeight
+                                            renderType: Text.NativeRendering
                                         }
                                     }
                                 }
@@ -981,6 +999,7 @@ ApplicationWindow {
                                     anchors.left: parent.left
                                     anchors.right: parent.right
                                     anchors.top: parent.top
+                                    renderType: Text.NativeRendering
                                 }
                             }
 
@@ -1002,6 +1021,7 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.topMargin: 12 - h2.eldurCarry
+                                renderType: Text.NativeRendering
                             }
 
                             // <pre>
@@ -1030,9 +1050,6 @@ ApplicationWindow {
                                     font.pixelSize: 13
                                     lineHeight: 18.85
                                     lineHeightMode: Text.FixedHeight
-                                    transform: Translate {
-                                        y: 1
-                                    }
                                     wrapMode: Text.NoWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -1040,6 +1057,7 @@ ApplicationWindow {
                                     anchors.leftMargin: 17
                                     anchors.rightMargin: 17
                                     anchors.topMargin: 17
+                                    renderType: Text.NativeRendering
                                 }
 
                                 Shape {
@@ -1111,6 +1129,7 @@ ApplicationWindow {
                                     anchors.left: parent.left
                                     anchors.right: parent.right
                                     anchors.top: parent.top
+                                    renderType: Text.NativeRendering
                                 }
                             }
 
@@ -1193,6 +1212,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -1244,6 +1264,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -1303,6 +1324,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 13
                                             anchors.topMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -1349,7 +1371,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
                                             transform: Translate {
-                                                y: -3.15
+                                                y: -2
                                             }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1357,6 +1379,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -1407,6 +1430,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -1465,6 +1489,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 13
                                             anchors.topMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -1505,7 +1530,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
                                             transform: Translate {
-                                                y: -3.15
+                                                y: -2
                                             }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1513,6 +1538,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -1553,7 +1579,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
                                             transform: Translate {
-                                                y: -3.15
+                                                y: -2
                                             }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1561,6 +1587,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -1619,6 +1646,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 13
                                             anchors.topMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -1659,7 +1687,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
                                             transform: Translate {
-                                                y: -3.15
+                                                y: -2
                                             }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1667,6 +1695,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -1707,7 +1736,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
                                             transform: Translate {
-                                                y: -3.15
+                                                y: -2
                                             }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1715,6 +1744,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -1773,6 +1803,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 13
                                             anchors.topMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -1821,7 +1852,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
                                             transform: Translate {
-                                                y: -3.15
+                                                y: -2
                                             }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1829,6 +1860,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -1877,7 +1909,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
                                             transform: Translate {
-                                                y: -3.15
+                                                y: -2
                                             }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1885,6 +1917,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -1911,7 +1944,7 @@ ApplicationWindow {
                                             font.pixelSize: 14
                                             wrapMode: Text.WordWrap
                                             transform: Translate {
-                                                y: -3.15
+                                                y: -2
                                             }
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1919,6 +1952,7 @@ ApplicationWindow {
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 13
                                             anchors.topMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
                                     }
                                 }

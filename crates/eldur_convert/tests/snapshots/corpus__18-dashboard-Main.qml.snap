@@ -301,6 +301,7 @@ ApplicationWindow {
                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                             Layout.alignment: Qt.AlignVCenter
                                             Layout.leftMargin: 10
+                                            renderType: Text.NativeRendering
                                         }
 
                                         Item {
@@ -333,6 +334,7 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.leftMargin: 12
                                         Layout.rightMargin: 12
+                                        renderType: Text.NativeRendering
                                     }
 
                                     // <a class="nav-item active">
@@ -391,6 +393,7 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -426,6 +429,7 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
 
                                         HoverHandler {
@@ -465,6 +469,7 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
 
                                         HoverHandler {
@@ -490,6 +495,7 @@ ApplicationWindow {
                                         Layout.leftMargin: 12
                                         Layout.rightMargin: 12
                                         Layout.topMargin: 24 - navItem3.eldurCarry
+                                        renderType: Text.NativeRendering
                                     }
 
                                     // <a class="nav-item">
@@ -528,6 +534,7 @@ ApplicationWindow {
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.alignment: Qt.AlignVCenter
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Item {
@@ -560,6 +567,7 @@ ApplicationWindow {
                                                     anchors.leftMargin: 8
                                                     anchors.rightMargin: 8
                                                     anchors.topMargin: 2
+                                                    renderType: Text.NativeRendering
                                                 }
                                             }
                                         }
@@ -601,6 +609,7 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
 
                                         HoverHandler {
@@ -640,6 +649,7 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
 
                                         HoverHandler {
@@ -665,6 +675,7 @@ ApplicationWindow {
                                         Layout.leftMargin: 12
                                         Layout.rightMargin: 12
                                         Layout.topMargin: 24 - navItem6.eldurCarry
+                                        renderType: Text.NativeRendering
                                     }
 
                                     // <a class="nav-item">
@@ -699,6 +710,7 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
 
                                         HoverHandler {
@@ -738,6 +750,7 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
+                                            renderType: Text.NativeRendering
                                         }
 
                                         HoverHandler {
@@ -807,6 +820,7 @@ ApplicationWindow {
                                             font.letterSpacing: -0.24
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            renderType: Text.NativeRendering
                                         }
 
                                         // <p class="subtitle">
@@ -820,6 +834,7 @@ ApplicationWindow {
                                             Layout.fillWidth: true
                                             Layout.topMargin: 4 - h1.eldurCarry
                                             Layout.preferredHeight: implicitHeight
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -861,6 +876,7 @@ ApplicationWindow {
                                             Layout.maximumWidth: 240
                                             Layout.preferredHeight: 36
                                             Layout.alignment: Qt.AlignVCenter
+                                            renderType: Text.NativeRendering
                                         }
 
                                         // <div class="avatar">
@@ -920,6 +936,7 @@ ApplicationWindow {
                                                 anchors.right: parent.right
                                                 anchors.top: parent.top
                                                 anchors.bottom: parent.bottom
+                                                renderType: Text.NativeRendering
                                             }
                                         }
 
@@ -996,6 +1013,7 @@ ApplicationWindow {
                                                     font.weight: 500
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="stat-value">
@@ -1013,6 +1031,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 8 - statLabel.eldurCarry
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="stat-delta up">
@@ -1027,6 +1046,7 @@ ApplicationWindow {
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 6 - statValue.eldurCarry
                                                     Layout.preferredHeight: implicitHeight
+                                                    renderType: Text.NativeRendering
                                                 }
                                             }
                                         }
@@ -1067,6 +1087,7 @@ ApplicationWindow {
                                                     font.weight: 500
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="stat-value">
@@ -1084,6 +1105,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 8 - statLabel2.eldurCarry
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="stat-delta down">
@@ -1098,6 +1120,7 @@ ApplicationWindow {
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 6 - statValue2.eldurCarry
                                                     Layout.preferredHeight: implicitHeight
+                                                    renderType: Text.NativeRendering
                                                 }
                                             }
                                         }
@@ -1138,6 +1161,7 @@ ApplicationWindow {
                                                     font.weight: 500
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="stat-value">
@@ -1155,6 +1179,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 8 - statLabel3.eldurCarry
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="stat-delta up">
@@ -1169,6 +1194,7 @@ ApplicationWindow {
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 6 - statValue3.eldurCarry
                                                     Layout.preferredHeight: implicitHeight
+                                                    renderType: Text.NativeRendering
                                                 }
                                             }
                                         }
@@ -1209,6 +1235,7 @@ ApplicationWindow {
                                                     font.weight: 500
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="stat-value">
@@ -1226,6 +1253,7 @@ ApplicationWindow {
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 8 - statLabel4.eldurCarry
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <p class="stat-delta down">
@@ -1240,6 +1268,7 @@ ApplicationWindow {
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 6 - statValue4.eldurCarry
                                                     Layout.preferredHeight: implicitHeight
+                                                    renderType: Text.NativeRendering
                                                 }
                                             }
                                         }
@@ -1295,6 +1324,7 @@ ApplicationWindow {
                                                     font.weight: 600
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <div class="bar-row">
@@ -1321,6 +1351,7 @@ ApplicationWindow {
                                                         Layout.minimumWidth: 120
                                                         Layout.maximumWidth: 120
                                                         Layout.alignment: Qt.AlignVCenter
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     // <div class="bar-track">
@@ -1393,6 +1424,7 @@ ApplicationWindow {
                                                         Layout.minimumWidth: 48
                                                         Layout.maximumWidth: 48
                                                         Layout.alignment: Qt.AlignVCenter
+                                                        renderType: Text.NativeRendering
                                                     }
                                                 }
 
@@ -1420,6 +1452,7 @@ ApplicationWindow {
                                                         Layout.minimumWidth: 120
                                                         Layout.maximumWidth: 120
                                                         Layout.alignment: Qt.AlignVCenter
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     // <div class="bar-track">
@@ -1492,6 +1525,7 @@ ApplicationWindow {
                                                         Layout.minimumWidth: 48
                                                         Layout.maximumWidth: 48
                                                         Layout.alignment: Qt.AlignVCenter
+                                                        renderType: Text.NativeRendering
                                                     }
                                                 }
 
@@ -1519,6 +1553,7 @@ ApplicationWindow {
                                                         Layout.minimumWidth: 120
                                                         Layout.maximumWidth: 120
                                                         Layout.alignment: Qt.AlignVCenter
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     // <div class="bar-track">
@@ -1591,6 +1626,7 @@ ApplicationWindow {
                                                         Layout.minimumWidth: 48
                                                         Layout.maximumWidth: 48
                                                         Layout.alignment: Qt.AlignVCenter
+                                                        renderType: Text.NativeRendering
                                                     }
                                                 }
 
@@ -1618,6 +1654,7 @@ ApplicationWindow {
                                                         Layout.minimumWidth: 120
                                                         Layout.maximumWidth: 120
                                                         Layout.alignment: Qt.AlignVCenter
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     // <div class="bar-track">
@@ -1690,6 +1727,7 @@ ApplicationWindow {
                                                         Layout.minimumWidth: 48
                                                         Layout.maximumWidth: 48
                                                         Layout.alignment: Qt.AlignVCenter
+                                                        renderType: Text.NativeRendering
                                                     }
                                                 }
 
@@ -1715,6 +1753,7 @@ ApplicationWindow {
                                                         Layout.minimumWidth: 120
                                                         Layout.maximumWidth: 120
                                                         Layout.alignment: Qt.AlignVCenter
+                                                        renderType: Text.NativeRendering
                                                     }
 
                                                     // <div class="bar-track">
@@ -1787,6 +1826,7 @@ ApplicationWindow {
                                                         Layout.minimumWidth: 48
                                                         Layout.maximumWidth: 48
                                                         Layout.alignment: Qt.AlignVCenter
+                                                        renderType: Text.NativeRendering
                                                     }
                                                 }
                                             }
@@ -1831,6 +1871,7 @@ ApplicationWindow {
                                                     font.weight: 600
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 // <div class="progress-group">
@@ -1860,6 +1901,7 @@ ApplicationWindow {
                                                             Layout.fillWidth: true
                                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                                             Layout.fillHeight: true
+                                                            renderType: Text.NativeRendering
                                                         }
 
                                                         Item {
@@ -1877,6 +1919,7 @@ ApplicationWindow {
                                                             Layout.fillWidth: true
                                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                                             Layout.fillHeight: true
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -1940,6 +1983,7 @@ ApplicationWindow {
                                                             Layout.fillWidth: true
                                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                                             Layout.fillHeight: true
+                                                            renderType: Text.NativeRendering
                                                         }
 
                                                         Item {
@@ -1957,6 +2001,7 @@ ApplicationWindow {
                                                             Layout.fillWidth: true
                                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                                             Layout.fillHeight: true
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2070,6 +2115,7 @@ ApplicationWindow {
                                                 font.weight: 600
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
+                                                renderType: Text.NativeRendering
                                             }
 
                                             // <table>
@@ -2108,6 +2154,7 @@ ApplicationWindow {
 
                                                         implicitWidth: thText.implicitWidth + 28
                                                         implicitHeight: thText.implicitHeight + 24
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 0
                                                         Layout.column: 0
                                                         Layout.preferredWidth: tableGrid.columnWidths[0]
@@ -2127,8 +2174,10 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2138,6 +2187,7 @@ ApplicationWindow {
 
                                                         implicitWidth: thText2.implicitWidth + 28
                                                         implicitHeight: thText2.implicitHeight + 24
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 0
                                                         Layout.column: 1
                                                         Layout.preferredWidth: tableGrid.columnWidths[1]
@@ -2157,8 +2207,10 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2168,6 +2220,7 @@ ApplicationWindow {
 
                                                         implicitWidth: thText3.implicitWidth + 28
                                                         implicitHeight: thText3.implicitHeight + 24
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 0
                                                         Layout.column: 2
                                                         Layout.preferredWidth: tableGrid.columnWidths[2]
@@ -2187,8 +2240,10 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2198,6 +2253,7 @@ ApplicationWindow {
 
                                                         implicitWidth: numText.implicitWidth + 28
                                                         implicitHeight: numText.implicitHeight + 24
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 0
                                                         Layout.column: 3
                                                         Layout.preferredWidth: tableGrid.columnWidths[3]
@@ -2217,8 +2273,10 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2228,6 +2286,7 @@ ApplicationWindow {
 
                                                         implicitWidth: thText4.implicitWidth + 28
                                                         implicitHeight: thText4.implicitHeight + 24
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 0
                                                         Layout.column: 4
                                                         Layout.preferredWidth: tableGrid.columnWidths[4]
@@ -2247,8 +2306,10 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2265,6 +2326,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText.implicitWidth + 28
                                                         implicitHeight: tdText.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 1
                                                         Layout.column: 0
                                                         Layout.preferredWidth: tableGrid.columnWidths[0]
@@ -2289,9 +2351,11 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2302,6 +2366,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText2.implicitWidth + 28
                                                         implicitHeight: tdText2.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 1
                                                         Layout.column: 1
                                                         Layout.preferredWidth: tableGrid.columnWidths[1]
@@ -2326,9 +2391,11 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2339,6 +2406,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText3.implicitWidth + 28
                                                         implicitHeight: tdText3.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 1
                                                         Layout.column: 2
                                                         Layout.preferredWidth: tableGrid.columnWidths[2]
@@ -2363,9 +2431,11 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2376,6 +2446,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: numText2.implicitWidth + 28
                                                         implicitHeight: numText2.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 1
                                                         Layout.column: 3
                                                         Layout.preferredWidth: tableGrid.columnWidths[3]
@@ -2401,9 +2472,11 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2414,6 +2487,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdContent.implicitWidth + 28
                                                         implicitHeight: tdContent.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 1
                                                         Layout.column: 4
                                                         Layout.preferredWidth: tableGrid.columnWidths[4]
@@ -2433,6 +2507,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -2461,6 +2536,7 @@ ApplicationWindow {
                                                                     anchors.leftMargin: 10
                                                                     anchors.rightMargin: 10
                                                                     anchors.topMargin: 3
+                                                                    renderType: Text.NativeRendering
                                                                 }
                                                             }
                                                         }
@@ -2473,6 +2549,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText4.implicitWidth + 28
                                                         implicitHeight: tdText4.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 2
                                                         Layout.column: 0
                                                         Layout.preferredWidth: tableGrid.columnWidths[0]
@@ -2497,9 +2574,11 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2510,6 +2589,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText5.implicitWidth + 28
                                                         implicitHeight: tdText5.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 2
                                                         Layout.column: 1
                                                         Layout.preferredWidth: tableGrid.columnWidths[1]
@@ -2534,9 +2614,11 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2547,6 +2629,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText6.implicitWidth + 28
                                                         implicitHeight: tdText6.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 2
                                                         Layout.column: 2
                                                         Layout.preferredWidth: tableGrid.columnWidths[2]
@@ -2571,9 +2654,11 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2584,6 +2669,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: numText3.implicitWidth + 28
                                                         implicitHeight: numText3.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 2
                                                         Layout.column: 3
                                                         Layout.preferredWidth: tableGrid.columnWidths[3]
@@ -2609,9 +2695,11 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2622,6 +2710,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdContent2.implicitWidth + 28
                                                         implicitHeight: tdContent2.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 2
                                                         Layout.column: 4
                                                         Layout.preferredWidth: tableGrid.columnWidths[4]
@@ -2641,6 +2730,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -2669,6 +2759,7 @@ ApplicationWindow {
                                                                     anchors.leftMargin: 10
                                                                     anchors.rightMargin: 10
                                                                     anchors.topMargin: 3
+                                                                    renderType: Text.NativeRendering
                                                                 }
                                                             }
                                                         }
@@ -2681,6 +2772,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText7.implicitWidth + 28
                                                         implicitHeight: tdText7.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 3
                                                         Layout.column: 0
                                                         Layout.preferredWidth: tableGrid.columnWidths[0]
@@ -2705,9 +2797,11 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2718,6 +2812,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText8.implicitWidth + 28
                                                         implicitHeight: tdText8.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 3
                                                         Layout.column: 1
                                                         Layout.preferredWidth: tableGrid.columnWidths[1]
@@ -2742,9 +2837,11 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2755,6 +2852,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText9.implicitWidth + 28
                                                         implicitHeight: tdText9.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 3
                                                         Layout.column: 2
                                                         Layout.preferredWidth: tableGrid.columnWidths[2]
@@ -2779,9 +2877,11 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2792,6 +2892,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: numText4.implicitWidth + 28
                                                         implicitHeight: numText4.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 3
                                                         Layout.column: 3
                                                         Layout.preferredWidth: tableGrid.columnWidths[3]
@@ -2817,9 +2918,11 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2830,6 +2933,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdContent3.implicitWidth + 28
                                                         implicitHeight: tdContent3.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 3
                                                         Layout.column: 4
                                                         Layout.preferredWidth: tableGrid.columnWidths[4]
@@ -2849,6 +2953,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -2877,6 +2982,7 @@ ApplicationWindow {
                                                                     anchors.leftMargin: 10
                                                                     anchors.rightMargin: 10
                                                                     anchors.topMargin: 3
+                                                                    renderType: Text.NativeRendering
                                                                 }
                                                             }
                                                         }
@@ -2889,6 +2995,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText10.implicitWidth + 28
                                                         implicitHeight: tdText10.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 4
                                                         Layout.column: 0
                                                         Layout.preferredWidth: tableGrid.columnWidths[0]
@@ -2913,9 +3020,11 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2926,6 +3035,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText11.implicitWidth + 28
                                                         implicitHeight: tdText11.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 4
                                                         Layout.column: 1
                                                         Layout.preferredWidth: tableGrid.columnWidths[1]
@@ -2950,9 +3060,11 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -2963,6 +3075,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText12.implicitWidth + 28
                                                         implicitHeight: tdText12.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 4
                                                         Layout.column: 2
                                                         Layout.preferredWidth: tableGrid.columnWidths[2]
@@ -2987,9 +3100,11 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -3000,6 +3115,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: numText5.implicitWidth + 28
                                                         implicitHeight: numText5.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 4
                                                         Layout.column: 3
                                                         Layout.preferredWidth: tableGrid.columnWidths[3]
@@ -3025,9 +3141,11 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -3038,6 +3156,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdContent4.implicitWidth + 28
                                                         implicitHeight: tdContent4.implicitHeight + 25
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 4
                                                         Layout.column: 4
                                                         Layout.preferredWidth: tableGrid.columnWidths[4]
@@ -3057,6 +3176,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
                                                             anchors.verticalCenterOffset: 0.5
@@ -3085,6 +3205,7 @@ ApplicationWindow {
                                                                     anchors.leftMargin: 10
                                                                     anchors.rightMargin: 10
                                                                     anchors.topMargin: 3
+                                                                    renderType: Text.NativeRendering
                                                                 }
                                                             }
                                                         }
@@ -3097,6 +3218,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText13.implicitWidth + 28
                                                         implicitHeight: tdText13.implicitHeight + 26
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 5
                                                         Layout.column: 0
                                                         Layout.preferredWidth: tableGrid.columnWidths[0]
@@ -3129,8 +3251,10 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -3141,6 +3265,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText14.implicitWidth + 28
                                                         implicitHeight: tdText14.implicitHeight + 26
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 5
                                                         Layout.column: 1
                                                         Layout.preferredWidth: tableGrid.columnWidths[1]
@@ -3173,8 +3298,10 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -3185,6 +3312,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdText15.implicitWidth + 28
                                                         implicitHeight: tdText15.implicitHeight + 26
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 5
                                                         Layout.column: 2
                                                         Layout.preferredWidth: tableGrid.columnWidths[2]
@@ -3217,8 +3345,10 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -3229,6 +3359,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: numText6.implicitWidth + 28
                                                         implicitHeight: numText6.implicitHeight + 26
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 5
                                                         Layout.column: 3
                                                         Layout.preferredWidth: tableGrid.columnWidths[3]
@@ -3262,8 +3393,10 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
+                                                            renderType: Text.NativeRendering
                                                         }
                                                     }
 
@@ -3274,6 +3407,7 @@ ApplicationWindow {
                                                         color: "#00000000"
                                                         implicitWidth: tdContent5.implicitWidth + 28
                                                         implicitHeight: tdContent5.implicitHeight + 26
+                                                        anchors.alignWhenCentered: false
                                                         Layout.row: 5
                                                         Layout.column: 4
                                                         Layout.preferredWidth: tableGrid.columnWidths[4]
@@ -3301,6 +3435,7 @@ ApplicationWindow {
                                                             anchors.left: parent.left
                                                             anchors.right: parent.right
                                                             anchors.verticalCenter: parent.verticalCenter
+                                                            anchors.alignWhenCentered: false
                                                             anchors.leftMargin: 14
                                                             anchors.rightMargin: 14
 
@@ -3328,6 +3463,7 @@ ApplicationWindow {
                                                                     anchors.leftMargin: 10
                                                                     anchors.rightMargin: 10
                                                                     anchors.topMargin: 3
+                                                                    renderType: Text.NativeRendering
                                                                 }
                                                             }
                                                         }

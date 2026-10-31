@@ -6,7 +6,8 @@
 //
 //   node tools/visual/paint/gen.mjs
 //
-// writes `page.html`, `chromium.json` (for each probe its box and the colours
+// writes `rich.txt` (the same three numbers for RichText lines), `page.html`,
+// `chromium.json` (for each probe its box and the colours
 // along a line through it; for each text line its inked rows) and
 // `shifts.txt` (for each font: Chromium's baseline below the line top, Qt's,
 // and the shift between them, which eldur_convert's unit test reads).
@@ -46,6 +47,40 @@ const FONTS = {
   f: { css: "font:13px/1 sans-serif", family: "sans-serif", size: 13, weight: 400, line: 13 },
 };
 
+// Inline runs the converter writes as RichText, at the same fractions: the
+// run's font, background or padding is what makes a line RichText, and the
+// line's baseline depends on the tallest run.
+const CODE = "font-family:monospace;background:#eee";
+const RICH = {
+  r1: { css: "font:16px/1.6 sans-serif", html: `Hx<span style="${CODE};font-size:14px;padding:2px 5px">H</span>`, qt: ["sans-serif", 16, 25.6, "monospace", 14] },
+  r2: { css: "font:14px/20px sans-serif", html: `Hx<span style="${CODE};font-size:12px">H</span>`, qt: ["sans-serif", 14, 20, "monospace", 12] },
+  r3: { css: "font:16px/1.5 sans-serif", html: `Hx<span style="${CODE};font-size:16px">H</span>`, qt: ["sans-serif", 16, 24, "monospace", 16] },
+  r4: { css: "font:16px/1.5 sans-serif", html: `Hx<span style="${CODE};font-size:24px">H</span>`, qt: ["sans-serif", 16, 24, "monospace", 24] },
+  r5: { css: "font:15px/1.5 sans-serif", html: `Hx<span style="background:#eee;font-family:serif">H</span>`, qt: ["sans-serif", 15, 22.5, "serif", 15] },
+  r6: { css: "font:16px/1.5 serif", html: `Hx<span style="${CODE};font-size:14px">H</span>`, qt: ["serif", 16, 24, "monospace", 14] },
+  r7: { css: "font:16px/1.6 sans-serif", html: `Hx<span style="background:#eee">H</span>`, qt: ["sans-serif", 16, 25.6, "sans-serif", 16] },
+  r8: { css: "font:14px/1.5 sans-serif", html: `Hx<span style="background:#eee;font-size:24px">H</span>`, qt: ["sans-serif", 14, 21, "sans-serif", 24] },
+  r9: { css: "font:16px/1.6 sans-serif", html: `Hx<br>H<span style="${CODE};font-size:14px">H</span>`, qt: ["sans-serif", 16, 25.6, "monospace", 14] },
+};
+const RICH_FRACTIONS = [0, 0.25, 0.5, 0.75];
+// A plain line of the monospace font, which RICH's runs mix in.
+const MONO = { m1: { css: "font:14px/1.5 monospace", html: "Hx" }, m2: { css: "font:16px/1.6 monospace", html: "Hx" } };
+
+// Table cells around text: `vertical-align`, a row a neighbour makes taller,
+// and insets that differ, which a collapsed border or padding gives.
+const CELLS = {
+  c1: { table: "border-collapse:collapse", cell: "padding:4px 8px;border:1px solid #ccc;font:14px/20px sans-serif", other: "" },
+  c2: { table: "border-collapse:collapse", cell: "padding:4px 8px;border:1px solid #ccc;font:14px/20px sans-serif", other: "height:60px" },
+  c3: { table: "border-collapse:collapse", cell: "padding:4px 8px;border:1px solid #ccc;font:14px/20px sans-serif;vertical-align:top", other: "height:60px" },
+  c4: { table: "border-collapse:collapse", cell: "padding:4px 8px;border:1px solid #ccc;font:14px/20px sans-serif;vertical-align:bottom", other: "height:60px" },
+  c5: { table: "border-collapse:collapse", cell: "padding:4px 8px;border:3px solid #ccc;font:14px/20px sans-serif", other: "height:61px" },
+  c6: { table: "border-collapse:collapse", cell: "padding:4px 8px;border:1px solid #ccc;font:15px/1.5 sans-serif", other: "height:50px" },
+  c7: { table: "border-collapse:separate;border-spacing:0", cell: "padding:5px 8px 4px;font:14px/20px sans-serif", other: "height:41px" },
+  c8: { table: "border-collapse:separate;border-spacing:0", cell: "padding:6px 8px 3px;font:15px/1.5 sans-serif", other: "height:40px" },
+  c9: { table: "border-collapse:separate;border-spacing:0", cell: "padding:10px 8px;border-bottom:1px solid #ccc;font:14px/1.6 sans-serif", other: "" },
+};
+const CELL_FRACTIONS = [0, 0.5];
+
 function page() {
   const css = [
     "html,body{margin:0;background:#fff}",
@@ -58,6 +93,11 @@ function page() {
     ".card p{font:16px/27.2px sans-serif;color:#000}",
     ...Object.entries(BOXES).map(([k, v]) => `.${k}{${v}}`),
     ...Object.entries(FONTS).map(([k, v]) => `.${k}{${v.css}}`),
+    ...Object.entries({ ...RICH, ...MONO }).map(([k, v]) => `.${k}{${v.css}}`),
+    ".cells{position:absolute}",
+    ".cells td{width:44px;color:#000;white-space:nowrap}",
+    ".cells td+td{width:12px;padding:0;font:0/0 sans-serif}",
+    ...Object.entries(CELLS).flatMap(([k, v]) => [`.t${k}{${v.table}}`, `.cells .${k}{${v.cell}}`, `.cells .${k}+td{border:${v.cell.match(/border:([^;]+)/)?.[1] ?? "0"}}`]),
   ];
   const body = [];
   let row = 0;
@@ -90,6 +130,21 @@ function page() {
     FRACTIONS.forEach((f, i) => {
       body.push(
         `<p class="line ${font}" data-line style="left:${400 + i * 60}px;top:${100 + r * 80 + f}px">Hx</p>`,
+      );
+    });
+  });
+  Object.entries({ ...MONO, ...RICH }).forEach(([font, rich], r) => {
+    RICH_FRACTIONS.forEach((f, i) => {
+      body.push(
+        `<p class="line ${font}" data-line style="left:${1000 + i * 70}px;top:${40 + r * 50 + f}px">${rich.html}</p>`,
+      );
+    });
+  });
+  Object.entries(CELLS).forEach(([name, cell], i) => {
+    CELL_FRACTIONS.forEach((f, r) => {
+      body.push(
+        `<table class="cells t${name}" style="left:${400 + i * 88}px;top:${600 + r * 95 + f}px">` +
+          `<tr><td class="cell ${name}" data-line>Hx</td><td style="${cell.other}"></td></tr></table>`,
       );
     });
   });
@@ -178,6 +233,59 @@ function baselines(fonts) {
   return out;
 }
 
+// The row Qt paints a RichText line's baseline on, as the converter writes
+// such a line without a shift: from the pixels, since QML reports no baseline
+// for a RichText line.
+function qtRichProbe() {
+  const items = Object.entries(RICH).map(([, r], i) => {
+    const [family, size, line, runFamily, runSize] = r.qt;
+    const run = `<span style=\\"font-family:'${runFamily}';font-size:${runSize}px;background-color:#eee\\">H</span>`;
+    return (
+      `Text { x: 10; y: ${10 + i * 70}; width: 60; textFormat: Text.RichText; color: "#000000"; ` +
+      `font.family: "${family}"; font.pixelSize: ${size}; ` +
+      `text: "<div style=\\"line-height:${line}px\\">H${run}</div>" }`
+    );
+  });
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "eldur-paint-"));
+  fs.writeFileSync(path.join(dir, "Main.qml"), `import QtQuick\nItem {\n${items.join("\n")}\n}\n`);
+  const png = path.join(dir, "rich.png");
+  execFileSync("python3", [path.join(here, "..", "render_qml.py"), dir, png], { stdio: "ignore" });
+  const shot = fs.readFileSync(png).toString("base64");
+  fs.rmSync(dir, { recursive: true });
+  return shot;
+}
+
+// Runs in the page: the last inked row, plus one, of each probed Text.
+function qtRichBaselines({ png, count }) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onerror = reject;
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const g = canvas.getContext("2d", { willReadFrequently: true });
+      g.drawImage(image, 0, 0);
+      const out = [];
+      for (let i = 0; i < count; ++i) {
+        const y0 = 10 + i * 70;
+        let last = -1;
+        for (let y = y0; y < y0 + 66; ++y) {
+          for (let x = 10; x < 70; ++x) {
+            if (g.getImageData(x, y, 1, 1).data[1] < 128) {
+              last = y - y0;
+              break;
+            }
+          }
+        }
+        out.push(last + 1);
+      }
+      resolve(out);
+    };
+    image.src = png;
+  });
+}
+
 // Qt's baseline in a fixed-height line of the same font and line height.
 function qtBaselines() {
   const items = Object.entries(FONTS)
@@ -233,6 +341,23 @@ await tab.evaluate(() => document.fonts.ready);
 const shot = (await tab.screenshot({ fullPage: false })).toString("base64");
 const measured = await tab.evaluate(read, `data:image/png;base64,${shot}`);
 const chromiumBaselines = await tab.evaluate(baselines, Object.keys(FONTS));
+// A line box's baseline, on the page itself: its first line, whatever runs it holds.
+const richBaselines = await tab.evaluate((fonts) => {
+  const out = {};
+  for (const font of fonts) {
+    const line = document.querySelector(`.${font}`);
+    const mark = document.createElement("span");
+    mark.style.cssText = "display:inline-block;width:0;height:0";
+    line.prepend(mark);
+    out[font] = mark.getBoundingClientRect().bottom - line.getBoundingClientRect().top;
+    mark.remove();
+  }
+  return out;
+}, Object.keys(RICH));
+const richQt = await tab.evaluate(qtRichBaselines, {
+  png: `data:image/png;base64,${qtRichProbe()}`,
+  count: Object.keys(RICH).length,
+});
 await browser.close();
 
 fs.writeFileSync(path.join(here, "chromium.json"), `${JSON.stringify(measured, null, 0)}\n`);
@@ -245,3 +370,9 @@ for (const k of Object.keys(FONTS)) {
   lines.push(`${k} ${chromiumBaselines[k]} ${painted} ${chromiumBaselines[k] - painted}`);
 }
 fs.writeFileSync(path.join(here, "shifts.txt"), `${lines.join("\n")}\n`);
+
+const rich = ["# font chromium-baseline qt-painted-baseline shift (gen.mjs; never edit by hand)"];
+Object.keys(RICH).forEach((k, i) => {
+  rich.push(`${k} ${richBaselines[k]} ${richQt[i]} ${richBaselines[k] - richQt[i]}`);
+});
+fs.writeFileSync(path.join(here, "rich.txt"), `${rich.join("\n")}\n`);

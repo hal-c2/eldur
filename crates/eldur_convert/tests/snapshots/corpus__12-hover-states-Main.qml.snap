@@ -81,6 +81,7 @@ ApplicationWindow {
                         }
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
+                        renderType: Text.NativeRendering
                     }
 
                     // <p class="lead">
@@ -101,6 +102,7 @@ ApplicationWindow {
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
                         Layout.topMargin: 6
+                        renderType: Text.NativeRendering
                     }
 
                     // <section class="section">
@@ -133,6 +135,7 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
+                            renderType: Text.NativeRendering
                         }
 
                         // <div class="button-row">
@@ -182,6 +185,13 @@ ApplicationWindow {
                                 bottomPadding: 11
                                 leftPadding: 21
                                 implicitHeight: 44.5
+                                contentItem: Text {
+                                    text: buttonControl.text
+                                    font: buttonControl.font
+                                    color: buttonControl.palette.buttonText
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
                                 transform: Scale {
                                     xScale: buttonControl.pressed ? 0.97 : 1
                                     yScale: buttonControl.pressed ? 0.97 : 1
@@ -244,6 +254,13 @@ ApplicationWindow {
                                 bottomPadding: 11
                                 leftPadding: 21
                                 implicitHeight: 44.5
+                                contentItem: Text {
+                                    text: buttonControl2.text
+                                    font: buttonControl2.font
+                                    color: buttonControl2.palette.buttonText
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
                                 transform: Scale {
                                     xScale: buttonControl2.pressed ? 0.97 : 1
                                     yScale: buttonControl2.pressed ? 0.97 : 1
@@ -306,6 +323,13 @@ ApplicationWindow {
                                 bottomPadding: 11
                                 leftPadding: 21
                                 implicitHeight: 44.5
+                                contentItem: Text {
+                                    text: buttonControl3.text
+                                    font: buttonControl3.font
+                                    color: buttonControl3.palette.buttonText
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
                                 transform: Scale {
                                     xScale: buttonControl3.pressed ? 0.97 : 1
                                     yScale: buttonControl3.pressed ? 0.97 : 1
@@ -361,6 +385,14 @@ ApplicationWindow {
                                 bottomPadding: 11
                                 leftPadding: 21
                                 implicitHeight: 44.5
+                                contentItem: Text {
+                                    text: buttonControl4.text
+                                    font: buttonControl4.font
+                                    color: buttonControl4.palette.buttonText
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    renderType: Text.NativeRendering
+                                }
                                 enabled: false
                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
                             }
@@ -397,6 +429,7 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
+                            renderType: Text.NativeRendering
                         }
 
                         // <div class="cards">
@@ -485,6 +518,7 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        renderType: Text.NativeRendering
                                     }
 
                                     // <p>
@@ -503,6 +537,7 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.topMargin: 6 - h3.eldurCarry
                                         Layout.preferredHeight: implicitHeight
+                                        renderType: Text.NativeRendering
                                     }
                                 }
 
@@ -585,6 +620,7 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        renderType: Text.NativeRendering
                                     }
 
                                     // <p>
@@ -603,6 +639,7 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.topMargin: 6 - h32.eldurCarry
                                         Layout.preferredHeight: implicitHeight
+                                        renderType: Text.NativeRendering
                                     }
                                 }
 
@@ -685,6 +722,7 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        renderType: Text.NativeRendering
                                     }
 
                                     // <p>
@@ -703,6 +741,7 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.topMargin: 6 - h33.eldurCarry
                                         Layout.preferredHeight: implicitHeight
+                                        renderType: Text.NativeRendering
                                     }
                                 }
 
@@ -753,6 +792,7 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                renderType: Text.NativeRendering
                             }
 
                             // <p>
@@ -774,6 +814,7 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.topMargin: 15 - sectionTitle3.eldurCarry
+                                renderType: Text.NativeRendering
 
                                 TapHandler {
                                     onTapped: root.scrollToFragment("#")
@@ -803,6 +844,7 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.topMargin: 15 - p.eldurCarry
+                                renderType: Text.NativeRendering
 
                                 TapHandler {
                                     onTapped: root.scrollToFragment("#")
@@ -830,6 +872,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.topMargin: 15 - p2.eldurCarry
                                 Layout.bottomMargin: 15
+                                renderType: Text.NativeRendering
 
                                 TapHandler {
                                     onTapped: root.scrollToFragment("#")
@@ -871,6 +914,7 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                renderType: Text.NativeRendering
                             }
 
                             // <ul class="menu">
@@ -971,6 +1015,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.alignment: Qt.AlignVCenter
                                                 Layout.leftMargin: 12
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Item {
@@ -1052,6 +1097,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.alignment: Qt.AlignVCenter
                                                 Layout.leftMargin: 12
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Item {
@@ -1133,6 +1179,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.alignment: Qt.AlignVCenter
                                                 Layout.leftMargin: 12
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Item {
@@ -1214,6 +1261,7 @@ ApplicationWindow {
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.alignment: Qt.AlignVCenter
                                                 Layout.leftMargin: 12
+                                                renderType: Text.NativeRendering
                                             }
 
                                             Item {

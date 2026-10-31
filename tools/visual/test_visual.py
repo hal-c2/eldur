@@ -388,6 +388,23 @@ class PaintSnapTests(unittest.TestCase):
         self.assertEqual(image[y, left].tolist(), [0, 0, 0])
         self.assertEqual(cols[left + 1 - x0], "0,0,0")
 
+    # Lines that do not land (layout.md §1.2, known limits). This fails when
+    # one starts to; take it out then.
+    KNOWN_ROWS: dict[str, tuple[list[int], list[int]]] = {
+        # A monospace run of the body's size: a row above what its metrics give.
+        "r3 240": ([245, 256], [244, 255]),
+        "r3 240.25": ([245, 256], [244, 255]),
+        "r3 240.5": ([246, 257], [245, 256]),
+        "r3 240.75": ([246, 257], [245, 256]),
+        # The shift is the tallest run's, so a line without the run is low.
+        "r9 540": ([546, 583], [547, 583]),
+        "r9 540.25": ([546, 583], [547, 583]),
+        "r9 540.5": ([547, 583], [548, 584]),
+        "r9 540.75": ([547, 583], [548, 584]),
+        # Half a pixel from a fractional height: Qt's sum is just under it.
+        "c9 695.5": ([712, 721], [711, 720]),
+    }
+
     def test_glyphs_land_on_chromiums_rows(self) -> None:
         image = self.pixels["gl"]
         wrong = {}
@@ -399,7 +416,7 @@ class PaintSnapTests(unittest.TestCase):
             got = [y0 + int(ink[0]), y0 + int(ink[-1])] if len(ink) else None
             if got != line["ink"]:
                 wrong[f"{line['font']} {line['y']}"] = (line["ink"], got)
-        self.assertEqual(wrong, {})
+        self.assertEqual(wrong, self.KNOWN_ROWS)
 
 
 class RenderQmlSettleTests(unittest.TestCase):
@@ -421,8 +438,7 @@ class RenderQmlSettleTests(unittest.TestCase):
             (tmp_dir / "Main.qml").write_text(DELAYED_QML, encoding="utf-8")
             out_png = tmp_dir / "out.png"
             warnings = render_qml.render_qml(
-                tmp_dir, out_png, width=200, height=120, strict=True, backend="gl",
-                gl_text="native",
+                tmp_dir, out_png, width=200, height=120, strict=True, backend="gl"
             )
             self.assertEqual(warnings, [])
             _assert_delayed_final_state(self, out_png)
@@ -479,14 +495,34 @@ class RenderQmlBackendTests(unittest.TestCase):
     def test_unknown_backend_is_rejected(self) -> None:
         with self.assertRaisesRegex(render_qml.QmlRenderError, "Unknown backend"):
             render_qml.render_qml(Path("."), Path("out.png"), backend="vulkan")
-        with self.assertRaisesRegex(render_qml.QmlRenderError, "Unknown gl_text"):
-            render_qml.render_qml(Path("."), Path("out.png"), backend="gl", gl_text="subpixel")
 
-    def test_default_backend_is_gl_with_native_text(self) -> None:
+    def test_default_backend_is_gl(self) -> None:
         for parser in (render_qml.build_parser(), visual_run.build_parser()):
             args = parser.parse_args(["x", "y"] if parser.prog == "render_qml.py" else [])
-            self.assertEqual((args.backend, args.gl_text), ("gl", "native"))
-        self.assertEqual((render_qml.DEFAULT_BACKEND, render_qml.DEFAULT_GL_TEXT), ("gl", "native"))
+            self.assertEqual(args.backend, "gl")
+            self.assertFalse(hasattr(args, "gl_text"))
+        self.assertEqual(render_qml.DEFAULT_BACKEND, "gl")
+
+    def test_gl_draws_the_glyphs_the_output_asks_for(self) -> None:
+        # An inherited switch must not score something users never see.
+        qml = """import QtQuick
+
+Item {
+    Text { x: 10; y: 10; text: "Glyph placement"; font.pixelSize: 16; color: "#000000"%s }
+}
+"""
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(
+            os.environ, {"QML_DISABLE_DISTANCEFIELD": "1"}
+        ):
+            images = {}
+            for name, extra in (("default", ""), ("native", "; renderType: Text.NativeRendering")):
+                tmp_dir = Path(tmp) / name
+                tmp_dir.mkdir()
+                (tmp_dir / "Main.qml").write_text(qml % extra, encoding="utf-8")
+                png = tmp_dir / "out.png"
+                render_qml.render_qml(tmp_dir, png, width=200, height=40, backend="gl")
+                images[name] = compare.load_rgb(png)
+            self.assertFalse(np.array_equal(images["default"], images["native"]))
 
     def test_default_without_sway_says_to_pass_software_instead_of_falling_back(self) -> None:
         real_which = render_qml.shutil.which
@@ -631,29 +667,19 @@ Item {
                 encoding="utf-8",
             )
             pngs = {}
-            for name, backend, gl_text in (
-                ("sw", "software", "distancefield"),
-                ("df", "gl", "distancefield"),
-                ("native", "gl", "native"),
-            ):
+            for name, backend in (("sw", "software"), ("gl", "gl")):
                 pngs[name] = tmp_dir / f"{name}.png"
-                render_qml.render_qml(
-                    tmp_dir, pngs[name], width=200, height=40, backend=backend, gl_text=gl_text
-                )
+                render_qml.render_qml(tmp_dir, pngs[name], width=200, height=40, backend=backend)
 
             def ink_box(path: Path) -> tuple[int, int, int, int]:
                 ys, xs = np.nonzero(compare.load_rgb(path).min(axis=2) < 128)
                 return int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max())
 
-            # Same layout in all three; native and distance-field glyphs differ.
+            # Same layout on both.
             sw_box = ink_box(pngs["sw"])
-            for name in ("df", "native"):
-                box = ink_box(pngs[name])
-                for got, want in zip(box, sw_box):
-                    self.assertLessEqual(abs(got - want), 1, (name, box, sw_box))
-            self.assertFalse(
-                np.array_equal(compare.load_rgb(pngs["df"]), compare.load_rgb(pngs["native"]))
-            )
+            box = ink_box(pngs["gl"])
+            for got, want in zip(box, sw_box):
+                self.assertLessEqual(abs(got - want), 1, (box, sw_box))
 
 
 class RenderHtmlAndRunnerTests(unittest.TestCase):

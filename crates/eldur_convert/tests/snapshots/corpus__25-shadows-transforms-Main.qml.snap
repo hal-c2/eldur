@@ -88,6 +88,7 @@ ApplicationWindow {
                             anchors.leftMargin: 16
                             anchors.rightMargin: 16
                             anchors.topMargin: 16
+                            renderType: Text.NativeRendering
                         }
                     }
 
@@ -143,6 +144,7 @@ ApplicationWindow {
                             anchors.leftMargin: 16
                             anchors.rightMargin: 16
                             anchors.topMargin: 16
+                            renderType: Text.NativeRendering
                         }
                     }
 
@@ -242,6 +244,7 @@ ApplicationWindow {
                             anchors.leftMargin: 16
                             anchors.rightMargin: 16
                             anchors.topMargin: 16
+                            renderType: Text.NativeRendering
                         }
                     }
 
@@ -321,6 +324,7 @@ ApplicationWindow {
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.top: parent.top
+                            renderType: Text.NativeRendering
                         }
                     }
 
@@ -379,6 +383,7 @@ ApplicationWindow {
                         anchors.leftMargin: 8
                         anchors.rightMargin: 8
                         anchors.topMargin: 8
+                        renderType: Text.NativeRendering
                     }
                 }
             }

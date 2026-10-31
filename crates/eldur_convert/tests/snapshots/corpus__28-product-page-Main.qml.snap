@@ -73,6 +73,7 @@ ApplicationWindow {
                             Layout.fillWidth: true
                             Layout.maximumWidth: Math.ceil(implicitWidth)
                             Layout.alignment: Qt.AlignVCenter
+                            renderType: Text.NativeRendering
                         }
 
                         Item {
@@ -95,6 +96,7 @@ ApplicationWindow {
                             Layout.fillWidth: true
                             Layout.maximumWidth: Math.ceil(implicitWidth)
                             Layout.alignment: Qt.AlignVCenter
+                            renderType: Text.NativeRendering
                         }
                     }
                 }
@@ -130,6 +132,7 @@ ApplicationWindow {
                         anchors.top: parent.top
                         anchors.leftMargin: 32
                         anchors.rightMargin: 32
+                        renderType: Text.NativeRendering
                     }
                 }
 
@@ -465,6 +468,7 @@ ApplicationWindow {
                                         anchors.leftMargin: 10
                                         anchors.rightMargin: 10
                                         anchors.topMargin: 2
+                                        renderType: Text.NativeRendering
                                     }
                                 }
 
@@ -502,6 +506,7 @@ ApplicationWindow {
                                         anchors.leftMargin: 10
                                         anchors.rightMargin: 10
                                         anchors.topMargin: 2
+                                        renderType: Text.NativeRendering
                                     }
                                 }
 
@@ -533,6 +538,7 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.topMargin: 12
+                                renderType: Text.NativeRendering
                             }
 
                             // <div class="rating">
@@ -559,6 +565,7 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.alignment: Qt.AlignVCenter
+                                    renderType: Text.NativeRendering
                                 }
 
                                 // <span>
@@ -578,6 +585,7 @@ ApplicationWindow {
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.alignment: Qt.AlignVCenter
                                     Layout.leftMargin: 10
+                                    renderType: Text.NativeRendering
                                 }
 
                                 Item {
@@ -609,6 +617,7 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.alignment: Qt.AlignBaseline
+                                    renderType: Text.NativeRendering
                                 }
 
                                 // <span class="was">
@@ -629,6 +638,7 @@ ApplicationWindow {
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.alignment: Qt.AlignBaseline
                                     Layout.leftMargin: 12
+                                    renderType: Text.NativeRendering
                                 }
 
                                 Item {
@@ -657,6 +667,7 @@ ApplicationWindow {
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
+                                    renderType: Text.NativeRendering
 
                                     TapHandler {
                                         onTapped: (eventPoint, button) => {
@@ -720,6 +731,7 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.topMargin: 20
+                                renderType: Text.NativeRendering
                             }
 
                             // <form class="buy">
@@ -778,6 +790,7 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            renderType: Text.NativeRendering
 
                                             TapHandler {
                                                 onTapped: (eventPoint, button) => {
@@ -815,6 +828,7 @@ ApplicationWindow {
                                                 color: "#1d2329"
                                                 verticalAlignment: Text.AlignVCenter
                                                 elide: Text.ElideRight
+                                                renderType: Text.NativeRendering
                                             }
                                             indicator: Text {
                                                 x: colour.width - width - 11
@@ -822,6 +836,7 @@ ApplicationWindow {
                                                 text: "▾"
                                                 color: "#1d2329"
                                                 font.pixelSize: 12
+                                                renderType: Text.NativeRendering
                                             }
                                             Accessible.name: "Colour"
                                             Layout.fillWidth: true
@@ -859,6 +874,7 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            renderType: Text.NativeRendering
 
                                             TapHandler {
                                                 onTapped: (eventPoint, button) => {
@@ -905,6 +921,7 @@ ApplicationWindow {
                                                 readOnly: !qty.editable
                                                 validator: qty.validator
                                                 inputMethodHints: Qt.ImhFormattedNumbersOnly
+                                                renderType: Text.NativeRendering
                                             }
                                             Accessible.name: "Quantity"
                                             Layout.fillWidth: true
@@ -930,6 +947,14 @@ ApplicationWindow {
                                         bottomPadding: 12
                                         leftPadding: 12
                                         implicitHeight: 46.5
+                                        contentItem: Text {
+                                            text: buttonControl.text
+                                            font: buttonControl.font
+                                            color: buttonControl.palette.buttonText
+                                            horizontalAlignment: Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                            renderType: Text.NativeRendering
+                                        }
                                         Layout.row: 1
                                         Layout.column: 0
                                         Layout.columnSpan: 2
@@ -979,6 +1004,7 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
+                            renderType: Text.NativeRendering
                         }
 
                         // <ul>
@@ -1038,6 +1064,7 @@ ApplicationWindow {
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                             Layout.alignment: Qt.AlignVCenter
+                                            renderType: Text.NativeRendering
                                         }
 
                                         // <meter>
@@ -1110,6 +1137,7 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.topMargin: 6
                                         Layout.preferredHeight: implicitHeight
+                                        renderType: Text.NativeRendering
                                     }
                                 }
                             }
@@ -1165,6 +1193,7 @@ ApplicationWindow {
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Math.ceil(implicitWidth)
                                             Layout.alignment: Qt.AlignVCenter
+                                            renderType: Text.NativeRendering
                                         }
 
                                         // <meter>
@@ -1237,6 +1266,7 @@ ApplicationWindow {
                                         Layout.fillWidth: true
                                         Layout.topMargin: 6
                                         Layout.preferredHeight: implicitHeight
+                                        renderType: Text.NativeRendering
                                     }
                                 }
                             }

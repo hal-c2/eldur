@@ -102,6 +102,7 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                renderType: Text.NativeRendering
                             }
 
                             // <p class="card__subtitle">
@@ -122,6 +123,7 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.topMargin: 4 - cardTitle.eldurCarry
+                                renderType: Text.NativeRendering
                             }
 
                             // <form class="form">
@@ -159,6 +161,7 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        renderType: Text.NativeRendering
 
                                         TapHandler {
                                             onTapped: (eventPoint, button) => {
@@ -205,6 +208,7 @@ ApplicationWindow {
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
                                         Layout.topMargin: 5 - fieldLabel.eldurCarry
+                                        renderType: Text.NativeRendering
                                     }
 
                                     Item {
@@ -238,6 +242,7 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        renderType: Text.NativeRendering
 
                                         TapHandler {
                                             onTapped: (eventPoint, button) => {
@@ -285,6 +290,7 @@ ApplicationWindow {
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
                                         Layout.topMargin: 5 - fieldLabel2.eldurCarry
+                                        renderType: Text.NativeRendering
                                     }
 
                                     Item {
@@ -318,6 +324,7 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        renderType: Text.NativeRendering
 
                                         TapHandler {
                                             onTapped: (eventPoint, button) => {
@@ -365,6 +372,7 @@ ApplicationWindow {
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
                                         Layout.topMargin: 5 - fieldLabel3.eldurCarry
+                                        renderType: Text.NativeRendering
                                     }
 
                                     Item {
@@ -398,6 +406,7 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        renderType: Text.NativeRendering
 
                                         TapHandler {
                                             onTapped: (eventPoint, button) => {
@@ -446,6 +455,7 @@ ApplicationWindow {
                                             color: "#1d2433"
                                             verticalAlignment: Text.AlignVCenter
                                             elide: Text.ElideRight
+                                            renderType: Text.NativeRendering
                                         }
                                         indicator: Text {
                                             x: team.width - width - 13
@@ -453,6 +463,7 @@ ApplicationWindow {
                                             text: "▾"
                                             color: "#1d2433"
                                             font.pixelSize: 12
+                                            renderType: Text.NativeRendering
                                         }
                                         Accessible.name: "Team size"
                                         Layout.preferredWidth: parent.width
@@ -491,6 +502,7 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        renderType: Text.NativeRendering
 
                                         TapHandler {
                                             onTapped: (eventPoint, button) => {
@@ -540,6 +552,7 @@ ApplicationWindow {
                                             placeholderText: "What will you build?"
                                             placeholderTextColor: "#757575"
                                             Accessible.name: "About you"
+                                            renderType: Text.NativeRendering
                                         }
                                     }
 
@@ -584,6 +597,7 @@ ApplicationWindow {
                                             anchors.top: parent.top
                                             anchors.leftMargin: 6
                                             anchors.rightMargin: 6
+                                            renderType: Text.NativeRendering
                                         }
                                     }
                                     topPadding: Math.max(fieldset.implicitLabelHeight, 1) + 10
@@ -666,6 +680,7 @@ ApplicationWindow {
                                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                                     Layout.alignment: Qt.AlignVCenter
                                                     Layout.leftMargin: 6
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 Item {
@@ -741,6 +756,7 @@ ApplicationWindow {
                                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                                     Layout.alignment: Qt.AlignVCenter
                                                     Layout.leftMargin: 6
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 Item {
@@ -816,6 +832,7 @@ ApplicationWindow {
                                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                                     Layout.alignment: Qt.AlignVCenter
                                                     Layout.leftMargin: 6
+                                                    renderType: Text.NativeRendering
                                                 }
 
                                                 Item {
@@ -873,6 +890,7 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            renderType: Text.NativeRendering
 
                                             TapHandler {
                                                 onTapped: (eventPoint, button) => {
@@ -929,6 +947,7 @@ ApplicationWindow {
                                                 readOnly: !seats.editable
                                                 validator: seats.validator
                                                 inputMethodHints: Qt.ImhFormattedNumbersOnly
+                                                renderType: Text.NativeRendering
                                             }
                                             Accessible.name: "Seats"
                                             Layout.preferredWidth: parent.width
@@ -968,6 +987,7 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
+                                            renderType: Text.NativeRendering
 
                                             TapHandler {
                                                 onTapped: (eventPoint, button) => {
@@ -1037,6 +1057,7 @@ ApplicationWindow {
                                             Layout.fillWidth: true
                                             Layout.topMargin: 4 - volume.eldurCarry
                                             Layout.preferredHeight: implicitHeight
+                                            renderType: Text.NativeRendering
                                         }
 
                                         Item {
@@ -1079,6 +1100,7 @@ ApplicationWindow {
                                                 color: "#ffffff"
                                                 font.pixelSize: Math.max(1, terms.height - 2)
                                                 visible: terms.checked
+                                                renderType: Text.NativeRendering
                                             }
                                         }
                                         Accessible.name: "I agree to the terms of service"
@@ -1105,6 +1127,7 @@ ApplicationWindow {
                                         Layout.maximumWidth: Math.ceil(implicitWidth)
                                         Layout.alignment: Qt.AlignVCenter
                                         Layout.leftMargin: 8
+                                        renderType: Text.NativeRendering
                                     }
 
                                     Item {
@@ -1151,6 +1174,14 @@ ApplicationWindow {
                                         bottomPadding: 11
                                         leftPadding: 19
                                         implicitHeight: 43
+                                        contentItem: Text {
+                                            text: buttonControl.text
+                                            font: buttonControl.font
+                                            color: buttonControl.palette.buttonText
+                                            horizontalAlignment: Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                            renderType: Text.NativeRendering
+                                        }
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Math.ceil(implicitWidth)
                                         Layout.fillHeight: true
@@ -1191,6 +1222,14 @@ ApplicationWindow {
                                         bottomPadding: 11
                                         leftPadding: 19
                                         implicitHeight: 43
+                                        contentItem: Text {
+                                            text: buttonControl2.text
+                                            font: buttonControl2.font
+                                            color: buttonControl2.palette.buttonText
+                                            horizontalAlignment: Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                            renderType: Text.NativeRendering
+                                        }
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Math.ceil(implicitWidth)
                                         Layout.fillHeight: true
