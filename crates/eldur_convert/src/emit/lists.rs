@@ -166,6 +166,7 @@ impl Emitter<'_, '_> {
             |c| (c.node, c.border.clone()),
         );
         self.report_crossed_ancestors(b, node, fixed);
+        self.report_place_in_line(b);
         let static_place = slot.as_ref().filter(|_| placed_by_slot).map(|slot| {
             self.static_places = true;
             StaticPlace {
@@ -200,6 +201,40 @@ impl Emitter<'_, '_> {
             (true, None) => self.fixed.push((comment, obj)),
         }
         slot.map(|id| Object::new("Item").with_id(id))
+    }
+
+    /// A slot goes before the line, whose start it knows and whose text it
+    /// does not: a static `x` is where the text before the box ends in CSS.
+    fn report_place_in_line(&mut self, b: &LayoutBox<'_>) {
+        let style = &*b.style;
+        let Some(node) = b.node.filter(|_| {
+            style.blockified_inline
+                && matches!(style.left, LengthAuto::Auto)
+                && matches!(style.right, LengthAuto::Auto)
+        }) else {
+            return;
+        };
+        let siblings: Vec<_> = self.doc.prev_siblings(node).collect();
+        for sibling in siblings {
+            let in_line = match self.doc.text(sibling) {
+                Some(text) => !text.trim().is_empty(),
+                None => self
+                    .styles
+                    .computed(sibling)
+                    .is_some_and(|s| !is_out_of_flow(&s.style) && s.style.display != eldur_css::Display::None),
+            };
+            if in_line {
+                self.diags.warning(
+                    "css",
+                    node_line(self.doc, node),
+                    format!(
+                        "{} has no `left` or `right`, so the text before it would place it; it sits at the start of its line",
+                        describe(self.doc, node)
+                    ),
+                );
+                return;
+            }
+        }
     }
 
     /// What hoisting a box cannot carry with it, or a containing block no

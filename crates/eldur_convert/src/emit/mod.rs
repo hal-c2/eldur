@@ -768,6 +768,15 @@ impl<'a, 'd> Emitter<'a, 'd> {
             Position::Static => {}
             Position::Relative if is_unmoved(style) => {}
             Position::Absolute | Position::Fixed if positioned => {}
+            Position::Absolute | Position::Fixed => self.diags.warning(
+                "css",
+                line,
+                format!(
+                    "`position: {}` on {} is ignored: a table part or a control's content stays in its table or control",
+                    format!("{:?}", style.position).to_lowercase(),
+                    what()
+                ),
+            ),
             p => self.diags.warning(
                 "css",
                 line,

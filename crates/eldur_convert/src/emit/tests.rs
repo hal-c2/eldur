@@ -1893,3 +1893,77 @@ fn a_hidden_item_passes_the_carry_on() {
         "{b:?}"
     );
 }
+
+#[test]
+fn absolute_without_positioned_ancestor_goes_to_the_initial_containing_block() {
+    let (qml, diags) = convert(&page(
+        ".a{position:absolute;top:10px;left:20px;width:30px;height:40px}",
+        "<section><div class=a>x</div><p>y</p></section>",
+    ));
+    let block = &qml[qml.find("id: initialContainingBlock").expect("the block")..];
+    assert!(block.contains("width: flickable.width"), "{qml}");
+    assert!(block.contains("x: 20"), "{qml}");
+    assert!(qml.contains("initialContainingBlock.childrenRect"), "{qml}");
+    // With its offsets set it reads nothing from where it was.
+    assert!(!qml.contains("Slot"), "{qml}");
+    assert!(!qml.contains("staticX"), "{qml}");
+    assert!(!diags.iter().any(|d| d.contains("position")), "{diags:?}");
+}
+
+#[test]
+fn a_page_without_such_a_box_has_no_initial_containing_block_item() {
+    let (qml, _) = convert(&page(
+        "#p{position:relative} .a{position:absolute;top:0;left:0}",
+        "<div id=p><div class=a>x</div></div>",
+    ));
+    assert!(!qml.contains("initialContainingBlock"), "{qml}");
+    assert!(!qml.contains("staticX"), "{qml}");
+}
+
+#[test]
+fn a_box_without_offsets_reads_its_static_position_from_a_slot() {
+    let (qml, _) = convert(&page(
+        ".a{position:absolute;width:5px;height:5px}",
+        "<p>y</p><div class=a></div>",
+    ));
+    assert!(qml.contains("function staticY(item, block)"), "{qml}");
+    assert!(qml.contains("y: root.staticY(aSlot, flickable.contentItem)"), "{qml}");
+}
+
+#[test]
+fn inline_box_without_a_left_after_text_says_its_x_is_approximate() {
+    let (_, diags) = convert(&page(
+        ".a{position:absolute;top:5px}",
+        "<p>text <span class=a>x</span></p>",
+    ));
+    assert!(
+        diags
+            .iter()
+            .any(|d| d.contains("<span") && d.contains("line")),
+        "{diags:?}"
+    );
+    let (_, diags) = convert(&page(
+        ".a{position:absolute;top:5px}",
+        "<p><span class=a>x</span>text</p>",
+    ));
+    assert!(!diags.iter().any(|d| d.contains("<span")), "{diags:?}");
+}
+
+#[test]
+fn what_hoisting_cannot_keep_is_reported() {
+    let (_, diags) = convert(&page(
+        ".a{position:absolute;top:0}",
+        "<div style=\"opacity:.5\"><div class=a>x</div></div>",
+    ));
+    assert!(diags.iter().any(|d| d.contains("opacity")), "{diags:?}");
+    let (_, diags) = convert(&page(
+        ".a{position:absolute;top:0}",
+        "<table><tr style=\"position:relative\"><td><div class=a>x</div></td></tr></table>",
+    ));
+    assert!(diags.iter().any(|d| d.contains("<tr")), "{diags:?}");
+    let (_, diags) = convert(&page(
+        ".a{position:absolute;width:5px}",
+        "<div style=\"display:flex;justify-content:center\"><div class=a></div></div>",
+    ));
+    assert!(diags.iter().any(|d| d.contains("alignment")), "{diags:?}");
+}

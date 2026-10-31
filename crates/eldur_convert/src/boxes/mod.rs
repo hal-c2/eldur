@@ -662,7 +662,7 @@ fn group<'a>(children: Vec<Child<'a>>, parent: &'a ComputedStyle) -> Content<'a>
         match child {
             Child::Inline(raw) => run.push(raw),
             Child::Block(b) if is_out_of_flow(&b.style) => {
-                if b.style.display == Display::Inline {
+                if b.style.blockified_inline {
                     blocks.push(*b);
                 } else {
                     below_run.push(*b);
