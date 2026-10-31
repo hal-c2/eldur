@@ -294,6 +294,7 @@ var _alertHook = null;
 var _activeElement = null;
 var _clipboardText = "";
 var _explicitBaseUrl = "";
+var _explicitDocumentUrl = "";
 
 // Per-item sidecar storage keyed by raw QML QObject (or synthetic node).
 // QML QObjects reject ad-hoc JS property assignments, whereas ES6 Map keys
@@ -302,18 +303,27 @@ var _itemMeta = new Map();
 var _warnedMissingTemplates = {};
 var _componentProbeCache = new Map();
 
-function init(rootItem, baseUrl) {
+function init(rootItem, baseUrl, documentUrl) {
     if (rootItem) {
         _root = rootItem;
     }
     _warnedMissingTemplates = {};
     _componentProbeCache = new Map();
+    _explicitBaseUrl = "";
+    _explicitDocumentUrl = "";
+    if (typeof documentUrl === "string" && documentUrl !== "") {
+        _explicitDocumentUrl = documentUrl;
+    } else if (_root && typeof _root.documentUrl === "string" && _root.documentUrl !== "") {
+        _explicitDocumentUrl = _root.documentUrl;
+    }
     if (typeof baseUrl === "string" && baseUrl !== "") {
         _explicitBaseUrl = baseUrl;
-        _updateLocationFromHref(baseUrl, false);
     } else if (_root && typeof _root.baseUrl === "string" && _root.baseUrl !== "") {
         _explicitBaseUrl = _root.baseUrl;
-        _updateLocationFromHref(_root.baseUrl, false);
+    }
+    var docUrl = _explicitDocumentUrl !== "" ? _explicitDocumentUrl : _explicitBaseUrl;
+    if (docUrl !== "") {
+        _updateLocationFromHref(docUrl, false);
     }
     _startTime = Date.now();
 }
@@ -965,7 +975,16 @@ function _parseHierarchicalUrl(urlStr) {
     };
 }
 
-function _getDocumentBaseUrl() {
+function _getDocumentUrl() {
+    if (_locState.href !== "") {
+        return _locState.href;
+    }
+    if (_explicitDocumentUrl !== "") {
+        return _explicitDocumentUrl;
+    }
+    if (_root && typeof _root.documentUrl === "string" && _root.documentUrl !== "") {
+        return _root.documentUrl;
+    }
     if (_explicitBaseUrl !== "") {
         return _explicitBaseUrl;
     }
@@ -975,13 +994,56 @@ function _getDocumentBaseUrl() {
     return "";
 }
 
+function _findBaseElementHref() {
+    if (!_root) {
+        return null;
+    }
+    var foundHref = null;
+    _walkItems(_root, function(node) {
+        if (node === _root) {
+            return false;
+        }
+        var tag = typeof node.h2qTag === "string"
+            ? node.h2qTag.toLowerCase()
+            : (_meta(node).createdTag || "");
+        if (tag === "base") {
+            var h = getAttribute(node, "href");
+            if (h !== null) {
+                foundHref = String(h).trim();
+                return true;
+            }
+        }
+        return false;
+    });
+    return foundHref;
+}
+
+function _getDocumentBaseUrl() {
+    var docUrl = _getDocumentUrl();
+    var baseElemHref = _findBaseElementHref();
+    if (baseElemHref !== null) {
+        return baseElemHref === "" ? docUrl : _resolveUrlWithBase(baseElemHref, docUrl);
+    }
+    if (_explicitBaseUrl !== "") {
+        return docUrl !== "" ? _resolveUrlWithBase(_explicitBaseUrl, docUrl) : _explicitBaseUrl;
+    }
+    if (_root && typeof _root.baseUrl === "string" && _root.baseUrl !== "") {
+        return docUrl !== "" ? _resolveUrlWithBase(_root.baseUrl, docUrl) : _root.baseUrl;
+    }
+    return docUrl;
+}
+
 function _resolveUrl(rawHref) {
+    return _resolveUrlWithBase(rawHref, _getDocumentBaseUrl());
+}
+
+function _resolveUrlWithBase(rawHref, baseStr) {
     if (rawHref === null || rawHref === undefined || rawHref === "") {
-        return _getDocumentBaseUrl();
+        return baseStr;
     }
     var str = String(rawHref).trim();
     if (str === "") {
-        return _getDocumentBaseUrl();
+        return baseStr;
     }
     var parsedAbs = _parseHierarchicalUrl(str);
     if (parsedAbs) {
@@ -990,7 +1052,6 @@ function _resolveUrl(rawHref) {
     if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(str)) {
         return str;
     }
-    var baseStr = _getDocumentBaseUrl();
     var base = baseStr ? _parseHierarchicalUrl(baseStr) : null;
     if (!base) {
         // Runtime has no document base URL when converted statically unless
@@ -1550,19 +1611,18 @@ function _childContainer(raw) {
     if (!raw) {
         return null;
     }
-    if (typeof raw.contentHeight === "number" && raw.contentItem) {
-        return raw.contentItem;
-    }
-    if (typeof raw.spacing === "number" || typeof raw.columnSpacing === "number") {
-        return raw;
+    var base = (typeof raw.contentHeight === "number" && raw.contentItem) ? raw.contentItem : raw;
+    if (typeof base.spacing === "number" || typeof base.columnSpacing === "number") {
+        return base;
     }
     var m = _meta(raw);
     if (m.flow) {
         return m.flow;
     }
-    if ((raw.color !== undefined || raw.clip === true) && raw.children) {
-        for (var i = 0; i < raw.children.length; ++i) {
-            var ch = raw.children[i];
+    var isContentItem = Boolean(raw.parent && raw.parent.contentItem === raw);
+    if ((raw.color !== undefined || raw.clip === true || base !== raw || isContentItem) && base.children) {
+        for (var i = 0; i < base.children.length; ++i) {
+            var ch = base.children[i];
             if (ch && (typeof ch.spacing === "number" || typeof ch.columnSpacing === "number")
                 && !ch.objectName && !_meta(ch).createdTag && typeof ch.h2qTag !== "string") {
                 _meta(ch).hostBox = raw;
@@ -1570,7 +1630,7 @@ function _childContainer(raw) {
             }
         }
     }
-    return raw;
+    return base;
 }
 
 function _rawElementChildren(raw) {
@@ -1602,11 +1662,20 @@ function _logicalParent(raw) {
     if (pm.hostBox) {
         return pm.hostBox;
     }
+    if (p.parent && p.parent.contentItem === p && !p.objectName && !pm.createdTag && typeof p.h2qTag !== "string") {
+        return p.parent;
+    }
     if ((typeof p.spacing === "number" || typeof p.columnSpacing === "number")
         && !p.objectName && !pm.createdTag && typeof p.h2qTag !== "string"
-        && p.parent && (p.parent.color !== undefined || p.parent.clip === true)
-        && typeof p.parent.spacing !== "number" && typeof p.parent.columnSpacing !== "number") {
-        return p.parent;
+        && p.parent) {
+        if (p.parent.parent && p.parent.parent.contentItem === p.parent
+            && !p.parent.objectName && !_meta(p.parent).createdTag && typeof p.parent.h2qTag !== "string") {
+            return p.parent.parent;
+        }
+        if ((p.parent.color !== undefined || p.parent.clip === true)
+            && typeof p.parent.spacing !== "number" && typeof p.parent.columnSpacing !== "number") {
+            return p.parent;
+        }
     }
     return p;
 }
@@ -2046,6 +2115,9 @@ function getAttribute(item, attrName) {
         return rawSrcAttr;
     }
     if (name === "href") {
+        if (typeof raw.href === "string") {
+            return raw.href;
+        }
         var txt = typeof raw.text === "string" ? raw.text : "";
         if (!txt) {
             var tc = _findTextChild(raw);
@@ -3672,6 +3744,7 @@ function wrap(rawItem) {
         },
         get tagName() { return _inferTagName(rawItem); },
         get nodeName() { return _inferTagName(rawItem); },
+        get baseURI() { return _getDocumentBaseUrl(); },
         get textContent() { return getText(rawItem); },
         set textContent(v) { setText(rawItem, v); },
         get innerText() { return getText(rawItem); },
@@ -3790,7 +3863,12 @@ function wrap(rawItem) {
         get href() {
             var rawHref = getAttribute(rawItem, "href");
             if (rawHref === null) {
-                return "";
+                return _inferTagName(rawItem) === "BASE" ? _getDocumentBaseUrl() : "";
+            }
+            if (_inferTagName(rawItem) === "BASE") {
+                var trimmed = String(rawHref).trim();
+                var docUrl = _getDocumentUrl();
+                return trimmed === "" ? docUrl : _resolveUrlWithBase(trimmed, docUrl);
             }
             return _resolveUrl(rawHref);
         },
@@ -4246,16 +4324,15 @@ function _walkItems(node, visitor) {
     if (visitor(node)) {
         return true;
     }
-    if (node.contentItem && node.contentItem !== node) {
-        if (_walkItems(node.contentItem, visitor)) {
-            return true;
-        }
-    }
     if (node.children) {
         for (var i = 0; i < node.children.length; ++i) {
             if (_walkItems(node.children[i], visitor)) {
                 return true;
             }
+        }
+    } else if (node.contentItem && node.contentItem !== node) {
+        if (_walkItems(node.contentItem, visitor)) {
+            return true;
         }
     }
     return false;
@@ -4269,13 +4346,25 @@ function _isInternalHelperNode(node) {
     if (m.hostBox || m.isFragment) {
         return true;
     }
-    if (_isPlainTextItem(node) && !node.objectName && !m.createdTag && typeof node.h2qTag !== "string"
-        && node.parent && (node.parent.color !== undefined || node.parent.clip === true)) {
-        return true;
-    }
-    if ((typeof node.spacing === "number" || typeof node.columnSpacing === "number")
-        && !node.objectName && !m.createdTag && typeof node.h2qTag !== "string") {
-        return true;
+    if (!node.objectName && !m.createdTag && typeof node.h2qTag !== "string") {
+        if (node.parent && (node.parent.contentItem === node || node.parent.background === node || node.parent.indicator === node)) {
+            return true;
+        }
+        if (typeof node.contentX === "number" && typeof node.contentY === "number" && node.contentItem) {
+            return true;
+        }
+        if (typeof node.position === "number" && typeof node.size === "number" && typeof node.active === "boolean") {
+            return true;
+        }
+        if (_root && _root.h2qStyledClasses !== undefined) {
+            return true;
+        }
+        if (_isPlainTextItem(node) && node.parent && (node.parent.color !== undefined || node.parent.clip === true)) {
+            return true;
+        }
+        if (typeof node.spacing === "number" || typeof node.columnSpacing === "number") {
+            return true;
+        }
     }
     return false;
 }
@@ -4611,6 +4700,9 @@ var scroll = scrollTo;
 var document = {
     get title() { return getTitle(); },
     set title(v) { setTitle(v); },
+    get baseURI() { return _getDocumentBaseUrl(); },
+    get URL() { return _locState.href; },
+    get documentURI() { return _locState.href; },
     get body() { return _root ? wrap(_root.contentItem || _root) : null; },
     get documentElement() { return _root ? wrap(_root) : null; },
     get head() { return _root ? wrap(_root) : null; },
