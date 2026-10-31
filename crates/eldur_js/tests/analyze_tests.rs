@@ -1432,3 +1432,19 @@ fn inserting_what_analysis_cannot_name_records_the_receiver() {
         assert!(!analysis.opaque_inserts.contains(&by_id(only_text)));
     }
 }
+
+#[test]
+fn a_class_written_after_insertion_opens_the_page() {
+    let res = analyze(&[classic(
+        "later.js",
+        r#"
+        const card = document.createElement("div");
+        card.className = "h card";
+        document.body.appendChild(card);
+        card.classList.remove("h");
+        "#,
+    )]);
+    assert_eq!(res.created[0].class_sets, sets(&[&["card", "h"]]));
+    assert!(res.created[0].open_classes);
+    assert!(res.open_elements);
+}
