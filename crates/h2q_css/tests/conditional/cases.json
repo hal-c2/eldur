@@ -638,5 +638,325 @@
    "padding-right",
    "padding-bottom"
   ]
+ },
+ {
+  "name": "pos x #x",
+  "html": "<style>li{color:rgb(1,1,1);margin-bottom:4px} li:first-child{color:rgb(200,0,0)} li:last-child{margin-bottom:0} li:nth-child(even){padding-left:10px} li:nth-last-child(2){font-size:20px} li:only-child{font-weight:700} li:first-of-type{padding-top:3px} li:nth-of-type(3n){padding-right:6px} li:first-child span{opacity:0.5}</style><div><li id=x><span id=s>x</span></li></div>",
+  "select": "#x",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "pos x #s",
+  "html": "<style>li{color:rgb(1,1,1);margin-bottom:4px} li:first-child{color:rgb(200,0,0)} li:last-child{margin-bottom:0} li:nth-child(even){padding-left:10px} li:nth-last-child(2){font-size:20px} li:only-child{font-weight:700} li:first-of-type{padding-top:3px} li:nth-of-type(3n){padding-right:6px} li:first-child span{opacity:0.5}</style><div><li id=x><span id=s>x</span></li></div>",
+  "select": "#s",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "pos x,li,li #x",
+  "html": "<style>li{color:rgb(1,1,1);margin-bottom:4px} li:first-child{color:rgb(200,0,0)} li:last-child{margin-bottom:0} li:nth-child(even){padding-left:10px} li:nth-last-child(2){font-size:20px} li:only-child{font-weight:700} li:first-of-type{padding-top:3px} li:nth-of-type(3n){padding-right:6px} li:first-child span{opacity:0.5}</style><div><li id=x><span id=s>x</span></li><li>li</li><li>li</li></div>",
+  "select": "#x",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "pos x,li,li #s",
+  "html": "<style>li{color:rgb(1,1,1);margin-bottom:4px} li:first-child{color:rgb(200,0,0)} li:last-child{margin-bottom:0} li:nth-child(even){padding-left:10px} li:nth-last-child(2){font-size:20px} li:only-child{font-weight:700} li:first-of-type{padding-top:3px} li:nth-of-type(3n){padding-right:6px} li:first-child span{opacity:0.5}</style><div><li id=x><span id=s>x</span></li><li>li</li><li>li</li></div>",
+  "select": "#s",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "pos li,x,li #x",
+  "html": "<style>li{color:rgb(1,1,1);margin-bottom:4px} li:first-child{color:rgb(200,0,0)} li:last-child{margin-bottom:0} li:nth-child(even){padding-left:10px} li:nth-last-child(2){font-size:20px} li:only-child{font-weight:700} li:first-of-type{padding-top:3px} li:nth-of-type(3n){padding-right:6px} li:first-child span{opacity:0.5}</style><div><li>li</li><li id=x><span id=s>x</span></li><li>li</li></div>",
+  "select": "#x",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "pos li,x,li #s",
+  "html": "<style>li{color:rgb(1,1,1);margin-bottom:4px} li:first-child{color:rgb(200,0,0)} li:last-child{margin-bottom:0} li:nth-child(even){padding-left:10px} li:nth-last-child(2){font-size:20px} li:only-child{font-weight:700} li:first-of-type{padding-top:3px} li:nth-of-type(3n){padding-right:6px} li:first-child span{opacity:0.5}</style><div><li>li</li><li id=x><span id=s>x</span></li><li>li</li></div>",
+  "select": "#s",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "pos li,li,x #x",
+  "html": "<style>li{color:rgb(1,1,1);margin-bottom:4px} li:first-child{color:rgb(200,0,0)} li:last-child{margin-bottom:0} li:nth-child(even){padding-left:10px} li:nth-last-child(2){font-size:20px} li:only-child{font-weight:700} li:first-of-type{padding-top:3px} li:nth-of-type(3n){padding-right:6px} li:first-child span{opacity:0.5}</style><div><li>li</li><li>li</li><li id=x><span id=s>x</span></li></div>",
+  "select": "#x",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "pos li,li,x #s",
+  "html": "<style>li{color:rgb(1,1,1);margin-bottom:4px} li:first-child{color:rgb(200,0,0)} li:last-child{margin-bottom:0} li:nth-child(even){padding-left:10px} li:nth-last-child(2){font-size:20px} li:only-child{font-weight:700} li:first-of-type{padding-top:3px} li:nth-of-type(3n){padding-right:6px} li:first-child span{opacity:0.5}</style><div><li>li</li><li>li</li><li id=x><span id=s>x</span></li></div>",
+  "select": "#s",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "pos li,li,x,li,li #x",
+  "html": "<style>li{color:rgb(1,1,1);margin-bottom:4px} li:first-child{color:rgb(200,0,0)} li:last-child{margin-bottom:0} li:nth-child(even){padding-left:10px} li:nth-last-child(2){font-size:20px} li:only-child{font-weight:700} li:first-of-type{padding-top:3px} li:nth-of-type(3n){padding-right:6px} li:first-child span{opacity:0.5}</style><div><li>li</li><li>li</li><li id=x><span id=s>x</span></li><li>li</li><li>li</li></div>",
+  "select": "#x",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "pos li,li,x,li,li #s",
+  "html": "<style>li{color:rgb(1,1,1);margin-bottom:4px} li:first-child{color:rgb(200,0,0)} li:last-child{margin-bottom:0} li:nth-child(even){padding-left:10px} li:nth-last-child(2){font-size:20px} li:only-child{font-weight:700} li:first-of-type{padding-top:3px} li:nth-of-type(3n){padding-right:6px} li:first-child span{opacity:0.5}</style><div><li>li</li><li>li</li><li id=x><span id=s>x</span></li><li>li</li><li>li</li></div>",
+  "select": "#s",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "pos p,x,li #x",
+  "html": "<style>li{color:rgb(1,1,1);margin-bottom:4px} li:first-child{color:rgb(200,0,0)} li:last-child{margin-bottom:0} li:nth-child(even){padding-left:10px} li:nth-last-child(2){font-size:20px} li:only-child{font-weight:700} li:first-of-type{padding-top:3px} li:nth-of-type(3n){padding-right:6px} li:first-child span{opacity:0.5}</style><div><p>p</p><li id=x><span id=s>x</span></li><li>li</li></div>",
+  "select": "#x",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "pos p,x,li #s",
+  "html": "<style>li{color:rgb(1,1,1);margin-bottom:4px} li:first-child{color:rgb(200,0,0)} li:last-child{margin-bottom:0} li:nth-child(even){padding-left:10px} li:nth-last-child(2){font-size:20px} li:only-child{font-weight:700} li:first-of-type{padding-top:3px} li:nth-of-type(3n){padding-right:6px} li:first-child span{opacity:0.5}</style><div><p>p</p><li id=x><span id=s>x</span></li><li>li</li></div>",
+  "select": "#s",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "pos p,li,x #x",
+  "html": "<style>li{color:rgb(1,1,1);margin-bottom:4px} li:first-child{color:rgb(200,0,0)} li:last-child{margin-bottom:0} li:nth-child(even){padding-left:10px} li:nth-last-child(2){font-size:20px} li:only-child{font-weight:700} li:first-of-type{padding-top:3px} li:nth-of-type(3n){padding-right:6px} li:first-child span{opacity:0.5}</style><div><p>p</p><li>li</li><li id=x><span id=s>x</span></li></div>",
+  "select": "#x",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "pos p,li,x #s",
+  "html": "<style>li{color:rgb(1,1,1);margin-bottom:4px} li:first-child{color:rgb(200,0,0)} li:last-child{margin-bottom:0} li:nth-child(even){padding-left:10px} li:nth-last-child(2){font-size:20px} li:only-child{font-weight:700} li:first-of-type{padding-top:3px} li:nth-of-type(3n){padding-right:6px} li:first-child span{opacity:0.5}</style><div><p>p</p><li>li</li><li id=x><span id=s>x</span></li></div>",
+  "select": "#s",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "pos li,li,p,x #x",
+  "html": "<style>li{color:rgb(1,1,1);margin-bottom:4px} li:first-child{color:rgb(200,0,0)} li:last-child{margin-bottom:0} li:nth-child(even){padding-left:10px} li:nth-last-child(2){font-size:20px} li:only-child{font-weight:700} li:first-of-type{padding-top:3px} li:nth-of-type(3n){padding-right:6px} li:first-child span{opacity:0.5}</style><div><li>li</li><li>li</li><p>p</p><li id=x><span id=s>x</span></li></div>",
+  "select": "#x",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
+ },
+ {
+  "name": "pos li,li,p,x #s",
+  "html": "<style>li{color:rgb(1,1,1);margin-bottom:4px} li:first-child{color:rgb(200,0,0)} li:last-child{margin-bottom:0} li:nth-child(even){padding-left:10px} li:nth-last-child(2){font-size:20px} li:only-child{font-weight:700} li:first-of-type{padding-top:3px} li:nth-of-type(3n){padding-right:6px} li:first-child span{opacity:0.5}</style><div><li>li</li><li>li</li><p>p</p><li id=x><span id=s>x</span></li></div>",
+  "select": "#s",
+  "props": [
+   "color",
+   "opacity",
+   "display",
+   "font-size",
+   "font-weight",
+   "padding-top",
+   "padding-left",
+   "margin-top",
+   "margin-right",
+   "margin-bottom",
+   "margin-left",
+   "padding-right",
+   "padding-bottom"
+  ]
  }
 ]

@@ -8,8 +8,8 @@ use std::sync::OnceLock;
 
 use h2q_css::{
     ComputedStyle, Condition, ConditionalStyles, Display, LengthAuto, Origin, PseudoState, Rgba,
-    Stylesheet, Viewport, class_candidates, compute_styles, conditional_styles,
-    open_class_candidates, styled_classes,
+    Structural, Stylesheet, Viewport, class_candidates, compute_styles, conditional_styles,
+    open_class_candidates, structural_pseudos, styled_classes,
 };
 use h2q_dom::{Document, NodeId};
 
@@ -460,4 +460,170 @@ fn open_class_candidates_co_occur_with_known_classes_or_the_tag() {
     );
     assert_eq!(open_class_candidates(&s, "li", &[]), set(&["selected"]));
     assert_eq!(open_class_candidates(&s, "span", &[]), BTreeSet::new());
+}
+
+/// `#x`'s 1-based place and sibling count in `layout` (`"li,x,li"`), all
+/// siblings and same-tag siblings.
+fn place(layout: &str) -> ((u32, u32), (u32, u32)) {
+    let tags: Vec<&str> = layout
+        .split(',')
+        .map(|t| if t == "x" { "li" } else { t })
+        .collect();
+    let at = layout.split(',').position(|t| t == "x").expect("x");
+    let same: Vec<usize> = (0..tags.len()).filter(|&i| tags[i] == "li").collect();
+    let in_type = same.iter().position(|&i| i == at).expect("x is an li");
+    let n = |v: usize| u32::try_from(v).expect("small");
+    ((n(at + 1), n(tags.len())), (n(in_type + 1), n(same.len())))
+}
+
+#[test]
+fn structural_pseudo_classes_as_position_conditions() {
+    let css = "li{color:rgb(1,1,1);margin-bottom:4px} li:first-child{color:rgb(200,0,0)} \
+               li:last-child{margin-bottom:0} li:nth-child(even){padding-left:10px} \
+               li:nth-last-child(2){font-size:20px} li:only-child{font-weight:700} \
+               li:first-of-type{padding-top:3px} li:nth-of-type(3n){padding-right:6px} \
+               li:first-child span{opacity:0.5}";
+    // The document's own place does not matter: every place is a combination.
+    let p = Page::new(
+        css,
+        "<div><li>a</li><li id=x><span id=s>x</span></li><li>b</li></div>",
+    );
+    let positions: Vec<Structural> = structural_pseudos(&p.sheets).into_iter().collect();
+    assert_eq!(
+        positions,
+        vec![
+            Structural::FirstChild,
+            Structural::LastChild,
+            Structural::OnlyChild,
+            Structural::NthChild { a: 2, b: 0 },
+            Structural::NthLastChild { a: 0, b: 2 },
+            Structural::FirstOfType,
+            Structural::NthOfType { a: 3, b: 0 },
+        ]
+    );
+    let conditions: Vec<Condition> = positions
+        .iter()
+        .map(|&test| Condition::Structural {
+            node: p.id("x"),
+            test,
+        })
+        .collect();
+    let cs = p.run(&conditions);
+    // Seven conditions on #x: one past the cap of six.
+    assert!(
+        cs.diagnostics
+            .iter()
+            .all(|d| d.message.contains("dynamic-combinations")),
+        "{:?}",
+        cs.diagnostics
+    );
+    let combined = p.depends_on(&cs, "x").expect("#x depends on its place");
+    for layout in [
+        "x",
+        "x,li,li",
+        "li,x,li",
+        "li,li,x",
+        "li,li,x,li,li",
+        "p,x,li",
+        "p,li,x",
+        "li,li,p,x",
+    ] {
+        let ((index, count), (type_index, type_count)) = place(layout);
+        let held: Vec<usize> = positions
+            .iter()
+            .enumerate()
+            .filter(|(_, pos)| {
+                if pos.of_type() {
+                    pos.matches(type_index, type_count)
+                } else {
+                    pos.matches(index, count)
+                }
+            })
+            .map(|(i, _)| i)
+            .collect();
+        // A condition past the cap keeps the document's value (#x is the
+        // second of three li, by either count), so only layouts that agree
+        // on it are exact.
+        let agrees = (0..positions.len())
+            .filter(|c| !combined.contains(&u16::try_from(*c).expect("small")))
+            .all(|c| held.contains(&c) == positions[c].matches(2, 3));
+        if !agrees {
+            continue;
+        }
+        assert_chromium(p.style(&cs, "x", &held), &format!("pos {layout} #x"));
+        assert_chromium(p.style(&cs, "s", &held), &format!("pos {layout} #s"));
+    }
+}
+
+#[test]
+fn position_conditions_without_a_cap() {
+    let css = "li{color:rgb(1,1,1);margin-bottom:4px} li:first-child{color:rgb(200,0,0)} \
+               li:last-child{margin-bottom:0} li:nth-child(even){padding-left:10px} \
+               li:first-child span{opacity:0.5}";
+    let p = Page::new(
+        css,
+        "<div><li>a</li><li id=x><span id=s>x</span></li><li>b</li></div>",
+    );
+    let positions = [
+        Structural::FirstChild,
+        Structural::LastChild,
+        Structural::NthChild { a: 2, b: 0 },
+    ];
+    let conditions: Vec<Condition> = positions
+        .iter()
+        .map(|&test| Condition::Structural {
+            node: p.id("x"),
+            test,
+        })
+        .collect();
+    let cs = p.run(&conditions);
+    assert!(cs.diagnostics.is_empty(), "{:?}", cs.diagnostics);
+    assert_eq!(p.depends_on(&cs, "x"), Some(vec![0, 1, 2]));
+    // The span reads its parent's `:first-child`, and inherits its colour;
+    // its parent's margin and padding do not reach it.
+    assert_eq!(p.depends_on(&cs, "s"), Some(vec![0]));
+    let mut seen = BTreeSet::new();
+    for layout in ["x", "x,li,li", "li,x,li", "li,li,x", "li,li,x,li,li"] {
+        let ((index, count), _) = place(layout);
+        let held: Vec<usize> = (0..positions.len())
+            .filter(|&i| positions[i].matches(index, count))
+            .collect();
+        seen.insert(held.clone());
+        // The page's other rules (`:only-child`, `:nth-last-child(2)`, …)
+        // are in Chromium's sheet only where they do not apply here.
+        let x = p.style(&cs, "x", &held);
+        let s = p.style(&cs, "s", &held);
+        let want = &chromium()[&format!("pos {layout} #x")];
+        assert_eq!(
+            x.color,
+            parse_rgb(want["color"].as_str().expect("color")),
+            "{layout}"
+        );
+        assert_eq!(
+            margin_px(&x.margin.bottom),
+            parse_px(want["margin-bottom"].as_str().expect("margin")),
+            "{layout}"
+        );
+        assert_eq!(
+            x.padding.left.as_px(),
+            Some(parse_px(want["padding-left"].as_str().expect("padding"))),
+            "{layout}"
+        );
+        let want = &chromium()[&format!("pos {layout} #s")];
+        assert_eq!(
+            s.color,
+            parse_rgb(want["color"].as_str().expect("color")),
+            "{layout}"
+        );
+        assert_eq!(
+            s.opacity,
+            want["opacity"]
+                .as_str()
+                .expect("opacity")
+                .parse::<f32>()
+                .expect("number"),
+            "{layout}"
+        );
+    }
+    assert_eq!(seen.len(), 5, "every layout is a different combination");
 }

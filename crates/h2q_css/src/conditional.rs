@@ -18,12 +18,12 @@ use h2q_dom::{Document, Element, NodeId};
 
 use crate::cascade::{self, BasePass, CascadeEngine};
 use crate::selectors::{
-    DynamicFact, DynamicFacts, MatchContext, Selector, TypeMatcher, class_bloom, matches_selector,
-    visit_compounds,
+    DynamicFact, DynamicFacts, MatchContext, PseudoClass, Selector, TypeMatcher, class_bloom,
+    matches_selector, visit_compounds,
 };
 use crate::{
     ComputedStyle, Condition, ConditionalStyles, Diagnostic, Display, ElementConditional, Severity,
-    Stylesheet, Viewport,
+    Structural, Stylesheet, Viewport,
 };
 
 /// Conditions combined per element (64 cascades); past it, a diagnostic.
@@ -335,12 +335,17 @@ fn set_fact(facts: &mut DynamicFacts, cond: &Condition, holds: Option<bool>, tag
         Condition::State { node, state } => {
             facts.set(*node, DynamicFact::State(*state), holds, tag);
         }
+        Condition::Structural { node, test } => {
+            facts.set(*node, DynamicFact::Structural(*test), holds, tag);
+        }
     }
 }
 
 fn condition_node(cond: &Condition) -> NodeId {
     match cond {
-        Condition::Class { node, .. } | Condition::State { node, .. } => *node,
+        Condition::Class { node, .. }
+        | Condition::State { node, .. }
+        | Condition::Structural { node, .. } => *node,
     }
 }
 
@@ -356,6 +361,7 @@ fn describe(cond: &Condition) -> String {
     match cond {
         Condition::Class { class, .. } => format!("class `{class}`"),
         Condition::State { state, .. } => format!("state {state:?}"),
+        Condition::Structural { test, .. } => format!("{test:?}"),
     }
 }
 
@@ -389,6 +395,16 @@ pub(crate) fn styled_classes(sheets: &[Stylesheet]) -> BTreeSet<String> {
     let mut out = BTreeSet::new();
     for sel in all_selectors(sheets) {
         visit_compounds(sel, &mut |c| out.extend(c.classes.iter().cloned()));
+    }
+    out
+}
+
+pub(crate) fn structural_pseudos(sheets: &[Stylesheet]) -> BTreeSet<Structural> {
+    let mut out = BTreeSet::new();
+    for sel in all_selectors(sheets) {
+        visit_compounds(sel, &mut |c| {
+            out.extend(c.pseudos.iter().filter_map(PseudoClass::structural));
+        });
     }
     out
 }
