@@ -35,6 +35,12 @@ pub(crate) fn is_visible(side: &BorderSide) -> bool {
     side.width > 0.0 && !matches!(side.style, BorderStyle::None | BorderStyle::Hidden)
 }
 
+/// A `double` side wide enough for two lines and a gap; a thinner one is
+/// drawn solid.
+fn is_double(side: &BorderSide) -> bool {
+    side.style == BorderStyle::Double && side.width >= 3.0
+}
+
 pub(crate) fn border_width(side: &BorderSide) -> f32 {
     if is_visible(side) { side.width } else { 0.0 }
 }
@@ -225,6 +231,7 @@ impl Emitter<'_, '_> {
         }
         let borders: Vec<&BorderSide> = sides(style).to_vec();
         let uniform = borders.iter().all(|s| **s == *borders[0]) && is_visible(borders[0]);
+        let stripped = deco.strips.is_some() || !uniform;
         if let Some(forced) = deco.strips {
             self.border_strips(&mut wrapper, style, forced, line);
         } else if uniform && painted {
@@ -245,7 +252,8 @@ impl Emitter<'_, '_> {
             self.border_strips(&mut wrapper, style, [false; 4], line);
         }
         for side in borders.iter().filter(|s| is_visible(s)) {
-            if !matches!(side.style, BorderStyle::Solid) {
+            let two_lines = stripped && is_double(side);
+            if !matches!(side.style, BorderStyle::Solid) && !two_lines {
                 self.diags.info(
                     "css",
                     line,
@@ -510,14 +518,37 @@ impl Emitter<'_, '_> {
                 strip.set(&format!("anchors.{a}"), Value::expr(format!("parent.{a}")));
             }
             strip.set(size, number(border_width(side)));
-            strip.set(
-                "color",
-                color(if visible {
-                    side.color
+            if visible && is_double(side) {
+                // Two lines at the strip's edges, as Chromium draws them.
+                strip.set("color", color(eldur_css::Rgba::TRANSPARENT));
+                let across = if size == "height" {
+                    ["top", "bottom"]
                 } else {
-                    eldur_css::Rgba::TRANSPARENT
-                }),
-            );
+                    ["left", "right"]
+                };
+                for edge in across {
+                    let mut line = Object::new("Rectangle");
+                    for a in anchors.iter().filter(|a| !across.contains(a)) {
+                        line.set(&format!("anchors.{a}"), Value::expr(format!("parent.{a}")));
+                    }
+                    line.set(
+                        &format!("anchors.{edge}"),
+                        Value::expr(format!("parent.{edge}")),
+                    );
+                    line.set(size, number((side.width / 3.0).round()));
+                    line.set("color", color(side.color));
+                    strip.push_child(line);
+                }
+            } else {
+                strip.set(
+                    "color",
+                    color(if visible {
+                        side.color
+                    } else {
+                        eldur_css::Rgba::TRANSPARENT
+                    }),
+                );
+            }
             wrapper.push_child(strip);
         }
         let r = &style.border_radius;

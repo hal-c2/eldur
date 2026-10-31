@@ -602,14 +602,14 @@ ApplicationWindow {
                                                         border.width: 1
                                                         radius: width / 2
                                                         color: "#ffffff"
-                                                        border.color: plan.checked ? "#0075ff" : "#767676"
+                                                        border.color: plan.checked ? "#3b6fe0" : "#767676"
 
                                                         Rectangle {
                                                             anchors.centerIn: parent
                                                             width: parent.width * 0.6
                                                             height: width
                                                             radius: width / 2
-                                                            color: "#0075ff"
+                                                            color: "#3b6fe0"
                                                             visible: plan.checked
                                                         }
                                                     }
@@ -675,14 +675,14 @@ ApplicationWindow {
                                                         border.width: 1
                                                         radius: width / 2
                                                         color: "#ffffff"
-                                                        border.color: plan2.checked ? "#0075ff" : "#767676"
+                                                        border.color: plan2.checked ? "#3b6fe0" : "#767676"
 
                                                         Rectangle {
                                                             anchors.centerIn: parent
                                                             width: parent.width * 0.6
                                                             height: width
                                                             radius: width / 2
-                                                            color: "#0075ff"
+                                                            color: "#3b6fe0"
                                                             visible: plan2.checked
                                                         }
                                                     }
@@ -748,14 +748,14 @@ ApplicationWindow {
                                                         border.width: 1
                                                         radius: width / 2
                                                         color: "#ffffff"
-                                                        border.color: plan3.checked ? "#0075ff" : "#767676"
+                                                        border.color: plan3.checked ? "#3b6fe0" : "#767676"
 
                                                         Rectangle {
                                                             anchors.centerIn: parent
                                                             width: parent.width * 0.6
                                                             height: width
                                                             radius: width / 2
-                                                            color: "#0075ff"
+                                                            color: "#3b6fe0"
                                                             visible: plan3.checked
                                                         }
                                                     }
@@ -1023,8 +1023,8 @@ ApplicationWindow {
                                             height: terms.height
                                             border.width: 1
                                             radius: 2
-                                            color: terms.checked ? "#0075ff" : "#ffffff"
-                                            border.color: terms.checked ? "#0075ff" : "#767676"
+                                            color: terms.checked ? "#3b6fe0" : "#ffffff"
+                                            border.color: terms.checked ? "#3b6fe0" : "#767676"
 
                                             Text {
                                                 anchors.centerIn: parent

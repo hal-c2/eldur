@@ -1193,8 +1193,9 @@ fn a_text_that_is_one_link_without_underline_is_not_underlined() {
          <ul><li><a href=\"#u\">Underlined</a></li></ul>",
     ));
     let nav = object_after(&qml, "<li>");
+    // The link is the whole text, so its colour is the Text's.
     assert!(
-        nav.contains("text: \"<font color=\\\"#334155\\\">Features</font>\""),
+        nav.contains("text: \"Features\"") && nav.contains("color: \"#334155\""),
         "{nav}"
     );
     assert!(!nav.contains("<a "), "{nav}");

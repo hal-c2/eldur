@@ -1173,15 +1173,15 @@ ApplicationWindow {
                             }
 
                             Text {
-                                text: "<font color=\"#5c6578\"><small>Tokens</small></font>"
-                                textFormat: Text.StyledText
-                                color: "#1c2233"
+                                text: "Tokens"
+                                textFormat: Text.PlainText
+                                color: "#5c6578"
                                 font.family: "sans-serif"
-                                font.pixelSize: 16
+                                font.pixelSize: 14
                                 lineHeight: 24
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2.8
+                                    y: 4.61
                                 }
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
@@ -1225,15 +1225,15 @@ ApplicationWindow {
                             }
 
                             Text {
-                                text: "<font color=\"#5c6578\"><small>Components</small></font>"
-                                textFormat: Text.StyledText
-                                color: "#1c2233"
+                                text: "Components"
+                                textFormat: Text.PlainText
+                                color: "#5c6578"
                                 font.family: "sans-serif"
-                                font.pixelSize: 16
+                                font.pixelSize: 14
                                 lineHeight: 24
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2.8
+                                    y: 4.61
                                 }
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
@@ -1277,15 +1277,15 @@ ApplicationWindow {
                             }
 
                             Text {
-                                text: "<font color=\"#5c6578\"><small>Themes</small></font>"
-                                textFormat: Text.StyledText
-                                color: "#1c2233"
+                                text: "Themes"
+                                textFormat: Text.PlainText
+                                color: "#5c6578"
                                 font.family: "sans-serif"
-                                font.pixelSize: 16
+                                font.pixelSize: 14
                                 lineHeight: 24
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2.8
+                                    y: 4.61
                                 }
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap

@@ -653,23 +653,32 @@ ApplicationWindow {
                                     from: 0
                                     to: 50
                                     value: 7
-                                    implicitHeight: 16
-                                    background: Rectangle {
-                                        color: "#efefef"
-                                        radius: 3
+                                    implicitWidth: 140
+                                    implicitHeight: 10
+                                    background: Item {
+                                        Rectangle {
+                                            width: parent.width
+                                            y: parent.height / 4
+                                            height: parent.height / 2
+                                            radius: height / 2
+                                            color: "#efefef"
+                                            border.color: "#b2b2b2"
+                                        }
                                     }
                                     contentItem: Item {
                                         Rectangle {
                                             width: stock.visualPosition * parent.width
-                                            height: parent.height
-                                            radius: 3
+                                            y: parent.height / 4
+                                            height: parent.height / 2
+                                            radius: height / 2
                                             color: "#0075ff"
                                         }
                                     }
                                     Accessible.name: "Only 7 left in stock"
                                     Layout.fillWidth: true
                                     Layout.preferredHeight: 10
-                                    Layout.topMargin: 4
+                                    Layout.topMargin: 11.92
+                                    Layout.bottomMargin: 3.08
                                 }
                             }
 
@@ -996,22 +1005,39 @@ ApplicationWindow {
                                             from: 0
                                             to: 5
                                             value: 5
-                                            implicitHeight: 16
-                                            background: Rectangle {
-                                                color: "#efefef"
-                                                radius: 3
+                                            implicitHeight: 15
+                                            background: Item {
+                                                Rectangle {
+                                                    width: parent.width
+                                                    y: parent.height / 4
+                                                    height: parent.height / 2
+                                                    radius: height / 2
+                                                    color: "#efefef"
+                                                    border.color: "#cbcbcb"
+                                                }
                                             }
                                             contentItem: Item {
                                                 Rectangle {
                                                     width: meterControl.visualPosition * parent.width
-                                                    height: parent.height
-                                                    radius: 3
+                                                    y: parent.height / 4
+                                                    height: parent.height / 2
+                                                    radius: height / 2
                                                     color: meterControl.value < 0 ? "#ffb900" : (meterControl.value > 5 ? "#ffb900" : "#107c10")
+                                                }
+
+                                                Rectangle {
+                                                    width: parent.width
+                                                    y: parent.height / 4
+                                                    height: parent.height / 2
+                                                    radius: height / 2
+                                                    color: "transparent"
+                                                    border.color: "#cbcbcb"
                                                 }
                                             }
                                             Layout.fillWidth: true
                                             Layout.preferredWidth: 100
                                             Layout.maximumWidth: 100
+                                            Layout.preferredHeight: 15
                                             Layout.alignment: Qt.AlignVCenter
                                             Layout.leftMargin: 12
                                         }
@@ -1094,22 +1120,39 @@ ApplicationWindow {
                                             from: 0
                                             to: 5
                                             value: 3
-                                            implicitHeight: 16
-                                            background: Rectangle {
-                                                color: "#efefef"
-                                                radius: 3
+                                            implicitHeight: 15
+                                            background: Item {
+                                                Rectangle {
+                                                    width: parent.width
+                                                    y: parent.height / 4
+                                                    height: parent.height / 2
+                                                    radius: height / 2
+                                                    color: "#efefef"
+                                                    border.color: "#cbcbcb"
+                                                }
                                             }
                                             contentItem: Item {
                                                 Rectangle {
                                                     width: meterControl2.visualPosition * parent.width
-                                                    height: parent.height
-                                                    radius: 3
+                                                    y: parent.height / 4
+                                                    height: parent.height / 2
+                                                    radius: height / 2
                                                     color: meterControl2.value < 2 ? "#d13438" : (meterControl2.value > 4 ? "#107c10" : "#ffb900")
+                                                }
+
+                                                Rectangle {
+                                                    width: parent.width
+                                                    y: parent.height / 4
+                                                    height: parent.height / 2
+                                                    radius: height / 2
+                                                    color: "transparent"
+                                                    border.color: "#cbcbcb"
                                                 }
                                             }
                                             Layout.fillWidth: true
                                             Layout.preferredWidth: 100
                                             Layout.maximumWidth: 100
+                                            Layout.preferredHeight: 15
                                             Layout.alignment: Qt.AlignVCenter
                                             Layout.leftMargin: 12
                                         }

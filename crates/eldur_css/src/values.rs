@@ -491,6 +491,28 @@ pub enum TextOverflow {
     Ellipsis,
 }
 
+/// `accent-color`. `currentcolor` inherits as the keyword, so it is kept
+/// unresolved.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum AccentColor {
+    #[default]
+    Auto,
+    CurrentColor,
+    Color(Rgba),
+}
+
+impl AccentColor {
+    /// The colour, with `currentcolor` as `color`; `None` for `auto`.
+    #[must_use]
+    pub fn resolve(self, color: Rgba) -> Option<Rgba> {
+        match self {
+            Self::Auto => None,
+            Self::CurrentColor => Some(color),
+            Self::Color(c) => Some(c),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum VerticalAlign {
     #[default]
@@ -871,6 +893,7 @@ pub struct ComputedStyle {
     /// `border-spacing`: horizontal, then vertical, in px.
     pub border_spacing: (f32, f32),
     pub caption_side: CaptionSide,
+    pub accent_color: AccentColor,
 
     // Not inherited, but propagated to inline descendants by the converter
     pub text_decoration_line: TextDecorationLine,
@@ -995,6 +1018,7 @@ impl Default for ComputedStyle {
             border_collapse: BorderCollapse::Separate,
             border_spacing: (0.0, 0.0),
             caption_side: CaptionSide::Top,
+            accent_color: AccentColor::Auto,
             table_layout: TableLayout::Auto,
             text_decoration_line: TextDecorationLine::default(),
             text_decoration_color: None,

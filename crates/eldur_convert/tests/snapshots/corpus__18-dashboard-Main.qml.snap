@@ -1769,22 +1769,31 @@ ApplicationWindow {
                                                         from: 0
                                                         to: 100
                                                         value: 68
-                                                        implicitHeight: 16
-                                                        background: Rectangle {
-                                                            color: "#efefef"
-                                                            radius: 3
+                                                        implicitWidth: 140
+                                                        implicitHeight: 12
+                                                        background: Item {
+                                                            Rectangle {
+                                                                width: parent.width
+                                                                y: parent.height / 4
+                                                                height: parent.height / 2
+                                                                radius: height / 2
+                                                                color: "#efefef"
+                                                                border.color: "#b2b2b2"
+                                                            }
                                                         }
                                                         contentItem: Item {
                                                             Rectangle {
                                                                 width: progressControl.visualPosition * parent.width
-                                                                height: parent.height
-                                                                radius: 3
-                                                                color: "#0075ff"
+                                                                y: parent.height / 4
+                                                                height: parent.height / 2
+                                                                radius: height / 2
+                                                                color: "#4f46e5"
                                                             }
                                                         }
                                                         Layout.fillWidth: true
                                                         Layout.preferredHeight: 12
-                                                        Layout.topMargin: 8
+                                                        Layout.topMargin: 11.47
+                                                        Layout.bottomMargin: 0.63
                                                     }
                                                 }
 

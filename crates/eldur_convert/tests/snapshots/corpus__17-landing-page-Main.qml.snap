@@ -140,11 +140,12 @@ ApplicationWindow {
 
                                         // <li>
                                         Text {
-                                            text: "<font color=\"#5c6378\">Features</font>"
-                                            textFormat: Text.StyledText
-                                            color: "#1d2233"
+                                            text: "Features"
+                                            textFormat: Text.PlainText
+                                            color: "#5c6378"
                                             font.family: "sans-serif"
                                             font.pixelSize: 16
+                                            font.weight: 500
                                             lineHeight: 25.6
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
@@ -166,11 +167,12 @@ ApplicationWindow {
 
                                         // <li>
                                         Text {
-                                            text: "<font color=\"#5c6378\">Pricing</font>"
-                                            textFormat: Text.StyledText
-                                            color: "#1d2233"
+                                            text: "Pricing"
+                                            textFormat: Text.PlainText
+                                            color: "#5c6378"
                                             font.family: "sans-serif"
                                             font.pixelSize: 16
+                                            font.weight: 500
                                             lineHeight: 25.6
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
@@ -193,11 +195,12 @@ ApplicationWindow {
 
                                         // <li>
                                         Text {
-                                            text: "<font color=\"#5c6378\">Customers</font>"
-                                            textFormat: Text.StyledText
-                                            color: "#1d2233"
+                                            text: "Customers"
+                                            textFormat: Text.PlainText
+                                            color: "#5c6378"
                                             font.family: "sans-serif"
                                             font.pixelSize: 16
+                                            font.weight: 500
                                             lineHeight: 25.6
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
@@ -220,11 +223,12 @@ ApplicationWindow {
 
                                         // <li>
                                         Text {
-                                            text: "<font color=\"#5c6378\">Docs</font>"
-                                            textFormat: Text.StyledText
-                                            color: "#1d2233"
+                                            text: "Docs"
+                                            textFormat: Text.PlainText
+                                            color: "#5c6378"
                                             font.family: "sans-serif"
                                             font.pixelSize: 16
+                                            font.weight: 500
                                             lineHeight: 25.6
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
@@ -1583,15 +1587,15 @@ ApplicationWindow {
                                                 }
 
                                                 Text {
-                                                    text: "<font color=\"#5c6378\"><small>Head of Engineering, Brightline</small></font>"
-                                                    textFormat: Text.StyledText
-                                                    color: "#1d2233"
+                                                    text: "Head of Engineering, Brightline"
+                                                    textFormat: Text.PlainText
+                                                    color: "#5c6378"
                                                     font.family: "sans-serif"
-                                                    font.pixelSize: 16
+                                                    font.pixelSize: 15
                                                     lineHeight: 25.6
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 3.6
+                                                        y: 4.06
                                                     }
                                                     horizontalAlignment: Text.AlignHCenter
                                                     wrapMode: Text.WordWrap

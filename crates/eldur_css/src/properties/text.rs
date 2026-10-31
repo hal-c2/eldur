@@ -5,16 +5,16 @@
 use swc_css_ast::ComponentValue;
 
 use crate::{
-    BorderCollapse, BorderStyle, CaptionSide, ComputedStyle, ContentItem, CounterChange,
-    Cursor as CssCursor, Direction, Length, ListStyleType, PointerEvents, Rgba, Shadow,
-    TableLayout, TextAlign, TextDecorationLine, TextOverflow, TextTransform, VerticalAlign,
+    AccentColor, BorderCollapse, BorderStyle, CaptionSide, ComputedStyle, ContentItem,
+    CounterChange, Cursor as CssCursor, Direction, Length, ListStyleType, PointerEvents, Rgba,
+    Shadow, TableLayout, TextAlign, TextDecorationLine, TextOverflow, TextTransform, VerticalAlign,
     Visibility, WhiteSpace, WordBreak,
 };
 
 use super::{
     ComputeContext,
     background::parse_shadow_list,
-    color::{eat_color, parse_color_cvs},
+    color::{eat_color, is_current_color_cvs, parse_color_cvs},
     cursor::{Cursor, split_comma_separated},
     length::{
         UnitContext, eat_length, eat_number_or_calc, eat_px, length_to_px, parse_length_cvs,
@@ -514,6 +514,21 @@ pub(crate) fn parse_text_decoration_style(cvs: &[ComponentValue]) -> Result<Bord
         .ok_or_else(|| "invalid text-decoration-style".to_owned())?;
     cur.expect_eof()?;
     Ok(st)
+}
+
+pub(crate) fn parse_accent_color(
+    cvs: &[ComponentValue],
+    current_color: Rgba,
+) -> Result<AccentColor, String> {
+    let mut cur = Cursor::new(cvs);
+    if cur.eat_ident_eq("auto") {
+        cur.expect_eof()?;
+        return Ok(AccentColor::Auto);
+    }
+    if is_current_color_cvs(cvs) {
+        return Ok(AccentColor::CurrentColor);
+    }
+    Ok(AccentColor::Color(parse_color_cvs(cvs, current_color)?))
 }
 
 pub(crate) fn parse_text_decoration_color(

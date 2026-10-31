@@ -719,11 +719,12 @@ ApplicationWindow {
 
                             // <p>
                             Text {
-                                text: "<b><font color=\"#3b6fe0\">Read the documentation</font></b>"
-                                textFormat: Text.StyledText
-                                color: "#1f2937"
+                                text: "Read the documentation"
+                                textFormat: Text.PlainText
+                                color: "#3b6fe0"
                                 font.family: "sans-serif"
                                 font.pixelSize: 15
+                                font.weight: 600
                                 lineHeight: 22.5
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
@@ -744,11 +745,12 @@ ApplicationWindow {
 
                             // <p>
                             Text {
-                                text: "<b><font color=\"#3b6fe0\">View the changelog</font></b>"
-                                textFormat: Text.StyledText
-                                color: "#1f2937"
+                                text: "View the changelog"
+                                textFormat: Text.PlainText
+                                color: "#3b6fe0"
                                 font.family: "sans-serif"
                                 font.pixelSize: 15
+                                font.weight: 600
                                 lineHeight: 22.5
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
@@ -769,11 +771,12 @@ ApplicationWindow {
 
                             // <p>
                             Text {
-                                text: "<b><font color=\"#3b6fe0\">Contact support</font></b>"
-                                textFormat: Text.StyledText
-                                color: "#1f2937"
+                                text: "Contact support"
+                                textFormat: Text.PlainText
+                                color: "#3b6fe0"
                                 font.family: "sans-serif"
                                 font.pixelSize: 15
+                                font.weight: 600
                                 lineHeight: 22.5
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {

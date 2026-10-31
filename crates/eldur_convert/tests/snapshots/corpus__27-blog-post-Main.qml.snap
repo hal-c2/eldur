@@ -68,21 +68,42 @@ ApplicationWindow {
                         anchors.right: parent.right
                         anchors.bottom: parent.bottom
                         height: 3
-                        color: "#d8cfc0"
+                        color: "#00000000"
+
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            height: 1
+                            color: "#d8cfc0"
+                        }
+
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            height: 1
+                            color: "#d8cfc0"
+                        }
                     }
 
                     Text {
                         id: mastheadText
-                        text: "<div style=\"line-height:28.8px\"><b><span style=\"font-size:22px;font-family:'sans-serif'\">Field Notes</span></b></div>"
-                        textFormat: Text.RichText
+                        text: "Field Notes"
+                        textFormat: Text.PlainText
                         color: "#2e2a26"
-                        font.family: "serif"
-                        font.pixelSize: 18
+                        font.family: "sans-serif"
+                        font.pixelSize: 22
+                        font.weight: 700
+                        font.letterSpacing: 4.4
+                        font.capitalization: Font.AllUppercase
+                        lineHeight: 35.2
+                        lineHeightMode: Text.FixedHeight
+                        transform: Translate {
+                            y: 4.95
+                        }
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.WordWrap
-                        transform: Translate {
-                            y: -4.05
-                        }
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.top: parent.top
@@ -188,6 +209,9 @@ ApplicationWindow {
 
                                     onLineLaidOut: (line) => {
                                         const fixed = lineHeightMode === Text.FixedHeight;
+                                        if (fixed) {
+                                            line.y = line.number * lineHeight;
+                                        }
                                         const top = y + (fixed ? line.number * lineHeight : line.y);
                                         const bottom = top + (fixed ? lineHeight : line.height);
                                         if (top < floats.childrenRect.y + floats.childrenRect.height && bottom > floats.childrenRect.y) {
@@ -219,6 +243,9 @@ ApplicationWindow {
 
                                     onLineLaidOut: (line) => {
                                         const fixed = lineHeightMode === Text.FixedHeight;
+                                        if (fixed) {
+                                            line.y = line.number * lineHeight;
+                                        }
                                         const top = y + (fixed ? line.number * lineHeight : line.y);
                                         const bottom = top + (fixed ? lineHeight : line.height);
                                         if (top < floats.childrenRect.y + floats.childrenRect.height && bottom > floats.childrenRect.y) {
@@ -250,6 +277,9 @@ ApplicationWindow {
 
                                     onLineLaidOut: (line) => {
                                         const fixed = lineHeightMode === Text.FixedHeight;
+                                        if (fixed) {
+                                            line.y = line.number * lineHeight;
+                                        }
                                         const top = y + (fixed ? line.number * lineHeight : line.y);
                                         const bottom = top + (fixed ? lineHeight : line.height);
                                         if (top < floats.childrenRect.y + floats.childrenRect.height && bottom > floats.childrenRect.y) {

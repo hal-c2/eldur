@@ -22,7 +22,7 @@ use crate::boxes::{BoxKind, Content, Inline, LayoutBox, Span, node_line};
 
 /// Ascent of the common fallback fonts as a fraction of the font size
 /// (Liberation Sans: 0.905).
-const ASCENT: f32 = 0.905;
+pub(super) const ASCENT: f32 = 0.905;
 
 /// The width of a created inline element or text run in a `Flow`: its
 /// natural width, no wider than the line.
@@ -131,7 +131,7 @@ enum Part {
 }
 
 /// The line height of `style` in px.
-fn line_height(style: &ComputedStyle) -> f32 {
+pub(super) fn line_height(style: &ComputedStyle) -> f32 {
     match style.line_height {
         LineHeight::Normal => CONTENT_AREA * style.font_size,
         LineHeight::Number(n) => n * style.font_size,
@@ -141,7 +141,7 @@ fn line_height(style: &ComputedStyle) -> f32 {
 
 /// The baseline of a line of `style`'s text, from the top of the line box:
 /// the glyphs are centred in it (half-leading).
-fn text_baseline(style: &ComputedStyle) -> f32 {
+pub(super) fn text_baseline(style: &ComputedStyle) -> f32 {
     (line_height(style) - CONTENT_AREA * style.font_size) / 2.0 + ASCENT * style.font_size
 }
 
