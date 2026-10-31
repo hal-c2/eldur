@@ -4,7 +4,12 @@
 //! elements from them, so added, toggled and deleted items look as they do
 //! in a browser.
 //!
-//! The pages are `tests/templates/page.html` and corpus 16-script-todo,
+//! The same holds for elements written as markup (`list.innerHTML = '<li
+//! class="item">…'`, `insertAdjacentHTML`), which the analysis parses and
+//! predicts like `createElement` sites.
+//!
+//! The pages are `tests/templates/page.html`, `tests/templates/markup.html`
+//! and corpus 16-script-todo,
 //! driven with real input through qmltestrunner. The expected values are
 //! Chromium's after the same steps, recorded in `tests/templates/chromium.json`
 //! by `node crates/h2q_convert/tests/templates/gen.mjs`.
@@ -273,6 +278,94 @@ const FOCUSED: &str = r##"
 #[test]
 fn created_items_match_chromium() {
     check("templates", include_str!("templates/page.html"), FOCUSED);
+}
+
+const MARKUP: &str = r##"
+    function list() { return named("list") }
+    function rows() { return tagged(list(), "li") }
+    function spans(row) { return items(row, []).filter(i => i.h2qTag === "span") }
+    function labels() { return rows().map(r => spans(r)[0]) }
+    function tags() { return rows().map(r => spans(r)[1]) }
+    function texts() { return labels().map(l => l.text) }
+    function sameTag(tag, name, what) {
+        sameColor(tag.color, want(name, "background-color"), what + " background")
+        const text = items(tag, []).find(i => i !== tag && typeof i.text === "string")
+        verify(text !== undefined, "no text in " + what)
+        sameColor(text.color, want(name, "color"), what + " colour")
+    }
+
+    // `list.innerHTML = '<li class="item">…'` at load.
+    function test_markup_items_take_the_page_styles() {
+        compare(texts(), order("M initial order"))
+        sameText(labels()[0], "M initial label1", "label 1")
+        sameText(labels()[1], "M initial label2", "label 2")
+        sameColor(rows()[0].color, want("M initial item1", "background-color"), "item 1")
+        sameColor(rows()[1].color, want("M initial item2", "background-color"), "item 2")
+        sameTag(tags()[0], "M initial tag1", "tag 1")
+        const g = "M initial geometry"
+        sameBox(list(), boxes(g, "#list")[0], "list")
+        sameBoxes(rows(), g, "#list li", "item")
+        sameBoxes(labels(), g, "#list .label", "label")
+        sameBoxes(tags(), g, "#list .tag", "tag")
+    }
+
+    // `insertAdjacentHTML('beforeend', '<li class="item">…' + next + '…')`.
+    function test_adding_markup_items() {
+        click(named("add"))
+        const g = "M add geometry"
+        sameBox(list(), boxes(g, "#list")[0], "list")
+        sameBoxes(rows(), g, "#list li", "item")
+        sameBoxes(tags(), g, "#list .tag", "tag")
+        click(named("add"))
+        compare(texts(), order("M add order"))
+        sameText(labels()[2], "M add label3", "label 3")
+        sameColor(rows()[3].color, want("M add item4", "background-color"), "item 4")
+        sameTag(tags()[3], "M add tag4", "tag 4")
+    }
+
+    function test_toggling_a_class_on_a_markup_item() {
+        click(named("toggle"))
+        sameText(labels()[0], "M toggle label1", "label 1")
+        sameColor(rows()[0].color, want("M toggle item1", "background-color"), "item 1")
+        const g = "M toggle geometry"
+        sameBox(list(), boxes(g, "#list")[0], "list")
+        sameBoxes(rows(), g, "#list li", "item")
+        sameBoxes(labels(), g, "#list .label", "label")
+        click(named("toggle"))
+        sameText(labels()[0], "M toggle twice label1", "label 1")
+        sameColor(rows()[0].color, want("M toggle twice item1", "background-color"), "item 1")
+    }
+
+    // `.item:hover .label` on items made from markup.
+    function test_hovering_a_markup_item() {
+        hover(rows()[0])
+        sameText(labels()[0], "M hover label1", "hovered label 1")
+        sameText(labels()[1], "M hover label2", "label 2")
+    }
+
+    function test_hovering_a_toggled_markup_item() {
+        click(named("toggle"))
+        hover(rows()[0])
+        sameText(labels()[0], "M toggle hover label1", "hovered label 1")
+    }
+
+    // `innerHTML` again replaces what was added and toggled.
+    function test_resetting_the_markup() {
+        click(named("add"))
+        click(named("toggle"))
+        click(named("reset"))
+        compare(texts(), order("M reset order"))
+        sameText(labels()[0], "M reset label1", "label 1")
+        sameColor(rows()[0].color, want("M reset item1", "background-color"), "item 1")
+        const g = "M reset geometry"
+        sameBox(list(), boxes(g, "#list")[0], "list")
+        sameBoxes(rows(), g, "#list li", "item")
+    }
+"##;
+
+#[test]
+fn markup_items_match_chromium() {
+    check("markup", include_str!("templates/markup.html"), MARKUP);
 }
 
 const TODO: &str = r##"

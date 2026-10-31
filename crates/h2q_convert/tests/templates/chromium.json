@@ -52,6 +52,77 @@
   "color": "rgb(134, 142, 150)",
   "text-decoration-line": "line-through"
  },
+ "M initial order": {
+  "--h2q-order": "\"First|Second\""
+ },
+ "M initial label1": {
+  "color": "rgb(31, 36, 48)",
+  "text-decoration-line": "none"
+ },
+ "M initial label2": {
+  "color": "rgb(134, 142, 150)",
+  "text-decoration-line": "line-through"
+ },
+ "M initial item1": {
+  "background-color": "rgba(0, 0, 0, 0)"
+ },
+ "M initial item2": {
+  "background-color": "rgb(241, 243, 245)"
+ },
+ "M initial tag1": {
+  "color": "rgb(24, 100, 171)",
+  "background-color": "rgb(231, 245, 255)"
+ },
+ "M add order": {
+  "--h2q-order": "\"First|Second|Item 3|Item 4\""
+ },
+ "M add label3": {
+  "color": "rgb(31, 36, 48)",
+  "text-decoration-line": "none"
+ },
+ "M add item4": {
+  "background-color": "rgba(0, 0, 0, 0)"
+ },
+ "M add tag4": {
+  "color": "rgb(24, 100, 171)",
+  "background-color": "rgb(231, 245, 255)"
+ },
+ "M toggle label1": {
+  "color": "rgb(134, 142, 150)",
+  "text-decoration-line": "line-through"
+ },
+ "M toggle item1": {
+  "background-color": "rgb(241, 243, 245)"
+ },
+ "M toggle twice label1": {
+  "color": "rgb(31, 36, 48)",
+  "text-decoration-line": "none"
+ },
+ "M toggle twice item1": {
+  "background-color": "rgba(0, 0, 0, 0)"
+ },
+ "M reset order": {
+  "--h2q-order": "\"First|Second\""
+ },
+ "M reset label1": {
+  "color": "rgb(31, 36, 48)",
+  "text-decoration-line": "none"
+ },
+ "M reset item1": {
+  "background-color": "rgba(0, 0, 0, 0)"
+ },
+ "M hover label1": {
+  "color": "rgb(28, 126, 214)",
+  "text-decoration-line": "none"
+ },
+ "M hover label2": {
+  "color": "rgb(134, 142, 150)",
+  "text-decoration-line": "line-through"
+ },
+ "M toggle hover label1": {
+  "color": "rgb(28, 126, 214)",
+  "text-decoration-line": "line-through"
+ },
  "16 initial order": {
   "--h2q-order": "\"Review the design tokens|Write release notes|Book the quarterly review\""
  },
@@ -216,6 +287,170 @@
     "y": 62,
     "width": 400,
     "height": 38
+   }
+  ]
+ },
+ "M initial geometry": {
+  "#list": [
+   {
+    "x": 24,
+    "y": 61,
+    "width": 402,
+    "height": 72
+   }
+  ],
+  "#list li": [
+   {
+    "x": 25,
+    "y": 62,
+    "width": 400,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 97,
+    "width": 400,
+    "height": 35
+   }
+  ],
+  "#list .label": [
+   {
+    "x": 37,
+    "y": 70,
+    "width": 333.984375,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 105,
+    "width": 339.984375,
+    "height": 18
+   }
+  ],
+  "#list .tag": [
+   {
+    "x": 378.984375,
+    "y": 70,
+    "width": 34.015625,
+    "height": 18
+   },
+   {
+    "x": 384.984375,
+    "y": 105,
+    "width": 28.015625,
+    "height": 18
+   }
+  ]
+ },
+ "M add geometry": {
+  "#list": [
+   {
+    "x": 24,
+    "y": 61,
+    "width": 402,
+    "height": 107
+   }
+  ],
+  "#list li": [
+   {
+    "x": 25,
+    "y": 62,
+    "width": 400,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 97,
+    "width": 400,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 132,
+    "width": 400,
+    "height": 35
+   }
+  ],
+  "#list .tag": [
+   {
+    "x": 378.984375,
+    "y": 70,
+    "width": 34.015625,
+    "height": 18
+   },
+   {
+    "x": 384.984375,
+    "y": 105,
+    "width": 28.015625,
+    "height": 18
+   },
+   {
+    "x": 378.984375,
+    "y": 140,
+    "width": 34.015625,
+    "height": 18
+   }
+  ]
+ },
+ "M toggle geometry": {
+  "#list": [
+   {
+    "x": 24,
+    "y": 61,
+    "width": 402,
+    "height": 72
+   }
+  ],
+  "#list li": [
+   {
+    "x": 25,
+    "y": 62,
+    "width": 400,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 97,
+    "width": 400,
+    "height": 35
+   }
+  ],
+  "#list .label": [
+   {
+    "x": 37,
+    "y": 70,
+    "width": 333.984375,
+    "height": 18
+   },
+   {
+    "x": 37,
+    "y": 105,
+    "width": 339.984375,
+    "height": 18
+   }
+  ]
+ },
+ "M reset geometry": {
+  "#list": [
+   {
+    "x": 24,
+    "y": 61,
+    "width": 402,
+    "height": 72
+   }
+  ],
+  "#list li": [
+   {
+    "x": 25,
+    "y": 62,
+    "width": 400,
+    "height": 35
+   },
+   {
+    "x": 25,
+    "y": 97,
+    "width": 400,
+    "height": 35
    }
   ]
  },

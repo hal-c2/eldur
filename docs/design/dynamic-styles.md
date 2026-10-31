@@ -435,11 +435,32 @@ says so.
 
 ### 6.7 `innerHTML` / `insertAdjacentHTML` with literal markup
 
-Later, the same mechanism applies to string literals assigned to
-`innerHTML`: analysis parses them with `h2q_dom::Document::parse_fragment`
-and reports their elements as `CreatedElement`s whose parent is the target.
-`H2Q.setInnerHTML` then materialises through the registry. This is a later
-slice (S9).
+The same mechanism applies to markup assigned to `innerHTML` (`=` and
+`+=`) or passed to `insertAdjacentHTML`: analysis parses each alternative
+value with `h2q_dom::Document::parse_fragment` and reports its elements as
+`CreatedElement`s whose parent is the target (`afterbegin`/`beforeend`;
+`beforebegin`/`afterend` give an `Unknown` parent). Nested elements are
+parented to their fragment parent. `H2Q.setInnerHTML` then materialises
+through the registry (S9a).
+
+- A value is literal when its structure is: concatenations and template
+  literals may put dynamic parts in text and attribute values. A dynamic
+  part in a `class` value makes the classes open (§6.1); in `type`, the
+  input type unknown.
+- Each distinct `(parent, tag, type, class)` is one `CreatedElement` with
+  `ClassOp::Assign` of that class value, so `li.item` and `li.done.item`
+  get their own templates and a later `classList` toggle swaps keys.
+- A dynamic part at the top level of the fragment, or in a tag or
+  attribute name, makes that part opaque (`dynamic-markup`): its elements
+  are not predicted and fall back at run time. The literal elements
+  around it still are.
+- `<script>`, `<style>`, `<template>` and non-HTML (`<svg>`) elements are
+  left out: the runtime does not make items for them.
+- The runtime still builds the nodes with its own small parser, so markup
+  that relies on HTML's implied end tags or foster parenting can differ
+  from what analysis predicted (the fallback chain then applies).
+- `getInnerHTML` returns the last string assigned, not a serialisation;
+  `outerHTML` and markup built by `Array.prototype.join` are opaque.
 
 ---
 
@@ -713,6 +734,7 @@ line.
 | `dynamic-form` | A combination changes layout kind (`display` flex/block/grid, `position`, `float`) | The base form is kept. Bound properties still apply. |
 | `dynamic-combinations` | More than 6 conditions on one element | Conditions are applied independently, in cascade order. |
 | `dynamic-templates` | More than 16 keys for one created element | Extra keys use the fallback chain. |
+| `dynamic-markup` (`warning[js]`) | Markup given to `innerHTML`/`insertAdjacentHTML` is not literal (§6.7) | Its elements are not predicted and use the fallback chain. |
 | `dynamic-unsupported-selector` | The condition is inside `:has()`, or on a later sibling or a descendant | Not converted. |
 | `dynamic-class-collision` | Two classes sanitise to the same `cls_` name | They share one property. |
 | *(runtime)* `no style template for …` | A key was not predicted | The fallback chain is used. |
