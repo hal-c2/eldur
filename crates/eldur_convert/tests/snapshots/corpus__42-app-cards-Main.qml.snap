@@ -211,6 +211,8 @@ ApplicationWindow {
             // <body>
             ColumnLayout {
                 property string eldurTag: "body"
+                property string eldurWs: "\n"
+                property string eldurWsEnd: "\n\n\n"
 
                 spacing: 0
                 Layout.fillWidth: true
@@ -219,6 +221,7 @@ ApplicationWindow {
                 // <header>
                 Rectangle {
                     property string eldurTag: "header"
+                    property string eldurWs: "\n"
 
                     color: "#ffffff"
                     implicitWidth: headerContent.implicitWidth + 48
@@ -292,6 +295,7 @@ ApplicationWindow {
                     id: grid
                     property string eldurTag: "div"
                     property string eldurClasses: "grid"
+                    property string eldurWs: "\n"
 
                     implicitWidth: gridContent.implicitWidth + 48
                     implicitHeight: gridContent.implicitHeight + 48

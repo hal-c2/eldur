@@ -45,6 +45,8 @@ ApplicationWindow {
             // <body>
             ColumnLayout {
                 property string eldurTag: "body"
+                property string eldurWs: "\n"
+                property string eldurWsEnd: "\n\n\n"
 
                 spacing: 0
                 Layout.fillWidth: true
@@ -53,6 +55,8 @@ ApplicationWindow {
                 // <main>
                 Item {
                     property string eldurTag: "main"
+                    property string eldurWs: "\n"
+                    property string eldurWsEnd: "\n"
 
                     implicitWidth: mainContent.implicitWidth + 80
                     implicitHeight: mainContent.implicitHeight + 80
@@ -72,6 +76,7 @@ ApplicationWindow {
                         Text {
                             id: h1
                             property string eldurTag: "h1"
+                            property string eldurWs: "\n  "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                             text: "Team"
@@ -91,6 +96,7 @@ ApplicationWindow {
                             id: open
                             property string eldurTag: "button"
                             property string eldurClasses: "btn"
+                            property string eldurWs: "\n  "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 34) - Layout.topMargin - 34 + 0.000001) : h1.eldurCarry
 
                             text: "Invite someone"
@@ -129,6 +135,7 @@ ApplicationWindow {
                         Text {
                             id: result
                             property string eldurTag: "p"
+                            property string eldurWs: "\n  "
 
                             text: ""
                             textFormat: Text.PlainText
@@ -165,6 +172,8 @@ ApplicationWindow {
         property string eldurTag: "div"
         property string eldurClasses: "overlay"
         property bool cls_open: false
+        property string eldurWs: "\n"
+        property string eldurWsEnd: "\n"
 
         color: "#80000000"
         implicitWidth: overlayContent.implicitWidth
@@ -196,6 +205,8 @@ ApplicationWindow {
             Rectangle {
                 property string eldurTag: "div"
                 property string eldurClasses: "dialog"
+                property string eldurWs: "\n  "
+                property string eldurWsEnd: "\n  "
 
                 color: "#ffffff"
                 radius: 8
@@ -221,6 +232,7 @@ ApplicationWindow {
                     Text {
                         id: title
                         property string eldurTag: "h2"
+                        property string eldurWs: "\n    "
                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                         text: "Invite someone"
@@ -239,6 +251,7 @@ ApplicationWindow {
                     Text {
                         id: label
                         property string eldurTag: "label"
+                        property string eldurWs: "\n    "
                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : title.eldurCarry
 
                         text: "Email"
@@ -262,6 +275,7 @@ ApplicationWindow {
                     TextField {
                         id: email
                         property string eldurTag: "input"
+                        property string eldurWs: "\n    "
                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 29) - Layout.topMargin - 29 + 0.000001) : label.eldurCarry
 
                         color: "#000000"
@@ -294,6 +308,8 @@ ApplicationWindow {
                     RowLayout {
                         property string eldurTag: "div"
                         property string eldurClasses: "actions"
+                        property string eldurWs: "\n    "
+                        property string eldurWsEnd: "\n    "
 
                         spacing: 0
                         Layout.fillWidth: true
@@ -309,6 +325,7 @@ ApplicationWindow {
                             id: cancel
                             property string eldurTag: "button"
                             property string eldurClasses: "btn secondary"
+                            property string eldurWs: "\n      "
 
                             text: "Cancel"
                             palette.buttonText: "#1a56db"
@@ -349,6 +366,7 @@ ApplicationWindow {
                             id: send
                             property string eldurTag: "button"
                             property string eldurClasses: "btn"
+                            property string eldurWs: "\n      "
 
                             text: "Send invite"
                             palette.buttonText: "#ffffff"

@@ -11083,6 +11083,70 @@
    }
   }
  ],
+ "text_nodes": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#out": [
+     {
+      "box": [
+       8,
+       423.84,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "[[\"blocks\",\"\\n one\\n two\\n\\n three\\n four\\n\",\"one\\ntwo\\n\\nthree\\n\\nfour\"],[\"list\",\"\\n a\\n b bold\\n\",\"a\\nb bold\"],[\"grid\",\"\\n H1H2\\n \\n \\n c1\\n c2\\n \\n \\n\",\"H1\\tH2\\nc1\\tc2\"],[\"tight\",\"xy\",\"x\\ny\"],[\"mutated\",\"\\n first\\n second\\n\",\"first\\nsecond\"],[\"made\",\"\\n m one\\n m two m three\\n\",\"m one\\n\\nm two m three\"],[\"field\",\"\",\"\"],[\"made\",5,2,3,\"\\n \",3],[\"blocks\",9,4,3,\"\\n \",3],[\"list\",5,2,3,\"\\n \",3],[\"tight\",2,2,1,null,1],[\"mutated\",5,2,3,\"\\n \",3]]"
+     }
+    ],
+    "#never-rendered": [
+     {
+      "box": [
+       8,
+       455.84,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "[[\"with-hidden\",\"\\n shown\\n gone\\n\",\"shown\"],[\"with-hidden\",5,2,3,\"\\n \",3]]"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "change",
+   "log": [],
+   "state": {
+    "#out": [
+     {
+      "box": [
+       8,
+       391.84,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "[[\"blocks\",\"\\n one\\n two\\n\\n three\\n four\\n\",\"one\\ntwo\\n\\nthree\\n\\nfour\"],[\"list\",\"\\n a\\n b bold\\n\",\"a\\nb bold\"],[\"grid\",\"\\n H1H2\\n \\n \\n c1\\n c2\\n \\n \\n\",\"H1\\tH2\\nc1\\tc2\"],[\"tight\",\"xy\",\"x\\ny\"],[\"mutated\",\"\\n \\n second\\nadded\",\"second\\nadded\"],[\"made\",\"\\n m one\\n m two m three\\n\",\"m one\\n\\nm two m three\"],[\"field\",\"\",\"\"],[\"made\",5,2,3,\"\\n \",3],[\"blocks\",9,4,3,\"\\n \",3],[\"list\",5,2,3,\"\\n \",3],[\"tight\",2,2,1,null,1],[\"mutated\",5,2,3,\"\\n \",1]]"
+     }
+    ],
+    "#never-rendered": [
+     {
+      "box": [
+       8,
+       423.84,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "[[\"with-hidden\",\"\\n shown\\n gone\\n\",\"shown\"],[\"with-hidden\",5,2,3,\"\\n \",3]]"
+     }
+    ],
+    "(focus)": "change"
+   }
+  }
+ ],
  "theme": [
   {
    "name": "load",

@@ -234,6 +234,8 @@ ApplicationWindow {
             // <body>
             ColumnLayout {
                 property string eldurTag: "body"
+                property string eldurWs: "\n"
+                property string eldurWsEnd: "\n\n\n"
 
                 spacing: 0
                 Layout.fillWidth: true
@@ -244,6 +246,8 @@ ApplicationWindow {
                 Rectangle {
                     property string eldurTag: "div"
                     property string eldurClasses: "top"
+                    property string eldurWs: "\n"
+                    property string eldurWsEnd: "\n"
 
                     color: "#00000000"
                     implicitWidth: topContent.implicitWidth + 48
@@ -274,6 +278,7 @@ ApplicationWindow {
                         Text {
                             property string eldurTag: "div"
                             property string eldurClasses: "title"
+                            property string eldurWs: "\n  "
 
                             text: "Journal"
                             textFormat: Text.PlainText
@@ -301,6 +306,8 @@ ApplicationWindow {
                         Flow {
                             id: divFlow
                             property string eldurTag: "div"
+                            property string eldurWs: "\n  "
+                            property string eldurWsEnd: "\n  "
 
                             Layout.fillWidth: true
                             Layout.preferredWidth: Math.ceil(Array.from(children).reduce((sum, item) => sum + item.implicitWidth, 0))
@@ -310,6 +317,7 @@ ApplicationWindow {
                             Button {
                                 id: compact
                                 property string eldurTag: "button"
+                                property string eldurWs: "\n    "
 
                                 text: "Compact"
                                 palette.buttonText: "#1a202c"
@@ -361,6 +369,7 @@ ApplicationWindow {
                             Button {
                                 id: toggle
                                 property string eldurTag: "button"
+                                property string eldurWs: "\n    "
 
                                 text: "Dark mode"
                                 palette.buttonText: "#1a202c"
@@ -403,6 +412,8 @@ ApplicationWindow {
                     id: card
                     property string eldurTag: "div"
                     property string eldurClasses: "card"
+                    property string eldurWs: "\n"
+                    property string eldurWsEnd: "\n"
 
                     color: "#f7fafc"
                     radius: 8
@@ -430,6 +441,7 @@ ApplicationWindow {
                         // <h2>
                         Text {
                             property string eldurTag: "h2"
+                            property string eldurWs: "\n  "
 
                             text: "Today"
                             textFormat: Text.PlainText
@@ -451,6 +463,7 @@ ApplicationWindow {
                         Text {
                             property string eldurTag: "p"
                             readonly property string eldurInline: "{\"bare\":false,\"hoisted\":false,\"html\":false,\"k\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(26, 32, 44)\",\"display\":\"block\",\"family\":\"Arial\",\"italic\":false,\"size\":16.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"Nothing much happened. \"},{\"attrs\":[[\"href\",\"#more\"],[\"id\",\"more\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(43, 108, 176)\",\"display\":\"inline\",\"family\":\"Arial\",\"italic\":false,\"size\":16.0,\"strike\":false,\"underline\":true,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"Read more\"}],\"tag\":\"a\"},{\"text\":\" if you must.\"}],\"lh\":24.0,\"pre\":false,\"strike\":false,\"underline\":false}"
+                            property string eldurWs: "\n  "
 
                             text: "Nothing much happened. <a href=\"#more\">Read more</a> if you must."
                             textFormat: Text.StyledText

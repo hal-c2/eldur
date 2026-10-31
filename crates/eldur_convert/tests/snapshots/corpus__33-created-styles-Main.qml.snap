@@ -210,6 +210,8 @@ ApplicationWindow {
             // <body>
             ColumnLayout {
                 property string eldurTag: "body"
+                property string eldurWs: "\n"
+                property string eldurWsEnd: "\n\n\n"
 
                 spacing: 0
                 Layout.fillWidth: true
@@ -219,6 +221,7 @@ ApplicationWindow {
                 Rectangle {
                     id: board
                     property string eldurTag: "div"
+                    property string eldurWs: "\n"
                     property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                     color: "#f0f2f8"

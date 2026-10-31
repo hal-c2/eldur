@@ -47,6 +47,8 @@ ApplicationWindow {
             // <body>
             ColumnLayout {
                 property string eldurTag: "body"
+                property string eldurWs: "\n"
+                property string eldurWsEnd: "\n\n\n"
 
                 spacing: 0
                 Layout.fillWidth: true
@@ -55,6 +57,8 @@ ApplicationWindow {
                 // <header>
                 Rectangle {
                     property string eldurTag: "header"
+                    property string eldurWs: "\n"
+                    property string eldurWsEnd: "\n"
 
                     color: "#24292e"
                     implicitWidth: headerContent.implicitWidth + 40
@@ -78,6 +82,7 @@ ApplicationWindow {
                         Text {
                             property string eldurTag: "div"
                             property string eldurClasses: "logo"
+                            property string eldurWs: "\n  "
 
                             text: "Acme"
                             textFormat: Text.PlainText
@@ -102,6 +107,8 @@ ApplicationWindow {
                             property string eldurTag: "div"
                             property string eldurClasses: "menu"
                             property bool cls_open: false
+                            property string eldurWs: "\n  "
+                            property string eldurWsEnd: "\n  "
 
                             implicitWidth: menuContent.implicitWidth
                             implicitHeight: menuContent.implicitHeight
@@ -124,6 +131,7 @@ ApplicationWindow {
                                     property var eldurAttrs: ({ "aria-haspopup": "true", "aria-expanded": "false" })
                                     property string eldurTag: "button"
                                     property string eldurClasses: "menu-btn"
+                                    property string eldurWs: "\n    "
                                     property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                                     text: "Account ▾"
@@ -168,6 +176,8 @@ ApplicationWindow {
                                 property Item eldurSlot: menuListSlot
                                 property string eldurTag: "ul"
                                 property string eldurClasses: "menu-list"
+                                property string eldurWs: "\n    "
+                                property string eldurWsEnd: "\n    "
 
                                 color: "#ffffff"
                                 radius: 4
@@ -208,6 +218,7 @@ ApplicationWindow {
                                         id: mProfile
                                         property var eldurAttrs: ({ "data-action": "profile" })
                                         property string eldurTag: "li"
+                                        property string eldurWs: "\n      "
                                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                                         implicitWidth: mProfileText.implicitWidth + 24
@@ -239,6 +250,7 @@ ApplicationWindow {
                                         id: mSettings
                                         property var eldurAttrs: ({ "data-action": "settings" })
                                         property string eldurTag: "li"
+                                        property string eldurWs: "\n      "
                                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : mProfile.eldurCarry
 
                                         implicitWidth: mSettingsText.implicitWidth + 24
@@ -271,6 +283,7 @@ ApplicationWindow {
                                         id: sep
                                         property string eldurTag: "li"
                                         property string eldurClasses: "sep"
+                                        property string eldurWs: "\n      "
                                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 1) - Layout.topMargin - 1 + 0.000001) : mSettings.eldurCarry
 
                                         color: "#e1e4e8"
@@ -286,6 +299,7 @@ ApplicationWindow {
                                         id: mLogout
                                         property var eldurAttrs: ({ "data-action": "logout" })
                                         property string eldurTag: "li"
+                                        property string eldurWs: "\n      "
 
                                         implicitWidth: mLogoutText.implicitWidth + 24
                                         implicitHeight: mLogoutText.implicitHeight + 12
@@ -320,6 +334,8 @@ ApplicationWindow {
                 // <main>
                 Item {
                     property string eldurTag: "main"
+                    property string eldurWs: "\n"
+                    property string eldurWsEnd: "\n"
 
                     implicitWidth: mainContent.implicitWidth + 40
                     implicitHeight: mainContent.implicitHeight + 40
@@ -339,6 +355,7 @@ ApplicationWindow {
                         Text {
                             id: p
                             property string eldurTag: "p"
+                            property string eldurWs: "\n  "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                             text: "Welcome back. Pick something from the menu."
@@ -356,6 +373,7 @@ ApplicationWindow {
                         Text {
                             id: status
                             property string eldurTag: "p"
+                            property string eldurWs: "\n  "
 
                             text: "Nothing chosen yet."
                             textFormat: Text.PlainText

@@ -391,7 +391,8 @@ Why this and not one QML object per element, or splitting the block whenever a s
 
 **Known gaps.**
 - A run with an atomic inline (`<img>`, `<button>`, inline-block) stays a `Flow`, and its inline elements have no nodes; the converter's "no QML object of its own" warning stays for them.
-- Whitespace-only text between blocks is not a node, and a real element's `childNodes` adds only its text runs to its element children, so counts differ when whitespace is all there is.
+- Whitespace-only text between elements makes no item. The converter records it on the element after it (`eldurWs`) and on the parent for what ends it (`eldurWsEnd`), so `textContent` and `childNodes` read it, markup a script gives keeps it too, and a removal leaves it behind. A `display:none` element no script names has no item, so it is neither text nor a child, and a `<script>` in the body adds no text.
+- `innerText` follows the standard's rendered text collection by tag (`_itCollect`): a block by its tag, not a computed `display`. Before the window shows, `visible` says nothing, so what a static `visibility` or collapse hides is read as shown then.
 - On a page whose elements analysis can all name (§13) the table holds no `var()`; nested rules and `@layer` order come from the richer table only there too. `:is()` specificity takes the maximum for every match. `text-transform` is not applied to a rewritten run. `display: block` on an inline node paints it inline.
 - A change to a real element's attribute, other than a class, does not recompute inline nodes.
 - A `Text` shown as its one element's style goes back to the block's on first write, using what the converter computed; a later class change on the block is then read live.

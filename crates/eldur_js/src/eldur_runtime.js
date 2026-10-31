@@ -2285,6 +2285,9 @@ function _polishDown(item) {
 // Takes a node out of the DOM. Never destroys it: a script may hold it and put
 // it back, as with a modal, and bindings of the page may read it by id.
 function _detachNode(raw) {
+    if (!raw.__eldurInline) {
+        _wsLeave(raw);
+    }
     if (raw.__eldurInline) {
         _vRemove(raw);
         return;
@@ -2572,7 +2575,8 @@ function getText(item) {
     }
     var vRun = _findTextChild(raw);
     if (vRun && _vAnonText(vRun)) {
-        return _rawKids(raw, true).map(getText).join("");
+        return _rawKids(raw, true).map(function(kid) { return _wsText(_wsBefore(kid)) + getText(kid); }).join("")
+            + _wsText(_wsEnd(raw));
     }
     if (_isPlainJsObject(raw) && ("textContent" in raw || "innerText" in raw)) {
         return raw.textContent !== undefined ? raw.textContent : raw.innerText;
@@ -2580,6 +2584,10 @@ function getText(item) {
     var run = _meta(raw).runText;
     if (run !== undefined) {
         return run;
+    }
+    // What is typed in an input is its value; it has no content.
+    if (raw.eldurTag === "input" || _meta(raw).createdTag === "input") {
+        return "";
     }
     if (typeof raw.text === "string") {
         return raw.text;
@@ -2595,8 +2603,207 @@ function getText(item) {
     if (m.explicitText !== undefined) {
         return String(m.explicitText);
     }
-    // `textContent` is the text of everything inside.
-    return _rawElementChildren(raw).map(getText).join("");
+    // `textContent` is the text of everything inside, the whitespace between too.
+    var inside = _rawElementChildren(raw).map(function(kid) { return _wsText(_wsBefore(kid)) + getText(kid); });
+    return inside.join("") + _wsText(_wsEnd(raw));
+}
+
+// The converter's record of whitespace between elements (`declare_whitespace`),
+// as text nodes until a script moves something; no item stands for it. Each
+// stays a node of its own, as a removal between two leaves two.
+function _wsRuns(raw, key, declared) {
+    if (!raw || raw.__eldurInline) {
+        return [];
+    }
+    var m = _meta(raw);
+    if (!m[key]) {
+        var given = raw[declared];
+        m[key] = typeof given === "string" && given !== "" && !_isCreatedElement(raw)
+            ? [_vLeaf(given, null, null)] : [];
+        m[key].forEach(function(leaf) { leaf.wsOwner = raw; leaf.wsKey = key; });
+    }
+    return m[key];
+}
+
+// Whitespace in markup a script gives, kept like the converter's.
+function _wsGiven(raw, key, text) {
+    if (text && !raw.__eldurInline) {
+        var leaf = _vLeaf(text, null, null);
+        leaf.wsOwner = raw;
+        leaf.wsKey = key;
+        _wsRuns(raw, key, "").push(leaf);
+    }
+}
+
+function _wsBefore(raw) {
+    return _wsRuns(raw, "ws", "eldurWs");
+}
+
+function _wsEnd(raw) {
+    return _wsRuns(raw, "wsEnd", "eldurWsEnd");
+}
+
+function _wsText(runs) {
+    return runs.map(function(leaf) { return leaf.data; }).join("");
+}
+
+function _wsMove(runs, owner, key, front) {
+    var into = key === "ws" ? _wsBefore(owner) : _wsEnd(owner);
+    runs.forEach(function(leaf) {
+        leaf.wsOwner = owner;
+        leaf.wsKey = key;
+        leaf.vparent = key === "ws" ? _logicalParent(owner) : owner;
+    });
+    if (front) {
+        Array.prototype.unshift.apply(into, runs);
+    } else {
+        Array.prototype.push.apply(into, runs);
+    }
+    runs.length = 0;
+}
+
+// A removed element's whitespace stays where it was, before what comes next.
+function _wsLeave(raw) {
+    var runs = _wsBefore(raw);
+    if (runs.length === 0) {
+        return;
+    }
+    var parent = _logicalParent(raw);
+    if (!parent) {
+        return;
+    }
+    var kids = _rawElementChildren(parent);
+    var next = kids[kids.indexOf(raw) + 1];
+    if (next) {
+        _wsMove(runs, next, "ws", true);
+    } else {
+        _wsMove(runs, parent, "wsEnd", true);
+    }
+}
+
+// What is inserted goes after the whitespace that was at that place.
+function _wsEnter(count, ref, container) {
+    var owner = _meta(container).hostBox || container;
+    // Looked up, as insertion can swap an element for its template's form.
+    var kids = _rawElementChildren(owner);
+    var first = kids[(ref ? kids.indexOf(ref) : kids.length) - count];
+    if (!first || first.__eldurInline || (ref && ref.__eldurInline)) {
+        return;
+    }
+    _wsMove(ref ? _wsBefore(ref) : _wsEnd(owner), first, "ws", false);
+}
+
+// `display` by element, as a page's closed form has no computed styles to ask.
+var _IT_BLOCK = /^(address|article|aside|blockquote|center|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|h[1-6]|header|hgroup|hr|li|main|menu|nav|ol|p|pre|section|summary|table|tbody|tfoot|thead|ul)$/;
+
+// The HTML standard's rendered text collection: what is shown, with a line
+// between blocks, two around a paragraph, and a tab between cells.
+function _itCollect(raw, out) {
+    if (raw.__eldurInline) {
+        if (raw.vtext) {
+            out.push(raw.data);
+            return;
+        }
+        if (raw.eldurTag === "br") {
+            out.push("\n");
+            return;
+        }
+    } else if (_itHidden(raw)) {
+        return;
+    }
+    var tag = _inferTagName(raw).toLowerCase();
+    if (tag === "br") {
+        out.push("\n");
+        return;
+    }
+    var edge = tag === "p" ? 2 : _IT_BLOCK.test(tag) ? 1 : 0;
+    if (edge) {
+        out.push(edge);
+    }
+    var model = raw.__eldurInline ? raw : _vOwnModel(raw);
+    if (model && model.kids) {
+        model.kids.filter(_vIsRendered).forEach(function(k) { _itCollect(k, out); });
+    } else {
+        var kids = _rawKids(raw, true);
+        if (kids.length === 0) {
+            out.push(getText(raw));
+        } else if (kids[0].tableSlot) {
+            _itGrid(kids, out);
+        } else {
+            _itCells(kids, tag, out);
+        }
+    }
+    if (edge) {
+        out.push(edge);
+    }
+}
+
+// The cells of a static table are one list; each knows its row.
+function _itGrid(kids, out) {
+    var row = -1;
+    kids.forEach(function(kid) {
+        if (kid.tableSlot) {
+            if (row >= 0) {
+                out.push(kid.tableSlot[0] !== row ? 1 : "\t");
+            }
+            row = kid.tableSlot[0];
+            _itCollect(kid, out);
+        } else {
+            _itCollect(kid, out);
+        }
+    });
+}
+
+function _itCells(kids, tag, out) {
+    kids.forEach(function(kid, i) {
+        _itCollect(kid, out);
+        if (tag === "tr" && i < kids.length - 1) {
+            out.push("\t");
+        }
+    });
+    if (tag === "tr") {
+        out.push(1);
+    }
+}
+
+function getInnerText(item) {
+    var raw = _unwrap(item);
+    return raw ? _innerText(raw) : "";
+}
+
+function _itHidden(raw) {
+    // Until the window shows, `visible` says no of everything.
+    return !raw.__eldurInline && raw.visible === false
+        && (_root.contentItem ? _root.contentItem.visible : _root.visible) !== false;
+}
+
+function _innerText(raw) {
+    // An element not being rendered reads as its textContent.
+    if (_itHidden(raw)) {
+        return getText(raw);
+    }
+    var out = [];
+    _itCollect(raw, out);
+    var text = "";
+    var pending = 0;
+    for (var i = 0; i < out.length; ++i) {
+        if (typeof out[i] === "number") {
+            pending = Math.max(pending, out[i]);
+            continue;
+        }
+        var piece = out[i];
+        if (piece.trim() === "" && piece !== "\t" && piece !== "\n" && (pending > 0 || text === "" || /\s$/.test(text))) {
+            continue;
+        }
+        if (pending > 0 && text !== "") {
+            text = text.replace(/ +$/, "") + "\n\n".slice(0, pending);
+        }
+        pending = 0;
+        text += piece;
+    }
+    return text.replace(/[ \t\r\f]*\n[ \t\r\f]*(?=\S)/g, function(m) { return m.replace(/[^\n]/g, ""); })
+        .replace(/[ \r\f\n]+/g, function(m) { return m.indexOf("\n") >= 0 ? m.replace(/[^\n]/g, "") : " "; })
+        .replace(/^ +| +$/g, "");
 }
 
 function setText(item, value) {
@@ -2759,8 +2966,10 @@ function _replaceWithMarkup(raw, str) {
     for (var i = 0; i < old.length; ++i) {
         _detachNode(old[i]);
     }
-    var nodes = _expandInsertRawNodes(_parseHtmlFragmentNodes(str));
+    var parsed = _parseHtmlFragmentNodes(str);
+    var nodes = _expandInsertRawNodes(parsed);
     _insertRawNodesBefore(_appendTarget(raw), nodes, null);
+    _wsGiven(raw, "wsEnd", parsed.wsEnd);
 }
 
 function _rememberMarkup(raw, str) {
@@ -4404,12 +4613,14 @@ function _insertRawNodesBefore(container, rawNodes, rawRef) {
     if (!container || rawNodes.length === 0) {
         return;
     }
+    rawNodes.forEach(_wsLeave);
     var places = [];
     for (var n = 0; n < rawNodes.length; ++n) {
         var node = rawNodes[n];
         places.push(node && node.eldurBlock !== undefined ? _slotFor(node) : (node && node.eldurSlot) || node);
     }
     _insertInFlow(container, places, (rawRef && rawRef.eldurSlot) || rawRef);
+    _wsEnter(rawNodes.length, rawRef, container);
     for (var o = 0; o < rawNodes.length; ++o) {
         if (rawNodes[o] && rawNodes[o].eldurBlock !== undefined) {
             _leaveFlow(rawNodes[o]);
@@ -5129,9 +5340,13 @@ function _applyAttrsFromHtml(el, attrStr) {
     }
 }
 
+var _HTML_INLINE = /^(a|abbr|b|bdi|bdo|cite|code|data|dfn|em|i|kbd|mark|q|s|samp|small|span|strong|sub|sup|time|u|var)$/i;
+
 function _parseHtmlFragmentNodes(html) {
     var src = String(html === null || html === undefined ? "" : html);
     var nodes = [];
+    var gap = "";
+    var lastTag = "";
     var pos = 0;
     var tagOpenRe = /<([a-zA-Z][a-zA-Z0-9-]*)(\s[^>]*)?\s*(\/?)>/g;
     var voidTags = { area: true, base: true, br: true, col: true, embed: true, hr: true, img: true, input: true, link: true, meta: true, source: true, track: true, wbr: true };
@@ -5143,6 +5358,8 @@ function _parseHtmlFragmentNodes(html) {
             var trailing = src.slice(pos);
             if (trailing.trim()) {
                 nodes.push(document.createTextNode(_unescapeHtmlText(trailing)));
+            } else {
+                nodes.wsEnd = trailing;
             }
             break;
         }
@@ -5150,13 +5367,21 @@ function _parseHtmlFragmentNodes(html) {
             var lead = src.slice(pos, m.index);
             if (lead.trim()) {
                 nodes.push(document.createTextNode(_unescapeHtmlText(lead)));
+            } else if (nodes.length > 0 && _HTML_INLINE.test(lastTag) && _HTML_INLINE.test(m[1])) {
+                // Between inline elements a space is drawn: it is text.
+                nodes.push(document.createTextNode(" "));
+            } else {
+                gap = lead;
             }
         }
+        lastTag = m[1];
         var tag = m[1].toLowerCase();
         var attrStr = m[2] || "";
         var selfClosing = m[3] === "/" || Boolean(voidTags[tag]);
         var el = document.createElement(tag);
         _applyAttrsFromHtml(el, attrStr);
+        _wsGiven(_unwrap(el), "ws", gap);
+        gap = "";
 
         var afterOpen = tagOpenRe.lastIndex;
         if (selfClosing) {
@@ -5196,6 +5421,7 @@ function _parseHtmlFragmentNodes(html) {
         var inner = src.slice(afterOpen, closeStart);
         if (/<[a-zA-Z]/.test(inner)) {
             var childWrappers = _parseHtmlFragmentNodes(inner);
+            _wsGiven(_unwrap(el), "wsEnd", childWrappers.wsEnd);
             for (var c = 0; c < childWrappers.length; ++c) {
                 el.appendChild(childWrappers[c]);
             }
@@ -5431,7 +5657,7 @@ function wrap(rawItem) {
         get baseURI() { return _getDocumentBaseUrl(); },
         get textContent() { return getText(rawItem); },
         set textContent(v) { setText(rawItem, v); },
-        get innerText() { return getText(rawItem); },
+        get innerText() { return _innerText(rawItem); },
         set innerText(v) { setText(rawItem, v); },
         get outerHTML() { return _serializeElement(rawItem); },
         set outerHTML(v) {
@@ -6169,8 +6395,11 @@ function wrap(rawItem) {
                 var kids = _rawElementChildren(rawItem);
                 if (kids.length > 0) {
                     for (var c = 0; c < kids.length; ++c) {
-                        clone.appendChild(wrap(kids[c]).cloneNode(true));
+                        var copy = wrap(kids[c]).cloneNode(true);
+                        _wsGiven(_unwrap(copy), "ws", _wsText(_wsBefore(kids[c])));
+                        clone.appendChild(copy);
                     }
+                    _wsGiven(_unwrap(clone), "wsEnd", _wsText(_wsEnd(rawItem)));
                 } else {
                     var txt = getText(rawItem);
                     if (txt) {
@@ -7705,6 +7934,13 @@ function _vToReal(v) {
 }
 
 function _vRemove(node) {
+    if (node.wsOwner) {
+        var runs = _meta(node.wsOwner)[node.wsKey];
+        runs.splice(runs.indexOf(node), 1);
+        node.wsOwner = null;
+        node.vparent = null;
+        return;
+    }
     var owner = node.vparent || node.model;
     if (!owner) {
         return;
@@ -7980,7 +8216,19 @@ function _rawChildNodes(raw) {
     if (own) {
         return own.kids.filter(_vIsRendered);
     }
-    return _rawKids(raw, true);
+    var out = [];
+    var withLeaves = function(leaves, leaf) {
+        leaves.forEach(function(l) {
+            l.vparent = raw;
+            out.push(l);
+        });
+        if (leaf) {
+            out.push(leaf);
+        }
+    };
+    _rawKids(raw, true).forEach(function(kid) { withLeaves(_wsBefore(kid), kid); });
+    withLeaves(_wsEnd(raw), null);
+    return out;
 }
 
 function _walkItems(node, visitor) {

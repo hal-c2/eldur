@@ -416,7 +416,8 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
     fn rewrite_resolved_prop_read(&self, target: &QmlTarget, prop: &str) -> String {
         let id = &target.qml_id;
         match prop {
-            "textContent" | "innerText" => {
+            "innerText" => format!("Eldur.getInnerText({id})"),
+            "textContent" => {
                 // A box has a `<id>Text` only when it has text of its own.
                 if target.kind == TargetKind::Box {
                     format!("Eldur.getText({id})")
@@ -919,7 +920,8 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             self.visit_expression(&it.object);
             let obj_str = self.editor.extract_and_consume(it.object.span());
             let rep = match prop {
-                "textContent" | "innerText" => format!("Eldur.getText({obj_str})"),
+                "textContent" => format!("Eldur.getText({obj_str})"),
+                "innerText" => format!("Eldur.getInnerText({obj_str})"),
                 "innerHTML" => format!("Eldur.getInnerHTML({obj_str})"),
                 "classList" => format!("Eldur.classList({obj_str})"),
                 "dataset" => format!("Eldur.dataset({obj_str})"),

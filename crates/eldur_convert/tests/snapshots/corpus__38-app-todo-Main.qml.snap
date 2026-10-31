@@ -53,6 +53,8 @@ ApplicationWindow {
             // <body>
             ColumnLayout {
                 property string eldurTag: "body"
+                property string eldurWs: "\n"
+                property string eldurWsEnd: "\n\n\n"
 
                 spacing: 0
                 Layout.fillWidth: true
@@ -65,6 +67,8 @@ ApplicationWindow {
                     id: app
                     property string eldurTag: "div"
                     property string eldurClasses: "app"
+                    property string eldurWs: "\n"
+                    property string eldurWsEnd: "\n"
                     property real eldurCarry: visible ? (Math.ceil(Layout.topMargin - (bar.eldurCarry)) - Layout.topMargin + bar.eldurCarry + 0.000001) : 0
 
                     color: "#ffffff"
@@ -90,6 +94,7 @@ ApplicationWindow {
                         Text {
                             id: h1
                             property string eldurTag: "h1"
+                            property string eldurWs: "\n  "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                             text: "Todos"
@@ -112,6 +117,8 @@ ApplicationWindow {
                         RowLayout {
                             id: form
                             property string eldurTag: "form"
+                            property string eldurWs: "\n  "
+                            property string eldurWsEnd: "\n  "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h1.eldurCarry
 
                             spacing: 8
@@ -125,6 +132,7 @@ ApplicationWindow {
                                 id: new_
                                 property var eldurAttrs: ({ "type": "text", "placeholder": "What needs doing?", "autocomplete": "off" })
                                 property string eldurTag: "input"
+                                property string eldurWs: "\n    "
 
                                 color: "#000000"
                                 font.family: "Arial"
@@ -161,6 +169,7 @@ ApplicationWindow {
                                 id: add
                                 property var eldurAttrs: ({ "type": "submit" })
                                 property string eldurTag: "button"
+                                property string eldurWs: "\n    "
 
                                 text: "Add"
                                 palette.buttonText: "#ffffff"
@@ -200,6 +209,7 @@ ApplicationWindow {
                         Item {
                             id: list
                             property string eldurTag: "ul"
+                            property string eldurWs: "\n  "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : form.eldurCarry
 
                             implicitWidth: Math.max(listText.implicitWidth, ulFlow.implicitWidth) + 0
@@ -243,6 +253,8 @@ ApplicationWindow {
                             id: bar
                             property string eldurTag: "div"
                             property string eldurClasses: "bar"
+                            property string eldurWs: "\n  "
+                            property string eldurWsEnd: "\n  "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : list.eldurCarry
 
                             spacing: 0
@@ -254,6 +266,7 @@ ApplicationWindow {
                             Text {
                                 id: count
                                 property string eldurTag: "span"
+                                property string eldurWs: "\n    "
 
                                 text: ""
                                 textFormat: Text.PlainText
@@ -283,6 +296,8 @@ ApplicationWindow {
                                 id: filters
                                 property string eldurTag: "div"
                                 property string eldurClasses: "filters"
+                                property string eldurWs: "\n    "
+                                property string eldurWsEnd: "\n    "
 
                                 implicitWidth: Math.ceil(Array.from(filtersFlow.children).reduce((sum, item) => sum + item.implicitWidth, 0))
                                 implicitHeight: filtersFlow.implicitHeight
@@ -302,6 +317,7 @@ ApplicationWindow {
                                         property string eldurTag: "button"
                                         property string eldurClasses: "current"
                                         property bool cls_current: true
+                                        property string eldurWs: "\n      "
 
                                         text: "All"
                                         palette.buttonText: fAll.cls_current ? "#2f855a" : "#000000"
@@ -351,6 +367,7 @@ ApplicationWindow {
                                         property var eldurAttrs: ({ "data-filter": "active" })
                                         property string eldurTag: "button"
                                         property bool cls_current: false
+                                        property string eldurWs: "\n      "
 
                                         text: "Active"
                                         palette.buttonText: fActive.cls_current ? "#2f855a" : "#000000"
@@ -400,6 +417,7 @@ ApplicationWindow {
                                         property var eldurAttrs: ({ "data-filter": "done" })
                                         property string eldurTag: "button"
                                         property bool cls_current: false
+                                        property string eldurWs: "\n      "
 
                                         text: "Done"
                                         palette.buttonText: fDone.cls_current ? "#2f855a" : "#000000"
@@ -439,6 +457,7 @@ ApplicationWindow {
                 Text {
                     id: row
                     property string eldurTag: "template"
+                    property string eldurWs: "\n"
 
                     text: ""
                     textFormat: Text.PlainText

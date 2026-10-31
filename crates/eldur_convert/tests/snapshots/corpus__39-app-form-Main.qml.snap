@@ -49,6 +49,8 @@ ApplicationWindow {
                 id: body
                 property string eldurTag: "body"
                 property bool cls_invalid: false
+                property string eldurWs: "\n"
+                property string eldurWsEnd: "\n\n\n"
 
                 spacing: 0
                 Layout.fillWidth: true
@@ -62,6 +64,7 @@ ApplicationWindow {
                 Text {
                     id: h1
                     property string eldurTag: "h1"
+                    property string eldurWs: "\n"
                     property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                     text: "Create your account"
@@ -80,6 +83,8 @@ ApplicationWindow {
                     id: signup
                     property string eldurTag: "form"
                     property bool cls_invalid: false
+                    property string eldurWs: "\n"
+                    property string eldurWsEnd: "\n"
                     property real eldurCarry: visible ? (Math.ceil(Layout.topMargin) - Layout.topMargin + go.eldurCarry + 0.000001) : h1.eldurCarry
 
                     spacing: 0
@@ -94,6 +99,8 @@ ApplicationWindow {
                         property string eldurTag: "div"
                         property string eldurClasses: "field"
                         property bool cls_invalid: false
+                        property string eldurWs: "\n  "
+                        property string eldurWsEnd: "\n  "
                         property real eldurCarry: visible ? error.eldurCarry : 0
 
                         spacing: 0
@@ -105,6 +112,7 @@ ApplicationWindow {
                         Text {
                             id: label
                             property string eldurTag: "label"
+                            property string eldurWs: "\n    "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                             text: "Name"
@@ -128,6 +136,7 @@ ApplicationWindow {
                         TextField {
                             id: name
                             property string eldurTag: "input"
+                            property string eldurWs: "\n    "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 32) - Layout.topMargin - 32 + 0.000001) : label.eldurCarry
 
                             color: "#000000"
@@ -163,6 +172,7 @@ ApplicationWindow {
                             id: error
                             property string eldurTag: "div"
                             property string eldurClasses: "error"
+                            property string eldurWs: "\n    "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : name.eldurCarry
 
                             text: "Please enter your name."
@@ -185,6 +195,8 @@ ApplicationWindow {
                         property string eldurTag: "div"
                         property string eldurClasses: "field"
                         property bool cls_invalid: false
+                        property string eldurWs: "\n  "
+                        property string eldurWsEnd: "\n  "
                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin) - Layout.topMargin + error2.eldurCarry + 0.000001) : fName.eldurCarry
 
                         spacing: 0
@@ -197,6 +209,7 @@ ApplicationWindow {
                         Text {
                             id: label2
                             property string eldurTag: "label"
+                            property string eldurWs: "\n    "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                             text: "Email"
@@ -220,6 +233,7 @@ ApplicationWindow {
                         TextField {
                             id: email
                             property string eldurTag: "input"
+                            property string eldurWs: "\n    "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 32) - Layout.topMargin - 32 + 0.000001) : label2.eldurCarry
 
                             color: "#000000"
@@ -256,6 +270,7 @@ ApplicationWindow {
                             id: error2
                             property string eldurTag: "div"
                             property string eldurClasses: "error"
+                            property string eldurWs: "\n    "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : email.eldurCarry
 
                             text: "That doesn't look like an email address."
@@ -278,6 +293,8 @@ ApplicationWindow {
                         property string eldurTag: "div"
                         property string eldurClasses: "field"
                         property bool cls_invalid: false
+                        property string eldurWs: "\n  "
+                        property string eldurWsEnd: "\n  "
                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin) - Layout.topMargin + error3.eldurCarry + 0.000001) : fEmail.eldurCarry
 
                         spacing: 0
@@ -290,6 +307,7 @@ ApplicationWindow {
                         Text {
                             id: label3
                             property string eldurTag: "label"
+                            property string eldurWs: "\n    "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                             text: "Password"
@@ -313,6 +331,7 @@ ApplicationWindow {
                         TextField {
                             id: pass
                             property string eldurTag: "input"
+                            property string eldurWs: "\n    "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 32) - Layout.topMargin - 32 + 0.000001) : label3.eldurCarry
 
                             color: "#000000"
@@ -348,6 +367,7 @@ ApplicationWindow {
                         Item {
                             id: strength
                             property string eldurTag: "div"
+                            property string eldurWs: "\n    "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 16) - Layout.topMargin - 16 + 0.000001) : pass.eldurCarry
 
                             implicitWidth: strengthText.implicitWidth
@@ -377,6 +397,7 @@ ApplicationWindow {
                             id: error3
                             property string eldurTag: "div"
                             property string eldurClasses: "error"
+                            property string eldurWs: "\n    "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : strength.eldurCarry
 
                             text: "Use at least eight characters."
@@ -399,6 +420,8 @@ ApplicationWindow {
                         property string eldurTag: "div"
                         property string eldurClasses: "field terms"
                         property bool cls_invalid: false
+                        property string eldurWs: "\n  "
+                        property string eldurWsEnd: "\n  "
                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin) - Layout.topMargin + error4.eldurCarry + 0.000001) : fPass.eldurCarry
 
                         spacing: 0
@@ -412,6 +435,7 @@ ApplicationWindow {
                             id: terms
                             property string eldurTag: "input"
                             property string value: "on"
+                            property string eldurWs: "\n    "
 
                             implicitWidth: 13
                             implicitHeight: 13
@@ -468,6 +492,7 @@ ApplicationWindow {
                             id: error4
                             property string eldurTag: "div"
                             property string eldurClasses: "error"
+                            property string eldurWs: "\n    "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : text.eldurCarry
 
                             text: "You have to accept the terms."
@@ -488,6 +513,7 @@ ApplicationWindow {
                     Button {
                         id: go
                         property string eldurTag: "button"
+                        property string eldurWs: "\n  "
                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 36) - Layout.topMargin - 36 + 0.000001) : fTerms.eldurCarry
 
                         text: "Sign up"
@@ -527,6 +553,7 @@ ApplicationWindow {
                 Rectangle {
                     id: done
                     property string eldurTag: "div"
+                    property string eldurWs: "\n"
                     property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : signup.eldurCarry
 
                     color: "#e6ffed"

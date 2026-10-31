@@ -46,6 +46,8 @@ ApplicationWindow {
             // <body>
             Item {
                 property string eldurTag: "body"
+                property string eldurWs: "\n"
+                property string eldurWsEnd: "\n\n\n"
 
                 implicitWidth: bodyContent.implicitWidth + 64
                 implicitHeight: bodyContent.implicitHeight + 64
@@ -64,6 +66,7 @@ ApplicationWindow {
                     // <h1>
                     Text {
                         property string eldurTag: "h1"
+                        property string eldurWs: "\n"
 
                         text: "Frequently asked questions"
                         textFormat: Text.PlainText
@@ -85,6 +88,8 @@ ApplicationWindow {
                     Rectangle {
                         id: d1
                         property string eldurTag: "details"
+                        property string eldurWs: "\n"
+                        property string eldurWsEnd: "\n"
                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin - (p.eldurCarry)) - Layout.topMargin + p.eldurCarry + 0.000001) : 0
 
                         color: "#00000000"
@@ -114,6 +119,7 @@ ApplicationWindow {
                             Text {
                                 id: s1
                                 property string eldurTag: "summary"
+                                property string eldurWs: "\n  "
                                 property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                                 text: "How do I reset my password?"
@@ -137,6 +143,7 @@ ApplicationWindow {
                             Text {
                                 id: p
                                 property string eldurTag: "p"
+                                property string eldurWs: "\n  "
                                 property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : s1.eldurCarry
 
                                 text: "Use the link on the sign-in page. We will email you a new one."
@@ -164,6 +171,8 @@ ApplicationWindow {
                         property var eldurAttrs: ({ "open": "" })
                         property string eldurTag: "details"
                         property bool eldurOpen: true
+                        property string eldurWs: "\n"
+                        property string eldurWsEnd: "\n"
                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin - (p2.eldurCarry)) - Layout.topMargin + p2.eldurCarry + 0.000001) : d1.eldurCarry
 
                         color: "#f7f7ff"
@@ -193,6 +202,7 @@ ApplicationWindow {
                             Text {
                                 id: s2
                                 property string eldurTag: "summary"
+                                property string eldurWs: "\n  "
                                 property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                                 text: "Can I change my plan?"
@@ -216,6 +226,7 @@ ApplicationWindow {
                             Text {
                                 id: p2
                                 property string eldurTag: "p"
+                                property string eldurWs: "\n  "
                                 property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : s2.eldurCarry
 
                                 text: "Yes, at any time from the billing page."
@@ -241,6 +252,7 @@ ApplicationWindow {
                     Text {
                         id: h22
                         property string eldurTag: "h2"
+                        property string eldurWs: "\n"
                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : d2.eldurCarry
 
                         text: "Shipping"
@@ -265,6 +277,8 @@ ApplicationWindow {
                         id: acc
                         property string eldurTag: "div"
                         property string eldurClasses: "acc"
+                        property string eldurWs: "\n"
+                        property string eldurWsEnd: "\n"
                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin - (accItem3.eldurCarry)) - Layout.topMargin + accItem3.eldurCarry + 0.000001) : h22.eldurCarry
 
                         color: "#00000000"
@@ -296,6 +310,7 @@ ApplicationWindow {
                                 property string eldurTag: "div"
                                 property string eldurClasses: "acc-item"
                                 property bool cls_open: false
+                                property string eldurWs: "\n  "
                                 property real eldurCarry: visible ? accBody.eldurCarry : 0
 
                                 spacing: 0
@@ -377,6 +392,7 @@ ApplicationWindow {
                                 property string eldurTag: "div"
                                 property string eldurClasses: "acc-item"
                                 property bool cls_open: false
+                                property string eldurWs: "\n  "
                                 property real eldurCarry: visible ? (Math.ceil(Layout.topMargin - (accBody2.eldurCarry)) - Layout.topMargin + accBody2.eldurCarry + 0.000001) : accItem.eldurCarry
 
                                 color: "#00000000"
@@ -478,6 +494,7 @@ ApplicationWindow {
                                 property string eldurTag: "div"
                                 property string eldurClasses: "acc-item"
                                 property bool cls_open: false
+                                property string eldurWs: "\n  "
                                 property real eldurCarry: visible ? (Math.ceil(Layout.topMargin - (accBody3.eldurCarry)) - Layout.topMargin + accBody3.eldurCarry + 0.000001) : accItem2.eldurCarry
 
                                 color: "#00000000"
@@ -579,6 +596,7 @@ ApplicationWindow {
                     Text {
                         id: opened
                         property string eldurTag: "p"
+                        property string eldurWs: "\n"
 
                         text: "0 open"
                         textFormat: Text.PlainText

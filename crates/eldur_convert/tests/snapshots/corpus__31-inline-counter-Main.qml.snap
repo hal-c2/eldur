@@ -50,6 +50,8 @@ ApplicationWindow {
             // <body>
             ColumnLayout {
                 property string eldurTag: "body"
+                property string eldurWs: "\n"
+                property string eldurWsEnd: "\n\n\n"
 
                 spacing: 0
                 Layout.fillWidth: true
@@ -64,6 +66,7 @@ ApplicationWindow {
                     id: p
                     property string eldurTag: "p"
                     readonly property string eldurInline: "{\"bare\":false,\"hoisted\":false,\"html\":false,\"k\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(34, 34, 34)\",\"display\":\"block\",\"family\":\"sans-serif\",\"italic\":false,\"size\":18.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"Count: \"},{\"attrs\":[[\"id\",\"count\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(34, 34, 34)\",\"display\":\"inline\",\"family\":\"sans-serif\",\"italic\":false,\"size\":18.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"0\"}],\"tag\":\"span\"},{\"text\":\" of \"},{\"attrs\":[[\"id\",\"total\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(34, 34, 34)\",\"display\":\"inline\",\"family\":\"sans-serif\",\"italic\":false,\"size\":18.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":700},\"kids\":[{\"text\":\"ten\"}],\"tag\":\"b\"}],\"pre\":false,\"strike\":false,\"underline\":false}"
+                    property string eldurWs: "\n"
                     property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                     text: "Count: 0 of <b>ten</b>"
@@ -82,6 +85,7 @@ ApplicationWindow {
                     property string eldurTag: "p"
                     readonly property string eldurInline: "{\"bare\":false,\"hoisted\":false,\"html\":false,\"k\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(34, 34, 34)\",\"display\":\"block\",\"family\":\"sans-serif\",\"italic\":false,\"size\":18.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"Status: \"},{\"attrs\":[[\"id\",\"state\"],[\"class\",\"warn\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(190, 30, 30)\",\"display\":\"inline\",\"family\":\"sans-serif\",\"italic\":true,\"size\":18.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"waiting\"}],\"tag\":\"span\"},{\"text\":\", \"},{\"attrs\":[],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(34, 34, 34)\",\"display\":\"inline\",\"family\":\"sans-serif\",\"italic\":true,\"size\":18.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"as usual\"}],\"tag\":\"em\"},{\"text\":\" \"},{\"attrs\":[[\"id\",\"gone\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(34, 34, 34)\",\"display\":\"inline\",\"family\":\"sans-serif\",\"italic\":false,\"size\":18.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"removed text\"}],\"tag\":\"span\"}],\"pre\":false,\"strike\":false,\"underline\":false}"
                     property bool cls_on: false
+                    property string eldurWs: "\n"
                     property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : p.eldurCarry
 
                     text: status.cls_on ? "Status: <i><font color=\"#be1e1e\">waiting</font></i>, <i><font color=\"#0000c8\">as usual</font></i> removed text" : "Status: <i><font color=\"#be1e1e\">waiting</font></i>, <i>as usual</i> removed text"
@@ -101,6 +105,7 @@ ApplicationWindow {
                     id: list
                     property string eldurTag: "p"
                     property string eldurKey: "list"
+                    property string eldurWs: "\n"
                     property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : status.eldurCarry
 
                     text: "Tags:"
@@ -120,6 +125,7 @@ ApplicationWindow {
                     id: p2
                     property string eldurTag: "p"
                     readonly property string eldurInline: "{\"bare\":false,\"hoisted\":false,\"html\":false,\"k\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(34, 34, 34)\",\"display\":\"block\",\"family\":\"sans-serif\",\"italic\":false,\"size\":18.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"A long line follows \"},{\"attrs\":[[\"id\",\"long\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(34, 34, 34)\",\"display\":\"inline\",\"family\":\"sans-serif\",\"italic\":false,\"size\":18.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"short\"}],\"tag\":\"span\"},{\"text\":\" and the block below it moves down.\"}],\"pre\":false,\"strike\":false,\"underline\":false}"
+                    property string eldurWs: "\n"
                     property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : list.eldurCarry
 
                     text: "A long line follows short and the block below it moves down."
@@ -137,6 +143,7 @@ ApplicationWindow {
                 Text {
                     id: below
                     property string eldurTag: "p"
+                    property string eldurWs: "\n"
                     property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : p2.eldurCarry
 
                     text: "Below the growing paragraph."
@@ -155,6 +162,7 @@ ApplicationWindow {
                 Button {
                     id: b
                     property string eldurTag: "button"
+                    property string eldurWs: "\n"
                     property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 21) - Layout.topMargin - 21 + 0.000001) : below.eldurCarry
 
                     text: "+"
@@ -198,6 +206,7 @@ ApplicationWindow {
             property string eldurTag: "span"
             property string eldurClasses: ""
             property string eldurTemplate: "eldurT_span_0"
+            property string eldurWs: "\n\n\n"
 
             text: ""
             textFormat: Text.PlainText

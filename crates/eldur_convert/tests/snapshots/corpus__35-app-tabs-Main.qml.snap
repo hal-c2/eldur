@@ -47,6 +47,8 @@ ApplicationWindow {
             // <body>
             ColumnLayout {
                 property string eldurTag: "body"
+                property string eldurWs: "\n"
+                property string eldurWsEnd: "\n\n\n"
 
                 spacing: 0
                 Layout.fillWidth: true
@@ -59,6 +61,8 @@ ApplicationWindow {
                     id: page2
                     property string eldurTag: "div"
                     property string eldurClasses: "page"
+                    property string eldurWs: "\n"
+                    property string eldurWsEnd: "\n"
                     property real eldurCarry: visible ? (Math.ceil(Layout.topMargin - (alerts.eldurCarry)) - Layout.topMargin + alerts.eldurCarry + 0.000001) : 0
 
                     color: "#ffffff"
@@ -91,6 +95,7 @@ ApplicationWindow {
                         Item {
                             id: h1
                             property string eldurTag: "h1"
+                            property string eldurWs: "\n  "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                             implicitWidth: h1Text.implicitWidth + 48
@@ -123,6 +128,8 @@ ApplicationWindow {
                             property var eldurAttrs: ({ "role": "tablist" })
                             property string eldurTag: "div"
                             property string eldurClasses: "tabs"
+                            property string eldurWs: "\n  "
+                            property string eldurWsEnd: "\n  "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h1.eldurCarry
 
                             color: "#00000000"
@@ -158,6 +165,7 @@ ApplicationWindow {
                                     property string eldurTag: "button"
                                     property string eldurClasses: "tab active"
                                     property bool cls_active: true
+                                    property string eldurWs: "\n    "
 
                                     text: "Profile"
                                     palette.buttonText: tabProfile.cls_active ? "#1a56db" : "#555555"
@@ -201,6 +209,7 @@ ApplicationWindow {
                                     property string eldurTag: "button"
                                     property string eldurClasses: "tab"
                                     property bool cls_active: false
+                                    property string eldurWs: "\n    "
 
                                     text: "Billing"
                                     palette.buttonText: tabBilling.cls_active ? "#1a56db" : (tabBilling.hovered ? "#000000" : "#555555")
@@ -246,6 +255,7 @@ ApplicationWindow {
                                     property string eldurTag: "button"
                                     property string eldurClasses: "tab"
                                     property bool cls_active: false
+                                    property string eldurWs: "\n    "
 
                                     text: "Alerts"
                                     palette.buttonText: tabAlerts.cls_active ? "#1a56db" : (tabAlerts.hovered ? "#000000" : "#555555")
@@ -296,6 +306,8 @@ ApplicationWindow {
                             property string eldurTag: "section"
                             property string eldurClasses: "panel active"
                             property bool cls_active: true
+                            property string eldurWs: "\n  "
+                            property string eldurWsEnd: "\n  "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : tabs.eldurCarry
 
                             implicitWidth: profileContent.implicitWidth + 48
@@ -318,6 +330,7 @@ ApplicationWindow {
                                 // <h2>
                                 Text {
                                     property string eldurTag: "h2"
+                                    property string eldurWs: "\n    "
 
                                     text: "Profile"
                                     textFormat: Text.PlainText
@@ -338,6 +351,7 @@ ApplicationWindow {
                                 // <p>
                                 Text {
                                     property string eldurTag: "p"
+                                    property string eldurWs: "\n    "
 
                                     text: "Your name and photo are shown to people you work with."
                                     textFormat: Text.PlainText
@@ -358,6 +372,7 @@ ApplicationWindow {
                                 // <p>
                                 Text {
                                     property string eldurTag: "p"
+                                    property string eldurWs: "\n    "
 
                                     text: "Change them whenever you like."
                                     textFormat: Text.PlainText
@@ -384,6 +399,8 @@ ApplicationWindow {
                             property string eldurTag: "section"
                             property string eldurClasses: "panel"
                             property bool cls_active: false
+                            property string eldurWs: "\n  "
+                            property string eldurWsEnd: "\n  "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : profile.eldurCarry
 
                             implicitWidth: billingContent.implicitWidth + 48
@@ -406,6 +423,7 @@ ApplicationWindow {
                                 // <h2>
                                 Text {
                                     property string eldurTag: "h2"
+                                    property string eldurWs: "\n    "
 
                                     text: "Billing"
                                     textFormat: Text.PlainText
@@ -426,6 +444,7 @@ ApplicationWindow {
                                 // <p>
                                 Text {
                                     property string eldurTag: "p"
+                                    property string eldurWs: "\n    "
 
                                     text: "You are on the free plan."
                                     textFormat: Text.PlainText
@@ -452,6 +471,8 @@ ApplicationWindow {
                             property string eldurTag: "section"
                             property string eldurClasses: "panel"
                             property bool cls_active: false
+                            property string eldurWs: "\n  "
+                            property string eldurWsEnd: "\n  "
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : billing.eldurCarry
 
                             implicitWidth: alertsContent.implicitWidth + 48
@@ -474,6 +495,7 @@ ApplicationWindow {
                                 // <h2>
                                 Text {
                                     property string eldurTag: "h2"
+                                    property string eldurWs: "\n    "
 
                                     text: "Alerts"
                                     textFormat: Text.PlainText
@@ -494,6 +516,7 @@ ApplicationWindow {
                                 // <p>
                                 Text {
                                     property string eldurTag: "p"
+                                    property string eldurWs: "\n    "
 
                                     text: "We send a weekly summary by email."
                                     textFormat: Text.PlainText
@@ -514,6 +537,7 @@ ApplicationWindow {
                                 // <p>
                                 Text {
                                     property string eldurTag: "p"
+                                    property string eldurWs: "\n    "
 
                                     text: "You can turn it off here."
                                     textFormat: Text.PlainText
@@ -534,6 +558,7 @@ ApplicationWindow {
                                 // <p>
                                 Text {
                                     property string eldurTag: "p"
+                                    property string eldurWs: "\n    "
 
                                     text: "Security alerts are always on."
                                     textFormat: Text.PlainText

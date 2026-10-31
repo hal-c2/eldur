@@ -841,6 +841,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 );
             }
             crate::metadata::tag(&mut e.obj, self.doc, node);
+            crate::metadata::declare_whitespace(&mut e.obj, self.doc, node);
             if self.open_elements || self.cascade_rules {
                 crate::metadata::declare_style(&mut e.obj, self.doc, node);
             }
