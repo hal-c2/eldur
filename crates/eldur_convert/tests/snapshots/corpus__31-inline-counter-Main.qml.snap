@@ -206,7 +206,6 @@ ApplicationWindow {
             property string eldurTag: "span"
             property string eldurClasses: ""
             property string eldurTemplate: "eldurT_span_0"
-            property string eldurWs: "\n\n\n"
 
             text: ""
             textFormat: Text.PlainText

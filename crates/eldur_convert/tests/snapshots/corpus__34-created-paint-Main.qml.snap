@@ -21,7 +21,7 @@ ApplicationWindow {
     property bool eldurOpenElements: true
     property string eldurControlFonts: "[{\"names\":[\"serif\",\"Times\",\"Times New Roman\",\"Georgia\",\"Liberation Serif\"],\"small\":[0.555,1.2],\"large\":[0.555,1.28],\"gap\":0.042},{\"names\":[\"monospace\"],\"small\":[0.6,2.4],\"large\":[0.6,2.5],\"gap\":0},{\"names\":[\"Helvetica\"],\"small\":[0.555,0.075],\"large\":[0.555,0.03],\"gap\":0.033},{\"names\":[],\"small\":[0.6,1.275],\"large\":[0.582,1.28],\"gap\":0.033}]"
     readonly property var eldurInitialBlock: initialContainingBlock
-    readonly property var eldurTemplates: ({ "div@cards": eldurT_div_0, "div@*": eldurT_div_1 })
+    readonly property var eldurTemplates: ({ "div@cards": eldurT_div_0, "div@*": eldurT_div_0 })
 
     visible: true
     color: "#ffffff"
@@ -283,33 +283,6 @@ ApplicationWindow {
             property string eldurTag: "div"
             property string eldurClasses: ""
             property string eldurTemplate: "eldurT_div_0"
-
-            text: ""
-            textFormat: Text.PlainText
-            color: "#000000"
-            font.family: "sans-serif"
-            font.pixelSize: 16
-            lineHeight: 20
-            lineHeightMode: Text.FixedHeight
-            transform: Translate {
-                y: 1
-            }
-            wrapMode: Text.WordWrap
-            Layout.fillWidth: true
-            renderType: Text.NativeRendering
-        }
-    }
-
-    // <div> created by a script
-    Component {
-        id: eldurT_div_1
-
-        Text {
-            id: div2
-            property string eldurTag: "div"
-            property string eldurClasses: ""
-            property string eldurTemplate: "eldurT_div_1"
-            property string eldurWs: "\n\n\n"
 
             text: ""
             textFormat: Text.PlainText
