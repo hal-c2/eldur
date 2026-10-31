@@ -4,3 +4,4 @@ expression: "diagnostics.join(\"\\n\")"
 ---
 info[css]: <style>#1:42: unknown property `font-variant-numeric`
 info[css]: index.html:190: <p id="empty" class="empty"> is `display: none` and used by a script: it is kept invisible, as a block when shown
+info[css]: index.html:265: a created <span> has no item of its own in <body>, so it has no template there (dynamic-templates)

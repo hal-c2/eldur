@@ -17,6 +17,7 @@ mod links;
 mod lists;
 mod shadow;
 mod table;
+pub(crate) mod templates;
 mod text;
 mod transform;
 pub(crate) mod units;

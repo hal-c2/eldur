@@ -15,6 +15,7 @@ ApplicationWindow {
     id: root
     property string baseUrl: Qt.resolvedUrl("Main.qml")
     property var h2qStyledClasses: ["app", "app-header", "btn", "composer", "counter", "delete", "done", "empty", "footer-note", "todo-item", "todo-list", "todo-text"]
+    readonly property var h2qTemplates: ({ "li.done.todo-item@todoList": h2qT_li_0, "li.todo-item@todoList": h2qT_li_0, "input[type=checkbox]@h2qT_li_0": h2qT_input_1, "span.todo-text@h2qT_li_0": h2qT_span_2, "button.delete@h2qT_li_0": h2qT_button_3, "li.done.todo-item@*": h2qT_li_0, "li.todo-item@*": h2qT_li_0, "input[type=checkbox]@*": h2qT_input_4, "button.delete@*": h2qT_button_5 })
 
     visible: true
     color: "#eef1f7"
@@ -220,6 +221,7 @@ ApplicationWindow {
                                 id: todoList
                                 property string h2qTag: "ul"
                                 property string h2qClasses: "todo-list"
+                                property string h2qKey: "todoList"
 
                                 color: "#00000000"
                                 implicitWidth: todoListText.implicitWidth
@@ -289,6 +291,206 @@ ApplicationWindow {
                     }
                 }
             }
+        }
+    }
+
+    // <li class="todo-item"> created by a script, in todoList
+    Component {
+        id: h2qT_li_0
+
+        Rectangle {
+            id: todoItem
+            property string h2qTag: "li"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_li_0"
+            property bool cls_done: false
+
+            color: "#00000000"
+            implicitWidth: todoItemContent.implicitWidth + 8
+            implicitHeight: todoItemContent.implicitHeight + 25
+            Layout.fillWidth: true
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                height: 1
+                color: "#e3e7ef"
+            }
+
+            RowLayout {
+                id: todoItemContent
+                spacing: 12
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.leftMargin: 4
+                anchors.rightMargin: 4
+                anchors.topMargin: 12
+                anchors.bottomMargin: 13
+            }
+        }
+    }
+
+    // <input> created by a script, in h2qT_li_0
+    Component {
+        id: h2qT_input_1
+
+        CheckBox {
+            id: inputControl
+            property string h2qTag: "input"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_input_1"
+            property string value: "on"
+
+            implicitWidth: 13
+            implicitHeight: 13
+            padding: 0
+            spacing: 0
+            contentItem: Item {}
+            indicator: Rectangle {
+                width: inputControl.width
+                height: inputControl.height
+                border.width: 1
+                radius: 2
+                color: inputControl.checked ? "#0075ff" : "#ffffff"
+                border.color: inputControl.checked ? "#0075ff" : "#767676"
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "✓"
+                    color: "#ffffff"
+                    font.pixelSize: Math.max(1, inputControl.height - 2)
+                    visible: inputControl.checked
+                }
+            }
+            Layout.preferredWidth: 18
+            Layout.minimumWidth: 18
+            Layout.preferredHeight: 18
+            Layout.alignment: Qt.AlignVCenter
+        }
+    }
+
+    // <span class="todo-text"> created by a script, in h2qT_li_0
+    Component {
+        id: h2qT_span_2
+
+        Text {
+            id: todoText
+            property string h2qTag: "span"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_span_2"
+            property Item h2qUp1: null
+
+            text: ""
+            textFormat: Text.PlainText
+            color: (h2qUp1 ? h2qUp1.cls_done : false) ? "#9aa3b5" : "#1f2430"
+            font.family: "sans-serif"
+            font.pixelSize: 16
+            wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+            Layout.fillWidth: true
+            Layout.preferredWidth: 0
+            Layout.alignment: Qt.AlignVCenter
+            font.strikeout: (h2qUp1 ? h2qUp1.cls_done : false)
+        }
+    }
+
+    // <button class="delete"> created by a script, in h2qT_li_0
+    Component {
+        id: h2qT_button_3
+
+        Button {
+            id: buttonControl
+            property string h2qTag: "button"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_button_3"
+
+            text: ""
+            palette.buttonText: "#b42318"
+            font.family: "sans-serif"
+            font.pixelSize: 13
+            background: Rectangle {
+                color: buttonControl.hovered ? "#fde2e2" : "#fff5f5"
+                radius: 6
+                border.width: 1
+                border.color: "#e3b5b5"
+            }
+            topPadding: 5
+            rightPadding: 11
+            bottomPadding: 5
+            leftPadding: 11
+            Layout.fillWidth: true
+            Layout.maximumWidth: Math.ceil(implicitWidth)
+            Layout.alignment: Qt.AlignVCenter
+            hoverEnabled: true
+        }
+    }
+
+    // <input> created by a script
+    Component {
+        id: h2qT_input_4
+
+        CheckBox {
+            id: inputControl3
+            property string h2qTag: "input"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_input_4"
+            property string value: "on"
+
+            implicitWidth: 13
+            implicitHeight: 13
+            padding: 0
+            spacing: 0
+            contentItem: Item {}
+            indicator: Rectangle {
+                width: inputControl3.width
+                height: inputControl3.height
+                border.width: 1
+                radius: 2
+                color: inputControl3.checked ? "#0075ff" : "#ffffff"
+                border.color: inputControl3.checked ? "#0075ff" : "#767676"
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "✓"
+                    color: "#ffffff"
+                    font.pixelSize: Math.max(1, inputControl3.height - 2)
+                    visible: inputControl3.checked
+                }
+            }
+            Layout.leftMargin: 3
+            Layout.rightMargin: 3
+            Layout.topMargin: 3
+        }
+    }
+
+    // <button class="delete"> created by a script
+    Component {
+        id: h2qT_button_5
+
+        Button {
+            id: buttonControl3
+            property string h2qTag: "button"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_button_5"
+
+            text: ""
+            palette.buttonText: "#b42318"
+            font.family: "sans-serif"
+            font.pixelSize: 13
+            background: Rectangle {
+                color: buttonControl3.hovered ? "#fde2e2" : "#fff5f5"
+                radius: 6
+                border.width: 1
+                border.color: "#e3b5b5"
+            }
+            topPadding: 5
+            rightPadding: 11
+            bottomPadding: 5
+            leftPadding: 11
+            Layout.alignment: Qt.AlignHCenter
+            hoverEnabled: true
         }
     }
 }

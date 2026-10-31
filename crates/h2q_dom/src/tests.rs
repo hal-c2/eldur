@@ -124,6 +124,18 @@ mod mutation {
         assert_eq!(doc.len(), before + 1);
     }
 
+    // Chromium: createTextNode("hi") appended to a div gives textContent "hi".
+    #[test]
+    fn created_text_appends_as_text() {
+        let mut doc = Document::parse("<div id=a></div>");
+        let div = doc.element_by_id("a").expect("div");
+        let text = doc.create_text("hi");
+        assert_eq!(doc.parent(text), None);
+        doc.append_child(div, text).expect("ok");
+        assert_eq!(doc.text(text), Some("hi"));
+        assert_eq!(doc.text_content(div), "hi");
+    }
+
     // Chromium: setAttribute("a","3") on a=1 b=2 gives `a="3" b="2"`.
     #[test]
     fn set_attribute_replaces_in_place() {

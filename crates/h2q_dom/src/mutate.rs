@@ -39,6 +39,17 @@ impl Document {
         id
     }
 
+    /// A detached text node, as `document.createTextNode` makes it.
+    pub fn create_text(&mut self, data: impl Into<String>) -> NodeId {
+        let id = NodeId::new(self.nodes.len());
+        self.nodes.push(Node {
+            parent: None,
+            children: Vec::new(),
+            data: NodeData::Text(data.into()),
+        });
+        id
+    }
+
     /// Sets an attribute. An existing attribute of the same name keeps its
     /// position and gets the new value; a new one goes last.
     ///
