@@ -50,6 +50,7 @@ ApplicationWindow {
                     Item {
                         implicitWidth: pageContent.implicitWidth + 80
                         implicitHeight: pageContent.implicitHeight
+                        z: 3
                         Layout.fillWidth: true
 
                         ColumnLayout {
@@ -84,6 +85,7 @@ ApplicationWindow {
                                 property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                                 spacing: 0
+                                z: 3
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
                                 Layout.topMargin: 32 - pageTitle.eldurCarry
@@ -94,6 +96,7 @@ ApplicationWindow {
                                     radius: 12
                                     implicitWidth: cardContent.implicitWidth + 48
                                     implicitHeight: cardContent.implicitHeight + 48
+                                    z: 1
                                     Layout.fillWidth: true
                                     Layout.preferredWidth: 340
                                     Layout.maximumWidth: 340
@@ -158,6 +161,7 @@ ApplicationWindow {
 
                                         Flow {
                                             id: blockFlow
+                                            z: 1
                                             Layout.fillWidth: true
                                             Layout.topMargin: 16 - p.eldurCarry
                                             Layout.preferredHeight: implicitHeight
@@ -170,6 +174,7 @@ ApplicationWindow {
                                                     id: tooltipWrapBox
                                                     implicitWidth: tooltipWrapContent.implicitWidth
                                                     implicitHeight: tooltipWrapContent.implicitHeight
+                                                    z: 1
                                                     width: Math.min(implicitWidth, blockFlow.width)
                                                     y: 64
 
@@ -328,6 +333,7 @@ ApplicationWindow {
                                     clip: true
                                     implicitWidth: 0
                                     implicitHeight: 0
+                                    z: 1
                                     Layout.fillWidth: true
                                     Layout.preferredWidth: 320
                                     Layout.maximumWidth: 320
@@ -439,6 +445,7 @@ ApplicationWindow {
                                 Item {
                                     implicitWidth: 0
                                     implicitHeight: 0
+                                    z: 3
                                     Layout.fillWidth: true
                                     Layout.preferredWidth: 240
                                     Layout.maximumWidth: 240

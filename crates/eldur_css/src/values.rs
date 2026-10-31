@@ -878,6 +878,9 @@ pub struct ComputedStyle {
     pub text_indent: Length,
     pub text_transform: TextTransform,
     pub white_space: WhiteSpace,
+    /// `display` was inline-level before `position` or `float` blockified
+    /// it: a static position is on the line, not below it.
+    pub blockified_inline: bool,
     pub word_break: WordBreak,
     pub overflow_wrap_anywhere: bool,
     pub text_shadow: Vec<Shadow>,
@@ -1004,6 +1007,7 @@ impl Default for ComputedStyle {
             text_indent: Length::px(0.0),
             text_transform: TextTransform::None,
             white_space: WhiteSpace::Normal,
+            blockified_inline: false,
             word_break: WordBreak::Normal,
             overflow_wrap_anywhere: false,
             text_shadow: Vec::new(),

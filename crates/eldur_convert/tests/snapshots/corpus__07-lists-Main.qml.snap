@@ -40,6 +40,7 @@ ApplicationWindow {
                 Item {
                     implicitWidth: pageContent.implicitWidth + 48
                     implicitHeight: pageContent.implicitHeight + 64
+                    z: 1
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignHCenter
                     Layout.maximumWidth: 1200
@@ -95,6 +96,7 @@ ApplicationWindow {
                             columns: 2
                             columnSpacing: 24
                             rowSpacing: 24
+                            z: 1
                             Layout.fillWidth: true
                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                             Layout.topMargin: 24
@@ -102,6 +104,7 @@ ApplicationWindow {
                             // <div>
                             ColumnLayout {
                                 spacing: 0
+                                z: 1
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 0
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
@@ -117,6 +120,7 @@ ApplicationWindow {
                                     implicitHeight: cardContent.implicitHeight + 46
                                     border.width: 1
                                     border.color: "#e1e5ee"
+                                    z: 1
                                     Layout.fillWidth: true
                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
@@ -152,6 +156,7 @@ ApplicationWindow {
                                         Item {
                                             implicitWidth: listSquareContent.implicitWidth + 24
                                             implicitHeight: listSquareContent.implicitHeight
+                                            z: 1
                                             Layout.fillWidth: true
                                             Layout.topMargin: 12
                                             Layout.bottomMargin: 8
@@ -168,6 +173,7 @@ ApplicationWindow {
                                                 Item {
                                                     implicitWidth: liContent4.implicitWidth
                                                     implicitHeight: liContent4.implicitHeight
+                                                    z: 1
                                                     Layout.fillWidth: true
 
                                                     ColumnLayout {
@@ -197,6 +203,7 @@ ApplicationWindow {
                                                         Item {
                                                             implicitWidth: listRomanContent.implicitWidth + 24
                                                             implicitHeight: listRomanContent.implicitHeight
+                                                            z: 1
                                                             Layout.fillWidth: true
                                                             Layout.topMargin: 6
 
@@ -212,6 +219,7 @@ ApplicationWindow {
                                                                 Item {
                                                                     implicitWidth: liContent3.implicitWidth
                                                                     implicitHeight: liContent3.implicitHeight
+                                                                    z: 1
                                                                     Layout.fillWidth: true
 
                                                                     ColumnLayout {
@@ -240,6 +248,7 @@ ApplicationWindow {
                                                                         // <ul class="list-none">
                                                                         ColumnLayout {
                                                                             spacing: 0
+                                                                            z: 1
                                                                             Layout.fillWidth: true
                                                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                                                                             Layout.topMargin: 6
@@ -248,6 +257,7 @@ ApplicationWindow {
                                                                             Item {
                                                                                 implicitWidth: liContent.implicitWidth + 16
                                                                                 implicitHeight: liContent.implicitHeight
+                                                                                z: 1
                                                                                 Layout.fillWidth: true
 
                                                                                 ColumnLayout {
@@ -292,6 +302,7 @@ ApplicationWindow {
                                                                             Item {
                                                                                 implicitWidth: liContent2.implicitWidth + 16
                                                                                 implicitHeight: liContent2.implicitHeight
+                                                                                z: 1
                                                                                 Layout.fillWidth: true
 
                                                                                 ColumnLayout {

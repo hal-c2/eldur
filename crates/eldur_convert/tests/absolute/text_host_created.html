@@ -1,0 +1,5 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}p{margin:0}#go{display:block;width:50px;height:30px;padding:0;border:0}.m{position:absolute;top:50px;left:60px;width:100px;height:40px;background:red}</style></head><body><div id="h">words</div><p id="after">after</p><script>
+var h=document.getElementById('h');var m=document.createElement('div');m.className='m';m.id='m';h.appendChild(m);
+console.log('LC kids='+h.children.length+' text='+h.textContent+' parent='+(m.parentNode===h));
+m.remove();console.log('LC kids='+h.children.length+' parent='+m.parentNode);h.appendChild(m);
+</script></body></html>

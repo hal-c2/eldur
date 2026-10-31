@@ -1,0 +1,4 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}p{margin:16px 0}#host{padding:1px 0}#go{display:block;width:50px;height:30px;padding:0;border:0}</style></head><body><button id="go">go</button><div id="host"><p id="a">a</p><p id="b">b</p></div><p id="after">after</p><script>
+var host=document.getElementById('host');
+document.getElementById('go').addEventListener('click',function(){host.innerHTML='';console.log('LC cleared kids='+host.children.length)});
+</script></body></html>

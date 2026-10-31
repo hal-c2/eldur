@@ -405,6 +405,7 @@ ApplicationWindow {
                         property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + cards.eldurCarry + 0.000001
 
                         spacing: 0
+                        z: 1
                         Layout.fillWidth: true
                         Layout.maximumWidth: Number.POSITIVE_INFINITY
                         Layout.topMargin: 32 - section.eldurCarry
@@ -440,6 +441,7 @@ ApplicationWindow {
                             columns: 3
                             columnSpacing: 20
                             rowSpacing: 20
+                            z: 1
                             Layout.fillWidth: true
                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                             Layout.topMargin: 12 - sectionTitle2.eldurCarry
@@ -451,6 +453,7 @@ ApplicationWindow {
                                 radius: 12
                                 implicitWidth: liftCardContent.implicitWidth + 44
                                 implicitHeight: liftCardContent.implicitHeight + 44
+                                z: 1
                                 transform: Translate {
                                     y: liftCardHover.hovered ? -4 : 0
 
@@ -553,6 +556,7 @@ ApplicationWindow {
                                 radius: 12
                                 implicitWidth: liftCardContent2.implicitWidth + 44
                                 implicitHeight: liftCardContent2.implicitHeight + 44
+                                z: 1
                                 transform: Translate {
                                     y: liftCard2Hover.hovered ? -4 : 0
 
@@ -655,6 +659,7 @@ ApplicationWindow {
                                 radius: 12
                                 implicitWidth: liftCardContent3.implicitWidth + 44
                                 implicitHeight: liftCardContent3.implicitHeight + 44
+                                z: 1
                                 transform: Translate {
                                     y: liftCard3Hover.hovered ? -4 : 0
 

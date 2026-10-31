@@ -1,0 +1,5 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}p{margin:0}#go{display:block;width:50px;height:30px;padding:0;border:0}.m{position:absolute;top:50px;left:60px;width:100px;height:40px;background:red}.n{position:fixed;top:200px;left:300px;width:20px;height:20px;background:blue}</style></head><body><button id="go">go</button><div id="host"><div id="box" class="m"><div id="deep" class="n"></div></div></div><p id="after">after</p><script>
+var box=document.getElementById('box');var deep=document.getElementById('deep');var host=document.getElementById('host');
+console.log('LC parent='+(deep.parentNode===box)+' kids='+box.children.length+' in='+host.contains(deep));
+document.getElementById('go').addEventListener('click',function(){box.remove();console.log('LC removed in='+host.contains(deep)+' parent='+(deep.parentNode===box))});
+</script></body></html>

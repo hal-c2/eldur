@@ -64,6 +64,7 @@ ApplicationWindow {
                     color: "#ebffffff"
                     implicitWidth: navbarContent.implicitWidth
                     implicitHeight: navbarContent.implicitHeight + 1
+                    z: 11
                     Layout.fillWidth: true
 
                     Rectangle {
@@ -85,6 +86,7 @@ ApplicationWindow {
                         Item {
                             implicitWidth: containerContent.implicitWidth + 48
                             implicitHeight: containerContent.implicitHeight
+                            z: 1
                             Layout.fillWidth: true
                             Layout.alignment: Qt.AlignHCenter
                             Layout.maximumWidth: 1120
@@ -273,6 +275,7 @@ ApplicationWindow {
                                     implicitHeight: btnText.implicitHeight + 4
                                     border.width: 2
                                     border.color: "#00000000"
+                                    z: 1
                                     transform: Translate {
                                         y: btnHover.hovered ? -2 : 0
 
@@ -328,6 +331,7 @@ ApplicationWindow {
                 // <main>
                 ColumnLayout {
                     spacing: 0
+                    z: 1
                     Layout.fillWidth: true
                     Layout.maximumWidth: Number.POSITIVE_INFINITY
 
@@ -335,6 +339,7 @@ ApplicationWindow {
                     Item {
                         implicitWidth: heroContent.implicitWidth
                         implicitHeight: heroContent.implicitHeight + 216
+                        z: 1
                         Layout.fillWidth: true
 
                         Shape {
@@ -384,6 +389,7 @@ ApplicationWindow {
                             Item {
                                 implicitWidth: containerContent2.implicitWidth + 48
                                 implicitHeight: containerContent2.implicitHeight
+                                z: 1
                                 Layout.fillWidth: true
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.maximumWidth: 1120
@@ -403,6 +409,7 @@ ApplicationWindow {
                                     // <div>
                                     ColumnLayout {
                                         spacing: 0
+                                        z: 1
                                         Layout.row: 0
                                         Layout.column: 0
                                         Layout.columnSpan: 5
@@ -511,6 +518,7 @@ ApplicationWindow {
                                         // <div class="cta-row">
                                         Flow {
                                             spacing: 16
+                                            z: 1
                                             Layout.fillWidth: true
                                             Layout.topMargin: 40 - lead.eldurCarry
                                             Layout.preferredHeight: implicitHeight
@@ -524,6 +532,7 @@ ApplicationWindow {
                                                 implicitHeight: btnText2.implicitHeight + 4
                                                 border.width: 2
                                                 border.color: "#00000000"
+                                                z: 1
                                                 transform: Translate {
                                                     y: btn2Hover.hovered ? -2 : 0
 
@@ -579,6 +588,7 @@ ApplicationWindow {
                                                 implicitHeight: btnText3.implicitHeight + 4
                                                 border.width: 2
                                                 border.color: "#99ffffff"
+                                                z: 1
                                                 transform: Translate {
                                                     y: btn3Hover.hovered ? -2 : 0
 
@@ -1044,6 +1054,7 @@ ApplicationWindow {
                         id: features
                         implicitWidth: featuresContent.implicitWidth
                         implicitHeight: featuresContent.implicitHeight + 192
+                        z: 1
                         Layout.fillWidth: true
 
                         ColumnLayout {
@@ -1058,6 +1069,7 @@ ApplicationWindow {
                             Item {
                                 implicitWidth: containerContent3.implicitWidth + 48
                                 implicitHeight: containerContent3.implicitHeight
+                                z: 1
                                 Layout.fillWidth: true
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.maximumWidth: 1120
@@ -1130,6 +1142,7 @@ ApplicationWindow {
                                         columns: 3
                                         columnSpacing: 24
                                         rowSpacing: 24
+                                        z: 1
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
                                         Layout.topMargin: 56 - p.eldurCarry
@@ -1140,6 +1153,7 @@ ApplicationWindow {
                                             radius: 16
                                             implicitWidth: featureCardContent.implicitWidth + 64
                                             implicitHeight: featureCardContent.implicitHeight + 64
+                                            z: 1
                                             Layout.fillWidth: true
                                             Layout.preferredWidth: 0
                                             Layout.fillHeight: true
@@ -1159,6 +1173,7 @@ ApplicationWindow {
                                                 Item {
                                                     implicitWidth: 0
                                                     implicitHeight: 0
+                                                    z: 1
                                                     Layout.preferredWidth: 56
                                                     Layout.preferredHeight: 56
 
@@ -1265,6 +1280,7 @@ ApplicationWindow {
                                             radius: 16
                                             implicitWidth: featureCardContent2.implicitWidth + 64
                                             implicitHeight: featureCardContent2.implicitHeight + 64
+                                            z: 1
                                             Layout.fillWidth: true
                                             Layout.preferredWidth: 0
                                             Layout.fillHeight: true
@@ -1284,6 +1300,7 @@ ApplicationWindow {
                                                 Item {
                                                     implicitWidth: 0
                                                     implicitHeight: 0
+                                                    z: 1
                                                     Layout.preferredWidth: 56
                                                     Layout.preferredHeight: 56
 
@@ -1390,6 +1407,7 @@ ApplicationWindow {
                                             radius: 16
                                             implicitWidth: featureCardContent3.implicitWidth + 64
                                             implicitHeight: featureCardContent3.implicitHeight + 64
+                                            z: 1
                                             Layout.fillWidth: true
                                             Layout.preferredWidth: 0
                                             Layout.fillHeight: true
@@ -1409,6 +1427,7 @@ ApplicationWindow {
                                                 Item {
                                                     implicitWidth: 0
                                                     implicitHeight: 0
+                                                    z: 1
                                                     Layout.preferredWidth: 56
                                                     Layout.preferredHeight: 56
 
@@ -1699,6 +1718,7 @@ ApplicationWindow {
                         color: "#f5f6fb"
                         implicitWidth: sectionTightContent.implicitWidth
                         implicitHeight: sectionTightContent.implicitHeight + 96
+                        z: 1
                         Layout.fillWidth: true
                         Layout.topMargin: -customers.eldurCarry
 
@@ -1713,6 +1733,7 @@ ApplicationWindow {
                             Item {
                                 implicitWidth: containerContent5.implicitWidth + 48
                                 implicitHeight: containerContent5.implicitHeight
+                                z: 1
                                 Layout.fillWidth: true
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.maximumWidth: 1120
@@ -1732,6 +1753,7 @@ ApplicationWindow {
                                         radius: 24
                                         implicitWidth: ctaBandContent.implicitWidth + 128
                                         implicitHeight: ctaBandContent.implicitHeight + 128
+                                        z: 1
                                         Layout.fillWidth: true
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
@@ -1810,6 +1832,7 @@ ApplicationWindow {
                                                 implicitHeight: btnText4.implicitHeight + 4
                                                 border.width: 2
                                                 border.color: "#00000000"
+                                                z: 1
                                                 transform: Translate {
                                                     y: btn4Hover.hovered ? -2 : 0
 

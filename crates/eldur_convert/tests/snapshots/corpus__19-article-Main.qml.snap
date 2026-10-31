@@ -208,6 +208,7 @@ ApplicationWindow {
                 Item {
                     implicitWidth: articleContent.implicitWidth + 48
                     implicitHeight: articleContent.implicitHeight + 136
+                    z: 1
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignHCenter
                     Layout.maximumWidth: 680
@@ -345,6 +346,7 @@ ApplicationWindow {
                             property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + p5.eldurCarry + 0.000001
 
                             spacing: 0
+                            z: 1
                             Layout.fillWidth: true
                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                             Layout.topMargin: 27.04 - lead.eldurCarry
@@ -641,6 +643,7 @@ ApplicationWindow {
                                 property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + li3.eldurCarry + 0.000001
 
                                 spacing: 0
+                                z: 1
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
                                 Layout.topMargin: 14.88 - h2.eldurCarry
@@ -649,6 +652,7 @@ ApplicationWindow {
                                 Item {
                                     implicitWidth: liContent.implicitWidth + 44
                                     implicitHeight: liContent.implicitHeight
+                                    z: 1
                                     Layout.fillWidth: true
 
                                     ColumnLayout {
@@ -723,6 +727,7 @@ ApplicationWindow {
 
                                     implicitWidth: liContent2.implicitWidth + 44
                                     implicitHeight: liContent2.implicitHeight
+                                    z: 1
                                     Layout.fillWidth: true
                                     Layout.topMargin: 14 - text.eldurCarry
 
@@ -798,6 +803,7 @@ ApplicationWindow {
 
                                     implicitWidth: liContent3.implicitWidth + 44
                                     implicitHeight: liContent3.implicitHeight
+                                    z: 1
                                     Layout.fillWidth: true
                                     Layout.topMargin: 14 - li.eldurCarry
 
@@ -873,6 +879,7 @@ ApplicationWindow {
 
                                     implicitWidth: liContent4.implicitWidth + 44
                                     implicitHeight: liContent4.implicitHeight
+                                    z: 1
                                     Layout.fillWidth: true
                                     Layout.topMargin: 14 - li2.eldurCarry
 

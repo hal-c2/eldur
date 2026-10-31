@@ -37,7 +37,7 @@ use eldur_dom::{Document, NodeId};
 use eldur_js::TargetKind;
 use eldur_qml::{Member, Object, Value};
 
-use crate::boxes::{BoxKind, Content, LayoutBox, describe, display_name, node_line};
+use crate::boxes::{self, BoxKind, Content, LayoutBox, describe, display_name, node_line};
 use crate::diag::Diagnostics;
 use crate::{Options, RootKind};
 use flow::{Emitted, MarginSet, has_height};
@@ -46,6 +46,8 @@ use units::{ROOT_ID, color, number};
 
 const FLICKABLE_ID: &str = "flickable";
 const PAGE_ID: &str = "page";
+/// The initial containing block (CSS 2.2 §10.1), when a box has it.
+const ICB_ID: &str = "initialContainingBlock";
 
 pub(crate) use controls::Form;
 
@@ -76,9 +78,27 @@ pub(crate) struct Emitter<'a, 'd> {
     root_node: Option<NodeId>,
     /// The page has a table, so the root needs the table solver.
     has_table: bool,
-    /// The box being emitted is an overlay of its positioned parent, so its
+    /// The box being emitted is an overlay of its containing block, so its
     /// `position` is handled.
     positioned_child: bool,
+    /// Where `position: absolute` boxes go. At the top it is the initial
+    /// containing block.
+    abs_block: lists::ContainingBlock,
+    /// Where `position: fixed` boxes go, when a transformed ancestor takes
+    /// them from the window.
+    fixed_block: Option<lists::ContainingBlock>,
+    /// An element between the box being emitted and its containing block
+    /// can be hidden while the box, which is not its child in QML, cannot.
+    hideable_ancestor: bool,
+    /// Some overlay reads where its slot is, through the root's functions.
+    static_places: bool,
+    /// The highest `z-index` of an overlay inside the page, which cannot
+    /// reach above the initial containing block's.
+    nested_z: Option<i32>,
+    /// The `z` the box being emitted needs for something inside it to paint
+    /// over its later siblings: every QML item is a stacking context, where
+    /// CSS lets a positioned box paint over the page outside its parent.
+    above_flow: Option<i32>,
     /// The content height in px of the block whose children are being
     /// laid out, when it is definite: their percentage heights resolve
     /// against it (CSS 2.2 §10.5).
@@ -136,7 +156,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         wanted: &'a HashSet<NodeId>,
     ) -> Self {
         let mut ids = Ids::default();
-        for id in [ROOT_ID, FLICKABLE_ID, PAGE_ID] {
+        for id in [ROOT_ID, FLICKABLE_ID, PAGE_ID, ICB_ID] {
             ids.reserve(id);
         }
         Self {
@@ -155,6 +175,12 @@ impl<'a, 'd> Emitter<'a, 'd> {
             root_node: None,
             has_table: false,
             positioned_child: false,
+            abs_block: lists::ContainingBlock::initial(),
+            fixed_block: None,
+            hideable_ancestor: false,
+            static_places: false,
+            nested_z: None,
+            above_flow: None,
             percent_height_base: None,
             fixed: Vec::new(),
             backdrop: None,
@@ -283,6 +309,18 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     "the root element always spans the window width".to_owned(),
                 );
             }
+            let initial = std::mem::take(&mut self.abs_block.overlays);
+            let (below, above): (Vec<_>, Vec<_>) = initial
+                .into_iter()
+                .partition(|(_, o)| matches!(o.get("z"), Some(Value::Number(z)) if *z < 0.0));
+            self.report_z_above_initial(&above);
+            // Paints over the canvas but under everything in flow.
+            if !below.is_empty() {
+                let mut block = initial_block();
+                block.set("z", Value::Number(-1.0));
+                push_overlays(&mut block, below);
+                flickable.push_child(block);
+            }
             if self.options.source_comments
                 && let Some(node) = html.node
             {
@@ -291,6 +329,12 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     .push(Member::Comment(describe(self.doc, node)));
             }
             flickable.push_child(page);
+            if !above.is_empty() {
+                let mut block = initial_block().with_id(ICB_ID);
+                push_overlays(&mut block, above);
+                flickable.push_child(block);
+                content_height = height_with_initial_block(&content_height);
+            }
         }
         flickable.set("contentHeight", Value::expr(content_height));
         root.push_child(flickable);
@@ -305,6 +349,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
         }
         if self.has_table {
             Self::table_solver(&mut root);
+        }
+        if self.static_places {
+            lists::static_place_functions(&mut root);
         }
         if self.fragment_links {
             self.scroll_to_fragment(&mut root);
@@ -398,6 +445,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
 
         let mut escaped_top = MarginSet::default();
         let mut escaped_bottom = MarginSet::default();
+        let mut only_slots = false;
         let outer_backdrop = self.backdrop;
         self.backdrop = if deco.gradients {
             None
@@ -406,20 +454,58 @@ impl<'a, 'd> Emitter<'a, 'd> {
         } else {
             outer_backdrop
         };
-        let lists::Positioned {
-            flow: in_flow,
-            overlays,
-            fixed,
-        } = self.split_positioned(b);
-        for f in fixed {
-            // The viewport has no border, so the initial style stands in
-            // for the containing block's.
-            let obj = self.overlay(&ComputedStyle::default(), f);
-            let comment = f
-                .node
-                .filter(|_| self.options.source_comments)
-                .map(|n| describe(self.doc, n));
-            self.fixed.push((comment, obj));
+        let outer_abs = boxes::is_containing_block(style).then(|| {
+            std::mem::replace(
+                &mut self.abs_block,
+                lists::ContainingBlock::of(b.node, style),
+            )
+        });
+        let outer_fixed = boxes::is_fixed_containing_block(style).then(|| {
+            self.fixed_block
+                .replace(lists::ContainingBlock::of(b.node, style))
+        });
+        let outer_above_flow = self.above_flow.take();
+        let outer_hideable = self.hideable_ancestor;
+        self.hideable_ancestor = if outer_abs.is_some() {
+            false
+        } else {
+            outer_hideable
+                || style.visibility == eldur_css::Visibility::Collapse
+                || b.node
+                    .is_some_and(|n| self.collapsed.contains(&n) || self.wanted.contains(&n))
+                || (self.markers && b.node.is_some())
+        };
+        let (in_flow, leaving) = lists::split_out_of_flow(b);
+        let mut corner_slots = Vec::new();
+        for c in leaving {
+            if let Some(mut slot) = self.out_of_flow_box(c, 0.0) {
+                if deco.insets.left != 0.0 {
+                    slot.set("x", number(deco.insets.left));
+                }
+                if deco.insets.top != 0.0 {
+                    slot.set("y", number(deco.insets.top));
+                }
+                self.report_aligned_static_place(b, c, line);
+                // Not among the container's items, so a script's DOM is
+                // told where the box goes between them.
+                if self.runtime_dom
+                    && let Content::Blocks(children) = &b.content
+                    && let Some(order) =
+                        children.iter().position(|sibling| std::ptr::eq(sibling, c))
+                {
+                    slot.members.insert(
+                        0,
+                        eldur_qml::Member::PropertyDecl {
+                            ty: "int".to_owned(),
+                            name: "eldurOrder".to_owned(),
+                            value: Some(Value::Number(order as f64)),
+                            readonly: true,
+                            required: false,
+                        },
+                    );
+                }
+                corner_slots.push(slot);
+            }
         }
         let mut inner = match &b.content {
             Content::Blocks(_) if b.kind == BoxKind::Flex => {
@@ -441,6 +527,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 self.percent_height_base = outer;
                 escaped_top = column.escaped_top;
                 escaped_bottom = column.escaped_bottom;
+                only_slots = column.only_slots;
                 column.obj.map(|o| (o, "Content"))
             }
             Content::Inline(items) if inline::has_atomic(items) => {
@@ -455,7 +542,18 @@ impl<'a, 'd> Emitter<'a, 'd> {
             }
             Content::Empty => None,
         };
-        let inner_backdrop = std::mem::replace(&mut self.backdrop, outer_backdrop);
+        self.backdrop = outer_backdrop;
+        self.hideable_ancestor = outer_hideable;
+        let overlays = match outer_abs {
+            Some(outer) => std::mem::replace(&mut self.abs_block, outer).overlays,
+            None => Vec::new(),
+        };
+        let mut overlays = overlays;
+        if let Some(outer) = outer_fixed
+            && let Some(own) = std::mem::replace(&mut self.fixed_block, outer)
+        {
+            overlays.extend(own.overlays);
+        }
         if inner.is_none() && (wanted || b.marker.is_some()) {
             // Scripts write text into it; a marker still has its line.
             inner = Some((self.text(style, decoration, &[], line), "Text"));
@@ -481,6 +579,10 @@ impl<'a, 'd> Emitter<'a, 'd> {
         if bottom_open {
             bottom.join(escaped_bottom);
         }
+        if only_slots && top_open && bottom_open {
+            top.join(bottom);
+            bottom = MarginSet::default();
+        }
 
         let html_id = b
             .node
@@ -501,6 +603,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             || (inner_has_id && outer_id.is_some())
             || b.marker.is_some()
             || !overlays.is_empty()
+            || !corner_slots.is_empty()
             || style.display == Display::TableCell;
         let (mut obj, kind) = if needs_wrapper {
             let inner = inner.map(|(mut obj, suffix)| {
@@ -522,11 +625,8 @@ impl<'a, 'd> Emitter<'a, 'd> {
             if let Some(marker) = &b.marker {
                 extra.push(self.marker(b, marker));
             }
-            self.backdrop = inner_backdrop;
-            for overlay in overlays {
-                extra.push(self.overlay(style, overlay));
-            }
-            self.backdrop = outer_backdrop;
+            extra.append(&mut corner_slots);
+            extra.extend(overlays.into_iter().map(|(_, overlay)| overlay));
             let wrapper = self.wrap_with(style, &deco, paint_background, inner, extra, fill, line);
             (wrapper, TargetKind::Box)
         } else {
@@ -558,6 +658,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         }
         self.label_tap(&mut obj, b.node);
         self.visibility(&mut obj, style);
+        self.stack_above_flow(&mut obj, b, outer_above_flow);
         let e = Emitted {
             obj,
             top,
@@ -565,6 +666,39 @@ impl<'a, 'd> Emitter<'a, 'd> {
             collapse_through: false,
         };
         self.transformed(e, b, line)
+    }
+
+    /// Raises an in-flow box that is positioned, or holds one, over its later
+    /// siblings. Of the same `z`, the later is on top, as in CSS.
+    fn stack_above_flow(&mut self, obj: &mut Object, b: &LayoutBox<'_>, outer: Option<i32>) {
+        let style = &*b.style;
+        if boxes::is_out_of_flow(style) {
+            // Its block has the overlay's own `z` to see to.
+            self.above_flow = outer;
+            return;
+        }
+        let holds = boxes::is_containing_block(style);
+        let own = match style.z_index {
+            // `z-index: 0` is still over what is not positioned.
+            Some(z) if holds && z >= 0 => Some(z + 1),
+            Some(z) if holds && z < 0 => {
+                self.above_flow = outer;
+                return;
+            }
+            _ => None,
+        };
+        let inside = if own.is_some() { None } else { self.above_flow };
+        let level = own.or(inside).or(holds.then_some(1));
+        let page = b
+            .node
+            .is_some_and(|n| Some(n) == self.doc.body() || Some(n) == self.root_node);
+        if let Some(z) = level.filter(|_| !page) {
+            obj.set("z", Value::Number(f64::from(z)));
+        }
+        self.above_flow = match (level, outer) {
+            (Some(a), Some(b)) => Some(a.max(b)),
+            (a, b) => a.or(b),
+        };
     }
 
     /// `e` with `b`'s `transform`, which every kind of box takes.
@@ -691,6 +825,15 @@ impl<'a, 'd> Emitter<'a, 'd> {
             Position::Static => {}
             Position::Relative if is_unmoved(style) => {}
             Position::Absolute | Position::Fixed if positioned => {}
+            Position::Absolute | Position::Fixed => self.diags.warning(
+                "css",
+                line,
+                format!(
+                    "`position: {}` on {} is ignored: a table part or a control's content stays in its table or control",
+                    format!("{:?}", style.position).to_lowercase(),
+                    what()
+                ),
+            ),
             p => self.diags.warning(
                 "css",
                 line,
@@ -719,6 +862,53 @@ impl<'a, 'd> Emitter<'a, 'd> {
         if opacity < 1.0 {
             obj.set("opacity", number(opacity));
         }
+    }
+}
+
+/// An item the size of the initial containing block: the viewport's, at the
+/// page's origin, so it scrolls with the page.
+fn initial_block() -> Object {
+    let mut block = Object::new("Item");
+    block.set("width", Value::expr(format!("{FLICKABLE_ID}.width")));
+    block.set("height", Value::expr(format!("{FLICKABLE_ID}.height")));
+    block
+}
+
+/// What overflows the initial containing block can be scrolled to (CSS
+/// Overflow 3 §2.2).
+fn height_with_initial_block(content_height: &str) -> String {
+    format!("Math.max({content_height}, {ICB_ID}.childrenRect.y + {ICB_ID}.childrenRect.height)")
+}
+
+/// Gives a page without the initial containing block's item one, for a
+/// script's boxes to go to.
+fn ensure_initial_block(root: &mut Object) {
+    let Some(flickable) = root.members.iter_mut().find_map(|m| match m {
+        Member::Child(c) if c.id.as_deref() == Some(FLICKABLE_ID) => Some(c),
+        _ => None,
+    }) else {
+        return;
+    };
+    let exists = flickable
+        .members
+        .iter()
+        .any(|m| matches!(m, Member::Child(c) if c.id.as_deref() == Some(ICB_ID)));
+    if exists {
+        return;
+    }
+    if let Some(Value::Expr(height)) = flickable.get("contentHeight") {
+        let height = height_with_initial_block(height);
+        flickable.set("contentHeight", Value::expr(height));
+    }
+    flickable.push_child(initial_block().with_id(ICB_ID));
+}
+
+fn push_overlays(parent: &mut Object, overlays: Vec<(Option<String>, Object)>) {
+    for (comment, overlay) in overlays {
+        if let Some(comment) = comment {
+            parent.members.push(Member::Comment(comment));
+        }
+        parent.push_child(overlay);
     }
 }
 

@@ -116,9 +116,11 @@ rowSpan/columnSpan`; `grid-template-areas` resolved to placements.
 approximated.
 
 **Positioning.** `relative` → `transform: Translate`; `absolute` → a child of
-the nearest positioned ancestor's wrapper (outside its layout), placed with
-`x`/`y`/`width` bindings or anchors from `top/right/bottom/left`; `fixed` →
-child of the window's content item, outside the Flickable; `sticky` →
+the containing block's wrapper (outside its layout), or with no positioned or
+transformed ancestor of the initial containing block's item in the Flickable,
+placed with `x`/`y`/`width` bindings or anchors from `top/right/bottom/left`;
+`fixed` → child of the window's content item, outside the Flickable, unless a
+transformed ancestor holds it; `sticky` →
 treated as relative (diagnostic). `z-index` → `z`.
 
 **Replaced elements.** `img` → `Image` (`fillMode` from `object-fit`,

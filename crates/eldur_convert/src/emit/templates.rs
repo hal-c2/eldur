@@ -13,14 +13,14 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
-use eldur_css::{Condition, PseudoState, Structural};
+use eldur_css::{Condition, Position, PseudoState, Structural};
 use eldur_dom::{Document, LocalName, NodeId, QualName, ns};
 use eldur_js::{CreatedElement, DomQuery, ElementRef};
 use eldur_qml::{Member, Object, Value};
 
-use super::Target;
 use super::dynamic::{self, Inputs, Probe};
-use crate::boxes::describe;
+use super::{ICB_ID, Target, ensure_initial_block, lists};
+use crate::boxes::{describe, is_containing_block, is_fixed_containing_block, is_out_of_flow};
 use crate::diag::Diagnostics;
 use crate::metadata::class_prop;
 use crate::scripts::{Scripts, find_mut};
@@ -155,6 +155,109 @@ impl Builder<'_> {
                 .expect("text in an element");
         }
     }
+}
+
+/// A template has no slot to read a static position or visibility from, and
+/// says where the runtime is to put it instead of its DOM parent.
+fn leave_flow(
+    obj: &mut Object,
+    doc: &Document,
+    styles: &eldur_css::StyleMap,
+    inst: &Inst,
+    targets: &BTreeMap<NodeId, Target>,
+    line: Option<u32>,
+    diags: &mut Diagnostics,
+) {
+    let mut lost_static = false;
+    let slot = obj.members.iter().find_map(|m| match m {
+        Member::PropertyDecl {
+            name,
+            value: Some(Value::Expr(e)),
+            ..
+        } if name == lists::SLOT_PROPERTY => Some(e.clone()),
+        _ => None,
+    });
+    let own_visible = obj.get("visible").and_then(|v| match v {
+        Value::Expr(e) => e
+            .split_once(") && (")
+            .and_then(|(_, own)| own.strip_suffix(')'))
+            .map(str::to_owned),
+        _ => None,
+    });
+    obj.members.retain(|m| match m {
+        Member::PropertyDecl { name, .. } if name == lists::SLOT_PROPERTY => false,
+        Member::Property {
+            name,
+            value: Value::Expr(e),
+        } if name == "x" || name == "y" => {
+            let slot = e.contains(".staticX(") || e.contains(".staticY(");
+            lost_static |= slot;
+            !slot
+        }
+        Member::Property {
+            name,
+            value: Value::Expr(e),
+        } if name == "visible" => !slot.as_ref().is_some_and(|s| e.contains(&format!("{s}."))),
+        _ => true,
+    });
+    if let Some(own) = own_visible {
+        obj.set("visible", Value::expr(own));
+    }
+    if lost_static {
+        diags.warning(
+            "css",
+            line,
+            format!(
+                "a script's {} has no offsets on an axis: it sits at its containing block's start, not where it would have been in flow",
+                describe(doc, inst.node)
+            ),
+        );
+    }
+    let fixed = styles
+        .computed(inst.node)
+        .is_some_and(|s| s.style.position == Position::Fixed);
+    let block = std::iter::successors(doc.parent(inst.node), |&n| doc.parent(n)).find(|&n| {
+        styles.computed(n).is_some_and(|s| {
+            if fixed {
+                is_fixed_containing_block(&s.style)
+            } else {
+                is_containing_block(&s.style)
+            }
+        })
+    });
+    let value = match block {
+        None if fixed => Value::string("window"),
+        None => Value::string("initial"),
+        Some(b) if doc.parent(inst.node) == Some(b) => Value::string("parent"),
+        Some(b) => match targets.get(&b) {
+            Some(t) => Value::expr(t.qml_id.clone()),
+            None => {
+                diags.warning(
+                    "css",
+                    line,
+                    format!(
+                        "a script's {} is placed against the page: nothing identifies its containing block, {}, at run time",
+                        describe(doc, inst.node),
+                        describe(doc, b)
+                    ),
+                );
+                Value::string("initial")
+            }
+        },
+    };
+    obj.members
+        .insert(0, decl("var", "eldurBlock", value, true));
+    // The runtime makes the slot when the DOM first takes the box.
+    obj.members.insert(
+        0,
+        Member::PropertyDecl {
+            ty: "Item".to_owned(),
+            name: lists::SLOT_PROPERTY.to_owned(),
+            value: None,
+            readonly: false,
+            required: false,
+        },
+    );
 }
 
 /// Every id in `obj`.
@@ -613,6 +716,7 @@ pub(crate) fn add(
     let mut static_positions: BTreeMap<String, (NodeId, bool)> = BTreeMap::new();
     let mut unreachable: BTreeSet<(usize, u16)> = BTreeSet::new();
     let mut reported: HashSet<usize> = HashSet::new();
+    let mut has_out_of_flow = false;
     for (i, inst) in insts.iter().enumerate() {
         let e = &created[inst.created];
         let Some(obj) = paths
@@ -711,6 +815,13 @@ pub(crate) fn add(
             *e = dynamic::replace_tokens(e, &mut expr_of);
         });
         dynamic::remove_markers(&mut obj);
+        if styles
+            .computed(inst.node)
+            .is_some_and(|s| is_out_of_flow(&s.style))
+        {
+            leave_flow(&mut obj, &doc, &styles, inst, targets, e.line, diags);
+            has_out_of_flow = true;
+        }
         objects.push(Some(obj));
     }
     for (e, c) in unreachable {
@@ -942,6 +1053,13 @@ pub(crate) fn add(
         .iter()
         .map(|key| format!("{}: {}", eldur_qml::quote_string(key), names[keys[key]]))
         .collect();
+    if has_out_of_flow {
+        ensure_initial_block(root);
+        root.members.insert(
+            0,
+            decl("var", "eldurInitialBlock", Value::expr(ICB_ID), true),
+        );
+    }
     root.members.insert(
         0,
         decl(
