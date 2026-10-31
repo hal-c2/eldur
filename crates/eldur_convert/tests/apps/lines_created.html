@@ -1,0 +1,101 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Lines in and around created boxes</title>
+<style>
+body { margin: 8px; font: 16px Arial, sans-serif; }
+.ib { display: inline-block; width: 40px; height: 30px; background: #ccc; }
+.card { width: 200px; background: #eef; }
+.j { width: 200px; text-align: justify; }
+.c { width: 200px; text-align: center; }
+</style>
+</head>
+<body>
+Words in body <span id="s0">span</span>
+<div id="host" class="card"></div>
+<div id="ref1">Before <em id="em1">em</em> after</div>
+<div id="ref2">Run <b id="b2">bold</b> and <i id="i2">it</i> tail</div>
+<div id="wrapclick" style="width:120px"><span id="ws">Words on a first line then short</span> <button id="wb">x</button></div>
+<div id="wrapmade" style="width:120px"></div>
+<div id="wrapreal" style="width:200px"></div>
+<div id="travel"><div id="tp">Own words</div><div id="tn">next</div></div>
+<script>
+var get = function (id) { return document.getElementById(id); };
+var make = function (tag, id, cls, text) {
+  var e = document.createElement(tag);
+  e.id = id;
+  if (cls) e.className = cls;
+  if (text) e.textContent = text;
+  return e;
+};
+var log = function (s) { console.log(s); };
+var box = function (id) { return make("span", id, "ib"); };
+
+// A created box's children on lines, wrapping past its width.
+var host = get("host");
+host.appendChild(document.createTextNode("Text then "));
+host.appendChild(box("c1"));
+host.appendChild(document.createTextNode(" more and more words to wrap "));
+host.appendChild(make("button", "c2", "", "Press this"));
+host.appendChild(make("span", "c3", "", " span "));
+host.appendChild(box("c4"));
+
+var just = make("div", "just", "j");
+just.appendChild(document.createTextNode("Spread these words "));
+just.appendChild(box("j1"));
+just.appendChild(document.createTextNode(" over a wrapping line and on"));
+document.body.appendChild(just);
+
+var center = make("div", "center", "c");
+center.appendChild(document.createTextNode("Mid "));
+center.appendChild(box("m1"));
+document.body.appendChild(center);
+
+var narrow = make("div", "narrow", "");
+narrow.style.width = "50px";
+narrow.appendChild(make("button", "nb", "", "Long one"));
+document.body.appendChild(narrow);
+
+var nowrap = make("div", "nowrap", "");
+nowrap.style.width = "50px";
+nowrap.style.whiteSpace = "nowrap";
+nowrap.appendChild(make("button", "nw", "", "Long one"));
+document.body.appendChild(nowrap);
+
+var block = make("div", "mix", "card");
+block.appendChild(document.createTextNode("first "));
+block.appendChild(box("mb"));
+block.appendChild(make("div", "inner", "", "a block"));
+block.appendChild(document.createTextNode("second"));
+document.body.appendChild(block);
+
+// A box and anonymous text in body.
+document.body.insertBefore(box("bodybox"), host);
+
+// Before a span cut by a box, and in a run.
+get("ref1").insertBefore(box("r1"), get("em1"));
+get("ref2").insertBefore(document.createTextNode("new "), get("b2"));
+get("ref2").insertBefore(box("r2"), get("i2"));
+log("text " + JSON.stringify(get("ref1").textContent) + " " + JSON.stringify(get("ref2").textContent) + " " + JSON.stringify(host.textContent));
+
+get("wrapclick").addEventListener("click", function (e) { log("press " + e.target.id); });
+
+// The same words in a created span, a real Text on the layouter's lines.
+var wrapmade = get("wrapmade");
+wrapmade.appendChild(make("span", "ms", "", "Words on a first line then short"));
+wrapmade.appendChild(make("button", "mb2", "", "x"));
+wrapmade.addEventListener("click", function (e) { log("press " + e.target.id); });
+
+// A block's own Text reached by traversal, no script seen to fill it.
+get("travel").firstElementChild.appendChild(box("tb"));
+get("travel").firstElementChild.appendChild(make("span", "tw", "", "after"));
+
+// After a box the span cannot join a model: its own Text, on lines of its own.
+var wrapreal = get("wrapreal");
+wrapreal.appendChild(make("button", "rb", "", "x"));
+wrapreal.appendChild(make("span", "rs", "", "Words on a first line and then a much longer second line then short"));
+wrapreal.addEventListener("click", function (e) { log("press " + e.target.id); });
+</script>
+</body>
+</html>

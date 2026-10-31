@@ -206,6 +206,8 @@ Snapping a rounded box's position instead (`Translate` or margins) needs its sce
 
 A justified line with boxes shares what it has left across its spaces, those between items and those in its text: a Text's one line by word spacing, the lines of a longer Text by Qt's own justification. **Not done:** the last line of a longer Text keeps its words' spacing when a box follows it on a justified line; the box itself is still placed as CSS says.
 
+A created box's own inline children are on the same layouter: the runtime groups a box's children into runs and blocks at each layout and gives each run an anonymous `EldurLines`, which the DOM does not see. A flex or grid container's children leave their lines again. A block's anonymous static text becomes a line where a created box lands next to it, and is not a `Text` any more. A run's own `line-height` counts in its line's height. A press beside a run's short line is not on the run: its box is the bounding box of its lines, and hit testing asks the layouter which lines it covers.
+
 **HTML/CSS**
 ```html
 <p>Read the <strong>docs</strong> at <a href="https://x.example">the site</a>, it's <em>fast</em>.</p>

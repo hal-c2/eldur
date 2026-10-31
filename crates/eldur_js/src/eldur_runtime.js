@@ -3082,6 +3082,10 @@ function _childContainer(raw) {
         return m.flow;
     }
     var isContentItem = Boolean(raw.parent && raw.parent.contentItem === raw);
+    // A box's lines are made at layout; its children are still its own.
+    if (_gIsBox(raw)) {
+        return base;
+    }
     if (base.children) {
         for (var i = 0; i < base.children.length; ++i) {
             var ch = base.children[i];
@@ -3189,7 +3193,7 @@ function _rawKids(raw, withText) {
             continue;
         }
         if (!isLayout && _isPlainTextItem(child) && !child.objectName && !_meta(child).createdTag) {
-            if (withText && _vHasRules()) {
+            if (withText && _vHasRules() && !_meta(child).vSplit) {
                 out.push(child);
             }
             continue;
@@ -3329,6 +3333,9 @@ function getText(item) {
     var vRun = _findTextChild(raw);
     if (vRun && _gIsBox(raw) && _vModelOf(vRun)) {
         return _vText(_vModelOf(vRun));
+    }
+    if (vRun && _gIsBox(raw) && _meta(vRun).vSplit) {
+        return _rawKids(raw, true).filter(function(k) { return k !== vRun; }).map(getText).join("");
     }
     if (vRun && _gIsBox(raw) && vRun.text !== "" && _rawKids(raw, true).length > 0) {
         return vRun.text + _rawKids(raw, true).filter(function(k) { return k !== vRun; }).map(getText).join("");
@@ -5889,6 +5896,14 @@ function _lineToJoin(raw, nodes, ref) {
     if (!boxes || !_linesAvailable()) {
         return null;
     }
+    if (before && _vAnonText(before)) {
+        return { lines: _anonTextBecomesLines(raw, column, before, after), ref: null };
+    }
+    if (after && _vAnonText(after)) {
+        var next = at + 1 < kids.length ? kids[at + 1] : null;
+        var made = _anonTextBecomesLines(raw, column, after, next);
+        return { lines: made, ref: made.children.length > 0 ? made.children[0] : null };
+    }
     var lines = _newLines(raw);
     _insertInFlow(column, [lines], after);
     if (at === 0 && !_meta(raw).createdTag) {
@@ -5913,6 +5928,26 @@ function _linesAvailable() {
     return _linesKnown;
 }
 
+// A block's anonymous text a box comes next to: they share a line, as the text
+// had no element of its own the line would have to stand in for.
+function _anonTextBecomesLines(owner, column, text, next) {
+    var lines = _newLines(owner);
+    lines.font = text.font;
+    lines.color = text.color;
+    if (text.lineHeightMode === 1) {
+        lines.lineHeight = text.lineHeight;
+    }
+    var runs = _takeRuns(text, _vModelOf(text));
+    text.parent = null;
+    text.destroy();
+    _insertInFlow(column, [lines], next);
+    if (runs.length > 0) {
+        _insertInFlow(lines, runs, null);
+        runs.forEach(function(n) { _dressLineText(lines, n); });
+    }
+    return lines;
+}
+
 // A box among the runs of one Text: a Text cannot hold it, so each run becomes
 // an item of a line, which takes the Text's place in the element.
 function _lineSplitsModel(raw, ref) {
@@ -5929,6 +5964,20 @@ function _lineSplitsModel(raw, ref) {
     if (text.lineHeightMode === 1) {
         lines.lineHeight = text.lineHeight;
     }
+    var runs = _takeRuns(text, model);
+    if (plain) {
+        column = _appendTarget(raw);
+    }
+    _insertInFlow(column, [lines], null);
+    if (runs.length > 0) {
+        _insertInFlow(lines, runs, null);
+        runs.forEach(function(n) { _dressLineText(lines, n); });
+    }
+    return { lines: lines, ref: ref ? _gCurrent(ref) : null };
+}
+
+// What a Text shows as items of their own, leaving the Text empty.
+function _takeRuns(text, model) {
     var runs = [];
     if (model) {
         runs = model.kids.slice();
@@ -5945,15 +5994,24 @@ function _lineSplitsModel(raw, ref) {
     text.textFormat = 0; // Text.PlainText; a library script has no `Text`
     text.text = "";
     _vRendering = false;
-    if (plain) {
-        column = _appendTarget(raw);
+    return runs;
+}
+
+// A box or block coming into a box with text: its Text cannot stand beside them
+// on a line, so the runs become items and flow with them.
+function _gBoxTextToKids(raw) {
+    var text = _findTextChild(raw);
+    if (!text || !_linesAvailable()) {
+        return;
     }
-    _insertInFlow(column, [lines], null);
+    var model = _vModelOf(text);
+    if (!model && text.text === "") {
+        return;
+    }
+    var runs = _takeRuns(text, model);
     if (runs.length > 0) {
-        _insertInFlow(lines, runs, null);
-        runs.forEach(function(n) { _dressLineText(lines, n); });
+        _insertInFlow(raw, runs, null);
     }
-    return { lines: lines, ref: ref ? _gCurrent(ref) : null };
 }
 
 function _vRunToItem(run) {
@@ -5991,11 +6049,32 @@ function _insertChildren(raw, nodes, ref) {
             spaces.length = 0;
         }
         _insertRawNodesBefore(line.lines, usable, line.ref);
-        usable.forEach(function(n) { _dressLineText(line.lines, n); });
+        usable.forEach(function(n) {
+            _dressLineText(line.lines, n);
+            // A created element's Text breaks where the line says.
+            if (_isPlainTextItem(n)) {
+                n.wrapMode = 1; // Text.WordWrap
+            }
+        });
         return;
+    }
+    if (_gIsBox(raw) && !nodes.every(_vStaysInline)) {
+        _gBoxTextToKids(raw);
+        ref = ref ? _gCurrent(ref) : ref;
     }
     // What is not inline-level goes beside the anonymous line, not in it.
     var at = ref && ref.parent && _isLines(ref.parent) && _isAnonLines(ref.parent) ? ref.parent : ref;
+    // A box's lines are remade from its children at its next layout.
+    if (at && at !== ref && _gIsBox(raw)) {
+        var inLine = [];
+        for (var k = 0; k < at.children.length; ++k) {
+            inLine.push(at.children[k]);
+        }
+        _insertInFlow(raw, inLine, at);
+        at.parent = null;
+        at.destroy();
+        at = ref;
+    }
     _insertRawNodesBefore(_appendTarget(raw), nodes, at);
 }
 
@@ -9332,7 +9411,12 @@ function _deepestUnder(item, scene) {
             return found;
         }
     }
-    return inside ? item : null;
+    // Positioned boxes hang from the initial containing block; it paints nothing,
+    // and lies over the page.
+    if (inside && _isPlainTextItem(item) && _isLines(item.parent) && !item.parent.runCovers(item, local.x, local.y)) {
+        return null;
+    }
+    return inside && item !== _root.eldurInitialBlock ? item : null;
 }
 
 function _deepestAt(scene) {
@@ -9507,6 +9591,7 @@ function _vToReal(v) {
     var made = _unwrap(document.createElement(v.eldurTag));
     var mm = _meta(made);
     var script = m.wrapper;
+    var look = _vStyle(v);
     _vRemove(v);
     if (v.objectName) {
         made.objectName = v.objectName;
@@ -9528,6 +9613,15 @@ function _vToReal(v) {
     }
     if (text !== "") {
         setText(made, text);
+    }
+    // What the markup showed was the model's; on a closed page no pass paints this.
+    if (_isPlainTextItem(made)) {
+        made.color = look.color;
+        made.font.weight = look.weight;
+        made.font.italic = look.italic;
+        made.font.underline = look.underline;
+        made.font.strikeout = look.strike;
+        made.font.pixelSize = look.size;
     }
     if (kids && !_vTryInsert(made, kids, null)) {
         _insertChildren(made, kids, null);
@@ -11687,7 +11781,7 @@ function _gIntrinsic(raw, s) {
     if (text && text.text !== "") {
         best = Math.ceil(text.implicitWidth);
     }
-    var kids = _gKids(raw);
+    var kids = _gBoxKids(raw);
     var row = _gIsFlex(s) && String(s["flex-direction"]).indexOf("row") === 0;
     var line = 0;
     var gap = _gPx(s["column-gap"], null, s.fontSize, s.rootSize) || 0;
@@ -11709,6 +11803,28 @@ function _gIntrinsic(raw, s) {
         }
     }
     return Math.max(best, line) + frame;
+}
+
+// A button's label wraps, unless the white-space it inherits forbids it.
+function _gLabelled(raw, s) {
+    return s.tag === "button" && raw.contentItem && typeof raw.contentItem.lineCount === "number";
+}
+
+// As narrow as a button goes: its widest word, or its whole label on one line.
+function _gMinContent(raw, s) {
+    var whole = _gIntrinsic(raw, s);
+    var white = s["white-space"];
+    if (white === "nowrap" || white === "pre") {
+        return whole;
+    }
+    var label = raw.contentItem;
+    label.wrapMode = 1; // Text.WordWrap
+    var metrics = _vMetrics(label);
+    var widest = 0;
+    String(raw.text).split(/\s+/).forEach(function(word) {
+        widest = Math.max(widest, metrics.advanceWidth(word));
+    });
+    return whole - Math.max(0, metrics.advanceWidth(String(raw.text)) - widest);
 }
 
 function _gOuterWidth(s, e, content) {
@@ -11747,6 +11863,8 @@ function _gPlace(raw, avail, opts, heightBasis) {
         used = Math.min(_gIntrinsic(raw, s), Math.max(avail - (e.ml || 0) - (e.mr || 0), 0));
         if (opts.shrink === "max") {
             used = _gIntrinsic(raw, s);
+        } else if (_gLabelled(raw, s)) {
+            used = Math.max(used, _gMinContent(raw, s));
         }
     } else {
         used = Math.max(avail - (e.ml || 0) - (e.mr || 0), frameW);
@@ -11772,6 +11890,9 @@ function _gPlace(raw, avail, opts, heightBasis) {
     }
     var content = { height: 0, top: 0, bottom: 0, through: false };
     var innerH = fixedH === null ? null : Math.max(fixedH - frameH, 0);
+    if (_gIsFlex(s) || _gIsGrid(s)) {
+        _gLinesLeave(raw);
+    }
     if (_gIsFlex(s)) {
         content.height = _gLayoutFlex(raw, s, e, innerW, innerH);
     } else if (_gIsGrid(s)) {
@@ -11813,11 +11934,167 @@ function _gPlaceLeaf(raw, s, e, used, fixedH, margins, frameH) {
     var height = fixedH;
     if (height === null) {
         height = raw.implicitHeight;
+        if (_gLabelled(raw, s) && raw.contentItem.lineCount > 1) {
+            var line = _gLineHeight(s);
+            height += (raw.contentItem.lineCount - 1) * (line === null ? _gControlLine(s) : line);
+        }
     }
     if (raw.height !== height) {
         raw.height = height;
     }
     return margins;
+}
+
+// What flows in a box, text nodes too: not its own `Text`, not virtual nodes.
+function _gBoxKids(raw) {
+    return _rawKids(raw, true).filter(function(kid) {
+        return !kid.__eldurInline && (kid.objectName || _meta(kid).createdTag || !_isPlainTextItem(kid));
+    });
+}
+
+// A box's kids in order: a run of what shares lines, or one block.
+function _gFlowGroups(raw) {
+    var kids = _gBoxKids(raw);
+    var groups = [];
+    var run = null;
+    for (var i = 0; i < kids.length; ++i) {
+        var ks = _gStyle(kids[i]);
+        // Its slot is what sits here, and it is placed against its containing block.
+        if (_gOutOfFlow(ks) && ks.display !== "none") {
+            continue;
+        }
+        if (_gInlineLevel(ks)) {
+            if (!run) {
+                run = { run: [], lines: null };
+                groups.push(run);
+            }
+            run.run.push(kids[i]);
+        } else if (ks.display === "none" && run) {
+            run.run.push(kids[i]);
+        } else {
+            run = null;
+            groups.push({ kid: kids[i] });
+        }
+    }
+    return groups;
+}
+
+// Whether the box's children are already what `groups` says. A line made here
+// is anonymous, so the DOM still sees its items as the box's.
+function _gLinesMatch(raw, groups) {
+    var at = 0;
+    for (var i = 0; i < raw.children.length; ++i) {
+        var child = raw.children[i];
+        var group = groups[at];
+        if (_isAnonLines(child)) {
+            if (!group || !group.run || child.children.length !== group.run.length) {
+                return false;
+            }
+            for (var k = 0; k < group.run.length; ++k) {
+                if (child.children[k] !== group.run[k]) {
+                    return false;
+                }
+            }
+            group.lines = child;
+            ++at;
+        } else if (group && group.kid === child) {
+            ++at;
+        } else if (groups.some(function(g) { return g.kid === child || g.run && g.run.indexOf(child) !== -1; })) {
+            return false;
+        }
+    }
+    return at === groups.length;
+}
+
+// A flex or grid container's children are its items, not a line's.
+function _gLinesLeave(raw) {
+    for (var i = raw.children.length - 1; i >= 0; --i) {
+        if (_isAnonLines(raw.children[i])) {
+            _gUnline(raw.children[i], raw);
+        }
+    }
+}
+
+function _gUnline(lines, parent) {
+    while (lines.children.length > 0) {
+        var kid = lines.children[0];
+        kid.parent = null;
+        kid.parent = parent;
+    }
+    lines.parent = null;
+    lines.destroy();
+}
+
+function _gArrangeLines(raw, groups) {
+    if (_gLinesMatch(raw, groups)) {
+        return;
+    }
+    var old = [];
+    for (var i = 0; i < raw.children.length; ++i) {
+        if (_isAnonLines(raw.children[i])) {
+            old.push(raw.children[i]);
+        }
+    }
+    groups.forEach(function(group) {
+        if (group.kid) {
+            group.kid.parent = null;
+            group.kid.parent = raw;
+            return;
+        }
+        var lines = _newLines(raw);
+        lines.parent = raw;
+        group.run.forEach(function(kid) {
+            kid.parent = null;
+            kid.parent = lines;
+        });
+        group.lines = lines;
+    });
+    old.forEach(function(lines) { _gUnline(lines, raw); });
+}
+
+// One box's run of inline content on the one layouter there is. Returns its height.
+function _gLayOutRun(group, s, innerW, x, y) {
+    var lines = group.lines;
+    var whitespace = s["white-space"];
+    lines.font = _gFontOf(s);
+    lines.color = _gQtColor(s.color);
+    var line = _gLineHeight(s);
+    lines.lineHeight = line === null ? 0 : line;
+    lines.noWrap = whitespace === "nowrap" || whitespace === "pre";
+    lines.preserveSpace = whitespace !== "normal" && whitespace !== "nowrap";
+    var align = s["text-align"];
+    // Text.AlignHCenter, AlignRight, AlignJustify, AlignLeft.
+    lines.textAlign = align === "center" || align === "-webkit-center" ? 4
+        : align === "right" || align === "end" || align === "-webkit-right" ? 2
+        : align === "justify" ? 8 : 1;
+    for (var i = 0; i < group.run.length; ++i) {
+        var kid = group.run[i];
+        if (_meta(kid).createdTag === "#text") {
+            _dressLineText(lines, kid);
+            continue;
+        }
+        var ks = _gStyle(kid);
+        if (ks.display === "none") {
+            _gHide(kid);
+            continue;
+        }
+        kid.visible = true;
+        var ke = _gEdges(kid, ks, innerW);
+        _gPlace(kid, innerW, { shrink: true }, null);
+        _gLineMargins(kid, ke);
+        if (_isPlainTextItem(kid)) {
+            // The line places it, on its natural height.
+            _gSet(kid, "lineHeightMode", 0);
+            _gSet(kid, "lineHeight", 1);
+            _gSet(kid, "wrapMode", 1);
+            lines.setRunLineHeight(kid, _gLineHeight(ks));
+        }
+    }
+    lines.x = x;
+    lines.y = y;
+    lines.width = innerW;
+    lines.layout();
+    return lines.implicitHeight;
 }
 
 // Block children stack, with their margins collapsing; inline-level ones share
@@ -11843,35 +12120,31 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
         text.x = x;
         text.y = y;
     }
-    var kids = _gKids(raw);
-    var line = [];
-    var flush = function() {
-        if (line.length === 0) {
-            return;
+    var groups = _gFlowGroups(raw);
+    _gArrangeLines(raw, groups);
+    for (var i = 0; i < groups.length; ++i) {
+        var group = groups[i];
+        if (group.run) {
+            var height = _gLayOutRun(group, s, innerW, x, first && collapseTop ? y : y + pending);
+            if (height > 0) {
+                if (first && collapseTop) {
+                    through = pending;
+                } else {
+                    y += pending;
+                }
+                pending = 0;
+                first = false;
+                y += height;
+            }
+            continue;
         }
-        if (first && collapseTop) {
-            through = pending;
-        } else {
-            y += pending;
-        }
-        pending = 0;
-        first = false;
-        y += _gLines(line, s, innerW, x, y);
-        line = [];
-    };
-    for (var i = 0; i < kids.length; ++i) {
-        var kid = kids[i];
+        var kid = group.kid;
         var ks = _gStyle(kid);
         if (ks.display === "none") {
             _gHide(kid);
             continue;
         }
         kid.visible = true;
-        if (_gInlineLevel(ks) && !_gOutOfFlow(ks)) {
-            line.push(kid);
-            continue;
-        }
-        flush();
         var ke = _gEdges(kid, ks, innerW);
         var got = _gPlace(kid, innerW, null, innerH);
         var kidWidth = kid.width;
@@ -11895,7 +12168,6 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
         pending = got.mb;
         first = false;
     }
-    flush();
     var bottom = 0;
     if (collapseBottom && !first) {
         bottom = pending;
@@ -11917,90 +12189,6 @@ function _gLineShift(s) {
     var metrics = _gMetrics(s);
     var ascent = Math.round(metrics.ascent);
     return Math.floor((line - ascent - Math.round(metrics.descent)) / 2);
-}
-
-function _gBaseline(raw, s) {
-    var text = _gTextOf(raw);
-    if (text && text.text !== "") {
-        var metrics = _gMetrics(s);
-        var line = _gLineHeight(s);
-        var height = line === null ? metrics.ascent + metrics.descent : line;
-        var e = _gEdges(raw, s, 0);
-        // A browser places text on whole-pixel ascent and descent, as in `_gLines`.
-        var ascent = Math.round(metrics.ascent);
-        return e.bt + e.pt + (text.lineCount - 1) * height
-            + Math.floor((height - ascent - Math.round(metrics.descent)) / 2) + ascent;
-    }
-    // A scroller's baseline is its bottom margin edge.
-    if (s.tag === "textarea") {
-        return raw.height + (_gEdges(raw, s, 0).mb || 0);
-    }
-    if (_G_FRAMED[s.tag] && raw.contentItem) {
-        var controlLine = _gLineHeight(s);
-        if (controlLine === null) {
-            controlLine = _gControlLine(s);
-        }
-        var fm = _gMetrics(s);
-        var up = Math.round(fm.ascent);
-        var edges = _gEdges(raw, s, 0);
-        return edges.bt + edges.pt + Math.floor((controlLine - up - Math.round(fm.descent)) / 2) + up;
-    }
-    if (typeof raw.baselineOffset === "number" && !_gIsBox(raw) && raw.baselineOffset > 0) {
-        return raw.baselineOffset;
-    }
-    return raw.height;
-}
-
-function _gLines(kids, s, innerW, x, y) {
-    var metrics = _gMetrics(s);
-    var lineHeight = _gLineHeight(s);
-    var strut = lineHeight === null ? metrics.ascent + metrics.descent : lineHeight;
-    // A browser places a line on whole-pixel ascent and descent.
-    var ascent = Math.round(metrics.ascent);
-    var strutUp = ascent + Math.floor((strut - ascent - Math.round(metrics.descent)) / 2);
-    var strutDown = strut - strutUp;
-    var lines = [];
-    var cur = { items: [], width: 0 };
-    for (var i = 0; i < kids.length; ++i) {
-        var ks = _gStyle(kids[i]);
-        var ke = _gEdges(kids[i], ks, innerW);
-        _gPlace(kids[i], innerW, { shrink: true }, null);
-        var outer = kids[i].width + (ke.ml || 0) + (ke.mr || 0);
-        if (cur.items.length > 0 && cur.width + outer > innerW) {
-            lines.push(cur);
-            cur = { items: [], width: 0 };
-        }
-        cur.items.push({ kid: kids[i], e: ke, s: ks, outer: outer });
-        cur.width += outer;
-    }
-    lines.push(cur);
-    var total = 0;
-    var align = s["text-align"];
-    for (var l = 0; l < lines.length; ++l) {
-        var up = strutUp;
-        var down = strutDown;
-        var items = lines[l].items;
-        for (var a = 0; a < items.length; ++a) {
-            var it = items[a];
-            it.base = _gBaseline(it.kid, it.s) + (it.e.mt || 0);
-            up = Math.max(up, it.base);
-            down = Math.max(down, it.kid.height + (it.e.mt || 0) + (it.e.mb || 0) - it.base);
-        }
-        var cx = x;
-        var free = innerW - lines[l].width;
-        if (align === "center" || align === "-webkit-center") {
-            cx += free / 2;
-        } else if (align === "right" || align === "end" || align === "-webkit-right") {
-            cx += free;
-        }
-        for (var p = 0; p < items.length; ++p) {
-            items[p].kid.x = cx + (items[p].e.ml || 0);
-            items[p].kid.y = y + total + up - items[p].base + (items[p].e.mt || 0);
-            cx += items[p].outer;
-        }
-        total += up + down;
-    }
-    return total;
 }
 
 function _gHide(kid) {
@@ -13454,7 +13642,8 @@ function _gLayoutRoots() {
     var outOfFlow = [];
     for (var i = 0; i < _gLive.length; ++i) {
         var raw = _gLive[i];
-        if (!raw.parent || _gIsBox(raw.parent) || !_isConnected(raw)) {
+        if (!raw.parent || _gIsBox(raw.parent) || !_isConnected(raw)
+            || _isAnonLines(raw.parent) && _gIsBox(raw.parent.parent)) {
             continue;
         }
         var s = _gStyle(raw);

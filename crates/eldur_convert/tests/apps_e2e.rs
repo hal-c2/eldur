@@ -33,8 +33,6 @@ const ROWS: &str =
     "table rows are whole pixels: 33 against Chromium's 32.59, adding up down the table";
 const BUTTONWIDTH: &str = "a button's width is whole pixels (`Math.ceil` in emit/controls.rs): \
                            five on a line add up to 2.2px against Chromium's fractions";
-const MONOLINE: &str = "a created textarea is 40 high, not 42: the runtime measures monospace in Qt \
-                        where the converter's font_extents table has Chromium's; what follows is higher";
 const SPANSCAN: &str = "a wrapped span's box comes from scanning its Text in half-font steps, so its height lands on a step: 56 for Chromium's 53";
 const WIDEBLOCK: &str = "a block wider than the viewport widens its column: a non-filling Layout item's preferred width is the column's minimum in Qt, so its siblings grow with it";
 const CONTROLROW: &str = "with the form between them hidden, the heading's bottom margin of 21.44 looks lost, leaving only #done's 16; not confirmed";
@@ -59,7 +57,6 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("cards", "* .desc[*] height:", FONTFOLLOW),
     ("cards", "* .price[*] y:", FONTFOLLOW),
     ("cards", "* .price[*] height:", FONT),
-    ("cards", "* .price[*] width:", FONT),
     ("cards", "* #cart[*] x:", FONT),
     ("cards", "* #cart[*] width:", FONT),
     ("theme", "* body[*] text:", NEVER_SCRIPT),
@@ -71,12 +68,15 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("hidden_lines", "* #s4[*] width:", HANGING),
     ("lines_closed", "* #sp[*] height:", SPANSCAN),
     ("lines_open", "* #sp[*] height:", SPANSCAN),
+    ("lines_created", "* #ws[*] width:", SPANSCAN),
+    ("lines_created", "* #ws[*] height:", SPANSCAN),
+    ("lines_created", "* #ms[*] width:", SPANSCAN),
+    ("lines_created", "* #ms[*] height:", SPANSCAN),
     ("lines_closed", "narrow #v[*] width:", WIDEBLOCK),
     ("lines_closed", "narrow #w2[*] width:", WIDEBLOCK),
     ("lines_open", "narrow #v[*] width:", WIDEBLOCK),
     ("lines_open", "narrow #w2[*] width:", WIDEBLOCK),
     ("created_lines", "* #reset[*] x:", BUTTONWIDTH),
-    ("created_controls", "* select[*] y:", MONOLINE),
 ];
 
 const TEST: &str = r##"
@@ -499,4 +499,9 @@ fn lines_closed() {
 #[test]
 fn lines_open() {
     page("lines_open");
+}
+
+#[test]
+fn lines_created() {
+    page("lines_created");
 }

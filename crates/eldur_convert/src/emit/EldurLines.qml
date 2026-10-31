@@ -27,6 +27,7 @@ Item {
 
     property var _runs: new Map()
     property var _watched: new Set()
+    property var _ownLeading: new Map()
     property bool _running: false
     property bool _scheduled: false
     property bool _laidOut: false
@@ -64,6 +65,28 @@ Item {
         }
     }
 
+    // A run keeps its font's natural height to be placed, so what its own
+    // `line-height` asks of the line is told here. Null is `normal`.
+    function setRunLineHeight(item, pixels) {
+        if (pixels === null) {
+            _ownLeading.delete(item);
+        } else {
+            _ownLeading.set(item, pixels);
+        }
+    }
+
+    // Whether a point in a run's own coordinates is on one of its lines: its box
+    // is their bounding box, and a press beside a short line is not on it.
+    function runCovers(item, x, y) {
+        const run = _runs.get(item);
+        if (!run || !run.place) {
+            return true;
+        }
+        return run.place.some(function(p) {
+            return x >= p.x && x < p.x + p.width && y >= p.y && y < p.y + p.height;
+        });
+    }
+
     function _isText(item) {
         return item.lineLaidOut !== undefined && typeof item.text === "string";
     }
@@ -73,15 +96,17 @@ Item {
             return;
         }
         _watched.add(item);
-        item.visibleChanged.connect(schedule);
-        item.implicitWidthChanged.connect(schedule);
-        item.implicitHeightChanged.connect(schedule);
+        // Connected through `lines` so the signals drop with it: a created box
+        // regroups its lines, and the items outlive the lines they were in.
+        item.visibleChanged.connect(lines, schedule);
+        item.implicitWidthChanged.connect(lines, schedule);
+        item.implicitHeightChanged.connect(lines, schedule);
         if (_isText(item)) {
-            item.textChanged.connect(schedule);
-            item.lineLaidOut.connect(function(line) { _placeLine(item, line); });
+            item.textChanged.connect(lines, schedule);
+            item.lineLaidOut.connect(lines, function(line) { _placeLine(item, line); });
         } else {
-            item.widthChanged.connect(schedule);
-            item.heightChanged.connect(schedule);
+            item.widthChanged.connect(lines, schedule);
+            item.heightChanged.connect(lines, schedule);
         }
     }
 
@@ -273,7 +298,9 @@ Item {
                 line.end += marginLeft + marginRight;
                 continue;
             }
-            const keeps = item.textFormat === Text.PlainText || preserveSpace;
+            // A created element's `Text` is AutoText: with no tag, Qt draws its edge spaces.
+            const keeps = item.textFormat === Text.PlainText || preserveSpace
+                || item.textFormat === Text.AutoText && item.text.indexOf("<") === -1;
             if (!preserveSpace && /^\s*$/.test(plain)) {
                 item.width = 0;
                 line.blanks.push({ item: item, x: line.end + (line.empty ? 0 : space) + marginLeft });
@@ -320,7 +347,8 @@ Item {
                 const width = m.width - (n === 0 ? leadWidth : 0) - (last ? trailWidth : 0);
                 line.texts.push({ item: item, run: run, number: n, x: x, width: width,
                                   height: m.height, ascent: ascent, lead: n === 0 ? leadWidth : 0,
-                                  gap: n === 0 && before > 0, inner: inner[n] || 0 });
+                                  gap: n === 0 && before > 0, inner: inner[n] || 0,
+                                  trail: last ? trailWidth : 0 });
                 line.end = x + width + (last ? marginRight : 0);
                 line.empty = false;
                 if (!last) {
@@ -362,7 +390,12 @@ Item {
             const late = [];
             // Text of the block's font is the strut already; only a larger span adds.
             for (const t of l.texts) {
-                if (lineHeight === 0 && t.height > strutAbove + strutBelow + 1) {
+                const own = _ownLeading.get(t.item);
+                if (own !== undefined) {
+                    const half = (own - t.height) / 2;
+                    above = Math.max(above, t.ascent + Math.floor(half));
+                    below = Math.max(below, t.height - t.ascent + Math.ceil(half));
+                } else if (lineHeight === 0 && t.height > strutAbove + strutBelow + 1) {
                     above = Math.max(above, t.ascent);
                     below = Math.max(below, t.height - t.ascent);
                 }
@@ -443,8 +476,10 @@ Item {
                 if (!t.run.place) {
                     t.run.place = [];
                 }
-                t.run.place[t.number] = { x: t.x + shift - t.lead, y: baseline - t.ascent,
-                                          width: (t.spread || t.width) + t.lead };
+                // A trailing space hangs at the line's end; before more it is in the box.
+                const followed = t.trail > 0 && l.boxes.concat(l.texts).some(function(o) { return o.x > t.x; });
+                t.run.place[t.number] = { x: t.x + shift - t.lead, y: baseline - t.ascent, height: t.height,
+                                          width: (t.spread || t.width) + t.lead + (followed ? t.trail : 0) };
                 if (t.spread) {
                     // Qt justifies every line of a Text but its last, whose
                     // words word-spacing spreads when it is the only one.

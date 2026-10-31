@@ -23667,6 +23667,3263 @@
    }
   }
  ],
+ "lines_created": [
+  {
+   "name": "load",
+   "log": [
+    "text \"Before em after\" \"Run new bold and it tail\" \"Text then  more and more words to wrap Press this span \""
+   ],
+   "state": {
+    "#s0": [
+     {
+      "box": [
+       114.42,
+       24,
+       34.7,
+       17
+      ],
+      "shown": true,
+      "text": "span"
+     }
+    ],
+    "#bodybox": [
+     {
+      "box": [
+       153.58,
+       8,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#host": [
+     {
+      "box": [
+       8,
+       42,
+       200,
+       88
+      ],
+      "shown": true,
+      "text": "Text then more and more words to wrap Press this span"
+     }
+    ],
+    "#c1": [
+     {
+      "box": [
+       77.38,
+       42,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#c2": [
+     {
+      "box": [
+       8,
+       109,
+       74.52,
+       21
+      ],
+      "shown": true,
+      "text": "Press this"
+     }
+    ],
+    "#c3": [
+     {
+      "box": [
+       82.52,
+       110,
+       43.59,
+       17
+      ],
+      "shown": true,
+      "text": "span"
+     }
+    ],
+    "#c4": [
+     {
+      "box": [
+       126.11,
+       94,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#just": [
+     {
+      "box": [
+       8,
+       421,
+       200,
+       52
+      ],
+      "shown": true,
+      "text": "Spread these words over a wrapping line and on"
+     }
+    ],
+    "#j1": [
+     {
+      "box": [
+       168,
+       421,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#center": [
+     {
+      "box": [
+       8,
+       473,
+       200,
+       34
+      ],
+      "shown": true,
+      "text": "Mid"
+     }
+    ],
+    "#m1": [
+     {
+      "box": [
+       103.11,
+       473,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#narrow": [
+     {
+      "box": [
+       8,
+       507,
+       50,
+       36
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nb": [
+     {
+      "box": [
+       8,
+       507,
+       50,
+       36
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nowrap": [
+     {
+      "box": [
+       8,
+       543,
+       50,
+       21
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nw": [
+     {
+      "box": [
+       8,
+       543,
+       71.59,
+       21
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#mix": [
+     {
+      "box": [
+       8,
+       564,
+       200,
+       70
+      ],
+      "shown": true,
+      "text": "first a blocksecond"
+     }
+    ],
+    "#mb": [
+     {
+      "box": [
+       38.22,
+       564,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#inner": [
+     {
+      "box": [
+       8,
+       598,
+       200,
+       18
+      ],
+      "shown": true,
+      "text": "a block"
+     }
+    ],
+    "#ref1": [
+     {
+      "box": [
+       8,
+       130,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Before em after"
+     }
+    ],
+    "#em1": [
+     {
+      "box": [
+       99.59,
+       146,
+       22.23,
+       17
+      ],
+      "shown": true,
+      "text": "em"
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       59.59,
+       130,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#ref2": [
+     {
+      "box": [
+       8,
+       164,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Run new bold and it tail"
+     }
+    ],
+    "#b2": [
+     {
+      "box": [
+       75.59,
+       180,
+       33.77,
+       17
+      ],
+      "shown": true,
+      "text": "bold"
+     }
+    ],
+    "#i2": [
+     {
+      "box": [
+       184.95,
+       180,
+       8,
+       17
+      ],
+      "shown": true,
+      "text": "it"
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       144.95,
+       164,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#wrapclick": [
+     {
+      "box": [
+       8,
+       198,
+       120,
+       57
+      ],
+      "shown": true,
+      "text": "Words on a first line then short x"
+     }
+    ],
+    "#ws": [
+     {
+      "box": [
+       8,
+       198,
+       111.75,
+       35
+      ],
+      "shown": true,
+      "text": "Words on a first line then short"
+     }
+    ],
+    "#wb": [
+     {
+      "box": [
+       8,
+       234,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#wrapmade": [
+     {
+      "box": [
+       8,
+       255,
+       120,
+       57
+      ],
+      "shown": true,
+      "text": "Words on a first line then shortx"
+     }
+    ],
+    "#ms": [
+     {
+      "box": [
+       8,
+       255,
+       111.75,
+       35
+      ],
+      "shown": true,
+      "text": "Words on a first line then short"
+     }
+    ],
+    "#mb2": [
+     {
+      "box": [
+       8,
+       291,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#wrapreal": [
+     {
+      "box": [
+       8,
+       312,
+       200,
+       57
+      ],
+      "shown": true,
+      "text": "xWords on a first line and then a much longer second line then short"
+     }
+    ],
+    "#rb": [
+     {
+      "box": [
+       8,
+       312,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#rs": [
+     {
+      "box": [
+       8,
+       313,
+       194.91,
+       55
+      ],
+      "shown": true,
+      "text": "Words on a first line and then a much longer second line then short"
+     }
+    ],
+    "#tp": [
+     {
+      "box": [
+       8,
+       369,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Own wordsafter"
+     }
+    ],
+    "#tb": [
+     {
+      "box": [
+       88.03,
+       369,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#tw": [
+     {
+      "box": [
+       128.03,
+       385,
+       32.02,
+       17
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "#tn": [
+     {
+      "box": [
+       8,
+       403,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "next"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "ws on",
+   "log": [
+    "press ws"
+   ],
+   "state": {
+    "#s0": [
+     {
+      "box": [
+       114.42,
+       24,
+       34.7,
+       17
+      ],
+      "shown": true,
+      "text": "span"
+     }
+    ],
+    "#bodybox": [
+     {
+      "box": [
+       153.58,
+       8,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#host": [
+     {
+      "box": [
+       8,
+       42,
+       200,
+       88
+      ],
+      "shown": true,
+      "text": "Text then more and more words to wrap Press this span"
+     }
+    ],
+    "#c1": [
+     {
+      "box": [
+       77.38,
+       42,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#c2": [
+     {
+      "box": [
+       8,
+       109,
+       74.52,
+       21
+      ],
+      "shown": true,
+      "text": "Press this"
+     }
+    ],
+    "#c3": [
+     {
+      "box": [
+       82.52,
+       110,
+       43.59,
+       17
+      ],
+      "shown": true,
+      "text": "span"
+     }
+    ],
+    "#c4": [
+     {
+      "box": [
+       126.11,
+       94,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#just": [
+     {
+      "box": [
+       8,
+       421,
+       200,
+       52
+      ],
+      "shown": true,
+      "text": "Spread these words over a wrapping line and on"
+     }
+    ],
+    "#j1": [
+     {
+      "box": [
+       168,
+       421,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#center": [
+     {
+      "box": [
+       8,
+       473,
+       200,
+       34
+      ],
+      "shown": true,
+      "text": "Mid"
+     }
+    ],
+    "#m1": [
+     {
+      "box": [
+       103.11,
+       473,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#narrow": [
+     {
+      "box": [
+       8,
+       507,
+       50,
+       36
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nb": [
+     {
+      "box": [
+       8,
+       507,
+       50,
+       36
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nowrap": [
+     {
+      "box": [
+       8,
+       543,
+       50,
+       21
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nw": [
+     {
+      "box": [
+       8,
+       543,
+       71.59,
+       21
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#mix": [
+     {
+      "box": [
+       8,
+       564,
+       200,
+       70
+      ],
+      "shown": true,
+      "text": "first a blocksecond"
+     }
+    ],
+    "#mb": [
+     {
+      "box": [
+       38.22,
+       564,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#inner": [
+     {
+      "box": [
+       8,
+       598,
+       200,
+       18
+      ],
+      "shown": true,
+      "text": "a block"
+     }
+    ],
+    "#ref1": [
+     {
+      "box": [
+       8,
+       130,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Before em after"
+     }
+    ],
+    "#em1": [
+     {
+      "box": [
+       99.59,
+       146,
+       22.23,
+       17
+      ],
+      "shown": true,
+      "text": "em"
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       59.59,
+       130,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#ref2": [
+     {
+      "box": [
+       8,
+       164,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Run new bold and it tail"
+     }
+    ],
+    "#b2": [
+     {
+      "box": [
+       75.59,
+       180,
+       33.77,
+       17
+      ],
+      "shown": true,
+      "text": "bold"
+     }
+    ],
+    "#i2": [
+     {
+      "box": [
+       184.95,
+       180,
+       8,
+       17
+      ],
+      "shown": true,
+      "text": "it"
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       144.95,
+       164,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#wrapclick": [
+     {
+      "box": [
+       8,
+       198,
+       120,
+       57
+      ],
+      "shown": true,
+      "text": "Words on a first line then short x"
+     }
+    ],
+    "#ws": [
+     {
+      "box": [
+       8,
+       198,
+       111.75,
+       35
+      ],
+      "shown": true,
+      "text": "Words on a first line then short"
+     }
+    ],
+    "#wb": [
+     {
+      "box": [
+       8,
+       234,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#wrapmade": [
+     {
+      "box": [
+       8,
+       255,
+       120,
+       57
+      ],
+      "shown": true,
+      "text": "Words on a first line then shortx"
+     }
+    ],
+    "#ms": [
+     {
+      "box": [
+       8,
+       255,
+       111.75,
+       35
+      ],
+      "shown": true,
+      "text": "Words on a first line then short"
+     }
+    ],
+    "#mb2": [
+     {
+      "box": [
+       8,
+       291,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#wrapreal": [
+     {
+      "box": [
+       8,
+       312,
+       200,
+       57
+      ],
+      "shown": true,
+      "text": "xWords on a first line and then a much longer second line then short"
+     }
+    ],
+    "#rb": [
+     {
+      "box": [
+       8,
+       312,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#rs": [
+     {
+      "box": [
+       8,
+       313,
+       194.91,
+       55
+      ],
+      "shown": true,
+      "text": "Words on a first line and then a much longer second line then short"
+     }
+    ],
+    "#tp": [
+     {
+      "box": [
+       8,
+       369,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Own wordsafter"
+     }
+    ],
+    "#tb": [
+     {
+      "box": [
+       88.03,
+       369,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#tw": [
+     {
+      "box": [
+       128.03,
+       385,
+       32.02,
+       17
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "#tn": [
+     {
+      "box": [
+       8,
+       403,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "next"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "ws beside",
+   "log": [
+    "press wrapclick"
+   ],
+   "state": {
+    "#s0": [
+     {
+      "box": [
+       114.42,
+       24,
+       34.7,
+       17
+      ],
+      "shown": true,
+      "text": "span"
+     }
+    ],
+    "#bodybox": [
+     {
+      "box": [
+       153.58,
+       8,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#host": [
+     {
+      "box": [
+       8,
+       42,
+       200,
+       88
+      ],
+      "shown": true,
+      "text": "Text then more and more words to wrap Press this span"
+     }
+    ],
+    "#c1": [
+     {
+      "box": [
+       77.38,
+       42,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#c2": [
+     {
+      "box": [
+       8,
+       109,
+       74.52,
+       21
+      ],
+      "shown": true,
+      "text": "Press this"
+     }
+    ],
+    "#c3": [
+     {
+      "box": [
+       82.52,
+       110,
+       43.59,
+       17
+      ],
+      "shown": true,
+      "text": "span"
+     }
+    ],
+    "#c4": [
+     {
+      "box": [
+       126.11,
+       94,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#just": [
+     {
+      "box": [
+       8,
+       421,
+       200,
+       52
+      ],
+      "shown": true,
+      "text": "Spread these words over a wrapping line and on"
+     }
+    ],
+    "#j1": [
+     {
+      "box": [
+       168,
+       421,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#center": [
+     {
+      "box": [
+       8,
+       473,
+       200,
+       34
+      ],
+      "shown": true,
+      "text": "Mid"
+     }
+    ],
+    "#m1": [
+     {
+      "box": [
+       103.11,
+       473,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#narrow": [
+     {
+      "box": [
+       8,
+       507,
+       50,
+       36
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nb": [
+     {
+      "box": [
+       8,
+       507,
+       50,
+       36
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nowrap": [
+     {
+      "box": [
+       8,
+       543,
+       50,
+       21
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nw": [
+     {
+      "box": [
+       8,
+       543,
+       71.59,
+       21
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#mix": [
+     {
+      "box": [
+       8,
+       564,
+       200,
+       70
+      ],
+      "shown": true,
+      "text": "first a blocksecond"
+     }
+    ],
+    "#mb": [
+     {
+      "box": [
+       38.22,
+       564,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#inner": [
+     {
+      "box": [
+       8,
+       598,
+       200,
+       18
+      ],
+      "shown": true,
+      "text": "a block"
+     }
+    ],
+    "#ref1": [
+     {
+      "box": [
+       8,
+       130,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Before em after"
+     }
+    ],
+    "#em1": [
+     {
+      "box": [
+       99.59,
+       146,
+       22.23,
+       17
+      ],
+      "shown": true,
+      "text": "em"
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       59.59,
+       130,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#ref2": [
+     {
+      "box": [
+       8,
+       164,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Run new bold and it tail"
+     }
+    ],
+    "#b2": [
+     {
+      "box": [
+       75.59,
+       180,
+       33.77,
+       17
+      ],
+      "shown": true,
+      "text": "bold"
+     }
+    ],
+    "#i2": [
+     {
+      "box": [
+       184.95,
+       180,
+       8,
+       17
+      ],
+      "shown": true,
+      "text": "it"
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       144.95,
+       164,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#wrapclick": [
+     {
+      "box": [
+       8,
+       198,
+       120,
+       57
+      ],
+      "shown": true,
+      "text": "Words on a first line then short x"
+     }
+    ],
+    "#ws": [
+     {
+      "box": [
+       8,
+       198,
+       111.75,
+       35
+      ],
+      "shown": true,
+      "text": "Words on a first line then short"
+     }
+    ],
+    "#wb": [
+     {
+      "box": [
+       8,
+       234,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#wrapmade": [
+     {
+      "box": [
+       8,
+       255,
+       120,
+       57
+      ],
+      "shown": true,
+      "text": "Words on a first line then shortx"
+     }
+    ],
+    "#ms": [
+     {
+      "box": [
+       8,
+       255,
+       111.75,
+       35
+      ],
+      "shown": true,
+      "text": "Words on a first line then short"
+     }
+    ],
+    "#mb2": [
+     {
+      "box": [
+       8,
+       291,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#wrapreal": [
+     {
+      "box": [
+       8,
+       312,
+       200,
+       57
+      ],
+      "shown": true,
+      "text": "xWords on a first line and then a much longer second line then short"
+     }
+    ],
+    "#rb": [
+     {
+      "box": [
+       8,
+       312,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#rs": [
+     {
+      "box": [
+       8,
+       313,
+       194.91,
+       55
+      ],
+      "shown": true,
+      "text": "Words on a first line and then a much longer second line then short"
+     }
+    ],
+    "#tp": [
+     {
+      "box": [
+       8,
+       369,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Own wordsafter"
+     }
+    ],
+    "#tb": [
+     {
+      "box": [
+       88.03,
+       369,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#tw": [
+     {
+      "box": [
+       128.03,
+       385,
+       32.02,
+       17
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "#tn": [
+     {
+      "box": [
+       8,
+       403,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "next"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "ms on",
+   "log": [
+    "press ms"
+   ],
+   "state": {
+    "#s0": [
+     {
+      "box": [
+       114.42,
+       24,
+       34.7,
+       17
+      ],
+      "shown": true,
+      "text": "span"
+     }
+    ],
+    "#bodybox": [
+     {
+      "box": [
+       153.58,
+       8,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#host": [
+     {
+      "box": [
+       8,
+       42,
+       200,
+       88
+      ],
+      "shown": true,
+      "text": "Text then more and more words to wrap Press this span"
+     }
+    ],
+    "#c1": [
+     {
+      "box": [
+       77.38,
+       42,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#c2": [
+     {
+      "box": [
+       8,
+       109,
+       74.52,
+       21
+      ],
+      "shown": true,
+      "text": "Press this"
+     }
+    ],
+    "#c3": [
+     {
+      "box": [
+       82.52,
+       110,
+       43.59,
+       17
+      ],
+      "shown": true,
+      "text": "span"
+     }
+    ],
+    "#c4": [
+     {
+      "box": [
+       126.11,
+       94,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#just": [
+     {
+      "box": [
+       8,
+       421,
+       200,
+       52
+      ],
+      "shown": true,
+      "text": "Spread these words over a wrapping line and on"
+     }
+    ],
+    "#j1": [
+     {
+      "box": [
+       168,
+       421,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#center": [
+     {
+      "box": [
+       8,
+       473,
+       200,
+       34
+      ],
+      "shown": true,
+      "text": "Mid"
+     }
+    ],
+    "#m1": [
+     {
+      "box": [
+       103.11,
+       473,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#narrow": [
+     {
+      "box": [
+       8,
+       507,
+       50,
+       36
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nb": [
+     {
+      "box": [
+       8,
+       507,
+       50,
+       36
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nowrap": [
+     {
+      "box": [
+       8,
+       543,
+       50,
+       21
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nw": [
+     {
+      "box": [
+       8,
+       543,
+       71.59,
+       21
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#mix": [
+     {
+      "box": [
+       8,
+       564,
+       200,
+       70
+      ],
+      "shown": true,
+      "text": "first a blocksecond"
+     }
+    ],
+    "#mb": [
+     {
+      "box": [
+       38.22,
+       564,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#inner": [
+     {
+      "box": [
+       8,
+       598,
+       200,
+       18
+      ],
+      "shown": true,
+      "text": "a block"
+     }
+    ],
+    "#ref1": [
+     {
+      "box": [
+       8,
+       130,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Before em after"
+     }
+    ],
+    "#em1": [
+     {
+      "box": [
+       99.59,
+       146,
+       22.23,
+       17
+      ],
+      "shown": true,
+      "text": "em"
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       59.59,
+       130,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#ref2": [
+     {
+      "box": [
+       8,
+       164,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Run new bold and it tail"
+     }
+    ],
+    "#b2": [
+     {
+      "box": [
+       75.59,
+       180,
+       33.77,
+       17
+      ],
+      "shown": true,
+      "text": "bold"
+     }
+    ],
+    "#i2": [
+     {
+      "box": [
+       184.95,
+       180,
+       8,
+       17
+      ],
+      "shown": true,
+      "text": "it"
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       144.95,
+       164,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#wrapclick": [
+     {
+      "box": [
+       8,
+       198,
+       120,
+       57
+      ],
+      "shown": true,
+      "text": "Words on a first line then short x"
+     }
+    ],
+    "#ws": [
+     {
+      "box": [
+       8,
+       198,
+       111.75,
+       35
+      ],
+      "shown": true,
+      "text": "Words on a first line then short"
+     }
+    ],
+    "#wb": [
+     {
+      "box": [
+       8,
+       234,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#wrapmade": [
+     {
+      "box": [
+       8,
+       255,
+       120,
+       57
+      ],
+      "shown": true,
+      "text": "Words on a first line then shortx"
+     }
+    ],
+    "#ms": [
+     {
+      "box": [
+       8,
+       255,
+       111.75,
+       35
+      ],
+      "shown": true,
+      "text": "Words on a first line then short"
+     }
+    ],
+    "#mb2": [
+     {
+      "box": [
+       8,
+       291,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#wrapreal": [
+     {
+      "box": [
+       8,
+       312,
+       200,
+       57
+      ],
+      "shown": true,
+      "text": "xWords on a first line and then a much longer second line then short"
+     }
+    ],
+    "#rb": [
+     {
+      "box": [
+       8,
+       312,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#rs": [
+     {
+      "box": [
+       8,
+       313,
+       194.91,
+       55
+      ],
+      "shown": true,
+      "text": "Words on a first line and then a much longer second line then short"
+     }
+    ],
+    "#tp": [
+     {
+      "box": [
+       8,
+       369,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Own wordsafter"
+     }
+    ],
+    "#tb": [
+     {
+      "box": [
+       88.03,
+       369,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#tw": [
+     {
+      "box": [
+       128.03,
+       385,
+       32.02,
+       17
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "#tn": [
+     {
+      "box": [
+       8,
+       403,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "next"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "ms beside",
+   "log": [
+    "press wrapmade"
+   ],
+   "state": {
+    "#s0": [
+     {
+      "box": [
+       114.42,
+       24,
+       34.7,
+       17
+      ],
+      "shown": true,
+      "text": "span"
+     }
+    ],
+    "#bodybox": [
+     {
+      "box": [
+       153.58,
+       8,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#host": [
+     {
+      "box": [
+       8,
+       42,
+       200,
+       88
+      ],
+      "shown": true,
+      "text": "Text then more and more words to wrap Press this span"
+     }
+    ],
+    "#c1": [
+     {
+      "box": [
+       77.38,
+       42,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#c2": [
+     {
+      "box": [
+       8,
+       109,
+       74.52,
+       21
+      ],
+      "shown": true,
+      "text": "Press this"
+     }
+    ],
+    "#c3": [
+     {
+      "box": [
+       82.52,
+       110,
+       43.59,
+       17
+      ],
+      "shown": true,
+      "text": "span"
+     }
+    ],
+    "#c4": [
+     {
+      "box": [
+       126.11,
+       94,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#just": [
+     {
+      "box": [
+       8,
+       421,
+       200,
+       52
+      ],
+      "shown": true,
+      "text": "Spread these words over a wrapping line and on"
+     }
+    ],
+    "#j1": [
+     {
+      "box": [
+       168,
+       421,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#center": [
+     {
+      "box": [
+       8,
+       473,
+       200,
+       34
+      ],
+      "shown": true,
+      "text": "Mid"
+     }
+    ],
+    "#m1": [
+     {
+      "box": [
+       103.11,
+       473,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#narrow": [
+     {
+      "box": [
+       8,
+       507,
+       50,
+       36
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nb": [
+     {
+      "box": [
+       8,
+       507,
+       50,
+       36
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nowrap": [
+     {
+      "box": [
+       8,
+       543,
+       50,
+       21
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nw": [
+     {
+      "box": [
+       8,
+       543,
+       71.59,
+       21
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#mix": [
+     {
+      "box": [
+       8,
+       564,
+       200,
+       70
+      ],
+      "shown": true,
+      "text": "first a blocksecond"
+     }
+    ],
+    "#mb": [
+     {
+      "box": [
+       38.22,
+       564,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#inner": [
+     {
+      "box": [
+       8,
+       598,
+       200,
+       18
+      ],
+      "shown": true,
+      "text": "a block"
+     }
+    ],
+    "#ref1": [
+     {
+      "box": [
+       8,
+       130,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Before em after"
+     }
+    ],
+    "#em1": [
+     {
+      "box": [
+       99.59,
+       146,
+       22.23,
+       17
+      ],
+      "shown": true,
+      "text": "em"
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       59.59,
+       130,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#ref2": [
+     {
+      "box": [
+       8,
+       164,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Run new bold and it tail"
+     }
+    ],
+    "#b2": [
+     {
+      "box": [
+       75.59,
+       180,
+       33.77,
+       17
+      ],
+      "shown": true,
+      "text": "bold"
+     }
+    ],
+    "#i2": [
+     {
+      "box": [
+       184.95,
+       180,
+       8,
+       17
+      ],
+      "shown": true,
+      "text": "it"
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       144.95,
+       164,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#wrapclick": [
+     {
+      "box": [
+       8,
+       198,
+       120,
+       57
+      ],
+      "shown": true,
+      "text": "Words on a first line then short x"
+     }
+    ],
+    "#ws": [
+     {
+      "box": [
+       8,
+       198,
+       111.75,
+       35
+      ],
+      "shown": true,
+      "text": "Words on a first line then short"
+     }
+    ],
+    "#wb": [
+     {
+      "box": [
+       8,
+       234,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#wrapmade": [
+     {
+      "box": [
+       8,
+       255,
+       120,
+       57
+      ],
+      "shown": true,
+      "text": "Words on a first line then shortx"
+     }
+    ],
+    "#ms": [
+     {
+      "box": [
+       8,
+       255,
+       111.75,
+       35
+      ],
+      "shown": true,
+      "text": "Words on a first line then short"
+     }
+    ],
+    "#mb2": [
+     {
+      "box": [
+       8,
+       291,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#wrapreal": [
+     {
+      "box": [
+       8,
+       312,
+       200,
+       57
+      ],
+      "shown": true,
+      "text": "xWords on a first line and then a much longer second line then short"
+     }
+    ],
+    "#rb": [
+     {
+      "box": [
+       8,
+       312,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#rs": [
+     {
+      "box": [
+       8,
+       313,
+       194.91,
+       55
+      ],
+      "shown": true,
+      "text": "Words on a first line and then a much longer second line then short"
+     }
+    ],
+    "#tp": [
+     {
+      "box": [
+       8,
+       369,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Own wordsafter"
+     }
+    ],
+    "#tb": [
+     {
+      "box": [
+       88.03,
+       369,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#tw": [
+     {
+      "box": [
+       128.03,
+       385,
+       32.02,
+       17
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "#tn": [
+     {
+      "box": [
+       8,
+       403,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "next"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "rs on",
+   "log": [
+    "press rs"
+   ],
+   "state": {
+    "#s0": [
+     {
+      "box": [
+       114.42,
+       24,
+       34.7,
+       17
+      ],
+      "shown": true,
+      "text": "span"
+     }
+    ],
+    "#bodybox": [
+     {
+      "box": [
+       153.58,
+       8,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#host": [
+     {
+      "box": [
+       8,
+       42,
+       200,
+       88
+      ],
+      "shown": true,
+      "text": "Text then more and more words to wrap Press this span"
+     }
+    ],
+    "#c1": [
+     {
+      "box": [
+       77.38,
+       42,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#c2": [
+     {
+      "box": [
+       8,
+       109,
+       74.52,
+       21
+      ],
+      "shown": true,
+      "text": "Press this"
+     }
+    ],
+    "#c3": [
+     {
+      "box": [
+       82.52,
+       110,
+       43.59,
+       17
+      ],
+      "shown": true,
+      "text": "span"
+     }
+    ],
+    "#c4": [
+     {
+      "box": [
+       126.11,
+       94,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#just": [
+     {
+      "box": [
+       8,
+       421,
+       200,
+       52
+      ],
+      "shown": true,
+      "text": "Spread these words over a wrapping line and on"
+     }
+    ],
+    "#j1": [
+     {
+      "box": [
+       168,
+       421,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#center": [
+     {
+      "box": [
+       8,
+       473,
+       200,
+       34
+      ],
+      "shown": true,
+      "text": "Mid"
+     }
+    ],
+    "#m1": [
+     {
+      "box": [
+       103.11,
+       473,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#narrow": [
+     {
+      "box": [
+       8,
+       507,
+       50,
+       36
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nb": [
+     {
+      "box": [
+       8,
+       507,
+       50,
+       36
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nowrap": [
+     {
+      "box": [
+       8,
+       543,
+       50,
+       21
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nw": [
+     {
+      "box": [
+       8,
+       543,
+       71.59,
+       21
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#mix": [
+     {
+      "box": [
+       8,
+       564,
+       200,
+       70
+      ],
+      "shown": true,
+      "text": "first a blocksecond"
+     }
+    ],
+    "#mb": [
+     {
+      "box": [
+       38.22,
+       564,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#inner": [
+     {
+      "box": [
+       8,
+       598,
+       200,
+       18
+      ],
+      "shown": true,
+      "text": "a block"
+     }
+    ],
+    "#ref1": [
+     {
+      "box": [
+       8,
+       130,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Before em after"
+     }
+    ],
+    "#em1": [
+     {
+      "box": [
+       99.59,
+       146,
+       22.23,
+       17
+      ],
+      "shown": true,
+      "text": "em"
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       59.59,
+       130,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#ref2": [
+     {
+      "box": [
+       8,
+       164,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Run new bold and it tail"
+     }
+    ],
+    "#b2": [
+     {
+      "box": [
+       75.59,
+       180,
+       33.77,
+       17
+      ],
+      "shown": true,
+      "text": "bold"
+     }
+    ],
+    "#i2": [
+     {
+      "box": [
+       184.95,
+       180,
+       8,
+       17
+      ],
+      "shown": true,
+      "text": "it"
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       144.95,
+       164,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#wrapclick": [
+     {
+      "box": [
+       8,
+       198,
+       120,
+       57
+      ],
+      "shown": true,
+      "text": "Words on a first line then short x"
+     }
+    ],
+    "#ws": [
+     {
+      "box": [
+       8,
+       198,
+       111.75,
+       35
+      ],
+      "shown": true,
+      "text": "Words on a first line then short"
+     }
+    ],
+    "#wb": [
+     {
+      "box": [
+       8,
+       234,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#wrapmade": [
+     {
+      "box": [
+       8,
+       255,
+       120,
+       57
+      ],
+      "shown": true,
+      "text": "Words on a first line then shortx"
+     }
+    ],
+    "#ms": [
+     {
+      "box": [
+       8,
+       255,
+       111.75,
+       35
+      ],
+      "shown": true,
+      "text": "Words on a first line then short"
+     }
+    ],
+    "#mb2": [
+     {
+      "box": [
+       8,
+       291,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#wrapreal": [
+     {
+      "box": [
+       8,
+       312,
+       200,
+       57
+      ],
+      "shown": true,
+      "text": "xWords on a first line and then a much longer second line then short"
+     }
+    ],
+    "#rb": [
+     {
+      "box": [
+       8,
+       312,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#rs": [
+     {
+      "box": [
+       8,
+       313,
+       194.91,
+       55
+      ],
+      "shown": true,
+      "text": "Words on a first line and then a much longer second line then short"
+     }
+    ],
+    "#tp": [
+     {
+      "box": [
+       8,
+       369,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Own wordsafter"
+     }
+    ],
+    "#tb": [
+     {
+      "box": [
+       88.03,
+       369,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#tw": [
+     {
+      "box": [
+       128.03,
+       385,
+       32.02,
+       17
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "#tn": [
+     {
+      "box": [
+       8,
+       403,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "next"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "rs beside",
+   "log": [
+    "press wrapreal"
+   ],
+   "state": {
+    "#s0": [
+     {
+      "box": [
+       114.42,
+       24,
+       34.7,
+       17
+      ],
+      "shown": true,
+      "text": "span"
+     }
+    ],
+    "#bodybox": [
+     {
+      "box": [
+       153.58,
+       8,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#host": [
+     {
+      "box": [
+       8,
+       42,
+       200,
+       88
+      ],
+      "shown": true,
+      "text": "Text then more and more words to wrap Press this span"
+     }
+    ],
+    "#c1": [
+     {
+      "box": [
+       77.38,
+       42,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#c2": [
+     {
+      "box": [
+       8,
+       109,
+       74.52,
+       21
+      ],
+      "shown": true,
+      "text": "Press this"
+     }
+    ],
+    "#c3": [
+     {
+      "box": [
+       82.52,
+       110,
+       43.59,
+       17
+      ],
+      "shown": true,
+      "text": "span"
+     }
+    ],
+    "#c4": [
+     {
+      "box": [
+       126.11,
+       94,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#just": [
+     {
+      "box": [
+       8,
+       421,
+       200,
+       52
+      ],
+      "shown": true,
+      "text": "Spread these words over a wrapping line and on"
+     }
+    ],
+    "#j1": [
+     {
+      "box": [
+       168,
+       421,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#center": [
+     {
+      "box": [
+       8,
+       473,
+       200,
+       34
+      ],
+      "shown": true,
+      "text": "Mid"
+     }
+    ],
+    "#m1": [
+     {
+      "box": [
+       103.11,
+       473,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#narrow": [
+     {
+      "box": [
+       8,
+       507,
+       50,
+       36
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nb": [
+     {
+      "box": [
+       8,
+       507,
+       50,
+       36
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nowrap": [
+     {
+      "box": [
+       8,
+       543,
+       50,
+       21
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#nw": [
+     {
+      "box": [
+       8,
+       543,
+       71.59,
+       21
+      ],
+      "shown": true,
+      "text": "Long one"
+     }
+    ],
+    "#mix": [
+     {
+      "box": [
+       8,
+       564,
+       200,
+       70
+      ],
+      "shown": true,
+      "text": "first a blocksecond"
+     }
+    ],
+    "#mb": [
+     {
+      "box": [
+       38.22,
+       564,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#inner": [
+     {
+      "box": [
+       8,
+       598,
+       200,
+       18
+      ],
+      "shown": true,
+      "text": "a block"
+     }
+    ],
+    "#ref1": [
+     {
+      "box": [
+       8,
+       130,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Before em after"
+     }
+    ],
+    "#em1": [
+     {
+      "box": [
+       99.59,
+       146,
+       22.23,
+       17
+      ],
+      "shown": true,
+      "text": "em"
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       59.59,
+       130,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#ref2": [
+     {
+      "box": [
+       8,
+       164,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Run new bold and it tail"
+     }
+    ],
+    "#b2": [
+     {
+      "box": [
+       75.59,
+       180,
+       33.77,
+       17
+      ],
+      "shown": true,
+      "text": "bold"
+     }
+    ],
+    "#i2": [
+     {
+      "box": [
+       184.95,
+       180,
+       8,
+       17
+      ],
+      "shown": true,
+      "text": "it"
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       144.95,
+       164,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#wrapclick": [
+     {
+      "box": [
+       8,
+       198,
+       120,
+       57
+      ],
+      "shown": true,
+      "text": "Words on a first line then short x"
+     }
+    ],
+    "#ws": [
+     {
+      "box": [
+       8,
+       198,
+       111.75,
+       35
+      ],
+      "shown": true,
+      "text": "Words on a first line then short"
+     }
+    ],
+    "#wb": [
+     {
+      "box": [
+       8,
+       234,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#wrapmade": [
+     {
+      "box": [
+       8,
+       255,
+       120,
+       57
+      ],
+      "shown": true,
+      "text": "Words on a first line then shortx"
+     }
+    ],
+    "#ms": [
+     {
+      "box": [
+       8,
+       255,
+       111.75,
+       35
+      ],
+      "shown": true,
+      "text": "Words on a first line then short"
+     }
+    ],
+    "#mb2": [
+     {
+      "box": [
+       8,
+       291,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#wrapreal": [
+     {
+      "box": [
+       8,
+       312,
+       200,
+       57
+      ],
+      "shown": true,
+      "text": "xWords on a first line and then a much longer second line then short"
+     }
+    ],
+    "#rb": [
+     {
+      "box": [
+       8,
+       312,
+       22.67,
+       21
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    "#rs": [
+     {
+      "box": [
+       8,
+       313,
+       194.91,
+       55
+      ],
+      "shown": true,
+      "text": "Words on a first line and then a much longer second line then short"
+     }
+    ],
+    "#tp": [
+     {
+      "box": [
+       8,
+       369,
+       1264,
+       34
+      ],
+      "shown": true,
+      "text": "Own wordsafter"
+     }
+    ],
+    "#tb": [
+     {
+      "box": [
+       88.03,
+       369,
+       40,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#tw": [
+     {
+      "box": [
+       128.03,
+       385,
+       32.02,
+       17
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "#tn": [
+     {
+      "box": [
+       8,
+       403,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "next"
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
  "lines_justify": [
   {
    "name": "load",
