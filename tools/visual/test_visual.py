@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import io
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -234,6 +235,166 @@ Rectangle {
                 )
             self.assertEqual(rc, 1)
             self.assertIn("ReferenceError", err_buf.getvalue())
+
+
+SHADOW_QML = """import QtQuick
+import QtQuick.Effects
+
+Item {
+    RectangularShadow {
+        x: 40
+        y: 30
+        width: 80
+        height: 40
+        blur: 12
+        color: "#000000"
+    }
+    Rectangle {
+        x: 40
+        y: 30
+        width: 80
+        height: 40
+        color: "#ffffff"
+    }
+}
+"""
+
+
+class RenderQmlBackendTests(unittest.TestCase):
+    def test_gl_backend_without_sway_fails_clearly(self) -> None:
+        real_which = render_qml.shutil.which
+
+        def which(name: str) -> str | None:
+            return None if name == "sway" else real_which(name)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text("import QtQuick\nItem {}\n", encoding="utf-8")
+            with mock.patch.object(render_qml.shutil, "which", side_effect=which):
+                with self.assertRaisesRegex(render_qml.QmlRenderError, "needs sway"):
+                    render_qml.render_qml(tmp_dir, tmp_dir / "out.png", backend="gl")
+
+    def test_unknown_backend_is_rejected(self) -> None:
+        with self.assertRaisesRegex(render_qml.QmlRenderError, "Unknown backend"):
+            render_qml.render_qml(Path("."), Path("out.png"), backend="vulkan")
+        with self.assertRaisesRegex(render_qml.QmlRenderError, "Unknown gl_text"):
+            render_qml.render_qml(Path("."), Path("out.png"), backend="gl", gl_text="subpixel")
+
+    def test_runner_stops_sway_when_the_run_is_interrupted(self) -> None:
+        started: list[mock.MagicMock] = []
+
+        def fake_sway(*_args: object) -> mock.MagicMock:
+            inst = mock.MagicMock()
+            started.append(inst)
+            return inst
+
+        with (
+            mock.patch.object(render_qml, "HeadlessSway", side_effect=fake_sway),
+            mock.patch.object(visual_run, "_evaluate_cases", side_effect=KeyboardInterrupt),
+        ):
+            with self.assertRaises(KeyboardInterrupt):
+                visual_run.evaluate_cases(
+                    [],
+                    out_dir=Path("unused"),
+                    width=1280,
+                    height=800,
+                    selftest=True,
+                    convert_cmd="",
+                    baseline_scores=None,
+                    backend="gl",
+                )
+        self.assertEqual(len(started), 1)
+        started[0].start.assert_called_once()
+        started[0].stop.assert_called_once()
+
+
+@unittest.skipUnless(shutil.which("sway"), "sway is not installed")
+class RenderQmlGlTests(unittest.TestCase):
+    def test_gl_renders_exact_size_and_stops_sway(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text(
+                """import QtQuick
+
+Item {
+    Rectangle { x: 0; y: 0; width: 200; height: 10; color: "#ef4444" }
+    Rectangle { x: 190; y: 110; width: 10; height: 10; color: "#2563eb" }
+}
+""",
+                encoding="utf-8",
+            )
+            out_png = tmp_dir / "out.png"
+            with render_qml.HeadlessSway(200, 120) as sway:
+                runtime_dir = sway.runtime_dir
+                proc = sway._proc
+                warnings = render_qml.render_qml(
+                    tmp_dir, out_png, width=200, height=120, strict=True, backend="gl", sway=sway
+                )
+            self.assertEqual(warnings, [])
+            assert runtime_dir is not None and proc is not None
+            self.assertFalse(runtime_dir.exists())
+            self.assertIsNotNone(proc.poll())
+
+            # A window resized by the compositor would be stretched by the grab,
+            # moving these edge rectangles off their pixels.
+            arr = compare.load_rgb(out_png)
+            self.assertEqual(arr.shape, (120, 200, 3))
+            self.assertEqual(arr[0, 0].tolist(), [239, 68, 68])
+            self.assertEqual(arr[9, 199].tolist(), [239, 68, 68])
+            self.assertEqual(arr[10, 100].tolist(), [255, 255, 255])
+            self.assertEqual(arr[110, 190].tolist(), [37, 99, 235])
+            self.assertEqual(arr[109, 189].tolist(), [255, 255, 255])
+
+    def test_gl_draws_rectangular_shadow_that_software_omits(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text(SHADOW_QML, encoding="utf-8")
+            sw_png = tmp_dir / "sw.png"
+            gl_png = tmp_dir / "gl.png"
+            render_qml.render_qml(tmp_dir, sw_png, width=160, height=100, backend="software")
+            render_qml.render_qml(tmp_dir, gl_png, width=160, height=100, backend="gl")
+            sw = compare.load_rgb(sw_png)
+            gl = compare.load_rgb(gl_png)
+            # Just outside the white box's bottom edge, inside the blur radius.
+            self.assertEqual(sw[72, 80].tolist(), [255, 255, 255])
+            self.assertLess(int(gl[72, 80].max()), 250)
+
+    def test_gl_native_text_matches_software_glyph_placement(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text(
+                """import QtQuick
+
+Item {
+    Text { x: 10; y: 10; text: "Glyph placement"; font.pixelSize: 16; color: "#000000" }
+}
+""",
+                encoding="utf-8",
+            )
+            pngs = {}
+            for name, backend, gl_text in (
+                ("sw", "software", "distancefield"),
+                ("df", "gl", "distancefield"),
+                ("native", "gl", "native"),
+            ):
+                pngs[name] = tmp_dir / f"{name}.png"
+                render_qml.render_qml(
+                    tmp_dir, pngs[name], width=200, height=40, backend=backend, gl_text=gl_text
+                )
+
+            def ink_box(path: Path) -> tuple[int, int, int, int]:
+                ys, xs = np.nonzero(compare.load_rgb(path).min(axis=2) < 128)
+                return int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max())
+
+            # Same layout in all three; native and distance-field glyphs differ.
+            sw_box = ink_box(pngs["sw"])
+            for name in ("df", "native"):
+                box = ink_box(pngs[name])
+                for got, want in zip(box, sw_box):
+                    self.assertLessEqual(abs(got - want), 1, (name, box, sw_box))
+            self.assertFalse(
+                np.array_equal(compare.load_rgb(pngs["df"]), compare.load_rgb(pngs["native"]))
+            )
 
 
 class RenderHtmlAndRunnerTests(unittest.TestCase):

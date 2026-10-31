@@ -1,8 +1,8 @@
 # Visual Parity Harness (`tools/visual/`)
 
 Objective, repeatable visual comparison between Chromium's rendering of an
-HTML5/CSS page and Qt Quick 6.11's off-screen rendering of the corresponding
-QML application at the same viewport (default `1280×800`, `deviceScaleFactor = 1`).
+HTML5/CSS page and Qt Quick 6.11's rendering of the corresponding QML
+application (off-screen software scene graph, or OpenGL with `--backend gl`) at the same viewport (default `1280×800`, `deviceScaleFactor = 1`).
 
 ## Quick Start
 
@@ -22,6 +22,10 @@ python3 tools/visual/run.py --corpus tests/corpus --out target/visual
 # Run specific corpus cases or merge updates into tools/visual/baseline.json:
 mise run visual -- --cases card,two-columns
 mise run visual -- --update-baseline
+
+# Render the QML side with OpenGL, as a real Qt app on a GPU does (needs sway):
+mise run visual -- --backend gl
+mise run visual -- --backend gl --gl-text native
 ```
 
 ## Components
@@ -75,11 +79,37 @@ converter tests.
 
 ```bash
 python3 tools/visual/render_qml.py <dir-with-Main.qml> <out.png> [--width 1280 --height 800] [--strict]
+                                   [--backend software|gl] [--gl-text distancefield|native]
 ```
 
-- Runs `qml6 --software` with `QT_QPA_PLATFORM=offscreen`,
-  `QT_QUICK_BACKEND=software`, `QT_FONT_DPI=96`, `QT_SCALE_FACTOR=1`,
+- Both backends set `QT_FONT_DPI=96`, `QT_SCALE_FACTOR=1`,
   `QML_DISABLE_DISK_CACHE=1`, and a 10 s timeout.
+- `--backend software` (default) runs `qml6 --software` with
+  `QT_QPA_PLATFORM=offscreen` and `QT_QUICK_BACKEND=software`. The software
+  scene graph does not draw shader effects, so `RectangularShadow` and
+  `MultiEffect` (box-shadow, focus rings) are missing from its screenshots.
+- `--backend gl` runs `qml6` with `QT_QPA_PLATFORM=wayland` and
+  `QSG_RHI_BACKEND=opengl` on a **private headless sway**
+  (`WLR_BACKENDS=headless`, its own `XDG_RUNTIME_DIR` under a temp dir, its own
+  socket). The user's `WAYLAND_DISPLAY` and compositor are never used. `run.py`
+  starts one sway per run and stops it at the end, also on errors and Ctrl-C;
+  If the harness is killed outright (SIGKILL, OOM killer), a `tail --pid`
+  watcher in the sway config ends sway too. Without sway
+  on `PATH`, gl mode fails with a clear message. The offscreen platform cannot
+  use OpenGL here (it falls back to software), and minimalegl with
+  `EGL_PLATFORM=surfaceless` finds no EGLConfig, hence the compositor.
+  - The sway config makes every window floating and borderless at the
+    viewport size. Under sway's default tiling a 1280×800 window became
+    1276×772 (borders, title bar), and `grabToImage` stretched it back to
+    1280×800, so text and boxes came out ~4% taller. `Shot.qml` fails when
+    the window is not the requested size instead of stretching it.
+  - `--gl-text distancefield` (default) is Qt's GPU default for
+    `Text.QtRendering`: distance-field glyphs, lighter and softer than
+    Chromium's. `--gl-text native` sets `QML_DISABLE_DISTANCEFIELD=1`, which
+    rasterises glyphs like the software backend while effects still draw.
+    Neither changes layout (advances come from the same design metrics). Text
+    on a fractional y can land 1 px off from software, since the two backends
+    round the baseline differently.
 - Returns any QML runtime/binding warnings printed by `qml6`; passing `--strict`
   causes `render_qml.py` to exit non-zero whenever `qml6` emits warnings.
 - `Shot.qml` uses a `QtObject` root and loads `Main.qml` via
@@ -120,6 +150,8 @@ Passing `--diff <out.png>` writes a labelled three-panel PNG:
 - Renders HTML, runs `--convert-cmd` (default
   `cargo run -q -p eldur_cli -- convert`), renders QML, compares screenshots, and
   writes `<out>/report.md` and `<out>/report.json`.
+- `--backend software|gl` and `--gl-text` choose the QML renderer (see
+  `render_qml.py`); the report records both.
 - Per-case statuses: `ok`, `qml_warnings` (when `--strict` is active, which is
   the default; pass `--no-strict` to keep status `ok` while still recording
   warnings), `convert_failed`, `html_render_failed`, `qml_render_failed`, and

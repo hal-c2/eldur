@@ -117,6 +117,16 @@ QtObject {
         root.grabStarted = true;
         frameDriver.stop();
 
+        // grabToImage scales to targetSize, so a window the platform resized
+        // (a tiling compositor, a too-small screen) would come out stretched
+        // instead of failing.
+        if (root.targetWindow.width !== root.reqWidth || root.targetWindow.height !== root.reqHeight) {
+            console.error("Shot.qml: window is " + root.targetWindow.width + "x" + root.targetWindow.height
+                          + ", expected " + root.reqWidth + "x" + root.reqHeight);
+            Qt.exit(2);
+            return;
+        }
+
         const targetSize = Qt.size(root.targetWindow.width, root.targetWindow.height);
         const ok = root.captureRoot.grabToImage(function(result) {
             if (!result.saveToFile(root.outputPath)) {

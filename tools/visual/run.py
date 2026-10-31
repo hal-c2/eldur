@@ -7,6 +7,7 @@ Usage:
                                 [--cases a,b] [--baseline tools/visual/baseline.json]
                                 [--update-baseline] [--strict | --no-strict]
                                 [--width 1280] [--height 800]
+                                [--backend software|gl] [--gl-text distancefield|native]
     python3 tools/visual/run.py --selftest
 
 For each case directory containing `index.html`:
@@ -14,9 +15,12 @@ For each case directory containing `index.html`:
   2. Converts `index.html` to QML via `--convert-cmd` (unless `--selftest`, where
      hand-written `Main.qml` sits alongside `index.html`). Conversion failures are
      recorded as `convert_failed` and execution continues.
-  3. Renders `Main.qml` off-screen in `qml6` (`render_qml.py` + `Shot.qml`). Under
+  3. Renders `Main.qml` in `qml6` (`render_qml.py` + `Shot.qml`). Under
      `--strict` (the default), any QML runtime/binding warnings mark the case
-     `qml_warnings` in the report.
+     `qml_warnings` in the report. `--backend software` (default) uses the
+     offscreen software scene graph; `--backend gl` uses OpenGL on one private
+     headless sway started for the run and stopped at its end; `--gl-text`
+     picks distance-field or native glyphs under gl (see `render_qml.py`).
   4. Computes `score`, `ssim`, `edge_iou`, `pixel_mismatch`, and a side-by-side
      `diff.png` (`compare.py`), recording `compare_failed` on image errors.
   5. Writes `<out>/report.md` and `<out>/report.json`, validates viewport and
@@ -313,6 +317,8 @@ def format_report_markdown(
         "# Visual Parity Report",
         "",
         f"- **Viewport:** {vp['width']}×{vp['height']}",
+        f"- **QML backend:** {report.get('backend', render_qml.DEFAULT_BACKEND)}"
+        + (f" (text: {report['gl_text']})" if report.get("gl_text") else ""),
         f"- **Cases:** {summary['total']} total, {summary['ok']} `ok`, "
         f"{summary['qml_warnings']} `qml_warnings`, "
         f"{summary['convert_failed']} `convert_failed`, "
@@ -419,8 +425,49 @@ def evaluate_cases(
     convert_cmd: str,
     baseline_scores: dict[str, float] | None,
     strict: bool = True,
+    backend: str = render_qml.DEFAULT_BACKEND,
+    gl_text: str = render_qml.DEFAULT_GL_TEXT,
 ) -> dict[str, Any]:
     """Run rendering, optional conversion, and comparison across `cases`."""
+    kwargs: dict[str, Any] = dict(
+        out_dir=out_dir,
+        width=width,
+        height=height,
+        selftest=selftest,
+        convert_cmd=convert_cmd,
+        baseline_scores=baseline_scores,
+        strict=strict,
+        backend=backend,
+        gl_text=gl_text,
+    )
+    if backend != "gl":
+        return _evaluate_cases(cases, sway=None, **kwargs)
+    # One compositor for the whole run; `finally` stops it on errors and Ctrl-C.
+    sway = render_qml.HeadlessSway(width, height)
+    try:
+        sway.start()
+    except render_qml.QmlRenderError as exc:
+        raise HarnessError(str(exc)) from exc
+    try:
+        return _evaluate_cases(cases, sway=sway, **kwargs)
+    finally:
+        sway.stop()
+
+
+def _evaluate_cases(
+    cases: list[tuple[str, Path]],
+    *,
+    out_dir: Path,
+    width: int,
+    height: int,
+    selftest: bool,
+    convert_cmd: str,
+    baseline_scores: dict[str, float] | None,
+    strict: bool,
+    backend: str,
+    gl_text: str,
+    sway: render_qml.HeadlessSway | None,
+) -> dict[str, Any]:
     out_abs = out_dir.resolve()
     cases_out_root = out_abs / "cases"
     cases_out_root.mkdir(parents=True, exist_ok=True)
@@ -487,6 +534,9 @@ def evaluate_cases(
                 width=width,
                 height=height,
                 strict=False,
+                backend=backend,
+                sway=sway,
+                gl_text=gl_text,
             )
             record["qml_png"] = _rel_posix(qml_png, out_abs)
             record["warnings"] = qml_warnings
@@ -546,6 +596,8 @@ def evaluate_cases(
 
     report = {
         "viewport": {"width": width, "height": height},
+        "backend": backend,
+        "gl_text": gl_text if backend == "gl" else None,
         "summary": {
             "total": len(results),
             "ok": len(ok_scores),
@@ -724,6 +776,20 @@ def build_parser() -> argparse.ArgumentParser:
         default=800,
         help="Viewport height in pixels (default: 800)",
     )
+    parser.add_argument(
+        "--backend",
+        choices=render_qml.BACKENDS,
+        default=render_qml.DEFAULT_BACKEND,
+        help="QML renderer: software (offscreen software scene graph, default) or "
+        "gl (OpenGL on a private headless sway; draws shadows and MultiEffect)",
+    )
+    parser.add_argument(
+        "--gl-text",
+        choices=render_qml.GL_TEXT_MODES,
+        default=render_qml.DEFAULT_GL_TEXT,
+        help="Text rasterisation under --backend gl: distancefield (Qt's GPU default) "
+        "or native (QML_DISABLE_DISTANCEFIELD=1, like the software backend)",
+    )
     return parser
 
 
@@ -768,6 +834,8 @@ def main(argv: list[str] | None = None) -> int:
             convert_cmd=args.convert_cmd,
             baseline_scores=baseline_scores,
             strict=args.strict,
+            backend=args.backend,
+            gl_text=args.gl_text,
         )
         print_console_summary(report, out_dir)
 
