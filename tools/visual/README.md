@@ -121,6 +121,13 @@ python3 tools/visual/render_qml.py <dir-with-Main.qml> <out.png> [--width 1280 -
     Neither changes layout (advances come from the same design metrics). Text
     on a fractional y can land 1 px off from software, since the two backends
     round the baseline differently.
+  - Known: text under a scale `transform` is not pixel-reproducible on gl
+    (Mesa radeonsi here). 20-pricing's `Scale { 1.05 }` card gave 4 variants
+    in 10 renders with native glyphs (≤ 7 pixels inside glyphs, same score to
+    four decimals) and a different image every time with distance fields;
+    removing the transform, or `--backend software`, makes it reproducible.
+    The render loop (`QSG_RENDER_LOOP=basic`) makes no difference, so it is
+    not capture timing.
 - Returns any QML runtime/binding warnings printed by `qml6`; passing `--strict`
   causes `render_qml.py` to exit non-zero whenever `qml6` emits warnings.
 - `Shot.qml` uses a `QtObject` root and loads `Main.qml` via
