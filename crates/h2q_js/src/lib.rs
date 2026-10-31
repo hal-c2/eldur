@@ -89,7 +89,9 @@ pub struct Analysis {
     pub diagnostics: Vec<Diagnostic>,
     /// Every class write site, in source order (`docs/design/dynamic-styles.md` §9.1).
     pub class_writes: Vec<ClassWrite>,
-    /// Every `document.createElement("<literal>")` site, in source order.
+    /// Every `document.createElement("<literal>")` site, and every element
+    /// written literally in markup given to `innerHTML` or
+    /// `insertAdjacentHTML`, in source order.
     pub created: Vec<CreatedElement>,
     /// Scripts reach elements by runtime selectors, traversal, `matches`/`closest`,
     /// event targets, or mutate the DOM: every element needs `h2qTag`/`h2qClasses`.
