@@ -1,0 +1,36 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif}button,a,span{text-align:left}.b{display:block;width:120px;height:30px}p,ul,li{margin:0;padding:0;list-style:none}label{display:block;width:120px;height:24px}input[type=text]{display:block;width:120px;height:24px;box-sizing:border-box}</style><script>function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){if(e===window)return "window";if(e===document)return "document";return e?(e.id||e.tagName):"null"}</script></head>
+<body id="bd" data-clicks="#none #self #mid #cap #imm #sp #capsp #ctl #ctlimm #plink #pcheck">
+<div id="outer"><div id="midd">
+<div id="none" class="b">none</div>
+<div id="self" class="b">self</div>
+<div id="mid" class="b">mid</div>
+<div id="cap" class="b">cap</div>
+<div id="imm" class="b">imm</div>
+<p><span id="sp">spanstop</span> <span id="capsp">spancap</span></p>
+<button id="ctl" class="b">ctl</button>
+<button id="ctlimm" class="b">ctlimm</button>
+<p><a id="plink" href="#gone">prevented</a></p>
+<input id="pcheck" type="checkbox">
+</div></div>
+<script>
+function byId(i){return document.getElementById(i)}
+function who(tag,fn){return function(e){L(tag,I(e.target),"prevented="+e.defaultPrevented);if(fn)fn(e)}}
+var stop=function(e){e.stopPropagation()};
+document.body.addEventListener("click",who("body"));
+byId("outer").addEventListener("click",who("outer",function(e){if(e.target.id==="pcheck")L("checked",e.target.checked)}));
+byId("midd").addEventListener("click",who("mid1",function(e){if(e.target.id==="mid")e.stopPropagation()}));
+byId("midd").addEventListener("click",who("mid2"));
+byId("outer").addEventListener("click",who("outer-cap",function(e){if(e.target.id==="cap"||e.target.id==="capsp")e.stopPropagation()}),true);
+byId("self").addEventListener("click",who("self1",stop));
+byId("self").addEventListener("click",who("self2"));
+byId("imm").addEventListener("click",who("imm1",function(e){e.stopImmediatePropagation()}));
+byId("imm").addEventListener("click",who("imm2"));
+byId("sp").addEventListener("click",who("sp",stop));
+byId("ctl").addEventListener("click",who("ctl",stop));
+byId("ctlimm").addEventListener("click",who("ctlimm1",function(e){e.stopImmediatePropagation()}));
+byId("ctlimm").addEventListener("click",who("ctlimm2"));
+byId("plink").addEventListener("click",function(e){e.preventDefault();L("hash",JSON.stringify(location.hash))});
+document.body.addEventListener("click",function(e){if(e.target.id==="plink")L("hash after",JSON.stringify(location.hash),e.defaultPrevented)});
+byId("pcheck").addEventListener("click",function(e){e.preventDefault();L("check during",e.target.checked)});
+</script></body></html>

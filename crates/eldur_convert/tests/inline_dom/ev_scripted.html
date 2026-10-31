@@ -1,0 +1,11 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif}button,a,span{text-align:left}.b{display:block;width:120px;height:30px}p,ul,li{margin:0;padding:0;list-style:none}label{display:block;width:120px;height:24px}input[type=text]{display:block;width:120px;height:24px;box-sizing:border-box}</style><script>function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){if(e===window)return "window";if(e===document)return "document";return e?(e.id||e.tagName):"null"}</script></head>
+<body id="bd" data-clicks="#go">
+<ul id="list"><li id="row"><span id="lab">label</span></li></ul>
+<button id="go" class="b">go</button>
+<script>
+var row=document.getElementById("row"),lab=document.getElementById("lab");
+row.addEventListener("click",function(e){L("row",I(e.target))});
+lab.addEventListener("click",function(e){L("lab",I(e.target))});
+document.getElementById("go").addEventListener("click",function(){lab.click();row.click()});
+</script></body></html>

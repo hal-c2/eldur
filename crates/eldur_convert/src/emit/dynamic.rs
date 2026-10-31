@@ -163,6 +163,8 @@ pub(crate) struct Emission {
     pub gated: bool,
     /// Set for a probe emission; its tree keeps the markers.
     pub probe: ProbeOut,
+    /// Inline elements and options scripts reach through `eldurInline`.
+    pub inline_covered: std::collections::BTreeSet<NodeId>,
 }
 
 /// The QML tree of the page, with conditional bindings when
@@ -205,6 +207,7 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
     let mut emitter = Emitter::new(cx.doc, cx.styles, cx.options, diags, cx.wanted);
     emitter.images = cx.images.clone();
     emitter.runtime_dom = cx.runtime_dom;
+    emitter.by_path = cx.scripts.is_some_and(|s| s.analysis.dispatch_by_path);
     emitter.script_attrs = cx.scripts.is_some_and(|s| s.analysis.reads_attributes);
     if let Some(probe) = cx.probe {
         emitter.markers = true;
@@ -222,6 +225,7 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
         imports: std::mem::take(&mut emitter.imports),
         gated: false,
         probe: ProbeOut::default(),
+        inline_covered: std::mem::take(&mut emitter.inline_covered),
     }
 }
 
@@ -759,6 +763,7 @@ struct Emitted {
     forms: BTreeMap<NodeId, Form>,
     imports: BTreeSet<&'static str>,
     ids: Ids,
+    inline_covered: BTreeSet<NodeId>,
 }
 
 impl Dynamic<'_, '_> {
@@ -795,6 +800,7 @@ impl Dynamic<'_, '_> {
             mut root,
             targets,
             forms,
+            inline_covered,
             mut imports,
             mut ids,
         } = Self::emit_world(self.cx, &styles, &sticky, &strips, collapsed, self.diags);
@@ -808,6 +814,13 @@ impl Dynamic<'_, '_> {
             .map(|c| u16::try_from(c).expect("conditions fit u16"))
             .collect();
         for &c in &unmarked {
+            // The runtime styles a node's classes itself, by the page's rules.
+            if let Condition::Class { node, .. } = &self.conds[usize::from(c)].cond
+                && self.cx.runtime_dom
+                && inline_covered.contains(node)
+            {
+                continue;
+            }
             no_item(self.cx.doc, &self.conds[usize::from(c)].cond, self.diags);
         }
         let worlds = self.worlds(&unmarked);
@@ -902,6 +915,7 @@ impl Dynamic<'_, '_> {
             imports,
             gated: gated && gate,
             probe,
+            inline_covered,
         }
     }
 
@@ -996,6 +1010,7 @@ impl Dynamic<'_, '_> {
         let mut emitter = Emitter::new(cx.doc, styles, cx.options, diags, cx.wanted);
         emitter.images = cx.images.clone();
         emitter.runtime_dom = cx.runtime_dom;
+        emitter.by_path = cx.scripts.is_some_and(|s| s.analysis.dispatch_by_path);
         emitter.script_attrs = cx.scripts.is_some_and(|s| s.analysis.reads_attributes);
         emitter.markers = true;
         if let Some(probe) = cx.probe {
@@ -1015,6 +1030,7 @@ impl Dynamic<'_, '_> {
             forms: std::mem::take(&mut emitter.forms),
             imports: std::mem::take(&mut emitter.imports),
             ids: std::mem::take(&mut emitter.ids),
+            inline_covered: std::mem::take(&mut emitter.inline_covered),
         };
         drop(emitter);
         drop(tree);

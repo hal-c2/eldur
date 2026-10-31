@@ -7,6 +7,8 @@
 
 pub mod values;
 
+pub use inline_rules::InlineRule;
+
 pub use values::*;
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -424,6 +426,14 @@ pub fn styled_classes(sheets: &[Stylesheet]) -> BTreeSet<String> {
     conditional::styled_classes(sheets)
 }
 
+/// The rules of `sheets` and the user agent's that set what inline text paints
+/// with, in cascade order, for the runtime to re-evaluate on the elements a
+/// script changes (`docs/spec/dom-api.md`, Inline nodes).
+#[must_use]
+pub fn inline_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<InlineRule> {
+    inline_rules::inline_rules(sheets, viewport)
+}
+
 /// The structural pseudo-classes (without `of S`) some selector in `sheets`
 /// uses: the [`Condition::Structural`]s worth asking about.
 #[must_use]
@@ -489,6 +499,7 @@ fn matches_any(doc: &Document, node: NodeId, list: &selectors::ConvertedSelector
 mod cascade;
 mod collect;
 mod conditional;
+mod inline_rules;
 mod media;
 mod parse;
 mod properties;

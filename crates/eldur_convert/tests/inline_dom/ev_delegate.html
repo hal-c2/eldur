@@ -1,0 +1,29 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif}button,a,span{text-align:left}.b{display:block;width:120px;height:30px}p,ul,li{margin:0;padding:0;list-style:none}label{display:block;width:120px;height:24px}input[type=text]{display:block;width:120px;height:24px;box-sizing:border-box}</style><script>function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){if(e===window)return "window";if(e===document)return "document";return e?(e.id||e.tagName):"null"}</script></head>
+<body id="bd" data-clicks="#b1 #t2 #plain #add #made #made2 #plain">
+<ul id="list">
+<li id="r1" data-id="1"><button id="b1" class="b" data-act="go">one</button></li>
+<li id="r2" data-id="2"><a id="t2" href="#x">two</a></li>
+<li id="r3" data-id="3"><p id="plain">three</p></li>
+</ul>
+<button id="add" class="b">add</button>
+<div id="sink"><div id="seed">seed</div></div>
+<script>
+var list=document.getElementById("list");
+list.addEventListener("click",function(e){
+  e.preventDefault();
+  var row=e.target.closest("li"),b=e.target.closest("button"),a=e.target.closest("[data-act]");
+  L("list",I(e.target),row?row.dataset.id:"-",b?I(b):"-",a?a.getAttribute("data-act"):"-",I(e.currentTarget));
+});
+var sink=document.getElementById("sink");
+sink.addEventListener("click",function(e){L("sink",I(e.target),e.target.tagName)});
+document.getElementById("add").addEventListener("click",function(){
+  var m=document.createElement("button");
+  m.id="made";m.className="b";m.textContent="made";
+  sink.appendChild(m);
+  var d=document.createElement("div");
+  d.id="made2";d.className="b";d.textContent="div";
+  sink.appendChild(d);
+  L("added");
+});
+</script></body></html>

@@ -3877,7 +3877,7 @@ Item {
 
     assert!(
         output.contains(
-            "ELDUR_OK_REMAT eldurT_li_0,eldurT_input_cb,eldurT_span_text,eldurT_input_text|INPUT,SPAN,INPUT|true|true|todo-item done:todo-item done:true|eldurT_li_card|card-item done:card-item done:true|INPUT,SPAN,INPUT|eldurT_input_cb,eldurT_span_text_card,eldurT_input_text|first,item-1,last|item-1,42,85,true,true,Buy oat milk,140,urgent,true|li:eldurT_li_0;cb:true;label:Buy oat milk;li:eldurT_li_card"
+            "ELDUR_OK_REMAT eldurT_li_0,eldurT_input_cb,eldurT_span_text,eldurT_input_text|INPUT,SPAN,INPUT|true|true|todo-item done:todo-item done:true|eldurT_li_card|card-item done:card-item done:true|INPUT,SPAN,INPUT|eldurT_input_cb,eldurT_span_text_card,eldurT_input_text|first,item-1,last|item-1,42,85,true,true,Buy oat milk,140,urgent,true|li:eldurT_li_0;cb:true;label:Buy oat milk;li:eldurT_li_0;li:eldurT_li_card"
         ),
         "{output}"
     );

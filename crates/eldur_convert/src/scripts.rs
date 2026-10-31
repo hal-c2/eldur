@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use eldur_dom::{Document, NodeId};
 use eldur_js::{
     Analysis, DomQuery, DomResolver, ElementKey, ElementRef, JsOutput, QmlTarget, ScriptInput,
-    ScriptKind,
+    ScriptKind, TargetKind,
 };
 use eldur_qml::{Member, Object};
 
@@ -135,6 +135,10 @@ pub(crate) fn collect(
     if empties_elements {
         analysis.mark_all_queries_live();
     }
+    if can_hear_another_element(doc, &analysis, &matches, &keys) {
+        analysis.dispatch_by_path = true;
+        analysis.runtime_dom = true;
+    }
     Scripts {
         inputs,
         analysis,
@@ -142,6 +146,32 @@ pub(crate) fn collect(
         matches,
         wanted,
     }
+}
+
+/// A listener on an element with elements inside hears events that started on
+/// them; `submit` starts at the form that has the listener. A listener no query
+/// names may be anywhere. A page with neither keeps its handlers in QML.
+fn can_hear_another_element(
+    doc: &Document,
+    analysis: &eldur_js::Analysis,
+    matches: &HashMap<DomQuery, Vec<NodeId>>,
+    keys: &HashMap<u32, NodeId>,
+) -> bool {
+    let nests = |node: &NodeId| doc.element_children(*node).next().is_some();
+    let delegates = |event: &str| event != "submit" && eldur_js::bubbles(event);
+    analysis.listens_unresolved
+        || analysis.listened.iter().any(|(query, event)| {
+            delegates(event) && matches.get(query).is_some_and(|f| f.iter().any(nests))
+        })
+        || keys.values().any(|node| {
+            nests(node)
+                && doc.element(*node).is_some_and(|e| {
+                    e.attrs.iter().any(|a| {
+                        let name: &str = &a.name.local;
+                        name.strip_prefix("on").is_some_and(delegates)
+                    })
+                })
+        })
 }
 
 fn key_of(node: NodeId) -> ElementKey {
@@ -197,11 +227,23 @@ fn resolve(doc: &Document, query: &DomQuery, diags: &mut Diagnostics) -> Vec<Nod
 pub(crate) struct Resolver<'a> {
     scripts: &'a Scripts,
     targets: &'a BTreeMap<NodeId, Target>,
+    inline_covered: &'a std::collections::BTreeSet<NodeId>,
 }
 
+/// The root property that holds an inline node with a handler attribute.
+const INLINE_NODE_PREFIX: &str = "eldurNode";
+
 impl<'a> Resolver<'a> {
-    pub(crate) fn new(scripts: &'a Scripts, targets: &'a BTreeMap<NodeId, Target>) -> Self {
-        Self { scripts, targets }
+    pub(crate) fn new(
+        scripts: &'a Scripts,
+        targets: &'a BTreeMap<NodeId, Target>,
+        inline_covered: &'a std::collections::BTreeSet<NodeId>,
+    ) -> Self {
+        Self {
+            scripts,
+            targets,
+            inline_covered,
+        }
     }
 
     fn target(&self, node: NodeId) -> Option<QmlTarget> {
@@ -223,7 +265,17 @@ impl DomResolver for Resolver<'_> {
     }
 
     fn element(&self, key: ElementKey) -> Option<QmlTarget> {
-        self.scripts.keys.get(&key.0).and_then(|&n| self.target(n))
+        let node = *self.scripts.keys.get(&key.0)?;
+        self.target(node).or_else(|| {
+            // No object of its own: its node is found when the page starts.
+            (self.scripts.analysis.dispatch_by_path && self.inline_covered.contains(&node)).then(
+                || QmlTarget {
+                    key,
+                    qml_id: format!("{INLINE_NODE_PREFIX}{}", key.0),
+                    kind: TargetKind::Box,
+                },
+            )
+        })
     }
 }
 
@@ -232,13 +284,14 @@ pub(crate) fn report_missing(
     doc: &Document,
     scripts: &Scripts,
     targets: &BTreeMap<NodeId, Target>,
+    inline_covered: &std::collections::BTreeSet<NodeId>,
     diags: &mut Diagnostics,
 ) {
     let mut missing: Vec<NodeId> = scripts
         .wanted
         .iter()
         .copied()
-        .filter(|n| !targets.contains_key(n))
+        .filter(|n| !targets.contains_key(n) && !inline_covered.contains(n))
         .collect();
     missing.sort_by_key(|n| n.index());
     for node in missing {
@@ -314,7 +367,10 @@ pub(crate) fn wire(
     forms: &BTreeMap<NodeId, Form>,
     scripts: &Scripts,
     diags: &mut Diagnostics,
-) {
+) -> Vec<String> {
+    if scripts.analysis.dispatch_by_path {
+        return wire_by_path(root, js, forms, scripts);
+    }
     for binding in &js.bindings {
         let id = &binding.target.qml_id;
         let call = |event: &str, arg: &str| {
@@ -422,6 +478,141 @@ pub(crate) fn wire(
                 None,
                 format!("`{other}` listeners on `{id}` are not wired to QML yet"),
             ),
+        }
+    }
+    Vec::new()
+}
+
+/// `wire` for a page whose listeners all go through the runtime's dispatch:
+/// `Eldur.listen` connects what it can, so only keys and a form's submit, which
+/// it cannot, get a QML handler. Attribute handlers join as `onX` before any
+/// script runs; returns those lines, for the root's `Component.onCompleted`.
+fn wire_by_path(
+    root: &mut Object,
+    js: &JsOutput,
+    forms: &BTreeMap<NodeId, Form>,
+    scripts: &Scripts,
+) -> Vec<String> {
+    let mut start = Vec::new();
+    let mut keys: BTreeSet<(String, &str)> = BTreeSet::new();
+    let mut inline_nodes = BTreeSet::new();
+    for binding in &js.bindings {
+        let id = &binding.target.qml_id;
+        let event = binding.event.as_str();
+        if let Some(key) = id.strip_prefix(INLINE_NODE_PREFIX)
+            && inline_nodes.insert(id.clone())
+        {
+            root.members.push(Member::PropertyDecl {
+                ty: "var".to_owned(),
+                name: id.clone(),
+                value: None,
+                readonly: false,
+                required: false,
+            });
+            start.push(format!("{id} = Eldur.inlineNode({key});"));
+        }
+        let bound = matches!(event, "keydown" | "keyup" | "submit");
+        if !js.redispatching_slots.contains(&binding.function) {
+            let setter = if bound { "setOnBound" } else { "setOn" };
+            start.push(format!(
+                "Eldur.{setter}({id}, {event:?}, Page.{});",
+                binding.function
+            ));
+        }
+        if event == "submit" {
+            let form = scripts
+                .keys_to_node(binding.target.key)
+                .and_then(|n| forms.get(&n));
+            if let Some(form) = form {
+                for (ids, signal) in [
+                    (&form.accepting, "onAccepted"),
+                    (&form.submitters, "onClicked"),
+                ] {
+                    for submitter in ids {
+                        if let Some(obj) = find_mut(root, submitter) {
+                            let fire = format!("Eldur.fire({id}, \"submit\", null);");
+                            add_handler(obj, signal, &[], vec![fire]);
+                        }
+                    }
+                }
+            }
+        } else if bound {
+            keys.insert((id.clone(), event));
+        }
+    }
+    let page = &js.page_js;
+    // A form with no listener of its own starts the path of its submit too.
+    if page.contains("submit") {
+        let heard: BTreeSet<NodeId> = js
+            .bindings
+            .iter()
+            .filter(|b| b.event == "submit")
+            .filter_map(|b| scripts.keys_to_node(b.target.key))
+            .collect();
+        for (_, form) in forms.iter().filter(|(n, _)| !heard.contains(n)) {
+            for (ids, signal) in [
+                (&form.accepting, "onAccepted"),
+                (&form.submitters, "onClicked"),
+            ] {
+                for submitter in ids {
+                    if let Some(obj) = find_mut(root, submitter) {
+                        let fire = format!("Eldur.fireSubmit({submitter});");
+                        add_handler(obj, signal, &[], vec![fire]);
+                    }
+                }
+            }
+        }
+    }
+    // A control with no listener of its own starts the key's path too.
+    for (event, quoted) in [("keydown", "keydown"), ("keyup", "keyup")] {
+        if page.contains(quoted) {
+            let mut ids = Vec::new();
+            control_ids(root, &mut ids);
+            keys.extend(ids.into_iter().map(|id| (id, event)));
+        }
+    }
+    for (id, event) in keys {
+        let Some(obj) = find_mut(root, &id) else {
+            continue;
+        };
+        let name = if event == "keydown" {
+            "Keys.onPressed"
+        } else {
+            "Keys.onReleased"
+        };
+        add_handler(
+            obj,
+            name,
+            &["event"],
+            vec![format!(
+                "event.accepted = !Eldur.fire({id}, {event:?}, event);"
+            )],
+        );
+    }
+    if !start.is_empty() {
+        start.insert(0, format!("Eldur.init({});", crate::emit::units::ROOT_ID));
+    }
+    start
+}
+
+fn control_ids(obj: &Object, out: &mut Vec<String>) {
+    let control = matches!(
+        obj.type_name.as_str(),
+        "Button"
+            | "CheckBox"
+            | "RadioButton"
+            | "TextField"
+            | "TextArea"
+            | "ComboBox"
+            | "Slider"
+            | "SpinBox"
+    );
+    if control && let Some(id) = &obj.id {
+        out.push(id.clone());
+    }
+    for member in &obj.members {
+        if let Member::Child(child) = member {
+            control_ids(child, out);
         }
     }
 }

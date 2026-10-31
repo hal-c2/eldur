@@ -1,0 +1,33 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+.k{color:rgb(200,0,0)} .big{font-weight:700} .blue{color:#0000ff} .on span{color:rgb(0,128,0)} .it{font-style:italic}
+</style><script>
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
+function C(e){var s=getComputedStyle(e);return s.color+"/"+s.fontWeight+"/"+s.fontStyle+"/"+s.display}
+
+var n=0;
+document.addEventListener("DOMContentLoaded",function(){
+var byId=function(s){return document.getElementById(s)};
+function who(tag){return function(e){L(tag,"t="+I(e.target),"c="+I(e.currentTarget),"this="+I(this),e.type,e.bubbles,e.button)}}
+var c=byId("count");
+byId("go").addEventListener("click",function(){c.textContent=String(Number(c.textContent)+1);L("count",c.textContent)});
+["word","bold","lnk","stop","nest","inner","wide"].forEach(function(i){byId(i).addEventListener("click",who(i))});
+byId("para").addEventListener("click",who("para"));
+byId("box").addEventListener("click",who("box"));
+document.body.addEventListener("click",who("body"));
+byId("lnk").addEventListener("click",function(e){e.preventDefault();L("hash",location.hash)});
+byId("stop").addEventListener("click",function(e){e.stopPropagation()});
+byId("tog").addEventListener("click",function(e){e.target.classList.toggle("k");L("tog",C(e.target))});
+byId("once").addEventListener("click",function(){L("once")},{once:true});
+byId("onc").onclick=function(e){L("onclick",I(e.target),I(this))};
+var m=document.createElement("span"); m.id="made"; m.textContent="created"; byId("para2").appendChild(m);
+m.addEventListener("click",who("made"));
+byId("para2").addEventListener("click",function(e){L("delegate",I(e.target),I(e.target.closest("span")))});
+});
+</script></head><body data-clicks="#go #go #word #bold #lnk #stop #inner #nest:tail #wide #tog #tog #once #once #onc #plainpart #made #para2:start #blank #blank:right">
+<button id="go" style="text-align:left">plus</button>
+<div id="box"><p id="para"><span id="plainpart">plain words here</span> <span id="word">wordy</span> and <b id="bold">boldly</b> then <a id="lnk" href="#frag">linked</a> and <span id="stop">stopper</span> <span id="nest">outer <i id="inner">innermost</i> tail</span></p>
+<p><span id="wide">xxxxxxxxxx</span> <span id="tog">toggle</span> <span id="once">oncely</span> <span id="onc">onclick</span> <span id="count">0</span></p>
+<p id="para2"><span class="start">start</span> text </p>
+<p id="blank">short</p></div>
+</body></html>

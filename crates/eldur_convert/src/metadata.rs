@@ -226,6 +226,27 @@ pub(crate) fn styled_classes_decl(classes: &BTreeSet<String>) -> Member {
     )
 }
 
+/// `root.eldurInlineRules`: what the runtime re-evaluates on inline elements a
+/// script changes. A string, parsed once, as the page may have many rules.
+pub(crate) fn inline_rules_decl(rules: &[eldur_css::InlineRule]) -> Member {
+    let list: Vec<serde_json::Value> = rules
+        .iter()
+        .map(|r| {
+            serde_json::json!({
+                "sel": r.selector,
+                "spec": [r.specificity.0, r.specificity.1, r.specificity.2],
+                "ua": r.user_agent,
+                "decls": r.declarations,
+            })
+        })
+        .collect();
+    decl(
+        "string",
+        "eldurInlineRules",
+        Value::String(serde_json::Value::Array(list).to_string()),
+    )
+}
+
 /// `root.baseUrl` (dynamic-styles §14, decision 2): an `http(s)` page's
 /// own URL, a local page's converted `Main.qml`, and `<base href>`
 /// resolved against either.

@@ -5,7 +5,9 @@ use std::borrow::Cow;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use swc_common::{BytePos, FileName, SourceMap, Span, Spanned, input::StringInput, sync::Lrc};
+use swc_common::{
+    BytePos, FileName, SourceMap, SourceMapper, Span, Spanned, input::StringInput, sync::Lrc,
+};
 use swc_css_ast as ast;
 use swc_css_codegen::{
     CodeGenerator, CodegenConfig, Emit,
@@ -83,6 +85,10 @@ pub(crate) struct StyleRule {
     pub(crate) declarations: Vec<ParsedDecl>,
     pub(crate) media: Vec<MediaQueryList>,
     pub(crate) layer: Option<LayerPath>,
+    /// The selector list as written, for what re-evaluates it at run time;
+    /// `None` inside a nesting rule, whose text alone does not say what it
+    /// selects.
+    pub(crate) selector_text: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -206,6 +212,8 @@ struct ParseCtx<'a> {
     /// True until any rule other than `@charset`, `@import`, or a `@layer` statement
     /// has been encountered at the top level.
     allow_imports: bool,
+    /// The source of the style rule being read.
+    selector_text: Option<String>,
 }
 
 impl<'a> ParseCtx<'a> {
@@ -358,6 +366,7 @@ pub(crate) fn parse_stylesheet(
         seen_unsupported_props: HashSet::new(),
         seen_unsupported_pseudos: HashSet::new(),
         allow_imports: true,
+        selector_text: None,
     };
 
     match parsed {
@@ -413,6 +422,7 @@ pub(crate) fn parse_inline_style(
         seen_unsupported_props: HashSet::new(),
         seen_unsupported_pseudos: HashSet::new(),
         allow_imports: false,
+        selector_text: None,
     };
 
     let mut out = Vec::new();
@@ -500,6 +510,15 @@ fn process_qualified_rule(
         return;
     }
 
+    let outer_text = ctx.selector_text.take();
+    ctx.selector_text = parent_selectors
+        .is_none()
+        .then(|| {
+            ctx.cm
+                .span_to_snippet(Span::new(qr.span.lo, qr.block.span.lo))
+                .ok()
+        })
+        .flatten();
     process_style_block_contents(
         ctx,
         &qr.block,
@@ -507,6 +526,7 @@ fn process_qualified_rule(
         media_stack,
         layer_stack,
     );
+    ctx.selector_text = outer_text;
 }
 
 /// Processes a style rule's `{ ... }` block (or a `@media`/`@supports`/`@layer` block
@@ -534,6 +554,7 @@ fn process_style_block_contents(
                 declarations: std::mem::take(decls),
                 media: media_stack.to_vec(),
                 layer: (!layer_stack.is_empty()).then(|| layer_stack.to_vec()),
+                selector_text: ctx.selector_text.clone(),
             });
         }
     };

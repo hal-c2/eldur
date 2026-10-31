@@ -1,0 +1,9 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif}button,a,span{text-align:left}.b{display:block;width:120px;height:30px}p,ul,li{margin:0;padding:0;list-style:none}label{display:block;width:120px;height:24px}input[type=text]{display:block;width:120px;height:24px;box-sizing:border-box}</style><script>function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){if(e===window)return "window";if(e===document)return "document";return e?(e.id||e.tagName):"null"}</script></head>
+<body id="bd" data-clicks="#c1 #c2 #t3">
+<div id="host" onclick="L('host')">
+<button id="c1" class="b">no listener</button>
+<button id="c2" class="b" onclick="L('c2');event.stopPropagation()">own</button>
+<div id="t3" class="b" onclick="L('t3')">three</div>
+</div>
+</body></html>

@@ -310,11 +310,17 @@ impl Emitter<'_, '_> {
         } else {
             format!("{id}.forceActiveFocus();")
         };
+        // The label's own click comes first, and can keep the control's away.
+        let guard = if self.by_path {
+            format!("{id}.enabled && !Eldur.tapPrevented(eventPoint)")
+        } else {
+            format!("{id}.enabled")
+        };
         let mut tap = Object::new("TapHandler");
         tap.members.push(Member::Handler {
             name: "onTapped".to_owned(),
             params: vec!["eventPoint".to_owned(), "button".to_owned()],
-            body: vec![format!("if ({id}.enabled) {{ {action} }}")],
+            body: vec![format!("if ({guard}) {{ {action} }}")],
         });
         obj.push_child(tap);
     }
@@ -1034,6 +1040,7 @@ impl Emitter<'_, '_> {
             );
         }
         let mut obj = Object::new("ComboBox");
+        self.declare_select_model(&mut obj, node);
         obj.set("model", Value::expr(format!("[{}]", options.join(", "))));
         obj.set("textRole", Value::string("text"));
         obj.set("valueRole", Value::string("value"));

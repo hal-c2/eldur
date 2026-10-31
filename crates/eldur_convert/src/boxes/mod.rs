@@ -118,6 +118,48 @@ pub(crate) fn build<'a>(
     build_with(doc, styles, None, None, diags)
 }
 
+/// An element a script reaches as a node of its line or `<select>`
+/// (`docs/spec/dom-api.md`, Inline nodes).
+pub(crate) fn is_inline_node(doc: &Document, styles: &StyleMap, node: NodeId) -> bool {
+    let tag = doc.element(node).map(eldur_dom::Element::local_name);
+    matches!(tag, Some("option" | "optgroup" | "select"))
+        || styles
+            .computed(node)
+            .is_some_and(|c| c.style.display == Display::Inline)
+        || stays_in_line(doc, styles, node)
+}
+
+/// A hidden phrasing element among its line's text: showing it puts it in
+/// that line, so a box of its own would split the line for nothing.
+fn stays_in_line(doc: &Document, styles: &StyleMap, node: NodeId) -> bool {
+    const PHRASING: &[&str] = &[
+        "a", "abbr", "b", "bdi", "bdo", "cite", "code", "data", "del", "dfn", "em", "font", "i",
+        "ins", "kbd", "label", "mark", "q", "s", "samp", "small", "span", "strong", "sub", "sup",
+        "time", "u", "var",
+    ];
+    let hidden = styles
+        .computed(node)
+        .is_none_or(|c| c.style.display == Display::None);
+    let phrasing = doc
+        .element(node)
+        .is_some_and(|e| PHRASING.contains(&e.local_name()));
+    if !hidden || !phrasing || doc.element_children(node).next().is_some() {
+        return false;
+    }
+    let Some(parent) = doc.parent(node) else {
+        return false;
+    };
+    doc.children(parent).any(|sibling| {
+        sibling != node
+            && match doc.text(sibling) {
+                Some(text) => !text.trim().is_empty(),
+                None => styles
+                    .style(sibling)
+                    .is_some_and(|s| s.display == Display::Inline),
+            }
+    })
+}
+
 /// [`build`], also keeping a hidden box for each `display: none` element
 /// in `keep`: scripts that show it (`el.hidden = false`) need an object.
 /// Each inline element in `own` is laid out as an atomic inline-level box
@@ -278,7 +320,7 @@ impl<'a> Builder<'a, '_> {
     fn element(&mut self, node: NodeId, out: &mut Vec<Child<'a>>) {
         let style = self.styles.computed(node).map(|s| &s.style);
         let hidden = style.is_none_or(|s| s.display == Display::None);
-        if hidden && self.keeps_descendant(node) {
+        if hidden && self.keeps_descendant(node) && !stays_in_line(self.doc, self.styles, node) {
             if let Some(b) = self.hidden_box(node) {
                 out.push(Child::Block(Box::new(b)));
             }

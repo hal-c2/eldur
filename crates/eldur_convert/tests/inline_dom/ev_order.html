@@ -1,0 +1,33 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif}button,a,span{text-align:left}.b{display:block;width:120px;height:30px}p,ul,li{margin:0;padding:0;list-style:none}label{display:block;width:120px;height:24px}input[type=text]{display:block;width:120px;height:24px;box-sizing:border-box}</style><script>function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){if(e===window)return "window";if(e===document)return "document";return e?(e.id||e.tagName):"null"}</script></head>
+<body id="bd" data-clicks="#block #inner #inner #btn #chk #lnk #field #lab">
+<div id="outer"><div id="mid">
+<div id="block" class="b">block</div>
+<p id="para">words <span id="sp">outer <b id="inner">bold</b> tail</span></p>
+<button id="btn" class="b">press</button>
+<input id="chk" type="checkbox">
+<p><a id="lnk" href="#frag">link</a></p>
+<input id="field" type="text">
+<label id="lab" for="chk">label</label>
+</div></div>
+<script>
+function who(tag){return function(e){L(tag,"t="+I(e.target),"c="+I(e.currentTarget),"this="+I(this),"phase="+e.eventPhase)}}
+function byId(i){return document.getElementById(i)}
+// Root first: a browser's order does not depend on it.
+window.addEventListener("click",who("window"));
+document.addEventListener("click",who("document"));
+document.body.addEventListener("click",who("body"));
+byId("outer").addEventListener("click",who("outer"));
+byId("mid").addEventListener("click",who("mid"));
+// Capture listeners, some added after the bubble ones of the same element.
+window.addEventListener("click",who("window-cap"),true);
+document.addEventListener("click",who("document-cap"),true);
+document.body.addEventListener("click",who("body-cap"),{capture:true});
+byId("mid").addEventListener("click",who("mid-cap"),true);
+// On the target: capture still comes first, though added second.
+byId("inner").addEventListener("click",who("inner"));
+byId("inner").addEventListener("click",who("inner-cap"),true);
+byId("sp").addEventListener("click",who("sp"));
+byId("block").addEventListener("click",who("block"));
+byId("block").addEventListener("click",who("block-cap"),true);
+</script></body></html>

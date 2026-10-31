@@ -1,0 +1,37 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+.k{color:rgb(200,0,0)} .big{font-weight:700} .blue{color:#0000ff} .on span{color:rgb(0,128,0)} .it{font-style:italic}
+</style><script>
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
+function C(e){var s=getComputedStyle(e);return s.color+"/"+s.fontWeight+"/"+s.fontStyle+"/"+s.display}
+
+document.addEventListener("DOMContentLoaded",function(){
+var byId=function(s){return document.getElementById(s)};
+var p=byId("p"),a=byId("a");
+var s=document.createElement("span"); s.id="s"; s.className="k"; s.textContent="made";
+L("detached",s.parentNode===null,s.isConnected,I(byId("s")));
+p.appendChild(s);
+L("append",p.textContent,p.children.length,p.childNodes.length,I(s.parentNode),s.isConnected,s===byId("s"),C(s),p.lastChild===s);
+s.textContent="changed"; L("write",p.textContent);
+var b=document.createElement("b"); b.append("bb"); p.insertBefore(b,a); L("before",p.textContent,I(a.previousElementSibling),b.tagName,C(b));
+b.classList.add("k"); L("restyle",C(b));
+p.append(" tail"); L("str",p.textContent,p.childNodes.length);
+p.prepend("head "); L("prepend",p.textContent);
+p.appendChild(document.createTextNode(" tn")); L("tn",p.textContent,p.lastChild.nodeType);
+a.after(document.createElement("i")); L("after",I(a.nextElementSibling),p.children.length);
+a.before("x"); L("before str",p.textContent);
+a.remove(); L("remove",a.parentNode===null,a.isConnected,I(byId("a")),p.textContent,a.textContent,p.children.length);
+p.insertBefore(a,s); L("reinsert",I(a.nextElementSibling),a.isConnected,I(byId("a")));
+p.removeChild(b); L("removeChild",p.contains(b),b.parentNode===null,p.textContent);
+var c=s.cloneNode(true); c.id="c"; p.appendChild(c); L("clone",c.textContent,C(c),c!==s,p.querySelectorAll(".k").length);
+s.replaceWith(b); L("replace",I(b.parentNode),s.parentNode===null,p.textContent);
+var o=byId("q"); o.appendChild(s); L("plain host",o.textContent,o.children.length,I(s.parentNode),C(s),o.childNodes.length);
+s.insertAdjacentText("beforeend","+"); L("adj",s.textContent);
+s.insertAdjacentHTML("afterend",'<u id="u">uu</u>'); L("adjhtml",o.textContent,I(byId("u")),I(byId("u").previousElementSibling));
+var w=document.createElement("em"); var w2=document.createElement("b"); w2.id="deep"; w2.textContent="d"; w.appendChild(w2); o.appendChild(w); L("nested",o.textContent,I(byId("deep").parentNode),I(byId("deep").closest("p")));
+o.replaceChildren(); L("cleared",o.textContent,o.children.length,o.childNodes.length);
+});
+</script></head><body>
+<p id="p">Start <span id="a">anchor</span> end</p>
+<p id="q">Plain</p>
+</body></html>

@@ -513,13 +513,54 @@ fn tag_part(e: &CreatedElement) -> String {
 /// Adds the templates of the elements `scripts` create to `root`: their
 /// `Component`s, `root.eldurTemplates`, and `eldurKey` and `cls_` properties on
 /// the static elements they read. `None` when there are none.
+/// The tags the runtime keeps as nodes in a line (`_vStaysInline`).
+fn stays_inline(tag: &str) -> bool {
+    matches!(
+        tag,
+        "a" | "abbr"
+            | "b"
+            | "bdi"
+            | "bdo"
+            | "br"
+            | "cite"
+            | "code"
+            | "data"
+            | "del"
+            | "dfn"
+            | "em"
+            | "font"
+            | "i"
+            | "ins"
+            | "kbd"
+            | "label"
+            | "mark"
+            | "q"
+            | "s"
+            | "samp"
+            | "small"
+            | "span"
+            | "strike"
+            | "strong"
+            | "sub"
+            | "sup"
+            | "time"
+            | "tt"
+            | "u"
+            | "var"
+            | "wbr"
+    )
+}
+
 pub(crate) fn add(
     cx: &Inputs<'_>,
     scripts: &Scripts,
     root: &mut Object,
     targets: &BTreeMap<NodeId, Target>,
+    inline_rules: bool,
     diags: &mut Diagnostics,
 ) -> Option<Added> {
+    // Such an element becomes a node of the line, styled by the page's rules.
+    let styled_as_node = |tag: &str| inline_rules && stays_inline(tag);
     let created = &scripts.analysis.created;
     if created.is_empty() || !cx.options.state_variants {
         return None;
@@ -554,6 +595,7 @@ pub(crate) fn add(
                             Some(t) => {
                                 builder.place(i, *node, Context::Static(t.qml_id.clone()), 0);
                             }
+                            None if styled_as_node(&e.tag) => {}
                             None => diags.info(
                                 "css",
                                 e.line,
@@ -727,7 +769,8 @@ pub(crate) fn add(
                 Context::Any => "in <body>",
                 Context::Static(_) | Context::Probe(_) => "where the script puts it",
             };
-            diags.info(
+            if !styled_as_node(&e.tag) {
+                diags.info(
                 "css",
                 e.line,
                 format!(
@@ -735,6 +778,7 @@ pub(crate) fn add(
                     e.tag
                 ),
             );
+            }
             objects.push(None);
             continue;
         };

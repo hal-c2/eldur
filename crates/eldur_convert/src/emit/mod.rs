@@ -14,6 +14,7 @@ mod grid;
 mod ids;
 mod image;
 mod inline;
+mod inline_model;
 mod links;
 mod lists;
 mod paint;
@@ -122,6 +123,8 @@ pub(crate) struct Emitter<'a, 'd> {
     /// Scripts reach elements at run time, so every element object says
     /// what it is (`eldurTag`, `eldurClasses`).
     pub runtime_dom: bool,
+    /// Events run one dispatch over the path from the target.
+    pub by_path: bool,
     /// Scripts read attributes, so elements carry `eldurAttrs`.
     pub script_attrs: bool,
     /// Each element's outermost object carries a marker comment naming its
@@ -147,6 +150,8 @@ pub(crate) struct Emitter<'a, 'd> {
     /// Created inline elements laid out as items of their own in their
     /// line (`boxes::build_with`).
     inline_items: HashSet<NodeId>,
+    /// Inline elements and options a script reaches through `eldurInline`.
+    pub inline_covered: std::collections::BTreeSet<NodeId>,
 }
 
 impl<'a, 'd> Emitter<'a, 'd> {
@@ -192,6 +197,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             imports: std::collections::BTreeSet::new(),
             images: BTreeMap::new(),
             runtime_dom: false,
+            by_path: false,
             script_attrs: false,
             markers: false,
             no_carry: false,
@@ -201,6 +207,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             collapsed: HashSet::new(),
             force_paint: false,
             inline_items: HashSet::new(),
+            inline_covered: std::collections::BTreeSet::new(),
         }
     }
 
@@ -538,6 +545,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
             }
             Content::Inline(items) => {
                 let mut text = self.text(style, decoration, items, line);
+                if self.runtime_dom {
+                    self.declare_inline_model(&mut text, b, decoration, items);
+                }
                 if matches!(b.kind, BoxKind::Flex | BoxKind::Grid) {
                     place_anonymous_item(&mut text, style, b.kind);
                 }

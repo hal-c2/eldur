@@ -1,0 +1,820 @@
+{
+ "clicks": {
+  "log": [
+   "LC count 1",
+   "LC body t=go c=BODY this=BODY click true 0",
+   "LC count 2",
+   "LC body t=go c=BODY this=BODY click true 0",
+   "LC word t=word c=word this=word click true 0",
+   "LC para t=word c=para this=para click true 0",
+   "LC box t=word c=box this=box click true 0",
+   "LC body t=word c=BODY this=BODY click true 0",
+   "LC bold t=bold c=bold this=bold click true 0",
+   "LC para t=bold c=para this=para click true 0",
+   "LC box t=bold c=box this=box click true 0",
+   "LC body t=bold c=BODY this=BODY click true 0",
+   "LC lnk t=lnk c=lnk this=lnk click true 0",
+   "LC hash ",
+   "LC para t=lnk c=para this=para click true 0",
+   "LC box t=lnk c=box this=box click true 0",
+   "LC body t=lnk c=BODY this=BODY click true 0",
+   "LC stop t=stop c=stop this=stop click true 0",
+   "LC inner t=inner c=inner this=inner click true 0",
+   "LC nest t=inner c=nest this=nest click true 0",
+   "LC para t=inner c=para this=para click true 0",
+   "LC box t=inner c=box this=box click true 0",
+   "LC body t=inner c=BODY this=BODY click true 0",
+   "LC nest t=nest c=nest this=nest click true 0",
+   "LC para t=nest c=para this=para click true 0",
+   "LC box t=nest c=box this=box click true 0",
+   "LC body t=nest c=BODY this=BODY click true 0",
+   "LC wide t=wide c=wide this=wide click true 0",
+   "LC box t=wide c=box this=box click true 0",
+   "LC body t=wide c=BODY this=BODY click true 0",
+   "LC tog rgb(200, 0, 0)/400/normal/inline",
+   "LC box t=tog c=box this=box click true 0",
+   "LC body t=tog c=BODY this=BODY click true 0",
+   "LC tog rgb(0, 0, 0)/400/normal/inline",
+   "LC box t=tog c=box this=box click true 0",
+   "LC body t=tog c=BODY this=BODY click true 0",
+   "LC once",
+   "LC box t=once c=box this=box click true 0",
+   "LC body t=once c=BODY this=BODY click true 0",
+   "LC box t=once c=box this=box click true 0",
+   "LC body t=once c=BODY this=BODY click true 0",
+   "LC onclick onc onc",
+   "LC box t=onc c=box this=box click true 0",
+   "LC body t=onc c=BODY this=BODY click true 0",
+   "LC para t=plainpart c=para this=para click true 0",
+   "LC box t=plainpart c=box this=box click true 0",
+   "LC body t=plainpart c=BODY this=BODY click true 0",
+   "LC made t=made c=made this=made click true 0",
+   "LC delegate made made",
+   "LC box t=made c=box this=box click true 0",
+   "LC body t=made c=BODY this=BODY click true 0",
+   "LC delegate SPAN SPAN",
+   "LC box t=SPAN c=box this=box click true 0",
+   "LC body t=SPAN c=BODY this=BODY click true 0",
+   "LC box t=blank c=box this=box click true 0",
+   "LC body t=blank c=BODY this=BODY click true 0",
+   "LC box t=blank c=box this=box click true 0",
+   "LC body t=blank c=BODY this=BODY click true 0"
+  ],
+  "clicks": [
+   {
+    "name": "#go",
+    "x": 28.2265625,
+    "y": 18.5
+   },
+   {
+    "name": "#go",
+    "x": 28.2265625,
+    "y": 18.5
+   },
+   {
+    "name": "#word",
+    "x": 139.0859375,
+    "y": 53.5
+   },
+   {
+    "name": "#bold",
+    "x": 211.984375,
+    "y": 53.5
+   },
+   {
+    "name": "#lnk",
+    "x": 288.875,
+    "y": 53.5
+   },
+   {
+    "name": "#stop",
+    "x": 363.5390625,
+    "y": 53.5
+   },
+   {
+    "name": "#inner",
+    "x": 459.96875,
+    "y": 53.5
+   },
+   {
+    "name": "#nest:tail",
+    "x": 506.1875,
+    "y": 53.5
+   },
+   {
+    "name": "#wide",
+    "x": 48,
+    "y": 87.5
+   },
+   {
+    "name": "#tog",
+    "x": 112,
+    "y": 87.5
+   },
+   {
+    "name": "#tog",
+    "x": 112,
+    "y": 87.5
+   },
+   {
+    "name": "#once",
+    "x": 157.328125,
+    "y": 87.5
+   },
+   {
+    "name": "#once",
+    "x": 157.328125,
+    "y": 87.5
+   },
+   {
+    "name": "#onc",
+    "x": 206.203125,
+    "y": 87.5
+   },
+   {
+    "name": "#plainpart",
+    "x": 61.3203125,
+    "y": 53.5
+   },
+   {
+    "name": "#made",
+    "x": 90.640625,
+    "y": 121.5
+   },
+   {
+    "name": "#para2:start",
+    "x": 21.7734375,
+    "y": 121.5
+   },
+   {
+    "name": "#blank",
+    "x": 24,
+    "y": 155.5
+   },
+   {
+    "name": "#blank:right",
+    "x": 1252,
+    "y": 155.5
+   }
+  ]
+ },
+ "ev_change": {
+  "log": [
+   "LC focus",
+   "LC blur",
+   "LC focus",
+   "LC change x",
+   "LC body change one",
+   "LC blur"
+  ],
+  "clicks": [
+   {
+    "name": "#one",
+    "x": 60,
+    "y": 12
+   },
+   {
+    "name": "key:Tab",
+    "key": "Tab"
+   },
+   {
+    "name": "#one",
+    "x": 60,
+    "y": 12
+   },
+   {
+    "name": "key:x",
+    "key": "x"
+   },
+   {
+    "name": "key:Tab",
+    "key": "Tab"
+   }
+  ]
+ },
+ "ev_delegate": {
+  "log": [
+   "LC list b1 1 b1 go list",
+   "LC list t2 2 - - list",
+   "LC list plain 3 - - list",
+   "LC added",
+   "LC sink made BUTTON",
+   "LC sink made2 DIV",
+   "LC list plain 3 - - list"
+  ],
+  "clicks": [
+   {
+    "name": "#b1",
+    "x": 19.125,
+    "y": 15
+   },
+   {
+    "name": "#t2",
+    "x": 12.453125,
+    "y": 39.5
+   },
+   {
+    "name": "#plain",
+    "x": 18.234375,
+    "y": 59.5
+   },
+   {
+    "name": "#add",
+    "x": 19.125,
+    "y": 85
+   },
+   {
+    "name": "#made",
+    "x": 24.671875,
+    "y": 135
+   },
+   {
+    "name": "#made2",
+    "x": 10.2265625,
+    "y": 159.5
+   },
+   {
+    "name": "#plain",
+    "x": 18.234375,
+    "y": 59.5
+   }
+  ]
+ },
+ "ev_forms": {
+  "log": [
+   "LC group keydown txt a",
+   "LC body keydown txt a",
+   "LC group input txt ",
+   "LC body input txt ",
+   "LC group keyup txt a",
+   "LC body keyup txt a",
+   "LC group keydown txt Tab",
+   "LC body keydown txt Tab",
+   "LC group change txt ",
+   "LC body change txt ",
+   "LC group keyup chk Tab",
+   "LC body keyup chk Tab",
+   "LC group input chk ",
+   "LC body input chk ",
+   "LC group change chk ",
+   "LC body change chk ",
+   "LC group input rad ",
+   "LC body input rad ",
+   "LC group change rad ",
+   "LC body change rad ",
+   "LC group keydown txt2 b",
+   "LC body keydown txt2 b",
+   "LC group input txt2 ",
+   "LC body input txt2 ",
+   "LC group keyup txt2 b",
+   "LC body keyup txt2 b",
+   "LC group keydown txt2 Enter",
+   "LC body keydown txt2 Enter",
+   "LC group change txt2 ",
+   "LC body change txt2 ",
+   "LC form submit frm",
+   "LC body submit frm ",
+   "LC group keyup txt2 Enter",
+   "LC body keyup txt2 Enter",
+   "LC form submit frm",
+   "LC body submit frm ",
+   "LC own c",
+   "LC body input own ",
+   "LC body keyup own c"
+  ],
+  "clicks": [
+   {
+    "name": "#txt",
+    "x": 60,
+    "y": 12
+   },
+   {
+    "name": "key:a",
+    "key": "a"
+   },
+   {
+    "name": "key:Tab",
+    "key": "Tab"
+   },
+   {
+    "name": "#chk",
+    "x": 64,
+    "y": 42
+   },
+   {
+    "name": "#rad",
+    "x": 65,
+    "y": 75
+   },
+   {
+    "name": "#txt2",
+    "x": 60,
+    "y": 102
+   },
+   {
+    "name": "key:b",
+    "key": "b"
+   },
+   {
+    "name": "key:Enter",
+    "key": "Enter"
+   },
+   {
+    "name": "#go",
+    "x": 15.4140625,
+    "y": 129
+   },
+   {
+    "name": "#own",
+    "x": 60,
+    "y": 156
+   },
+   {
+    "name": "key:c",
+    "key": "c"
+   }
+  ]
+ },
+ "ev_order": {
+  "log": [
+   "LC window-cap t=block c=window this=window phase=1",
+   "LC document-cap t=block c=document this=document phase=1",
+   "LC body-cap t=block c=bd this=bd phase=1",
+   "LC mid-cap t=block c=mid this=mid phase=1",
+   "LC block-cap t=block c=block this=block phase=2",
+   "LC block t=block c=block this=block phase=2",
+   "LC mid t=block c=mid this=mid phase=3",
+   "LC outer t=block c=outer this=outer phase=3",
+   "LC body t=block c=bd this=bd phase=3",
+   "LC document t=block c=document this=document phase=3",
+   "LC window t=block c=window this=window phase=3",
+   "LC window-cap t=inner c=window this=window phase=1",
+   "LC document-cap t=inner c=document this=document phase=1",
+   "LC body-cap t=inner c=bd this=bd phase=1",
+   "LC mid-cap t=inner c=mid this=mid phase=1",
+   "LC inner-cap t=inner c=inner this=inner phase=2",
+   "LC inner t=inner c=inner this=inner phase=2",
+   "LC sp t=inner c=sp this=sp phase=3",
+   "LC mid t=inner c=mid this=mid phase=3",
+   "LC outer t=inner c=outer this=outer phase=3",
+   "LC body t=inner c=bd this=bd phase=3",
+   "LC document t=inner c=document this=document phase=3",
+   "LC window t=inner c=window this=window phase=3",
+   "LC window-cap t=inner c=window this=window phase=1",
+   "LC document-cap t=inner c=document this=document phase=1",
+   "LC body-cap t=inner c=bd this=bd phase=1",
+   "LC mid-cap t=inner c=mid this=mid phase=1",
+   "LC inner-cap t=inner c=inner this=inner phase=2",
+   "LC inner t=inner c=inner this=inner phase=2",
+   "LC sp t=inner c=sp this=sp phase=3",
+   "LC mid t=inner c=mid this=mid phase=3",
+   "LC outer t=inner c=outer this=outer phase=3",
+   "LC body t=inner c=bd this=bd phase=3",
+   "LC document t=inner c=document this=document phase=3",
+   "LC window t=inner c=window this=window phase=3",
+   "LC window-cap t=btn c=window this=window phase=1",
+   "LC document-cap t=btn c=document this=document phase=1",
+   "LC body-cap t=btn c=bd this=bd phase=1",
+   "LC mid-cap t=btn c=mid this=mid phase=1",
+   "LC mid t=btn c=mid this=mid phase=3",
+   "LC outer t=btn c=outer this=outer phase=3",
+   "LC body t=btn c=bd this=bd phase=3",
+   "LC document t=btn c=document this=document phase=3",
+   "LC window t=btn c=window this=window phase=3",
+   "LC window-cap t=chk c=window this=window phase=1",
+   "LC document-cap t=chk c=document this=document phase=1",
+   "LC body-cap t=chk c=bd this=bd phase=1",
+   "LC mid-cap t=chk c=mid this=mid phase=1",
+   "LC mid t=chk c=mid this=mid phase=3",
+   "LC outer t=chk c=outer this=outer phase=3",
+   "LC body t=chk c=bd this=bd phase=3",
+   "LC document t=chk c=document this=document phase=3",
+   "LC window t=chk c=window this=window phase=3",
+   "LC window-cap t=lnk c=window this=window phase=1",
+   "LC document-cap t=lnk c=document this=document phase=1",
+   "LC body-cap t=lnk c=bd this=bd phase=1",
+   "LC mid-cap t=lnk c=mid this=mid phase=1",
+   "LC mid t=lnk c=mid this=mid phase=3",
+   "LC outer t=lnk c=outer this=outer phase=3",
+   "LC body t=lnk c=bd this=bd phase=3",
+   "LC document t=lnk c=document this=document phase=3",
+   "LC window t=lnk c=window this=window phase=3",
+   "LC window-cap t=field c=window this=window phase=1",
+   "LC document-cap t=field c=document this=document phase=1",
+   "LC body-cap t=field c=bd this=bd phase=1",
+   "LC mid-cap t=field c=mid this=mid phase=1",
+   "LC mid t=field c=mid this=mid phase=3",
+   "LC outer t=field c=outer this=outer phase=3",
+   "LC body t=field c=bd this=bd phase=3",
+   "LC document t=field c=document this=document phase=3",
+   "LC window t=field c=window this=window phase=3",
+   "LC window-cap t=lab c=window this=window phase=1",
+   "LC document-cap t=lab c=document this=document phase=1",
+   "LC body-cap t=lab c=bd this=bd phase=1",
+   "LC mid-cap t=lab c=mid this=mid phase=1",
+   "LC mid t=lab c=mid this=mid phase=3",
+   "LC outer t=lab c=outer this=outer phase=3",
+   "LC body t=lab c=bd this=bd phase=3",
+   "LC document t=lab c=document this=document phase=3",
+   "LC window t=lab c=window this=window phase=3",
+   "LC window-cap t=chk c=window this=window phase=1",
+   "LC document-cap t=chk c=document this=document phase=1",
+   "LC body-cap t=chk c=bd this=bd phase=1",
+   "LC mid-cap t=chk c=mid this=mid phase=1",
+   "LC mid t=chk c=mid this=mid phase=3",
+   "LC outer t=chk c=outer this=outer phase=3",
+   "LC body t=chk c=bd this=bd phase=3",
+   "LC document t=chk c=document this=document phase=3",
+   "LC window t=chk c=window this=window phase=3"
+  ],
+  "clicks": [
+   {
+    "name": "#block",
+    "x": 18.6796875,
+    "y": 9.5
+   },
+   {
+    "name": "#inner",
+    "x": 104.9296875,
+    "y": 39.5
+   },
+   {
+    "name": "#inner",
+    "x": 104.9296875,
+    "y": 39.5
+   },
+   {
+    "name": "#btn",
+    "x": 24.296875,
+    "y": 65
+   },
+   {
+    "name": "#chk",
+    "x": 10.5,
+    "y": 89.5
+   },
+   {
+    "name": "#lnk",
+    "x": 12.0078125,
+    "y": 110.5
+   },
+   {
+    "name": "#field",
+    "x": 60,
+    "y": 133
+   },
+   {
+    "name": "#lab",
+    "x": 16.90625,
+    "y": 154.5
+   }
+  ]
+ },
+ "ev_scripted": {
+  "log": [
+   "LC lab lab",
+   "LC row lab",
+   "LC row row"
+  ],
+  "clicks": [
+   {
+    "name": "#go",
+    "x": 15.4140625,
+    "y": 35
+   }
+  ]
+ },
+ "ev_static": {
+  "log": [
+   "LC attr attr attr",
+   "LC host attr host",
+   "LC host inside host",
+   "LC attrstop",
+   "LC mixed prop replaces attr, keeps its place",
+   "LC mixed listener 1",
+   "LC mixed listener 2",
+   "LC host mixed host",
+   "LC onlyprop onlyprop onlyprop",
+   "LC host onlyprop host",
+   "LC swap prop",
+   "LC swap listener",
+   "LC host swap host",
+   "LC nulled listener",
+   "LC nulled again",
+   "LC host nulled host",
+   "LC falsy ",
+   "LC host falsy host",
+   "LC named hdl hdl",
+   "LC once",
+   "LC host hdl host",
+   "LC named hdl hdl",
+   "LC host hdl host"
+  ],
+  "clicks": [
+   {
+    "name": "#attr",
+    "x": 17.6328125,
+    "y": 15
+   },
+   {
+    "name": "#inside",
+    "x": 20.90625,
+    "y": 39.5
+   },
+   {
+    "name": "#attrstop",
+    "x": 20.6015625,
+    "y": 75
+   },
+   {
+    "name": "#mixed",
+    "x": 25.78125,
+    "y": 105
+   },
+   {
+    "name": "#onlyprop",
+    "x": 21.34375,
+    "y": 135
+   },
+   {
+    "name": "#swap",
+    "x": 23.5625,
+    "y": 165
+   },
+   {
+    "name": "#nulled",
+    "x": 25.7890625,
+    "y": 195
+   },
+   {
+    "name": "#falsy",
+    "x": 16.453125,
+    "y": 219.5
+   },
+   {
+    "name": "#hdl",
+    "x": 10.6796875,
+    "y": 239.5
+   },
+   {
+    "name": "#hdl",
+    "x": 10.6796875,
+    "y": 239.5
+   }
+  ]
+ },
+ "ev_static_only": {
+  "log": [
+   "LC host",
+   "LC c2",
+   "LC t3",
+   "LC host"
+  ],
+  "clicks": [
+   {
+    "name": "#c1",
+    "x": 38.75,
+    "y": 15
+   },
+   {
+    "name": "#c2",
+    "x": 20.2265625,
+    "y": 45
+   },
+   {
+    "name": "#t3",
+    "x": 18.234375,
+    "y": 69.5
+   }
+  ]
+ },
+ "ev_stop": {
+  "log": [
+   "LC outer-cap none prevented=false",
+   "LC mid1 none prevented=false",
+   "LC mid2 none prevented=false",
+   "LC outer none prevented=false",
+   "LC body none prevented=false",
+   "LC outer-cap self prevented=false",
+   "LC self1 self prevented=false",
+   "LC self2 self prevented=false",
+   "LC outer-cap mid prevented=false",
+   "LC mid1 mid prevented=false",
+   "LC mid2 mid prevented=false",
+   "LC outer-cap cap prevented=false",
+   "LC outer-cap imm prevented=false",
+   "LC imm1 imm prevented=false",
+   "LC outer-cap sp prevented=false",
+   "LC sp sp prevented=false",
+   "LC outer-cap capsp prevented=false",
+   "LC outer-cap ctl prevented=false",
+   "LC ctl ctl prevented=false",
+   "LC outer-cap ctlimm prevented=false",
+   "LC ctlimm1 ctlimm prevented=false",
+   "LC outer-cap plink prevented=false",
+   "LC hash \"\"",
+   "LC mid1 plink prevented=true",
+   "LC mid2 plink prevented=true",
+   "LC outer plink prevented=true",
+   "LC body plink prevented=true",
+   "LC hash after \"\" true",
+   "LC outer-cap pcheck prevented=false",
+   "LC check during true",
+   "LC mid1 pcheck prevented=true",
+   "LC mid2 pcheck prevented=true",
+   "LC outer pcheck prevented=true",
+   "LC checked true",
+   "LC body pcheck prevented=true"
+  ],
+  "clicks": [
+   {
+    "name": "#none",
+    "x": 17.796875,
+    "y": 9.5
+   },
+   {
+    "name": "#self",
+    "x": 12.453125,
+    "y": 39.5
+   },
+   {
+    "name": "#mid",
+    "x": 12.890625,
+    "y": 69.5
+   },
+   {
+    "name": "#cap",
+    "x": 12.8984375,
+    "y": 99.5
+   },
+   {
+    "name": "#imm",
+    "x": 15.109375,
+    "y": 129.5
+   },
+   {
+    "name": "#sp",
+    "x": 32.46875,
+    "y": 159.5
+   },
+   {
+    "name": "#capsp",
+    "x": 99.640625,
+    "y": 159.5
+   },
+   {
+    "name": "#ctl",
+    "x": 14.671875,
+    "y": 185
+   },
+   {
+    "name": "#ctlimm",
+    "x": 27.25,
+    "y": 215
+   },
+   {
+    "name": "#plink",
+    "x": 35.5859375,
+    "y": 239.5
+   },
+   {
+    "name": "#pcheck",
+    "x": 10.5,
+    "y": 259.5
+   }
+  ]
+ },
+ "ev_submit": {
+  "log": [
+   "LC above submit frm above",
+   "LC body submit frm true",
+   "LC above submit frm above",
+   "LC body submit frm true"
+  ],
+  "clicks": [
+   {
+    "name": "#go",
+    "x": 15.4140625,
+    "y": 39
+   },
+   {
+    "name": "#txt",
+    "x": 60,
+    "y": 12
+   },
+   {
+    "name": "key:Enter",
+    "key": "Enter"
+   }
+  ]
+ },
+ "lookups": {
+  "log": [
+   "LC id count bold link count null",
+   "LC same true true true true",
+   "LC tag SPAN SPAN 1 A",
+   "LC sel 5 2 1 1 1 4 1",
+   "LC class 2 EM bold 1 count",
+   "LC star 14 4 4",
+   "LC up p1 p1 p1 BODY count null",
+   "LC contains true false true false true",
+   "LC kids 4 7 4 count EM 0 1",
+   "LC nodes 3 Count:  1 EM 3 0",
+   "LC sib bold null 3  and  Count:  count",
+   "LC mixed 3 anon inner I 5 anon inner d",
+   "LC match true true true false true true true",
+   "LC text 0 0 Count: 0 and y link em inside",
+   "LC html 0 <span id=\"count\" class=\"k\">0</span> <b id=\"bold\">y</b> Count: <span id=\"count\" class=\"k\">0</span> and <b id=\"bold\">y</b> <a id=\"link\" href=\"#x\">link</a><em class=\"k e2\"> em</em>",
+   "LC attr k count true  k 1 true count",
+   "LC link #x false 7 7 tt",
+   "LC computed rgb(200, 0, 0)/400/normal/inline rgb(0, 0, 0)/700/normal/inline rgb(0, 0, 0)/400/normal/inline",
+   "LC connected true gone rgb(0, 0, 0)/400/normal/none hid"
+  ],
+  "clicks": []
+ },
+ "mutate": {
+  "log": [
+   "LC detached true false null",
+   "LC append Start anchor endmade 2 4 p true true rgb(200, 0, 0)/400/normal/inline true",
+   "LC write Start anchor endchanged",
+   "LC before Start bbanchor endchanged B B rgb(0, 0, 0)/700/normal/inline",
+   "LC restyle rgb(200, 0, 0)/700/normal/inline",
+   "LC str Start bbanchor endchanged tail 6",
+   "LC prepend head Start bbanchor endchanged tail",
+   "LC tn head Start bbanchor endchanged tail tn 3",
+   "LC after I 4",
+   "LC before str head Start bbxanchor endchanged tail tn",
+   "LC remove true false null head Start bbx endchanged tail tn anchor 3",
+   "LC reinsert s true a",
+   "LC removeChild false true head Start x endanchorchanged tail tn",
+   "LC clone changed rgb(200, 0, 0)/400/normal/inline true 2",
+   "LC replace p true head Start x endanchorbb tail tnchanged",
+   "LC plain host Plainchanged 1 q rgb(200, 0, 0)/400/normal/inline 2",
+   "LC adj changed+",
+   "LC adjhtml Plainchanged+uu u s",
+   "LC nested Plainchanged+uud EM q",
+   "LC cleared  0 0"
+  ],
+  "clicks": []
+ },
+ "options": {
+  "log": [
+   "LC count 3 3 3 3 o2 null o1",
+   "LC read b B B 1 true OPTION s false c c",
+   "LC sel b 1 o2 1 o2 o1 o3",
+   "LC select a 0 false o1",
+   "LC value true 2",
+   "LC index true b",
+   "LC set value zz zz",
+   "LC set text Bee zz",
+   "LC append 4 s 3 zz n",
+   "LC pick new 3",
+   "LC insert 5 0 4 new First",
+   "LC add 6 optv Opt",
+   "LC remove 5 0 First true true",
+   "LC remove0 4 a 0",
+   "LC class 1 x",
+   "LC inner 2 q 1",
+   "LC truncate 1 p",
+   "LC empty 0  -1"
+  ],
+  "clicks": []
+ },
+ "writes": {
+  "log": [
+   "LC text 12 Count: 12 and other end 12",
+   "LC innerText 13",
+   "LC escape a <b> & c a &lt;b&gt; &amp; c",
+   "LC grew true",
+   "LC shrank true",
+   "LC inner xcy x<b id=\"nb\" class=\"big\">c</b>y 1 3 n c rgb(0, 0, 0)/700/normal/inline",
+   "LC emptied 0 null",
+   "LC class0  rgb(0, 0, 0)/400/normal/inline",
+   "LC class1 k rgb(200, 0, 0)/400/normal/inline true",
+   "LC class2 k big rgb(200, 0, 0)/700/normal/inline 1",
+   "LC class3 big rgb(0, 0, 0)/700/normal/inline",
+   "LC class4  rgb(0, 0, 0)/400/normal/inline",
+   "LC parent rgb(0, 128, 0)/400/normal/inline rgb(0, 128, 0)/400/normal/inline",
+   "LC parent2 rgb(0, 0, 0)/400/normal/inline",
+   "LC attr class it rgb(0, 0, 0)/400/italic/inline",
+   "LC noclass  ",
+   "LC style rgb(1, 2, 3) rgb(1, 2, 3)/400/normal/inline color: rgb(1, 2, 3);",
+   "LC style2 700 rgb(1, 2, 3)/700/normal/inline color: rgb(1, 2, 3); font-weight: 700;",
+   "LC style3  rgb(0, 0, 0)/700/normal/inline",
+   "LC css italic rgb(0, 0, 0)/400/italic/inline",
+   "LC nostyle  rgb(0, 0, 0)/400/normal/inline",
+   "LC attr style rgb(9, 9, 9) rgb(9, 9, 9)/400/normal/inline",
+   "LC attr t t 1 true 1",
+   "LC attr2  false",
+   "LC id renamed null renamed",
+   "LC hidden true true rgb(0, 0, 0)/400/normal/none 0 Count: 6 and other end",
+   "LC shown false rgb(0, 0, 0)/400/normal/inline true",
+   "LC none rgb(0, 0, 0)/400/normal/none 0 0",
+   "LC back rgb(0, 0, 0)/400/normal/inline true",
+   "LC flat flat 0 true false null 6",
+   "LC p inner new run 1 ni rgb(200, 0, 0)/400/italic/inline new <i id=\"ni\" class=\"k\">run</i>",
+   "LC p inner2 new ran"
+  ],
+  "clicks": []
+ }
+}

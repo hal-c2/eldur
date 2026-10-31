@@ -791,6 +791,7 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             "history" => Some("Eldur.history"),
             "navigator" => Some("Eldur.navigator"),
             "Event" => Some("Eldur.Event"),
+            "Option" => Some("Eldur.Option"),
             "CustomEvent" => Some("Eldur.CustomEvent"),
             "EventTarget" => Some("Eldur.EventTarget"),
             "KeyboardEvent" => Some("Eldur.KeyboardEvent"),

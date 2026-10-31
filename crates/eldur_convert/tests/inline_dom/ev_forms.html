@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif}button,a,span{text-align:left}.b{display:block;width:120px;height:30px}p,ul,li{margin:0;padding:0;list-style:none}label{display:block;width:120px;height:24px}input[type=text]{display:block;width:120px;height:24px;box-sizing:border-box}</style><script>function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){if(e===window)return "window";if(e===document)return "document";return e?(e.id||e.tagName):"null"}</script></head>
+<body id="bd" data-clicks="#txt key:a key:Tab #chk #rad #txt2 key:b key:Enter #go #own key:c">
+<form id="frm" action="#sent">
+<div id="group">
+<input id="txt" class="b" type="text">
+<input id="chk" class="b" type="checkbox">
+<input id="rad" class="b" type="radio" name="r">
+<input id="txt2" class="b" type="text">
+<button id="go" class="b" type="submit">go</button>
+</div>
+</form>
+<input id="own" class="b" type="text">
+<script>
+function who(tag){return function(e){L(tag,e.type,I(e.target),e.key===undefined||e.key===""?"":e.key)}}
+var kinds=["input","change","submit","keydown","keyup"];
+kinds.forEach(function(k){
+  document.body.addEventListener(k,who("body"));
+  document.getElementById("group").addEventListener(k,who("group"));
+});
+document.getElementById("frm").addEventListener("submit",function(e){e.preventDefault();L("form submit",I(e.target))});
+document.getElementById("own").addEventListener("keydown",function(e){L("own",e.key);e.stopPropagation()});
+</script></body></html>
