@@ -19,7 +19,7 @@ use eldur_js::{CreatedElement, DomQuery, ElementRef};
 use eldur_qml::{Member, Object, Value};
 
 use super::dynamic::{self, Inputs, Probe};
-use super::{ICB_ID, Target, ensure_initial_block};
+use super::{ICB_ID, Target, ensure_initial_block, lists};
 use crate::boxes::{describe, is_containing_block, is_fixed_containing_block, is_out_of_flow};
 use crate::diag::Diagnostics;
 use crate::metadata::class_prop;
@@ -169,7 +169,23 @@ fn leave_flow(
     diags: &mut Diagnostics,
 ) {
     let mut lost_static = false;
+    let slot = obj.members.iter().find_map(|m| match m {
+        Member::PropertyDecl {
+            name,
+            value: Some(Value::Expr(e)),
+            ..
+        } if name == lists::SLOT_PROPERTY => Some(e.clone()),
+        _ => None,
+    });
+    let own_visible = obj.get("visible").and_then(|v| match v {
+        Value::Expr(e) => e
+            .split_once(") && (")
+            .and_then(|(_, own)| own.strip_suffix(')'))
+            .map(str::to_owned),
+        _ => None,
+    });
     obj.members.retain(|m| match m {
+        Member::PropertyDecl { name, .. } if name == lists::SLOT_PROPERTY => false,
         Member::Property {
             name,
             value: Value::Expr(e),
@@ -181,9 +197,12 @@ fn leave_flow(
         Member::Property {
             name,
             value: Value::Expr(e),
-        } if name == "visible" => !e.ends_with("Slot.visible"),
+        } if name == "visible" => !slot.as_ref().is_some_and(|s| e.contains(&format!("{s}."))),
         _ => true,
     });
+    if let Some(own) = own_visible {
+        obj.set("visible", Value::expr(own));
+    }
     if lost_static {
         diags.warning(
             "css",
@@ -228,6 +247,17 @@ fn leave_flow(
     };
     obj.members
         .insert(0, decl("var", "eldurBlock", value, true));
+    // The runtime makes the slot when the DOM first takes the box.
+    obj.members.insert(
+        0,
+        Member::PropertyDecl {
+            ty: "Item".to_owned(),
+            name: lists::SLOT_PROPERTY.to_owned(),
+            value: None,
+            readonly: false,
+            required: false,
+        },
+    );
 }
 
 /// Every id in `obj`.

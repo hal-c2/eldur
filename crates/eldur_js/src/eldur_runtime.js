@@ -1641,6 +1641,30 @@ function _renumber(container) {
     }
 }
 
+// A Qt layout left with no visible item keeps its last implicit size, so an
+// emptied one holds an empty item until something goes in it.
+function _keepCollapsing(layout) {
+    if (typeof layout.spacing !== "number" && typeof layout.columnSpacing !== "number") {
+        return;
+    }
+    if (layout.background !== undefined || layout.contentItem !== undefined) {
+        return;
+    }
+    var m = _meta(layout);
+    var kids = layout.children;
+    var empty = true;
+    for (var i = 0; i < kids.length && empty; ++i) {
+        empty = kids[i] === m.collapser || !kids[i].visible;
+    }
+    if (empty && !m.collapser) {
+        m.collapser = Qt.createQmlObject("import QtQuick; Item {}", layout, "eldur_collapser");
+    } else if (!empty && m.collapser) {
+        m.collapser.parent = null;
+        m.collapser.destroy();
+        m.collapser = null;
+    }
+}
+
 function _settleLayouts() {
     var dirty = _layoutDirty;
     _layoutDirty = [];
@@ -1658,6 +1682,7 @@ function _settleLayouts() {
         }
     }
     for (var i = 0; i < dirty.length; ++i) {
+        _keepCollapsing(dirty[i]);
         if (dirty[i].parent) {
             _polishSubtree(dirty[i]);
         }
@@ -1670,15 +1695,41 @@ function _settleLayouts() {
     }
 }
 
+// Takes a node out of the DOM. Never destroys it: a script may hold it and put
+// it back, as with a modal, and bindings of the page may read it by id.
+function _detachNode(raw) {
+    var box = raw.eldurBox || raw;
+    var place = box.eldurSlot || box;
+    if (place.parent) {
+        _layoutChanged(place.parent);
+        place.parent = null;
+    }
+    if (box.eldurSlot && box.eldurBlock !== undefined) {
+        box.parent = null;
+    }
+}
+
+// Sets whether a node shows of itself. A box painted away from its DOM parent
+// still goes when that parent does.
+function _setShown(raw, shown) {
+    _layoutChanged(raw.parent);
+    var slot = raw.eldurSlot;
+    if (slot && raw.eldurBlock === undefined) {
+        raw.visible = Qt.binding(function() {
+            return shown && (slot.parent ? slot.parent.visible : false);
+        });
+    } else {
+        raw.visible = shown;
+    }
+}
+
 function _clearAppended(raw) {
     _layoutChanged(raw);
     var flow = _meta(raw).flow;
     while (flow && flow.children.length > 0) {
-        // `destroy` waits for the event loop, so a handler of a child being
-        // removed can run to its end.
         var child = flow.children[0];
+        _detachNode(child);
         child.parent = null;
-        child.destroy();
     }
     // The page's own elements in a laid-out container (a list's items) go
     // too; spacers, decoration and text runs are not elements.
@@ -1688,10 +1739,8 @@ function _clearAppended(raw) {
         var kids = _rawElementChildren(raw);
         for (var i = 0; i < kids.length; ++i) {
             var kid = kids[i];
-            // Detached as `removeChild` does: destroying a static item
-            // would leave its own bindings reading a null id.
             if (typeof kid.eldurTag === "string" || _meta(kid).createdTag) {
-                kid.parent = null;
+                _detachNode(kid);
             }
         }
     }
@@ -1734,7 +1783,7 @@ function _childContainer(raw) {
         return m.flow;
     }
     var isContentItem = Boolean(raw.parent && raw.parent.contentItem === raw);
-    if ((raw.color !== undefined || raw.clip === true || base !== raw || isContentItem) && base.children) {
+    if (base.children) {
         for (var i = 0; i < base.children.length; ++i) {
             var ch = base.children[i];
             if (ch && (typeof ch.spacing === "number" || typeof ch.columnSpacing === "number")
@@ -1755,6 +1804,7 @@ function _childContainer(raw) {
 function _isLayoutSpacer(item) {
     return Boolean(
         item
+        && item.eldurBox === undefined
         && String(item).indexOf("QQuickItem(") === 0
         && !item.objectName
         && item.children && item.children.length === 0
@@ -1774,6 +1824,17 @@ function _rawElementChildren(raw) {
         if (!child) {
             continue;
         }
+        // An out-of-flow box is its slot's child in the DOM, wherever it is
+        // painted.
+        if (child.eldurSlot !== undefined) {
+            continue;
+        }
+        if (child.eldurBox !== undefined) {
+            if (child.eldurBox) {
+                out.push(child.eldurBox);
+            }
+            continue;
+        }
         // A control's own parts (Button.background, .contentItem, …) are
         // children of it but not elements; a Button also has `spacing`.
         if (child === container.background || child === container.contentItem
@@ -1788,11 +1849,32 @@ function _rawElementChildren(raw) {
         }
         out.push(child);
     }
+    // A flex or grid container's out-of-flow boxes wait beside its items.
+    if (container !== raw && raw.children) {
+        for (var c = 0; c < raw.children.length; ++c) {
+            var corner = raw.children[c];
+            if (corner.eldurBox && corner.eldurOrder !== undefined) {
+                out.splice(Math.min(corner.eldurOrder, out.length), 0, corner.eldurBox);
+            }
+        }
+    }
     return out;
 }
 
+// The next item up that a script's DOM has: an out-of-flow box with no parent
+// in the DOM stops here, wherever it is painted.
+function _domUp(raw) {
+    if (raw.eldurSlot !== undefined) {
+        return _logicalParent(raw);
+    }
+    return _logicalParent(raw) || raw.parent || null;
+}
+
 function _logicalParent(raw) {
-    if (!raw || !raw.parent) {
+    if (raw && raw.eldurSlot) {
+        raw = raw.eldurSlot;
+    }
+    if (!raw || !raw.parent || raw.eldurSlot === null) {
         return null;
     }
     var p = raw.parent;
@@ -1810,7 +1892,7 @@ function _logicalParent(raw) {
             && !p.parent.objectName && !_meta(p.parent).createdTag && typeof p.parent.eldurTag !== "string") {
             return p.parent.parent;
         }
-        if ((p.parent.color !== undefined || p.parent.clip === true)
+        if ((p.parent.color !== undefined || p.parent.clip === true || typeof p.parent.eldurTag === "string" || p.parent.objectName)
             && typeof p.parent.spacing !== "number" && typeof p.parent.columnSpacing !== "number") {
             return p.parent;
         }
@@ -1985,11 +2067,7 @@ function _replaceWithMarkup(raw, str) {
     }
     var old = _rawElementChildren(raw);
     for (var i = 0; i < old.length; ++i) {
-        if (old[i].parent !== undefined) {
-            old[i].parent = null;
-        }
-        // As `textContent = x`: `destroy` waits for the event loop.
-        old[i].destroy();
+        _detachNode(old[i]);
     }
     var nodes = _expandInsertRawNodes(_parseHtmlFragmentNodes(str));
     _insertRawNodesBefore(_appendTarget(raw), nodes, null);
@@ -2047,7 +2125,7 @@ function setStyle(item, prop, value) {
 
     if (name === "display") {
         if (typeof raw.visible === "boolean") {
-            raw.visible = str !== "none";
+            _setShown(raw, str !== "none");
         }
     } else if (name === "visibility") {
         var visible = str !== "hidden";
@@ -2274,7 +2352,7 @@ function setAttribute(item, attrName, attrValue) {
     } else if (name === "disabled" && typeof raw.enabled === "boolean") {
         raw.enabled = false;
     } else if (name === "hidden" && typeof raw.visible === "boolean") {
-        raw.visible = false;
+        _setShown(raw, false);
     } else if (name === "readonly" && typeof raw.readOnly === "boolean") {
         raw.readOnly = true;
     } else if (name === "value") {
@@ -2371,7 +2449,7 @@ function removeAttribute(item, attrName) {
     } else if (name === "disabled" && typeof raw.enabled === "boolean") {
         raw.enabled = true;
     } else if (name === "hidden" && typeof raw.visible === "boolean") {
-        raw.visible = true;
+        _setShown(raw, true);
     } else if (name === "readonly" && typeof raw.readOnly === "boolean") {
         raw.readOnly = false;
     } else if (name === "class") {
@@ -3229,47 +3307,57 @@ function _expandInsertRawNodes(nodes) {
     return out;
 }
 
-// A layout would place an out-of-flow item, and its containing block may have
-// no room outside one, so it gets an item the block's size above the page.
-function _outOfFlowHost(block) {
-    var blockMeta = _meta(block);
-    if (!blockMeta.outOfFlowHost) {
-        var host = Qt.createQmlObject(
-            "import QtQuick; Item { property Item block; "
-            + "function at(axis) { let n = 0; for (let i = block; i && i !== parent; i = i.parent) n += i[axis]; return n } "
-            + "x: at(\"x\"); y: at(\"y\"); width: block ? block.width : 0; height: block ? block.height : 0; "
-            + "visible: block ? block.visible : false }",
-            _root.eldurInitialBlock, "eldur_out_of_flow");
-        host.block = block;
-        _meta(host).hostBox = block;
-        blockMeta.outOfFlowHost = host;
+// What stands for an out-of-flow box among its DOM siblings. Hidden: a layout
+// does not count it, and no script-made box reads a static position from it.
+function _slotFor(box) {
+    if (!box.eldurSlot) {
+        box.eldurSlot = Qt.createQmlObject(
+            "import QtQuick; Item { visible: false; property Item eldurBox }",
+            _qobjectParent(), "eldur_slot");
+        box.eldurSlot.eldurBox = box;
     }
-    return blockMeta.outOfFlowHost;
+    return box.eldurSlot;
 }
 
-// Moves a template's out-of-flow item, just put in its DOM parent, to its
-// containing block.
+// A created box is painted in an item the size of its containing block, above
+// the page since a layout would place it there. The item goes with the box's
+// DOM parent, which is not its parent in QML.
 function _leaveFlow(item) {
     var block = item.eldurBlock;
     if (block === undefined) {
         return;
     }
-    var initial = _root.eldurInitialBlock;
-    if (block === "window") {
-        // Outside the Flickable, so it does not scroll.
-        item.parent = initial.parent.parent.parent;
-    } else if (block === "initial") {
-        item.parent = initial;
-    } else {
-        item.parent = _outOfFlowHost(block === "parent" ? _logicalParent(item) : block);
+    var m = _meta(item);
+    if (!m.outOfFlowGate) {
+        m.outOfFlowGate = Qt.createQmlObject(
+            "import QtQuick; Item { property Item block; property Item dom; "
+            + "function at(axis) { let n = 0; for (let i = block; i && i !== parent.parent; i = i.parent) n += i[axis]; return n } "
+            + "x: parent ? at(\"x\") : 0; y: parent ? at(\"y\") : 0; "
+            + "width: block ? block.width : parent ? parent.width : 0; height: block ? block.height : parent ? parent.height : 0; "
+            + "visible: dom ? dom.visible : false }",
+            _qobjectParent(), "eldur_out_of_flow");
+        _meta(m.outOfFlowGate).hostBox = item;
     }
+    var gate = m.outOfFlowGate;
+    var dom = _logicalParent(item);
+    var initial = _root.eldurInitialBlock;
+    gate.dom = dom;
+    gate.block = block === "parent" ? dom : (typeof block === "string" ? null : block);
+    // Outside the Flickable, so it does not scroll.
+    gate.parent = block === "window" ? initial.parent.parent.parent : initial;
+    item.parent = gate;
 }
 
 function _insertRawNodesBefore(container, rawNodes, rawRef) {
     if (!container || rawNodes.length === 0) {
         return;
     }
-    _insertInFlow(container, rawNodes, rawRef);
+    var places = [];
+    for (var n = 0; n < rawNodes.length; ++n) {
+        var node = rawNodes[n];
+        places.push(node && node.eldurBlock !== undefined ? _slotFor(node) : (node && node.eldurSlot) || node);
+    }
+    _insertInFlow(container, places, (rawRef && rawRef.eldurSlot) || rawRef);
     for (var o = 0; o < rawNodes.length; ++o) {
         if (rawNodes[o] && rawNodes[o].eldurBlock !== undefined) {
             _leaveFlow(rawNodes[o]);
@@ -3380,7 +3468,7 @@ function _isConnected(raw) {
         if (cur === _root || (_root.contentItem && cur === _root.contentItem)) {
             return true;
         }
-        cur = _logicalParent(cur) || cur.parent || null;
+        cur = _domUp(cur);
     }
     return false;
 }
@@ -3575,7 +3663,16 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
         next = component.createObject(_qobjectParent(), initProps);
         if (next && next.parent !== undefined) {
             next.parent = parentContainer;
-            _leaveFlow(next);
+            if (oldRaw.eldurSlot && next.eldurSlot !== undefined) {
+                next.eldurSlot = oldRaw.eldurSlot;
+                next.eldurSlot.eldurBox = next;
+            }
+            if (next.eldurBlock !== undefined && parentContainer) {
+                if (!next.eldurSlot) {
+                    _slotFor(next).parent = parentContainer;
+                }
+                _leaveFlow(next);
+            }
         }
         m.templateComponent = component;
     } else {
@@ -4233,7 +4330,7 @@ function wrap(rawItem) {
         set hidden(v) {
             m.explicitHidden = Boolean(v);
             if (typeof rawItem.visible === "boolean") {
-                rawItem.visible = !v;
+                _setShown(rawItem, !v);
             }
         },
         get src() {
@@ -4534,7 +4631,7 @@ function wrap(rawItem) {
                 if (cur === rawItem) {
                     return true;
                 }
-                cur = _logicalParent(cur) || cur.parent || null;
+                cur = _domUp(cur);
             }
             return false;
         },
@@ -4546,15 +4643,13 @@ function wrap(rawItem) {
         removeChild: function(child) {
             var rawChild = _unwrap(child);
             if (rawChild && rawChild.parent !== undefined) {
-                _layoutChanged(rawChild.parent);
-                rawChild.parent = null;
+                _detachNode(rawChild);
             }
             return child;
         },
         remove: function() {
             if (rawItem.parent !== undefined) {
-                _layoutChanged(rawItem.parent);
-                rawItem.parent = null;
+                _detachNode(rawItem);
             }
         },
         insertBefore: function(newChild, refChild) {
@@ -4571,7 +4666,7 @@ function wrap(rawItem) {
             var rawNodes = _expandInsertRawNodes([newChild]);
             _insertRawNodesBefore(_appendTarget(rawItem), rawNodes, rawOld);
             if (rawOld.parent !== undefined) {
-                rawOld.parent = null;
+                _detachNode(rawOld);
             }
             return oldChild;
         },
@@ -4612,14 +4707,14 @@ function wrap(rawItem) {
             var rawNodes = _expandInsertRawNodes(arguments);
             _insertRawNodesBefore(_appendTarget(p), rawNodes, rawItem);
             if (rawItem.parent !== undefined) {
-                rawItem.parent = null;
+                _detachNode(rawItem);
             }
         },
         replaceChildren: function() {
             var existing = _rawElementChildren(rawItem);
             for (var i = 0; i < existing.length; ++i) {
                 if (existing[i].parent !== undefined) {
-                    existing[i].parent = null;
+                    _detachNode(existing[i]);
                 }
             }
             var rawNodes = _expandInsertRawNodes(arguments);
@@ -4730,11 +4825,18 @@ function _walkItems(node, visitor) {
     if (!node) {
         return false;
     }
+    // An out-of-flow box is in the tree at its slot, and only then.
+    if (node.eldurBox) {
+        node = node.eldurBox;
+    }
     if (visitor(node)) {
         return true;
     }
     if (node.children) {
         for (var i = 0; i < node.children.length; ++i) {
+            if (node.children[i].eldurSlot !== undefined) {
+                continue;
+            }
             if (_walkItems(node.children[i], visitor)) {
                 return true;
             }

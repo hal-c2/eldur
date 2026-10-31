@@ -70,6 +70,7 @@ ApplicationWindow {
                 Item {
                     implicitWidth: mainContent.implicitWidth + 48
                     implicitHeight: mainContent.implicitHeight + 48
+                    z: 1
                     Layout.fillWidth: true
                     Layout.maximumWidth: 768
 
@@ -152,6 +153,7 @@ ApplicationWindow {
                             color: "#e5e7eb"
                             implicitWidth: 0
                             implicitHeight: 0
+                            z: 1
                             transform: Translate {
                                 x: 20
                             }

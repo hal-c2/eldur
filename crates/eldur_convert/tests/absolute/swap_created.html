@@ -1,0 +1,4 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}p{margin:0}#go{display:block;width:50px;height:30px;padding:0;border:0}.m{position:absolute;top:50px;left:60px;width:100px;height:40px;background:red}.m.big{width:200px;background:blue}</style></head><body><button id="go">go</button><div id="h"><p id="a">a</p></div><script>
+var h=document.getElementById('h');var m=document.createElement('div');m.className='m';m.id='m';h.appendChild(m);
+document.getElementById('go').addEventListener('click',function(){m.classList.add('big');console.log('LC kids='+h.children.length+' parent='+(m.parentNode===h)+' last='+(h.lastElementChild===m))});
+</script></body></html>

@@ -2510,3 +2510,21 @@ function testUserObjects(dynObj) {
         "{js}"
     );
 }
+
+#[test]
+fn compares_a_resolved_element_with_a_dom_read_as_wrappers() {
+    let resolver = FakeResolver::default().with_id("host", 1, "hostBox", TargetKind::Box);
+    let out = run_rewrite(
+        &[classic(
+            "a.js",
+            "var h = document.getElementById('host'); function f(m) { return m.parentNode === h; }",
+        )],
+        &resolver,
+    );
+    assert!(
+        out.page_js
+            .contains("Eldur.wrap(m.parentNode) === Eldur.wrap(hostBox)"),
+        "{}",
+        out.page_js
+    );
+}

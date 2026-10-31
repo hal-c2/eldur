@@ -545,6 +545,10 @@ An inline box that is absolute does not split its line. Its `y` is the top of th
 
 **Scripts.** A class or inline style changes offsets, `z-index` and `display` of a box in place, and static positions follow. A template of a created box declares `eldurBlock` (`"initial"`, `"parent"`, `"window"` or the id of the block) and the runtime moves the new item out of its DOM parent's layout. Below the initial block it goes straight in it; under another block it goes in an item bound to that block's place and size, so the block needs no room for it.
 
+**The DOM of a moved box.** A box's QML parent says where it paints, not where it is in the DOM, so with a script on the page every out-of-flow box has a slot, its stand-in among its DOM siblings: `eldurSlot` on the box, `eldurBox` on the slot. A created box gets its slot from the runtime, and an item that shows it only while the slot's parent shows. Every DOM read and mutation goes through the slot: `children` and `parentNode`, `contains` and being in the document, and insertion, removal and `innerHTML`. Removing a box takes its slot out and hides it; putting it back shows it in the slot's new place. A slot beside a flex or grid container's items holds its DOM index in `eldurOrder`. A page without a script has no slots beyond those of §5.2's static position.
+
+**Painting over what follows.** Every QML item is a stacking context, and of equal `z` the later sibling paints on top. So an in-flow box that is positioned, or holds an out-of-flow box, gets a `z` over its later siblings (`z-index` + 1 when it has one), and so does each ancestor up to the page. Measured in the `paint_*` pages of `tests/absolute/` by hit tests against Chromium.
+
 | Case | Support | Notes |
 |---|---|---|
 | Any depth, initial or positioned containing block | Full | Measured against Chromium in `tests/absolute_e2e.rs`. |
@@ -555,8 +559,13 @@ An inline box that is absolute does not split its line. Its `y` is the top of th
 | Static position in a template (a created box without offsets) | Approx | At the containing block's start: warning. |
 | Containing block that is a `<table>`, `<tr>` or `<fieldset>` | Approx | Placed against the next block out: warning. |
 | Opacity of an ancestor up to the containing block | Not done | The box leaves that item: warning. |
-| Stacking across containing blocks | Approx | `z` orders siblings only. A positioned box's overlay stays under the initial block's boxes, whatever its `z-index` (warning), and under later in-flow siblings of its containing block. |
+| Stacking across containing blocks | Approx | `z` orders siblings only. A positioned box's overlay stays under the initial block's boxes, whatever its `z-index` (warning). |
 | A class switching `position` between static and absolute | Not done | `dynamic-form` warning: worlds must share a shape, so it keeps its first form. |
+| Overlays of different ancestors | Approx | Raising the ancestors orders them by those ancestors. A box inside a `z-index` context with a lower `z` than an outer overlay is right; two contexts crossing at several depths are not reordered. |
+| A static `getElementById` or `querySelector` with a literal | Approx | Resolved at compile time to the item, so it still finds a box the script removed. A computed id goes through the runtime and is right. |
+| A static box moved under another parent by a script | Approx | It keeps the containing block it was emitted in. |
+| `id` selectors on a created box | Not done | The script sets the id, which the template's cascade cannot predict. A class works. |
+| Removed created boxes | Leak | Kept, hidden, as a script may hold them and put them back. Creating and removing them in a loop grows the page. |
 | A script setting `style.position` | Not done | The box stays in flow; the runtime warns on the console. A class on a created box works. |
 
 ### 5.3 `position: fixed`

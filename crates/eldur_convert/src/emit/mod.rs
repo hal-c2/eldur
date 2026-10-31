@@ -95,6 +95,10 @@ pub(crate) struct Emitter<'a, 'd> {
     /// The highest `z-index` of an overlay inside the page, which cannot
     /// reach above the initial containing block's.
     nested_z: Option<i32>,
+    /// The `z` the box being emitted needs for something inside it to paint
+    /// over its later siblings: every QML item is a stacking context, where
+    /// CSS lets a positioned box paint over the page outside its parent.
+    above_flow: Option<i32>,
     /// The content height in px of the block whose children are being
     /// laid out, when it is definite: their percentage heights resolve
     /// against it (CSS 2.2 §10.5).
@@ -176,6 +180,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             hideable_ancestor: false,
             static_places: false,
             nested_z: None,
+            above_flow: None,
             percent_height_base: None,
             fixed: Vec::new(),
             backdrop: None,
@@ -459,6 +464,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             self.fixed_block
                 .replace(lists::ContainingBlock::of(b.node, style))
         });
+        let outer_above_flow = self.above_flow.take();
         let outer_hideable = self.hideable_ancestor;
         self.hideable_ancestor = if outer_abs.is_some() {
             false
@@ -480,6 +486,24 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     slot.set("y", number(deco.insets.top));
                 }
                 self.report_aligned_static_place(b, c, line);
+                // Not among the container's items, so a script's DOM is
+                // told where the box goes between them.
+                if self.runtime_dom
+                    && let Content::Blocks(children) = &b.content
+                    && let Some(order) =
+                        children.iter().position(|sibling| std::ptr::eq(sibling, c))
+                {
+                    slot.members.insert(
+                        0,
+                        eldur_qml::Member::PropertyDecl {
+                            ty: "int".to_owned(),
+                            name: "eldurOrder".to_owned(),
+                            value: Some(Value::Number(order as f64)),
+                            readonly: true,
+                            required: false,
+                        },
+                    );
+                }
                 corner_slots.push(slot);
             }
         }
@@ -634,6 +658,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         }
         self.label_tap(&mut obj, b.node);
         self.visibility(&mut obj, style);
+        self.stack_above_flow(&mut obj, b, outer_above_flow);
         let e = Emitted {
             obj,
             top,
@@ -641,6 +666,39 @@ impl<'a, 'd> Emitter<'a, 'd> {
             collapse_through: false,
         };
         self.transformed(e, b, line)
+    }
+
+    /// Raises an in-flow box that is positioned, or holds one, over its later
+    /// siblings. Of the same `z`, the later is on top, as in CSS.
+    fn stack_above_flow(&mut self, obj: &mut Object, b: &LayoutBox<'_>, outer: Option<i32>) {
+        let style = &*b.style;
+        if boxes::is_out_of_flow(style) {
+            // Its block has the overlay's own `z` to see to.
+            self.above_flow = outer;
+            return;
+        }
+        let holds = boxes::is_containing_block(style);
+        let own = match style.z_index {
+            // `z-index: 0` is still over what is not positioned.
+            Some(z) if holds && z >= 0 => Some(z + 1),
+            Some(z) if holds && z < 0 => {
+                self.above_flow = outer;
+                return;
+            }
+            _ => None,
+        };
+        let inside = if own.is_some() { None } else { self.above_flow };
+        let level = own.or(inside).or(holds.then_some(1));
+        let page = b
+            .node
+            .is_some_and(|n| Some(n) == self.doc.body() || Some(n) == self.root_node);
+        if let Some(z) = level.filter(|_| !page) {
+            obj.set("z", Value::Number(f64::from(z)));
+        }
+        self.above_flow = match (level, outer) {
+            (Some(a), Some(b)) => Some(a.max(b)),
+            (a, b) => a.or(b),
+        };
     }
 
     /// `e` with `b`'s `transform`, which every kind of box takes.

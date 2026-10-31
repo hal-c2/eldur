@@ -4754,3 +4754,42 @@ function moveOut() { document.querySelector('#box').appendChild(built); }
     assert!(output.contains("ELDUR_TURNED 0+0+0 0 0 0 1 0"), "{output}");
     assert!(output.contains("ELDUR_MOVED 1+1"), "{output}");
 }
+
+#[test]
+fn qml6_warns_that_a_scripts_style_position_is_not_applied() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("b", 1, "box", TargetKind::Box);
+    let (output, _) = run_page(
+        &resolver,
+        r#"
+function start(id) {
+    var el = document.getElementById(id);
+    el.style.position = "relative";
+    console.log("ELDUR_AFTER_RELATIVE");
+    el.style.position = "absolute";
+    el.style.position = "fixed";
+}
+"#,
+        r#"Item {
+    id: root
+    Item { id: box; objectName: "b" }
+    Component.onCompleted: {
+        (Page.__eldur_init || Eldur.init)(root);
+        Page.start("b");
+        console.log("ELDUR_DONE");
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(output.contains("ELDUR_DONE"), "{output}");
+    let warned = |value: &str| {
+        output.contains(&format!(
+            "eldur: style.position = \"{value}\" from a script is not applied; use a class"
+        ))
+    };
+    assert!(warned("absolute"), "{output}");
+    assert!(warned("fixed"), "{output}");
+    assert!(!warned("relative"), "{output}");
+}

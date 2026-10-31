@@ -23,6 +23,11 @@ use crate::boxes::{
 /// 7px from the box, regardless of the image.
 const IMAGE_MARKER_GAP: f32 = 7.0;
 
+/// On an out-of-flow box of a page the runtime drives: what stands for it in
+/// its DOM parent, and on that item, the box.
+pub(super) const SLOT_PROPERTY: &str = "eldurSlot";
+pub(super) const BOX_PROPERTY: &str = "eldurBox";
+
 /// A bullet's side, in px. Chromium draws it about 0.3em across at any font
 /// size (measured at 12, 16, 24 and 40px).
 pub(crate) fn bullet_size(font_size: f32) -> f32 {
@@ -154,7 +159,10 @@ impl Emitter<'_, '_> {
         };
         let placed_by_slot = auto(&style.left, &style.right) || auto(&style.top, &style.bottom);
         let hideable = self.hideable_ancestor;
-        let slot = (placed_by_slot || hideable)
+        // A script reads and moves the box where it is in the DOM, and hides
+        // it with any ancestor, so a page with one keeps every box's place.
+        let scripted = self.runtime_dom;
+        let slot = (placed_by_slot || hideable || scripted)
             .then(|| self.ids.claim(&format!("{} slot", hint(self.doc, b))));
         let block = if fixed {
             self.fixed_block.as_ref()
@@ -181,15 +189,55 @@ impl Emitter<'_, '_> {
             }
         });
         self.hideable_ancestor = false;
+        let mut box_id = None;
         let mut obj = self.overlay(&border, b, static_place.as_ref());
         self.hideable_ancestor = hideable;
-        if let Some(slot) = slot.as_ref().filter(|_| hideable)
+        if let Some(slot) = slot.as_ref().filter(|_| scripted) {
+            let id = match &obj.id {
+                Some(id) => id.clone(),
+                None => {
+                    let id = self.ids.claim(&hint(self.doc, b));
+                    obj.id = Some(id.clone());
+                    id
+                }
+            };
+            box_id = Some(id);
+            let own = match obj.get("visible") {
+                Some(Value::Expr(e)) => Some(e.clone()),
+                _ => None,
+            };
+            // The slot's parent, as the slot itself is hidden when it does
+            // not hold a place the layout should count.
+            let shown = format!("{slot}.parent ? {slot}.parent.visible : false");
+            obj.set(
+                "visible",
+                Value::expr(match own {
+                    Some(own) => format!("({shown}) && ({own})"),
+                    None => shown,
+                }),
+            );
+            obj.members.insert(
+                0,
+                Member::PropertyDecl {
+                    ty: "Item".to_owned(),
+                    name: SLOT_PROPERTY.to_owned(),
+                    value: Some(Value::expr(slot.clone())),
+                    readonly: false,
+                    required: false,
+                },
+            );
+        } else if let Some(slot) = slot.as_ref().filter(|_| hideable)
             && obj.get("visible").is_none()
         {
             obj.set("visible", Value::expr(format!("{slot}.visible")));
         }
         if let (Some(_), Some(z)) = (node, style.z_index) {
             self.nested_z = Some(self.nested_z.map_or(z, |n| n.max(z)));
+        }
+        // Inside the page, it has to get out from under what follows.
+        if node.is_some() {
+            let z = style.z_index.unwrap_or(0).max(0) + 1;
+            self.above_flow = Some(self.above_flow.map_or(z, |n| n.max(z)));
         }
         let comment = b
             .node
@@ -200,7 +248,26 @@ impl Emitter<'_, '_> {
             (true, Some(block)) => block.overlays.push((comment, obj)),
             (true, None) => self.fixed.push((comment, obj)),
         }
-        slot.map(|id| Object::new("Item").with_id(id))
+        slot.map(|id| {
+            let mut item = Object::new("Item").with_id(id);
+            if let Some(owner) = box_id {
+                item.members.insert(
+                    0,
+                    Member::PropertyDecl {
+                        ty: "Item".to_owned(),
+                        name: BOX_PROPERTY.to_owned(),
+                        value: Some(Value::expr(owner)),
+                        readonly: false,
+                        required: false,
+                    },
+                );
+                if !placed_by_slot {
+                    // Nothing reads where it is, and a layout's gap would.
+                    item.set("visible", false);
+                }
+            }
+            item
+        })
     }
 
     /// A slot goes before the line, whose start it knows and whose text it

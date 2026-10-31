@@ -259,6 +259,7 @@ ApplicationWindow {
                     radius: 8
                     implicitWidth: 0
                     implicitHeight: 0
+                    z: 1
                     Layout.fillWidth: true
                     Layout.preferredHeight: 160
                     Layout.topMargin: 40
@@ -357,6 +358,7 @@ ApplicationWindow {
                     color: "#fde68a"
                     implicitWidth: nudgeText.implicitWidth + 16
                     implicitHeight: nudgeText.implicitHeight + 16
+                    z: 1
                     transform: Translate {
                         x: 12
                         y: 6

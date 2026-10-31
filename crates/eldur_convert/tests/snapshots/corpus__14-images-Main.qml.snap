@@ -175,6 +175,7 @@ ApplicationWindow {
                 Item {
                     implicitWidth: heroContent.implicitWidth
                     implicitHeight: heroContent.implicitHeight
+                    z: 1
                     Layout.fillWidth: true
 
                     ColumnLayout {

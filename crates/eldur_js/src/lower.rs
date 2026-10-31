@@ -2,8 +2,8 @@ use std::collections::{HashMap, HashSet};
 
 use oxc_ast::ast::{
     ArrowFunctionBody, ArrowFunctionExpression, AssignmentExpression, AssignmentTarget,
-    AssignmentTargetPropertyIdentifier, AwaitExpression, BindingIdentifier, BindingPattern,
-    BindingProperty, CallExpression, CatchClause, Class, ClassElement, ClassType,
+    AssignmentTargetPropertyIdentifier, AwaitExpression, BinaryExpression, BindingIdentifier,
+    BindingPattern, BindingProperty, CallExpression, CatchClause, Class, ClassElement, ClassType,
     ComputedMemberExpression, Expression, ForInStatement, ForOfStatement, ForStatement, Function,
     IdentifierReference, MethodDefinition, MethodDefinitionKind, ObjectExpression, ObjectProperty,
     ObjectPropertyKind, PropertyKey, ReturnStatement, SimpleAssignmentTarget, Statement,
@@ -1000,6 +1000,26 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             return;
         }
         walk::walk_update_expression(self, it);
+    }
+
+    // A DOM read gives a wrapper and a resolved element is the QML item, so
+    // the two only compare equal as the same wrapper.
+    fn visit_binary_expression(&mut self, it: &BinaryExpression<'a>) {
+        // A resolved element is a raw item, and a DOM read gives a wrapper. The
+        // other side can be either: a script keeps what it resolved in a variable.
+        if it.operator.is_equality()
+            && (self.resolve_single_target(&it.left).is_some()
+                || self.resolve_single_target(&it.right).is_some())
+        {
+            for side in [&it.left, &it.right] {
+                self.visit_expression(side);
+                let inner = self.editor.extract_and_consume(side.span());
+                self.editor
+                    .replace(side.span(), format!("Eldur.wrap({inner})"));
+            }
+            return;
+        }
+        walk::walk_binary_expression(self, it);
     }
 
     fn visit_unary_expression(&mut self, it: &UnaryExpression<'a>) {

@@ -1,0 +1,14 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}p{margin:0}#go{display:block;width:50px;height:30px;padding:0;border:0}#host{width:300px}.m{position:absolute;top:50px;left:60px;width:100px;height:40px;background:red}.in{display:block;width:10px;height:10px;background:blue}</style></head><body><button id="go">go</button><div id="outer"><div id="host"><p id="a">a</p><div id="box" class="m"><span id="inner" class="in"></span></div><p id="b">b</p></div><p id="keep">keep</p></div><script>
+var qi='#host #inner',bi='box';
+function L(s){console.log('LC '+s)}
+function d(e){return e?(e.id||e.tagName.toLowerCase()):'null'}
+function ids(c){var o=[];for(var i=0;i<c.length;i++)o.push(d(c[i]));return o.join(',')}
+function S(n){var p=box.parentNode;L(n+' kids='+ids(host.children)+' nodes='+ids(host.childNodes)+' count='+host.childElementCount+' parent='+d(p)+' pe='+d(box.parentElement)
++' first='+d(host.firstElementChild)+' last='+d(host.lastElementChild)+' fc='+d(host.firstChild)+' lc='+d(host.lastChild)
++' same='+(box.parentNode===host)+' next='+d(box.nextElementSibling)+' prev='+d(box.previousElementSibling)+' same='+(box.parentNode===host)+' contains='+host.contains(box)+' inner='+host.contains(inner)
++' closest='+d(inner.closest('#host'))+' qs='+d(host.querySelector('#box'))+' qsi='+d(document.querySelector(qi))+' qsa='+host.querySelectorAll('.m').length
++' byid='+d(document.getElementById(bi))+' innerp='+d(inner.parentNode))}
+var outer=document.getElementById('outer');var host=document.getElementById('host');var a=document.getElementById('a');var b=document.getElementById('b');
+var box=document.getElementById('box');var inner=document.getElementById('inner');
+box.remove();S('out');document.getElementById('go').addEventListener('click',function(){host.appendChild(box);S('in')});
+</script></body></html>
