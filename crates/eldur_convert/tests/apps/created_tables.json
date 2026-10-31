@@ -1,0 +1,2 @@
+{"steps":[{"name":"grow","click":"#grow"},{"name":"shrink","click":"#shrink"}],
+ "watch":[{"sel":"table"},{"sel":"tr"},{"sel":"th"},{"sel":"td"},{"sel":"#grow"}]}

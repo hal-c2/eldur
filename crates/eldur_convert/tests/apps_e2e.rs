@@ -36,7 +36,11 @@ const INLINE: &str =
 const STRUT: &str = "a control alone in a line box sits on the line's baseline, here at its top: no inline replaced elements (boxes/mod.rs)";
 const FONT: &str = "Helvetica: Qt's fontconfig match has line height 23 where Chromium's has 18";
 const FONTFOLLOW: &str = "follows from the Helvetica line height and width difference";
-const TABLE: &str = "created rows do not take part in the table's auto column sizing";
+const COLLAPSE: &str =
+    "the column solver counts a collapsed cell's whole border and columns are whole pixels";
+const AFTER: &str =
+    "a ::after that depends on a class a script sets is not generated, so its column does not grow";
+const NO_ROW: &str = "a static table's row has no QML object, so a query does not find it";
 const CLASS: &str = "classList.remove on an element with no class attribute leaves no attribute, Chromium an empty one";
 const HOVER: &str = "li:hover under a list that starts display:none gets no hover tracking";
 const FOCUS: &str = "hiding the form leaves focus on its hidden button";
@@ -66,16 +70,24 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("cards", "* #cart[*] x:", FONT),
     ("cards", "* #cart[*] width:", FONT),
     ("accordion", "* details[*] text:", WS),
+    ("created_tables", "* tr count:", NO_ROW),
+    ("created_tables", "* td[*] width:", COLLAPSE),
+    ("created_tables", "* th[3] width:", COLLAPSE),
+    ("table", "* th[1] x:", COLLAPSE),
+    ("table", "* tbody td[*] x:", COLLAPSE),
+    ("table", "sort age th[*] x:", AFTER),
+    ("table", "sort age th[*] width:", AFTER),
+    ("table", "sort age tbody td[*] x:", AFTER),
+    ("table", "sort age tbody td[*] width:", AFTER),
+    ("table", "filter th[*] x:", AFTER),
+    ("table", "filter th[*] width:", AFTER),
+    ("table", "filter tbody td[*] x:", AFTER),
+    ("table", "filter tbody td[*] width:", AFTER),
     ("table", "* #people[*] height:", UAFOLLOW),
     ("table", "* #people[*] text:", WS),
     ("table", "* #summary[*] y:", UAFOLLOW),
     ("table", "* td[*] y:", UAFOLLOW),
-    ("table", "* td[*] width:", TABLE),
-    ("table", "* td[*] x:", TABLE),
     ("table", "* tr[*] y:", UAFOLLOW),
-    ("table", "* tr[*] width:", TABLE),
-    ("table", "* th[*] width:", TABLE),
-    ("table", "* th[*] x:", TABLE),
     ("table", "* th[*] class:", CLASS),
     ("dropdown", "* #list[*] text:", WS),
     ("dropdown", "* #m-settings[*] background-color:", HOVER),
@@ -365,6 +377,11 @@ fn page(name: &str) {
 #[test]
 fn controls() {
     page("controls");
+}
+
+#[test]
+fn created_tables() {
+    page("created_tables");
 }
 
 #[test]

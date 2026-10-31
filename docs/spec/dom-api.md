@@ -190,9 +190,9 @@ every queried element without element children a candidate.
   no height while empty, as an empty CSS box takes none.
 - An empty flex container places its spacers at run time (`eldurPack`), and an
   empty grid gives each item its cell and column size (`eldurTracks`).
-- A table with no rows stacks its sections, and created rows lay out their
-  cells in a `RowLayout`. Column widths come from each cell's own `width`, not
-  from the table's column solver.
+- A table with no rows stacks its sections. Created rows place their cells by
+  coordinates, so a cell can span rows, and share the table's column solver
+  (`docs/spec/layout.md`, §8).
 - Elsewhere the runtime makes the column when a block arrives (`_appendTarget`).
 
 Reading geometry (`getBoundingClientRect`, `offset*`, `client*`, `scroll*`,

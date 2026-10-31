@@ -314,8 +314,10 @@ const SOLVER: &[(&str, &[&str], &str)] = &[
 const min = new Array(n).fill(0)
 const max = new Array(n).fill(0)
 const spanning = []
-for (let i = 0; i < grid.children.length; ++i) {
-    const cell = grid.children[i]
+// Rows a script added are not in the grid; the runtime says what their cells need.
+const cells = Array.from(grid.children).concat(grid.eldurCreatedCells || [])
+for (let i = 0; i < cells.length; ++i) {
+    const cell = cells[i]
     const slot = cell.tableSlot
     if (!slot)
         continue
@@ -720,6 +722,15 @@ impl<'a> Emitter<'a, '_> {
             });
         };
         declare(&mut grid, "var", "columnSpecs", specs_expr);
+        if self.runtime_dom {
+            grid.members.push(Member::PropertyDecl {
+                ty: "var".to_owned(),
+                name: "eldurCreatedCells".to_owned(),
+                value: Some(Value::expr("[]")),
+                readonly: false,
+                required: false,
+            });
+        }
         declare(
             &mut grid,
             "var",

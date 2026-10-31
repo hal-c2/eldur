@@ -210,6 +210,14 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
     if let Some(scripts) = cx.scripts {
         emitter.open_elements = scripts.analysis.open_elements;
         emitter.cascade_rules = scripts.analysis.needs_cascade();
+        // Rows a script makes are sized by the same solver, table or no table.
+        emitter.has_table = scripts.analysis.open_elements
+            || scripts.analysis.created.iter().any(|c| {
+                matches!(
+                    c.tag.as_str(),
+                    "table" | "thead" | "tbody" | "tfoot" | "tr" | "td" | "th"
+                )
+            });
         emitter.gains.clone_from(&scripts.gains.nodes);
         // A read needs an element to read: an empty one is not left out.
         emitter.gains_any_empty = scripts.gains.any_empty || scripts.analysis.reads_computed_style;

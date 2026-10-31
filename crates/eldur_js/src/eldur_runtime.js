@@ -1806,6 +1806,256 @@ function _flowInText(text) {
 // and their ancestors, ahead of the frame.
 var _layoutDirty = [];
 
+var _TABLE_PARTS = { table: true, thead: true, tbody: true, tfoot: true, tr: true };
+var _TABLE_SECTION = { thead: 0, tbody: 1, tfoot: 2 };
+
+function _tablePartTag(item) {
+    var tag = _meta(item).createdTag || item.eldurTag;
+    return typeof tag === "string" ? tag.toLowerCase() : "";
+}
+
+// What a script's rows belong to: a static table's grid, whose solver then counts
+// them too, or a table the script made.
+function _tableHost(item) {
+    for (var cur = item; cur; cur = cur.parent) {
+        if (cur.columnSpecs !== undefined || _meta(cur).createdTag === "table") {
+            return cur;
+        }
+    }
+    return null;
+}
+
+// The rows under a section in order; a static section's flow sits a level down.
+function _tableRowsIn(item, out) {
+    var kids = item.children || [];
+    for (var i = 0; i < kids.length; ++i) {
+        var tag = _meta(kids[i]).createdTag;
+        if (tag === "tr") {
+            if (kids[i].visible !== false || !kids[i].parent) {
+                out.push(kids[i]);
+            }
+        } else if (!_isCreatedElement(kids[i]) && kids[i].tableSlot === undefined && !kids[i].eldurTag
+            || tag in _TABLE_SECTION || _TABLE_SECTION[kids[i].eldurTag] !== undefined) {
+            _tableRowsIn(kids[i], out);
+        }
+    }
+    return out;
+}
+
+function _tableSpan(cell, name) {
+    var n = parseInt(getAttribute(cell, name), 10);
+    return n > 0 ? n : 1;
+}
+
+var _tableMetrics = null;
+
+// As the converter's `min_content`: the longest word, and what is around the text.
+function _tableMinContent(cell, text) {
+    if (!text) {
+        return cell.implicitWidth;
+    }
+    if (!_tableMetrics) {
+        _tableMetrics = Qt.createQmlObject("import QtQuick; FontMetrics {}", _root, "eldur_table_metrics");
+    }
+    _tableMetrics.font = text.font;
+    var words = String(text.text).split(/\s+/);
+    var longest = 0;
+    for (var i = 0; i < words.length; ++i) {
+        longest = Math.max(longest, _tableMetrics.advanceWidth(words[i]));
+    }
+    return Math.ceil(longest) + cell.implicitWidth - text.implicitWidth;
+}
+
+// The HTML forming algorithm's slots, for what a script made: rows are indexes
+// into `rows`, and a rowspan stops at its section's end as the converter's does.
+function _tablePlace(rows) {
+    var cells = [];
+    var taken = {};
+    var columns = 0;
+    for (var r = 0; r < rows.length; ++r) {
+        var kids = rows[r].item.children;
+        var c = 0;
+        for (var i = 0; i < kids.length; ++i) {
+            if (!/^t[dh]$/.test(_tablePartTag(kids[i]))) {
+                continue;
+            }
+            while (taken[r + ":" + c]) {
+                ++c;
+            }
+            var across = _tableSpan(kids[i], "colspan");
+            var down = Math.min(_tableSpan(kids[i], "rowspan"), rows[r].end - r);
+            for (var y = r; y < r + down; ++y) {
+                for (var x = c; x < c + across; ++x) {
+                    taken[y + ":" + x] = true;
+                }
+            }
+            cells.push({ item: kids[i], row: r, column: c, rowSpan: down, columnSpan: across });
+            c += across;
+            columns = Math.max(columns, c);
+        }
+    }
+    return { cells: cells, columns: columns };
+}
+
+function _tableSpacing(host) {
+    if (host.columnSpacing !== undefined) {
+        return [host.columnSpacing, host.rowSpacing];
+    }
+    var styles = _meta(host).styles || {};
+    var parts = String(styles.borderSpacing || styles["border-spacing"] || "").split(/\s+/).map(parseFloat).filter(function(v) { return !isNaN(v); });
+    if (parts.length === 0) {
+        return [2, 2];
+    }
+    return [parts[0], parts.length > 1 ? parts[1] : parts[0]];
+}
+
+function _tableLayout(host) {
+    var isStatic = host.columnSpecs !== undefined;
+    var sections = [];
+    if (isStatic) {
+        for (var g = 0; g < host.children.length; ++g) {
+            if (_TABLE_SECTION[host.children[g].eldurTag] !== undefined) {
+                sections.push({ rows: _tableRowsIn(host.children[g], []) });
+            }
+        }
+    } else {
+        var parts = host.children;
+        for (var o = 0; o < 3; ++o) {
+            for (var p = 0; p < parts.length; ++p) {
+                if (_TABLE_SECTION[_tablePartTag(parts[p])] === o) {
+                    sections.push({ rows: _tableRowsIn(parts[p], []), item: parts[p] });
+                }
+            }
+        }
+        // Rows put straight in a table are a body of their own.
+        var loose = [];
+        for (var q = 0; q < parts.length; ++q) {
+            if (_tablePartTag(parts[q]) === "tr") {
+                loose.push(parts[q]);
+            }
+        }
+        if (loose.length > 0) {
+            sections.push({ rows: loose });
+        }
+    }
+    var rows = [];
+    sections.forEach(function(group) {
+        var end = rows.length + group.rows.length;
+        group.rows.forEach(function(item) {
+            rows.push({ item: item, end: end });
+        });
+    });
+    var placed = _tablePlace(rows);
+    // What a cell needs changes as its text wraps in the width given below, and
+    // whenever a script writes to it afterwards.
+    placed.cells.forEach(function(c) {
+        var cm = _meta(c.item);
+        if (!cm.tableWatched) {
+            cm.tableWatched = true;
+            var again = function() { _layoutChanged(c.item); };
+            c.item.implicitHeightChanged.connect(again);
+            c.item.implicitWidthChanged.connect(again);
+        }
+    });
+    var measure = function() {
+        return placed.cells.map(function(c) {
+            var text = _findTextChild(c.item);
+            return {
+                tableSlot: [c.row, c.column, c.rowSpan, c.columnSpan],
+                // Columns come out whole pixels; a text must not wrap by a fraction.
+                implicitWidth: Math.ceil(c.item.implicitWidth),
+                implicitHeight: c.item.implicitHeight,
+                minContentWidth: _tableMinContent(c.item, text)
+            };
+        });
+    };
+    var spacing = _tableSpacing(host);
+    var adapters = measure();
+    var widths;
+    if (isStatic) {
+        host.eldurCreatedCells = adapters;
+        widths = host.columnWidths;
+    } else {
+        var specs = [];
+        for (var n = 0; n < placed.columns; ++n) {
+            specs.push(null);
+        }
+        var solver = { children: adapters, columnSpacing: spacing[0], rowSpacing: spacing[1], width: 0 };
+        // Auto width is max-content, up to what the table is in.
+        var room = host.parent && host.parent.width > 0 ? host.parent.width - 2 * spacing[0] : Infinity;
+        var given = /^[\d.]+px$/.test(String(_meta(host).styles.width)) ? parseFloat(_meta(host).styles.width) : NaN;
+        solver.width = !isNaN(given) ? given - 2 * spacing[0]
+            : Math.min(_root.tableMaxContentWidth(solver, specs, false), room);
+        widths = _root.tableColumnWidths(solver, specs, false);
+    }
+    var left = [];
+    var edge = 0;
+    for (var w = 0; w < widths.length; ++w) {
+        left.push(edge);
+        edge += widths[w] + spacing[0];
+    }
+    var total = Math.max(edge - spacing[0], 0);
+    var acrossFrom = function(c) {
+        var sum = spacing[0] * (c.columnSpan - 1);
+        for (var k = c.column; k < c.column + c.columnSpan && k < widths.length; ++k) {
+            sum += widths[k];
+        }
+        return sum;
+    };
+    placed.cells.forEach(function(c) {
+        c.item.x = left[c.column] || 0;
+        c.item.width = acrossFrom(c);
+    });
+    // Text wraps in the width it now has.
+    var zeros = rows.map(function() { return 0; });
+    var heights = rows.length > 0
+        ? _root.tableRowHeights({ children: measure(), rowSpacing: spacing[1] }, zeros)
+        : [];
+    placed.cells.forEach(function(c) {
+        var sum = spacing[1] * (c.rowSpan - 1);
+        for (var k = c.row; k < c.row + c.rowSpan; ++k) {
+            sum += heights[k];
+        }
+        c.item.y = 0;
+        c.item.height = sum;
+    });
+    rows.forEach(function(row, r) {
+        row.item.implicitWidth = total;
+        row.item.implicitHeight = heights[r];
+        if (row.item.parent && row.item.parent.spacing !== undefined) {
+            row.item.parent.spacing = spacing[1];
+        }
+    });
+    if (!isStatic) {
+        // A table's border-spacing runs around its rows too.
+        host.spacing = spacing[1];
+        host.implicitWidth = total + 2 * spacing[0];
+        for (var e = 0; e < host.children.length; ++e) {
+            var kid = host.children[e];
+            kid.eldurSide = spacing[0];
+            kid.eldurTop = e === 0 ? spacing[1] : 0;
+            kid.eldurBottom = e === host.children.length - 1 ? spacing[1] : 0;
+        }
+    }
+}
+
+function _tableSettle(dirty) {
+    var hosts = [];
+    for (var i = 0; i < dirty.length; ++i) {
+        var host = null;
+        var pair = [dirty[i], dirty[i].parent];
+        for (var q = 0; q < pair.length && !host; ++q) {
+            if (pair[q] && (_TABLE_PARTS[_tablePartTag(pair[q])] || /^t[dh]$/.test(_tablePartTag(pair[q])))) {
+                host = _tableHost(pair[q]);
+            }
+        }
+        if (host && hosts.indexOf(host) < 0) {
+            hosts.push(host);
+        }
+    }
+    hosts.forEach(_tableLayout);
+}
+
 function _layoutChanged(item) {
     if (!item || typeof item !== "object") {
         return;
@@ -1977,6 +2227,7 @@ function _settleLayouts() {
     _gSettle();
     var dirty = _layoutDirty;
     _layoutDirty = [];
+    _tableSettle(dirty);
     var done = [];
     var numbered = [];
     for (var n = 0; n < dirty.length; ++n) {
@@ -4249,8 +4500,16 @@ function _genericElementSource(tag, inputType) {
     if (tag === "li") {
         return "import QtQuick; import QtQuick.Layouts; RowLayout { Layout.fillWidth: true; spacing: 8 }";
     }
+    // `_tableSettle` places a row's cells: they may span rows, which no row-wide
+    // layout could hold.
     if (tag === "tr") {
-        return "import QtQuick; import QtQuick.Layouts; RowLayout { spacing: 0 }";
+        return "import QtQuick; import QtQuick.Layouts; Item { Layout.fillWidth: true; Layout.preferredHeight: implicitHeight; property real eldurSide: 0; property real eldurTop: 0; property real eldurBottom: 0; Layout.leftMargin: eldurSide; Layout.rightMargin: eldurSide; Layout.topMargin: eldurTop; Layout.bottomMargin: eldurBottom; }";
+    }
+    if (tag === "table") {
+        return "import QtQuick; import QtQuick.Layouts; ColumnLayout { Layout.fillWidth: false; spacing: 0 }";
+    }
+    if (tag === "thead" || tag === "tbody" || tag === "tfoot") {
+        return "import QtQuick; import QtQuick.Layouts; ColumnLayout { Layout.fillWidth: true; spacing: 0; property real eldurSide: 0; property real eldurTop: 0; property real eldurBottom: 0; Layout.leftMargin: eldurSide; Layout.rightMargin: eldurSide; Layout.topMargin: eldurTop; Layout.bottomMargin: eldurBottom; }";
     }
     if (tag === "ul" || tag === "ol") {
         return "import QtQuick; import QtQuick.Layouts; ColumnLayout { Layout.fillWidth: true; spacing: 0 }";
@@ -4379,8 +4638,9 @@ function _lookupTemplate(raw) {
     if (!_root || !_root.eldurTemplates || typeof _root.eldurTemplates !== "object") {
         return null;
     }
-    // A row has no form of its own for a template to describe.
-    if (_meta(raw).createdTag === "tr") {
+    // A row has no form of its own for a template to describe, nor has a table
+    // whose rows are not there yet.
+    if (_TABLE_PARTS[_meta(raw).createdTag]) {
         return null;
     }
     var templates = _root.eldurTemplates;
@@ -5512,6 +5772,10 @@ function wrap(rawItem) {
             }
             setAttribute(rawItem, "height", String(n));
         },
+        get colSpan() { return _tableSpan(rawItem, "colspan"); },
+        set colSpan(v) { setAttribute(rawItem, "colspan", String(v)); },
+        get rowSpan() { return _tableSpan(rawItem, "rowspan"); },
+        set rowSpan(v) { setAttribute(rawItem, "rowspan", String(v)); },
         get className() { return getClassName(rawItem); },
         set className(v) { setClassName(rawItem, v); },
         get classList() { return classList(rawItem); },
@@ -11010,6 +11274,10 @@ function _gApplyGaps(gaps, trailing) {
 }
 
 function _gColumnMargins(column, owner) {
+    // Between a table's parts is border-spacing, which `_tableLayout` sets.
+    if (_TABLE_PARTS[_meta(column).createdTag]) {
+        return;
+    }
     var kids = _gFlowKids(column);
     // A template's Text keeps a line for text that hasn't come; a box has none.
     for (var t = 0; t < kids.length; ++t) {

@@ -3258,6 +3258,1019 @@
    }
   }
  ],
+ "created_tables": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "table": [
+     {
+      "box": [
+       8,
+       8,
+       196.67,
+       80
+      ],
+      "shown": true,
+      "text": "IdName1A rather long name here2Bo"
+     },
+     {
+      "box": [
+       8,
+       100,
+       173.63,
+       60
+      ],
+      "shown": true,
+      "text": "ABWider than the firstC"
+     },
+     {
+      "box": [
+       8,
+       172,
+       400,
+       47
+      ],
+      "shown": true,
+      "text": "LeftRightxa longer cell"
+     },
+     {
+      "box": [
+       8,
+       231,
+       185.56,
+       57
+      ],
+      "shown": true,
+      "text": "spans twodownoneanother one"
+     }
+    ],
+    "tr": [
+     {
+      "box": [
+       10,
+       10,
+       192.67,
+       24
+      ],
+      "shown": true,
+      "text": "IdName"
+     },
+     {
+      "box": [
+       10,
+       36,
+       192.67,
+       24
+      ],
+      "shown": true,
+      "text": "1A rather long name here"
+     },
+     {
+      "box": [
+       10,
+       62,
+       192.67,
+       24
+      ],
+      "shown": true,
+      "text": "2Bo"
+     },
+     {
+      "box": [
+       14,
+       104,
+       161.63,
+       24
+      ],
+      "shown": true,
+      "text": "AB"
+     },
+     {
+      "box": [
+       14,
+       132,
+       161.63,
+       24
+      ],
+      "shown": true,
+      "text": "Wider than the firstC"
+     },
+     {
+      "box": [
+       8.5,
+       172.5,
+       399,
+       23
+      ],
+      "shown": true,
+      "text": "LeftRight"
+     },
+     {
+      "box": [
+       8.5,
+       195.5,
+       399,
+       23
+      ],
+      "shown": true,
+      "text": "xa longer cell"
+     },
+     {
+      "box": [
+       11,
+       234,
+       179.56,
+       24
+      ],
+      "shown": true,
+      "text": "spans twodown"
+     },
+     {
+      "box": [
+       11,
+       261,
+       179.56,
+       24
+      ],
+      "shown": true,
+      "text": "oneanother one"
+     }
+    ],
+    "th": [
+     {
+      "box": [
+       10,
+       10,
+       26.45,
+       24
+      ],
+      "shown": true,
+      "text": "Id"
+     },
+     {
+      "box": [
+       38.45,
+       10,
+       164.22,
+       24
+      ],
+      "shown": true,
+      "text": "Name"
+     },
+     {
+      "box": [
+       8.5,
+       172.5,
+       121.33,
+       23
+      ],
+      "shown": true,
+      "text": "Left"
+     },
+     {
+      "box": [
+       129.83,
+       172.5,
+       277.67,
+       23
+      ],
+      "shown": true,
+      "text": "Right"
+     }
+    ],
+    "td": [
+     {
+      "box": [
+       10,
+       36,
+       26.45,
+       24
+      ],
+      "shown": true,
+      "text": "1"
+     },
+     {
+      "box": [
+       38.45,
+       36,
+       164.22,
+       24
+      ],
+      "shown": true,
+      "text": "A rather long name here"
+     },
+     {
+      "box": [
+       10,
+       62,
+       26.45,
+       24
+      ],
+      "shown": true,
+      "text": "2"
+     },
+     {
+      "box": [
+       38.45,
+       62,
+       164.22,
+       24
+      ],
+      "shown": true,
+      "text": "Bo"
+     },
+     {
+      "box": [
+       14,
+       104,
+       131.5,
+       24
+      ],
+      "shown": true,
+      "text": "A"
+     },
+     {
+      "box": [
+       151.5,
+       104,
+       24.13,
+       24
+      ],
+      "shown": true,
+      "text": "B"
+     },
+     {
+      "box": [
+       14,
+       132,
+       131.5,
+       24
+      ],
+      "shown": true,
+      "text": "Wider than the first"
+     },
+     {
+      "box": [
+       151.5,
+       132,
+       24.13,
+       24
+      ],
+      "shown": true,
+      "text": "C"
+     },
+     {
+      "box": [
+       8.5,
+       195.5,
+       121.33,
+       23
+      ],
+      "shown": true,
+      "text": "x"
+     },
+     {
+      "box": [
+       129.83,
+       195.5,
+       277.67,
+       23
+      ],
+      "shown": true,
+      "text": "a longer cell"
+     },
+     {
+      "box": [
+       11,
+       234,
+       129.09,
+       24
+      ],
+      "shown": true,
+      "text": "spans two"
+     },
+     {
+      "box": [
+       143.09,
+       234,
+       47.47,
+       51
+      ],
+      "shown": true,
+      "text": "down"
+     },
+     {
+      "box": [
+       11,
+       261,
+       37.36,
+       24
+      ],
+      "shown": true,
+      "text": "one"
+     },
+     {
+      "box": [
+       51.36,
+       261,
+       88.73,
+       24
+      ],
+      "shown": true,
+      "text": "another one"
+     }
+    ],
+    "#grow": [
+     {
+      "box": [
+       8,
+       300,
+       47.84,
+       21
+      ],
+      "shown": true,
+      "text": "Grow"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "grow",
+   "log": [],
+   "state": {
+    "table": [
+     {
+      "box": [
+       8,
+       8,
+       291.64,
+       106
+      ],
+      "shown": true,
+      "text": "IdName0An even longer name than the long one1A rather long name here2Bo"
+     },
+     {
+      "box": [
+       8,
+       126,
+       173.63,
+       60
+      ],
+      "shown": true,
+      "text": "ABWider than the firstC"
+     },
+     {
+      "box": [
+       8,
+       198,
+       400,
+       47
+      ],
+      "shown": true,
+      "text": "LeftRightxa longer cell"
+     },
+     {
+      "box": [
+       8,
+       257,
+       185.56,
+       57
+      ],
+      "shown": true,
+      "text": "spans twodownoneanother one"
+     }
+    ],
+    "tr": [
+     {
+      "box": [
+       10,
+       10,
+       287.64,
+       24
+      ],
+      "shown": true,
+      "text": "IdName"
+     },
+     {
+      "box": [
+       10,
+       36,
+       287.64,
+       24
+      ],
+      "shown": true,
+      "text": "0An even longer name than the long one"
+     },
+     {
+      "box": [
+       10,
+       62,
+       287.64,
+       24
+      ],
+      "shown": true,
+      "text": "1A rather long name here"
+     },
+     {
+      "box": [
+       10,
+       88,
+       287.64,
+       24
+      ],
+      "shown": true,
+      "text": "2Bo"
+     },
+     {
+      "box": [
+       14,
+       130,
+       161.63,
+       24
+      ],
+      "shown": true,
+      "text": "AB"
+     },
+     {
+      "box": [
+       14,
+       158,
+       161.63,
+       24
+      ],
+      "shown": true,
+      "text": "Wider than the firstC"
+     },
+     {
+      "box": [
+       8.5,
+       198.5,
+       399,
+       23
+      ],
+      "shown": true,
+      "text": "LeftRight"
+     },
+     {
+      "box": [
+       8.5,
+       221.5,
+       399,
+       23
+      ],
+      "shown": true,
+      "text": "xa longer cell"
+     },
+     {
+      "box": [
+       11,
+       260,
+       179.56,
+       24
+      ],
+      "shown": true,
+      "text": "spans twodown"
+     },
+     {
+      "box": [
+       11,
+       287,
+       179.56,
+       24
+      ],
+      "shown": true,
+      "text": "oneanother one"
+     }
+    ],
+    "th": [
+     {
+      "box": [
+       10,
+       10,
+       26.45,
+       24
+      ],
+      "shown": true,
+      "text": "Id"
+     },
+     {
+      "box": [
+       38.45,
+       10,
+       259.19,
+       24
+      ],
+      "shown": true,
+      "text": "Name"
+     },
+     {
+      "box": [
+       8.5,
+       198.5,
+       121.33,
+       23
+      ],
+      "shown": true,
+      "text": "Left"
+     },
+     {
+      "box": [
+       129.83,
+       198.5,
+       277.67,
+       23
+      ],
+      "shown": true,
+      "text": "Right"
+     }
+    ],
+    "td": [
+     {
+      "box": [
+       10,
+       36,
+       26.45,
+       24
+      ],
+      "shown": true,
+      "text": "0"
+     },
+     {
+      "box": [
+       38.45,
+       36,
+       259.19,
+       24
+      ],
+      "shown": true,
+      "text": "An even longer name than the long one"
+     },
+     {
+      "box": [
+       10,
+       62,
+       26.45,
+       24
+      ],
+      "shown": true,
+      "text": "1"
+     },
+     {
+      "box": [
+       38.45,
+       62,
+       259.19,
+       24
+      ],
+      "shown": true,
+      "text": "A rather long name here"
+     },
+     {
+      "box": [
+       10,
+       88,
+       26.45,
+       24
+      ],
+      "shown": true,
+      "text": "2"
+     },
+     {
+      "box": [
+       38.45,
+       88,
+       259.19,
+       24
+      ],
+      "shown": true,
+      "text": "Bo"
+     },
+     {
+      "box": [
+       14,
+       130,
+       131.5,
+       24
+      ],
+      "shown": true,
+      "text": "A"
+     },
+     {
+      "box": [
+       151.5,
+       130,
+       24.13,
+       24
+      ],
+      "shown": true,
+      "text": "B"
+     },
+     {
+      "box": [
+       14,
+       158,
+       131.5,
+       24
+      ],
+      "shown": true,
+      "text": "Wider than the first"
+     },
+     {
+      "box": [
+       151.5,
+       158,
+       24.13,
+       24
+      ],
+      "shown": true,
+      "text": "C"
+     },
+     {
+      "box": [
+       8.5,
+       221.5,
+       121.33,
+       23
+      ],
+      "shown": true,
+      "text": "x"
+     },
+     {
+      "box": [
+       129.83,
+       221.5,
+       277.67,
+       23
+      ],
+      "shown": true,
+      "text": "a longer cell"
+     },
+     {
+      "box": [
+       11,
+       260,
+       129.09,
+       24
+      ],
+      "shown": true,
+      "text": "spans two"
+     },
+     {
+      "box": [
+       143.09,
+       260,
+       47.47,
+       51
+      ],
+      "shown": true,
+      "text": "down"
+     },
+     {
+      "box": [
+       11,
+       287,
+       37.36,
+       24
+      ],
+      "shown": true,
+      "text": "one"
+     },
+     {
+      "box": [
+       51.36,
+       287,
+       88.73,
+       24
+      ],
+      "shown": true,
+      "text": "another one"
+     }
+    ],
+    "#grow": [
+     {
+      "box": [
+       8,
+       326,
+       47.84,
+       21
+      ],
+      "shown": true,
+      "text": "Grow"
+     }
+    ],
+    "(focus)": "grow"
+   }
+  },
+  {
+   "name": "shrink",
+   "log": [],
+   "state": {
+    "table": [
+     {
+      "box": [
+       8,
+       8,
+       84.59,
+       54
+      ],
+      "shown": true,
+      "text": "IdName2Bo"
+     },
+     {
+      "box": [
+       8,
+       74,
+       173.63,
+       60
+      ],
+      "shown": true,
+      "text": "ABWider than the firstC"
+     },
+     {
+      "box": [
+       8,
+       146,
+       400,
+       47
+      ],
+      "shown": true,
+      "text": "LeftRightxa longer cell"
+     },
+     {
+      "box": [
+       8,
+       205,
+       185.56,
+       57
+      ],
+      "shown": true,
+      "text": "spans twodownoneanother one"
+     }
+    ],
+    "tr": [
+     {
+      "box": [
+       10,
+       10,
+       80.59,
+       24
+      ],
+      "shown": true,
+      "text": "IdName"
+     },
+     {
+      "box": [
+       10,
+       36,
+       80.59,
+       24
+      ],
+      "shown": true,
+      "text": "2Bo"
+     },
+     {
+      "box": [
+       14,
+       78,
+       161.63,
+       24
+      ],
+      "shown": true,
+      "text": "AB"
+     },
+     {
+      "box": [
+       14,
+       106,
+       161.63,
+       24
+      ],
+      "shown": true,
+      "text": "Wider than the firstC"
+     },
+     {
+      "box": [
+       8.5,
+       146.5,
+       399,
+       23
+      ],
+      "shown": true,
+      "text": "LeftRight"
+     },
+     {
+      "box": [
+       8.5,
+       169.5,
+       399,
+       23
+      ],
+      "shown": true,
+      "text": "xa longer cell"
+     },
+     {
+      "box": [
+       11,
+       208,
+       179.56,
+       24
+      ],
+      "shown": true,
+      "text": "spans twodown"
+     },
+     {
+      "box": [
+       11,
+       235,
+       179.56,
+       24
+      ],
+      "shown": true,
+      "text": "oneanother one"
+     }
+    ],
+    "th": [
+     {
+      "box": [
+       10,
+       10,
+       26.45,
+       24
+      ],
+      "shown": true,
+      "text": "Id"
+     },
+     {
+      "box": [
+       38.45,
+       10,
+       52.14,
+       24
+      ],
+      "shown": true,
+      "text": "Name"
+     },
+     {
+      "box": [
+       8.5,
+       146.5,
+       121.33,
+       23
+      ],
+      "shown": true,
+      "text": "Left"
+     },
+     {
+      "box": [
+       129.83,
+       146.5,
+       277.67,
+       23
+      ],
+      "shown": true,
+      "text": "Right"
+     }
+    ],
+    "td": [
+     {
+      "box": [
+       10,
+       36,
+       26.45,
+       24
+      ],
+      "shown": true,
+      "text": "2"
+     },
+     {
+      "box": [
+       38.45,
+       36,
+       52.14,
+       24
+      ],
+      "shown": true,
+      "text": "Bo"
+     },
+     {
+      "box": [
+       14,
+       78,
+       131.5,
+       24
+      ],
+      "shown": true,
+      "text": "A"
+     },
+     {
+      "box": [
+       151.5,
+       78,
+       24.13,
+       24
+      ],
+      "shown": true,
+      "text": "B"
+     },
+     {
+      "box": [
+       14,
+       106,
+       131.5,
+       24
+      ],
+      "shown": true,
+      "text": "Wider than the first"
+     },
+     {
+      "box": [
+       151.5,
+       106,
+       24.13,
+       24
+      ],
+      "shown": true,
+      "text": "C"
+     },
+     {
+      "box": [
+       8.5,
+       169.5,
+       121.33,
+       23
+      ],
+      "shown": true,
+      "text": "x"
+     },
+     {
+      "box": [
+       129.83,
+       169.5,
+       277.67,
+       23
+      ],
+      "shown": true,
+      "text": "a longer cell"
+     },
+     {
+      "box": [
+       11,
+       208,
+       129.09,
+       24
+      ],
+      "shown": true,
+      "text": "spans two"
+     },
+     {
+      "box": [
+       143.09,
+       208,
+       47.47,
+       51
+      ],
+      "shown": true,
+      "text": "down"
+     },
+     {
+      "box": [
+       11,
+       235,
+       37.36,
+       24
+      ],
+      "shown": true,
+      "text": "one"
+     },
+     {
+      "box": [
+       51.36,
+       235,
+       88.73,
+       24
+      ],
+      "shown": true,
+      "text": "another one"
+     }
+    ],
+    "#grow": [
+     {
+      "box": [
+       8,
+       274,
+       47.84,
+       21
+      ],
+      "shown": true,
+      "text": "Grow"
+     }
+    ],
+    "(focus)": "shrink"
+   }
+  }
+ ],
  "dropdown": [
   {
    "name": "load",

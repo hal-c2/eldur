@@ -29,6 +29,165 @@ ApplicationWindow {
     width: 1280
     height: 800
 
+    function tableExtents(grid, specs) {
+        const n = specs.length
+        const min = new Array(n).fill(0)
+        const max = new Array(n).fill(0)
+        const spanning = []
+        // Rows a script added are not in the grid; the runtime says what their cells need.
+        const cells = Array.from(grid.children).concat(grid.eldurCreatedCells || [])
+        for (let i = 0; i < cells.length; ++i) {
+            const cell = cells[i]
+            const slot = cell.tableSlot
+            if (!slot)
+                continue
+            if (slot[3] > 1) {
+                spanning.push(cell)
+                continue
+            }
+            min[slot[1]] = Math.max(min[slot[1]], cell.minContentWidth)
+            max[slot[1]] = Math.max(max[slot[1]], cell.implicitWidth)
+        }
+        for (const cell of spanning) {
+            const first = cell.tableSlot[1]
+            const last = first + cell.tableSlot[3]
+            const gaps = grid.columnSpacing * (cell.tableSlot[3] - 1)
+            for (const [widths, wanted] of [[min, cell.minContentWidth], [max, cell.implicitWidth]]) {
+                let have = 0
+                let weight = 0
+                for (let c = first; c < last; ++c) {
+                    have += widths[c]
+                    weight += max[c]
+                }
+                const missing = wanted - gaps - have
+                if (missing <= 0)
+                    continue
+                const add = []
+                for (let c = first; c < last; ++c)
+                    add.push(weight > 0 ? missing * max[c] / weight : missing / cell.tableSlot[3])
+                for (let c = first; c < last; ++c)
+                    widths[c] += add[c - first]
+            }
+        }
+        for (let c = 0; c < n; ++c)
+            max[c] = Math.max(max[c], min[c])
+        return { min: min, max: max }
+    }
+
+    function tableMaxContentWidth(grid, specs, fixed) {
+        const extents = root.tableExtents(grid, specs)
+        let sum = grid.columnSpacing * (specs.length - 1)
+        for (let c = 0; c < specs.length; ++c) {
+            if (typeof specs[c] === "number")
+                sum += fixed ? specs[c] : Math.max(specs[c], extents.min[c])
+            else
+                sum += fixed ? 0 : extents.max[c]
+        }
+        return sum
+    }
+
+    function tableMinContentWidth(grid, specs, fixed) {
+        const extents = root.tableExtents(grid, specs)
+        let sum = grid.columnSpacing * (specs.length - 1)
+        for (let c = 0; c < specs.length; ++c) {
+            if (typeof specs[c] === "number")
+                sum += fixed ? specs[c] : Math.max(specs[c], extents.min[c])
+            else
+                sum += fixed ? 0 : extents.min[c]
+        }
+        return sum
+    }
+
+    function tableColumnWidths(grid, specs, fixed) {
+        const n = specs.length
+        const space = Math.max(0, grid.width - grid.columnSpacing * (n - 1))
+        const extents = fixed ? { min: new Array(n).fill(0), max: new Array(n).fill(0) } : root.tableExtents(grid, specs)
+        const percent = s => parseFloat(s) * space / 100
+        const widths = []
+        const kinds = []
+        for (let c = 0; c < n; ++c) {
+            const s = specs[c]
+            if (typeof s === "number") {
+                widths.push(Math.max(s, extents.min[c]))
+                kinds.push(1)
+            } else if (typeof s === "string") {
+                widths.push(Math.max(percent(s), extents.min[c]))
+                kinds.push(2)
+            } else {
+                widths.push(extents.max[c])
+                kinds.push(0)
+            }
+        }
+        let left = space - widths.reduce((a, b) => a + b, 0)
+        const share = (kind, amount, weights) => {
+            const total = weights.reduce((a, w, c) => a + (kinds[c] === kind ? w : 0), 0)
+            const count = kinds.filter(k => k === kind).length
+            if (count === 0)
+                return false
+            for (let c = 0; c < n; ++c) {
+                if (kinds[c] === kind)
+                    widths[c] += total > 0 ? amount * weights[c] / total : amount / count
+            }
+            return true
+        }
+        if (left > 0) {
+            // Equal shares in fixed layout: there are no content widths to weigh.
+            share(0, left, fixed ? widths.map(() => 1) : extents.max)
+                || share(1, left, widths) || share(2, left, widths)
+        } else if (left < 0 && !fixed) {
+            for (const kind of [0, 1, 2]) {
+                const room = widths.map((w, c) => kinds[c] === kind ? w - extents.min[c] : 0)
+                const total = room.reduce((a, b) => a + b, 0)
+                if (total <= 0)
+                    continue
+                share(kind, -Math.min(-left, total), room)
+                left += Math.min(-left, total)
+                if (left >= 0)
+                    break
+            }
+        }
+        let edge = 0
+        for (let c = 0; c < n; ++c) {
+            const next = edge + widths[c]
+            widths[c] = Math.round(next) - Math.round(edge)
+            edge = next
+        }
+        return widths
+    }
+
+    function tableRowHeights(grid, minimums) {
+        const heights = minimums.slice()
+        const spanning = []
+        for (let i = 0; i < grid.children.length; ++i) {
+            const cell = grid.children[i]
+            const slot = cell.tableSlot
+            if (!slot)
+                continue
+            if (slot[2] > 1)
+                spanning.push(cell)
+            else
+                heights[slot[0]] = Math.max(heights[slot[0]], cell.implicitHeight)
+        }
+        for (const cell of spanning) {
+            const first = cell.tableSlot[0]
+            const span = cell.tableSlot[2]
+            let have = grid.rowSpacing * (span - 1)
+            for (let r = first; r < first + span; ++r)
+                have += heights[r]
+            if (cell.implicitHeight > have) {
+                for (let r = first; r < first + span; ++r)
+                    heights[r] += (cell.implicitHeight - have) / span
+            }
+        }
+        let edge = 0
+        for (let r = 0; r < heights.length; ++r) {
+            const next = edge + heights[r]
+            heights[r] = Math.round(next) - Math.round(edge)
+            edge = next
+        }
+        return heights
+    }
+
     Component.onCompleted: {
         Page.__eldur_init(root);
     }

@@ -31,8 +31,10 @@ ApplicationWindow {
         const min = new Array(n).fill(0)
         const max = new Array(n).fill(0)
         const spanning = []
-        for (let i = 0; i < grid.children.length; ++i) {
-            const cell = grid.children[i]
+        // Rows a script added are not in the grid; the runtime says what their cells need.
+        const cells = Array.from(grid.children).concat(grid.eldurCreatedCells || [])
+        for (let i = 0; i < cells.length; ++i) {
+            const cell = cells[i]
             const slot = cell.tableSlot
             if (!slot)
                 continue
@@ -289,6 +291,7 @@ ApplicationWindow {
                     GridLayout {
                         id: tableGrid
                         readonly property var columnSpecs: [null, null, null]
+                        property var eldurCreatedCells: []
                         readonly property var columnWidths: root.tableColumnWidths(this, columnSpecs, false)
                         readonly property var rowHeights: root.tableRowHeights(this, [0])
                         readonly property real maxContentWidth: root.tableMaxContentWidth(this, columnSpecs, false)
