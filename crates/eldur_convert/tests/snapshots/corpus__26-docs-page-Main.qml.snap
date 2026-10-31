@@ -316,9 +316,13 @@ ApplicationWindow {
 
                             // <h4>
                             Item {
+                                id: h4
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                 implicitWidth: h4Text.implicitWidth + 16
                                 implicitHeight: h4Text.implicitHeight
                                 Layout.fillWidth: true
+                                Layout.preferredHeight: implicitHeight
 
                                 Text {
                                     id: h4Text
@@ -346,10 +350,13 @@ ApplicationWindow {
 
                             // <ul>
                             ColumnLayout {
+                                id: ul
+                                property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + li3.eldurCarry + 0.000001
+
                                 spacing: 0
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                Layout.topMargin: 6
+                                Layout.topMargin: 6 - h4.eldurCarry
 
                                 // <li>
                                 ColumnLayout {
@@ -359,9 +366,13 @@ ApplicationWindow {
 
                                     // <a>
                                     Item {
+                                        id: a
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                         implicitWidth: aText.implicitWidth + 16
                                         implicitHeight: aText.implicitHeight + 8
                                         Layout.fillWidth: true
+                                        Layout.preferredHeight: implicitHeight
 
                                         Text {
                                             id: aText
@@ -388,15 +399,23 @@ ApplicationWindow {
 
                                 // <li>
                                 ColumnLayout {
+                                    id: li
+                                    property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + a2.eldurCarry + 0.000001
+
                                     spacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                    Layout.topMargin: -a.eldurCarry
 
                                     // <a>
                                     Item {
+                                        id: a2
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                         implicitWidth: aText2.implicitWidth + 16
                                         implicitHeight: aText2.implicitHeight + 8
                                         Layout.fillWidth: true
+                                        Layout.preferredHeight: implicitHeight
 
                                         Text {
                                             id: aText2
@@ -423,17 +442,25 @@ ApplicationWindow {
 
                                 // <li>
                                 ColumnLayout {
+                                    id: li3
+                                    property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + active.eldurCarry + 0.000001
+
                                     spacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                    Layout.topMargin: -li.eldurCarry
 
                                     // <a class="active">
                                     Rectangle {
+                                        id: active
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                         color: "#ddf4ff"
                                         radius: 6
                                         implicitWidth: activeText.implicitWidth + 16
                                         implicitHeight: activeText.implicitHeight + 8
                                         Layout.fillWidth: true
+                                        Layout.preferredHeight: implicitHeight
 
                                         Text {
                                             id: activeText
@@ -462,10 +489,14 @@ ApplicationWindow {
 
                             // <h4>
                             Item {
+                                id: h42
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                 implicitWidth: h4Text2.implicitWidth + 16
                                 implicitHeight: h4Text2.implicitHeight
                                 Layout.fillWidth: true
-                                Layout.topMargin: 16
+                                Layout.topMargin: 16 - ul.eldurCarry
+                                Layout.preferredHeight: implicitHeight
 
                                 Text {
                                     id: h4Text2
@@ -493,10 +524,13 @@ ApplicationWindow {
 
                             // <ul>
                             ColumnLayout {
+                                id: ul2
+                                property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + li4.eldurCarry + 0.000001
+
                                 spacing: 0
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                Layout.topMargin: 6
+                                Layout.topMargin: 6 - h42.eldurCarry
 
                                 // <li>
                                 ColumnLayout {
@@ -506,9 +540,13 @@ ApplicationWindow {
 
                                     // <a>
                                     Item {
+                                        id: a3
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                         implicitWidth: aText3.implicitWidth + 16
                                         implicitHeight: aText3.implicitHeight + 8
                                         Layout.fillWidth: true
+                                        Layout.preferredHeight: implicitHeight
 
                                         Text {
                                             id: aText3
@@ -535,15 +573,23 @@ ApplicationWindow {
 
                                 // <li>
                                 ColumnLayout {
+                                    id: li2
+                                    property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + a4.eldurCarry + 0.000001
+
                                     spacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                    Layout.topMargin: -a3.eldurCarry
 
                                     // <a>
                                     Item {
+                                        id: a4
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                         implicitWidth: aText4.implicitWidth + 16
                                         implicitHeight: aText4.implicitHeight + 8
                                         Layout.fillWidth: true
+                                        Layout.preferredHeight: implicitHeight
 
                                         Text {
                                             id: aText4
@@ -570,15 +616,23 @@ ApplicationWindow {
 
                                 // <li>
                                 ColumnLayout {
+                                    id: li4
+                                    property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + a5.eldurCarry + 0.000001
+
                                     spacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                    Layout.topMargin: -li2.eldurCarry
 
                                     // <a>
                                     Item {
+                                        id: a5
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                         implicitWidth: aText5.implicitWidth + 16
                                         implicitHeight: aText5.implicitHeight + 8
                                         Layout.fillWidth: true
+                                        Layout.preferredHeight: implicitHeight
 
                                         Text {
                                             id: aText5
@@ -606,10 +660,14 @@ ApplicationWindow {
 
                             // <h4>
                             Item {
+                                id: h43
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                 implicitWidth: h4Text3.implicitWidth + 16
                                 implicitHeight: h4Text3.implicitHeight
                                 Layout.fillWidth: true
-                                Layout.topMargin: 16
+                                Layout.topMargin: 16 - ul2.eldurCarry
+                                Layout.preferredHeight: implicitHeight
 
                                 Text {
                                     id: h4Text3
@@ -640,7 +698,7 @@ ApplicationWindow {
                                 spacing: 0
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                Layout.topMargin: 6
+                                Layout.topMargin: 6 - h43.eldurCarry
 
                                 // <li>
                                 ColumnLayout {
@@ -650,9 +708,13 @@ ApplicationWindow {
 
                                     // <a>
                                     Item {
+                                        id: a6
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                         implicitWidth: aText6.implicitWidth + 16
                                         implicitHeight: aText6.implicitHeight + 8
                                         Layout.fillWidth: true
+                                        Layout.preferredHeight: implicitHeight
 
                                         Text {
                                             id: aText6
@@ -679,15 +741,23 @@ ApplicationWindow {
 
                                 // <li>
                                 ColumnLayout {
+                                    id: li5
+                                    property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + a7.eldurCarry + 0.000001
+
                                     spacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                    Layout.topMargin: -a6.eldurCarry
 
                                     // <a>
                                     Item {
+                                        id: a7
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                         implicitWidth: aText7.implicitWidth + 16
                                         implicitHeight: aText7.implicitHeight + 8
                                         Layout.fillWidth: true
+                                        Layout.preferredHeight: implicitHeight
 
                                         Text {
                                             id: aText7
@@ -754,6 +824,9 @@ ApplicationWindow {
 
                             // <p class="subtitle">
                             Text {
+                                id: subtitle
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Tell the scheduler where your queues live and how hard to try."
                                 textFormat: Text.PlainText
                                 color: "#57606a"
@@ -771,6 +844,9 @@ ApplicationWindow {
 
                             // <p>
                             Text {
+                                id: p
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "<div style=\"line-height:25.6px\">Tidewater reads its settings from <span style=\"font-size:14px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>tidewater.toml<span style=\"letter-spacing:5px\">&#8288;</span></span> in the working directory. Every key can be overridden with an environment variable: <span style=\"font-size:14px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>queue.url<span style=\"letter-spacing:5px\">&#8288;</span></span> becomes <span style=\"font-size:14px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>TIDEWATER_QUEUE_URL<span style=\"letter-spacing:5px\">&#8288;</span></span>.</div>"
                                 textFormat: Text.RichText
                                 color: "#24292f"
@@ -781,11 +857,14 @@ ApplicationWindow {
                                     y: -3.6
                                 }
                                 Layout.fillWidth: true
-                                Layout.topMargin: 16
+                                Layout.topMargin: 16 - subtitle.eldurCarry
                             }
 
                             // <div class="callout">
                             Rectangle {
+                                id: callout
+                                property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + text.eldurCarry + 0.000001
+
                                 color: "#ddf4ff"
                                 topLeftRadius: 0
                                 topRightRadius: 6
@@ -794,7 +873,7 @@ ApplicationWindow {
                                 implicitWidth: calloutContent.implicitWidth + 36
                                 implicitHeight: calloutContent.implicitHeight + 24
                                 Layout.fillWidth: true
-                                Layout.topMargin: 16
+                                Layout.topMargin: 16 - p.eldurCarry
 
                                 Rectangle {
                                     anchors.top: parent.top
@@ -822,6 +901,9 @@ ApplicationWindow {
 
                                         // <span class="callout-title">
                                         Text {
+                                            id: calloutTitle
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Note"
                                             textFormat: Text.PlainText
                                             color: "#0969da"
@@ -838,6 +920,9 @@ ApplicationWindow {
                                         }
 
                                         Text {
+                                            id: text
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "<div style=\"line-height:25.6px\">Settings are read once at start-up. Send <span style=\"font-size:14px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>SIGHUP<span style=\"letter-spacing:5px\">&#8288;</span></span> to reload them without dropping jobs.</div>"
                                             textFormat: Text.RichText
                                             color: "#24292f"
@@ -848,7 +933,8 @@ ApplicationWindow {
                                                 y: -3.6
                                             }
                                             Layout.fillWidth: true
-                                            Layout.topMargin: 4
+                                            Layout.topMargin: 4 - calloutTitle.eldurCarry
+                                            Layout.preferredHeight: implicitHeight
                                         }
                                     }
                                 }
@@ -856,11 +942,15 @@ ApplicationWindow {
 
                             // <h2>
                             Rectangle {
+                                id: h2
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                 color: "#00000000"
                                 implicitWidth: h2Text.implicitWidth
                                 implicitHeight: h2Text.implicitHeight + 7
                                 Layout.fillWidth: true
-                                Layout.topMargin: 32
+                                Layout.topMargin: 32 - callout.eldurCarry
+                                Layout.preferredHeight: implicitHeight
 
                                 Rectangle {
                                     anchors.left: parent.left
@@ -892,6 +982,9 @@ ApplicationWindow {
 
                             // <p>
                             Text {
+                                id: p2
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "This is enough to run one worker against a local queue:"
                                 textFormat: Text.PlainText
                                 color: "#24292f"
@@ -904,11 +997,14 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 12
+                                Layout.topMargin: 12 - h2.eldurCarry
                             }
 
                             // <pre>
                             Rectangle {
+                                id: pre
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                 color: "#f6f8fa"
                                 radius: 6
                                 clip: true
@@ -917,7 +1013,8 @@ ApplicationWindow {
                                 border.width: 1
                                 border.color: "#d0d7de"
                                 Layout.fillWidth: true
-                                Layout.topMargin: 16
+                                Layout.topMargin: 16 - p2.eldurCarry
+                                Layout.preferredHeight: implicitHeight
 
                                 Text {
                                     id: preText
@@ -973,11 +1070,15 @@ ApplicationWindow {
 
                             // <h2>
                             Rectangle {
+                                id: h22
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                 color: "#00000000"
                                 implicitWidth: h2Text2.implicitWidth
                                 implicitHeight: h2Text2.implicitHeight + 7
                                 Layout.fillWidth: true
-                                Layout.topMargin: 32
+                                Layout.topMargin: 32 - pre.eldurCarry
+                                Layout.preferredHeight: implicitHeight
 
                                 Rectangle {
                                     anchors.left: parent.left
@@ -1013,7 +1114,7 @@ ApplicationWindow {
                                 implicitHeight: tableGrid.implicitHeight
                                 Layout.minimumWidth: tableGrid.minContentWidth
                                 Layout.fillWidth: true
-                                Layout.topMargin: 12
+                                Layout.topMargin: 12 - h22.eldurCarry
                                 Layout.bottomMargin: 16
 
                                 GridLayout {

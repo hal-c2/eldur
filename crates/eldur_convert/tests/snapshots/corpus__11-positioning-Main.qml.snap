@@ -64,6 +64,9 @@ ApplicationWindow {
 
                             // <h1 class="page-title">
                             Text {
+                                id: pageTitle
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Positioning"
                                 textFormat: Text.PlainText
                                 color: "#1f2937"
@@ -76,10 +79,13 @@ ApplicationWindow {
 
                             // <section class="row">
                             RowLayout {
+                                id: row
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                 spacing: 0
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                Layout.topMargin: 32
+                                Layout.topMargin: 32 - pageTitle.eldurCarry
 
                                 // <article class="card">
                                 Rectangle {
@@ -113,6 +119,9 @@ ApplicationWindow {
 
                                         // <h2>
                                         Text {
+                                            id: h2
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Team update"
                                             textFormat: Text.PlainText
                                             color: "#1f2937"
@@ -125,6 +134,9 @@ ApplicationWindow {
 
                                         // <p>
                                         Text {
+                                            id: p
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "The design review moved to Thursday. Check the shared calendar for the new room."
                                             textFormat: Text.PlainText
                                             color: "#4b5563"
@@ -137,13 +149,14 @@ ApplicationWindow {
                                             }
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
-                                            Layout.topMargin: 8
+                                            Layout.topMargin: 8 - h2.eldurCarry
                                         }
 
                                         Flow {
                                             id: blockFlow
                                             Layout.fillWidth: true
-                                            Layout.topMargin: 16
+                                            Layout.topMargin: 16 - p.eldurCarry
+                                            Layout.preferredHeight: implicitHeight
 
                                             Item {
                                                 width: tooltipWrapBox.width
@@ -180,6 +193,7 @@ ApplicationWindow {
                                                             bottomPadding: 10
                                                             leftPadding: 18
                                                             Layout.alignment: Qt.AlignHCenter
+                                                            Layout.preferredHeight: implicitHeight
                                                         }
                                                     }
 
@@ -214,6 +228,7 @@ ApplicationWindow {
                                                                 font.pixelSize: 13
                                                                 wrapMode: Text.NoWrap
                                                                 Layout.fillWidth: true
+                                                                Layout.preferredHeight: implicitHeight
                                                             }
                                                         }
 

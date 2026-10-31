@@ -49,10 +49,13 @@ ApplicationWindow {
                     // <p id="mixed">
                     Item {
                         id: mixed
+                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                         implicitWidth: pFlow.implicitWidth
                         implicitHeight: pFlow.implicitHeight
                         Layout.fillWidth: true
                         Layout.maximumWidth: 480
+                        Layout.preferredHeight: implicitHeight
 
                         Flow {
                             id: pFlow
@@ -529,6 +532,9 @@ ApplicationWindow {
 
                 // <section class="narrow">
                 Rectangle {
+                    id: narrow
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                     color: "#00000000"
                     radius: 8
                     implicitWidth: narrowFlow.implicitWidth + 26
@@ -536,7 +542,8 @@ ApplicationWindow {
                     border.width: 1
                     border.color: "#cbd5e1"
                     Layout.preferredWidth: 346
-                    Layout.topMargin: 24
+                    Layout.topMargin: 24 - mixed.eldurCarry
+                    Layout.preferredHeight: implicitHeight
 
                     Flow {
                         id: narrowFlow
@@ -843,11 +850,15 @@ ApplicationWindow {
 
                 // <section class="centered">
                 Rectangle {
+                    id: centered
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                     color: "#f8fafc"
                     implicitWidth: centeredFlow.implicitWidth + 32
                     implicitHeight: centeredFlow.implicitHeight + 32
                     Layout.fillWidth: true
-                    Layout.topMargin: 24
+                    Layout.topMargin: 24 - narrow.eldurCarry
+                    Layout.preferredHeight: implicitHeight
 
                     Flow {
                         id: centeredFlow
@@ -949,8 +960,11 @@ ApplicationWindow {
                 // <section>
                 Flow {
                     id: sectionFlow
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                     Layout.fillWidth: true
-                    Layout.topMargin: 24
+                    Layout.topMargin: 24 - centered.eldurCarry
+                    Layout.preferredHeight: implicitHeight
 
                     Text {
                         text: "Status: "
@@ -1068,8 +1082,11 @@ ApplicationWindow {
                 // <section>
                 Flow {
                     id: sectionFlow2
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                     Layout.fillWidth: true
-                    Layout.topMargin: 24
+                    Layout.topMargin: 24 - sectionFlow.eldurCarry
+                    Layout.preferredHeight: implicitHeight
 
                     Item {
                         width: statBox.width + 16

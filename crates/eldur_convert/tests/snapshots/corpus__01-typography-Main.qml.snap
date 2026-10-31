@@ -76,6 +76,9 @@ ApplicationWindow {
 
                         // <p class="kicker">
                         Text {
+                            id: kicker
+                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "Typography notes · Issue 14"
                             textFormat: Text.PlainText
                             color: "#5b616e"
@@ -92,6 +95,9 @@ ApplicationWindow {
 
                         // <h1>
                         Text {
+                            id: h1
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "On Setting Text for the Screen"
                             textFormat: Text.PlainText
                             color: "#1d1f23"
@@ -106,11 +112,14 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
-                            Layout.topMargin: 8
+                            Layout.topMargin: 8 - kicker.eldurCarry
                         }
 
                         // <p>
                         Text {
+                            id: p11
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "A short essay on rhythm, measure and the <b>quiet</b> work that <b>good type</b> does when nobody is looking. Read it at your own pace; the <i>argument</i> is <i>deliberately</i> simple."
                             textFormat: Text.StyledText
                             color: "#1d1f23"
@@ -123,16 +132,20 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
-                            Layout.topMargin: 20
+                            Layout.topMargin: 20 - h1.eldurCarry
+                            Layout.preferredHeight: implicitHeight
                         }
                     }
 
                     // <main>
                     ColumnLayout {
+                        id: main
+                        property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + p12.eldurCarry + 0.000001
+
                         spacing: 0
                         Layout.fillWidth: true
                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                        Layout.topMargin: 42
+                        Layout.topMargin: 42 - p11.eldurCarry
 
                         // <h2>
                         Rectangle {
@@ -171,6 +184,9 @@ ApplicationWindow {
 
                         // <p>
                         Text {
+                            id: p2
+                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "Line length decides how far the eye travels before it returns to the left edge. Most readers are comfortable somewhere around 60 to 75 characters per line, which is why this column is capped near 760 pixels. The full specification lives in the <a href=\"#spec\">type guidelines</a>, and the earlier draft is <a href=\"https://example.com/draft\">archived here</a>."
                             textFormat: Text.StyledText
                             color: "#1d1f23"
@@ -200,6 +216,9 @@ ApplicationWindow {
 
                         // <p>
                         Text {
+                            id: p3
+                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "Vertical rhythm follows from the baseline. With a line height of 1.6, each line sits far enough from its neighbour to breathe, and a paragraph gap of one line keeps sections distinct without turning the page into a list of islands.\nA forced line break, like this one, is useful for addresses and poems but should be rare in running text."
                             textFormat: Text.PlainText
                             color: "#1d1f23"
@@ -212,11 +231,14 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
-                            Layout.topMargin: 16
+                            Layout.topMargin: 16 - p2.eldurCarry
                         }
 
                         // <h3>
                         Text {
+                            id: h3
+                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "Scale and hierarchy"
                             textFormat: Text.PlainText
                             color: "#1d1f23"
@@ -230,11 +252,14 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
-                            Layout.topMargin: 33
+                            Layout.topMargin: 33 - p3.eldurCarry
                         }
 
                         // <p>
                         Text {
+                            id: p4
+                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "<div style=\"line-height:27.2px\">A modular scale gives headings a consistent relationship to body text. Here the steps are expressed in <span style=\"font-size:15px;font-family:'monospace';background-color:#f1efe8\"><span style=\"letter-spacing:5.35px\">&#8288;</span>rem<span style=\"letter-spacing:5.35px\">&#8288;</span></span> so that they follow the user's preferred base size.</div>"
                             textFormat: Text.RichText
                             color: "#1d1f23"
@@ -245,11 +270,14 @@ ApplicationWindow {
                                 y: -3.83
                             }
                             Layout.fillWidth: true
-                            Layout.topMargin: 11
+                            Layout.topMargin: 11 - h3.eldurCarry
                         }
 
                         // <h4>
                         Text {
+                            id: h4
+                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "Choosing a typeface"
                             textFormat: Text.PlainText
                             color: "#1d1f23"
@@ -263,11 +291,14 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
-                            Layout.topMargin: 27
+                            Layout.topMargin: 27 - p4.eldurCarry
                         }
 
                         // <p>
                         Text {
+                            id: p5
+                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "Serif faces suit long reading, while sans-serif faces are often preferred for interface labels and captions. Mixing the two is common, provided each has a clear job."
                             textFormat: Text.PlainText
                             color: "#1d1f23"
@@ -280,11 +311,14 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
-                            Layout.topMargin: 9
+                            Layout.topMargin: 9 - h4.eldurCarry
                         }
 
                         // <h5>
                         Text {
+                            id: h5
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "Practical tip"
                             textFormat: Text.PlainText
                             color: "#5b616e"
@@ -300,11 +334,14 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
-                            Layout.topMargin: 24
+                            Layout.topMargin: 24 - p5.eldurCarry
                         }
 
                         // <p>
                         Text {
+                            id: p6
+                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "Test every heading at the smallest supported width before you ship it."
                             textFormat: Text.PlainText
                             color: "#1d1f23"
@@ -317,11 +354,14 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
-                            Layout.topMargin: 8
+                            Layout.topMargin: 8 - h5.eldurCarry
                         }
 
                         // <h6>
                         Text {
+                            id: h6
+                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "Note on sources"
                             textFormat: Text.PlainText
                             color: "#5b616e"
@@ -335,11 +375,14 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
-                            Layout.topMargin: 21
+                            Layout.topMargin: 21 - p6.eldurCarry
                         }
 
                         // <p>
                         Text {
+                            id: p7
+                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "Figures in this section come from the 2025 readability survey."
                             textFormat: Text.PlainText
                             color: "#1d1f23"
@@ -352,16 +395,19 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
-                            Layout.topMargin: 7
+                            Layout.topMargin: 7 - h6.eldurCarry
                         }
 
                         // <h2>
                         Rectangle {
+                            id: h2
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                             color: "#00000000"
                             implicitWidth: h2Text2.implicitWidth
                             implicitHeight: h2Text2.implicitHeight + 5
                             Layout.fillWidth: true
-                            Layout.topMargin: 42
+                            Layout.topMargin: 42 - p7.eldurCarry
 
                             Rectangle {
                                 anchors.left: parent.left
@@ -393,6 +439,9 @@ ApplicationWindow {
 
                         // <p>
                         Text {
+                            id: p8
+                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "<div style=\"line-height:27.2px\">Emphasis should be used sparingly. <span style=\"background-color:#fff1a8\"><span style=\"letter-spacing:3.4px\">&#8288;</span>Highlighted passages<span style=\"letter-spacing:3.4px\">&#8288;</span></span> help a reader find their place during revision, but they are not a substitute for structure. Water is H<span style=\"font-size:13px\">2</span>O, and the area of a circle is πr<span style=\"font-size:13px\">2</span>. Footnotes are often set in <font color=\"#5b616e\"><span style=\"font-size:13px\">smaller type, typically around 13 pixels</span></font>, so that they do not compete with the main text.</div>"
                             textFormat: Text.RichText
                             color: "#1d1f23"
@@ -403,16 +452,19 @@ ApplicationWindow {
                                 y: -3.83
                             }
                             Layout.fillWidth: true
-                            Layout.topMargin: 14
+                            Layout.topMargin: 14 - h2.eldurCarry
                         }
 
                         // <h2>
                         Rectangle {
+                            id: h22
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                             color: "#00000000"
                             implicitWidth: h2Text3.implicitWidth
                             implicitHeight: h2Text3.implicitHeight + 5
                             Layout.fillWidth: true
-                            Layout.topMargin: 42
+                            Layout.topMargin: 42 - p8.eldurCarry
 
                             Rectangle {
                                 anchors.left: parent.left
@@ -444,11 +496,14 @@ ApplicationWindow {
 
                         // <blockquote>
                         Rectangle {
+                            id: blockquote
+                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + cite.eldurCarry + 0.000001
+
                             color: "#00000000"
                             implicitWidth: blockquoteContent.implicitWidth + 24
                             implicitHeight: blockquoteContent.implicitHeight + 8
                             Layout.fillWidth: true
-                            Layout.topMargin: 24
+                            Layout.topMargin: 24 - h22.eldurCarry
 
                             Rectangle {
                                 anchors.top: parent.top
@@ -469,6 +524,9 @@ ApplicationWindow {
 
                                 // <p>
                                 Text {
+                                    id: p
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                     text: "Typography exists to honour content. It is the craft of endowing human language with a durable visual form."
                                     textFormat: Text.PlainText
                                     color: "#5b616e"
@@ -486,6 +544,9 @@ ApplicationWindow {
 
                                 // <cite>
                                 Text {
+                                    id: cite
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                     text: "Robert Bringhurst, <i>The Elements of Typographic Style</i>"
                                     textFormat: Text.StyledText
                                     color: "#5b616e"
@@ -498,18 +559,22 @@ ApplicationWindow {
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
-                                    Layout.topMargin: 8
+                                    Layout.topMargin: 8 - p.eldurCarry
+                                    Layout.preferredHeight: implicitHeight
                                 }
                             }
                         }
 
                         // <h2>
                         Rectangle {
+                            id: h23
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                             color: "#00000000"
                             implicitWidth: h2Text4.implicitWidth
                             implicitHeight: h2Text4.implicitHeight + 5
                             Layout.fillWidth: true
-                            Layout.topMargin: 42
+                            Layout.topMargin: 42 - blockquote.eldurCarry
 
                             Rectangle {
                                 anchors.left: parent.left
@@ -541,6 +606,9 @@ ApplicationWindow {
 
                         // <p>
                         Text {
+                            id: p9
+                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "<div style=\"line-height:27.2px\">Inline identifiers such as <span style=\"font-size:15px;font-family:'monospace';background-color:#f1efe8\"><span style=\"letter-spacing:5.35px\">&#8288;</span>line-height<span style=\"letter-spacing:5.35px\">&#8288;</span></span> or <span style=\"font-size:15px;font-family:'monospace';background-color:#f1efe8\"><span style=\"letter-spacing:5.35px\">&#8288;</span>max-width<span style=\"letter-spacing:5.35px\">&#8288;</span></span> sit on the baseline. Longer examples belong in a block:</div>"
                             textFormat: Text.RichText
                             color: "#1d1f23"
@@ -551,18 +619,21 @@ ApplicationWindow {
                                 y: -3.83
                             }
                             Layout.fillWidth: true
-                            Layout.topMargin: 14
+                            Layout.topMargin: 14 - h23.eldurCarry
                         }
 
                         // <pre>
                         Rectangle {
+                            id: pre
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                             color: "#20242b"
                             radius: 6
                             clip: true
                             implicitWidth: preText.implicitWidth + 40
                             implicitHeight: preText.implicitHeight + 32
                             Layout.fillWidth: true
-                            Layout.topMargin: 20
+                            Layout.topMargin: 20 - p9.eldurCarry
 
                             Text {
                                 id: preText
@@ -610,6 +681,9 @@ ApplicationWindow {
 
                         // <p>
                         Text {
+                            id: p10
+                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "Lists remain simple:"
                             textFormat: Text.PlainText
                             color: "#1d1f23"
@@ -622,15 +696,18 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
-                            Layout.topMargin: 20
+                            Layout.topMargin: 20 - pre.eldurCarry
                         }
 
                         // <ul>
                         Item {
+                            id: ul
+                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + li3.eldurCarry + 0.000001
+
                             implicitWidth: ulContent.implicitWidth + 24
                             implicitHeight: ulContent.implicitHeight
                             Layout.fillWidth: true
-                            Layout.topMargin: 16
+                            Layout.topMargin: 16 - p10.eldurCarry
 
                             ColumnLayout {
                                 id: ulContent
@@ -642,9 +719,13 @@ ApplicationWindow {
 
                                 // <li>
                                 Item {
+                                    id: li
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                     implicitWidth: liText.implicitWidth
                                     implicitHeight: liText.implicitHeight
                                     Layout.fillWidth: true
+                                    Layout.preferredHeight: implicitHeight
 
                                     Text {
                                         id: liText
@@ -676,10 +757,14 @@ ApplicationWindow {
 
                                 // <li>
                                 Item {
+                                    id: li2
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                     implicitWidth: liText2.implicitWidth
                                     implicitHeight: liText2.implicitHeight
                                     Layout.fillWidth: true
-                                    Layout.topMargin: 4
+                                    Layout.topMargin: 4 - li.eldurCarry
+                                    Layout.preferredHeight: implicitHeight
 
                                     Text {
                                         id: liText2
@@ -711,10 +796,14 @@ ApplicationWindow {
 
                                 // <li>
                                 Item {
+                                    id: li3
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                     implicitWidth: liText3.implicitWidth
                                     implicitHeight: liText3.implicitHeight
                                     Layout.fillWidth: true
-                                    Layout.topMargin: 4
+                                    Layout.topMargin: 4 - li2.eldurCarry
+                                    Layout.preferredHeight: implicitHeight
 
                                     Text {
                                         id: liText3
@@ -748,12 +837,15 @@ ApplicationWindow {
 
                         // <hr>
                         Rectangle {
+                            id: hr
+                            property real eldurCarry: Math.ceil(Layout.topMargin + 1) - Layout.topMargin - 1 + 0.000001
+
                             color: "#00000000"
                             clip: true
                             implicitWidth: 0
                             implicitHeight: 1
                             Layout.fillWidth: true
-                            Layout.topMargin: 32
+                            Layout.topMargin: 32 - ul.eldurCarry
 
                             Rectangle {
                                 anchors.left: parent.left
@@ -766,6 +858,9 @@ ApplicationWindow {
 
                         // <p>
                         Text {
+                            id: p12
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "Continue reading in the next issue."
                             textFormat: Text.PlainText
                             color: "#1d1f23"
@@ -778,7 +873,8 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
-                            Layout.topMargin: 32
+                            Layout.topMargin: 32 - hr.eldurCarry
+                            Layout.preferredHeight: implicitHeight
                         }
                     }
 
@@ -788,7 +884,7 @@ ApplicationWindow {
                         implicitWidth: footerContent.implicitWidth
                         implicitHeight: footerContent.implicitHeight + 13
                         Layout.fillWidth: true
-                        Layout.topMargin: 40
+                        Layout.topMargin: 40 - main.eldurCarry
                         Layout.bottomMargin: 16
 
                         Rectangle {
@@ -809,6 +905,9 @@ ApplicationWindow {
 
                             // <p>
                             Text {
+                                id: p13
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Typography notes is a test page. All faces are generic families."
                                 textFormat: Text.PlainText
                                 color: "#5b616e"
@@ -821,6 +920,7 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
+                                Layout.preferredHeight: implicitHeight
                             }
                         }
                     }

@@ -4,6 +4,7 @@
 //! own submodule.
 
 mod background;
+mod carry;
 mod controls;
 mod decoration;
 pub(crate) mod dynamic;
@@ -103,6 +104,12 @@ pub(crate) struct Emitter<'a, 'd> {
     /// Each element's outermost object carries a marker comment naming its
     /// node, so [`dynamic`] can tell whose properties differ.
     markers: bool,
+    /// Set for the templates' probe document: a template's ids are its
+    /// own, so it cannot read a sibling's carry (`carry`).
+    no_carry: bool,
+    /// Each carried column's last rounding, by the key in its comment
+    /// (`carry`).
+    excess: HashMap<usize, carry::Excess>,
     /// Elements some condition gives paint, padding or a shadow: they keep
     /// a painting wrapper in every combination, so the forms agree.
     sticky: HashSet<NodeId>,
@@ -157,6 +164,8 @@ impl<'a, 'd> Emitter<'a, 'd> {
             images: BTreeMap::new(),
             runtime_dom: false,
             markers: false,
+            no_carry: false,
+            excess: HashMap::new(),
             sticky: HashSet::new(),
             strips: HashMap::new(),
             collapsed: HashSet::new(),
@@ -301,6 +310,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         }
         self.finish_resets(&mut root);
         self.report_inline_labels();
+        carry::strip_hints(&mut root);
         root
     }
 
@@ -567,6 +577,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
             && let Some(node) = b.node
         {
             crate::metadata::tag(&mut e.obj, self.doc, node);
+        }
+        if !self.no_carry && e.obj.id.is_none() && b.node.is_some() {
+            e.obj.members.push(carry::hint_comment(&hint(self.doc, b)));
         }
         if let Some(node) = b.node {
             if self.collapsed.contains(&node) {

@@ -58,10 +58,14 @@ ApplicationWindow {
 
                 // <header class="masthead">
                 Rectangle {
+                    id: masthead
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                     color: "#00000000"
                     implicitWidth: mastheadText.implicitWidth
                     implicitHeight: mastheadText.implicitHeight + 43
                     Layout.fillWidth: true
+                    Layout.preferredHeight: implicitHeight
 
                     Rectangle {
                         anchors.left: parent.left
@@ -121,11 +125,15 @@ ApplicationWindow {
 
                 // <article>
                 Item {
+                    id: article
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                     implicitWidth: articleContent.implicitWidth + 48
                     implicitHeight: articleContent.implicitHeight + 96
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignHCenter
                     Layout.maximumWidth: 768
+                    Layout.topMargin: -masthead.eldurCarry
 
                     ColumnLayout {
                         id: articleContent
@@ -139,11 +147,13 @@ ApplicationWindow {
 
                         // <h1>
                         Text {
+                            id: h1
                             readonly property FontMetrics metrics: FontMetrics {
                                 font.family: "serif"
                                 font.pixelSize: 38
                                 font.weight: 700
                             }
+                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
 
                             text: "A winter at the harbour"
                             textFormat: Text.PlainText
@@ -163,6 +173,9 @@ ApplicationWindow {
 
                         // <p class="meta">
                         Text {
+                            id: meta
+                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "By Sólveig Ragnarsdóttir · 14 February 2026 · 6 min read"
                             textFormat: Text.PlainText
                             color: "#8a7f70"
@@ -175,14 +188,18 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
-                            Layout.topMargin: 6
+                            Layout.topMargin: 6 - h1.eldurCarry
                         }
 
                         Item {
+                            id: item
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                             Layout.fillWidth: true
                             implicitWidth: floats.implicitWidth
                             implicitHeight: Math.max(wrapped.implicitHeight, floats.implicitHeight)
-                            Layout.topMargin: 28
+                            Layout.topMargin: 28 - meta.eldurCarry
+                            Layout.preferredHeight: implicitHeight
 
                             ColumnLayout {
                                 id: wrapped
@@ -193,7 +210,9 @@ ApplicationWindow {
 
                                 // <p class="intro">
                                 Text {
-                                    id: wrappedText
+                                    id: intro
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                     text: "When the ferries stop running in November, the harbour becomes a different town. The cafés close their terraces, the fishing boats come in early, and the few of us who stay learn each other's routines. I went there to write a book and ended up keeping a diary of the weather instead."
                                     textFormat: Text.PlainText
                                     color: "#2e2a26"
@@ -226,7 +245,9 @@ ApplicationWindow {
 
                                 // <p>
                                 Text {
-                                    id: wrappedText2
+                                    id: p
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                     text: "The mornings are dark until ten. I would walk to the end of the breakwater with a thermos and watch the light come up behind the hills, first grey, then a thin band of orange that never quite made it to yellow. Most days the wind decided everything: whether the boats went out, whether the shop got its delivery, whether anyone bothered to talk."
                                     textFormat: Text.PlainText
                                     color: "#2e2a26"
@@ -239,7 +260,7 @@ ApplicationWindow {
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
-                                    Layout.topMargin: 18
+                                    Layout.topMargin: 18 - intro.eldurCarry
 
                                     onLineLaidOut: (line) => {
                                         const fixed = lineHeightMode === Text.FixedHeight;
@@ -260,7 +281,7 @@ ApplicationWindow {
 
                                 // <p>
                                 Text {
-                                    id: wrappedText3
+                                    id: wrappedText
                                     text: "By January I knew which gulls belonged to which roof."
                                     textFormat: Text.PlainText
                                     color: "#2e2a26"
@@ -273,7 +294,8 @@ ApplicationWindow {
                                     }
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
-                                    Layout.topMargin: 18
+                                    Layout.topMargin: 18 - p.eldurCarry
+                                    Layout.preferredHeight: implicitHeight
 
                                     onLineLaidOut: (line) => {
                                         const fixed = lineHeightMode === Text.FixedHeight;
@@ -301,9 +323,9 @@ ApplicationWindow {
                                 anchors.top: parent.top
 
                                 onChildrenRectChanged: {
+                                    Qt.callLater(intro.forceLayout);
+                                    Qt.callLater(p.forceLayout);
                                     Qt.callLater(wrappedText.forceLayout);
-                                    Qt.callLater(wrappedText2.forceLayout);
-                                    Qt.callLater(wrappedText3.forceLayout);
                                 }
 
                                 // <img class="photo">
@@ -356,12 +378,15 @@ ApplicationWindow {
 
                         // <nav class="toc">
                         Rectangle {
+                            id: toc
+                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + li4.eldurCarry + 0.000001
+
                             color: "#f4efe6"
                             radius: 6
                             implicitWidth: tocContent.implicitWidth + 48
                             implicitHeight: tocContent.implicitHeight + 32
                             Layout.fillWidth: true
-                            Layout.topMargin: 24
+                            Layout.topMargin: 24 - item.eldurCarry
 
                             ColumnLayout {
                                 id: tocContent
@@ -406,6 +431,9 @@ ApplicationWindow {
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
 
                                         Text {
+                                            id: text
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "<b><font color=\"#c9533b\">1. </font></b>The dark months"
                                             textFormat: Text.StyledText
                                             color: "#2e2a26"
@@ -422,9 +450,13 @@ ApplicationWindow {
 
                                         // <ol>
                                         Item {
+                                            id: ol
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + li2.eldurCarry + 0.000001
+
                                             implicitWidth: olContent.implicitWidth + 24
                                             implicitHeight: olContent.implicitHeight
                                             Layout.fillWidth: true
+                                            Layout.topMargin: -text.eldurCarry
 
                                             ColumnLayout {
                                                 id: olContent
@@ -436,6 +468,9 @@ ApplicationWindow {
 
                                                 // <li>
                                                 Text {
+                                                    id: li
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     text: "<b><font color=\"#c9533b\">1.a </font></b>Weather as a calendar"
                                                     textFormat: Text.StyledText
                                                     color: "#2e2a26"
@@ -452,6 +487,9 @@ ApplicationWindow {
 
                                                 // <li>
                                                 Text {
+                                                    id: li2
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     text: "<b><font color=\"#c9533b\">1.b </font></b>The last ferry"
                                                     textFormat: Text.StyledText
                                                     color: "#2e2a26"
@@ -464,6 +502,8 @@ ApplicationWindow {
                                                     }
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
+                                                    Layout.topMargin: -li.eldurCarry
+                                                    Layout.preferredHeight: implicitHeight
                                                 }
                                             }
                                         }
@@ -471,6 +511,9 @@ ApplicationWindow {
 
                                     // <li>
                                     Text {
+                                        id: li3
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                         text: "<b><font color=\"#c9533b\">2. </font></b>Learning the town"
                                         textFormat: Text.StyledText
                                         color: "#2e2a26"
@@ -483,10 +526,14 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        Layout.topMargin: -ol.eldurCarry
                                     }
 
                                     // <li>
                                     Text {
+                                        id: li4
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                         text: "<b><font color=\"#c9533b\">3. </font></b>What I wrote instead"
                                         textFormat: Text.StyledText
                                         color: "#2e2a26"
@@ -499,6 +546,8 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
+                                        Layout.topMargin: -li3.eldurCarry
+                                        Layout.preferredHeight: implicitHeight
                                     }
                                 }
                             }
@@ -506,11 +555,15 @@ ApplicationWindow {
 
                         // <blockquote>
                         Rectangle {
+                            id: blockquote
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                             color: "#00000000"
                             implicitWidth: blockquoteText.implicitWidth + 24
                             implicitHeight: blockquoteText.implicitHeight + 8
                             Layout.fillWidth: true
-                            Layout.topMargin: 24
+                            Layout.topMargin: 24 - toc.eldurCarry
+                            Layout.preferredHeight: implicitHeight
 
                             Rectangle {
                                 anchors.top: parent.top
@@ -544,6 +597,9 @@ ApplicationWindow {
 
                         // <p>
                         Text {
+                            id: p2
+                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "That question turned out to be the most useful thing anyone told me all winter. It is a question about planning, about honesty, and about whether you have thought further ahead than tomorrow."
                             textFormat: Text.PlainText
                             color: "#2e2a26"
@@ -556,15 +612,18 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
-                            Layout.topMargin: 24
+                            Layout.topMargin: 24 - blockquote.eldurCarry
                         }
 
                         // <figure>
                         ColumnLayout {
+                            id: figure
+                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + figcaption.eldurCarry + 0.000001
+
                             spacing: 0
                             Layout.fillWidth: true
                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                            Layout.topMargin: 24
+                            Layout.topMargin: 24 - p2.eldurCarry
 
                             // <img>
                             Item {
@@ -584,6 +643,9 @@ ApplicationWindow {
 
                             // <figcaption>
                             Text {
+                                id: figcaption
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Hours of daylight each month, January to June."
                                 textFormat: Text.PlainText
                                 color: "#8a7f70"
@@ -598,6 +660,7 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.topMargin: 8
+                                Layout.preferredHeight: implicitHeight
                             }
                         }
 
@@ -615,7 +678,7 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
-                            Layout.topMargin: 24
+                            Layout.topMargin: 24 - figure.eldurCarry
                             Layout.bottomMargin: 18
                         }
                     }

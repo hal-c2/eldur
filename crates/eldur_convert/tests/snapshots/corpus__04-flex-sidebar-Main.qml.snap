@@ -126,11 +126,15 @@ ApplicationWindow {
 
                                             // <a class="menu-item is-active">
                                             Rectangle {
+                                                id: menuItem
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                 color: "#2f3b5a"
                                                 radius: 6
                                                 implicitWidth: menuItemText.implicitWidth + 24
                                                 implicitHeight: menuItemText.implicitHeight + 20
                                                 Layout.fillWidth: true
+                                                Layout.preferredHeight: implicitHeight
 
                                                 Shape {
                                                     id: menuItemInset
@@ -181,54 +185,20 @@ ApplicationWindow {
 
                                             // <a class="menu-item">
                                             Rectangle {
-                                                id: menuItem
-                                                color: menuItemHover.hovered ? "#252e46" : "#00000000"
+                                                id: menuItem2
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
+                                                color: menuItem2Hover.hovered ? "#252e46" : "#00000000"
                                                 radius: 6
                                                 implicitWidth: menuItemText2.implicitWidth + 24
                                                 implicitHeight: menuItemText2.implicitHeight + 20
                                                 Layout.fillWidth: true
-                                                Layout.topMargin: 4
+                                                Layout.topMargin: 4 - menuItem.eldurCarry
+                                                Layout.preferredHeight: implicitHeight
 
                                                 Text {
                                                     id: menuItemText2
                                                     text: "Projects"
-                                                    textFormat: Text.PlainText
-                                                    color: menuItemHover.hovered ? "#ffffff" : "#c9d1e3"
-                                                    font.family: "sans-serif"
-                                                    font.pixelSize: 15
-                                                    font.weight: 500
-                                                    lineHeight: 22.5
-                                                    lineHeightMode: Text.FixedHeight
-                                                    transform: Translate {
-                                                        y: 2.63
-                                                    }
-                                                    wrapMode: Text.WordWrap
-                                                    anchors.left: parent.left
-                                                    anchors.right: parent.right
-                                                    anchors.top: parent.top
-                                                    anchors.leftMargin: 12
-                                                    anchors.rightMargin: 12
-                                                    anchors.topMargin: 10
-                                                }
-
-                                                HoverHandler {
-                                                    id: menuItemHover
-                                                }
-                                            }
-
-                                            // <a class="menu-item">
-                                            Rectangle {
-                                                id: menuItem2
-                                                color: menuItem2Hover.hovered ? "#252e46" : "#00000000"
-                                                radius: 6
-                                                implicitWidth: menuItemText3.implicitWidth + 24
-                                                implicitHeight: menuItemText3.implicitHeight + 20
-                                                Layout.fillWidth: true
-                                                Layout.topMargin: 4
-
-                                                Text {
-                                                    id: menuItemText3
-                                                    text: "Tasks"
                                                     textFormat: Text.PlainText
                                                     color: menuItem2Hover.hovered ? "#ffffff" : "#c9d1e3"
                                                     font.family: "sans-serif"
@@ -256,16 +226,19 @@ ApplicationWindow {
                                             // <a class="menu-item">
                                             Rectangle {
                                                 id: menuItem3
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                 color: menuItem3Hover.hovered ? "#252e46" : "#00000000"
                                                 radius: 6
-                                                implicitWidth: menuItemText4.implicitWidth + 24
-                                                implicitHeight: menuItemText4.implicitHeight + 20
+                                                implicitWidth: menuItemText3.implicitWidth + 24
+                                                implicitHeight: menuItemText3.implicitHeight + 20
                                                 Layout.fillWidth: true
-                                                Layout.topMargin: 4
+                                                Layout.topMargin: 4 - menuItem2.eldurCarry
+                                                Layout.preferredHeight: implicitHeight
 
                                                 Text {
-                                                    id: menuItemText4
-                                                    text: "Calendar"
+                                                    id: menuItemText3
+                                                    text: "Tasks"
                                                     textFormat: Text.PlainText
                                                     color: menuItem3Hover.hovered ? "#ffffff" : "#c9d1e3"
                                                     font.family: "sans-serif"
@@ -293,16 +266,19 @@ ApplicationWindow {
                                             // <a class="menu-item">
                                             Rectangle {
                                                 id: menuItem4
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                 color: menuItem4Hover.hovered ? "#252e46" : "#00000000"
                                                 radius: 6
-                                                implicitWidth: menuItemText5.implicitWidth + 24
-                                                implicitHeight: menuItemText5.implicitHeight + 20
+                                                implicitWidth: menuItemText4.implicitWidth + 24
+                                                implicitHeight: menuItemText4.implicitHeight + 20
                                                 Layout.fillWidth: true
-                                                Layout.topMargin: 4
+                                                Layout.topMargin: 4 - menuItem3.eldurCarry
+                                                Layout.preferredHeight: implicitHeight
 
                                                 Text {
-                                                    id: menuItemText5
-                                                    text: "Messages"
+                                                    id: menuItemText4
+                                                    text: "Calendar"
                                                     textFormat: Text.PlainText
                                                     color: menuItem4Hover.hovered ? "#ffffff" : "#c9d1e3"
                                                     font.family: "sans-serif"
@@ -327,6 +303,46 @@ ApplicationWindow {
                                                 }
                                             }
 
+                                            // <a class="menu-item">
+                                            Rectangle {
+                                                id: menuItem7
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
+                                                color: menuItem7Hover.hovered ? "#252e46" : "#00000000"
+                                                radius: 6
+                                                implicitWidth: menuItemText5.implicitWidth + 24
+                                                implicitHeight: menuItemText5.implicitHeight + 20
+                                                Layout.fillWidth: true
+                                                Layout.topMargin: 4 - menuItem4.eldurCarry
+                                                Layout.preferredHeight: implicitHeight
+
+                                                Text {
+                                                    id: menuItemText5
+                                                    text: "Messages"
+                                                    textFormat: Text.PlainText
+                                                    color: menuItem7Hover.hovered ? "#ffffff" : "#c9d1e3"
+                                                    font.family: "sans-serif"
+                                                    font.pixelSize: 15
+                                                    font.weight: 500
+                                                    lineHeight: 22.5
+                                                    lineHeightMode: Text.FixedHeight
+                                                    transform: Translate {
+                                                        y: 2.63
+                                                    }
+                                                    wrapMode: Text.WordWrap
+                                                    anchors.left: parent.left
+                                                    anchors.right: parent.right
+                                                    anchors.top: parent.top
+                                                    anchors.leftMargin: 12
+                                                    anchors.rightMargin: 12
+                                                    anchors.topMargin: 10
+                                                }
+
+                                                HoverHandler {
+                                                    id: menuItem7Hover
+                                                }
+                                            }
+
                                             Item {
                                                 Layout.fillHeight: true
                                             }
@@ -334,6 +350,9 @@ ApplicationWindow {
 
                                         // <p class="menu-label">
                                         Text {
+                                            id: menuLabel
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Workspace"
                                             textFormat: Text.PlainText
                                             color: "#7d8aa6"
@@ -351,8 +370,7 @@ ApplicationWindow {
                                             Layout.fillWidth: true
                                             Layout.leftMargin: 12
                                             Layout.rightMargin: 12
-                                            Layout.topMargin: 20
-                                            Layout.bottomMargin: 6
+                                            Layout.topMargin: 20 - menuItem7.eldurCarry
                                         }
 
                                         // <nav class="menu">
@@ -360,15 +378,19 @@ ApplicationWindow {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                            Layout.topMargin: 6 - menuLabel.eldurCarry
 
                                             // <a class="menu-item">
                                             Rectangle {
                                                 id: menuItem5
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                 color: menuItem5Hover.hovered ? "#252e46" : "#00000000"
                                                 radius: 6
                                                 implicitWidth: menuItemText6.implicitWidth + 24
                                                 implicitHeight: menuItemText6.implicitHeight + 20
                                                 Layout.fillWidth: true
+                                                Layout.preferredHeight: implicitHeight
 
                                                 Text {
                                                     id: menuItemText6
@@ -400,12 +422,15 @@ ApplicationWindow {
                                             // <a class="menu-item">
                                             Rectangle {
                                                 id: menuItem6
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                 color: menuItem6Hover.hovered ? "#252e46" : "#00000000"
                                                 radius: 6
                                                 implicitWidth: menuItemText7.implicitWidth + 24
                                                 implicitHeight: menuItemText7.implicitHeight + 20
                                                 Layout.fillWidth: true
-                                                Layout.topMargin: 4
+                                                Layout.topMargin: 4 - menuItem5.eldurCarry
+                                                Layout.preferredHeight: implicitHeight
 
                                                 Text {
                                                     id: menuItemText7
@@ -436,19 +461,22 @@ ApplicationWindow {
 
                                             // <a class="menu-item">
                                             Rectangle {
-                                                id: menuItem7
-                                                color: menuItem7Hover.hovered ? "#252e46" : "#00000000"
+                                                id: menuItem8
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
+                                                color: menuItem8Hover.hovered ? "#252e46" : "#00000000"
                                                 radius: 6
                                                 implicitWidth: menuItemText8.implicitWidth + 24
                                                 implicitHeight: menuItemText8.implicitHeight + 20
                                                 Layout.fillWidth: true
-                                                Layout.topMargin: 4
+                                                Layout.topMargin: 4 - menuItem6.eldurCarry
+                                                Layout.preferredHeight: implicitHeight
 
                                                 Text {
                                                     id: menuItemText8
                                                     text: "Settings"
                                                     textFormat: Text.PlainText
-                                                    color: menuItem7Hover.hovered ? "#ffffff" : "#c9d1e3"
+                                                    color: menuItem8Hover.hovered ? "#ffffff" : "#c9d1e3"
                                                     font.family: "sans-serif"
                                                     font.pixelSize: 15
                                                     font.weight: 500
@@ -467,7 +495,7 @@ ApplicationWindow {
                                                 }
 
                                                 HoverHandler {
-                                                    id: menuItem7Hover
+                                                    id: menuItem8Hover
                                                 }
                                             }
 
@@ -639,6 +667,9 @@ ApplicationWindow {
 
                                                             // <p class="stat-label">
                                                             Text {
+                                                                id: statLabel
+                                                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                                 text: "Open tasks"
                                                                 textFormat: Text.PlainText
                                                                 color: "#5b6375"
@@ -668,7 +699,7 @@ ApplicationWindow {
                                                                 }
                                                                 wrapMode: Text.WordWrap
                                                                 Layout.fillWidth: true
-                                                                Layout.topMargin: 4
+                                                                Layout.topMargin: 4 - statLabel.eldurCarry
                                                             }
                                                         }
                                                     }
@@ -697,6 +728,9 @@ ApplicationWindow {
 
                                                             // <p class="stat-label">
                                                             Text {
+                                                                id: statLabel2
+                                                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                                 text: "Completed this week"
                                                                 textFormat: Text.PlainText
                                                                 color: "#5b6375"
@@ -726,7 +760,7 @@ ApplicationWindow {
                                                                 }
                                                                 wrapMode: Text.WordWrap
                                                                 Layout.fillWidth: true
-                                                                Layout.topMargin: 4
+                                                                Layout.topMargin: 4 - statLabel2.eldurCarry
                                                             }
                                                         }
                                                     }
@@ -755,6 +789,9 @@ ApplicationWindow {
 
                                                             // <p class="stat-label">
                                                             Text {
+                                                                id: statLabel3
+                                                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                                 text: "Team members"
                                                                 textFormat: Text.PlainText
                                                                 color: "#5b6375"
@@ -784,7 +821,7 @@ ApplicationWindow {
                                                                 }
                                                                 wrapMode: Text.WordWrap
                                                                 Layout.fillWidth: true
-                                                                Layout.topMargin: 4
+                                                                Layout.topMargin: 4 - statLabel3.eldurCarry
                                                             }
                                                         }
                                                     }

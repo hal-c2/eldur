@@ -371,6 +371,9 @@ ApplicationWindow {
 
                             // <span class="badge">
                             Rectangle {
+                                id: badge
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                 color: "#ffffff"
                                 radius: 999
                                 implicitWidth: badgeText.implicitWidth + 22
@@ -380,6 +383,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
+                                Layout.preferredHeight: implicitHeight
 
                                 Text {
                                     id: badgeText
@@ -406,6 +410,9 @@ ApplicationWindow {
 
                             // <p class="eyebrow">
                             Text {
+                                id: eyebrow
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Analytics for small teams"
                                 textFormat: Text.PlainText
                                 color: "#0b5cad"
@@ -424,16 +431,18 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
-                                Layout.topMargin: 20
+                                Layout.topMargin: 20 - badge.eldurCarry
                             }
 
                             // <h1>
                             Text {
+                                id: h1
                                 readonly property FontMetrics metrics: FontMetrics {
                                     font.family: "sans-serif"
                                     font.pixelSize: 48
                                     font.weight: 700
                                 }
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
 
                                 text: "See what your customers do, before they leave"
                                 textFormat: Text.PlainText
@@ -450,11 +459,14 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.min(Math.ceil(implicitWidth), 720)
                                 Layout.alignment: Qt.AlignHCenter
-                                Layout.topMargin: 20
+                                Layout.topMargin: 20 - eyebrow.eldurCarry
                             }
 
                             // <p class="hero-lead">
                             Text {
+                                id: heroLead
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Lumen turns page views, clicks and sign-ups into a single clear picture, with no tagging plan required."
                                 textFormat: Text.PlainText
                                 color: "#4b5567"
@@ -470,16 +482,19 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.min(Math.ceil(implicitWidth), 560)
                                 Layout.alignment: Qt.AlignHCenter
-                                Layout.topMargin: 20
+                                Layout.topMargin: 20 - h1.eldurCarry
                             }
 
                             // <div class="hero-actions">
                             RowLayout {
+                                id: heroActions
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                 spacing: 0
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
-                                Layout.topMargin: 28
+                                Layout.topMargin: 28 - heroLead.eldurCarry
 
                                 Item {
                                     Layout.fillWidth: true
@@ -606,7 +621,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
-                                Layout.topMargin: 20
+                                Layout.topMargin: 20 - heroActions.eldurCarry
                             }
 
                             Item {

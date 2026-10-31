@@ -101,12 +101,16 @@ ApplicationWindow {
 
                 // <p class="crumbs">
                 Item {
+                    id: crumbs
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                     implicitWidth: crumbsText.implicitWidth + 64
                     implicitHeight: crumbsText.implicitHeight
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignHCenter
                     Layout.maximumWidth: 1120
                     Layout.topMargin: 16
+                    Layout.preferredHeight: implicitHeight
 
                     Text {
                         id: crumbsText
@@ -131,11 +135,15 @@ ApplicationWindow {
 
                 // <main class="product">
                 Item {
+                    id: product
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                     implicitWidth: productContent.implicitWidth + 64
                     implicitHeight: productContent.implicitHeight + 56
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignHCenter
                     Layout.maximumWidth: 1120
+                    Layout.topMargin: -crumbs.eldurCarry
 
                     GridLayout {
                         id: productContent
@@ -684,6 +692,9 @@ ApplicationWindow {
 
                             // <p class="description">
                             Text {
+                                id: description
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "An enamelled steel kettle that works on gas, electric and induction hobs. The handle stays cool, and the whistle can be flipped up when you would rather it didn't."
                                 textFormat: Text.PlainText
                                 color: "#3d4650"
@@ -708,7 +719,7 @@ ApplicationWindow {
                                 border.width: 1
                                 border.color: "#e3e7eb"
                                 Layout.fillWidth: true
-                                Layout.topMargin: 20
+                                Layout.topMargin: 20 - description.eldurCarry
 
                                 GridLayout {
                                     id: buyContent
@@ -738,6 +749,9 @@ ApplicationWindow {
 
                                         // <label>
                                         Text {
+                                            id: label
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Colour"
                                             textFormat: Text.PlainText
                                             color: "#1d2329"
@@ -797,7 +811,7 @@ ApplicationWindow {
                                             }
                                             Accessible.name: "Colour"
                                             Layout.fillWidth: true
-                                            Layout.topMargin: 4
+                                            Layout.topMargin: 4 - label.eldurCarry
                                         }
                                     }
 
@@ -815,6 +829,9 @@ ApplicationWindow {
 
                                         // <label>
                                         Text {
+                                            id: label2
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                             text: "Quantity"
                                             textFormat: Text.PlainText
                                             color: "#1d2329"
@@ -876,7 +893,7 @@ ApplicationWindow {
                                             }
                                             Accessible.name: "Quantity"
                                             Layout.fillWidth: true
-                                            Layout.topMargin: 4
+                                            Layout.topMargin: 4 - label2.eldurCarry
                                         }
                                     }
 
@@ -912,11 +929,15 @@ ApplicationWindow {
 
                 // <section class="reviews">
                 Item {
+                    id: reviews
+                    property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + review.eldurCarry + 0.000001
+
                     implicitWidth: reviewsContent.implicitWidth + 64
                     implicitHeight: reviewsContent.implicitHeight + 48
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignHCenter
                     Layout.maximumWidth: 1120
+                    Layout.topMargin: -product.eldurCarry
 
                     ColumnLayout {
                         id: reviewsContent
@@ -1049,6 +1070,9 @@ ApplicationWindow {
 
                                     // <p>
                                     Text {
+                                        id: p
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                         text: "Boils quickly on our induction hob and looks lovely on the stove."
                                         textFormat: Text.PlainText
                                         color: "#3d4650"
@@ -1062,16 +1086,21 @@ ApplicationWindow {
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
                                         Layout.topMargin: 6
+                                        Layout.preferredHeight: implicitHeight
                                     }
                                 }
                             }
 
                             // <li class="review">
                             Rectangle {
+                                id: review
+                                property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + p2.eldurCarry + 0.000001
+
                                 color: "#00000000"
                                 implicitWidth: reviewContent2.implicitWidth
                                 implicitHeight: reviewContent2.implicitHeight + 33
                                 Layout.fillWidth: true
+                                Layout.topMargin: -p.eldurCarry
 
                                 Rectangle {
                                     anchors.left: parent.left
@@ -1164,6 +1193,9 @@ ApplicationWindow {
 
                                     // <p>
                                     Text {
+                                        id: p2
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                         text: "Good kettle, but the lid gets hot. Use a cloth."
                                         textFormat: Text.PlainText
                                         color: "#3d4650"
@@ -1177,6 +1209,7 @@ ApplicationWindow {
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
                                         Layout.topMargin: 6
+                                        Layout.preferredHeight: implicitHeight
                                     }
                                 }
                             }

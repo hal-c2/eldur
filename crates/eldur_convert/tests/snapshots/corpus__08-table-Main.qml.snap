@@ -235,6 +235,9 @@ ApplicationWindow {
 
                             // <p class="page-meta">
                             Text {
+                                id: pageMeta
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Fiscal year 2026 · Q3 · Figures in USD"
                                 textFormat: Text.PlainText
                                 color: "#5f6880"
@@ -248,11 +251,15 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.topMargin: 4
+                                Layout.preferredHeight: implicitHeight
                             }
                         }
 
                         // <div class="table-wrap">
                         Rectangle {
+                            id: tableWrap
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                             color: "#ffffff"
                             radius: 12
                             implicitWidth: tableWrapContent.implicitWidth + 50
@@ -262,7 +269,7 @@ ApplicationWindow {
                             Layout.fillWidth: true
                             Layout.alignment: Qt.AlignHCenter
                             Layout.maximumWidth: 900
-                            Layout.topMargin: 24
+                            Layout.topMargin: 24 - pageMeta.eldurCarry
 
                             ColumnLayout {
                                 id: tableWrapContent
@@ -2430,6 +2437,9 @@ ApplicationWindow {
 
                         // <p class="note">
                         Text {
+                            id: note
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "Average order is revenue divided by orders for each region."
                             textFormat: Text.PlainText
                             color: "#5f6880"
@@ -2444,7 +2454,7 @@ ApplicationWindow {
                             Layout.fillWidth: true
                             Layout.alignment: Qt.AlignHCenter
                             Layout.maximumWidth: 900
-                            Layout.topMargin: 16
+                            Layout.topMargin: 16 - tableWrap.eldurCarry
                         }
                     }
                 }

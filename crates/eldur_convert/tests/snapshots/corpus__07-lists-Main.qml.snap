@@ -938,9 +938,13 @@ ApplicationWindow {
 
                                         // <ul class="tags">
                                         Flow {
+                                            id: tags
+                                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                             spacing: 8
                                             Layout.fillWidth: true
                                             Layout.topMargin: 12
+                                            Layout.preferredHeight: implicitHeight
 
                                             // <li>
                                             ColumnLayout {

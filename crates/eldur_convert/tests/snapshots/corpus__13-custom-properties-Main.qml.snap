@@ -221,7 +221,10 @@ ApplicationWindow {
 
                         Flow {
                             id: blockFlow
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                             Layout.fillWidth: true
+                            Layout.preferredHeight: implicitHeight
 
                             Item {
                                 width: eyebrowBox.width
@@ -261,11 +264,13 @@ ApplicationWindow {
 
                         // <h1>
                         Text {
+                            id: h1
                             readonly property FontMetrics metrics: FontMetrics {
                                 font.family: "sans-serif"
                                 font.pixelSize: 52
                                 font.weight: 700
                             }
+                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
 
                             text: "Build one theme and reuse it everywhere"
                             textFormat: Text.PlainText
@@ -279,10 +284,14 @@ ApplicationWindow {
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             Layout.maximumWidth: 936
+                            Layout.topMargin: -blockFlow.eldurCarry
                         }
 
                         // <p>
                         Text {
+                            id: p5
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "Every colour, radius and spacing value lives in a single set of custom properties on the root element."
                             textFormat: Text.PlainText
                             color: "#ffffff"
@@ -297,13 +306,16 @@ ApplicationWindow {
                             opacity: 0.92
                             Layout.fillWidth: true
                             Layout.maximumWidth: 648
-                            Layout.topMargin: 26
+                            Layout.topMargin: 26 - h1.eldurCarry
                         }
                     }
                 }
 
                 // <main class="layout">
                 GridLayout {
+                    id: layout
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                     columns: 3
                     columnSpacing: 16
                     rowSpacing: 16
@@ -311,7 +323,7 @@ ApplicationWindow {
                     Layout.preferredWidth: Math.max(0, parent.width - 32)
                     Layout.alignment: Qt.AlignHCenter
                     Layout.maximumWidth: Number.POSITIVE_INFINITY
-                    Layout.topMargin: 32
+                    Layout.topMargin: 32 - p5.eldurCarry
 
                     // <article class="card">
                     Rectangle {
@@ -344,6 +356,9 @@ ApplicationWindow {
 
                             // <h2>
                             Text {
+                                id: h2
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Colour"
                                 textFormat: Text.PlainText
                                 color: "#1c2233"
@@ -361,6 +376,9 @@ ApplicationWindow {
 
                             // <p>
                             Text {
+                                id: p
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Primary, surface and text colours are defined once and referenced by var()."
                                 textFormat: Text.PlainText
                                 color: "#5c6578"
@@ -373,14 +391,15 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 8.8
+                                Layout.topMargin: 8.8 - h2.eldurCarry
                             }
 
                             // <ul class="swatches">
                             Flow {
                                 spacing: 8
                                 Layout.fillWidth: true
-                                Layout.topMargin: 15.2
+                                Layout.topMargin: 15.2 - p.eldurCarry
+                                Layout.preferredHeight: implicitHeight
 
                                 // <li class="swatch swatch--primary">
                                 Rectangle {
@@ -521,6 +540,9 @@ ApplicationWindow {
 
                             // <h2>
                             Text {
+                                id: h22
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Spacing"
                                 textFormat: Text.PlainText
                                 color: "#1c2233"
@@ -538,6 +560,9 @@ ApplicationWindow {
 
                             // <p>
                             Text {
+                                id: p2
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Gaps and padding are multiples of --space, combined with calc()."
                                 textFormat: Text.PlainText
                                 color: "#5c6578"
@@ -550,7 +575,7 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 8.8
+                                Layout.topMargin: 8.8 - h22.eldurCarry
                             }
 
                             // <ul class="spacing-demo">
@@ -558,7 +583,7 @@ ApplicationWindow {
                                 spacing: 8
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                Layout.topMargin: 15.2
+                                Layout.topMargin: 15.2 - p2.eldurCarry
 
                                 // <li>
                                 Rectangle {
@@ -647,6 +672,9 @@ ApplicationWindow {
 
                             // <h2>
                             Text {
+                                id: h23
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Tags"
                                 textFormat: Text.PlainText
                                 color: "#1c2233"
@@ -664,6 +692,9 @@ ApplicationWindow {
 
                             // <p>
                             Text {
+                                id: p3
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Fallback values keep components working when a token is missing."
                                 textFormat: Text.PlainText
                                 color: "#5c6578"
@@ -676,13 +707,14 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 8.8
+                                Layout.topMargin: 8.8 - h23.eldurCarry
                             }
 
                             Flow {
                                 id: blockFlow2
                                 Layout.fillWidth: true
-                                Layout.topMargin: 15.2
+                                Layout.topMargin: 15.2 - p3.eldurCarry
+                                Layout.preferredHeight: implicitHeight
 
                                 Item {
                                     width: tagBox.width + 12
@@ -901,6 +933,9 @@ ApplicationWindow {
 
                             // <h2>
                             Text {
+                                id: h24
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Components"
                                 textFormat: Text.PlainText
                                 color: "#1c2233"
@@ -918,6 +953,9 @@ ApplicationWindow {
 
                             // <p>
                             Text {
+                                id: p4
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Buttons take their colour from the same tokens and darken on hover."
                                 textFormat: Text.PlainText
                                 color: "#5c6578"
@@ -930,13 +968,14 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 8.8
+                                Layout.topMargin: 8.8 - h24.eldurCarry
                             }
 
                             Flow {
                                 id: blockFlow3
                                 Layout.fillWidth: true
-                                Layout.topMargin: 15.2
+                                Layout.topMargin: 15.2 - p4.eldurCarry
+                                Layout.preferredHeight: implicitHeight
 
                                 Rectangle {
                                     id: button
@@ -1007,6 +1046,9 @@ ApplicationWindow {
 
                             // <h2>
                             Text {
+                                id: h25
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Typography"
                                 textFormat: Text.PlainText
                                 color: "#1c2233"
@@ -1036,7 +1078,7 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 8.8
+                                Layout.topMargin: 8.8 - h25.eldurCarry
                                 Layout.bottomMargin: 15.2
                             }
                         }
@@ -1074,6 +1116,9 @@ ApplicationWindow {
 
                             // <h2>
                             Text {
+                                id: h26
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Units"
                                 textFormat: Text.PlainText
                                 color: "#1c2233"
@@ -1103,7 +1148,7 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 8.8
+                                Layout.topMargin: 8.8 - h26.eldurCarry
                                 Layout.bottomMargin: 15.2
                             }
                         }
@@ -1112,6 +1157,9 @@ ApplicationWindow {
 
                 // <section class="stats">
                 Rectangle {
+                    id: stats
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                     color: "#ffffff"
                     radius: 12
                     implicitWidth: statsContent.implicitWidth + 32
@@ -1119,7 +1167,7 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.maximumWidth: Math.max(0, parent.width - 32)
                     Layout.alignment: Qt.AlignHCenter
-                    Layout.topMargin: 32
+                    Layout.topMargin: 32 - layout.eldurCarry
 
                     RectangularShadow {
                         anchors.fill: parent
@@ -1301,10 +1349,13 @@ ApplicationWindow {
 
                 // <footer class="site-footer">
                 Item {
+                    id: siteFooter
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                     implicitWidth: siteFooterText.implicitWidth + 64
                     implicitHeight: siteFooterText.implicitHeight + 32
                     Layout.fillWidth: true
-                    Layout.topMargin: 32
+                    Layout.topMargin: 32 - stats.eldurCarry
 
                     Text {
                         id: siteFooterText

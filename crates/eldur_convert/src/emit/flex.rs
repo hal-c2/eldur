@@ -318,6 +318,9 @@ impl Emitter<'_, '_> {
         for _ in 0..slots[n] {
             layout.push_child(spacer());
         }
+        if !row {
+            self.carry(&mut layout);
+        }
         layout
     }
 

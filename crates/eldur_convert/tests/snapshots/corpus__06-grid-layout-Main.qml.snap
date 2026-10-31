@@ -253,11 +253,15 @@ ApplicationWindow {
 
                                                 // <a class="is-active">
                                                 Rectangle {
+                                                    id: isActive
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     color: "#e3f4f1"
                                                     radius: 8
                                                     implicitWidth: isActiveText.implicitWidth + 24
                                                     implicitHeight: isActiveText.implicitHeight + 16
                                                     Layout.fillWidth: true
+                                                    Layout.preferredHeight: implicitHeight
 
                                                     Text {
                                                         id: isActiveText
@@ -285,16 +289,23 @@ ApplicationWindow {
 
                                             // <li>
                                             ColumnLayout {
+                                                id: li
+                                                property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + a.eldurCarry + 0.000001
+
                                                 spacing: 0
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                                Layout.topMargin: 4
+                                                Layout.topMargin: 4 - isActive.eldurCarry
 
                                                 // <a>
                                                 Item {
+                                                    id: a
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     implicitWidth: aText.implicitWidth + 24
                                                     implicitHeight: aText.implicitHeight + 16
                                                     Layout.fillWidth: true
+                                                    Layout.preferredHeight: implicitHeight
 
                                                     Text {
                                                         id: aText
@@ -321,16 +332,23 @@ ApplicationWindow {
 
                                             // <li>
                                             ColumnLayout {
+                                                id: li2
+                                                property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + a2.eldurCarry + 0.000001
+
                                                 spacing: 0
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                                Layout.topMargin: 4
+                                                Layout.topMargin: 4 - li.eldurCarry
 
                                                 // <a>
                                                 Item {
+                                                    id: a2
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     implicitWidth: aText2.implicitWidth + 24
                                                     implicitHeight: aText2.implicitHeight + 16
                                                     Layout.fillWidth: true
+                                                    Layout.preferredHeight: implicitHeight
 
                                                     Text {
                                                         id: aText2
@@ -357,16 +375,23 @@ ApplicationWindow {
 
                                             // <li>
                                             ColumnLayout {
+                                                id: li3
+                                                property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + a3.eldurCarry + 0.000001
+
                                                 spacing: 0
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                                Layout.topMargin: 4
+                                                Layout.topMargin: 4 - li2.eldurCarry
 
                                                 // <a>
                                                 Item {
+                                                    id: a3
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     implicitWidth: aText3.implicitWidth + 24
                                                     implicitHeight: aText3.implicitHeight + 16
                                                     Layout.fillWidth: true
+                                                    Layout.preferredHeight: implicitHeight
 
                                                     Text {
                                                         id: aText3
@@ -393,16 +418,23 @@ ApplicationWindow {
 
                                             // <li>
                                             ColumnLayout {
+                                                id: li4
+                                                property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + a4.eldurCarry + 0.000001
+
                                                 spacing: 0
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                                Layout.topMargin: 4
+                                                Layout.topMargin: 4 - li3.eldurCarry
 
                                                 // <a>
                                                 Item {
+                                                    id: a4
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     implicitWidth: aText4.implicitWidth + 24
                                                     implicitHeight: aText4.implicitHeight + 16
                                                     Layout.fillWidth: true
+                                                    Layout.preferredHeight: implicitHeight
 
                                                     Text {
                                                         id: aText4
@@ -429,16 +461,23 @@ ApplicationWindow {
 
                                             // <li>
                                             ColumnLayout {
+                                                id: li5
+                                                property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + a5.eldurCarry + 0.000001
+
                                                 spacing: 0
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                                Layout.topMargin: 4
+                                                Layout.topMargin: 4 - li4.eldurCarry
 
                                                 // <a>
                                                 Item {
+                                                    id: a5
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                     implicitWidth: aText5.implicitWidth + 24
                                                     implicitHeight: aText5.implicitHeight + 16
                                                     Layout.fillWidth: true
+                                                    Layout.preferredHeight: implicitHeight
 
                                                     Text {
                                                         id: aText5
@@ -599,6 +638,9 @@ ApplicationWindow {
 
                                                     // <p class="tile-label">
                                                     Text {
+                                                        id: tileLabel
+                                                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                         text: "Deployments this week"
                                                         textFormat: Text.PlainText
                                                         color: "#ccffffff"
@@ -621,6 +663,9 @@ ApplicationWindow {
 
                                                     // <p class="tile-value">
                                                     Text {
+                                                        id: tileValue
+                                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                         text: "184"
                                                         textFormat: Text.PlainText
                                                         color: "#ffffff"
@@ -634,6 +679,7 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         Layout.fillWidth: true
+                                                        Layout.topMargin: -tileLabel.eldurCarry
                                                     }
 
                                                     Item {
@@ -654,6 +700,8 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         Layout.fillWidth: true
+                                                        Layout.topMargin: -tileValue.eldurCarry
+                                                        Layout.preferredHeight: implicitHeight
                                                     }
                                                 }
                                             }
@@ -689,6 +737,9 @@ ApplicationWindow {
 
                                                     // <p class="tile-label">
                                                     Text {
+                                                        id: tileLabel2
+                                                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                         text: "Requests per day"
                                                         textFormat: Text.PlainText
                                                         color: "#64708a"
@@ -711,9 +762,13 @@ ApplicationWindow {
 
                                                     // <div class="bars">
                                                     RowLayout {
+                                                        id: bars
+                                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                         spacing: 8
                                                         Layout.fillWidth: true
                                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
+                                                        Layout.topMargin: -tileLabel2.eldurCarry
 
                                                         // <div class="bar bar--a">
                                                         Rectangle {
@@ -809,6 +864,8 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         Layout.fillWidth: true
+                                                        Layout.topMargin: -bars.eldurCarry
+                                                        Layout.preferredHeight: implicitHeight
                                                     }
                                                 }
                                             }
@@ -843,6 +900,9 @@ ApplicationWindow {
 
                                                     // <p class="tile-label">
                                                     Text {
+                                                        id: tileLabel3
+                                                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                         text: "Open incidents"
                                                         textFormat: Text.PlainText
                                                         color: "#64708a"
@@ -865,6 +925,9 @@ ApplicationWindow {
 
                                                     // <p class="tile-value">
                                                     Text {
+                                                        id: tileValue2
+                                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                         text: "3"
                                                         textFormat: Text.PlainText
                                                         color: "#1b2231"
@@ -878,6 +941,7 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         Layout.fillWidth: true
+                                                        Layout.topMargin: -tileLabel3.eldurCarry
                                                     }
 
                                                     Item {
@@ -898,6 +962,8 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         Layout.fillWidth: true
+                                                        Layout.topMargin: -tileValue2.eldurCarry
+                                                        Layout.preferredHeight: implicitHeight
                                                     }
                                                 }
                                             }
@@ -932,6 +998,9 @@ ApplicationWindow {
 
                                                     // <p class="tile-label">
                                                     Text {
+                                                        id: tileLabel4
+                                                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                         text: "Mean time to recover"
                                                         textFormat: Text.PlainText
                                                         color: "#64708a"
@@ -954,6 +1023,9 @@ ApplicationWindow {
 
                                                     // <p class="tile-value">
                                                     Text {
+                                                        id: tileValue3
+                                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                         text: "42m"
                                                         textFormat: Text.PlainText
                                                         color: "#1b2231"
@@ -967,6 +1039,7 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         Layout.fillWidth: true
+                                                        Layout.topMargin: -tileLabel4.eldurCarry
                                                     }
 
                                                     Item {
@@ -987,6 +1060,8 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         Layout.fillWidth: true
+                                                        Layout.topMargin: -tileValue3.eldurCarry
+                                                        Layout.preferredHeight: implicitHeight
                                                     }
                                                 }
                                             }
@@ -1021,6 +1096,9 @@ ApplicationWindow {
 
                                                     // <p class="tile-label">
                                                     Text {
+                                                        id: tileLabel5
+                                                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                         text: "Uptime"
                                                         textFormat: Text.PlainText
                                                         color: "#64708a"
@@ -1043,6 +1121,9 @@ ApplicationWindow {
 
                                                     // <p class="tile-value">
                                                     Text {
+                                                        id: tileValue4
+                                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                         text: "99.97%"
                                                         textFormat: Text.PlainText
                                                         color: "#1b2231"
@@ -1056,6 +1137,7 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         Layout.fillWidth: true
+                                                        Layout.topMargin: -tileLabel5.eldurCarry
                                                     }
 
                                                     Item {
@@ -1076,6 +1158,8 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         Layout.fillWidth: true
+                                                        Layout.topMargin: -tileValue4.eldurCarry
+                                                        Layout.preferredHeight: implicitHeight
                                                     }
                                                 }
                                             }
@@ -1110,6 +1194,9 @@ ApplicationWindow {
 
                                                     // <p class="tile-label">
                                                     Text {
+                                                        id: tileLabel6
+                                                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                         text: "Active users"
                                                         textFormat: Text.PlainText
                                                         color: "#64708a"
@@ -1132,6 +1219,9 @@ ApplicationWindow {
 
                                                     // <p class="tile-value">
                                                     Text {
+                                                        id: tileValue5
+                                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                         text: "1,208"
                                                         textFormat: Text.PlainText
                                                         color: "#1b2231"
@@ -1145,6 +1235,7 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         Layout.fillWidth: true
+                                                        Layout.topMargin: -tileLabel6.eldurCarry
                                                     }
 
                                                     Item {
@@ -1165,6 +1256,8 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         Layout.fillWidth: true
+                                                        Layout.topMargin: -tileValue5.eldurCarry
+                                                        Layout.preferredHeight: implicitHeight
                                                     }
                                                 }
                                             }
@@ -1199,6 +1292,9 @@ ApplicationWindow {
 
                                                     // <p class="tile-label">
                                                     Text {
+                                                        id: tileLabel7
+                                                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                         text: "Build queue"
                                                         textFormat: Text.PlainText
                                                         color: "#64708a"
@@ -1221,6 +1317,9 @@ ApplicationWindow {
 
                                                     // <p class="tile-value">
                                                     Text {
+                                                        id: tileValue6
+                                                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                         text: "7"
                                                         textFormat: Text.PlainText
                                                         color: "#1b2231"
@@ -1234,6 +1333,7 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         Layout.fillWidth: true
+                                                        Layout.topMargin: -tileLabel7.eldurCarry
                                                     }
 
                                                     Item {
@@ -1254,6 +1354,8 @@ ApplicationWindow {
                                                         }
                                                         wrapMode: Text.WordWrap
                                                         Layout.fillWidth: true
+                                                        Layout.topMargin: -tileValue6.eldurCarry
+                                                        Layout.preferredHeight: implicitHeight
                                                     }
                                                 }
                                             }

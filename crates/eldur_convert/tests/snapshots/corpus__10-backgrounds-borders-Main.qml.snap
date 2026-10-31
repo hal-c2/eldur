@@ -50,6 +50,9 @@ ApplicationWindow {
 
                     // <h1 class="page-title">
                     Text {
+                        id: pageTitle
+                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                         text: "Backgrounds and borders"
                         textFormat: Text.PlainText
                         color: "#222222"
@@ -62,6 +65,9 @@ ApplicationWindow {
 
                     // <p class="page-lead">
                     Text {
+                        id: pageLead
+                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                         text: "Eight boxes covering radius, border styles, shadows, gradients, outlines and translucency."
                         textFormat: Text.PlainText
                         color: "#666666"
@@ -69,18 +75,21 @@ ApplicationWindow {
                         font.pixelSize: 15
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
-                        Layout.topMargin: 6
+                        Layout.topMargin: 6 - pageTitle.eldurCarry
                     }
 
                     // <div class="gallery">
                     GridLayout {
+                        id: gallery
+                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                         columns: 4
                         columnSpacing: 24
                         rowSpacing: 28
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignHCenter
                         Layout.maximumWidth: 1120
-                        Layout.topMargin: 28
+                        Layout.topMargin: 28 - pageLead.eldurCarry
 
                         // <div class="cell">
                         ColumnLayout {
@@ -144,6 +153,7 @@ ApplicationWindow {
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 12
+                                Layout.preferredHeight: implicitHeight
                             }
 
                             Item {
@@ -189,6 +199,7 @@ ApplicationWindow {
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 12
+                                Layout.preferredHeight: implicitHeight
                             }
 
                             Item {
@@ -231,6 +242,7 @@ ApplicationWindow {
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 12
+                                Layout.preferredHeight: implicitHeight
                             }
 
                             Item {
@@ -366,6 +378,7 @@ ApplicationWindow {
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 12
+                                Layout.preferredHeight: implicitHeight
                             }
 
                             Item {
@@ -605,6 +618,7 @@ ApplicationWindow {
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 12
+                                Layout.preferredHeight: implicitHeight
                             }
 
                             Item {
@@ -674,6 +688,7 @@ ApplicationWindow {
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 12
+                                Layout.preferredHeight: implicitHeight
                             }
 
                             Item {
@@ -749,6 +764,7 @@ ApplicationWindow {
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 12
+                                Layout.preferredHeight: implicitHeight
                             }
 
                             Item {
@@ -852,6 +868,7 @@ ApplicationWindow {
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 12
+                                Layout.preferredHeight: implicitHeight
                             }
 
                             Item {

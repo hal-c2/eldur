@@ -102,7 +102,9 @@ ApplicationWindow {
 
                             // <h1>
                             Text {
+                                id: h1
                                 property string eldurTag: "h1"
+                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                                 text: "Counter"
                                 textFormat: Text.PlainText
@@ -126,6 +128,7 @@ ApplicationWindow {
                                     font.pixelSize: 96
                                     font.weight: 800
                                 }
+                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h1.eldurCarry
 
                                 text: "0"
                                 textFormat: Text.PlainText
@@ -143,18 +146,20 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 objectName: "count"
                                 Layout.fillWidth: true
-                                Layout.topMargin: 24
+                                Layout.topMargin: 24 - h1.eldurCarry
                             }
 
                             // <div class="controls">
                             RowLayout {
+                                id: controls
                                 property string eldurTag: "div"
                                 property string eldurClasses: "controls"
+                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : count.eldurCarry
 
                                 spacing: 0
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                Layout.topMargin: 24
+                                Layout.topMargin: 24 - count.eldurCarry
 
                                 Item {
                                     Layout.fillWidth: true
@@ -268,8 +273,10 @@ ApplicationWindow {
 
                             // <label class="field">
                             Text {
+                                id: field
                                 property string eldurTag: "label"
                                 property string eldurClasses: "field"
+                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : controls.eldurCarry
 
                                 text: "Live text"
                                 textFormat: Text.PlainText
@@ -279,7 +286,7 @@ ApplicationWindow {
                                 font.weight: 600
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 32
+                                Layout.topMargin: 32 - controls.eldurCarry
 
                                 TapHandler {
                                     onTapped: (eventPoint, button) => {
@@ -293,6 +300,7 @@ ApplicationWindow {
                                 id: mirrorInput
                                 property string eldurTag: "input"
                                 property string eldurClasses: "text-input"
+                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : field.eldurCarry
 
                                 color: "#1f2430"
                                 font.family: "sans-serif"
@@ -314,7 +322,8 @@ ApplicationWindow {
                                 Accessible.name: "Live text"
                                 objectName: "mirror-input"
                                 Layout.fillWidth: true
-                                Layout.topMargin: 8
+                                Layout.topMargin: 8 - field.eldurCarry
+                                Layout.preferredHeight: implicitHeight
 
                                 onTextEdited: {
                                     Page.__eldur_on_input_mirrorInput(Eldur.event("input", mirrorInput, null));
@@ -334,7 +343,7 @@ ApplicationWindow {
                                 objectName: "mirror-output"
                                 Layout.fillWidth: true
                                 Layout.minimumHeight: 24
-                                Layout.topMargin: 12
+                                Layout.topMargin: 12 - mirrorInput.eldurCarry
 
                                 Text {
                                     id: mirrorOutputText
@@ -488,7 +497,9 @@ ApplicationWindow {
 
                                     // <p>
                                     Text {
+                                        id: p
                                         property string eldurTag: "p"
+                                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                                         text: "The counter goes negative below zero and turns red. Text typed above is mirrored as you type."
                                         textFormat: Text.PlainText
@@ -503,6 +514,7 @@ ApplicationWindow {
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
                                         Layout.topMargin: 8
+                                        Layout.preferredHeight: implicitHeight
                                     }
                                 }
                             }

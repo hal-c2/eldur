@@ -85,6 +85,9 @@ ApplicationWindow {
 
                     // <p class="lead">
                     Text {
+                        id: lead
+                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                         text: "Hover, press and focus each control to see its styles. Disabled and link states are included."
                         textFormat: Text.PlainText
                         color: "#5b6478"
@@ -102,13 +105,19 @@ ApplicationWindow {
 
                     // <section class="section">
                     ColumnLayout {
+                        id: section
+                        property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + buttonRow.eldurCarry + 0.000001
+
                         spacing: 0
                         Layout.fillWidth: true
                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                        Layout.topMargin: 28
+                        Layout.topMargin: 28 - lead.eldurCarry
 
                         // <h2 class="section__title">
                         Text {
+                            id: sectionTitle
+                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "Buttons"
                             textFormat: Text.PlainText
                             color: "#6b7280"
@@ -128,9 +137,13 @@ ApplicationWindow {
 
                         // <div class="button-row">
                         Flow {
+                            id: buttonRow
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                             spacing: 12
                             Layout.fillWidth: true
-                            Layout.topMargin: 12
+                            Layout.topMargin: 12 - sectionTitle.eldurCarry
+                            Layout.preferredHeight: implicitHeight
 
                             // <button class="btn btn--primary">
                             Button {
@@ -355,13 +368,19 @@ ApplicationWindow {
 
                     // <section class="section">
                     ColumnLayout {
+                        id: section2
+                        property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + cards.eldurCarry + 0.000001
+
                         spacing: 0
                         Layout.fillWidth: true
                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                        Layout.topMargin: 32
+                        Layout.topMargin: 32 - section.eldurCarry
 
                         // <h2 class="section__title">
                         Text {
+                            id: sectionTitle2
+                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                             text: "Cards"
                             textFormat: Text.PlainText
                             color: "#6b7280"
@@ -381,12 +400,15 @@ ApplicationWindow {
 
                         // <div class="cards">
                         GridLayout {
+                            id: cards
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                             columns: 3
                             columnSpacing: 20
                             rowSpacing: 20
                             Layout.fillWidth: true
                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                            Layout.topMargin: 12
+                            Layout.topMargin: 12 - sectionTitle2.eldurCarry
 
                             // <article class="lift-card">
                             Rectangle {
@@ -446,6 +468,9 @@ ApplicationWindow {
 
                                     // <h3>
                                     Text {
+                                        id: h3
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                         text: "Analytics"
                                         textFormat: Text.PlainText
                                         color: "#1f2937"
@@ -475,7 +500,8 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
-                                        Layout.topMargin: 6
+                                        Layout.topMargin: 6 - h3.eldurCarry
+                                        Layout.preferredHeight: implicitHeight
                                     }
                                 }
 
@@ -542,6 +568,9 @@ ApplicationWindow {
 
                                     // <h3>
                                     Text {
+                                        id: h32
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                         text: "Releases"
                                         textFormat: Text.PlainText
                                         color: "#1f2937"
@@ -571,7 +600,8 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
-                                        Layout.topMargin: 6
+                                        Layout.topMargin: 6 - h32.eldurCarry
+                                        Layout.preferredHeight: implicitHeight
                                     }
                                 }
 
@@ -638,6 +668,9 @@ ApplicationWindow {
 
                                     // <h3>
                                     Text {
+                                        id: h33
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                         text: "Billing"
                                         textFormat: Text.PlainText
                                         color: "#1f2937"
@@ -667,7 +700,8 @@ ApplicationWindow {
                                         }
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
-                                        Layout.topMargin: 6
+                                        Layout.topMargin: 6 - h33.eldurCarry
+                                        Layout.preferredHeight: implicitHeight
                                     }
                                 }
 
@@ -685,7 +719,7 @@ ApplicationWindow {
                         rowSpacing: 32
                         Layout.fillWidth: true
                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                        Layout.topMargin: 32
+                        Layout.topMargin: 32 - section2.eldurCarry
                         Layout.bottomMargin: 32
 
                         // <div>
@@ -700,6 +734,9 @@ ApplicationWindow {
 
                             // <h2 class="section__title">
                             Text {
+                                id: sectionTitle3
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Links"
                                 textFormat: Text.PlainText
                                 color: "#6b7280"
@@ -719,6 +756,9 @@ ApplicationWindow {
 
                             // <p>
                             Text {
+                                id: p
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Read the documentation"
                                 textFormat: Text.PlainText
                                 color: "#3b6fe0"
@@ -732,7 +772,7 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 15
+                                Layout.topMargin: 15 - sectionTitle3.eldurCarry
 
                                 TapHandler {
                                     onTapped: root.scrollToFragment("#")
@@ -745,6 +785,9 @@ ApplicationWindow {
 
                             // <p>
                             Text {
+                                id: p2
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "View the changelog"
                                 textFormat: Text.PlainText
                                 color: "#3b6fe0"
@@ -758,7 +801,7 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 15
+                                Layout.topMargin: 15 - p.eldurCarry
 
                                 TapHandler {
                                     onTapped: root.scrollToFragment("#")
@@ -784,7 +827,7 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 15
+                                Layout.topMargin: 15 - p2.eldurCarry
                                 Layout.bottomMargin: 15
 
                                 TapHandler {
@@ -809,6 +852,9 @@ ApplicationWindow {
 
                             // <h2 class="section__title">
                             Text {
+                                id: sectionTitle4
+                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                 text: "Menu"
                                 textFormat: Text.PlainText
                                 color: "#6b7280"
@@ -833,7 +879,7 @@ ApplicationWindow {
                                 implicitWidth: menuContent.implicitWidth + 16
                                 implicitHeight: menuContent.implicitHeight + 16
                                 Layout.fillWidth: true
-                                Layout.topMargin: 12
+                                Layout.topMargin: 12 - sectionTitle4.eldurCarry
 
                                 RectangularShadow {
                                     anchors.fill: parent

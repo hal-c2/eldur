@@ -1101,8 +1101,16 @@ fn percentage_height_resolves_against_a_definite_parent() {
         let obj = object_after(&qml, comment);
         assert!(own_lines(obj).contains(&height), "{obj}");
     }
+    // Auto: its own content height (carry.rs lays a painted box out at
+    // it), not a resolved length.
     let i = object_after(&qml, "<div class=\"i\">");
-    assert!(!i.contains("preferredHeight"), "{i}");
+    assert!(
+        own_lines(i)
+            .iter()
+            .filter(|l| l.contains("preferredHeight"))
+            .all(|l| *l == "Layout.preferredHeight: implicitHeight"),
+        "{i}"
+    );
     assert_eq!(
         diags
             .iter()
@@ -1461,5 +1469,145 @@ fn a_float_run_shares_a_line_and_what_follows_wraps_beside_it() {
             .iter()
             .any(|d| d.contains("is placed below the floats")),
         "{diags:?}"
+    );
+}
+
+// Carry (carry.rs): Qt rounds each ColumnLayout cell up to a whole pixel,
+// so an item's top margin takes back what the cell before it was rounded
+// up by.
+
+const CARRY_CSS: &str = "p{margin:0 0 13.3px;font:16px/27.2px sans-serif}";
+
+#[test]
+fn a_fractional_line_height_hands_its_rounding_to_the_next_item() {
+    let (qml, _) = convert(&page(
+        CARRY_CSS,
+        r#"<p id="a">One</p><p id="b">Two</p><p id="c">Three</p>"#,
+    ));
+    let a = own_lines(object_after(&qml, r#"<p id="a">"#));
+    assert!(
+        a.contains(&"property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001"),
+        "{a:?}"
+    );
+    let b = own_lines(object_after(&qml, r#"<p id="b">"#));
+    assert!(
+        b.contains(&"Layout.topMargin: 13.3 - a.eldurCarry"),
+        "{b:?}"
+    );
+    // The last cell is rounded once: its height is not rounded first.
+    let c = own_lines(object_after(&qml, r#"<p id="c">"#));
+    assert!(
+        c.contains(&"Layout.topMargin: 13.3 - b.eldurCarry"),
+        "{c:?}"
+    );
+    assert!(
+        c.contains(&"Layout.preferredHeight: implicitHeight"),
+        "{c:?}"
+    );
+}
+
+#[test]
+fn whole_heights_need_no_carry() {
+    let (qml, _) = convert(&page(
+        "p{margin:0 0 12px;font:16px/24px sans-serif} div{height:30px;background:#eee}",
+        r#"<p id="a">One</p><div id="d"></div><p id="b">Two</p>"#,
+    ));
+    assert!(!qml.contains("eldurCarry"), "{qml}");
+    let d = own_lines(object_after(&qml, r#"<div id="d">"#));
+    assert!(d.contains(&"Layout.topMargin: 12"), "{d:?}");
+}
+
+#[test]
+fn fixed_fractional_heights_carry_as_numbers() {
+    // 10.5 px boxes: the first cell is 11, so the second box starts 0.5
+    // earlier; its cell (3.5 + 10.5) is whole, so the third does not.
+    let (qml, _) = convert(&page(
+        ".half{height:10.5px;margin:0 0 4px;background:#eee}",
+        r#"<div class="half" id="h1"></div><div class="half" id="h2"></div><div class="half" id="h3"></div>"#,
+    ));
+    assert!(!qml.contains("eldurCarry"), "{qml}");
+    let h2 = own_lines(object_after(&qml, r#"<div id="h2" class="half">"#));
+    assert!(h2.contains(&"Layout.topMargin: 3.5"), "{h2:?}");
+    let h3 = own_lines(object_after(&qml, r#"<div id="h3" class="half">"#));
+    assert!(h3.contains(&"Layout.topMargin: 4"), "{h3:?}");
+}
+
+/// 09-forms' overshoot in the prototype: the carry was taken off the
+/// giving item's bottom margin, and a fixed-height item after it (an
+/// `<input>` with `Layout.preferredHeight`) never added it back. The
+/// carry belongs to the item that takes it, and a fixed height takes it
+/// and hands its own on.
+#[test]
+fn a_fixed_height_after_a_fractional_one_takes_the_carry() {
+    let (qml, _) = convert(&page(
+        "label{display:block;margin-bottom:5px;font:14px/19.6px sans-serif} input{display:block;height:41px;box-sizing:border-box} p{margin:0;font:16px/27.2px sans-serif}",
+        r#"<label id="l">Name</label><input id="i"><p id="k">After</p>"#,
+    ));
+    let l = own_lines(object_after(&qml, r#"<label id="l">"#));
+    assert!(
+        !l.iter().any(|m| m.starts_with("Layout.bottomMargin")),
+        "{l:?}"
+    );
+    let i = own_lines(object_after(&qml, r#"<input id="i">"#));
+    assert!(i.contains(&"Layout.topMargin: 5 - l.eldurCarry"), "{i:?}");
+    assert!(
+        i.contains(&"property real eldurCarry: Math.ceil(Layout.topMargin + 41) - Layout.topMargin - 41 + 0.000001"),
+        "{i:?}"
+    );
+    let k = own_lines(object_after(&qml, r#"<p id="k">"#));
+    assert!(k.contains(&"Layout.topMargin: -i.eldurCarry"), "{k:?}");
+}
+
+#[test]
+fn a_nested_column_hands_on_its_last_rounding() {
+    let (qml, _) = convert(&page(
+        CARRY_CSS,
+        r#"<section id="s"><p id="d">Four</p><p id="e">Five</p></section><p id="g">Six</p>"#,
+    ));
+    let e = own_lines(object_after(&qml, r#"<p id="e">"#));
+    assert!(
+        e.iter().any(|m| m.starts_with("property real eldurCarry:")),
+        "{e:?}"
+    );
+    let g = own_lines(object_after(&qml, r#"<p id="g">"#));
+    assert!(
+        g.iter()
+            .any(|m| m.starts_with("Layout.topMargin: 13.3 - ") && m.ends_with(".eldurCarry")),
+        "{g:?}"
+    );
+    assert!(!g.contains(&"Layout.topMargin: 13.3"), "{g:?}");
+}
+
+#[test]
+fn a_flex_column_carries_past_its_spacer() {
+    let (qml, _) = convert(&page(
+        ".f{display:flex;flex-direction:column} label{margin-bottom:5px;font:14px/19.6px sans-serif} input{height:41px;box-sizing:border-box}",
+        r#"<div class="f"><label id="fl">Flex</label><input id="fi"></div>"#,
+    ));
+    let fi = own_lines(object_after(&qml, r#"<input id="fi">"#));
+    assert!(
+        fi.contains(&"Layout.topMargin: 5 - fl.eldurCarry"),
+        "{fi:?}"
+    );
+}
+
+#[test]
+fn a_hidden_item_passes_the_carry_on() {
+    let (qml, _) = convert(&page(
+        CARRY_CSS,
+        r#"<p id="a">One</p><p id="x" hidden>Hidden</p><p id="b">Two</p><button id="t">t</button>
+        <script>document.getElementById("t").onclick = () => { document.getElementById("x").hidden = false; };</script>"#,
+    ));
+    let x = own_lines(object_after(&qml, r#"<p id="x">"#));
+    assert!(
+        x.iter()
+            .any(|m| m.starts_with("property real eldurCarry: visible ? (")
+                && m.ends_with(") : a.eldurCarry")),
+        "{x:?}"
+    );
+    let b = own_lines(object_after(&qml, r#"<p id="b">"#));
+    assert!(
+        b.contains(&"Layout.topMargin: 13.3 - x.eldurCarry"),
+        "{b:?}"
     );
 }
