@@ -494,13 +494,14 @@ ApplicationWindow {
                         // <blockquote>
                         Rectangle {
                             id: blockquote
-                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + cite.eldurCarry + 0.000001
+                            property real eldurCarry: Math.ceil(Layout.topMargin - (cite.eldurCarry)) - Layout.topMargin + cite.eldurCarry + 0.000001
 
                             color: "#00000000"
                             implicitWidth: blockquoteContent.implicitWidth + 24
                             implicitHeight: blockquoteContent.implicitHeight + 8
                             Layout.fillWidth: true
                             Layout.topMargin: 24 - h22.eldurCarry
+                            Layout.preferredHeight: implicitHeight - cite.eldurCarry
 
                             Rectangle {
                                 anchors.top: parent.top
@@ -883,6 +884,7 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Layout.topMargin: 40 - main.eldurCarry
                         Layout.bottomMargin: 16
+                        Layout.preferredHeight: implicitHeight - p13.eldurCarry
 
                         Rectangle {
                             anchors.left: parent.left

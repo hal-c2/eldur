@@ -67,7 +67,7 @@ ApplicationWindow {
                         id: app
                         property string eldurTag: "main"
                         property string eldurClasses: "app"
-                        property real eldurCarry: visible ? footerNote.eldurCarry : 0
+                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin - (footerNote.eldurCarry)) - Layout.topMargin + footerNote.eldurCarry + 0.000001) : 0
 
                         color: "#ffffff"
                         radius: 16
@@ -76,6 +76,7 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignHCenter
                         Layout.maximumWidth: 560
+                        Layout.preferredHeight: implicitHeight - footerNote.eldurCarry
 
                         RectangularShadow {
                             anchors.fill: parent

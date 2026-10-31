@@ -457,6 +457,7 @@ ApplicationWindow {
                                 visible: false
                                 Layout.fillWidth: true
                                 Layout.topMargin: 16
+                                Layout.preferredHeight: implicitHeight - p.eldurCarry
 
                                 Rectangle {
                                     anchors.top: parent.top

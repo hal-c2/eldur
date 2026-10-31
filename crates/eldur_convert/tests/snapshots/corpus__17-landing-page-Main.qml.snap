@@ -1478,13 +1478,14 @@ ApplicationWindow {
                     // <section id="customers" class="section testimonial">
                     Rectangle {
                         id: customers
-                        property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + quoteAuthor.eldurCarry + 0.000001
+                        property real eldurCarry: Math.ceil(Layout.topMargin - (quoteAuthor.eldurCarry)) - Layout.topMargin + quoteAuthor.eldurCarry + 0.000001
 
                         color: "#f5f6fb"
                         implicitWidth: customersContent.implicitWidth
                         implicitHeight: customersContent.implicitHeight + 192
                         Layout.fillWidth: true
                         Layout.topMargin: -featuresGrid.eldurCarry
+                        Layout.preferredHeight: implicitHeight - quoteAuthor.eldurCarry
 
                         ColumnLayout {
                             id: customersContent

@@ -863,7 +863,7 @@ ApplicationWindow {
                             // <div class="callout">
                             Rectangle {
                                 id: callout
-                                property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + text.eldurCarry + 0.000001
+                                property real eldurCarry: Math.ceil(Layout.topMargin - (text.eldurCarry)) - Layout.topMargin + text.eldurCarry + 0.000001
 
                                 color: "#ddf4ff"
                                 topLeftRadius: 0
@@ -874,6 +874,7 @@ ApplicationWindow {
                                 implicitHeight: calloutContent.implicitHeight + 24
                                 Layout.fillWidth: true
                                 Layout.topMargin: 16 - p.eldurCarry
+                                Layout.preferredHeight: implicitHeight - text.eldurCarry
 
                                 Rectangle {
                                     anchors.top: parent.top

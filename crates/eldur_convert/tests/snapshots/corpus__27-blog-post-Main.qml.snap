@@ -379,7 +379,7 @@ ApplicationWindow {
                         // <nav class="toc">
                         Rectangle {
                             id: toc
-                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + li4.eldurCarry + 0.000001
+                            property real eldurCarry: Math.ceil(Layout.topMargin - (li4.eldurCarry)) - Layout.topMargin + li4.eldurCarry + 0.000001
 
                             color: "#f4efe6"
                             radius: 6
@@ -387,6 +387,7 @@ ApplicationWindow {
                             implicitHeight: tocContent.implicitHeight + 32
                             Layout.fillWidth: true
                             Layout.topMargin: 24 - item.eldurCarry
+                            Layout.preferredHeight: implicitHeight - li4.eldurCarry
 
                             ColumnLayout {
                                 id: tocContent

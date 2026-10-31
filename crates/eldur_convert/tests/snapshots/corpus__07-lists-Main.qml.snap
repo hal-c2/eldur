@@ -908,6 +908,7 @@ ApplicationWindow {
                                     border.color: "#e1e5ee"
                                     Layout.fillWidth: true
                                     Layout.topMargin: 24
+                                    Layout.preferredHeight: implicitHeight - tags.eldurCarry
 
                                     ColumnLayout {
                                         id: cardContent4

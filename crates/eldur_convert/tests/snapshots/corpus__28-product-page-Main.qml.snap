@@ -930,7 +930,7 @@ ApplicationWindow {
                 // <section class="reviews">
                 Item {
                     id: reviews
-                    property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + review.eldurCarry + 0.000001
+                    property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + review2.eldurCarry + 0.000001
 
                     implicitWidth: reviewsContent.implicitWidth + 64
                     implicitHeight: reviewsContent.implicitHeight + 48
@@ -974,10 +974,14 @@ ApplicationWindow {
 
                             // <li class="review">
                             Rectangle {
+                                id: review
+                                property real eldurCarry: Math.ceil(Layout.topMargin - (p.eldurCarry)) - Layout.topMargin + p.eldurCarry + 0.000001
+
                                 color: "#00000000"
                                 implicitWidth: reviewContent.implicitWidth
                                 implicitHeight: reviewContent.implicitHeight + 33
                                 Layout.fillWidth: true
+                                Layout.preferredHeight: implicitHeight - p.eldurCarry
 
                                 Rectangle {
                                     anchors.left: parent.left
@@ -1093,14 +1097,15 @@ ApplicationWindow {
 
                             // <li class="review">
                             Rectangle {
-                                id: review
-                                property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + p2.eldurCarry + 0.000001
+                                id: review2
+                                property real eldurCarry: Math.ceil(Layout.topMargin - (p2.eldurCarry)) - Layout.topMargin + p2.eldurCarry + 0.000001
 
                                 color: "#00000000"
                                 implicitWidth: reviewContent2.implicitWidth
                                 implicitHeight: reviewContent2.implicitHeight + 33
                                 Layout.fillWidth: true
-                                Layout.topMargin: -p.eldurCarry
+                                Layout.topMargin: -review.eldurCarry
+                                Layout.preferredHeight: implicitHeight - p2.eldurCarry
 
                                 Rectangle {
                                     anchors.left: parent.left

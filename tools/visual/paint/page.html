@@ -1,0 +1,173 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>paint snapping</title>
+<style>
+html,body{margin:0;background:#fff}
+div,p{margin:0}
+.stage{position:relative;width:1280px;height:800px;overflow:hidden}
+.abs{position:absolute;width:20px}
+.line{position:absolute;width:44px;color:#000;white-space:nowrap}
+.flow{position:absolute;left:20px;top:330px;width:330px}
+.card{background:#eee;border:1px solid #000;padding:10px;margin-bottom:9.3px}
+.card p{font:16px/27.2px sans-serif;color:#000}
+.fill{height:20px;background:#00f}
+.tall{height:20.5px;background:#00f}
+.short{height:20.25px;background:#00f}
+.border{height:20px;background:#f00;border:1px solid #000;box-sizing:border-box}
+.bordertall{height:20.5px;background:#f00;border:1px solid #000;box-sizing:border-box}
+.thick{height:20px;background:#f00;border:2px solid #000;box-sizing:border-box}
+.bottom{height:20.25px;background:#f00;border-bottom:1px solid #000;box-sizing:border-box}
+.a{font:15px/1.5 sans-serif}
+.b{font:17px/1.5 sans-serif}
+.c{font:bold 28px/1.5 sans-serif}
+.d{font:16px/1.5 serif}
+.e{font:16px/1.1 sans-serif}
+.f{font:13px/1 sans-serif}
+</style></head>
+<body><div class="stage">
+<div class="abs fill" data-box style="left:20px;top:10px"></div>
+<div class="abs fill" data-box style="left:50px;top:10.125px"></div>
+<div class="abs fill" data-box style="left:80px;top:10.25px"></div>
+<div class="abs fill" data-box style="left:110px;top:10.375px"></div>
+<div class="abs fill" data-box style="left:140px;top:10.49px"></div>
+<div class="abs fill" data-box style="left:170px;top:10.5px"></div>
+<div class="abs fill" data-box style="left:200px;top:10.51px"></div>
+<div class="abs fill" data-box style="left:230px;top:10.625px"></div>
+<div class="abs fill" data-box style="left:260px;top:10.75px"></div>
+<div class="abs fill" data-box style="left:290px;top:10.875px"></div>
+<div class="abs tall" data-box style="left:20px;top:55px"></div>
+<div class="abs tall" data-box style="left:50px;top:55.125px"></div>
+<div class="abs tall" data-box style="left:80px;top:55.25px"></div>
+<div class="abs tall" data-box style="left:110px;top:55.375px"></div>
+<div class="abs tall" data-box style="left:140px;top:55.49px"></div>
+<div class="abs tall" data-box style="left:170px;top:55.5px"></div>
+<div class="abs tall" data-box style="left:200px;top:55.51px"></div>
+<div class="abs tall" data-box style="left:230px;top:55.625px"></div>
+<div class="abs tall" data-box style="left:260px;top:55.75px"></div>
+<div class="abs tall" data-box style="left:290px;top:55.875px"></div>
+<div class="abs short" data-box style="left:20px;top:100px"></div>
+<div class="abs short" data-box style="left:50px;top:100.125px"></div>
+<div class="abs short" data-box style="left:80px;top:100.25px"></div>
+<div class="abs short" data-box style="left:110px;top:100.375px"></div>
+<div class="abs short" data-box style="left:140px;top:100.49px"></div>
+<div class="abs short" data-box style="left:170px;top:100.5px"></div>
+<div class="abs short" data-box style="left:200px;top:100.51px"></div>
+<div class="abs short" data-box style="left:230px;top:100.625px"></div>
+<div class="abs short" data-box style="left:260px;top:100.75px"></div>
+<div class="abs short" data-box style="left:290px;top:100.875px"></div>
+<div class="abs border" data-box style="left:20px;top:145px"></div>
+<div class="abs border" data-box style="left:50px;top:145.125px"></div>
+<div class="abs border" data-box style="left:80px;top:145.25px"></div>
+<div class="abs border" data-box style="left:110px;top:145.375px"></div>
+<div class="abs border" data-box style="left:140px;top:145.49px"></div>
+<div class="abs border" data-box style="left:170px;top:145.5px"></div>
+<div class="abs border" data-box style="left:200px;top:145.51px"></div>
+<div class="abs border" data-box style="left:230px;top:145.625px"></div>
+<div class="abs border" data-box style="left:260px;top:145.75px"></div>
+<div class="abs border" data-box style="left:290px;top:145.875px"></div>
+<div class="abs bordertall" data-box style="left:20px;top:190px"></div>
+<div class="abs bordertall" data-box style="left:50px;top:190.125px"></div>
+<div class="abs bordertall" data-box style="left:80px;top:190.25px"></div>
+<div class="abs bordertall" data-box style="left:110px;top:190.375px"></div>
+<div class="abs bordertall" data-box style="left:140px;top:190.49px"></div>
+<div class="abs bordertall" data-box style="left:170px;top:190.5px"></div>
+<div class="abs bordertall" data-box style="left:200px;top:190.51px"></div>
+<div class="abs bordertall" data-box style="left:230px;top:190.625px"></div>
+<div class="abs bordertall" data-box style="left:260px;top:190.75px"></div>
+<div class="abs bordertall" data-box style="left:290px;top:190.875px"></div>
+<div class="abs thick" data-box style="left:20px;top:235px"></div>
+<div class="abs thick" data-box style="left:50px;top:235.125px"></div>
+<div class="abs thick" data-box style="left:80px;top:235.25px"></div>
+<div class="abs thick" data-box style="left:110px;top:235.375px"></div>
+<div class="abs thick" data-box style="left:140px;top:235.49px"></div>
+<div class="abs thick" data-box style="left:170px;top:235.5px"></div>
+<div class="abs thick" data-box style="left:200px;top:235.51px"></div>
+<div class="abs thick" data-box style="left:230px;top:235.625px"></div>
+<div class="abs thick" data-box style="left:260px;top:235.75px"></div>
+<div class="abs thick" data-box style="left:290px;top:235.875px"></div>
+<div class="abs bottom" data-box style="left:20px;top:280px"></div>
+<div class="abs bottom" data-box style="left:50px;top:280.125px"></div>
+<div class="abs bottom" data-box style="left:80px;top:280.25px"></div>
+<div class="abs bottom" data-box style="left:110px;top:280.375px"></div>
+<div class="abs bottom" data-box style="left:140px;top:280.49px"></div>
+<div class="abs bottom" data-box style="left:170px;top:280.5px"></div>
+<div class="abs bottom" data-box style="left:200px;top:280.51px"></div>
+<div class="abs bottom" data-box style="left:230px;top:280.625px"></div>
+<div class="abs bottom" data-box style="left:260px;top:280.75px"></div>
+<div class="abs bottom" data-box style="left:290px;top:280.875px"></div>
+<div class="abs border" data-box style="left:360px;top:10px"></div>
+<div class="abs border" data-box style="left:390.125px;top:10px"></div>
+<div class="abs border" data-box style="left:420.25px;top:10px"></div>
+<div class="abs border" data-box style="left:450.375px;top:10px"></div>
+<div class="abs border" data-box style="left:480.49px;top:10px"></div>
+<div class="abs border" data-box style="left:510.5px;top:10px"></div>
+<div class="abs border" data-box style="left:540.51px;top:10px"></div>
+<div class="abs border" data-box style="left:570.625px;top:10px"></div>
+<div class="abs border" data-box style="left:600.75px;top:10px"></div>
+<div class="abs border" data-box style="left:630.875px;top:10px"></div>
+<div class="flow">
+<div class="card" data-box><p>One</p><p>Two</p></div>
+<div class="card" data-box><p>Three</p></div>
+<div class="card" data-box><div class="card" data-box><p>Four</p></div><p>Five</p></div>
+<div class="card" data-box><p>Six</p></div>
+</div>
+<p class="line a" data-line style="left:400px;top:100px">Hx</p>
+<p class="line a" data-line style="left:460px;top:100.125px">Hx</p>
+<p class="line a" data-line style="left:520px;top:100.25px">Hx</p>
+<p class="line a" data-line style="left:580px;top:100.375px">Hx</p>
+<p class="line a" data-line style="left:640px;top:100.49px">Hx</p>
+<p class="line a" data-line style="left:700px;top:100.5px">Hx</p>
+<p class="line a" data-line style="left:760px;top:100.51px">Hx</p>
+<p class="line a" data-line style="left:820px;top:100.625px">Hx</p>
+<p class="line a" data-line style="left:880px;top:100.75px">Hx</p>
+<p class="line a" data-line style="left:940px;top:100.875px">Hx</p>
+<p class="line b" data-line style="left:400px;top:180px">Hx</p>
+<p class="line b" data-line style="left:460px;top:180.125px">Hx</p>
+<p class="line b" data-line style="left:520px;top:180.25px">Hx</p>
+<p class="line b" data-line style="left:580px;top:180.375px">Hx</p>
+<p class="line b" data-line style="left:640px;top:180.49px">Hx</p>
+<p class="line b" data-line style="left:700px;top:180.5px">Hx</p>
+<p class="line b" data-line style="left:760px;top:180.51px">Hx</p>
+<p class="line b" data-line style="left:820px;top:180.625px">Hx</p>
+<p class="line b" data-line style="left:880px;top:180.75px">Hx</p>
+<p class="line b" data-line style="left:940px;top:180.875px">Hx</p>
+<p class="line c" data-line style="left:400px;top:260px">Hx</p>
+<p class="line c" data-line style="left:460px;top:260.125px">Hx</p>
+<p class="line c" data-line style="left:520px;top:260.25px">Hx</p>
+<p class="line c" data-line style="left:580px;top:260.375px">Hx</p>
+<p class="line c" data-line style="left:640px;top:260.49px">Hx</p>
+<p class="line c" data-line style="left:700px;top:260.5px">Hx</p>
+<p class="line c" data-line style="left:760px;top:260.51px">Hx</p>
+<p class="line c" data-line style="left:820px;top:260.625px">Hx</p>
+<p class="line c" data-line style="left:880px;top:260.75px">Hx</p>
+<p class="line c" data-line style="left:940px;top:260.875px">Hx</p>
+<p class="line d" data-line style="left:400px;top:340px">Hx</p>
+<p class="line d" data-line style="left:460px;top:340.125px">Hx</p>
+<p class="line d" data-line style="left:520px;top:340.25px">Hx</p>
+<p class="line d" data-line style="left:580px;top:340.375px">Hx</p>
+<p class="line d" data-line style="left:640px;top:340.49px">Hx</p>
+<p class="line d" data-line style="left:700px;top:340.5px">Hx</p>
+<p class="line d" data-line style="left:760px;top:340.51px">Hx</p>
+<p class="line d" data-line style="left:820px;top:340.625px">Hx</p>
+<p class="line d" data-line style="left:880px;top:340.75px">Hx</p>
+<p class="line d" data-line style="left:940px;top:340.875px">Hx</p>
+<p class="line e" data-line style="left:400px;top:420px">Hx</p>
+<p class="line e" data-line style="left:460px;top:420.125px">Hx</p>
+<p class="line e" data-line style="left:520px;top:420.25px">Hx</p>
+<p class="line e" data-line style="left:580px;top:420.375px">Hx</p>
+<p class="line e" data-line style="left:640px;top:420.49px">Hx</p>
+<p class="line e" data-line style="left:700px;top:420.5px">Hx</p>
+<p class="line e" data-line style="left:760px;top:420.51px">Hx</p>
+<p class="line e" data-line style="left:820px;top:420.625px">Hx</p>
+<p class="line e" data-line style="left:880px;top:420.75px">Hx</p>
+<p class="line e" data-line style="left:940px;top:420.875px">Hx</p>
+<p class="line f" data-line style="left:400px;top:500px">Hx</p>
+<p class="line f" data-line style="left:460px;top:500.125px">Hx</p>
+<p class="line f" data-line style="left:520px;top:500.25px">Hx</p>
+<p class="line f" data-line style="left:580px;top:500.375px">Hx</p>
+<p class="line f" data-line style="left:640px;top:500.49px">Hx</p>
+<p class="line f" data-line style="left:700px;top:500.5px">Hx</p>
+<p class="line f" data-line style="left:760px;top:500.51px">Hx</p>
+<p class="line f" data-line style="left:820px;top:500.625px">Hx</p>
+<p class="line f" data-line style="left:880px;top:500.75px">Hx</p>
+<p class="line f" data-line style="left:940px;top:500.875px">Hx</p>
+</div></body></html>

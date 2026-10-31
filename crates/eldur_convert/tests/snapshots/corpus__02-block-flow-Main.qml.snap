@@ -57,12 +57,16 @@ ApplicationWindow {
 
                         // <header class="hero">
                         Rectangle {
+                            id: hero
+                            property real eldurCarry: Math.ceil(Layout.topMargin - (p3.eldurCarry)) - Layout.topMargin + p3.eldurCarry + 0.000001
+
                             color: "#e9eef6"
                             implicitWidth: heroContent.implicitWidth + 66
                             implicitHeight: heroContent.implicitHeight + 50
                             border.width: 1
                             border.color: "#b8c4d6"
                             Layout.fillWidth: true
+                            Layout.preferredHeight: implicitHeight - p3.eldurCarry
 
                             ColumnLayout {
                                 id: heroContent
@@ -132,7 +136,7 @@ ApplicationWindow {
                             implicitWidth: sectionContent.implicitWidth + 45
                             implicitHeight: sectionContent.implicitHeight + 34
                             Layout.fillWidth: true
-                            Layout.topMargin: 24 - p3.eldurCarry
+                            Layout.topMargin: 24 - hero.eldurCarry
 
                             Rectangle {
                                 anchors.left: parent.left
@@ -232,7 +236,7 @@ ApplicationWindow {
                         // <section class="section section--tinted">
                         Rectangle {
                             id: section2
-                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + emPadded.eldurCarry + 0.000001
+                            property real eldurCarry: Math.ceil(Layout.topMargin - (emPadded.eldurCarry)) - Layout.topMargin + emPadded.eldurCarry + 0.000001
 
                             color: "#f0f7ee"
                             implicitWidth: sectionContent2.implicitWidth + 42
@@ -241,6 +245,7 @@ ApplicationWindow {
                             border.color: "#b9d6b0"
                             Layout.fillWidth: true
                             Layout.topMargin: 24 - section.eldurCarry
+                            Layout.preferredHeight: implicitHeight - emPadded.eldurCarry
 
                             ColumnLayout {
                                 id: sectionContent2
@@ -455,13 +460,14 @@ ApplicationWindow {
                         // <section class="section section--plain">
                         Rectangle {
                             id: section4
-                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + borderBox.eldurCarry + 0.000001
+                            property real eldurCarry: Math.ceil(Layout.topMargin - (borderBox.eldurCarry)) - Layout.topMargin + borderBox.eldurCarry + 0.000001
 
                             color: "#fff8e6"
                             implicitWidth: sectionContent4.implicitWidth + 48
                             implicitHeight: sectionContent4.implicitHeight + 32
                             Layout.fillWidth: true
                             Layout.topMargin: 24 - section3.eldurCarry
+                            Layout.preferredHeight: implicitHeight - borderBox.eldurCarry
 
                             ColumnLayout {
                                 id: sectionContent4
