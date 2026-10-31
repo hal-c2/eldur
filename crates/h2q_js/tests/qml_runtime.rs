@@ -4322,3 +4322,119 @@ Item {
         "{output}"
     );
 }
+
+/// `innerHTML` and `insertAdjacentHTML` on a box make their elements the way
+/// `createElement` does, so they go through the registry (§6.7): nested
+/// elements take the template of their context, `innerHTML` replaces the
+/// children, and a class change rematerialises as for created elements.
+#[test]
+fn qml6_inner_html_and_insert_adjacent_html_materialise_through_templates() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("list", 1, "list", TargetKind::Box);
+
+    let (output, out) = run_page(
+        &resolver,
+        r##"
+function summary() {
+    const items = document.getElementById("list").children;
+    return Array.prototype.map.call(items, function (li) {
+        const span = li.querySelector("span");
+        return li._item.h2qTemplate + ":" + li.className + ":"
+            + (span ? span._item.h2qTemplate + "=" + span.textContent : "-");
+    }).join(",");
+}
+function verifyMarkup() {
+    const list = document.getElementById("list");
+    const old = document.createElement("li");
+    old.className = "item";
+    list.appendChild(old);
+    list.innerHTML = '<li class="item"><span class="label">One</span></li>'
+        + '<li class="item done"><span class="label">Two &amp; more</span></li>';
+    const first = summary();
+    list.insertAdjacentHTML("beforeend", '<li class="item"><span class="label">Three</span></li>');
+    list.insertAdjacentHTML("afterbegin", '<li class="item"><span class="label">Zero</span></li>');
+    const second = summary();
+    list.children[0].classList.add("done");
+    const third = summary();
+    list.innerHTML = "";
+    return [first, second, third, list.children.length].join("|");
+}
+"##,
+        r#"import QtQuick
+import QtQuick.Layouts
+
+Item {
+    id: root
+    readonly property var h2qStyledClasses: ["done", "item", "label"]
+    readonly property var h2qTemplates: ({
+        "li.item@list": h2qT_li_0,
+        "li.done.item@list": h2qT_li_1,
+        "span.label@h2qT_li_0": h2qT_span_2,
+        "span.label@h2qT_li_1": h2qT_span_3
+    })
+
+    Component {
+        id: h2qT_li_0
+        RowLayout {
+            property string h2qTag: "li"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_li_0"
+        }
+    }
+    Component {
+        id: h2qT_li_1
+        RowLayout {
+            property string h2qTag: "li"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_li_1"
+        }
+    }
+    Component {
+        id: h2qT_span_2
+        Text {
+            property string h2qTag: "span"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_span_2"
+        }
+    }
+    Component {
+        id: h2qT_span_3
+        Text {
+            property string h2qTag: "span"
+            property string h2qClasses: ""
+            property string h2qTemplate: "h2qT_span_3"
+        }
+    }
+
+    ColumnLayout {
+        id: list
+        objectName: "list"
+        property string h2qTag: "ul"
+        property string h2qKey: "list"
+    }
+
+    Component.onCompleted: {
+        (Page.__h2q_init || H2Q.init)(root);
+        console.log("H2Q_OK_MARKUP", Page.verifyMarkup());
+        Qt.quit();
+    }
+}"#,
+    );
+
+    assert!(
+        output.contains(
+            "H2Q_OK_MARKUP \
+             h2qT_li_0:item:h2qT_span_2=One,h2qT_li_1:item done:h2qT_span_3=Two & more|\
+             h2qT_li_0:item:h2qT_span_2=Zero,h2qT_li_0:item:h2qT_span_2=One,\
+             h2qT_li_1:item done:h2qT_span_3=Two & more,h2qT_li_0:item:h2qT_span_2=Three|\
+             h2qT_li_1:item done:h2qT_span_3=Zero,h2qT_li_0:item:h2qT_span_2=One,\
+             h2qT_li_1:item done:h2qT_span_3=Two & more,h2qT_li_0:item:h2qT_span_2=Three|0"
+        ),
+        "{output}\n{}",
+        out.page_js
+    );
+    assert!(!output.contains("no style template"), "{output}");
+    assert!(!output.contains("unsupported"), "{output}");
+}
