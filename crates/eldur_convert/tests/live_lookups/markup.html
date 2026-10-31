@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>markup</title><style>span,i,b,em{display:block}</style></head>
+<body>
+<div id="h" class="w">h</div><div id="old"><b id="b0" class="m">b</b></div>
+<script>
+function L(k,v){console.log("LC "+k+" "+v)}
+function ids(l){var r=[];for(var i=0;i<l.length;i++){r.push(l[i].id||l[i].className||l[i].tagName)}return r.join(",")}
+
+var h=document.getElementById("h");
+h.innerHTML="<div id=\"n1\" class=\"m\">x</div><span class=\"m\" data-z=\"1\">y</span>";
+L("innerHTML",document.getElementById("n1").id+" "+document.querySelectorAll(".m").length+" "+ids(h.querySelectorAll(".m"))+" "+h.children.length);
+L("attr",document.querySelector("[data-z]").tagName);
+h.insertAdjacentHTML("beforeend","<p id=\"n2\" class=\"m\">z</p>");
+L("adjacent",document.getElementById("n2").tagName+" "+document.querySelectorAll("#h .m").length);
+h.innerHTML+="<em id=\"n3\">q</em>";
+L("append",document.getElementById("n3").tagName+" "+h.children.length);
+var old=document.getElementById("old");old.outerHTML="<div id=\"new\" class=\"m\">n</div>";
+L("outer",document.getElementById("old")+" "+document.getElementById("b0")+" "+document.getElementById("new").id);
+</script>
+</body></html>

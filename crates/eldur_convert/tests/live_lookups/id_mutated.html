@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>id_mutated</title></head>
+<body>
+<div id="a" class="k">a</div><div id="b" class="k">b</div><div id="c" class="k">c</div><div id="e" class="k">e</div>
+<script>
+function L(k,v){console.log("LC "+k+" "+v)}
+function ids(l){var r=[];for(var i=0;i<l.length;i++){r.push(l[i].id||l[i].className||l[i].tagName)}return r.join(",")}
+
+var a=document.getElementById("a");
+a.id="renamed";
+L("old",document.getElementById("a")+" "+document.querySelector("#a"));
+L("new",(document.getElementById("renamed")===a)+" "+(document.querySelector("#renamed")===a));
+var b=document.getElementById("b");b.setAttribute("id","bb");
+L("setAttribute",document.getElementById("b")+" "+document.getElementById("bb").id);
+var c=document.getElementById("c");c.removeAttribute("id");
+L("removeAttribute",document.getElementById("c")+" "+c.id+"|"+c.hasAttribute("id"));
+var n=document.createElement("div");n.id="c";document.body.appendChild(n);
+L("taken",document.getElementById("c")===n);
+var dup=document.createElement("div");dup.id="e";document.body.insertBefore(dup,document.body.firstElementChild);
+L("first in order",document.getElementById("e")===dup);
+L("all",document.querySelectorAll("#e").length);
+dup.remove();
+L("the other",document.getElementById("e").className);
+L("attr",document.querySelectorAll("[id]").length);
+</script>
+</body></html>

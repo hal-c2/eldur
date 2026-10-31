@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>class_mutated</title></head>
+<body>
+<div id="a" class="m">a</div><div id="b">b</div><div id="c" class="m z">c</div><p id="d">d</p>
+<script>
+function L(k,v){console.log("LC "+k+" "+v)}
+function ids(l){var r=[];for(var i=0;i<l.length;i++){r.push(l[i].id||l[i].className||l[i].tagName)}return r.join(",")}
+
+var a=document.getElementById("a"),b=document.getElementById("b"),c=document.getElementById("c");
+L("start",ids(document.querySelectorAll(".m")));
+b.classList.add("m");
+L("add",ids(document.querySelectorAll(".m"))+" "+ids(document.getElementsByClassName("m")));
+a.classList.remove("m");
+L("remove",ids(document.querySelectorAll(".m")));
+c.className="z";
+L("className",ids(document.querySelectorAll(".m"))+" "+document.querySelectorAll(".m.z").length);
+a.setAttribute("class","m z");
+L("setAttribute",ids(document.querySelectorAll(".m.z"))+" "+ids(document.getElementsByClassName("z m")));
+b.classList.toggle("q");
+L("toggle",document.querySelector(".q").id+" "+document.querySelectorAll("div.q").length);
+document.getElementById("d").classList.add("m");
+L("tag",ids(document.querySelectorAll("p.m"))+" "+ids(document.querySelectorAll("div.m")));
+a.removeAttribute("class");
+L("removed attr",ids(document.querySelectorAll(".z")));
+L("not",ids(document.querySelectorAll("div:not(.m)")));
+</script>
+</body></html>

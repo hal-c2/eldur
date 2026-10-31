@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>created</title><style>span,i,b,em{display:block}</style></head>
+<body>
+<div id="h"><div class="m">s</div></div><section id="other"><span class="m">t</span></section>
+<script>
+function L(k,v){console.log("LC "+k+" "+v)}
+function ids(l){var r=[];for(var i=0;i<l.length;i++){r.push(l[i].id||l[i].className||l[i].tagName)}return r.join(",")}
+
+var h=document.getElementById("h");var c=document.createElement("div");c.className="m";
+L("before",document.querySelectorAll(".m").length);
+h.appendChild(c);
+L("qsa",document.querySelectorAll(".m").length+" "+h.querySelectorAll(".m").length);
+L("byclass",document.getElementsByClassName("m").length);
+L("bytag",document.getElementsByTagName("div").length);
+L("qs",document.querySelector("div.m")!==null);
+var e=document.getElementById("other");
+L("scoped",e.querySelectorAll(".m").length+" "+e.getElementsByClassName("m").length+" "+e.getElementsByTagName("span").length);
+var s=document.createElement("span");s.id="made";s.className="m";e.appendChild(s);
+L("made",document.getElementById("made")===s);
+L("span",document.querySelectorAll("span").length+" "+e.getElementsByTagName("span").length);
+L("ids",ids(document.querySelectorAll("section .m")));
+var off=document.createElement("div");off.id="off";off.className="m";
+L("unattached",document.getElementById("off")+" "+document.querySelectorAll(".m").length);
+</script>
+</body></html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>cross</title></head>
+<body>
+<div id="a" class="c">a</div><div id="b">b</div>
+<script>
+function L(k,v){console.log("LC "+k+" "+v)}
+var a=document.getElementById("a");
+var list=document.querySelectorAll(".c");
+function byId(){return document.getElementById("a")}
+</script>
+<script>
+L("seen",a.id+" "+list.length);
+a.remove();
+L("after",byId()+" "+a.id+" "+list.length+" "+document.querySelectorAll(".c").length);
+var b=document.getElementById("b");b.className="c";
+</script>
+<script>
+L("third",(b===document.querySelector(".c"))+" "+document.querySelectorAll(".c").length+" "+b.className);
+</script>
+</body></html>

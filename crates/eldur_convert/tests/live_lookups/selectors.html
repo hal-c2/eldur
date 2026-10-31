@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>selectors</title><style>span,i,b,em{display:block}</style></head>
+<body>
+<ul id="u"><li id="l1" class="i">1</li><li id="l2">2</li><li id="l3" class="i" data-k="ab-cd">3</li><li id="l4">4</li></ul><div id="w"><p id="p1">p</p><em id="e1">e</em><p id="p2">q</p></div><input id="t" type="text" value="v">
+<script>
+function L(k,v){console.log("LC "+k+" "+v)}
+function ids(l){var r=[];for(var i=0;i<l.length;i++){r.push(l[i].id||l[i].className||l[i].tagName)}return r.join(",")}
+
+function q(s){L(s,ids(document.querySelectorAll(s)))}
+var n=document.createElement("li");n.id="l5";document.getElementById("u").appendChild(n);
+q("li:first-child");q("li:last-child");q("li:nth-child(2)");q("li:nth-child(odd)");q("li:nth-child(2n+1)");q("li:nth-last-child(1)");
+q("li + li");q("#l1 + li");q("#l1 ~ .i");q("#l2 ~ li");q("ul > li.i");q("ul li");q("div > p");q("em + p");q("div p");
+q("li:not(.i)");q("li:not(.i):not(#l2)");q(":not(li):not(p):not(em):not(html):not(body):not(head):not(meta):not(title):not(script)");
+q("li:is(.i,#l2)");q("p, em");q("em, p, #u");q("*.i");
+q("[data-k]");q("[data-k=ab-cd]");q("[data-k^=ab]");q("[data-k$=cd]");q("[data-k*=\"b-c\"]");q("[data-k|=ab]");q("[data-k~=ab-cd]");
+q("li:only-child");q("em:first-of-type");q("p:last-of-type");q("p:nth-of-type(2)");q("div:empty");q("LI");q("LI.i");
+L("w scoped",ids(document.getElementById("w").querySelectorAll("div p")));
+L("w child",ids(document.getElementById("w").querySelectorAll("p + em")));
+L("scope",ids(document.getElementById("u").querySelectorAll(":scope > li.i")));
+L("el first",document.getElementById("u").querySelector("li:last-child").id);
+L("matches",document.getElementById("l2").matches("li:nth-child(2)")+" "+document.getElementById("l3").matches("#l2 + li"));
+L("closest",document.getElementById("l1").closest("ul:not(.q)").id);
+var bad=false;try{document.querySelectorAll("li:::x")}catch(e){bad=e.name}L("invalid",bad);
+</script>
+</body></html>
