@@ -18,6 +18,11 @@
  *   --run '[{"eval":"document.body.append(document.createElement(\"p\"))"}]'
  * Steps: eval, click, hover, focus, type [sel, text], wait ms.
  * `--after ms` waits that long after the steps, before measuring.
+ *
+ * `--elements` (no selectors) prints every element that generates a box
+ * other than an inline one, in document order, as {describe, x, y, width,
+ * height}; `describe` is the `<tag id class>` text the converter writes in
+ * its source comments, which drift.py matches against.
  */
 
 import fs from "node:fs";
@@ -33,6 +38,11 @@ let file = null;
 let click = null;
 let run = null;
 let after = 0;
+let elements = false;
+if (args[0] === "--elements") {
+  args.shift();
+  elements = true;
+}
 while (args[0] === "--run" || args[0] === "--after") {
   const flag = args.shift();
   const v = args.shift();
@@ -49,9 +59,9 @@ if (args[0] === "--html") {
 } else {
   file = args.shift();
 }
-if ((html === null && !file) || args.length === 0) {
+if ((html === null && !file) || (args.length === 0) === !elements) {
   console.error(
-    "usage: geometry.mjs [--run json] [--after ms] [--click selector] (page.html | --html '<markup>') selector...",
+    "usage: geometry.mjs [--elements] [--run json] [--after ms] [--click selector] (page.html | --html '<markup>') [selector...]",
   );
   process.exit(2);
 }
@@ -78,6 +88,26 @@ try {
   }
   if (run) await runSteps(page, run);
   if (after) await page.waitForTimeout(after);
+  if (elements) {
+    const rows = await page.evaluate(() => {
+      const describe = (e) => {
+        let out = `<${e.localName}`;
+        if (e.id) out += ` id="${e.id}"`;
+        const cls = (e.getAttribute("class") || "").trim().split(/\s+/).filter(Boolean).join(" ");
+        if (cls) out += ` class="${cls}"`;
+        return `${out}>`;
+      };
+      const rows = [];
+      for (const e of document.querySelectorAll("*")) {
+        const display = getComputedStyle(e).display;
+        if (display === "inline" || display === "contents" || e.getClientRects().length === 0) continue;
+        const r = e.getBoundingClientRect();
+        rows.push({ describe: describe(e), x: r.x, y: r.y, width: r.width, height: r.height });
+      }
+      return rows;
+    });
+    rows.forEach((r) => console.log(JSON.stringify(r)));
+  }
   for (const select of args) {
     const rects = await page.$$eval(select, (els) =>
       els.map((e) => {

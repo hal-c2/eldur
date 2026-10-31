@@ -77,6 +77,30 @@ matches, one JSON line per element, at the harness viewport (1280×800,
 `deviceScaleFactor: 1`). Use it for the expected positions and sizes in
 converter tests.
 
+`--elements` (no selectors) instead prints every element that has a box
+other than an inline one, in document order, with the `<tag id class>` text
+the converter writes in its source comments (`describe`).
+
+### Drift: `drift.py`
+
+```bash
+python3 tools/visual/drift.py tests/corpus/02-block-flow [--qml DIR] [--json out.json]
+```
+
+Per-element geometry from both sides, to see where vertical error first
+appears and how it grows. Chromium's boxes come from `geometry.mjs
+--elements`. The QML side converts the page (or takes `--qml`), adds
+`property string eldurGeo: "<n>"` to the object under each `// <tag …>`
+source comment in a copy of `Main.qml`, and renders it with `render_qml.py`
+(`--backend software` by default: layout does not depend on the scene
+graph). `Shot.qml` logs the scene geometry of tagged objects when it would
+grab, after the page has settled; an object's own `transform` is left out.
+The k-th Chromium element with a description is matched to the k-th QML
+object with it; the table gives `dy = qml.y - chromium.y` and `dh` in
+document order, and a summary (largest |dy|, dy of the last element in the
+viewport, unmatched counts). Elements a page converts into one `Text`
+(inline runs) have no object of their own and stay unmatched.
+
 ### 2. `Shot.qml` + `render_qml.py`
 
 ```bash
