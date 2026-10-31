@@ -328,10 +328,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 let mut block = initial_block().with_id(ICB_ID);
                 push_overlays(&mut block, above);
                 flickable.push_child(block);
-                // What overflows it is scrollable overflow (CSS Overflow 3 §2.2).
-                content_height = format!(
-                    "Math.max({content_height}, {ICB_ID}.childrenRect.y + {ICB_ID}.childrenRect.height)"
-                );
+                content_height = height_with_initial_block(&content_height);
             }
         }
         flickable.set("contentHeight", Value::expr(content_height));
@@ -606,9 +603,8 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 extra.push(self.marker(b, marker));
             }
             extra.append(&mut corner_slots);
-            let mut wrapper =
-                self.wrap_with(style, &deco, paint_background, inner, extra, fill, line);
-            push_overlays(&mut wrapper, overlays);
+            extra.extend(overlays.into_iter().map(|(_, overlay)| overlay));
+            let wrapper = self.wrap_with(style, &deco, paint_background, inner, extra, fill, line);
             (wrapper, TargetKind::Box)
         } else {
             let (obj, suffix) = inner.unwrap_or((Object::new("Item"), "Content"));
@@ -810,6 +806,37 @@ fn initial_block() -> Object {
     block.set("width", Value::expr(format!("{FLICKABLE_ID}.width")));
     block.set("height", Value::expr(format!("{FLICKABLE_ID}.height")));
     block
+}
+
+/// What overflows the initial containing block can be scrolled to (CSS
+/// Overflow 3 §2.2).
+fn height_with_initial_block(content_height: &str) -> String {
+    format!(
+        "Math.max({content_height}, {ICB_ID}.childrenRect.y + {ICB_ID}.childrenRect.height)"
+    )
+}
+
+/// Gives a page without the initial containing block's item one, for a
+/// script's boxes to go to.
+fn ensure_initial_block(root: &mut Object) {
+    let Some(flickable) = root.members.iter_mut().find_map(|m| match m {
+        Member::Child(c) if c.id.as_deref() == Some(FLICKABLE_ID) => Some(c),
+        _ => None,
+    }) else {
+        return;
+    };
+    let exists = flickable
+        .members
+        .iter()
+        .any(|m| matches!(m, Member::Child(c) if c.id.as_deref() == Some(ICB_ID)));
+    if exists {
+        return;
+    }
+    if let Some(Value::Expr(height)) = flickable.get("contentHeight") {
+        let height = height_with_initial_block(height);
+        flickable.set("contentHeight", Value::expr(height));
+    }
+    flickable.push_child(initial_block().with_id(ICB_ID));
 }
 
 fn push_overlays(parent: &mut Object, overlays: Vec<(Option<String>, Object)>) {

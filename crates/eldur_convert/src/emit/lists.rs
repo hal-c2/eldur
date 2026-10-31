@@ -6,7 +6,7 @@ use std::borrow::Cow;
 
 use eldur_css::{
     Align, BorderSide, BoxSizing, ComputedStyle, LengthAuto, LineHeight, Position, Sides, Size,
-    TextDecorationLine,
+    TextDecorationLine, WhiteSpace,
 };
 use eldur_dom::NodeId;
 use eldur_qml::{Member, Object, Value};
@@ -349,14 +349,14 @@ impl Emitter<'_, '_> {
         if !matches!(style.width, Size::Length(_)) && !both_sides {
             // Shrink-to-fit: no wider than what the containing block has
             // left (CSS 2.2 §10.3.7).
-            let mut limits = vec!["implicitWidth".to_owned()];
+            let mut width = "implicitWidth".to_owned();
+            let mut limited = false;
             if let Size::Length(max) = &style.max_width
                 && let Some(px) = max.as_px()
             {
-                limits.push(fmt_number(round(px + extra_w)));
-            }
-            if has_text(b) {
-                let margins = margin_px(&style.margin.left) + margin_px(&style.margin.right);
+                width = format!("Math.min({width}, {})", fmt_number(round(px + extra_w)));
+                limited = true;
+            } else if has_text(b) {
                 let taken = if matches!(style.left, LengthAuto::Auto)
                     && !matches!(style.right, LengthAuto::Auto)
                 {
@@ -369,14 +369,11 @@ impl Emitter<'_, '_> {
                         format!("x - {}", fmt_number(round(right)))
                     }
                 };
-                let _ = margins;
-                limits.push(format!("parent.width - {taken}"));
+                width = format!("Math.min({width}, parent.width - {taken})");
+                limited = true;
             }
-            if limits.len() > 1 {
-                obj.set(
-                    "width",
-                    Value::expr(format!("Math.min({})", limits.join(", "))),
-                );
+            if limited {
+                obj.set("width", Value::expr(width));
             }
         }
         place(
@@ -480,11 +477,13 @@ pub(super) fn static_place_functions(root: &mut Object) {
     }
 }
 
-/// Whether a box has text of its own somewhere in flow, which wraps at the
-/// width it gets.
+/// Whether a box has text somewhere in flow that wraps at the width it gets.
 fn has_text(b: &LayoutBox<'_>) -> bool {
     match &b.content {
-        Content::Inline(_) => true,
+        Content::Inline(_) => matches!(
+            b.style.white_space,
+            WhiteSpace::Normal | WhiteSpace::PreWrap | WhiteSpace::PreLine
+        ),
         Content::Blocks(children) => children
             .iter()
             .any(|c| !is_out_of_flow(&c.style) && has_text(c)),

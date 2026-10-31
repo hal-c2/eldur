@@ -36,6 +36,18 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
     }
     return { scroll, scrollHeight: document.documentElement.scrollHeight, boxes };
   }, SCROLL[name] ?? 0);
+  // A page with a button is measured again once it has been pressed.
+  if (await page.$("#go")) {
+    await page.click("#go");
+    out[name].after = await page.evaluate(() => {
+      const boxes = {};
+      for (const e of document.querySelectorAll("[id]")) {
+        const r = e.getBoundingClientRect();
+        boxes[e.id] = [r.x, r.y, r.width, r.height];
+      }
+      return boxes;
+    });
+  }
 }
 await browser.close();
 fs.writeFileSync(path.join(here, "chromium.json"), JSON.stringify(out, null, 1) + "\n");

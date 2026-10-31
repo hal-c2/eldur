@@ -2062,6 +2062,13 @@ function setStyle(item, prop, value) {
         if (!isNaN(op) && typeof raw.opacity === "number") {
             raw.opacity = op;
         }
+    } else if (name === "left" || name === "top" || name === "right" || name === "bottom") {
+        _setOffset(raw, name, str);
+    } else if (name === "zIndex") {
+        var zi = parseInt(str, 10);
+        if (!isNaN(zi) && typeof raw.z === "number") {
+            raw.z = zi;
+        }
     } else if (name === "width") {
         var w = parseFloat(str);
         if (!isNaN(w) && typeof raw.width === "number") {
@@ -3166,6 +3173,28 @@ function _inputSource(type) {
         + "background: Rectangle { color: \"white\"; border.color: \"#767676\"; radius: 2 } }";
 }
 
+// Inside a layout, as an in-flow or `relative` box is, an item's place is the
+// layout's to set, and this has no effect.
+function _setOffset(raw, name, str) {
+    var vertical = name === "top" || name === "bottom";
+    var px = parseFloat(str);
+    if (isNaN(px) || !raw.parent) {
+        return;
+    }
+    if (/%\s*$/.test(str)) {
+        px *= (vertical ? raw.parent.height : raw.parent.width) / 100;
+    }
+    var start = vertical ? "top" : "left";
+    var end = vertical ? "bottom" : "right";
+    if (name === start) {
+        raw.anchors[end] = undefined;
+        raw[vertical ? "y" : "x"] = px;
+    } else {
+        raw.anchors[end] = raw.parent[end];
+        raw.anchors[end + "Margin"] = px;
+    }
+}
+
 function _coerceNode(nodeOrString) {
     if (nodeOrString === null || nodeOrString === undefined) {
         return null;
@@ -3195,10 +3224,55 @@ function _expandInsertRawNodes(nodes) {
     return out;
 }
 
+// A layout would place an out-of-flow item, and its containing block may have
+// no room outside one, so it gets an item the block's size above the page.
+function _outOfFlowHost(block) {
+    var blockMeta = _meta(block);
+    if (!blockMeta.outOfFlowHost) {
+        var host = Qt.createQmlObject(
+            "import QtQuick; Item { property Item block; "
+            + "function at(axis) { let n = 0; for (let i = block; i && i !== parent; i = i.parent) n += i[axis]; return n } "
+            + "x: at(\"x\"); y: at(\"y\"); width: block ? block.width : 0; height: block ? block.height : 0; "
+            + "visible: block ? block.visible : false }",
+            _root.eldurInitialBlock, "eldur_out_of_flow");
+        host.block = block;
+        _meta(host).hostBox = block;
+        blockMeta.outOfFlowHost = host;
+    }
+    return blockMeta.outOfFlowHost;
+}
+
+// Moves a template's out-of-flow item, just put in its DOM parent, to its
+// containing block.
+function _leaveFlow(item) {
+    var block = item.eldurBlock;
+    if (block === undefined) {
+        return;
+    }
+    var initial = _root.eldurInitialBlock;
+    if (block === "window") {
+        // Outside the Flickable, so it does not scroll.
+        item.parent = initial.parent.parent.parent;
+    } else if (block === "initial") {
+        item.parent = initial;
+    } else {
+        item.parent = _outOfFlowHost(block === "parent" ? _logicalParent(item) : block);
+    }
+}
+
 function _insertRawNodesBefore(container, rawNodes, rawRef) {
     if (!container || rawNodes.length === 0) {
         return;
     }
+    _insertInFlow(container, rawNodes, rawRef);
+    for (var o = 0; o < rawNodes.length; ++o) {
+        if (rawNodes[o] && rawNodes[o].eldurBlock !== undefined) {
+            _leaveFlow(rawNodes[o]);
+        }
+    }
+}
+
+function _insertInFlow(container, rawNodes, rawRef) {
     _layoutChanged(container);
     if (!rawRef && container.children
         && (typeof container.spacing === "number" || typeof container.columnSpacing === "number")) {
@@ -3496,6 +3570,7 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
         next = component.createObject(_qobjectParent(), initProps);
         if (next && next.parent !== undefined) {
             next.parent = parentContainer;
+            _leaveFlow(next);
         }
         m.templateComponent = component;
     } else {

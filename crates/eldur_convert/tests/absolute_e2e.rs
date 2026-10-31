@@ -99,19 +99,45 @@ TestCase {
         compare(Math.max(flick.contentHeight, 800), chromium.scrollHeight, "scroll height")
         flick.contentY = chromium.scroll
         wait(50)
-        for (const id in chromium.boxes) {
-            const want = chromium.boxes[id]
-            const item = findChild(page, id)
-            verify(item !== null, "no item named " + id)
+        compareBoxes(chromium.boxes, "")
+        if (!chromium.after) return
+        const go = findChild(page, "go")
+        verify(go !== null, "no button")
+        mouseClick(go)
+        wait(50)
+        compareBoxes(chromium.after, "pressed: ")
+    }
+
+    function compareBoxes(boxes, when) {
+        for (const id in boxes) {
+            const want = boxes[id]
+            const item = findById(page, id)
+            verify(item !== null, when + "no item named " + id)
             if (want[2] === 0 && want[3] === 0 && !item.visible) continue
-            verify(item.visible, id + " is hidden")
+            verify(item.visible, when + id + " is hidden")
             const r = item.mapToItem(page, Qt.rect(0, 0, item.width, item.height))
             const got = [r.x, r.y, r.width, r.height]
             // Text is measured by two engines; boxes agree to the pixel.
             for (let i = 0; i < 4; i++)
                 verify(Math.abs(got[i] - want[i]) <= 1.5,
-                       id + ": got " + got + ", Chromium " + want)
+                       when + id + ": got " + got + ", Chromium " + want)
         }
+    }
+
+    // A script's element has its `id` in the runtime, not as an objectName.
+    function findById(item, id) {
+        const named = findChild(item, id)
+        if (named) return named
+        return findCreated(item, id)
+    }
+
+    function findCreated(item, id) {
+        if (item.eldurId === id) return item
+        for (let i = 0; i < item.children.length; i++) {
+            const found = findCreated(item.children[i], id)
+            if (found) return found
+        }
+        return null
     }
 }
 }

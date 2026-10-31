@@ -235,7 +235,8 @@ impl Emitter<'_, '_> {
             last = Some(layout.members.len() - 1);
             pending = emitted.bottom;
         }
-        let only_slots = last.is_none() && !layout.members.is_empty();
+        let only_slots =
+            last.is_none() && layout.members.iter().any(|m| matches!(m, Member::Child(_)));
         let Some(mut last) = last else {
             return Column {
                 obj: only_slots.then_some(layout),
