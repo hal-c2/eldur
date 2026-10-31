@@ -1084,7 +1084,7 @@ ApplicationWindow {
                                     transform: Translate {
                                         x: badgeBox.width * -0.5
                                     }
-                                    x: parent.width * 0.5 + 2
+                                    x: (parent.width - 4) * 0.5 + 2
                                     y: -12
 
                                     Text {

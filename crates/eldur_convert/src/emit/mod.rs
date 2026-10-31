@@ -304,13 +304,6 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     "the root element always spans the window width".to_owned(),
                 );
             }
-            if self.options.source_comments
-                && let Some(node) = html.node
-            {
-                flickable
-                    .members
-                    .push(Member::Comment(describe(self.doc, node)));
-            }
             let initial = std::mem::take(&mut self.abs_block.overlays);
             let (below, above): (Vec<_>, Vec<_>) = initial
                 .into_iter()
@@ -322,6 +315,13 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 block.set("z", Value::Number(-1.0));
                 push_overlays(&mut block, below);
                 flickable.push_child(block);
+            }
+            if self.options.source_comments
+                && let Some(node) = html.node
+            {
+                flickable
+                    .members
+                    .push(Member::Comment(describe(self.doc, node)));
             }
             flickable.push_child(page);
             if !above.is_empty() {

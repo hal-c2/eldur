@@ -594,10 +594,10 @@ fn expr_height(obj: &Object, expr: &str, excess: &HashMap<usize, Excess>) -> Hei
 /// A flex container's `Item { Layout.fillHeight: true }`.
 fn is_spacer(obj: &Object) -> bool {
     obj.type_name == "Item"
-        && obj.id.is_none()
         && obj.members.iter().all(|m| {
             matches!(m, Member::Property { name, .. }
-                if name == "Layout.fillHeight" || name == "Layout.verticalStretchFactor")
+                if obj.id.is_none()
+                    && (name == "Layout.fillHeight" || name == "Layout.verticalStretchFactor"))
         })
 }
 

@@ -464,7 +464,7 @@ Item {
 
 ### 5.2 `position: absolute`
 
-The containing block is the padding box of the nearest positioned ancestor. In QML the child must be a direct child of an unlayouted `Item` that is that ancestor. If the ancestor is a `ColumnLayout` or `RowLayout`, the absolute child cannot be inside it, because the Layout would position it.
+The containing block is the padding box of the nearest positioned or transformed or filtered ancestor; with none, it is the initial containing block (§5.2.1). In QML the child must be a direct child of an unlayouted `Item` that is that ancestor. If the ancestor is a `ColumnLayout` or `RowLayout`, the absolute child cannot be inside it, because the Layout would position it.
 
 **HTML/CSS**
 ```html
@@ -517,9 +517,50 @@ Rectangle {                              // .card, plain Item, not a Layout
 | `z-index` | Approx | `z`, see §5.1. |
 | `position: static` | Full | No change. |
 
+#### 5.2.1 Where a box goes
+
+An out-of-flow box is emitted in its containing block however deep it is in the source. A wrapper that holds one takes it as a sibling of its flow layout. Without a positioned ancestor it goes to the initial containing block, an item only pages that use it get:
+
+```qml
+Flickable {
+    id: flickable
+    contentHeight: Math.max(page.implicitHeight, initialContainingBlock.childrenRect.y + initialContainingBlock.childrenRect.height)
+
+    ColumnLayout { id: page; width: flickable.width }
+
+    Item {                                 // scrolls with the page, unlike `fixed`
+        id: initialContainingBlock
+        width: flickable.width
+        height: flickable.height
+        Rectangle { x: 20; y: 10; width: 30; height: 40 }
+    }
+}
+```
+
+Boxes with a negative `z-index` go to a second such item, under the page.
+
+**Static position.** An axis with neither offset uses where the box would have been in flow. Only then does it leave a slot, an empty `Item` at its place in the layout, and read it through the root's `staticX`/`staticY`, which sum `x` or `y` up the parents, so they follow layout. Margins before the slot are added; a page's boxes that leave no slot leave no trace. The slot takes no room, and margins collapse through it as through nothing. When an ancestor up to the containing block can be hidden (a script target, `display: none`), the box also binds `visible` to a slot.
+
+An inline box that is absolute does not split its line. Its `y` is the top of the line it was on, its `x` the start of that line.
+
+**Scripts.** A class or inline style changes offsets, `z-index` and `display` of a box in place, and static positions follow. A template of a created box declares `eldurBlock` (`"initial"`, `"parent"`, `"window"` or the id of the block) and the runtime moves the new item out of its DOM parent's layout. Below the initial block it goes straight in it; under another block it goes in an item bound to that block's place and size, so the block needs no room for it.
+
+| Case | Support | Notes |
+|---|---|---|
+| Any depth, initial or positioned containing block | Full | Measured against Chromium in `tests/absolute_e2e.rs`. |
+| Transformed or filtered ancestor, `fixed` in one | Full | |
+| Percentages against the padding box; `auto` margins centring | Full | |
+| Absolute in a flex or grid container | Approx | Its slot is the container's start corner. Container alignment of the static position is not applied: warning. |
+| Inline box with no `left` or `right`, after text | Approx | At the start of the line: warning. |
+| Static position in a template (a created box without offsets) | Approx | At the containing block's start: warning. |
+| Containing block that is a `<table>`, `<tr>` or `<fieldset>` | Approx | Placed against the next block out: warning. |
+| Opacity of an ancestor up to the containing block | Not done | The box leaves that item: warning. |
+| Stacking across containing blocks | Approx | `z` orders siblings only. A positioned box's overlay stays under the initial block's boxes, whatever its `z-index` (warning), and under later in-flow siblings of its containing block. |
+| A class switching `position` between static and absolute | Not done | `dynamic-form` warning: worlds must share a shape, so it keeps its first form. |
+
 ### 5.3 `position: fixed`
 
-Fixed elements are siblings of the ScrollView inside the `ApplicationWindow`; their `parent` is the window's `contentItem`, which is the containing block (the viewport). They do not scroll.
+Fixed elements are siblings of the ScrollView inside the `ApplicationWindow`; their `parent` is the window's `contentItem`, which is the containing block (the viewport). They do not scroll. A transformed or filtered ancestor is their containing block instead (§5.2.1).
 
 ```qml
 ApplicationWindow {

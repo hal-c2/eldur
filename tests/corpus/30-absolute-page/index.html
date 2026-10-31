@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Absolute boxes without a positioned ancestor</title>
+<style>
+  body { margin: 0; font: 16px/24px sans-serif; color: #1f2937; background: #f9fafb; }
+  main { padding: 24px; max-width: 720px; }
+  h1 { margin: 0 0 12px; font-size: 28px; line-height: 36px; }
+  p { margin: 0 0 16px; }
+  .ribbon { position: absolute; top: 16px; right: 16px; width: 120px; height: 32px;
+            background: #dc2626; z-index: 2; }
+  .band { position: absolute; left: 0; right: 0; bottom: 0; height: 12px; background: #2563eb; }
+  .half { position: absolute; left: 75%; top: 25%; width: 20%; height: 25%; background: #fde68a; }
+  .behind { position: absolute; top: 60px; left: 12px; width: 200px; height: 90px;
+            background: #bbf7d0; z-index: -1; }
+  .note { position: absolute; left: 480px; width: 160px; height: 48px; background: #c7d2fe; }
+  .dot { position: absolute; left: 4px; top: 240px; width: 12px; height: 12px;
+         background: #f97316; border-radius: 6px; }
+  .frame { transform: translateX(20px); margin: 16px 0; height: 80px; background: #e5e7eb; }
+  .frame i { position: absolute; left: 8px; top: 8px; width: 40px; height: 40px; background: #0f766e; }
+  .row { display: flex; gap: 12px; height: 40px; }
+  .row b { flex: 1; background: #d1d5db; }
+  .row u { position: absolute; left: 680px; top: 620px; width: 60px; height: 24px; background: #a78bfa; }
+  .below { position: absolute; left: 24px; top: 1000px; width: 300px; height: 40px; background: #fca5a5; }
+</style>
+</head>
+<body>
+  <div class="ribbon"></div>
+  <div class="band"></div>
+  <div class="half"></div>
+  <main>
+    <div class="behind"></div>
+    <h1>Placed against the page</h1>
+    <p>None of the coloured boxes has a positioned ancestor, so each is placed
+    against the initial containing block: the viewport's size, at the page's
+    origin, scrolling with the page.</p>
+    <div class="note"></div>
+    <p>The blue note stays where this paragraph starts, on top of it, and takes
+    no room. <span class="dot"></span>The orange dot was an inline box in this
+    sentence and does not split it.</p>
+    <div class="frame"><i></i></div>
+    <div class="row"><b></b><b></b><u></u><b></b></div>
+    <section>
+      <div>
+        <p>The red box far below is as deep as this text, and it makes the page
+        scroll.</p>
+        <div class="below"></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
