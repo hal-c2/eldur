@@ -884,7 +884,7 @@ GridLayout {
 | `caption`, `caption-side` | Full | An outer `ColumnLayout` holding captions and the table. |
 | Row, group and column backgrounds | Emulated | Items cannot overlap in a `GridLayout`, so each cell paints them, flattened source-over. Background images on rows and groups are reported. |
 | `vertical-align` in cells | Approx | `top`, `middle`, `bottom`; `baseline` is the top. |
-| Scripts targeting static rows or groups | Unsupported | A row, or a group that has static rows, has no QML object. Warn. |
+| Scripts targeting static rows or groups | Live form | A table whose page has a table word in a script, or whose part a script wants, is a `ColumnLayout` of section `ColumnLayout`s and row `Item`s, with cells placed by the runtime through the same solver; `columnWidths` are written, not bound. Other tables keep the `GridLayout`. |
 | Rows and tables a script makes | Same solver | The runtime places their slots and passes their cells to the page's `tableColumnWidths` and `tableRowHeights`. In a static table the grid counts them through `eldurCreatedCells`, so its header moves with them. They cannot add a column a static table does not have. |
 | `visibility: collapse`, row `opacity` | Unsupported | Reported. |
 | `empty-cells`, presentational attributes (`cellspacing`, `bgcolor`, …) | Unsupported | Not read. |
