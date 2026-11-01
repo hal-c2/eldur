@@ -349,3 +349,15 @@ fn stretch_grid_body_auto() {
 fn stretch_flex() {
     page("stretch_flex");
 }
+
+/// `inline-flex` with auto margins is on a line: they take no space, nor does it grow.
+#[test]
+fn inline_flex_auto() {
+    page("inline_flex_auto");
+}
+
+/// An `<input>` in created markup, with no `type`, finds its template.
+#[test]
+fn markup_input() {
+    page("markup_input");
+}

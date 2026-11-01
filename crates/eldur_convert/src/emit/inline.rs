@@ -548,6 +548,11 @@ impl Emitter<'_, '_> {
                     }
                 }
             }
+            if let Size::Length(l) = &style.width
+                && let Some(w) = l.as_px()
+            {
+                obj.set("implicitWidth", number(w + extra_w));
+            }
             obj.set("width", Value::expr(OWN_WIDTH));
             return Part {
                 obj,

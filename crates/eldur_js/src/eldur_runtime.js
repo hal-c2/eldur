@@ -6484,6 +6484,11 @@ function _buildTemplateKeys(raw) {
     var m = _meta(raw);
     var tag = String(m.createdTag || (typeof raw.eldurTag === "string" ? raw.eldurTag : "")).toLowerCase();
     var inputType = tag === "input" ? String(m.inputType || m.attrs.type || "").toLowerCase() : "";
+    // The converter keys an input with no type as the text one it is.
+    if (tag === "input" && inputType === "" && _root && _root.eldurTemplates
+        && Object.keys(_root.eldurTemplates).some(function(k) { return k.indexOf("input[type=text]") === 0; })) {
+        inputType = "text";
+    }
     var tagPart = (tag === "input" && inputType !== "") ? ("input[type=" + inputType + "]") : tag;
 
     var styled = (_root && _root.eldurStyledClasses !== undefined && _root.eldurStyledClasses !== null && typeof _root.eldurStyledClasses.length === "number")

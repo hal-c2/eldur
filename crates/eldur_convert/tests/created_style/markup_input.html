@@ -1,0 +1,8 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.c{padding:4px}input{width:100px}</style></head><body>
+<div id="host"></div>
+<script>
+var host=document.getElementById("host");
+host.innerHTML='<div class="c"><input id="i" value="v"><span id="s">t</span></div>';
+var b=document.getElementById("i").getBoundingClientRect();
+console.log("CS "+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)+" "+document.getElementById("i").value);
+</script></body></html>
