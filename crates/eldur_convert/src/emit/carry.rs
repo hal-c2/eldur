@@ -273,10 +273,19 @@ impl Emitter<'_, '_> {
                             fmt_carry(t.ceil() - t),
                             carry_text(&e)
                         ))),
-                        (Gap::Expr(_), e) => Some(Carry::Binding(format!(
-                            "Math.ceil(Layout.topMargin) - Layout.topMargin + {} + {NUDGE}",
-                            carry_text(&e)
-                        ))),
+                        // A row's cell is its whole height less the margin, to the nearest
+                        // pixel (measured), where a column's is rounded up.
+                        (Gap::Expr(_), e) => {
+                            let cell = if obj.type_name == "RowLayout" {
+                                "round"
+                            } else {
+                                "ceil"
+                            };
+                            Some(Carry::Binding(format!(
+                                "Math.{cell}(Layout.topMargin) - Layout.topMargin + {} + {NUDGE}",
+                                carry_text(&e)
+                            )))
+                        }
                     }
                 }
                 _ if last_bottom != 0.0 => None,

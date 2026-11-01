@@ -656,7 +656,10 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 self.percent_of_vh = outer_vh;
                 self.percent_of_parent = outer_of_parent;
                 self.percent_fills = outer_fills_percent;
-                if of_parent && !fills && let Some(obj) = &mut column.obj {
+                if of_parent
+                    && !fills
+                    && let Some(obj) = &mut column.obj
+                {
                     // What is left of its height stays below its items.
                     obj.push_child(Object::new("Item").prop("Layout.fillHeight", true));
                 }

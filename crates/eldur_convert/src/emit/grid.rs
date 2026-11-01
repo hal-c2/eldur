@@ -19,9 +19,9 @@ use eldur_css::{
 use eldur_qml::{Member, Object, Value};
 
 use super::flex::{Pack, pack, spacer_slots};
-use super::{Emitter, Given};
 use super::flow::{has_height, is_layout, is_viewport_relative, size_value};
 use super::units::{fmt_number, length_expr, number, round};
+use super::{Emitter, Given};
 use crate::boxes::{LayoutBox, describe, node_line};
 
 /// One axis of an item's position before auto-placement: a 0-based start
@@ -548,7 +548,9 @@ impl AxisPlan {
             return match track {
                 TrackSize::Fixed(v) => pinned(v.clone()),
                 TrackSize::Fr { min, .. } => fill(true, *min, None),
-                TrackSize::Auto { min } if !self.has_fr() && self.stretch => fill(false, *min, None),
+                TrackSize::Auto { min } if !self.has_fr() && self.stretch => {
+                    fill(false, *min, None)
+                }
                 TrackSize::Auto { min: Some(m) } => {
                     vec![(format!("Layout.minimum{dim}"), number(*m))]
                 }
@@ -932,7 +934,10 @@ impl Emitter<'_, '_> {
         let column_gap = if gap_split.is_some() { 0.0 } else { column_gap };
         let cols = AxisPlan::new(col_tracks, column_gap, true, true);
         let mut rows = AxisPlan::new(row_tracks, row_gap, definite, false);
-        rows.stretch = matches!(style.align_content, Align::Normal | Align::Auto | Align::Stretch);
+        rows.stretch = matches!(
+            style.align_content,
+            Align::Normal | Align::Auto | Align::Stretch
+        );
         // Free space `align-content` hands out; `fr` tracks leave none.
         let packed = (tall && !rows.stretch && !rows.has_fr() && placement.rows > 0)
             .then(|| pack(style.align_content, false));
@@ -1003,11 +1008,8 @@ impl Emitter<'_, '_> {
         // Qt puts row spacing before the carrier row too, so the row gap
         // becomes the top margin of what starts in a later row.
         let gap_margins = (carrier_row || row_slots.is_some()) && row_gap > 0.0;
-        let explicit = !trivial
-            || !placeholders.is_empty()
-            || filler_col
-            || filler_row
-            || row_slots.is_some();
+        let explicit =
+            !trivial || !placeholders.is_empty() || filler_col || filler_row || row_slots.is_some();
 
         let mut grid = Object::new("GridLayout");
         grid.set(
@@ -1039,8 +1041,8 @@ impl Emitter<'_, '_> {
                 && !tall
                 && style.grid_template_rows.is_empty()
                 && style.grid_auto_rows.is_empty();
-            let pinned_track = p.row_span == 1
-                && matches!(rows.tracks.get(p.row), Some(TrackSize::Fixed(_)));
+            let pinned_track =
+                p.row_span == 1 && matches!(rows.tracks.get(p.row), Some(TrackSize::Fixed(_)));
             self.child_given = if !stretches || single_content_row {
                 Given::Content
             } else if definite || pinned_track {
@@ -1224,7 +1226,9 @@ impl Emitter<'_, '_> {
             || !rows.tracks.iter().all(|t| {
                 matches!(
                     t,
-                    TrackSize::Auto { .. } | TrackSize::Fr { .. } | TrackSize::Fixed(Value::Number(_))
+                    TrackSize::Auto { .. }
+                        | TrackSize::Fr { .. }
+                        | TrackSize::Fixed(Value::Number(_))
                 )
             })
         {

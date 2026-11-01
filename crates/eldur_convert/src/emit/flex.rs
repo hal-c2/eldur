@@ -22,9 +22,9 @@ use eldur_css::{
 };
 use eldur_qml::{Member, Object, Value};
 
-use super::{Emitter, Given};
 use super::flow::{is_layout, is_viewport_relative, size_value};
 use super::units::{fmt_number, length_expr, number, px_part, round};
+use super::{Emitter, Given};
 use crate::boxes::{BoxKind, LayoutBox, describe, node_line};
 
 /// The stretch factor of growing items against spacers of factor 1: the

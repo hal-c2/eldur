@@ -63,6 +63,9 @@ const OVERFLOW: &str = "a `height: 100%` item with a sibling takes what the sibl
 const BLOCK_IN_LINE: &str = "an inline control a script makes `display: block` stays on its line: \
     a line of text is one item, which it can't split";
 
+const LAYOUT_UNIT: &str = "Chromium's heights are in 1/64 px, so a 22.6px line is a little less: \
+    twelve rows in, a top near a half rounds down there and up here";
+
 const ROW_TOPS: &str = "a collapsed table starts half its border in, on Chromium's rounded \
     rows 0.5px higher than ours, so every other row's top rounds 1px apart";
 
@@ -72,6 +75,12 @@ const COLLAPSED_COLUMNS: &str = "a collapsed table's cells start on whole pixels
 /// `(page, Chromium's line, ours, why)`: what is known to differ, in full, so a
 /// changed difference and one that went away both fail.
 const KNOWN: &[(&str, &str, &str, &str)] = &[
+    (
+        "row_fractions",
+        "CS 0 r2:43 r3:85 r4:128 p1:170 c1:180 p2:213 c2:223 p3:256 c3:266 p4:298 c4:308 p5:341 c5:351 p6:383 c6:393 n1:426 m1:426 n2:449 m2:449 n3:471 m3:471 n4:494 m4:494 n5:516 m5:516 n6:539 m6:539 n7:562 m7:562 n8:584 m8:584 n9:607 m9:607 n10:629 m10:629 n11:652 m11:652 n12:674 m12:674 after:697",
+        "CS 0 r2:43 r3:85 r4:128 p1:170 c1:180 p2:213 c2:223 p3:256 c3:266 p4:298 c4:308 p5:341 c5:351 p6:383 c6:393 n1:426 m1:426 n2:449 m2:449 n3:471 m3:471 n4:494 m4:494 n5:516 m5:516 n6:539 m6:539 n7:562 m7:562 n8:584 m8:584 n9:607 m9:607 n10:629 m10:629 n11:652 m11:652 n12:675 m12:675 after:697",
+        LAYOUT_UNIT,
+    ),
     (
         "stretch_flex",
         "CS c6:500,0,100,150 c6a:500,0,100,150 c6b:500,150,100,18",

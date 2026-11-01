@@ -764,7 +764,10 @@ impl Emitter<'_, '_> {
                     obj.set("Layout.preferredHeight", 0.0);
                     obj.set("Layout.fillHeight", true);
                 } else {
-                    let h = format!("parent.height * {}", fmt_number(f64::from(l.percent) / 100.0));
+                    let h = format!(
+                        "parent.height * {}",
+                        fmt_number(f64::from(l.percent) / 100.0)
+                    );
                     obj.set("Layout.preferredHeight", Value::expr(h.clone()));
                     obj.set("Layout.minimumHeight", Value::expr(h));
                 }
