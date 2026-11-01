@@ -229,3 +229,8 @@ fn inline_box() {
 fn inline_children() {
     page("inline_children");
 }
+
+#[test]
+fn hidden_items() {
+    page("hidden_items");
+}

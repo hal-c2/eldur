@@ -128,6 +128,8 @@ pub(crate) struct Emitter<'a, 'd> {
     /// The runtime resolves some element from the page's rules, and reads what
     /// each element's markup says about itself.
     pub open_elements: bool,
+    /// A script writes inline styles or `hidden`, so any item can leave its layout.
+    pub hides_items: bool,
     /// The page holds the rule table: the runtime computes styles of its own.
     pub cascade_rules: bool,
     /// The boxes a script may put block children in.
@@ -214,6 +216,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             images: BTreeMap::new(),
             runtime_dom: false,
             open_elements: false,
+            hides_items: false,
             cascade_rules: false,
             gains: HashSet::new(),
             live_tables: HashSet::new(),

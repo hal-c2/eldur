@@ -38,7 +38,7 @@ ApplicationWindow {
         for (let i = 0; i < cells.length; ++i) {
             const cell = cells[i]
             const slot = cell.tableSlot
-            if (!slot)
+            if (!slot || cell.visible === false)
                 continue
             if (slot[3] > 1) {
                 spanning.push(cell)

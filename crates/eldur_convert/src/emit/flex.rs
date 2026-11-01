@@ -296,13 +296,37 @@ impl Emitter<'_, '_> {
             }
             item
         };
+        let mut may_lead = self.hides_items;
+        let mut lead_follows = false;
+        let mut spacers_at = Vec::new();
         for (i, child) in items.iter().enumerate() {
             for _ in 0..slots[i] {
                 layout.push_child(spacer());
+                spacers_at.push(layout.members.len() - 1);
             }
             let mut obj = self.item(child, decoration).obj;
             let lead_gap = if spacers && i > 0 { gap } else { 0.0 };
             self.flex_item(&mut obj, child, style, axis, unequal_grow, lead_gap);
+            // The gap is between items in the layout: `display: none` is not one.
+            if lead_gap != 0.0 && may_lead {
+                lead_follows = true;
+                let name = axis.lead_margin();
+                let (with, without) = match obj.get(name) {
+                    Some(Value::Number(v)) => (fmt_number(*v), fmt_number(*v - round(gap))),
+                    Some(v) => (
+                        value_text(v),
+                        format!("{} - {}", value_text(v), fmt_number(round(gap))),
+                    ),
+                    None => (fmt_number(round(gap)), "0".to_owned()),
+                };
+                obj.set(
+                    name,
+                    Value::expr(format!(
+                        "parent && parent.eldurLeads ? (parent.eldurLeads(this) ? {with} : {without}) : {without}"
+                    )),
+                );
+            }
+            may_lead |= obj.get("visible").is_some();
             if capped && child.style.flex_grow > 0.0 {
                 obj.set(stretch, CAPPED_STRETCH);
             }
@@ -317,6 +341,33 @@ impl Emitter<'_, '_> {
         }
         for _ in 0..slots[n] {
             layout.push_child(spacer());
+            spacers_at.push(layout.members.len() - 1);
+        }
+        if lead_follows {
+            for at in spacers_at {
+                if let Member::Child(item) = &mut layout.members[at] {
+                    item.members.push(Member::PropertyDecl {
+                        ty: "bool".to_owned(),
+                        name: "eldurSpacer".to_owned(),
+                        value: Some(Value::Bool(true)),
+                        readonly: true,
+                        required: false,
+                    });
+                }
+            }
+            layout.members.push(Member::Function {
+                name: "eldurLeads".to_owned(),
+                params: vec!["item".to_owned()],
+                body: [
+                    "for (const kid of children) {",
+                    "    if (kid === item) return false",
+                    "    if (kid.visible && !kid.eldurSpacer) return true",
+                    "}",
+                    "return false",
+                ]
+                .map(str::to_owned)
+                .to_vec(),
+            });
         }
         if !row {
             self.carry(&mut layout);

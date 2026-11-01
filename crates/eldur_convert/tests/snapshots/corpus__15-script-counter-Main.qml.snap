@@ -176,7 +176,17 @@ ApplicationWindow {
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
                                 Layout.topMargin: 24 - count.eldurCarry
 
+                                function eldurLeads(item) {
+                                    for (const kid of children) {
+                                        if (kid === item) return false
+                                        if (kid.visible && !kid.eldurSpacer) return true
+                                    }
+                                    return false
+                                }
+
                                 Item {
+                                    readonly property bool eldurSpacer: true
+
                                     Layout.fillWidth: true
                                 }
 
@@ -263,7 +273,7 @@ ApplicationWindow {
                                     Layout.maximumWidth: Math.max(Math.ceil(implicitWidth), 64)
                                     Layout.minimumWidth: 64
                                     Layout.fillHeight: true
-                                    Layout.leftMargin: 12
+                                    Layout.leftMargin: parent && parent.eldurLeads ? (parent.eldurLeads(this) ? 12 : 0) : 0
                                     hoverEnabled: true
 
                                     onClicked: {
@@ -309,7 +319,7 @@ ApplicationWindow {
                                     Layout.maximumWidth: Math.max(Math.ceil(implicitWidth), 64)
                                     Layout.minimumWidth: 64
                                     Layout.fillHeight: true
-                                    Layout.leftMargin: 12
+                                    Layout.leftMargin: parent && parent.eldurLeads ? (parent.eldurLeads(this) ? 12 : 0) : 0
                                     hoverEnabled: true
 
                                     onClicked: {
@@ -318,6 +328,8 @@ ApplicationWindow {
                                 }
 
                                 Item {
+                                    readonly property bool eldurSpacer: true
+
                                     Layout.fillWidth: true
                                 }
                             }
@@ -436,6 +448,14 @@ ApplicationWindow {
                                 Layout.topMargin: 24
                                 Layout.bottomMargin: details.visible ? 0 : 16
 
+                                function eldurLeads(item) {
+                                    for (const kid of children) {
+                                        if (kid === item) return false
+                                        if (kid.visible && !kid.eldurSpacer) return true
+                                    }
+                                    return false
+                                }
+
                                 // <input id="details-toggle">
                                 CheckBox {
                                     id: detailsToggle
@@ -494,11 +514,13 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.alignment: Qt.AlignVCenter
-                                    Layout.leftMargin: 8
+                                    Layout.leftMargin: parent && parent.eldurLeads ? (parent.eldurLeads(this) ? 8 : 0) : 0
                                     renderType: Text.NativeRendering
                                 }
 
                                 Item {
+                                    readonly property bool eldurSpacer: true
+
                                     Layout.fillWidth: true
                                 }
 

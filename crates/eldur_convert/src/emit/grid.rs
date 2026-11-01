@@ -958,9 +958,21 @@ impl Emitter<'_, '_> {
             "rowSpacing",
             number(if gap_margins { 0.0 } else { row_gap }),
         );
+        // Only a plain run of same-sized cells can follow its items out of the
+        // layout: spans and other tracks would change more than the cell.
+        let flows = explicit
+            && placeholders.is_empty()
+            && !gap_margins
+            && gap_split.is_none()
+            && (1..placement.cols).all(|c| cols.props(c, 1, true) == cols.props(0, 1, true))
+            && placement.items.iter().enumerate().all(|(i, p)| {
+                p.row_span == 1 && p.col_span == 1 && p.row * placement.cols + p.col == i
+            });
+        let mut cell_follows = false;
         for (child, p) in items.iter().zip(&placement.items) {
             let mut obj = self.item(child, decoration).obj;
             self.grid_item(&mut obj, child, style, p, &cols, &rows, explicit);
+            cell_follows |= flows && (self.hides_items || obj.get("visible").is_some());
             if gap_margins && p.row > 0 {
                 add_margin(&mut obj, "Layout.topMargin", row_gap);
             }
@@ -978,6 +990,41 @@ impl Emitter<'_, '_> {
                 grid.members.push(Member::Comment(describe(self.doc, node)));
             }
             grid.push_child(obj);
+        }
+        if cell_follows {
+            let across = placement.cols;
+            for obj in grid.members.iter_mut().filter_map(|m| match m {
+                Member::Child(o) => Some(o),
+                _ => None,
+            }) {
+                obj.set(
+                    "Layout.row",
+                    Value::expr(format!(
+                        "parent && parent.eldurCell ? Math.floor(parent.eldurCell(this) / {across}) : 0"
+                    )),
+                );
+                obj.set(
+                    "Layout.column",
+                    Value::expr(format!(
+                        "parent && parent.eldurCell ? parent.eldurCell(this) % {across} : 0"
+                    )),
+                );
+            }
+            grid.members.push(Member::Function {
+                name: "eldurCell".to_owned(),
+                params: vec!["item".to_owned()],
+                body: [
+                    "// `display: none` takes no cell (CSS Grid 2 §8).",
+                    "let cell = 0",
+                    "for (const kid of children) {",
+                    "    if (kid === item) break",
+                    "    if (kid.visible) ++cell",
+                    "}",
+                    "return cell",
+                ]
+                .map(str::to_owned)
+                .to_vec(),
+            });
         }
         for (r, c, size_col, size_row) in placeholders {
             let mut ph = Object::new("Item");
