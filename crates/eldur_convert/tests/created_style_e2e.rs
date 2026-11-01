@@ -249,3 +249,8 @@ fn span_line_height() {
 fn moved_fixed() {
     page("moved_fixed");
 }
+
+#[test]
+fn created_rows() {
+    page("created_rows");
+}

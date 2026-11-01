@@ -1394,6 +1394,7 @@ fn default_value(ty: &str, prop: &str) -> Option<Value> {
         | "font.letterSpacing" | "font.wordSpacing" | "topLeftRadius" | "topRightRadius"
         | "bottomLeftRadius" | "bottomRightRadius" => n(0.0),
         "font.weight" => n(400.0),
+        "horizontalAlignment" => Some(Value::expr("Text.AlignLeft")),
         "offset" if ty == "RectangularShadow" => Some(Value::expr("Qt.vector2d(0, 0)")),
         p if p.starts_with("anchors.") && p.ends_with("Margin") => n(0.0),
         p if p.starts_with("Layout.") && p.ends_with("Margin") => n(0.0),

@@ -29,8 +29,6 @@ const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 const GEOMETRY_TOLERANCE: f64 = 2.0;
 
 const COMPACT: &str = "a right-aligned row: its buttons are whole pixels wider (see BUTTONWIDTH), which would start this one 2px left; not confirmed";
-const ROWS: &str =
-    "table rows are whole pixels: 33 against Chromium's 32.59, adding up down the table";
 const BUTTONWIDTH: &str = "a button's width is whole pixels (`Math.ceil` in emit/controls.rs): \
                            five on a line add up to 2.2px against Chromium's fractions";
 const SPANSCAN: &str = "a wrapped span's box comes from scanning its Text in half-font steps, so its height lands on a step: 56 for Chromium's 53";
@@ -59,10 +57,6 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("cards", "* #cart[*] x:", FONT),
     ("cards", "* #cart[*] width:", FONT),
     ("theme", "* body[*] text:", NEVER_SCRIPT),
-    ("table", "* #people[*] height:", ROWS),
-    ("table", "* #summary[*] y:", ROWS),
-    ("table", "* td[*] y:", ROWS),
-    ("table", "* tr[*] y:", ROWS),
     ("form", "* #done[*] y:", CONTROLROW),
     ("hidden_lines", "* #s4[*] width:", HANGING),
     ("lines_closed", "* #sp[*] height:", SPANSCAN),

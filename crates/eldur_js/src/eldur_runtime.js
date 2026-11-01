@@ -2205,6 +2205,18 @@ function _tableSpacing(host) {
     return [parts[0], parts.length > 1 ? parts[1] : parts[0]];
 }
 
+function _tableCollapses(host) {
+    if (host.eldurOuterEdge > 0) {
+        return true;
+    }
+    var styles = _meta(host).styles || {};
+    var written = styles.borderCollapse || styles["border-collapse"];
+    if (written === undefined && _gHasCascade()) {
+        written = _gComputed(host, "border-collapse");
+    }
+    return String(written).trim() === "collapse";
+}
+
 // A cell's CSS width is a floor on its column, as its text is.
 function _tableCellWidth(item, exact) {
     var wanted = exact ? item.implicitWidth : Math.ceil(item.implicitWidth);
@@ -2453,16 +2465,29 @@ function _tablePlaceAll(host, live) {
     rows.forEach(function(row, r) {
         zeros[r] = row.item.eldurMinHeight || 0;
     });
+    // Collapsed, a cell made from a template shares its top border with the row
+    // above. It has all four of its own, where a static cell paints the sides it won.
+    var collapsed = _tableCollapses(host);
+    var shared = function(c) {
+        return collapsed && c.row > 0 && c.item.eldurTemplate !== undefined && c.item.border
+            ? c.item.border.width : 0;
+    };
     var heights = rows.length > 0
-        ? _root.tableRowHeights({ children: measure(), rowSpacing: spacing[1] }, zeros)
+        ? _root.tableRowHeights({
+            children: measure().map(function(a, i) {
+                return Object.assign({}, a, { implicitHeight: a.implicitHeight - shared(placed.cells[i]) });
+            }),
+            rowSpacing: spacing[1]
+        }, zeros)
         : [];
     placed.cells.forEach(function(c) {
         var sum = spacing[1] * (c.rowSpan - 1);
         for (var k = c.row; k < c.row + c.rowSpan; ++k) {
             sum += heights[k];
         }
-        c.item.y = 0;
-        c.item.height = sum;
+        var over = shared(c);
+        c.item.y = -over;
+        c.item.height = sum + over;
     });
     rows.forEach(function(row, r) {
         row.item.implicitWidth = total;
