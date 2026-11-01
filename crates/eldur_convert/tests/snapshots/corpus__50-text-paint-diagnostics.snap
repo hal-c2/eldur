@@ -1,0 +1,6 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+warning[css]: <style>#1:22: unsupported pseudo-element `::first-line`
+warning[css]: index.html:41: `rotateY(30deg) translateZ(10px)` on <div id="x-3d" class="box"> is flattened to the plane: it has no depth here, and what it overlaps stays in document order

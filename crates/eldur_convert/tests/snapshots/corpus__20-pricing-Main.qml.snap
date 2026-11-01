@@ -228,13 +228,60 @@ ApplicationWindow {
                                                 bottomPadding: 0
                                                 leftPadding: 22
                                                 implicitHeight: 40
-                                                contentItem: Text {
-                                                    text: buttonControl2.text
-                                                    font: buttonControl2.font
-                                                    color: buttonControl2.palette.buttonText
-                                                    horizontalAlignment: Text.AlignHCenter
-                                                    verticalAlignment: Text.AlignVCenter
-                                                    renderType: Text.NativeRendering
+                                                contentItem: Item {
+                                                    implicitWidth: Math.ceil(toggleBtnFlow.implicitWidth)
+                                                    implicitHeight: toggleBtnFlow.implicitHeight
+
+                                                    EldurLines {
+                                                        id: toggleBtnFlow
+                                                        color: "#64748b"
+                                                        font.family: "sans-serif"
+                                                        font.pixelSize: 15
+                                                        font.weight: 600
+                                                        textAlign: Text.AlignHCenter
+                                                        width: parent.width
+                                                        y: Math.round((parent.height - height) / 2)
+
+                                                        Text {
+                                                            text: "Yearly "
+                                                            textFormat: Text.PlainText
+                                                            color: buttonControl2.palette.buttonText
+                                                            font.family: "sans-serif"
+                                                            font.pixelSize: 15
+                                                            font.weight: 600
+                                                            wrapMode: Text.WordWrap
+                                                            renderType: Text.NativeRendering
+                                                        }
+
+                                                        Text {
+                                                            id: inlineRun
+                                                            readonly property real eldurMarginRight: 8
+                                                            readonly property real eldurMarginLeft: 14
+                                                            property var eldurFragments: []
+
+                                                            text: "Save 20%"
+                                                            textFormat: Text.PlainText
+                                                            color: "#166534"
+                                                            font.family: "sans-serif"
+                                                            font.pixelSize: 12
+                                                            font.weight: 600
+                                                            wrapMode: Text.WordWrap
+                                                            renderType: Text.NativeRendering
+
+                                                            EldurInlineBox {
+                                                                fragments: inlineRun.eldurFragments
+                                                                font.family: "sans-serif"
+                                                                font.pixelSize: 12
+                                                                font.weight: 600
+                                                                fill: "#dcfce7"
+                                                                radii: [999, 999, 999, 999]
+                                                                paddingTop: 2
+                                                                paddingBottom: 2
+                                                                reachLeft: 8
+                                                                reachRight: 8
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                                 implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0133333) + leftPadding + rightPadding
                                                 Layout.fillWidth: true

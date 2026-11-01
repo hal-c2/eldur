@@ -1,0 +1,54 @@
+[
+  {
+    "selector": "#square",
+    "max_mismatch": 0.005
+  },
+  {
+    "selector": "#bordered",
+    "max_mismatch": 0.005
+  },
+  {
+    "selector": "#uneven",
+    "max_mismatch": 0.005
+  },
+  {
+    "selector": "#circle",
+    "max_mismatch": 0.005
+  },
+  {
+    "selector": "#plain"
+  },
+  {
+    "selector": "#i-round",
+    "max_mismatch": 0.005
+  },
+  {
+    "selector": "#i-circle",
+    "max_mismatch": 0.005
+  },
+  {
+    "selector": "#i-cover"
+  },
+  {
+    "selector": "#i-contain"
+  },
+  {
+    "selector": "#i-none"
+  },
+  {
+    "selector": "#i-down"
+  },
+  {
+    "selector": "#i-pos"
+  },
+  {
+    "selector": "#i-pos2"
+  },
+  {
+    "selector": "#i-posc"
+  },
+  {
+    "selector": "#i-rcover",
+    "max_mismatch": 0.005
+  }
+]

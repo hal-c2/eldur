@@ -11,11 +11,18 @@
 //! bindings on the shape's `width`/`height`. Everything that is linear in
 //! those is kept as a [`Lin`].
 
-use eldur_css::{BackgroundSize, ColorStop, ComputedStyle, Image, LengthPercentage};
+use eldur_css::{
+    BackgroundAttachment, BackgroundClip, BackgroundLayer, BackgroundOrigin, BackgroundRepeat,
+    BackgroundSize, ColorStop, ComputedStyle, Image, Length, LengthAuto, LengthPercentage,
+    ObjectFit,
+};
 use eldur_qml::{Object, Value};
 
 use super::Emitter;
+use super::decoration::{Insets, border_width, is_visible, set_radii, sides};
 use super::units::{color, fmt_number};
+
+pub(crate) const ELDUR_BACKGROUND_LAYER_QML: &str = include_str!("EldurBackgroundLayer.qml");
 
 /// `w * width + h * height + k`, a coordinate or length on a box whose size
 /// is only known at run time.
@@ -237,7 +244,248 @@ fn snap(v: f64) -> f64 {
     }
 }
 
+/// A length's px, with its viewport units, and its percentage.
+fn linear_parts(l: Option<&LengthPercentage>, viewport: (f32, f32)) -> (f32, f32) {
+    l.map_or((0.0, 0.0), |l| {
+        (
+            l.px + l.vw * viewport.0 / 100.0 + l.vh * viewport.1 / 100.0,
+            l.percent,
+        )
+    })
+}
+
+/// Whether a gradient layer is the whole box: then it takes one `Shape` with
+/// the box's corners and no texture.
+fn fills_the_box(style: &ComputedStyle, layer: &BackgroundLayer) -> bool {
+    layer.size == BackgroundSize::Auto
+        && layer.position_x.is_zero()
+        && layer.position_y.is_zero()
+        && matches!(layer.repeat, BackgroundRepeat::Repeat | BackgroundRepeat::NoRepeat)
+        && layer.clip == BackgroundClip::BorderBox
+        && layer.attachment != BackgroundAttachment::Fixed
+        // The gradient spans the padding box, so a border needs it placed.
+        && (layer.origin == BackgroundOrigin::BorderBox
+            || (layer.origin == BackgroundOrigin::PaddingBox
+                && sides(style).iter().all(|s| !is_visible(s))))
+}
+
 impl Emitter<'_, '_> {
+    /// Distances from the border box in to the padding and content boxes.
+    fn background_box_insets(
+        &mut self,
+        style: &ComputedStyle,
+        line: Option<u32>,
+    ) -> (Insets, Insets) {
+        let content = self.insets(style, line);
+        let padding = Insets {
+            top: border_width(&style.border.top),
+            right: border_width(&style.border.right),
+            bottom: border_width(&style.border.bottom),
+            left: border_width(&style.border.left),
+        };
+        (padding, content)
+    }
+
+    /// An `<img>` as a layer: the replaced content is a no-repeat tile in
+    /// the content box, `object-fit` its size and `object-position` its place.
+    pub(super) fn image_layer(
+        &mut self,
+        style: &ComputedStyle,
+        source: &str,
+        hint: &str,
+        line: Option<u32>,
+    ) -> Object {
+        let (size, scale_down) = match style.object_fit {
+            ObjectFit::Fill => (
+                BackgroundSize::Explicit(
+                    LengthAuto::Length(Length::Linear(LengthPercentage::percent(100.0))),
+                    LengthAuto::Length(Length::Linear(LengthPercentage::percent(100.0))),
+                ),
+                false,
+            ),
+            ObjectFit::Contain => (BackgroundSize::Contain, false),
+            ObjectFit::Cover => (BackgroundSize::Cover, false),
+            ObjectFit::None => (BackgroundSize::Auto, false),
+            ObjectFit::ScaleDown => (BackgroundSize::Contain, true),
+        };
+        let layer = BackgroundLayer {
+            image: None,
+            size,
+            position_x: style.object_position_x,
+            position_y: style.object_position_y,
+            repeat: BackgroundRepeat::NoRepeat,
+            origin: BackgroundOrigin::ContentBox,
+            clip: BackgroundClip::ContentBox,
+            attachment: BackgroundAttachment::Scroll,
+        };
+        let mut item = self.background_layer(style, &layer, hint, Some(source), None, line);
+        if scale_down {
+            item.set("sizing", Value::Number(4.0));
+        }
+        item
+    }
+
+    /// An `EldurBackgroundLayer` holding an image file or a gradient tile.
+    fn background_layer(
+        &mut self,
+        style: &ComputedStyle,
+        layer: &BackgroundLayer,
+        hint: &str,
+        source: Option<&str>,
+        gradient: Option<Object>,
+        line: Option<u32>,
+    ) -> Object {
+        self.imports.insert("QtQuick.Shapes");
+        let (padding, content) = self.background_box_insets(style, line);
+        let none = Insets {
+            top: 0.0,
+            right: 0.0,
+            bottom: 0.0,
+            left: 0.0,
+        };
+        let clip = match layer.clip {
+            BackgroundClip::BorderBox => none,
+            BackgroundClip::PaddingBox => padding,
+            BackgroundClip::ContentBox => content,
+            BackgroundClip::Text => {
+                self.diags.warning(
+                    "css",
+                    line,
+                    "`background-clip: text` is not converted; the layer fills the box behind the text"
+                        .to_owned(),
+                );
+                none
+            }
+        };
+        let origin = match layer.origin {
+            BackgroundOrigin::BorderBox => none,
+            BackgroundOrigin::PaddingBox => padding,
+            BackgroundOrigin::ContentBox => content,
+        };
+        let id = self.ids.claim(&format!("{hint} background"));
+        let mut item = Object::new("EldurBackgroundLayer").with_id(id);
+        item.set("anchors.fill", Value::expr("parent"));
+        for (name, v) in [
+            ("anchors.topMargin", clip.top),
+            ("anchors.rightMargin", clip.right),
+            ("anchors.bottomMargin", clip.bottom),
+            ("anchors.leftMargin", clip.left),
+            ("areaTop", origin.top - clip.top),
+            ("areaRight", origin.right - clip.right),
+            ("areaBottom", origin.bottom - clip.bottom),
+            ("areaLeft", origin.left - clip.left),
+        ] {
+            if v != 0.0 {
+                item.set(name, Value::Number(f64::from(v)));
+            }
+        }
+        match layer.attachment {
+            BackgroundAttachment::Fixed => {
+                item.set("fixedToWindow", true);
+                self.diags.info(
+                    "css",
+                    line,
+                    "`background-attachment: fixed` is placed against the window once; it does not follow scrolling"
+                        .to_owned(),
+                );
+            }
+            BackgroundAttachment::Local => {
+                self.diags.info(
+                    "css",
+                    line,
+                    "`background-attachment: local` is drawn as `scroll`".to_owned(),
+                );
+            }
+            BackgroundAttachment::Scroll => {}
+        }
+        let viewport = self.viewport();
+        match &layer.size {
+            BackgroundSize::Auto => {}
+            BackgroundSize::Cover => {
+                item.set("sizing", Value::Number(1.0));
+            }
+            BackgroundSize::Contain => {
+                item.set("sizing", Value::Number(2.0));
+            }
+            BackgroundSize::Explicit(w, h) => {
+                item.set("sizing", Value::Number(3.0));
+                for (l, px, percent) in [
+                    (w, "sizeWidth", "sizeWidthPercent"),
+                    (h, "sizeHeight", "sizeHeightPercent"),
+                ] {
+                    if let LengthAuto::Length(l) = l {
+                        let (k, frac) = linear_parts(
+                            match l {
+                                Length::Linear(l) => Some(l),
+                                _ => None,
+                            },
+                            viewport,
+                        );
+                        item.set(px, Value::Number(f64::from(k)));
+                        if frac != 0.0 {
+                            item.set(percent, Value::Number(f64::from(frac)));
+                        }
+                    }
+                }
+            }
+        }
+        for (l, px, percent) in [
+            (&layer.position_x, "positionX", "positionXPercent"),
+            (&layer.position_y, "positionY", "positionYPercent"),
+        ] {
+            let (k, frac) = linear_parts(Some(l), viewport);
+            if k != 0.0 {
+                item.set(px, Value::Number(f64::from(k)));
+            }
+            if frac != 0.0 {
+                item.set(percent, Value::Number(f64::from(frac)));
+            }
+        }
+        let (repeat_x, repeat_y) = match layer.repeat {
+            BackgroundRepeat::Repeat | BackgroundRepeat::Space | BackgroundRepeat::Round => {
+                (true, true)
+            }
+            BackgroundRepeat::RepeatX => (true, false),
+            BackgroundRepeat::RepeatY => (false, true),
+            BackgroundRepeat::NoRepeat => (false, false),
+        };
+        if !repeat_x {
+            item.set("repeatX", false);
+        }
+        if !repeat_y {
+            item.set("repeatY", false);
+        }
+        match layer.repeat {
+            BackgroundRepeat::Space => {
+                item.set("spaced", true);
+            }
+            BackgroundRepeat::Round => {
+                item.set("rounded", true);
+            }
+            _ => {}
+        }
+        // The corners of the clip box are the outer ones less what it is in by.
+        let radii = self.corner_radii(style, line);
+        let less = |r: f32, a: f32, b: f32| (r - a.max(b)).max(0.0);
+        set_radii(
+            &mut item,
+            [
+                less(radii[0], clip.top, clip.left),
+                less(radii[1], clip.top, clip.right),
+                less(radii[2], clip.bottom, clip.right),
+                less(radii[3], clip.bottom, clip.left),
+            ],
+        );
+        if let Some(source) = source {
+            item.set("source", Value::string(source));
+        }
+        if let Some(gradient) = gradient {
+            item.set("isGradient", true);
+            item.push_child(gradient);
+        }
+        item
+    }
+
     /// One `Shape` per gradient layer, bottom layer first, each filling the
     /// box. `hint` names the shapes' ids.
     pub(super) fn gradient_layers(
@@ -267,16 +515,7 @@ impl Emitter<'_, '_> {
                     center_y,
                     stops,
                     repeating,
-                } => {
-                    if *repeating {
-                        self.diags.info(
-                            "css",
-                            line,
-                            "`repeating-radial-gradient()` is drawn without repeating".to_owned(),
-                        );
-                    }
-                    Fill::Radial(*circle, center_x, center_y, stops)
-                }
+                } => Fill::Radial(*circle, center_x, center_y, stops, *repeating),
                 Image::ConicGradient {
                     from_deg,
                     center_x,
@@ -284,21 +523,26 @@ impl Emitter<'_, '_> {
                     stops,
                 } => Fill::Conic(*from_deg, center_x, center_y, stops),
                 Image::Url(url) => {
-                    self.diags.warning(
-                        "css",
+                    let Some(source) = self.background_images.get(url).cloned() else {
+                        self.diags.warning(
+                            "css",
+                            line,
+                            format!("background image `{url}` was not found; it paints nothing"),
+                        );
+                        continue;
+                    };
+                    shapes.push(self.background_layer(
+                        style,
+                        layer,
+                        hint,
+                        Some(&source),
+                        None,
                         line,
-                        format!("background image `url({url})` is not converted yet"),
-                    );
+                    ));
                     continue;
                 }
             };
-            if layer.size != BackgroundSize::Auto {
-                self.diags.info(
-                    "css",
-                    line,
-                    "`background-size` on a gradient is not converted; it fills the box".to_owned(),
-                );
-            }
+            let plain = fills_the_box(style, layer);
             self.imports.insert("QtQuick.Shapes");
             let id = self.ids.claim(&format!("{hint} gradient"));
             let mut path = Object::new("ShapePath");
@@ -316,8 +560,8 @@ impl Emitter<'_, '_> {
                     let g = self.conic(&id, from, cx, cy, stops);
                     path.set("fillGradient", Value::Object(Box::new(g)));
                 }
-                Fill::Radial(circle, cx, cy, stops) => {
-                    let (g, transform) = self.radial(&id, circle, cx, cy, stops, line);
+                Fill::Radial(circle, cx, cy, stops, repeating) => {
+                    let (g, transform) = self.radial(&id, circle, cx, cy, stops, repeating, line);
                     if let Some(t) = transform {
                         path.set("fillTransform", Value::expr(t));
                     }
@@ -327,12 +571,18 @@ impl Emitter<'_, '_> {
             let mut rect = Object::new("PathRectangle");
             rect.set("width", Value::expr(format!("{id}.width")));
             rect.set("height", Value::expr(format!("{id}.height")));
-            self.radius(&mut rect, style, line);
+            if plain {
+                self.radius(&mut rect, style, line);
+            }
             path.push_child(rect);
             let mut shape = Object::new("Shape").with_id(id);
             shape.set("anchors.fill", Value::expr("parent"));
             shape.push_child(path);
-            shapes.push(shape);
+            if plain {
+                shapes.push(shape);
+            } else {
+                shapes.push(self.background_layer(style, layer, hint, None, Some(shape), line));
+            }
         }
         shapes
     }
@@ -515,6 +765,7 @@ impl Emitter<'_, '_> {
 
     /// A radial gradient sized `farthest-corner` (the only size the style
     /// keeps); an ellipse is a circle scaled by `fillTransform`.
+    #[allow(clippy::too_many_arguments)]
     fn radial(
         &mut self,
         id: &str,
@@ -522,6 +773,7 @@ impl Emitter<'_, '_> {
         cx: &LengthPercentage,
         cy: &LengthPercentage,
         stops: &[ColorStop],
+        repeating: bool,
         line: Option<u32>,
     ) -> (Object, Option<String>) {
         let (vw, vh) = self.viewport();
@@ -565,6 +817,50 @@ impl Emitter<'_, '_> {
         g.set("focalX", x.value(id));
         g.set("focalY", y.value(id));
         let positions = fixup_stops(stops, (vw, vh));
+        if repeating {
+            // One period runs from the first stop's circle to the last's.
+            let at = |p: StopPos| {
+                format!(
+                    "{} + {} * ({radius})",
+                    fmt_number(round4(p.px)),
+                    fmt_number(round4(p.frac))
+                )
+            };
+            let first = positions.first().copied().unwrap_or_default();
+            let last = positions.last().copied().unwrap_or_default();
+            let (inner, outer) = (at(first), at(last));
+            g.set(
+                "centerRadius",
+                Value::expr(format!("Math.max(0.01, {outer})")),
+            );
+            g.set("focalRadius", Value::expr(inner.clone()));
+            g.set("spread", Value::expr("ShapeGradient.RepeatSpread"));
+            let span = |p: StopPos| (p.px - first.px, p.frac - first.frac);
+            let (span_px, span_frac) = span(last);
+            let mut values: Vec<Value> = positions
+                .iter()
+                .map(|p| {
+                    let (px, frac) = span(*p);
+                    // Lengths alone or fractions alone have a ratio known
+                    // now, and a number keeps hard stops apart.
+                    if span_frac == 0.0 && frac == 0.0 && span_px > 0.0 {
+                        Value::Number(round4(px / span_px))
+                    } else if span_px == 0.0 && px == 0.0 && span_frac > 0.0 {
+                        Value::Number(round4(frac / span_frac))
+                    } else {
+                        Value::expr(format!(
+                            "Math.max(0, Math.min(1, ({} - ({inner})) / Math.max(0.01, ({outer}) - ({inner}))))",
+                            at(*p)
+                        ))
+                    }
+                })
+                .collect();
+            separate(&mut values);
+            for (stop, position) in stops.iter().zip(values) {
+                g.push_child(gradient_stop(position, stop));
+            }
+            return (g, transform);
+        }
         let mut lossy = false;
         let mut values = Vec::with_capacity(stops.len());
         for p in &positions {
@@ -614,6 +910,7 @@ enum Fill<'s> {
         &'s LengthPercentage,
         &'s LengthPercentage,
         &'s [ColorStop],
+        bool,
     ),
 }
 

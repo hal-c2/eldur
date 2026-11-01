@@ -1,0 +1,46 @@
+[
+  {
+    "selector": "#r-group",
+    "pad": 24
+  },
+  {
+    "selector": "#r-gray",
+    "pad": 24
+  },
+  {
+    "selector": "#r-chain",
+    "pad": 24
+  },
+  {
+    "selector": "#r-blur",
+    "pad": 24
+  },
+  {
+    "selector": "#r-drop",
+    "pad": 24
+  },
+  {
+    "selector": "#r-fade",
+    "pad": 24
+  },
+  {
+    "selector": "#r-shadow",
+    "pad": 24
+  },
+  {
+    "selector": "#r-spread",
+    "pad": 24
+  },
+  {
+    "selector": "#r-many",
+    "pad": 24
+  },
+  {
+    "selector": "#r-em",
+    "pad": 24
+  },
+  {
+    "selector": "#r-margin",
+    "known": "a created grid item from a template lets its first child margin out: layout, not paint"
+  }
+]

@@ -6,7 +6,10 @@
 
 use std::collections::BTreeMap;
 
-use eldur_css::{BorderSide, BorderStyle, BoxSizing, ComputedStyle, Length, Rgba, Size, TextAlign};
+use eldur_css::{
+    BorderSide, BorderStyle, BoxSizing, ComputedStyle, Length, Rgba, Size, TextAlign,
+    TextDecorationLine,
+};
 use eldur_dom::{Document, NodeId};
 use eldur_js::TargetKind;
 use eldur_qml::{Member, Object, Value};
@@ -15,7 +18,7 @@ use super::flow::{Emitted, MarginSet};
 use super::text::{font_extents, font_family};
 use super::units::{color, number, round};
 use super::{Emitter, Target};
-use crate::boxes::{LayoutBox, describe};
+use crate::boxes::{Content, Inline, LayoutBox, describe};
 
 /// Chromium's accent for `accent-color: auto`.
 const ACCENT: Rgba = Rgba::new(0x00, 0x75, 0xff, 0xff);
@@ -458,6 +461,7 @@ impl Emitter<'_, '_> {
         control: Control,
         line: Option<u32>,
     ) -> Emitted {
+        self.plain_control = self.plain_edges.contains(&node);
         let native = with_native_box(&b.style, control);
         let style = native.as_ref().unwrap_or(&*b.style);
         let id = self.control_id(node);
@@ -469,7 +473,15 @@ impl Emitter<'_, '_> {
             Control::Number => self.spin_box(node, style, &id, reset, line),
             Control::Range => self.slider(node, &id, reset),
             Control::CheckBox | Control::Radio => self.toggle(node, style, control, &id, reset),
-            Control::Button { .. } => self.button(node, style, &id, line),
+            Control::Button { .. } => {
+                let drawn = matches!(b.content, Content::Inline(_));
+                let mut button = self.button(node, style, &id, drawn, line);
+                if let Content::Inline(items) = &b.content {
+                    let label = self.button_lines(b, items, &id, line);
+                    button.set("contentItem", object_value(label));
+                }
+                button
+            }
             Control::Select => self.combo_box(node, style, &id, reset, line),
             Control::Progress | Control::Meter => self.progress(node, style, control, &id, line),
         };
@@ -545,7 +557,8 @@ impl Emitter<'_, '_> {
     /// The element's box as the control's `background` (and the control's
     /// padding from its insets), so the Basic style's look never shows.
     fn apply_box(&mut self, obj: &mut Object, style: &ComputedStyle, line: Option<u32>) -> f32 {
-        let deco = self.decoration(style, true, line);
+        let mut deco = self.decoration(style, true, line);
+        deco.plain_edges = self.plain_control;
         let insets = deco.insets;
         let mut background = self.wrap(style, &deco, true, None, false, line);
         // The control sizes its background; the insets are its padding.
@@ -1031,11 +1044,50 @@ impl Emitter<'_, '_> {
         id
     }
 
+    /// A button's content when it holds more than text: its lines, centred as a
+    /// button centres what it holds.
+    fn button_lines(
+        &mut self,
+        b: &LayoutBox<'_>,
+        items: &[Inline<'_>],
+        id: &str,
+        line: Option<u32>,
+    ) -> Object {
+        let mut flow = self.inline_flow(b, TextDecorationLine::default(), items, line);
+        let color_expr = Value::expr(format!("{id}.palette.buttonText"));
+        // Scripts and hover states change the colour through the palette.
+        let own = color(b.style.color);
+        for member in &mut flow.members {
+            if let Member::Child(run) = member
+                && run.type_name == "Text"
+                && run.get("color") == Some(&own)
+            {
+                run.set("color", color_expr.clone());
+            }
+        }
+        let flow_id = flow.id.clone().unwrap_or_default();
+        flow.set("width", Value::expr("parent.width"));
+        flow.set("y", Value::expr("Math.round((parent.height - height) / 2)"));
+        let mut holder = Object::new("Item");
+        // Whole pixels, or the line would wrap at the width it asked for.
+        holder.set(
+            "implicitWidth",
+            Value::expr(format!("Math.ceil({flow_id}.implicitWidth)")),
+        );
+        holder.set(
+            "implicitHeight",
+            Value::expr(format!("{flow_id}.implicitHeight")),
+        );
+        holder.push_child(flow);
+        holder
+    }
+
     fn button(
         &mut self,
         node: NodeId,
         style: &ComputedStyle,
         id: &str,
+        drawn_content: bool,
         line: Option<u32>,
     ) -> Object {
         let element = self.doc.element(node);
@@ -1056,7 +1108,7 @@ impl Emitter<'_, '_> {
                 .unwrap_or(fallback)
                 .to_owned()
         } else {
-            if self.doc.element_children(node).next().is_some() {
+            if !drawn_content && self.doc.element_children(node).next().is_some() {
                 self.diags.info(
                     "html",
                     line,
@@ -1387,6 +1439,7 @@ impl Emitter<'_, '_> {
         decoration: eldur_css::TextDecorationLine,
         line: Option<u32>,
     ) -> Emitted {
+        self.plain_control = self.plain_edges.contains(&node);
         let style = &*b.style;
         let html_id = self
             .doc
@@ -1398,7 +1451,8 @@ impl Emitter<'_, '_> {
             None => self.ids.claim("fieldset"),
         };
         let mut obj = Object::new("GroupBox").with_id(id.clone());
-        let deco = self.decoration(style, true, line);
+        let mut deco = self.decoration(style, true, line);
+        deco.plain_edges = self.plain_control;
         let insets = deco.insets;
         let border_top = super::decoration::border_width(&style.border.top);
         let mut background = self.wrap(style, &deco, true, None, false, line);

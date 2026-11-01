@@ -2,7 +2,7 @@
 //! §10.3.2, §10.6.2): a given width or height keeps the intrinsic ratio,
 //! both stretch the image (`object-fit: fill`).
 
-use eldur_css::{BoxSizing, ComputedStyle, ObjectFit, Size};
+use eldur_css::{BoxSizing, ComputedStyle, LengthPercentage, ObjectFit, Size};
 use eldur_dom::NodeId;
 use eldur_qml::{Object, Value};
 
@@ -73,22 +73,15 @@ impl Emitter<'_, '_> {
                 format!("{what} has no `src`; an empty placeholder keeps its space"),
             );
         }
-        let (fill_mode, fit) = match style.object_fit {
-            ObjectFit::Fill => (None, None),
-            ObjectFit::Contain => (Some("Image.PreserveAspectFit"), None),
-            ObjectFit::Cover => (Some("Image.PreserveAspectCrop"), None),
-            ObjectFit::None => (Some("Image.Pad"), None),
-            ObjectFit::ScaleDown => (Some("Image.PreserveAspectFit"), Some("scale-down")),
+        let fill_mode = match style.object_fit {
+            ObjectFit::Fill => None,
+            ObjectFit::Contain => Some("Image.PreserveAspectFit"),
+            ObjectFit::Cover => Some("Image.PreserveAspectCrop"),
+            ObjectFit::None => Some("Image.Pad"),
+            ObjectFit::ScaleDown => None,
         };
         if let Some(mode) = fill_mode {
             image.set("fillMode", Value::expr(mode));
-        }
-        if let Some(fit) = fit {
-            self.diags.info(
-                "css",
-                line,
-                format!("`object-fit: {fit}` is drawn as `contain`"),
-            );
         }
         if asset.as_ref().is_some_and(|a| is_svg(&a.source)) {
             // An SVG is drawn at its source size and then scaled: render it
@@ -124,10 +117,25 @@ impl Emitter<'_, '_> {
         // An image is clipped to its rounded border box (CSS Backgrounds 3
         // §5.3).
         deco.clips |= rounded;
-        let shown = if asset.is_some() {
-            vec![image]
-        } else {
-            Vec::new()
+        // `Image` has no rounded corners, no `object-position` and no
+        // scale-down; a background layer does all three in one draw. An SVG
+        // has to stay an `Image`, which renders it at the size it is shown.
+        let placed = asset.as_ref().filter(|a| {
+            !is_svg(&a.source)
+                && (rounded || style.object_fit == ObjectFit::ScaleDown || !is_centred(style))
+        });
+        deco.clips &= placed.is_none();
+        let shown = match (placed, &asset) {
+            (Some(a), _) => {
+                let hint = deco.hint.clone();
+                let mut drawn = self.image_layer(style, &a.source, &hint, line);
+                if let Some(alt) = element.attr("alt").filter(|a| !a.is_empty()) {
+                    drawn.set("Accessible.name", Value::string(alt.to_owned()));
+                }
+                vec![drawn]
+            }
+            (None, Some(_)) => vec![image],
+            (None, None) => Vec::new(),
         };
         let mut obj = self.wrap_with(style, &deco, true, None, shown, false, line);
         let (cw, ch) = content.unwrap_or((0.0, 0.0));
@@ -164,6 +172,11 @@ impl Emitter<'_, '_> {
             collapse_through: false,
         }
     }
+}
+
+fn is_centred(style: &ComputedStyle) -> bool {
+    let centre = LengthPercentage::percent(50.0);
+    style.object_position_x == centre && style.object_position_y == centre
 }
 
 fn is_svg(source: &str) -> bool {

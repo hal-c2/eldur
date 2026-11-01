@@ -178,6 +178,7 @@ pub fn convert_str(html: &str, options: &Options) -> Output {
 mod boxes;
 mod diag;
 mod emit;
+mod filter;
 mod images;
 mod metadata;
 mod paint_values;

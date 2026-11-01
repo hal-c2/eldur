@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Shadows and filters</title>
+<style>
+body { margin: 30px; background: #fff; font: 20px/1.4 sans-serif; color: #111; }
+.g { display: grid; grid-template-columns: repeat(6, 150px); gap: 40px; }
+.g > div { height: 100px; background: #3b82f6; }
+.wrap { background: #fff !important; padding: 0; }
+#s-blur { box-shadow: 0 4px 16px rgba(0,0,0,.5); }
+#s-spread { box-shadow: 0 0 0 6px #f59e0b; }
+#s-both { box-shadow: 4px 4px 10px 4px #dc2626; }
+#s-multi { box-shadow: -8px 0 8px #22c55e, 8px 0 8px #ef4444; }
+#s-round { border-radius: 24px; box-shadow: 0 6px 20px rgba(0,0,0,.6); }
+#s-em { font-size: 10px; box-shadow: 1em 1em 2em #000; }
+#s-inset { background: #fff; box-shadow: inset 0 0 16px rgba(0,0,0,.7); }
+#s-inset2 { background: #fff; box-shadow: inset 6px 6px 0 #16a34a; }
+#s-inset3 { background: #fff; border-radius: 20px; box-shadow: inset 0 4px 12px 2px #b91c1c; }
+#s-none { background: transparent; box-shadow: 0 0 12px 4px #000; }
+#f-blur { filter: blur(4px); }
+#f-bright { filter: brightness(1.5); }
+#f-dark { filter: brightness(.5); }
+#f-contrast { filter: contrast(2); }
+#f-gray { filter: grayscale(1); }
+#f-opacity { filter: opacity(.4); }
+#f-drop { filter: drop-shadow(4px 4px 6px #000); border-radius: 50%; }
+#f-sepia { filter: sepia(1); }
+#f-hue { filter: hue-rotate(90deg); }
+#f-invert { filter: invert(1); }
+#f-sat { filter: saturate(3); }
+#f-chain { filter: grayscale(1) brightness(.8); }
+#o-group { background: #dc2626; opacity: .5; }
+#o-group > div { height: 60px; width: 60px; margin: 20px; background: #16a34a; }
+#o-nest { background: #dc2626; opacity: .6; position: relative; }
+#o-nest > div { position: absolute; left: 20px; top: 20px; width: 100px; height: 60px; background: #1d4ed8; opacity: .5; }
+#b-multiply { background: linear-gradient(#f59e0b, #f59e0b) ; }
+#b-multiply > div { height: 60px; margin: 20px; background: #06b6d4; mix-blend-mode: multiply; }
+#b-backdrop { background: linear-gradient(90deg, #ef4444, #3b82f6); position: relative; }
+#b-backdrop > div { position: absolute; inset: 20px; backdrop-filter: blur(6px); background: rgba(255,255,255,.2); }
+.ts { background: none !important; }
+#t-hard { text-shadow: 2px 2px 0 #dc2626; }
+#t-blur { text-shadow: 0 0 6px #2563eb; }
+#t-multi { text-shadow: 1px 1px 0 #16a34a, -1px -1px 0 #dc2626; }
+#t-em { font-size: 24px; text-shadow: .1em .1em .1em #000; }
+</style></head><body><div class="g">
+<div id="s-blur"></div><div id="s-spread"></div><div id="s-both"></div><div id="s-multi"></div><div id="s-round"></div><div id="s-em"></div>
+<div id="s-inset"></div><div id="s-inset2"></div><div id="s-inset3"></div><div id="s-none"></div><div id="f-blur"></div><div id="f-bright"></div>
+<div id="f-dark"></div><div id="f-contrast"></div><div id="f-gray"></div><div id="f-opacity"></div><div id="f-drop"></div><div id="f-sepia"></div>
+<div id="f-hue"></div><div id="f-invert"></div><div id="f-sat"></div><div id="f-chain"></div><div id="o-group"><div></div></div><div id="o-nest"><div></div></div>
+<div id="b-multiply"><div></div></div><div id="b-backdrop"><div></div></div>
+<div class="ts" id="t-hard">Shadow</div><div class="ts" id="t-blur">Shadow</div><div class="ts" id="t-multi">Shadow</div><div class="ts" id="t-em">Shadow</div>
+</div></body></html>

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Clip</title>
+<style>
+html { background: linear-gradient(90deg, #fde68a, #a7f3d0); }
+body { margin: 10px; }
+.g { display: grid; grid-template-columns: repeat(5, 240px); gap: 10px; }
+.card { height: 140px; overflow: hidden; border-radius: 28px; background: #fff; }
+.band { height: 70px; background: #1d4ed8; }
+.wide { width: 400px; height: 60px; background: #dc2626; }
+#bordered { border: 6px solid #0f172a; }
+#uneven { border-radius: 40px 10px 40px 10px; }
+#circle { width: 140px; border-radius: 50%; }
+#plain { background: #e2e8f0; }
+.solid { background: #f8fafc; padding: 10px; }
+.solid .card { height: 120px; }
+img { display: block; }
+.i { width: 200px; height: 140px; }
+#i-round { border-radius: 24px; }
+#i-circle { width: 140px; border-radius: 50%; }
+#i-cover { object-fit: cover; }
+#i-contain { object-fit: contain; background: #cbd5e1; }
+#i-none { object-fit: none; }
+#i-down { object-fit: scale-down; background: #cbd5e1; }
+#i-pos { object-fit: none; object-position: 0 0; }
+#i-pos2 { object-fit: cover; object-position: 100% 50%; width: 80px; }
+#i-posc { object-fit: contain; object-position: 10px 20px; background: #cbd5e1; }
+#i-rcover { object-fit: cover; border-radius: 30px; }
+</style></head><body><div class="g">
+<div class="card" id="square"><div class="band"></div></div>
+<div class="card" id="bordered"><div class="band"></div></div>
+<div class="card" id="uneven"><div class="wide"></div></div>
+<div class="card" id="circle"><div class="band"></div></div>
+<div class="solid"><div class="card" id="plain"><div class="band"></div></div></div>
+<img class="i" id="i-round" src="photo.png" alt="">
+<img class="i" id="i-circle" src="photo.png" alt="">
+<img class="i" id="i-cover" src="photo.png" alt="">
+<img class="i" id="i-contain" src="photo.png" alt="">
+<img class="i" id="i-none" src="photo.png" alt="">
+<img class="i" id="i-down" src="photo.png" alt="">
+<img class="i" id="i-pos" src="photo.png" alt="">
+<img class="i" id="i-pos2" src="photo.png" alt="">
+<img class="i" id="i-posc" src="photo.png" alt="">
+<img class="i" id="i-rcover" src="photo.png" alt="">
+</div></body></html>

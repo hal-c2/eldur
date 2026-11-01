@@ -862,28 +862,144 @@ ApplicationWindow {
                             }
 
                             // <p>
-                            Text {
-                                id: p
-                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+                            EldurLines {
+                                id: pFlow
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
-                                text: "<div style=\"line-height:25.6px\">Tidewater reads its settings from <span style=\"font-size:14px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>tidewater.toml<span style=\"letter-spacing:5px\">&#8288;</span></span> in the working directory. Every key can be overridden with an environment variable: <span style=\"font-size:14px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>queue.url<span style=\"letter-spacing:5px\">&#8288;</span></span> becomes <span style=\"font-size:14px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>TIDEWATER_QUEUE_URL<span style=\"letter-spacing:5px\">&#8288;</span></span>.</div>"
-                                textFormat: Text.RichText
                                 color: "#24292f"
                                 font.family: "sans-serif"
                                 font.pixelSize: 16
-                                wrapMode: Text.WordWrap
-                                transform: Translate {
-                                    y: -3
-                                }
+                                lineHeight: 25.6
                                 Layout.fillWidth: true
                                 Layout.topMargin: 16 - subtitle.eldurCarry
-                                renderType: Text.NativeRendering
+                                Layout.preferredHeight: implicitHeight
+
+                                Text {
+                                    text: "Tidewater reads its settings from "
+                                    textFormat: Text.PlainText
+                                    color: "#24292f"
+                                    font.family: "sans-serif"
+                                    font.pixelSize: 16
+                                    wrapMode: Text.WordWrap
+                                    renderType: Text.NativeRendering
+                                }
+
+                                Text {
+                                    id: inlineRun
+                                    readonly property real eldurMarginRight: 5
+                                    readonly property real eldurMarginLeft: 5
+                                    property var eldurFragments: []
+
+                                    text: "tidewater.toml"
+                                    textFormat: Text.PlainText
+                                    color: "#24292f"
+                                    font.family: "monospace"
+                                    font.pixelSize: 14
+                                    wrapMode: Text.WordWrap
+                                    renderType: Text.NativeRendering
+
+                                    EldurInlineBox {
+                                        fragments: inlineRun.eldurFragments
+                                        font.family: "monospace"
+                                        font.pixelSize: 14
+                                        fill: "#eff1f3"
+                                        radii: [4, 4, 4, 4]
+                                        paddingTop: 2
+                                        paddingBottom: 2
+                                        reachLeft: 5
+                                        reachRight: 5
+                                    }
+                                }
+
+                                Text {
+                                    text: " in the working directory. Every key can be overridden with an environment variable: "
+                                    textFormat: Text.PlainText
+                                    color: "#24292f"
+                                    font.family: "sans-serif"
+                                    font.pixelSize: 16
+                                    wrapMode: Text.WordWrap
+                                    renderType: Text.NativeRendering
+                                }
+
+                                Text {
+                                    id: inlineRun2
+                                    readonly property real eldurMarginRight: 5
+                                    readonly property real eldurMarginLeft: 5
+                                    property var eldurFragments: []
+
+                                    text: "queue.url"
+                                    textFormat: Text.PlainText
+                                    color: "#24292f"
+                                    font.family: "monospace"
+                                    font.pixelSize: 14
+                                    wrapMode: Text.WordWrap
+                                    renderType: Text.NativeRendering
+
+                                    EldurInlineBox {
+                                        fragments: inlineRun2.eldurFragments
+                                        font.family: "monospace"
+                                        font.pixelSize: 14
+                                        fill: "#eff1f3"
+                                        radii: [4, 4, 4, 4]
+                                        paddingTop: 2
+                                        paddingBottom: 2
+                                        reachLeft: 5
+                                        reachRight: 5
+                                    }
+                                }
+
+                                Text {
+                                    text: " becomes "
+                                    textFormat: Text.PlainText
+                                    color: "#24292f"
+                                    font.family: "sans-serif"
+                                    font.pixelSize: 16
+                                    wrapMode: Text.WordWrap
+                                    renderType: Text.NativeRendering
+                                }
+
+                                Text {
+                                    id: inlineRun3
+                                    readonly property real eldurMarginRight: 5
+                                    readonly property real eldurMarginLeft: 5
+                                    property var eldurFragments: []
+
+                                    text: "TIDEWATER_QUEUE_URL"
+                                    textFormat: Text.PlainText
+                                    color: "#24292f"
+                                    font.family: "monospace"
+                                    font.pixelSize: 14
+                                    wrapMode: Text.WordWrap
+                                    renderType: Text.NativeRendering
+
+                                    EldurInlineBox {
+                                        fragments: inlineRun3.eldurFragments
+                                        font.family: "monospace"
+                                        font.pixelSize: 14
+                                        fill: "#eff1f3"
+                                        radii: [4, 4, 4, 4]
+                                        paddingTop: 2
+                                        paddingBottom: 2
+                                        reachLeft: 5
+                                        reachRight: 5
+                                    }
+                                }
+
+                                Text {
+                                    text: "."
+                                    textFormat: Text.PlainText
+                                    color: "#24292f"
+                                    font.family: "sans-serif"
+                                    font.pixelSize: 16
+                                    wrapMode: Text.WordWrap
+                                    renderType: Text.NativeRendering
+                                }
                             }
 
                             // <div class="callout">
                             Rectangle {
                                 id: callout
-                                property real eldurCarry: Math.ceil(Layout.topMargin - (text.eldurCarry)) - Layout.topMargin + text.eldurCarry + 0.000001
+                                property real eldurCarry: Math.ceil(Layout.topMargin - (blockFlow.eldurCarry)) - Layout.topMargin + blockFlow.eldurCarry + 0.000001
 
                                 color: "#ddf4ff"
                                 topLeftRadius: 0
@@ -893,16 +1009,16 @@ ApplicationWindow {
                                 implicitWidth: calloutContent.implicitWidth + 36
                                 implicitHeight: calloutContent.implicitHeight + 24
                                 Layout.fillWidth: true
-                                Layout.topMargin: 16 - p.eldurCarry
-                                Layout.preferredHeight: implicitHeight - text.eldurCarry
+                                Layout.topMargin: 16 - pFlow.eldurCarry
+                                Layout.preferredHeight: implicitHeight - blockFlow.eldurCarry
                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
-                                Rectangle {
-                                    anchors.top: parent.top
-                                    anchors.bottom: parent.bottom
-                                    anchors.left: parent.left
-                                    width: 4
-                                    color: "#0969da"
+                                EldurBorder {
+                                    sideWidths: [0, 0, 0, 4]
+                                    sideColors: ["#00000000", "#00000000", "#00000000", "#ff0969da"]
+                                    sideStyles: ["none", "none", "none", "solid"]
+                                    radii: [0, 6, 6, 0]
+                                    anchors.fill: parent
                                 }
 
                                 ColumnLayout {
@@ -942,23 +1058,64 @@ ApplicationWindow {
                                             renderType: Text.NativeRendering
                                         }
 
-                                        Text {
-                                            id: text
+                                        EldurLines {
+                                            id: blockFlow
                                             property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
-                                            text: "<div style=\"line-height:25.6px\">Settings are read once at start-up. Send <span style=\"font-size:14px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>SIGHUP<span style=\"letter-spacing:5px\">&#8288;</span></span> to reload them without dropping jobs.</div>"
-                                            textFormat: Text.RichText
                                             color: "#24292f"
                                             font.family: "sans-serif"
                                             font.pixelSize: 16
-                                            wrapMode: Text.WordWrap
-                                            transform: Translate {
-                                                y: -3
-                                            }
+                                            lineHeight: 25.6
                                             Layout.fillWidth: true
                                             Layout.topMargin: 4 - calloutTitle.eldurCarry
                                             Layout.preferredHeight: implicitHeight
-                                            renderType: Text.NativeRendering
+
+                                            Text {
+                                                text: "Settings are read once at start-up. Send "
+                                                textFormat: Text.PlainText
+                                                color: "#24292f"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 16
+                                                wrapMode: Text.WordWrap
+                                                renderType: Text.NativeRendering
+                                            }
+
+                                            Text {
+                                                id: inlineRun4
+                                                readonly property real eldurMarginRight: 5
+                                                readonly property real eldurMarginLeft: 5
+                                                property var eldurFragments: []
+
+                                                text: "SIGHUP"
+                                                textFormat: Text.PlainText
+                                                color: "#24292f"
+                                                font.family: "monospace"
+                                                font.pixelSize: 14
+                                                wrapMode: Text.WordWrap
+                                                renderType: Text.NativeRendering
+
+                                                EldurInlineBox {
+                                                    fragments: inlineRun4.eldurFragments
+                                                    font.family: "monospace"
+                                                    font.pixelSize: 14
+                                                    fill: "#eff1f3"
+                                                    radii: [4, 4, 4, 4]
+                                                    paddingTop: 2
+                                                    paddingBottom: 2
+                                                    reachLeft: 5
+                                                    reachRight: 5
+                                                }
+                                            }
+
+                                            Text {
+                                                text: " to reload them without dropping jobs."
+                                                textFormat: Text.PlainText
+                                                color: "#24292f"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 16
+                                                wrapMode: Text.WordWrap
+                                                renderType: Text.NativeRendering
+                                            }
                                         }
                                     }
                                 }
@@ -1007,7 +1164,7 @@ ApplicationWindow {
 
                             // <p>
                             Text {
-                                id: p2
+                                id: p
                                 property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
 
                                 text: "This is enough to run one worker against a local queue:"
@@ -1039,7 +1196,7 @@ ApplicationWindow {
                                 border.width: 1
                                 border.color: "#d0d7de"
                                 Layout.fillWidth: true
-                                Layout.topMargin: 16 - p2.eldurCarry
+                                Layout.topMargin: 16 - p.eldurCarry
                                 Layout.preferredHeight: implicitHeight
                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
@@ -1341,8 +1498,8 @@ ApplicationWindow {
                                         readonly property real minContentWidth: tableFont2.advanceWidth("queue.url") + 25
 
                                         color: "#00000000"
-                                        implicitWidth: tdText.implicitWidth + 25
-                                        implicitHeight: tdText.implicitHeight + 17
+                                        implicitWidth: tdFlow.implicitWidth + 25
+                                        implicitHeight: tdFlow.implicitHeight + 17
                                         Layout.row: 1
                                         Layout.column: 0
                                         Layout.preferredWidth: tableGrid.columnWidths[0]
@@ -1364,24 +1521,45 @@ ApplicationWindow {
                                             color: "#d0d7de"
                                         }
 
-                                        Text {
-                                            id: tdText
-                                            text: "<div style=\"line-height:22.4px\"><span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>queue.url<span style=\"letter-spacing:5px\">&#8288;</span></span></div>"
-                                            textFormat: Text.RichText
+                                        EldurLines {
+                                            id: tdFlow
                                             color: "#24292f"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
-                                            wrapMode: Text.WordWrap
-                                            transform: Translate {
-                                                y: -2
-                                            }
+                                            lineHeight: 22.4
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
-                                            renderType: Text.NativeRendering
+
+                                            Text {
+                                                id: inlineRun5
+                                                readonly property real eldurMarginRight: 5
+                                                readonly property real eldurMarginLeft: 5
+                                                property var eldurFragments: []
+
+                                                text: "queue.url"
+                                                textFormat: Text.PlainText
+                                                color: "#24292f"
+                                                font.family: "monospace"
+                                                font.pixelSize: 12
+                                                wrapMode: Text.NoWrap
+                                                renderType: Text.NativeRendering
+
+                                                EldurInlineBox {
+                                                    fragments: inlineRun5.eldurFragments
+                                                    font.family: "monospace"
+                                                    font.pixelSize: 12
+                                                    fill: "#eff1f3"
+                                                    radii: [4, 4, 4, 4]
+                                                    paddingTop: 2
+                                                    paddingBottom: 2
+                                                    reachLeft: 5
+                                                    reachRight: 5
+                                                }
+                                            }
                                         }
                                     }
 
@@ -1390,8 +1568,8 @@ ApplicationWindow {
                                         readonly property real minContentWidth: tableFont2.advanceWidth("none") + 25
 
                                         color: "#00000000"
-                                        implicitWidth: tdText2.implicitWidth + 25
-                                        implicitHeight: tdText2.implicitHeight + 17
+                                        implicitWidth: tdText.implicitWidth + 25
+                                        implicitHeight: tdText.implicitHeight + 17
                                         Layout.row: 1
                                         Layout.column: 1
                                         Layout.preferredWidth: tableGrid.columnWidths[1]
@@ -1414,7 +1592,7 @@ ApplicationWindow {
                                         }
 
                                         Text {
-                                            id: tdText2
+                                            id: tdText
                                             text: "none"
                                             textFormat: Text.PlainText
                                             color: "#24292f"
@@ -1441,12 +1619,211 @@ ApplicationWindow {
                                         readonly property real minContentWidth: tableFont2.advanceWidth("Required.") + 26
 
                                         color: "#00000000"
-                                        implicitWidth: tdText3.implicitWidth + 26
-                                        implicitHeight: tdText3.implicitHeight + 17
+                                        implicitWidth: tdText2.implicitWidth + 26
+                                        implicitHeight: tdText2.implicitHeight + 17
                                         Layout.row: 1
                                         Layout.column: 2
                                         Layout.preferredWidth: tableGrid.columnWidths[2]
                                         Layout.preferredHeight: tableGrid.rowHeights[1]
+
+                                        Rectangle {
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            height: 1
+                                            color: "#d0d7de"
+                                        }
+
+                                        Rectangle {
+                                            anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
+                                            anchors.right: parent.right
+                                            width: 1
+                                            color: "#d0d7de"
+                                        }
+
+                                        Rectangle {
+                                            anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
+                                            anchors.left: parent.left
+                                            width: 1
+                                            color: "#d0d7de"
+                                        }
+
+                                        Text {
+                                            id: tdText2
+                                            text: "Where jobs are stored. Required."
+                                            textFormat: Text.PlainText
+                                            color: "#24292f"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 14
+                                            lineHeight: 22.4
+                                            lineHeightMode: Text.FixedHeight
+                                            transform: Translate {
+                                                y: 3
+                                            }
+                                            wrapMode: Text.WordWrap
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.leftMargin: 13
+                                            anchors.rightMargin: 13
+                                            anchors.topMargin: 9
+                                            renderType: Text.NativeRendering
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        readonly property var tableSlot: [2, 0, 1, 1]
+                                        readonly property real minContentWidth: tableFont2.advanceWidth("worker.concurrency") + 25
+
+                                        color: "#00000000"
+                                        implicitWidth: tdFlow2.implicitWidth + 25
+                                        implicitHeight: tdFlow2.implicitHeight + 17
+                                        Layout.row: 2
+                                        Layout.column: 0
+                                        Layout.preferredWidth: tableGrid.columnWidths[0]
+                                        Layout.preferredHeight: tableGrid.rowHeights[2]
+
+                                        Rectangle {
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            height: 1
+                                            color: "#d0d7de"
+                                        }
+
+                                        Rectangle {
+                                            anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
+                                            anchors.left: parent.left
+                                            width: 1
+                                            color: "#d0d7de"
+                                        }
+
+                                        EldurLines {
+                                            id: tdFlow2
+                                            color: "#24292f"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 14
+                                            lineHeight: 22.4
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.leftMargin: 13
+                                            anchors.rightMargin: 12
+                                            anchors.topMargin: 9
+
+                                            Text {
+                                                id: inlineRun6
+                                                readonly property real eldurMarginRight: 5
+                                                readonly property real eldurMarginLeft: 5
+                                                property var eldurFragments: []
+
+                                                text: "worker.concurrency"
+                                                textFormat: Text.PlainText
+                                                color: "#24292f"
+                                                font.family: "monospace"
+                                                font.pixelSize: 12
+                                                wrapMode: Text.NoWrap
+                                                renderType: Text.NativeRendering
+
+                                                EldurInlineBox {
+                                                    fragments: inlineRun6.eldurFragments
+                                                    font.family: "monospace"
+                                                    font.pixelSize: 12
+                                                    fill: "#eff1f3"
+                                                    radii: [4, 4, 4, 4]
+                                                    paddingTop: 2
+                                                    paddingBottom: 2
+                                                    reachLeft: 5
+                                                    reachRight: 5
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        readonly property var tableSlot: [2, 1, 1, 1]
+                                        readonly property real minContentWidth: tableFont2.advanceWidth("1") + 25
+
+                                        color: "#00000000"
+                                        implicitWidth: tdFlow3.implicitWidth + 25
+                                        implicitHeight: tdFlow3.implicitHeight + 17
+                                        Layout.row: 2
+                                        Layout.column: 1
+                                        Layout.preferredWidth: tableGrid.columnWidths[1]
+                                        Layout.preferredHeight: tableGrid.rowHeights[2]
+
+                                        Rectangle {
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            height: 1
+                                            color: "#d0d7de"
+                                        }
+
+                                        Rectangle {
+                                            anchors.top: parent.top
+                                            anchors.bottom: parent.bottom
+                                            anchors.left: parent.left
+                                            width: 1
+                                            color: "#d0d7de"
+                                        }
+
+                                        EldurLines {
+                                            id: tdFlow3
+                                            color: "#24292f"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 14
+                                            lineHeight: 22.4
+                                            anchors.left: parent.left
+                                            anchors.right: parent.right
+                                            anchors.top: parent.top
+                                            anchors.leftMargin: 13
+                                            anchors.rightMargin: 12
+                                            anchors.topMargin: 9
+
+                                            Text {
+                                                id: inlineRun7
+                                                readonly property real eldurMarginRight: 5
+                                                readonly property real eldurMarginLeft: 5
+                                                property var eldurFragments: []
+
+                                                text: "1"
+                                                textFormat: Text.PlainText
+                                                color: "#24292f"
+                                                font.family: "monospace"
+                                                font.pixelSize: 12
+                                                wrapMode: Text.NoWrap
+                                                renderType: Text.NativeRendering
+
+                                                EldurInlineBox {
+                                                    fragments: inlineRun7.eldurFragments
+                                                    font.family: "monospace"
+                                                    font.pixelSize: 12
+                                                    fill: "#eff1f3"
+                                                    radii: [4, 4, 4, 4]
+                                                    paddingTop: 2
+                                                    paddingBottom: 2
+                                                    reachLeft: 5
+                                                    reachRight: 5
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        readonly property var tableSlot: [2, 2, 1, 1]
+                                        readonly property real minContentWidth: tableFont2.advanceWidth("worker.") + 26
+
+                                        color: "#00000000"
+                                        implicitWidth: tdText3.implicitWidth + 26
+                                        implicitHeight: tdText3.implicitHeight + 17
+                                        Layout.row: 2
+                                        Layout.column: 2
+                                        Layout.preferredWidth: tableGrid.columnWidths[2]
+                                        Layout.preferredHeight: tableGrid.rowHeights[2]
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -1474,163 +1851,6 @@ ApplicationWindow {
 
                                         Text {
                                             id: tdText3
-                                            text: "Where jobs are stored. Required."
-                                            textFormat: Text.PlainText
-                                            color: "#24292f"
-                                            font.family: "sans-serif"
-                                            font.pixelSize: 14
-                                            lineHeight: 22.4
-                                            lineHeightMode: Text.FixedHeight
-                                            transform: Translate {
-                                                y: 3
-                                            }
-                                            wrapMode: Text.WordWrap
-                                            anchors.left: parent.left
-                                            anchors.right: parent.right
-                                            anchors.top: parent.top
-                                            anchors.leftMargin: 13
-                                            anchors.rightMargin: 13
-                                            anchors.topMargin: 9
-                                            renderType: Text.NativeRendering
-                                        }
-                                    }
-
-                                    Rectangle {
-                                        readonly property var tableSlot: [2, 0, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("worker.concurrency") + 25
-
-                                        color: "#00000000"
-                                        implicitWidth: tdText4.implicitWidth + 25
-                                        implicitHeight: tdText4.implicitHeight + 17
-                                        Layout.row: 2
-                                        Layout.column: 0
-                                        Layout.preferredWidth: tableGrid.columnWidths[0]
-                                        Layout.preferredHeight: tableGrid.rowHeights[2]
-
-                                        Rectangle {
-                                            anchors.left: parent.left
-                                            anchors.right: parent.right
-                                            anchors.top: parent.top
-                                            height: 1
-                                            color: "#d0d7de"
-                                        }
-
-                                        Rectangle {
-                                            anchors.top: parent.top
-                                            anchors.bottom: parent.bottom
-                                            anchors.left: parent.left
-                                            width: 1
-                                            color: "#d0d7de"
-                                        }
-
-                                        Text {
-                                            id: tdText4
-                                            text: "<div style=\"line-height:22.4px\"><span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>worker.concurrency<span style=\"letter-spacing:5px\">&#8288;</span></span></div>"
-                                            textFormat: Text.RichText
-                                            color: "#24292f"
-                                            font.family: "sans-serif"
-                                            font.pixelSize: 14
-                                            wrapMode: Text.WordWrap
-                                            transform: Translate {
-                                                y: -2
-                                            }
-                                            anchors.left: parent.left
-                                            anchors.right: parent.right
-                                            anchors.top: parent.top
-                                            anchors.leftMargin: 13
-                                            anchors.rightMargin: 12
-                                            anchors.topMargin: 9
-                                            renderType: Text.NativeRendering
-                                        }
-                                    }
-
-                                    Rectangle {
-                                        readonly property var tableSlot: [2, 1, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("1") + 25
-
-                                        color: "#00000000"
-                                        implicitWidth: tdText5.implicitWidth + 25
-                                        implicitHeight: tdText5.implicitHeight + 17
-                                        Layout.row: 2
-                                        Layout.column: 1
-                                        Layout.preferredWidth: tableGrid.columnWidths[1]
-                                        Layout.preferredHeight: tableGrid.rowHeights[2]
-
-                                        Rectangle {
-                                            anchors.left: parent.left
-                                            anchors.right: parent.right
-                                            anchors.top: parent.top
-                                            height: 1
-                                            color: "#d0d7de"
-                                        }
-
-                                        Rectangle {
-                                            anchors.top: parent.top
-                                            anchors.bottom: parent.bottom
-                                            anchors.left: parent.left
-                                            width: 1
-                                            color: "#d0d7de"
-                                        }
-
-                                        Text {
-                                            id: tdText5
-                                            text: "<div style=\"line-height:22.4px\"><span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>1<span style=\"letter-spacing:5px\">&#8288;</span></span></div>"
-                                            textFormat: Text.RichText
-                                            color: "#24292f"
-                                            font.family: "sans-serif"
-                                            font.pixelSize: 14
-                                            wrapMode: Text.WordWrap
-                                            transform: Translate {
-                                                y: -2
-                                            }
-                                            anchors.left: parent.left
-                                            anchors.right: parent.right
-                                            anchors.top: parent.top
-                                            anchors.leftMargin: 13
-                                            anchors.rightMargin: 12
-                                            anchors.topMargin: 9
-                                            renderType: Text.NativeRendering
-                                        }
-                                    }
-
-                                    Rectangle {
-                                        readonly property var tableSlot: [2, 2, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("worker.") + 26
-
-                                        color: "#00000000"
-                                        implicitWidth: tdText6.implicitWidth + 26
-                                        implicitHeight: tdText6.implicitHeight + 17
-                                        Layout.row: 2
-                                        Layout.column: 2
-                                        Layout.preferredWidth: tableGrid.columnWidths[2]
-                                        Layout.preferredHeight: tableGrid.rowHeights[2]
-
-                                        Rectangle {
-                                            anchors.left: parent.left
-                                            anchors.right: parent.right
-                                            anchors.top: parent.top
-                                            height: 1
-                                            color: "#d0d7de"
-                                        }
-
-                                        Rectangle {
-                                            anchors.top: parent.top
-                                            anchors.bottom: parent.bottom
-                                            anchors.right: parent.right
-                                            width: 1
-                                            color: "#d0d7de"
-                                        }
-
-                                        Rectangle {
-                                            anchors.top: parent.top
-                                            anchors.bottom: parent.bottom
-                                            anchors.left: parent.left
-                                            width: 1
-                                            color: "#d0d7de"
-                                        }
-
-                                        Text {
-                                            id: tdText6
                                             text: "Jobs run at the same time by one worker."
                                             textFormat: Text.PlainText
                                             color: "#24292f"
@@ -1657,8 +1877,8 @@ ApplicationWindow {
                                         readonly property real minContentWidth: tableFont2.advanceWidth("worker.max_attempts") + 25
 
                                         color: "#00000000"
-                                        implicitWidth: tdText7.implicitWidth + 25
-                                        implicitHeight: tdText7.implicitHeight + 17
+                                        implicitWidth: tdFlow4.implicitWidth + 25
+                                        implicitHeight: tdFlow4.implicitHeight + 17
                                         Layout.row: 3
                                         Layout.column: 0
                                         Layout.preferredWidth: tableGrid.columnWidths[0]
@@ -1680,24 +1900,45 @@ ApplicationWindow {
                                             color: "#d0d7de"
                                         }
 
-                                        Text {
-                                            id: tdText7
-                                            text: "<div style=\"line-height:22.4px\"><span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>worker.max_attempts<span style=\"letter-spacing:5px\">&#8288;</span></span></div>"
-                                            textFormat: Text.RichText
+                                        EldurLines {
+                                            id: tdFlow4
                                             color: "#24292f"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
-                                            wrapMode: Text.WordWrap
-                                            transform: Translate {
-                                                y: -2
-                                            }
+                                            lineHeight: 22.4
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
-                                            renderType: Text.NativeRendering
+
+                                            Text {
+                                                id: inlineRun8
+                                                readonly property real eldurMarginRight: 5
+                                                readonly property real eldurMarginLeft: 5
+                                                property var eldurFragments: []
+
+                                                text: "worker.max_attempts"
+                                                textFormat: Text.PlainText
+                                                color: "#24292f"
+                                                font.family: "monospace"
+                                                font.pixelSize: 12
+                                                wrapMode: Text.NoWrap
+                                                renderType: Text.NativeRendering
+
+                                                EldurInlineBox {
+                                                    fragments: inlineRun8.eldurFragments
+                                                    font.family: "monospace"
+                                                    font.pixelSize: 12
+                                                    fill: "#eff1f3"
+                                                    radii: [4, 4, 4, 4]
+                                                    paddingTop: 2
+                                                    paddingBottom: 2
+                                                    reachLeft: 5
+                                                    reachRight: 5
+                                                }
+                                            }
                                         }
                                     }
 
@@ -1706,8 +1947,8 @@ ApplicationWindow {
                                         readonly property real minContentWidth: tableFont2.advanceWidth("3") + 25
 
                                         color: "#00000000"
-                                        implicitWidth: tdText8.implicitWidth + 25
-                                        implicitHeight: tdText8.implicitHeight + 17
+                                        implicitWidth: tdFlow5.implicitWidth + 25
+                                        implicitHeight: tdFlow5.implicitHeight + 17
                                         Layout.row: 3
                                         Layout.column: 1
                                         Layout.preferredWidth: tableGrid.columnWidths[1]
@@ -1729,24 +1970,45 @@ ApplicationWindow {
                                             color: "#d0d7de"
                                         }
 
-                                        Text {
-                                            id: tdText8
-                                            text: "<div style=\"line-height:22.4px\"><span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>3<span style=\"letter-spacing:5px\">&#8288;</span></span></div>"
-                                            textFormat: Text.RichText
+                                        EldurLines {
+                                            id: tdFlow5
                                             color: "#24292f"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
-                                            wrapMode: Text.WordWrap
-                                            transform: Translate {
-                                                y: -2
-                                            }
+                                            lineHeight: 22.4
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
-                                            renderType: Text.NativeRendering
+
+                                            Text {
+                                                id: inlineRun9
+                                                readonly property real eldurMarginRight: 5
+                                                readonly property real eldurMarginLeft: 5
+                                                property var eldurFragments: []
+
+                                                text: "3"
+                                                textFormat: Text.PlainText
+                                                color: "#24292f"
+                                                font.family: "monospace"
+                                                font.pixelSize: 12
+                                                wrapMode: Text.NoWrap
+                                                renderType: Text.NativeRendering
+
+                                                EldurInlineBox {
+                                                    fragments: inlineRun9.eldurFragments
+                                                    font.family: "monospace"
+                                                    font.pixelSize: 12
+                                                    fill: "#eff1f3"
+                                                    radii: [4, 4, 4, 4]
+                                                    paddingTop: 2
+                                                    paddingBottom: 2
+                                                    reachLeft: 5
+                                                    reachRight: 5
+                                                }
+                                            }
                                         }
                                     }
 
@@ -1755,8 +2017,8 @@ ApplicationWindow {
                                         readonly property real minContentWidth: tableFont2.advanceWidth("queue.") + 26
 
                                         color: "#00000000"
-                                        implicitWidth: tdText9.implicitWidth + 26
-                                        implicitHeight: tdText9.implicitHeight + 17
+                                        implicitWidth: tdText4.implicitWidth + 26
+                                        implicitHeight: tdText4.implicitHeight + 17
                                         Layout.row: 3
                                         Layout.column: 2
                                         Layout.preferredWidth: tableGrid.columnWidths[2]
@@ -1787,7 +2049,7 @@ ApplicationWindow {
                                         }
 
                                         Text {
-                                            id: tdText9
+                                            id: tdText4
                                             text: "Tries before a job moves to the dead-letter queue."
                                             textFormat: Text.PlainText
                                             color: "#24292f"
@@ -1814,8 +2076,8 @@ ApplicationWindow {
                                         readonly property real minContentWidth: tableFont2.advanceWidth("log.level") + 25
 
                                         color: "#00000000"
-                                        implicitWidth: tdText10.implicitWidth + 25
-                                        implicitHeight: tdText10.implicitHeight + 18
+                                        implicitWidth: tdFlow6.implicitWidth + 25
+                                        implicitHeight: tdFlow6.implicitHeight + 18
                                         Layout.row: 4
                                         Layout.column: 0
                                         Layout.preferredWidth: tableGrid.columnWidths[0]
@@ -1845,24 +2107,45 @@ ApplicationWindow {
                                             color: "#d0d7de"
                                         }
 
-                                        Text {
-                                            id: tdText10
-                                            text: "<div style=\"line-height:22.4px\"><span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>log.level<span style=\"letter-spacing:5px\">&#8288;</span></span></div>"
-                                            textFormat: Text.RichText
+                                        EldurLines {
+                                            id: tdFlow6
                                             color: "#24292f"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
-                                            wrapMode: Text.WordWrap
-                                            transform: Translate {
-                                                y: -2
-                                            }
+                                            lineHeight: 22.4
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
-                                            renderType: Text.NativeRendering
+
+                                            Text {
+                                                id: inlineRun10
+                                                readonly property real eldurMarginRight: 5
+                                                readonly property real eldurMarginLeft: 5
+                                                property var eldurFragments: []
+
+                                                text: "log.level"
+                                                textFormat: Text.PlainText
+                                                color: "#24292f"
+                                                font.family: "monospace"
+                                                font.pixelSize: 12
+                                                wrapMode: Text.NoWrap
+                                                renderType: Text.NativeRendering
+
+                                                EldurInlineBox {
+                                                    fragments: inlineRun10.eldurFragments
+                                                    font.family: "monospace"
+                                                    font.pixelSize: 12
+                                                    fill: "#eff1f3"
+                                                    radii: [4, 4, 4, 4]
+                                                    paddingTop: 2
+                                                    paddingBottom: 2
+                                                    reachLeft: 5
+                                                    reachRight: 5
+                                                }
+                                            }
                                         }
                                     }
 
@@ -1871,8 +2154,8 @@ ApplicationWindow {
                                         readonly property real minContentWidth: tableFont2.advanceWidth("\"info\"") + 25
 
                                         color: "#00000000"
-                                        implicitWidth: tdText11.implicitWidth + 25
-                                        implicitHeight: tdText11.implicitHeight + 18
+                                        implicitWidth: tdFlow7.implicitWidth + 25
+                                        implicitHeight: tdFlow7.implicitHeight + 18
                                         Layout.row: 4
                                         Layout.column: 1
                                         Layout.preferredWidth: tableGrid.columnWidths[1]
@@ -1902,24 +2185,45 @@ ApplicationWindow {
                                             color: "#d0d7de"
                                         }
 
-                                        Text {
-                                            id: tdText11
-                                            text: "<div style=\"line-height:22.4px\"><span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>\"info\"<span style=\"letter-spacing:5px\">&#8288;</span></span></div>"
-                                            textFormat: Text.RichText
+                                        EldurLines {
+                                            id: tdFlow7
                                             color: "#24292f"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
-                                            wrapMode: Text.WordWrap
-                                            transform: Translate {
-                                                y: -2
-                                            }
+                                            lineHeight: 22.4
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
-                                            renderType: Text.NativeRendering
+
+                                            Text {
+                                                id: inlineRun11
+                                                readonly property real eldurMarginRight: 5
+                                                readonly property real eldurMarginLeft: 5
+                                                property var eldurFragments: []
+
+                                                text: "\"info\""
+                                                textFormat: Text.PlainText
+                                                color: "#24292f"
+                                                font.family: "monospace"
+                                                font.pixelSize: 12
+                                                wrapMode: Text.NoWrap
+                                                renderType: Text.NativeRendering
+
+                                                EldurInlineBox {
+                                                    fragments: inlineRun11.eldurFragments
+                                                    font.family: "monospace"
+                                                    font.pixelSize: 12
+                                                    fill: "#eff1f3"
+                                                    radii: [4, 4, 4, 4]
+                                                    paddingTop: 2
+                                                    paddingBottom: 2
+                                                    reachLeft: 5
+                                                    reachRight: 5
+                                                }
+                                            }
                                         }
                                     }
 
@@ -1928,8 +2232,8 @@ ApplicationWindow {
                                         readonly property real minContentWidth: tableFont2.advanceWidth("error.") + 26
 
                                         color: "#00000000"
-                                        implicitWidth: tdText12.implicitWidth + 26
-                                        implicitHeight: tdText12.implicitHeight + 18
+                                        implicitWidth: tdFlow8.implicitWidth + 26
+                                        implicitHeight: tdFlow8.implicitHeight + 18
                                         border.width: 1
                                         border.color: "#d0d7de"
                                         Layout.row: 4
@@ -1937,24 +2241,176 @@ ApplicationWindow {
                                         Layout.preferredWidth: tableGrid.columnWidths[2]
                                         Layout.preferredHeight: tableGrid.rowHeights[4]
 
-                                        Text {
-                                            id: tdText12
-                                            text: "<div style=\"line-height:22.4px\">One of <span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>debug<span style=\"letter-spacing:5px\">&#8288;</span></span>, <span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>info<span style=\"letter-spacing:5px\">&#8288;</span></span>, <span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>warn<span style=\"letter-spacing:5px\">&#8288;</span></span> or <span style=\"font-size:12px;font-family:'monospace';background-color:#eff1f3\"><span style=\"letter-spacing:5px\">&#8288;</span>error<span style=\"letter-spacing:5px\">&#8288;</span></span>.</div>"
-                                            textFormat: Text.RichText
+                                        EldurLines {
+                                            id: tdFlow8
                                             color: "#24292f"
                                             font.family: "sans-serif"
                                             font.pixelSize: 14
-                                            wrapMode: Text.WordWrap
-                                            transform: Translate {
-                                                y: -2
-                                            }
+                                            lineHeight: 22.4
                                             anchors.left: parent.left
                                             anchors.right: parent.right
                                             anchors.top: parent.top
                                             anchors.leftMargin: 13
                                             anchors.rightMargin: 13
                                             anchors.topMargin: 9
-                                            renderType: Text.NativeRendering
+
+                                            Text {
+                                                text: "One of "
+                                                textFormat: Text.PlainText
+                                                color: "#24292f"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 14
+                                                wrapMode: Text.WordWrap
+                                                renderType: Text.NativeRendering
+                                            }
+
+                                            Text {
+                                                id: inlineRun12
+                                                readonly property real eldurMarginRight: 5
+                                                readonly property real eldurMarginLeft: 5
+                                                property var eldurFragments: []
+
+                                                text: "debug"
+                                                textFormat: Text.PlainText
+                                                color: "#24292f"
+                                                font.family: "monospace"
+                                                font.pixelSize: 12
+                                                wrapMode: Text.NoWrap
+                                                renderType: Text.NativeRendering
+
+                                                EldurInlineBox {
+                                                    fragments: inlineRun12.eldurFragments
+                                                    font.family: "monospace"
+                                                    font.pixelSize: 12
+                                                    fill: "#eff1f3"
+                                                    radii: [4, 4, 4, 4]
+                                                    paddingTop: 2
+                                                    paddingBottom: 2
+                                                    reachLeft: 5
+                                                    reachRight: 5
+                                                }
+                                            }
+
+                                            Text {
+                                                text: ", "
+                                                textFormat: Text.PlainText
+                                                color: "#24292f"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 14
+                                                wrapMode: Text.WordWrap
+                                                renderType: Text.NativeRendering
+                                            }
+
+                                            Text {
+                                                id: inlineRun13
+                                                readonly property real eldurMarginRight: 5
+                                                readonly property real eldurMarginLeft: 5
+                                                property var eldurFragments: []
+
+                                                text: "info"
+                                                textFormat: Text.PlainText
+                                                color: "#24292f"
+                                                font.family: "monospace"
+                                                font.pixelSize: 12
+                                                wrapMode: Text.NoWrap
+                                                renderType: Text.NativeRendering
+
+                                                EldurInlineBox {
+                                                    fragments: inlineRun13.eldurFragments
+                                                    font.family: "monospace"
+                                                    font.pixelSize: 12
+                                                    fill: "#eff1f3"
+                                                    radii: [4, 4, 4, 4]
+                                                    paddingTop: 2
+                                                    paddingBottom: 2
+                                                    reachLeft: 5
+                                                    reachRight: 5
+                                                }
+                                            }
+
+                                            Text {
+                                                text: ", "
+                                                textFormat: Text.PlainText
+                                                color: "#24292f"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 14
+                                                wrapMode: Text.WordWrap
+                                                renderType: Text.NativeRendering
+                                            }
+
+                                            Text {
+                                                id: inlineRun14
+                                                readonly property real eldurMarginRight: 5
+                                                readonly property real eldurMarginLeft: 5
+                                                property var eldurFragments: []
+
+                                                text: "warn"
+                                                textFormat: Text.PlainText
+                                                color: "#24292f"
+                                                font.family: "monospace"
+                                                font.pixelSize: 12
+                                                wrapMode: Text.NoWrap
+                                                renderType: Text.NativeRendering
+
+                                                EldurInlineBox {
+                                                    fragments: inlineRun14.eldurFragments
+                                                    font.family: "monospace"
+                                                    font.pixelSize: 12
+                                                    fill: "#eff1f3"
+                                                    radii: [4, 4, 4, 4]
+                                                    paddingTop: 2
+                                                    paddingBottom: 2
+                                                    reachLeft: 5
+                                                    reachRight: 5
+                                                }
+                                            }
+
+                                            Text {
+                                                text: " or "
+                                                textFormat: Text.PlainText
+                                                color: "#24292f"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 14
+                                                wrapMode: Text.WordWrap
+                                                renderType: Text.NativeRendering
+                                            }
+
+                                            Text {
+                                                id: inlineRun15
+                                                readonly property real eldurMarginRight: 5
+                                                readonly property real eldurMarginLeft: 5
+                                                property var eldurFragments: []
+
+                                                text: "error"
+                                                textFormat: Text.PlainText
+                                                color: "#24292f"
+                                                font.family: "monospace"
+                                                font.pixelSize: 12
+                                                wrapMode: Text.NoWrap
+                                                renderType: Text.NativeRendering
+
+                                                EldurInlineBox {
+                                                    fragments: inlineRun15.eldurFragments
+                                                    font.family: "monospace"
+                                                    font.pixelSize: 12
+                                                    fill: "#eff1f3"
+                                                    radii: [4, 4, 4, 4]
+                                                    paddingTop: 2
+                                                    paddingBottom: 2
+                                                    reachLeft: 5
+                                                    reachRight: 5
+                                                }
+                                            }
+
+                                            Text {
+                                                text: "."
+                                                textFormat: Text.PlainText
+                                                color: "#24292f"
+                                                font.family: "sans-serif"
+                                                font.pixelSize: 14
+                                                wrapMode: Text.WordWrap
+                                                renderType: Text.NativeRendering
+                                            }
                                         }
                                     }
                                 }

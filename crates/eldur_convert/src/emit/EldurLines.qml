@@ -382,7 +382,8 @@ Item {
         const leading = (lineHeight > 0 ? lineHeight : round(lines.font.pixelSize * 1.15))
             - fontAscent - fontDescent;
         const strutAbove = fontAscent + Math.floor(leading / 2);
-        const strutBelow = fontDescent + Math.ceil(leading / 2);
+        // A fractional line-height stays fractional: lines add up as the block's do.
+        const strutBelow = fontDescent + leading - Math.floor(leading / 2);
         const size = lines.font.pixelSize;
         let top = 0;
         let baseline = 0;
@@ -495,6 +496,7 @@ Item {
                 // A trailing space hangs at the line's end; before more it is in the box.
                 const followed = t.trail > 0 && l.boxes.concat(l.texts).some(function(o) { return o.x > t.x; });
                 t.run.place[t.number] = { x: t.x + shift - t.lead, y: baseline - t.ascent, height: t.height,
+                                          ascent: t.ascent,
                                           width: (t.spread || t.width) + t.lead + (followed ? t.trail : 0) };
                 if (t.spread) {
                     // Qt justifies every line of a Text but its last, whose
@@ -536,6 +538,10 @@ Item {
             item.y = high;
             item.width = Math.max(0, right - left);
             item.forceLayout();
+            // An inline element's own box is painted on these.
+            if (item.eldurFragments !== undefined) {
+                item.eldurFragments = place;
+            }
         });
         implicitHeight = top;
         implicitWidth = natural;

@@ -1557,7 +1557,7 @@ fn rounded_clip_redraws_the_border_over_the_content() {
 }
 
 #[test]
-fn rounded_clip_over_a_gradient_stays_square_with_a_diagnostic() {
+fn rounded_clip_over_a_gradient_masks_what_it_holds() {
     let (qml, diags) = convert(&page(
         ".p{background:linear-gradient(red,blue)} \
          .m{width:100px;height:50px;border-radius:8px;overflow:hidden}",
@@ -1565,12 +1565,19 @@ fn rounded_clip_over_a_gradient_stays_square_with_a_diagnostic() {
     ));
     let m = object_after(&qml, "<div class=\"m\">");
     assert!(!m.contains("OddEvenFill"), "{m}");
-    assert!(
-        diags
-            .iter()
-            .any(|d| d.contains("rounded") && d.contains("square")),
-        "{diags:?}"
-    );
+    assert!(m.contains("EldurRoundClip"), "{m}");
+    assert!(m.contains("layer.enabled: true"), "{m}");
+    assert!(!diags.iter().any(|d| d.contains("square")), "{diags:?}");
+}
+
+#[test]
+fn a_rounded_clip_with_nothing_to_clip_takes_no_layer() {
+    let (qml, _) = convert(&page(
+        ".p{background:linear-gradient(red,blue)} \
+         .m{width:100px;height:50px;border-radius:8px;overflow:hidden;background:#fff}",
+        "<div class=p><div class=m></div></div>",
+    ));
+    assert!(!qml.contains("layer.enabled"), "{qml}");
 }
 
 #[test]
@@ -2034,4 +2041,146 @@ fn a_page_without_a_script_emits_nothing_for_hidden_elements() {
     );
     assert!(main.contains("shown"));
     assert!(!main.contains("secret"), "{main}");
+}
+
+#[test]
+fn a_filter_is_one_effect_on_the_box_and_what_it_holds() {
+    let (qml, _) = convert(&page(
+        ".b { filter: grayscale(1) blur(4px); }",
+        r#"<div class="b"><p>x</p></div>"#,
+    ));
+    assert!(qml.contains("layer.enabled: true"), "{qml}");
+    assert!(qml.contains("EldurFilter"), "{qml}");
+    assert!(qml.contains("colorMatrix"), "{qml}");
+    assert!(qml.contains("blurDeviation: 4"), "{qml}");
+}
+
+#[test]
+fn opacity_takes_a_layer_only_with_more_than_one_thing_to_fade() {
+    let (group, _) = convert(&page(
+        ".b { opacity: .5; background: red; }",
+        r#"<div class="b"><p>x</p></div>"#,
+    ));
+    assert!(group.contains("layer.enabled: true"), "{group}");
+    let (alone, _) = convert(&page(
+        ".b { opacity: .5; background: red; width: 9px; height: 9px; }",
+        r#"<div class="b"></div>"#,
+    ));
+    assert!(!alone.contains("layer.enabled"), "{alone}");
+}
+
+#[test]
+fn text_shadow_is_a_copy_of_the_text_behind_it() {
+    let (qml, _) = convert(&page(
+        ".b { text-shadow: 1px 2px 4px red; }",
+        r#"<p class="b">x</p>"#,
+    ));
+    assert!(qml.contains("EldurTextShadow"), "{qml}");
+    assert!(qml.contains("blurDeviation: 2"), "{qml}");
+}
+
+#[test]
+fn a_style_a_rectangle_cannot_draw_goes_to_the_drawn_border() {
+    let (qml, diags) = convert(&page(".b{border:4px dashed #000}", "<div class=b>x</div>"));
+    assert!(qml.contains("EldurBorder"), "{qml}");
+    assert!(
+        qml.contains(r#"sideStyles: ["dashed", "dashed", "dashed", "dashed"]"#),
+        "{qml}"
+    );
+    assert!(
+        !diags.iter().any(|d| d.contains("drawn solid")),
+        "{diags:?}"
+    );
+}
+
+#[test]
+fn a_plain_border_stays_on_the_rectangle() {
+    let (qml, _) = convert(&page(".b{border:4px solid #000}", "<div class=b>x</div>"));
+    assert!(!qml.contains("EldurBorder"), "{qml}");
+    assert!(qml.contains("border.width: 4"), "{qml}");
+}
+
+#[test]
+fn an_outline_takes_no_room_and_sits_outside_the_box() {
+    let (qml, _) = convert(&page(
+        ".b{outline:3px solid red;outline-offset:2px}",
+        "<div class=b>x</div>",
+    ));
+    assert!(qml.contains("anchors.margins: -5"), "{qml}");
+    assert!(qml.contains("border.width: 3"), "{qml}");
+}
+
+#[test]
+fn a_third_dimension_flattens_with_a_warning_and_no_perspective() {
+    let (qml, diags) = convert(&page(
+        ".b{width:80px;height:80px;background:#000;transform:rotateY(60deg) translateZ(10px)}",
+        "<div class=b></div>",
+    ));
+    // cos 60° on x; the z move through the turn lands sin 60° × 10 on x.
+    assert!(qml.contains("Qt.matrix4x4(0.5, 0, 0, 8.66"), "{qml}");
+    assert!(diags.iter().any(|d| d.contains("flattened")), "{diags:?}");
+}
+
+#[test]
+fn perspective_stays_left_out() {
+    let (qml, diags) = convert(&page(
+        ".b{width:80px;height:80px;background:#000;transform:perspective(100px) rotateY(60deg)}",
+        "<div class=b></div>",
+    ));
+    // The turn is still drawn flat, as it is with the perspective gone.
+    assert!(qml.contains("Qt.matrix4x4(0.5, 0, 0, 0"), "{qml}");
+    assert!(
+        diags
+            .iter()
+            .any(|d| d.contains("`perspective(100px)` on") && d.contains("left out")),
+        "{diags:?}"
+    );
+}
+
+#[test]
+fn ellipsis_elides_a_line_that_cannot_wrap() {
+    let (qml, _) = convert(&page(
+        ".e{width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
+        "<p class=e>A long line of text</p>",
+    ));
+    assert!(qml.contains("elide: Text.ElideRight"), "{qml}");
+    let (qml, _) = convert(&page(
+        ".e{width:80px;white-space:nowrap;text-overflow:ellipsis}",
+        "<p class=e>A long line of text</p>",
+    ));
+    assert!(
+        !qml.contains("elide"),
+        "visible overflow has no ellipsis: {qml}"
+    );
+}
+
+#[test]
+fn a_line_a_font_cannot_draw_is_drawn_beside_the_text() {
+    let (qml, _) = convert(&page(
+        ".u{text-decoration:underline wavy #16a34a}",
+        "<p class=u>x</p>",
+    ));
+    assert!(qml.contains("EldurTextLines {"), "{qml}");
+    assert!(qml.contains(r#"lineStyle: "wavy""#), "{qml}");
+    assert!(!qml.contains("font.underline"), "{qml}");
+    let (qml, _) = convert(&page(".u{text-decoration:underline}", "<p class=u>x</p>"));
+    assert!(qml.contains("font.underline: true"), "{qml}");
+    assert!(!qml.contains("EldurTextLines"), "{qml}");
+}
+
+#[test]
+fn a_first_letter_is_a_run_of_its_own() {
+    let (qml, diags) = convert(&page(
+        "p::first-letter{color:#dc2626}",
+        "<p>First words</p>",
+    ));
+    assert!(
+        qml.contains(r##"<font color=\"#dc2626\">F</font>"##),
+        "{qml}"
+    );
+    assert!(qml.contains("irst words"), "{qml}");
+    assert!(
+        !diags.iter().any(|d| d.contains("first-letter")),
+        "{diags:?}"
+    );
 }

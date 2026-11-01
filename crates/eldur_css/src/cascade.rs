@@ -106,6 +106,12 @@ const PROBED_CSS_PROPERTIES: &[&str] = &[
     "background-size",
     "background-position",
     "background-repeat",
+    "background-origin",
+    "background-clip",
+    "background-attachment",
+    "object-fit",
+    "text-shadow",
+    "object-position",
     "box-shadow",
     "opacity",
     "overflow",
@@ -1084,6 +1090,7 @@ impl<'a> CascadeEngine<'a> {
                 after: None,
                 placeholder: None,
                 marker: None,
+                first_letter: None,
             };
         }
 
@@ -1092,6 +1099,7 @@ impl<'a> CascadeEngine<'a> {
         let mut after_decls: Vec<(CascadeKey, &DeclValue)> = Vec::new();
         let mut placeholder_decls: Vec<(CascadeKey, &DeclValue)> = Vec::new();
         let mut marker_decls: Vec<(CascadeKey, &DeclValue)> = Vec::new();
+        let mut first_letter_decls: Vec<(CascadeKey, &DeclValue)> = Vec::new();
         let supports_placeholder =
             elem.is_html() && matches!(elem.local_name(), "input" | "textarea");
 
@@ -1106,6 +1114,7 @@ impl<'a> CascadeEngine<'a> {
                         PseudoElement::After => &mut after_decls,
                         PseudoElement::Placeholder => &mut placeholder_decls,
                         PseudoElement::Marker => &mut marker_decls,
+                        PseudoElement::FirstLetter => &mut first_letter_decls,
                     };
                     for (offset, decl) in rule.declarations.iter().enumerate() {
                         let key = CascadeKey {
@@ -1185,6 +1194,20 @@ impl<'a> CascadeEngine<'a> {
             )))
         };
 
+        let first_letter = if first_letter_decls.is_empty() {
+            None
+        } else {
+            let mut fs = *root_font_size;
+            Some(Box::new(self.resolve_declarations_to_style(
+                &first_letter_decls,
+                false,
+                Some(&style),
+                pseudo_enclosing,
+                &mut fs,
+                None,
+            )))
+        };
+
         // Ensure `style.content` on regular elements doesn't leak onto non-pseudo elements
         // unless set directly, keeping `style` intact as computed.
         let _ = &mut style;
@@ -1195,6 +1218,7 @@ impl<'a> CascadeEngine<'a> {
             after,
             placeholder,
             marker,
+            first_letter,
         }
     }
 

@@ -15,12 +15,15 @@ use eldur_qml::{Member, Object, Value};
 
 use super::Emitter;
 use super::controls::{line_box, normal_line, text_scale};
+use super::decoration::{border_width, is_visible};
 use super::text::CONTENT_AREA;
 use super::units::{fmt_number, number, round};
 use crate::boxes::{BoxKind, Inline, LayoutBox, Span, node_line};
 
 /// The layouter, written beside `Main.qml` when anything may use it.
 pub(crate) const ELDUR_LINES_QML: &str = include_str!("EldurLines.qml");
+/// What an inline element paints of its own box, beside it when used.
+pub(crate) const ELDUR_INLINE_BOX_QML: &str = include_str!("EldurInlineBox.qml");
 
 /// Ascent of the common fallback fonts as a fraction of the font size
 /// (Liberation Sans: 0.905).
@@ -66,6 +69,47 @@ fn holds_tall_span(block: &ComputedStyle, items: &[Inline<'_>]) -> bool {
     })
 }
 
+/// Whether an inline element paints a box RichText cannot: RichText has a background
+/// as tall as its line, with no corners or borders. Such an element is a run of its
+/// own and `EldurInlineBox` draws behind it. A square background stays in RichText,
+/// its vertical padding unpainted (see 45-inline-boxes `#p-tall`).
+pub(crate) fn paints_box(style: &ComputedStyle) -> bool {
+    let sides = [
+        &style.border.top,
+        &style.border.right,
+        &style.border.bottom,
+        &style.border.left,
+    ];
+    if sides.into_iter().any(is_visible) {
+        return true;
+    }
+    let r = &style.border_radius;
+    let rounded = [&r.top_left, &r.top_right, &r.bottom_right, &r.bottom_left]
+        .iter()
+        .any(|c| !c.is_zero());
+    !style.background_color.is_transparent() && rounded
+}
+
+/// The innermost element that paints a box and holds all of `items`.
+fn sole_box<'a>(items: &[Inline<'a>]) -> Option<&'a ComputedStyle> {
+    let [Inline::Span(span)] = items else {
+        return None;
+    };
+    sole_box(&span.children).or(paints_box(span.style).then_some(span.style))
+}
+
+fn holds_box(items: &[Inline<'_>]) -> bool {
+    items.iter().any(|item| match item {
+        Inline::Span(span) => paints_box(span.style) || holds_box(&span.children),
+        Inline::Text(_) | Inline::Atomic(_) | Inline::LineBreak => false,
+    })
+}
+
+/// Whether `items` must be placed by `EldurLines` for a box an element paints.
+pub(crate) fn needs_lines_for_boxes(items: &[Inline<'_>]) -> bool {
+    holds_box(items)
+}
+
 /// Whether `items` must be placed by `EldurLines` for a span's `line-height`.
 /// A span that is the whole line is already the `Text`'s own (`whole_span`).
 pub(crate) fn needs_lines_for_leading(block: &ComputedStyle, items: &[Inline<'_>]) -> bool {
@@ -101,6 +145,38 @@ fn run_margins(items: &[Inline<'_>]) -> [f32; 2] {
     [left, right]
 }
 
+fn side_px(m: &LengthAuto) -> f32 {
+    match m {
+        LengthAuto::Length(l) => l.as_px().unwrap_or(0.0),
+        LengthAuto::Auto => 0.0,
+    }
+}
+
+/// The boxes a run paints, outermost first, and whether each opens and closes in
+/// this run; `runs` is every run of the line, for an element an atomic cuts.
+fn run_boxes<'b, 'a>(
+    items: &'b [Inline<'a>],
+    this: usize,
+    runs: &[Vec<Option<NodeId>>],
+) -> Vec<(&'b Span<'a>, bool, bool)> {
+    let mut spans = Vec::new();
+    each_span(items, &mut spans);
+    spans
+        .into_iter()
+        .filter(|s| paints_box(s.style))
+        .map(|s| {
+            let mut with = runs
+                .iter()
+                .enumerate()
+                .filter(|(_, r)| s.node.is_some() && r.contains(&s.node))
+                .map(|(n, _)| n);
+            let first = with.next().unwrap_or(this);
+            let last = with.next_back().unwrap_or(first);
+            (s, first == this, last == this)
+        })
+        .collect()
+}
+
 /// The percentage and pixels of a `width` that follows the containing block.
 fn percent_width(style: &ComputedStyle) -> Option<(f32, f32)> {
     match style.width {
@@ -134,9 +210,11 @@ fn pieces<'b, 'a>(
                 out.push(Piece::Atomic(b, owner));
             }
             Inline::Span(span)
-                if has_atomic(&span.children) || holds_tall_span(block, &span.children) =>
+                if has_atomic(&span.children)
+                    || holds_tall_span(block, &span.children)
+                    || holds_box(&span.children) =>
             {
-                let tall = raises_line(block, span.style);
+                let tall = raises_line(block, span.style) || paints_box(span.style);
                 if tall {
                     end_run(run, out);
                 }
@@ -151,7 +229,7 @@ fn pieces<'b, 'a>(
                     end_run(run, out);
                 }
             }
-            Inline::Span(span) if raises_line(block, span.style) => {
+            Inline::Span(span) if raises_line(block, span.style) || paints_box(span.style) => {
                 end_run(run, out);
                 push_in_chain(run, item.clone(), chain);
                 end_run(run, out);
@@ -377,12 +455,29 @@ impl Emitter<'_, '_> {
             flow.set("preserveSpace", true);
         }
 
+        let run_nodes: Vec<Vec<Option<NodeId>>> = list
+            .iter()
+            .filter_map(|piece| match piece {
+                Piece::Run(items) => {
+                    let mut spans = Vec::new();
+                    each_span(items, &mut spans);
+                    Some(spans.iter().map(|s| s.node).collect())
+                }
+                Piece::Atomic(..) => None,
+            })
+            .collect();
+        let mut run_index = 0;
         let mut runs = false;
         for piece in list {
             match piece {
                 Piece::Run(items) => {
                     let drawn = drop_doubled_spaces(&items, &mut false);
-                    let mut text = self.text(style, decoration, &drawn, line);
+                    // RichText has no `lineLaidOut`, so the line could not place it:
+                    // the run takes the font of the element whose box it is.
+                    let own = sole_box(&drawn).unwrap_or(style);
+                    self.boxes_drawn = true;
+                    let mut text = self.text(own, decoration, &drawn, line);
+                    self.boxes_drawn = false;
                     drop_own_leading(&mut text);
                     let mut spans = Vec::new();
                     each_span(&items, &mut spans);
@@ -407,7 +502,9 @@ impl Emitter<'_, '_> {
                                 if name == "horizontalAlignment")
                         });
                     }
-                    let [left, right] = run_margins(&items);
+                    let boxes = run_boxes(&items, run_index, &run_nodes);
+                    run_index += 1;
+                    let [left, right] = self.paint_run_boxes(&mut text, &items, &boxes, line);
                     for (name, m) in [("eldurMarginLeft", left), ("eldurMarginRight", right)] {
                         if m != 0.0 {
                             text.members.insert(
@@ -493,6 +590,129 @@ impl Emitter<'_, '_> {
             flow.push_child(Object::new("Component").with_id(run_id).child(run));
         }
         flow
+    }
+
+    /// Puts the boxes of a run's elements behind its text, and returns what they
+    /// and its other spans take on the line beside it.
+    fn paint_run_boxes(
+        &mut self,
+        text: &mut Object,
+        items: &[Inline<'_>],
+        boxes: &[(&Span<'_>, bool, bool)],
+        line: Option<u32>,
+    ) -> [f32; 2] {
+        let mut margins = run_margins(items);
+        if boxes.is_empty() {
+            return margins;
+        }
+        // The outermost span's margin, when it paints, is counted below with the rest.
+        if let Some(Inline::Span(outer)) = items
+            .iter()
+            .find(|i| !matches!(i, Inline::Text(t) if t.trim().is_empty()))
+            && paints_box(outer.style)
+        {
+            margins = [0.0, 0.0];
+        }
+        let id = match &text.id {
+            Some(id) => id.clone(),
+            None => {
+                let id = self.ids.claim("inline run");
+                text.id = Some(id.clone());
+                id
+            }
+        };
+        text.members.insert(
+            0,
+            Member::PropertyDecl {
+                ty: "var".to_owned(),
+                name: "eldurFragments".to_owned(),
+                value: Some(Value::expr("[]")),
+                readonly: false,
+                required: false,
+            },
+        );
+        // Inner boxes first: what each takes pushes every box around it outwards.
+        let (mut reach_left, mut reach_right) = (0.0, 0.0);
+        let mut painted = Vec::new();
+        for (span, opens, closes) in boxes.iter().rev() {
+            let st = span.style;
+            let pad = |l: &Length| l.as_px().unwrap_or(0.0).max(0.0);
+            let (opens, closes) = (*opens, *closes);
+            if opens {
+                reach_left += pad(&st.padding.left) + border_width(&st.border.left);
+            }
+            if closes {
+                reach_right += pad(&st.padding.right) + border_width(&st.border.right);
+            }
+            let mut paint = Object::new("EldurInlineBox");
+            paint.set("fragments", Value::expr(format!("{id}.eldurFragments")));
+            let metrics = self.text(st, TextDecorationLine::default(), &[], line);
+            for member in &metrics.members {
+                if let Member::Property { name, value } = member
+                    && name.starts_with("font.")
+                {
+                    paint.set(name, value.clone());
+                }
+            }
+            if !st.background_color.is_transparent() {
+                paint.set("fill", super::units::color(st.background_color));
+            }
+            let radii = self.corner_radii(st, line);
+            if radii.iter().any(|r| *r != 0.0) {
+                paint.set(
+                    "radii",
+                    list_expr(radii.iter().map(|r| fmt_number(round(*r)))),
+                );
+            }
+            let sides = [
+                &st.border.top,
+                &st.border.right,
+                &st.border.bottom,
+                &st.border.left,
+            ];
+            if sides.iter().any(|s| is_visible(s)) {
+                paint.set(
+                    "borderWidths",
+                    list_expr(sides.iter().map(|s| fmt_number(round(border_width(s))))),
+                );
+                paint.set(
+                    "borderColors",
+                    list_expr(sides.iter().map(|s| {
+                        format!("\"{}\"", super::units::qml_color(s.color).to_qml_string())
+                    })),
+                );
+            }
+            if pad(&st.padding.top) != 0.0 {
+                paint.set("paddingTop", number(pad(&st.padding.top)));
+            }
+            if pad(&st.padding.bottom) != 0.0 {
+                paint.set("paddingBottom", number(pad(&st.padding.bottom)));
+            }
+            if reach_left != 0.0 {
+                paint.set("reachLeft", number(reach_left));
+            }
+            if reach_right != 0.0 {
+                paint.set("reachRight", number(reach_right));
+            }
+            if !opens {
+                paint.set("opens", false);
+            }
+            if !closes {
+                paint.set("closes", false);
+            }
+            painted.push(paint);
+            if opens {
+                reach_left += side_px(&st.margin.left);
+            }
+            if closes {
+                reach_right += side_px(&st.margin.right);
+            }
+        }
+        // The outermost is painted first.
+        for paint in painted.into_iter().rev() {
+            text.push_child(paint);
+        }
+        [margins[0] + reach_left, margins[1] + reach_right]
     }
 
     fn atomic(&mut self, a: &LayoutBox<'_>, decoration: TextDecorationLine, flow_id: &str) -> Part {
@@ -716,4 +936,8 @@ impl Emitter<'_, '_> {
         wrapper.push_child(obj);
         wrapper
     }
+}
+
+fn list_expr(items: impl Iterator<Item = String>) -> Value {
+    Value::expr(format!("[{}]", items.collect::<Vec<_>>().join(", ")))
 }

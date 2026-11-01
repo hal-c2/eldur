@@ -31,6 +31,85 @@ impl Insets {
     }
 }
 
+pub(crate) const ELDUR_ROUND_CLIP_QML: &str = include_str!("EldurRoundClip.qml");
+pub(crate) const ELDUR_BORDER_QML: &str = include_str!("EldurBorder.qml");
+
+fn style_name(style: BorderStyle) -> &'static str {
+    match style {
+        BorderStyle::None => "none",
+        BorderStyle::Hidden => "hidden",
+        BorderStyle::Solid => "solid",
+        BorderStyle::Dashed => "dashed",
+        BorderStyle::Dotted => "dotted",
+        BorderStyle::Double => "double",
+        BorderStyle::Groove => "groove",
+        BorderStyle::Ridge => "ridge",
+        BorderStyle::Inset => "inset",
+        BorderStyle::Outset => "outset",
+    }
+}
+
+/// The picture a Rectangle's one border and four square strips cannot give: a
+/// style other than solid, curves on sides that differ, or a join between colours.
+pub(super) fn needs_drawn_border(style: &ComputedStyle) -> bool {
+    let all = sides(style);
+    let plain = |s: &BorderSide| !is_visible(s) || s.style == BorderStyle::Solid;
+    if !all.iter().all(|s| plain(s)) {
+        return true;
+    }
+    let uniform = all.iter().all(|s| **s == *all[0]);
+    let r = &style.border_radius;
+    let rounded = [&r.top_left, &r.top_right, &r.bottom_right, &r.bottom_left]
+        .iter()
+        .any(|c| !c.is_zero());
+    let meet = (0..4).any(|i| {
+        let (a, b) = (all[i], all[(i + 1) % 4]);
+        is_visible(a) && is_visible(b) && a.color != b.color
+    });
+    all.iter().any(|s| is_visible(s)) && !uniform && (rounded || meet)
+}
+
+fn argb(c: eldur_css::Rgba) -> String {
+    format!("#{:02x}{:02x}{:02x}{:02x}", c.a, c.r, c.g, c.b)
+}
+
+fn drawn_border(sides: [&BorderSide; 4], radii: [f32; 4]) -> Object {
+    let mut drawn = Object::new("EldurBorder");
+    let list = |items: Vec<String>| Value::expr(format!("[{}]", items.join(", ")));
+    drawn.set(
+        "sideWidths",
+        list(
+            sides
+                .iter()
+                .map(|s| fmt_number(f64::from(border_width(s))))
+                .collect(),
+        ),
+    );
+    drawn.set(
+        "sideColors",
+        list(
+            sides
+                .iter()
+                .map(|s| format!("\"{}\"", argb(s.color)))
+                .collect(),
+        ),
+    );
+    drawn.set(
+        "sideStyles",
+        list(
+            sides
+                .iter()
+                .map(|s| format!("\"{}\"", style_name(s.style)))
+                .collect(),
+        ),
+    );
+    drawn.set(
+        "radii",
+        list(radii.iter().map(|r| fmt_number(f64::from(*r))).collect()),
+    );
+    drawn
+}
+
 pub(crate) fn is_visible(side: &BorderSide) -> bool {
     side.width > 0.0 && !matches!(side.style, BorderStyle::None | BorderStyle::Hidden)
 }
@@ -45,7 +124,7 @@ pub(crate) fn border_width(side: &BorderSide) -> f32 {
     if is_visible(side) { side.width } else { 0.0 }
 }
 
-fn sides(style: &ComputedStyle) -> [&BorderSide; 4] {
+pub(super) fn sides(style: &ComputedStyle) -> [&BorderSide; 4] {
     let b = &style.border;
     [&b.top, &b.right, &b.bottom, &b.left]
 }
@@ -67,6 +146,8 @@ pub(crate) struct Decoration {
     /// left), visible or not, so every combination of conditions has
     /// the same objects.
     pub strips: Option<[bool; 4]>,
+    /// Draw no `EldurBorder` or outline: states would change the box's objects.
+    pub plain_edges: bool,
 }
 
 impl Decoration {
@@ -123,7 +204,10 @@ impl Emitter<'_, '_> {
         let clips = style.overflow_x != Overflow::Visible || style.overflow_y != Overflow::Visible;
         // The canvas propagation only takes the colour; gradients stay on
         // the box, which is close for the body of a page.
-        let gradients = style.background_layers.iter().any(|l| l.image.is_some());
+        let gradients = style
+            .background_layers
+            .iter()
+            .any(|l| l.image.is_some() || !matches!(l.clip, eldur_css::BackgroundClip::BorderBox));
         let inset_shadows = style.box_shadow.iter().any(|s| s.inset);
         let shadows = style.box_shadow.iter().any(|s| !s.inset);
         if matches!(style.overflow_x, Overflow::Auto | Overflow::Scroll)
@@ -137,13 +221,14 @@ impl Emitter<'_, '_> {
         }
         Decoration {
             insets,
-            paints: background || border || self.force_paint,
+            paints: background || border || is_visible(&style.outline) || self.force_paint,
             clips,
             gradients,
             shadows,
             inset_shadows,
             hint: "box".to_owned(),
             strips: None,
+            plain_edges: false,
         }
     }
 
@@ -186,7 +271,7 @@ impl Emitter<'_, '_> {
         let mut wrapper = Object::new(if deco.paints { "Rectangle" } else { "Item" });
         let insets = deco.insets;
         if deco.paints {
-            let bg = if paint_background {
+            let bg = if paint_background && colour_clip_inset(style).is_none() {
                 style.background_color
             } else {
                 eldur_css::Rgba::TRANSPARENT
@@ -228,7 +313,14 @@ impl Emitter<'_, '_> {
         } else {
             Vec::new()
         };
-        let painted = !gradients.is_empty();
+        let colour_box = (paint_background && !style.background_color.is_transparent())
+            .then(|| colour_clip_inset(style))
+            .flatten();
+        let painted = !gradients.is_empty() || colour_box.is_some();
+        if let Some(by_content) = colour_box {
+            let colour = self.clipped_colour(style, by_content, line);
+            wrapper.push_child(colour);
+        }
         for shape in gradients {
             wrapper.push_child(shape);
         }
@@ -239,8 +331,14 @@ impl Emitter<'_, '_> {
         let borders: Vec<&BorderSide> = sides(style).to_vec();
         let uniform = borders.iter().all(|s| **s == *borders[0]) && is_visible(borders[0]);
         let stripped = deco.strips.is_some() || !uniform;
+        let drawn = deco.strips.is_none() && !deco.plain_edges && needs_drawn_border(style);
         if let Some(forced) = deco.strips {
             self.border_strips(&mut wrapper, style, forced, line);
+        } else if drawn {
+            let radii = self.corner_radii(style, line);
+            let mut border = drawn_border(sides(style), radii);
+            border.set("anchors.fill", Value::expr("parent"));
+            wrapper.push_child(border);
         } else if uniform && painted {
             // The background is painted under the border (`background-clip:
             // border-box`), and a Rectangle draws its border below its
@@ -260,7 +358,7 @@ impl Emitter<'_, '_> {
         }
         for side in borders.iter().filter(|s| is_visible(s)) {
             let two_lines = stripped && is_double(side);
-            if !matches!(side.style, BorderStyle::Solid) && !two_lines {
+            if !drawn && !matches!(side.style, BorderStyle::Solid) && !two_lines {
                 self.diags.info(
                     "css",
                     line,
@@ -319,8 +417,10 @@ impl Emitter<'_, '_> {
         for child in extra {
             wrapper.push_child(child);
         }
+        self.outline(&mut wrapper, style, line);
         if deco.clips {
-            self.clip_edges(&mut wrapper, style, &deco.hint, line);
+            let holds = wrapper.children().next().is_some();
+            self.clip_edges(&mut wrapper, style, &deco.hint, holds, line);
         }
         if deco.shadows && deco.clips {
             // `overflow` clips the content, not the box's own shadow, and a
@@ -351,12 +451,14 @@ impl Emitter<'_, '_> {
     /// software backend (`MultiEffect` masks and `ShapePath.fillItem` draw
     /// nothing there), so the corners outside the rounded rect are painted
     /// over in the colour behind the box, and the border is drawn again on
-    /// top. Over anything but a plain colour the clip stays square.
+    /// top. Over anything else the box is masked, which takes a layer and so
+    /// is kept for a box that holds something to clip.
     fn clip_edges(
         &mut self,
         wrapper: &mut Object,
         style: &ComputedStyle,
         hint: &str,
+        holds: bool,
         line: Option<u32>,
     ) {
         let r = &style.border_radius;
@@ -394,12 +496,14 @@ impl Emitter<'_, '_> {
                     shape.push_child(path);
                     wrapper.push_child(shape);
                 }
-                None => self.diags.info(
-                    "css",
-                    line,
-                    "rounded `overflow` clip is square: what is behind the box is not a plain colour"
-                        .to_owned(),
-                ),
+                None if holds => {
+                    self.imports.insert("QtQuick.Effects");
+                    let mut mask = Object::new("EldurRoundClip");
+                    self.radius(&mut mask, style, line);
+                    wrapper.set("layer.enabled", true);
+                    wrapper.set("layer.effect", Value::Object(Box::new(mask)));
+                }
+                None => {}
             }
         }
         let borders = sides(style);
@@ -448,6 +552,50 @@ impl Emitter<'_, '_> {
             self.radius(&mut shadow, style, line);
             wrapper.push_child(shadow);
         }
+    }
+
+    /// The background colour, painted in the box the bottom layer clips to.
+    fn clipped_colour(
+        &mut self,
+        style: &ComputedStyle,
+        to_content: bool,
+        line: Option<u32>,
+    ) -> Object {
+        let by = if to_content {
+            self.insets(style, line)
+        } else {
+            Insets {
+                top: border_width(&style.border.top),
+                right: border_width(&style.border.right),
+                bottom: border_width(&style.border.bottom),
+                left: border_width(&style.border.left),
+            }
+        };
+        let mut rect = Object::new("Rectangle");
+        rect.set("anchors.fill", Value::expr("parent"));
+        for (name, v) in [
+            ("anchors.topMargin", by.top),
+            ("anchors.rightMargin", by.right),
+            ("anchors.bottomMargin", by.bottom),
+            ("anchors.leftMargin", by.left),
+        ] {
+            if v != 0.0 {
+                rect.set(name, number(v));
+            }
+        }
+        rect.set("color", color(style.background_color));
+        let radii = self.corner_radii(style, line);
+        let less = |r: f32, a: f32, b: f32| (r - a.max(b)).max(0.0);
+        set_radii(
+            &mut rect,
+            [
+                less(radii[0], by.top, by.left),
+                less(radii[1], by.top, by.right),
+                less(radii[2], by.bottom, by.right),
+                less(radii[3], by.bottom, by.left),
+            ],
+        );
+        rect
     }
 
     pub(super) fn radius(
@@ -500,6 +648,33 @@ impl Emitter<'_, '_> {
             BoxSizing::BorderBox => (0.0, 0.0),
         };
         Some((w + extra_w).min(h + extra_h))
+    }
+
+    /// An outline is above what the box holds and takes no room. It follows the
+    /// border's curve, grown by its distance, where a corner is rounded.
+    fn outline(&mut self, wrapper: &mut Object, style: &ComputedStyle, line: Option<u32>) {
+        let side = &style.outline;
+        if !is_visible(side) {
+            return;
+        }
+        let out = style.outline_offset + side.width;
+        let radii = self
+            .corner_radii(style, line)
+            .map(|r| if r > 0.0 { r + out } else { 0.0 });
+        let mut drawn = if side.style == BorderStyle::Solid {
+            let mut rect = Object::new("Rectangle");
+            rect.set("color", Value::string("transparent"));
+            rect.set("border.width", number(side.width));
+            rect.set("border.color", color(side.color));
+            set_radii(&mut rect, radii);
+            rect
+        } else {
+            drawn_border([side; 4], radii)
+        };
+        drawn.set("anchors.fill", Value::expr("parent"));
+        drawn.set("anchors.margins", number(-out));
+        drawn.set("z", 1.0);
+        wrapper.push_child(drawn);
     }
 
     /// Non-uniform borders: one thin `Rectangle` per visible side, and per
@@ -579,6 +754,17 @@ impl Emitter<'_, '_> {
 }
 
 /// `radius`, or one radius per corner when they differ.
+/// `Some(to_content)` when the background colour stops inside the border box:
+/// the bottom layer's `background-clip` says for the colour too (CSS
+/// Backgrounds 3 §3.7).
+fn colour_clip_inset(style: &ComputedStyle) -> Option<bool> {
+    match style.background_layers.last()?.clip {
+        eldur_css::BackgroundClip::PaddingBox => Some(false),
+        eldur_css::BackgroundClip::ContentBox => Some(true),
+        eldur_css::BackgroundClip::BorderBox | eldur_css::BackgroundClip::Text => None,
+    }
+}
+
 pub(super) fn set_radii(obj: &mut Object, px: [f32; 4]) {
     let names = [
         "topLeftRadius",

@@ -601,6 +601,33 @@ pub enum BackgroundRepeat {
     Round,
 }
 
+/// `background-origin`: the box a layer is positioned and sized against.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum BackgroundOrigin {
+    BorderBox,
+    #[default]
+    PaddingBox,
+    ContentBox,
+}
+
+/// `background-clip`: the box a layer is painted within.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum BackgroundClip {
+    #[default]
+    BorderBox,
+    PaddingBox,
+    ContentBox,
+    Text,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum BackgroundAttachment {
+    #[default]
+    Scroll,
+    Fixed,
+    Local,
+}
+
 /// One background layer (`background-image` and its parallel lists).
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BackgroundLayer {
@@ -609,6 +636,9 @@ pub struct BackgroundLayer {
     pub position_x: LengthPercentage,
     pub position_y: LengthPercentage,
     pub repeat: BackgroundRepeat,
+    pub origin: BackgroundOrigin,
+    pub clip: BackgroundClip,
+    pub attachment: BackgroundAttachment,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -860,6 +890,8 @@ pub struct ComputedStyle {
     /// Percentages of the border box; default 50% 50%.
     pub transform_origin: (LengthPercentage, LengthPercentage),
     pub object_fit: ObjectFit,
+    pub object_position_x: LengthPercentage,
+    pub object_position_y: LengthPercentage,
     /// Raw `filter` value; QML has MultiEffect for blur/brightness etc.
     pub filter: Option<String>,
 
@@ -908,6 +940,8 @@ pub struct ComputedStyle {
     pub text_decoration_line: TextDecorationLine,
     pub text_decoration_color: Option<Rgba>,
     pub text_decoration_style: BorderStyle,
+    /// `wavy` is no border style; `text_decoration_style` says solid with it.
+    pub text_decoration_wavy: bool,
     pub text_overflow: TextOverflow,
     pub vertical_align: VerticalAlign,
 
@@ -999,6 +1033,8 @@ impl Default for ComputedStyle {
                 LengthPercentage::percent(50.0),
             ),
             object_fit: ObjectFit::Fill,
+            object_position_x: LengthPercentage::percent(50.0),
+            object_position_y: LengthPercentage::percent(50.0),
             filter: None,
             color: Rgba::BLACK,
             font_family: vec!["serif".to_owned()],
@@ -1035,6 +1071,7 @@ impl Default for ComputedStyle {
             text_decoration_line: TextDecorationLine::default(),
             text_decoration_color: None,
             text_decoration_style: BorderStyle::Solid,
+            text_decoration_wavy: false,
             text_overflow: TextOverflow::Clip,
             vertical_align: VerticalAlign::Baseline,
             transitions: Vec::new(),

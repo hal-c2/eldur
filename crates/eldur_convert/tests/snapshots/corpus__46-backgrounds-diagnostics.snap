@@ -1,0 +1,5 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[css]: index.html:42: `background-attachment: fixed` is placed against the window once; it does not follow scrolling

@@ -28,7 +28,10 @@ pub(crate) fn parse_content_value(value: &str) -> Option<Option<Vec<crate::Conte
 }
 mod transform;
 
-use crate::{BackgroundRepeat, ComputedStyle, LengthPercentage, Size, TransformFn, Viewport};
+use crate::{
+    BackgroundAttachment, BackgroundClip, BackgroundOrigin, BackgroundRepeat, ComputedStyle,
+    LengthPercentage, Size, TransformFn, Viewport,
+};
 
 use self::{
     animation::{
@@ -40,10 +43,10 @@ use self::{
     },
     background::{
         apply_background_images, apply_background_prop, copy_background_field,
-        parse_background_color, parse_background_image_list, parse_bg_position_axis_list,
+        parse_background_color, parse_background_image_list, parse_bg_attachment_list,
+        parse_bg_clip_list, parse_bg_origin_list, parse_bg_position_axis_list,
         parse_bg_repeat_list, parse_bg_size_list, parse_filter, parse_object_fit, parse_opacity,
-        parse_overflow, parse_position_2d, parse_shadow_list, validate_bg_attachment_list,
-        validate_bg_box_list,
+        parse_overflow, parse_position_2d, parse_shadow_list,
     },
     box_model::{
         apply_border_color, apply_border_style, apply_border_width, parse_aspect_ratio,
@@ -1126,13 +1129,22 @@ pub(crate) fn compute(
             });
         }
         Longhand::BackgroundAttachment => {
-            validate_bg_attachment_list(cvs)?;
+            let list = parse_bg_attachment_list(cvs)?;
+            apply_background_prop(style, &list, &BackgroundAttachment::Scroll, |layer, v| {
+                layer.attachment = v
+            });
         }
         Longhand::BackgroundOrigin => {
-            validate_bg_box_list(cvs, false)?;
+            let list = parse_bg_origin_list(cvs)?;
+            apply_background_prop(style, &list, &BackgroundOrigin::PaddingBox, |layer, v| {
+                layer.origin = v
+            });
         }
         Longhand::BackgroundClip => {
-            validate_bg_box_list(cvs, true)?;
+            let list = parse_bg_clip_list(cvs)?;
+            apply_background_prop(style, &list, &BackgroundClip::BorderBox, |layer, v| {
+                layer.clip = v
+            });
         }
         Longhand::BoxShadow => {
             style.box_shadow = parse_shadow_list(cvs, &uctx_no_pct, style.color, true)?;
@@ -1153,7 +1165,8 @@ pub(crate) fn compute(
             style.object_fit = parse_object_fit(cvs)?;
         }
         Longhand::ObjectPosition => {
-            let _ = parse_position_2d(cvs, &uctx_pct, true)?;
+            (style.object_position_x, style.object_position_y) =
+                parse_position_2d(cvs, &uctx_pct, true)?;
         }
         Longhand::Filter => {
             style.filter = parse_filter(cvs, &uctx_no_pct, style.color)?;
@@ -1207,6 +1220,7 @@ pub(crate) fn compute(
         }
         Longhand::TextDecorationStyle => {
             style.text_decoration_style = parse_text_decoration_style(cvs)?;
+            style.text_decoration_wavy = text::is_wavy(cvs);
         }
         Longhand::TextDecorationColor => {
             style.text_decoration_color = parse_text_decoration_color(cvs, style.color)?;
@@ -1565,14 +1579,43 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
                 |l, r| l.repeat = r,
             );
         }
-        Longhand::BackgroundAttachment | Longhand::BackgroundOrigin | Longhand::BackgroundClip => {}
+        Longhand::BackgroundAttachment => {
+            copy_background_field(
+                dst,
+                src,
+                BackgroundAttachment::Scroll,
+                |l| l.attachment,
+                |l, v| l.attachment = v,
+            );
+        }
+        Longhand::BackgroundOrigin => {
+            copy_background_field(
+                dst,
+                src,
+                BackgroundOrigin::PaddingBox,
+                |l| l.origin,
+                |l, v| l.origin = v,
+            );
+        }
+        Longhand::BackgroundClip => {
+            copy_background_field(
+                dst,
+                src,
+                BackgroundClip::BorderBox,
+                |l| l.clip,
+                |l, v| l.clip = v,
+            );
+        }
         Longhand::BoxShadow => dst.box_shadow.clone_from(&src.box_shadow),
         Longhand::Opacity => dst.opacity = src.opacity,
         Longhand::Visibility => dst.visibility = src.visibility,
         Longhand::OverflowX => dst.overflow_x = src.overflow_x,
         Longhand::OverflowY => dst.overflow_y = src.overflow_y,
         Longhand::ObjectFit => dst.object_fit = src.object_fit,
-        Longhand::ObjectPosition => {}
+        Longhand::ObjectPosition => {
+            dst.object_position_x = src.object_position_x;
+            dst.object_position_y = src.object_position_y;
+        }
         Longhand::Filter => dst.filter.clone_from(&src.filter),
 
         Longhand::Translate => {
@@ -1602,7 +1645,10 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
         Longhand::TextIndent => dst.text_indent.clone_from(&src.text_indent),
         Longhand::TextTransform => dst.text_transform = src.text_transform,
         Longhand::TextDecorationLine => dst.text_decoration_line = src.text_decoration_line,
-        Longhand::TextDecorationStyle => dst.text_decoration_style = src.text_decoration_style,
+        Longhand::TextDecorationStyle => {
+            dst.text_decoration_style = src.text_decoration_style;
+            dst.text_decoration_wavy = src.text_decoration_wavy;
+        }
         Longhand::TextDecorationColor => dst.text_decoration_color = src.text_decoration_color,
         Longhand::TextDecorationThickness | Longhand::TextUnderlineOffset => {}
         Longhand::TextOverflow => dst.text_overflow = src.text_overflow,

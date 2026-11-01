@@ -182,3 +182,10 @@ fn comments_stay_next_to_the_child_they_annotate() {
     }
     "#);
 }
+
+#[test]
+fn words_qt_keeps_for_later_are_not_ids() {
+    for word in ["double", "float", "int", "goto", "volatile"] {
+        assert!(is_reserved(word), "{word}");
+    }
+}

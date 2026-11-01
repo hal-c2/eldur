@@ -77,7 +77,16 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     } else {
         &scripts.wanted
     };
-    let images = crate::images::collect(&doc, &input.url, resources, &mut diags);
+    let mut images = crate::images::collect(&doc, &input.url, resources, &mut diags);
+    crate::images::collect_backgrounds(
+        &mut images,
+        &doc,
+        &styles,
+        &sheets,
+        &input.url,
+        resources,
+        &mut diags,
+    );
     // An inline element or option has no object for a script's static target,
     // so a script that wants one finds it at run time.
     let runtime_dom = !scripts.is_empty()
@@ -103,6 +112,7 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         options,
         wanted,
         images: &images.by_node,
+        background_images: &images.backgrounds,
         runtime_dom,
         scripts: (!scripts.is_empty()).then_some(&scripts),
         probe: None,
@@ -190,9 +200,34 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
             }
             if scripts.analysis.needs_cascade() {
                 let rules = eldur_css::runtime_rules(&sheets, &options.viewport);
+                let mut with_rules = crate::images::Images {
+                    backgrounds: images.backgrounds.clone(),
+                    files: std::mem::take(&mut files),
+                    ..Default::default()
+                };
+                crate::images::add_background_files(
+                    &mut with_rules,
+                    crate::paint_values::background_urls(&rules, &options.viewport),
+                    &sheets,
+                    &input.url,
+                    resources,
+                    &mut diags,
+                );
+                files = with_rules.files;
+                for text in crate::paint_values::flattened_transforms(&rules) {
+                    diags.info(
+                        "css",
+                        None,
+                        format!(
+                            "`{text}`, where a script applies it, is flattened to the plane: \
+                             it has no depth here, and what it overlaps stays in document order"
+                        ),
+                    );
+                }
                 decls.push(crate::paint_values::paint_values_decl(
                     &rules,
                     &options.viewport,
+                    &with_rules.backgrounds,
                 ));
                 if !open_elements {
                     decls.push(metadata::cascade_rules_decl(&rules));
@@ -289,6 +324,68 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         files.push(OutputFile {
             path: PathBuf::from("EldurLines.qml"),
             contents: crate::emit::ELDUR_LINES_QML.as_bytes().to_vec(),
+        });
+    }
+    if main.contains("EldurBackgroundLayer {")
+        || files
+            .iter()
+            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
+    {
+        files.push(OutputFile {
+            path: PathBuf::from("EldurBackgroundLayer.qml"),
+            contents: crate::emit::ELDUR_BACKGROUND_LAYER_QML.as_bytes().to_vec(),
+        });
+    }
+    if main.contains("EldurRoundClip {")
+        || files
+            .iter()
+            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
+    {
+        files.push(OutputFile {
+            path: PathBuf::from("EldurRoundClip.qml"),
+            contents: crate::emit::ELDUR_ROUND_CLIP_QML.as_bytes().to_vec(),
+        });
+    }
+    if main.contains("EldurTextLines {") {
+        files.push(OutputFile {
+            path: PathBuf::from("EldurTextLines.qml"),
+            contents: crate::emit::ELDUR_TEXT_LINES_QML.as_bytes().to_vec(),
+        });
+    }
+    if main.contains("EldurBorder {")
+        || files
+            .iter()
+            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
+    {
+        files.push(OutputFile {
+            path: PathBuf::from("EldurBorder.qml"),
+            contents: crate::emit::ELDUR_BORDER_QML.as_bytes().to_vec(),
+        });
+    }
+    if main.contains("EldurFilter {")
+        || files
+            .iter()
+            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
+    {
+        files.push(OutputFile {
+            path: PathBuf::from("EldurFilter.qml"),
+            contents: crate::emit::ELDUR_FILTER_QML.as_bytes().to_vec(),
+        });
+        files.push(OutputFile {
+            path: PathBuf::from("eldur_filter.frag.qsb"),
+            contents: crate::emit::ELDUR_FILTER_QSB.to_vec(),
+        });
+    }
+    if main.contains("EldurTextShadow {") {
+        files.push(OutputFile {
+            path: PathBuf::from("EldurTextShadow.qml"),
+            contents: crate::emit::ELDUR_TEXT_SHADOW_QML.as_bytes().to_vec(),
+        });
+    }
+    if main.contains("EldurInlineBox {") {
+        files.push(OutputFile {
+            path: PathBuf::from("EldurInlineBox.qml"),
+            contents: crate::emit::ELDUR_INLINE_BOX_QML.as_bytes().to_vec(),
         });
     }
     files.insert(

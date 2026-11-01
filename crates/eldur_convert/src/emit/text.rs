@@ -7,6 +7,8 @@
 //! since RichText ignores `lineHeight`. What neither draws is reported.
 //! QML has no inheritance, so every value the block needs is written out.
 
+pub(crate) const ELDUR_TEXT_LINES_QML: &str = include_str!("EldurTextLines.qml");
+
 use eldur_css::{
     ComputedStyle, Direction, FontStyle, LineHeight, Rgba, TextAlign, TextDecorationLine,
     TextTransform, VerticalAlign, WhiteSpace, WordBreak,
@@ -85,7 +87,11 @@ impl Emitter<'_, '_> {
             styled: String::new(),
             plain: String::new(),
             rich: false,
-            html: needs_html(items, &state.family),
+            html: if self.boxes_drawn {
+                needs_html_around_boxes(items, &state.family)
+            } else {
+                needs_html(items, &state.family)
+            },
             preserve: !matches!(style.white_space, WhiteSpace::Normal | WhiteSpace::NoWrap),
             prev_space: true,
             link_colors: Vec::new(),
@@ -99,6 +105,7 @@ impl Emitter<'_, '_> {
         };
         self.markup(items, &state, &mut markup);
         let fragments = markup.styled.contains("<a href=\"#");
+        let mut plain = false;
 
         if markup.html {
             let styled = match line_height(style) {
@@ -115,10 +122,12 @@ impl Emitter<'_, '_> {
             text.set("text", Value::String(markup.styled));
             text.set("textFormat", Value::expr("Text.StyledText"));
         } else {
+            plain = true;
             text.set("text", Value::String(markup.plain));
             text.set("textFormat", Value::expr("Text.PlainText"));
         }
         self.font(&mut text, style, decoration, line);
+        self.drawn_decoration(&mut text, style, decoration, plain, line);
         if markup.html {
             // A `lineHeight` on the Text replaces the block's in RichText.
             text.members.retain(|m| {
@@ -204,6 +213,58 @@ impl Emitter<'_, '_> {
     }
 
     /// Font, colour, line height, alignment and wrapping of a `Text`.
+    /// Qt's font lines take the text's colour and are solid. An element's own
+    /// line that is neither is drawn beside its Text, which reports its rows.
+    fn drawn_decoration(
+        &mut self,
+        text: &mut Object,
+        style: &ComputedStyle,
+        decoration: TextDecorationLine,
+        plain: bool,
+        line: Option<u32>,
+    ) {
+        let own = style.text_decoration_line;
+        if !(own.underline || own.overline || own.line_through) {
+            return;
+        }
+        let name = if style.text_decoration_wavy {
+            "wavy"
+        } else {
+            match style.text_decoration_style {
+                eldur_css::BorderStyle::Dashed => "dashed",
+                eldur_css::BorderStyle::Dotted => "dotted",
+                eldur_css::BorderStyle::Double => "double",
+                _ => "solid",
+            }
+        };
+        let colour = style.text_decoration_color.unwrap_or(style.color);
+        if name == "solid" && colour == style.color {
+            return;
+        }
+        // An ancestor's line is drawn in the font with this text's.
+        if !plain || decoration != own {
+            self.diags.info(
+                "qml",
+                line,
+                format!(
+                    "a `{name}` text decoration in this text's other styling is solid, in the text's colour"
+                ),
+            );
+            return;
+        }
+        text.members.retain(|m| {
+            !matches!(m, Member::Property { name, .. }
+                if matches!(name.as_str(), "font.underline" | "font.overline" | "font.strikeout"))
+        });
+        let mut lines = Object::new("EldurTextLines");
+        lines.set("underline", own.underline);
+        lines.set("overline", own.overline);
+        lines.set("lineThrough", own.line_through);
+        lines.set("lineStyle", name);
+        lines.set("lineColor", color(colour));
+        text.push_child(lines);
+    }
+
     pub(super) fn font(
         &mut self,
         text: &mut Object,
@@ -308,13 +369,47 @@ impl Emitter<'_, '_> {
             _ => "Text.WordWrap",
         };
         text.set("wrapMode", Value::expr(wrap));
+        if style.text_overflow == eldur_css::TextOverflow::Ellipsis
+            && style.overflow_x != eldur_css::Overflow::Visible
+            && wrap == "Text.NoWrap"
+        {
+            // Qt does not elide rich text; such a line is cut, as `clip` has it.
+            let rich =
+                matches!(text.get("textFormat"), Some(Value::Expr(f)) if f.contains("RichText"));
+            if rich {
+                self.diags.info(
+                    "qml",
+                    line,
+                    "`text-overflow: ellipsis` on text with inline styling is cut, not elided"
+                        .to_owned(),
+                );
+            } else {
+                text.set("elide", Value::expr("Text.ElideRight"));
+            }
+        }
         if style.text_indent.as_px() != Some(0.0) {
             self.diags
                 .info("css", line, "`text-indent` is not converted".to_owned());
         }
         if !style.text_shadow.is_empty() {
-            self.diags
-                .info("css", line, "`text-shadow` is not converted".to_owned());
+            let id = match &text.id {
+                Some(id) => id.clone(),
+                None => self.ids.claim("shadowed text"),
+            };
+            text.id = Some(id.clone());
+            // The first in CSS is on top, and later siblings draw above.
+            for s in style.text_shadow.iter().rev() {
+                let mut copy = Object::new("EldurTextShadow");
+                copy.set("source", Value::expr(id.clone()));
+                copy.set("x", Value::Number(f64::from(s.offset_x)));
+                copy.set("y", Value::Number(f64::from(s.offset_y)));
+                copy.set("color", color(s.color));
+                if s.blur > 0.0 {
+                    // A shadow's blur radius is twice the deviation.
+                    copy.set("blurDeviation", Value::Number(f64::from(s.blur) / 2.0));
+                }
+                text.push_child(copy);
+            }
         }
     }
 
@@ -472,14 +567,15 @@ impl Emitter<'_, '_> {
                 ),
             );
         }
-        if m.html && !style.background_color.is_transparent() {
+        let drawn = self.boxes_drawn && super::inline::paints_box(style);
+        if m.html && !drawn && !style.background_color.is_transparent() {
             css.push(format!(
                 "background-color:{}",
                 css_color(style.background_color)
             ));
         }
         if !style.background_layers.is_empty()
-            || (!m.html && !style.background_color.is_transparent())
+            || (!m.html && !drawn && !style.background_color.is_transparent())
         {
             self.diags.info(
                 "qml",
@@ -519,7 +615,9 @@ impl Emitter<'_, '_> {
                 .iter()
                 .any(|c| !c.is_zero())
         };
-        if m.html {
+        if drawn {
+            // `EldurInlineBox` paints it, and the line leaves its room.
+        } else if m.html {
             // The space padding and borders take on the line, as a zero-width
             // joiner widened by `letter-spacing`, inside the background.
             if boxed {
@@ -571,11 +669,11 @@ impl Emitter<'_, '_> {
         for o in &open {
             m.styled.push_str(o);
         }
-        if m.html && lead > 0.0 {
+        if m.html && !drawn && lead > 0.0 {
             push_space(m, lead);
         }
         self.markup(&span.children, &state, m);
-        if m.html && trail > 0.0 {
+        if m.html && !drawn && trail > 0.0 {
             push_space(m, trail);
         }
         for c in close.iter().rev() {
@@ -787,16 +885,42 @@ fn text_runs<'a>(items: &'a [Inline<'_>], runs: &mut Vec<&'a ComputedStyle>) {
 
 /// Whether a run in `items` needs RichText: another font family, a
 /// background colour, or horizontal padding or borders.
+/// A letter's size is exact, where `<big>` is one step: the only generated span
+/// without `content`.
+fn is_first_letter(span: &Span<'_>) -> bool {
+    span.node.is_none() && span.style.content.is_none()
+}
+
 pub(super) fn needs_html(items: &[Inline<'_>], family: &str) -> bool {
     items.iter().any(|item| match item {
         Inline::Span(span) => {
             let style = span.style;
             let own = font_family(&style.font_family);
             own != family
+                || is_first_letter(span)
                 || !style.background_color.is_transparent()
                 || inline_space(style, Side::Left) > 0.0
                 || inline_space(style, Side::Right) > 0.0
                 || needs_html(&span.children, &own)
+        }
+        _ => false,
+    })
+}
+
+/// As `needs_html`, with what `EldurInlineBox` paints and the line makes room for
+/// left out.
+fn needs_html_around_boxes(items: &[Inline<'_>], family: &str) -> bool {
+    items.iter().any(|item| match item {
+        Inline::Span(span) => {
+            let own = font_family(&span.style.font_family);
+            let bare = !super::inline::paints_box(span.style)
+                && (!span.style.background_color.is_transparent()
+                    || inline_space(span.style, Side::Left) > 0.0
+                    || inline_space(span.style, Side::Right) > 0.0);
+            own != family
+                || bare
+                || is_first_letter(span)
+                || needs_html_around_boxes(&span.children, &own)
         }
         _ => false,
     })

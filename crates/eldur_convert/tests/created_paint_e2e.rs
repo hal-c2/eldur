@@ -186,7 +186,7 @@ fn computed_static() {
 #[test]
 fn unpaintable_warns() {
     let html = r#"<!doctype html><html><head><style>
-.f{height:20px;filter:blur(2px)}
+.f{height:20px;filter:url(#none)}
 .a{height:20px;animation:spin 1s}
 @keyframes spin{to{opacity:0}}
 .t{height:20px;transition:width .1s;width:10px}

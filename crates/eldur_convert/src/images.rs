@@ -26,6 +26,8 @@ pub(crate) struct ImageAsset {
 #[derive(Debug, Default)]
 pub(crate) struct Images {
     pub by_node: BTreeMap<NodeId, ImageAsset>,
+    /// A background's `url()` as written → its `Image.source`.
+    pub backgrounds: BTreeMap<String, String>,
     pub files: Vec<OutputFile>,
 }
 
@@ -88,6 +90,94 @@ pub(crate) fn collect(
         images.by_node.insert(node, asset);
     }
     images
+}
+
+/// The files of every `background-image` an element has or takes in a state.
+/// A computed style no longer says which sheet its `url()` came from, so each
+/// sheet's base is tried after the document's.
+pub(crate) fn collect_backgrounds(
+    images: &mut Images,
+    doc: &Document,
+    styles: &eldur_css::StyleMap,
+    sheets: &[eldur_css::Stylesheet],
+    base: &str,
+    resources: &mut dyn Resources,
+    diags: &mut Diagnostics,
+) {
+    let mut urls = std::collections::BTreeSet::new();
+    let mut add = |style: &eldur_css::ComputedStyle| {
+        if let Some(url) = &style.list_style_image {
+            urls.insert(url.clone());
+        }
+        for layer in &style.background_layers {
+            if let Some(eldur_css::Image::Url(url)) = &layer.image {
+                urls.insert(url.clone());
+            }
+        }
+    };
+    for node in doc.descendants(doc.root()) {
+        if let Some(style) = styles.style(node) {
+            add(style);
+        }
+    }
+    for variant in &styles.variants {
+        for (_, style) in &variant.changed {
+            add(style);
+        }
+    }
+    add_background_files(images, urls, sheets, base, resources, diags);
+}
+
+/// Copies the files of `urls`, each once, under `assets/`.
+pub(crate) fn add_background_files(
+    images: &mut Images,
+    urls: std::collections::BTreeSet<String>,
+    sheets: &[eldur_css::Stylesheet],
+    base: &str,
+    resources: &mut dyn Resources,
+    diags: &mut Diagnostics,
+) {
+    for url in urls {
+        if images.backgrounds.contains_key(&url) {
+            continue;
+        }
+        if url.contains("://") || url.starts_with("data:") {
+            images.backgrounds.insert(url.clone(), url);
+            continue;
+        }
+        let bases =
+            std::iter::once(base).chain(sheets.iter().filter_map(|s| s.base_url.as_deref()));
+        let found = bases.into_iter().find_map(|b| resources.read(&url, b));
+        let Some(resource) = found else {
+            diags.warning(
+                "css",
+                None,
+                format!("background image `{url}` was not found; it paints nothing"),
+            );
+            continue;
+        };
+        let known = images
+            .by_node
+            .values()
+            .map(|a| a.source.clone())
+            .chain(images.backgrounds.values().cloned())
+            .find(|source| {
+                images.files.iter().any(|f| {
+                    f.path.to_string_lossy().replace('\\', "/") == *source
+                        && f.contents == resource.bytes
+                })
+            });
+        let source = known.unwrap_or_else(|| {
+            let path = unique_path(asset_path(&url), &images.files);
+            let source = path.to_string_lossy().replace('\\', "/");
+            images.files.push(OutputFile {
+                path,
+                contents: resource.bytes,
+            });
+            source
+        });
+        images.backgrounds.insert(url, source);
+    }
 }
 
 /// `assets/` plus the path as written, without its query, fragment and

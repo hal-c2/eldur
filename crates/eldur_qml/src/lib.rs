@@ -329,6 +329,24 @@ pub fn sanitize_id(raw: &str) -> String {
 #[must_use]
 pub fn is_reserved(word: &str) -> bool {
     const RESERVED: &[&str] = &[
+        // Words ECMAScript once kept for later: Qt's lexer still refuses them
+        // as ids, though a page may name an element `double`.
+        "abstract",
+        "boolean",
+        "byte",
+        "char",
+        "double",
+        "final",
+        "float",
+        "goto",
+        "int",
+        "long",
+        "native",
+        "short",
+        "synchronized",
+        "throws",
+        "transient",
+        "volatile",
         "arguments",
         "as",
         "await",

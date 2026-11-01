@@ -62,6 +62,7 @@ pub(crate) struct Inputs<'a> {
     pub options: &'a Options,
     pub wanted: &'a HashSet<NodeId>,
     pub images: &'a BTreeMap<NodeId, ImageAsset>,
+    pub background_images: &'a BTreeMap<String, String>,
     pub runtime_dom: bool,
     /// The page's scripts, when it has any.
     pub scripts: Option<&'a Scripts>,
@@ -206,6 +207,7 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
     let body = cx.doc.body().and_then(|b| cx.styles.style(b));
     let mut emitter = Emitter::new(cx.doc, cx.styles, cx.options, diags, cx.wanted);
     emitter.images = cx.images.clone();
+    emitter.background_images = cx.background_images.clone();
     emitter.runtime_dom = cx.runtime_dom;
     if let Some(scripts) = cx.scripts {
         emitter.open_elements = scripts.analysis.open_elements;
@@ -804,6 +806,25 @@ impl Dynamic<'_, '_> {
             .iter()
             .filter_map(|e| border_strips(&e.by_mask).map(|s| (e.node, s)))
             .collect();
+        if self.found.elements.iter().any(|e| {
+            outline_changes(&e.by_mask)
+                && e.by_mask
+                    .iter()
+                    .any(|s| super::decoration::is_visible(&s.outline))
+        }) {
+            self.diags.info(
+                "css",
+                None,
+                "an outline that changes under a class or state is not drawn".to_owned(),
+            );
+        }
+        let plain_edges: HashSet<NodeId> = self
+            .found
+            .elements
+            .iter()
+            .filter(|e| edges_change_form(&e.by_mask))
+            .map(|e| e.node)
+            .collect();
         // The display an element hidden in some combinations has when shown.
         let shown: HashMap<NodeId, Display> = self
             .found
@@ -823,7 +844,15 @@ impl Dynamic<'_, '_> {
             inline_covered,
             mut imports,
             mut ids,
-        } = Self::emit_world(self.cx, &styles, &sticky, &strips, collapsed, self.diags);
+        } = Self::emit_world(
+            self.cx,
+            &styles,
+            &sticky,
+            &strips,
+            &plain_edges,
+            collapsed,
+            self.diags,
+        );
         let mut markers = HashMap::new();
         marker_paths(&root, &mut Vec::new(), &mut markers);
         // A condition on an element without an item of its own (an inline
@@ -849,8 +878,15 @@ impl Dynamic<'_, '_> {
             let (styles, collapsed) = self.world(flipped, &shown);
             // Only the document's world reports; the others repeat it.
             let mut scratch = Diagnostics::new(&self.diags.document);
-            let emitted =
-                Self::emit_world(self.cx, &styles, &sticky, &strips, collapsed, &mut scratch);
+            let emitted = Self::emit_world(
+                self.cx,
+                &styles,
+                &sticky,
+                &strips,
+                &plain_edges,
+                collapsed,
+                &mut scratch,
+            );
             imports.extend(emitted.imports);
             trees.push(emitted.root);
         }
@@ -959,6 +995,13 @@ impl Dynamic<'_, '_> {
                     .filter(|&(_, c)| self.holds(*c, flipped))
                     .fold(0usize, |m, (i, _)| m | 1 << i);
                 let mut style = (*e.by_mask[mask]).clone();
+                // A drawn outline is another object: one that comes and goes
+                // would make the worlds differ in form, and every other state
+                // binding of the page's tree would go with it.
+                if outline_changes(&e.by_mask) {
+                    style.outline = Default::default();
+                    style.outline_offset = Default::default();
+                }
                 if style.display == Display::None
                     && let Some(display) = shown.get(&e.node)
                 {
@@ -1016,6 +1059,7 @@ impl Dynamic<'_, '_> {
         styles: &StyleMap,
         sticky: &HashSet<NodeId>,
         strips: &HashMap<NodeId, [bool; 4]>,
+        plain_edges: &HashSet<NodeId>,
         collapsed: HashSet<NodeId>,
         diags: &mut Diagnostics,
     ) -> Emitted {
@@ -1029,6 +1073,7 @@ impl Dynamic<'_, '_> {
         let body = cx.doc.body().and_then(|b| styles.style(b));
         let mut emitter = Emitter::new(cx.doc, styles, cx.options, diags, cx.wanted);
         emitter.images = cx.images.clone();
+        emitter.background_images = cx.background_images.clone();
         emitter.runtime_dom = cx.runtime_dom;
         if let Some(scripts) = cx.scripts {
             emitter.open_elements = scripts.analysis.open_elements;
@@ -1053,6 +1098,7 @@ impl Dynamic<'_, '_> {
         }
         emitter.sticky = sticky.clone();
         emitter.strips = strips.clone();
+        emitter.plain_edges = plain_edges.clone();
         emitter.collapsed = collapsed;
         let root = emitter.document(tree.as_ref(), body);
         let emitted = Emitted {
@@ -1467,6 +1513,24 @@ fn identity_of(f: &TransformFn) -> TransformFn {
         TransformFn::Matrix(_) => TransformFn::Matrix([1.0, 0.0, 0.0, 1.0, 0.0, 0.0]),
         TransformFn::Unsupported(t) => TransformFn::Unsupported(t.clone()),
     }
+}
+
+/// A drawn border or an outline is an object of its own, and states change the
+/// values of the objects a box has in all of them. When they disagree on either,
+/// the box keeps the plain border every combination can express.
+fn outline_changes(styles: &[Box<ComputedStyle>]) -> bool {
+    styles
+        .iter()
+        .any(|s| s.outline != styles[0].outline || s.outline_offset != styles[0].outline_offset)
+}
+
+fn edges_change_form(styles: &[Box<ComputedStyle>]) -> bool {
+    styles
+        .iter()
+        .any(|s| super::decoration::needs_drawn_border(s))
+        && styles
+            .iter()
+            .any(|s| s.border != styles[0].border || s.border_radius != styles[0].border_radius)
 }
 
 /// The sides to draw as strips in every combination, when the

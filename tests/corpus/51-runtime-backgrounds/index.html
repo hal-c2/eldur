@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Backgrounds on boxes a script makes</title>
+<style>
+body { margin: 10px; background: #fff; }
+#grid { display: grid; grid-template-columns: repeat(5, 200px); gap: 10px; }
+#grid div { height: 120px; background-color: #f1f5f9; }
+.tile { background-image: url(tile.png); }
+.cover { background: url(photo.png) center / cover no-repeat; }
+.contain { background: url(photo.png) center / contain no-repeat; }
+.place { background: url(photo.png) 100% 100% / 50% 50% no-repeat; }
+.repx { background: url(tile.png) repeat-x 0 30px; }
+.round { background: url(photo.png) center / cover; border-radius: 24px; }
+.stripes { background: linear-gradient(90deg, #6366f1 50%, #e0e7ff 50%) 0 0 / 40px 40px; }
+.sized { background: linear-gradient(135deg, #f97316, #1d4ed8) 20px 20px / 100px 60px no-repeat; }
+.conic { background: conic-gradient(#ef4444, #eab308, #22c55e, #3b82f6, #ef4444); }
+.clipc { background: #0ea5e9 content-box; padding: 16px; height: 88px !important; }
+.origin { background: url(tile.png) no-repeat 0 0 content-box; padding: 20px; height: 80px !important; }
+.repr { background: repeating-radial-gradient(circle, #1e293b 0 10px, #e2e8f0 10px 20px); }
+.holds { overflow: hidden; border-radius: 30px; background-color: #e2e8f0 !important; }
+.holds p { margin: 0; height: 60px; background: #1d4ed8; }
+#pictures { display: grid; grid-template-columns: repeat(5, 200px); gap: 10px; margin-top: 10px; }
+#pictures img { display: block; width: 200px; height: 120px; }
+.i-round { border-radius: 24px; }
+.i-cover { object-fit: cover; }
+.i-contain { object-fit: contain; }
+.i-corner { object-fit: none; object-position: 0 0; }
+.i-end { object-fit: none; object-position: 100% 100%; }
+</style></head><body><div id="grid"></div>
+
+<script>
+const grid = document.getElementById('grid');
+for (const name of ['tile', 'cover', 'contain', 'place', 'repx', 'round', 'stripes', 'sized', 'conic', 'clipc', 'origin', 'repr']) {
+  const d = document.createElement('div');
+  d.className = name;
+  d.id = 'r-' + name;
+  grid.appendChild(d);
+}
+const holder = document.createElement('div');
+holder.className = 'holds';
+holder.id = 'r-holds';
+holder.appendChild(document.createElement('p'));
+grid.appendChild(holder);
+// A file a script names is not found by the converter, which copies what the
+// page names under `assets/`: this path is both that copy and one for the browser.
+const pictures = document.createElement('section');
+pictures.id = 'pictures';
+for (const name of ['round', 'cover', 'contain', 'corner', 'end']) {
+  const i = document.createElement('img');
+  i.src = 'assets/photo.png';
+  i.className = 'i-' + name;
+  i.id = 'r-i-' + name;
+  pictures.appendChild(i);
+}
+document.body.appendChild(pictures);
+</script></body></html>

@@ -2871,8 +2871,8 @@ function _placeGrid(grid) {
     var m = _meta(grid);
     if (!m.gridPlacer) {
         m.gridPlacer = Qt.createQmlObject("import QtQuick; import QtQuick.Layouts; QtObject { "
-            + "function place(item, row, column, size) { "
-            + "item.Layout.row = row; item.Layout.column = column; "
+            + "function place(item, row, column, size, cellOnly) { "
+            + "item.Layout.row = row; item.Layout.column = column; if (cellOnly) return; "
             + "if (size >= 0) { item.Layout.fillWidth = false; item.Layout.minimumWidth = size; "
             + "item.Layout.preferredWidth = size; item.Layout.maximumWidth = size; } "
             + "else { item.Layout.fillWidth = true; item.Layout.minimumWidth = 0; item.Layout.preferredWidth = 0; "
@@ -2880,7 +2880,14 @@ function _placeGrid(grid) {
     }
     var kids = _rawElementChildren(grid);
     for (var i = 0; i < kids.length; ++i) {
-        m.gridPlacer.place(kids[i], Math.floor(i / n), i % n, tracks[i % n]);
+        var size = tracks[i % n];
+        // A box reads its width from its own rules, within this track.
+        if (size >= 0 && kids[i].eldurTrack !== undefined) {
+            kids[i].eldurTrack = size;
+            m.gridPlacer.place(kids[i], Math.floor(i / n), i % n, -1, true);
+        } else {
+            m.gridPlacer.place(kids[i], Math.floor(i / n), i % n, size);
+        }
     }
 }
 
@@ -3287,6 +3294,10 @@ function _rawKids(raw, withText) {
         // An out-of-flow box is its slot's child in the DOM, wherever it is
         // painted.
         if (child.eldurSlot !== undefined) {
+            continue;
+        }
+        // A layer's source and effect are made beside the item it belongs to.
+        if (child.sourceItem !== undefined || child.fragmentShader !== undefined || child.blurMax !== undefined) {
             continue;
         }
         if (_isAnonLines(child)) {
@@ -11352,7 +11363,9 @@ var _G_INITIAL = {
     "background-image": "none", "box-shadow": "none", "transform": "none", "transform-origin": "50% 50%",
     "filter": "none", "animation-name": "none", "transition-property": "all", "transition-duration": "0s",
     "transition-delay": "0s", "transition-timing-function": "ease", "background-size": "auto",
-    "background-position-x": "0%", "background-position-y": "0%", "background-repeat": "repeat"
+    "background-position-x": "0%", "background-position-y": "0%", "background-repeat": "repeat",
+    "text-shadow": "none", "outline-style": "none", "outline-width": "medium",
+    "outline-color": "currentcolor", "outline-offset": "0px", "object-fit": "fill", "object-position": "50% 50%", "background-origin": "padding-box", "background-clip": "border-box", "background-attachment": "scroll"
 };
 // The controls whose box the UA sheet in the rule table describes: padding and
 // border are the control's insets.
@@ -11414,9 +11427,13 @@ function _gBoxSource(tag, outOfFlow) {
         + "Behavior on opacity { enabled: eldurFadeMs + eldurFadeWait > 0; SequentialAnimation { "
         + "PauseAnimation { duration: eldurFadeWait } NumberAnimation { duration: eldurFadeMs; easing.type: eldurFadeEase } } } "
         + "property real eldurGapT: 0; property real eldurGapL: 0; property real eldurTrack: -1; "
-        + "Layout.topMargin: eldurMt + eldurGapT; Layout.rightMargin: eldurMr; Layout.bottomMargin: eldurMb; Layout.leftMargin: eldurMl + eldurGapL; "
-        + "Layout.minimumWidth: eldurTrack < 0 ? 0 : eldurTrack - eldurMl - eldurMr; "
-        + "Layout.maximumWidth: eldurTrack < 0 ? Number.POSITIVE_INFINITY : eldurTrack - eldurMl - eldurMr; "
+        // A box narrower than its grid track keeps the track's width in its
+        // margin, as the converter's own grid items do: the track has no other size.
+        + "readonly property real eldurTrackLeft: eldurTrack < 0 ? 0 : eldurTrack - eldurMl - eldurMr; "
+        + "Layout.topMargin: eldurMt + eldurGapT; Layout.rightMargin: eldurMr + (eldurPw >= 0 ? Math.max(0, eldurTrackLeft - eldurPw) : 0); "
+        + "Layout.bottomMargin: eldurMb; Layout.leftMargin: eldurMl + eldurGapL; "
+        + "Layout.minimumWidth: eldurTrack < 0 ? 0 : eldurPw >= 0 ? Math.min(eldurPw, eldurTrackLeft) : eldurTrackLeft; "
+        + "Layout.maximumWidth: eldurTrack < 0 ? Number.POSITIVE_INFINITY : eldurPw >= 0 ? Math.min(eldurPw, eldurTrackLeft) : eldurTrackLeft; "
         + "Layout.fillWidth: eldurFill; Layout.preferredWidth: eldurPw; Layout.alignment: eldurAlign; "
         + "Text { " + _NATIVE_TEXT + "visible: text !== \"\"; wrapMode: Text.Wrap; color: \"black\"; font.pixelSize: 16 } }";
 }
@@ -11655,6 +11672,20 @@ function _gExpand(prop, value) {
             // `background: none` names no colour: the shorthand resets it.
             out.push(["background-color", /^none$/i.test(String(value).trim()) ? "rgba(0, 0, 0, 0)" : value]);
         }
+    } else if (prop === "outline") {
+        var lineWidth = "medium";
+        var lineStyle = "none";
+        var lineColor = "currentcolor";
+        for (var lp = 0; lp < parts.length; ++lp) {
+            if (/^(none|hidden|dotted|dashed|solid|double|groove|ridge|inset|outset|auto)$/.test(parts[lp])) {
+                lineStyle = parts[lp];
+            } else if (/^(thin|medium|thick|[-+.\d].*|calc\(.*)$/.test(parts[lp])) {
+                lineWidth = parts[lp];
+            } else {
+                lineColor = parts[lp];
+            }
+        }
+        out.push(["outline-width", lineWidth], ["outline-style", lineStyle], ["outline-color", lineColor]);
     } else if (/^border(-(top|right|bottom|left))?$/.test(prop)) {
         var which = prop === "border" ? names : [prop.slice(7)];
         var width = "medium";
@@ -12234,6 +12265,7 @@ function _gPlace(raw, avail, opts, heightBasis) {
 
 function _gPlaceLeaf(raw, s, e, used, fixedH, margins, frameH) {
     _gPaintControl(raw, s, e);
+    _gPaintPicture(raw, s, used, fixedH === null ? raw.height : fixedH);
     // A created inline element with only text is a `Text` itself.
     if (_meta(raw).createdTag && _isPlainTextItem(raw)) {
         _gPaintText(raw, s, used);
@@ -12807,11 +12839,13 @@ function _gPaintBox(raw, s, e) {
     var uniform = e.bt === e.br && e.bt === e.bb && e.bt === e.bl
         && s["border-top-color"] === s["border-right-color"] && s["border-top-color"] === s["border-bottom-color"]
         && s["border-top-color"] === s["border-left-color"];
-    _gSet(raw.border, "width", uniform ? e.bt : 0);
-    if (uniform && e.bt > 0) {
+    var drawn = _gPaintDrawnBorder(raw, s, e, uniform);
+    _gSet(raw.border, "width", uniform && !drawn ? e.bt : 0);
+    if (uniform && !drawn && e.bt > 0) {
         raw.border.color = _gQtColor(s["border-top-color"]);
     }
-    _gPaintEdges(raw, s, e, !uniform);
+    _gPaintEdges(raw, s, e, !uniform && !drawn);
+    _gPaintOutline(raw, s);
     var z = s["z-index"] === "auto" ? (s.position !== "static" ? 1 : 0) : _gNumber(s["z-index"]);
     _gSet(raw, "z", z);
     _gSet(raw, "clip", s["overflow-x"] !== "visible" || s["overflow-y"] !== "visible");
@@ -12821,6 +12855,56 @@ function _gPaintBox(raw, s, e) {
         _meta(raw).gPainted = true;
         _gPaintTimings(raw, s);
     }
+}
+
+var _G_SIDES = ["top", "right", "bottom", "left"];
+
+function _gDrawnSource(widths, colors, styles, radii, attrs) {
+    return "import QtQuick; import \".\"; EldurBorder { " + attrs
+        + "sideWidths: " + JSON.stringify(widths) + "; sideColors: " + JSON.stringify(colors)
+        + "; sideStyles: " + JSON.stringify(styles) + "; radii: " + JSON.stringify(radii) + " }";
+}
+
+// The picture one Rectangle border and four square strips cannot give, as in
+// `needs_drawn_border`. Says whether it took the box's border over.
+function _gPaintDrawnBorder(raw, s, e, uniform) {
+    var widths = [e.bt, e.br, e.bb, e.bl];
+    var colors = _G_SIDES.map(function(side) { return String(_gQtColor(s["border-" + side + "-color"])); });
+    var styles = _G_SIDES.map(function(side) { return s["border-" + side + "-style"]; });
+    var radii = _gCorners(raw, s);
+    var fancy = styles.some(function(style, i) { return widths[i] > 0 && style !== "solid"; });
+    var meet = widths.some(function(w, i) {
+        var next = (i + 1) % 4;
+        return w > 0 && widths[next] > 0 && colors[i] !== colors[next];
+    });
+    var wanted = fancy || (!uniform && (meet || radii.some(function(r) { return r > 0; })));
+    var source = wanted ? _gDrawnSource(widths, colors, styles, radii, "anchors.fill: parent; ") : null;
+    _gReplaceShape(raw, "gBorder", source, source, raw, function() {}, Qt.resolvedUrl("eldur_paint"));
+    return wanted;
+}
+
+// Above what the box holds, taking no room, and on the box's curve grown by its
+// distance. A clip would cut it, as a child: a clipping box warns.
+function _gPaintOutline(raw, s) {
+    var known = { thin: 1, medium: 3, thick: 5 };
+    var named = known[s["outline-width"]];
+    var width = named !== undefined ? named : _gPx(s["outline-width"], null, s.fontSize, s.rootSize) || 0;
+    var style = s["outline-style"];
+    var shown = width > 0 && style !== "none" && style !== undefined && style !== "hidden";
+    var source = null;
+    if (shown) {
+        var out = (_gPx(s["outline-offset"], null, s.fontSize, s.rootSize) || 0) + width;
+        var radii = _gCorners(raw, s).map(function(r) { return r > 0 ? r + out : 0; });
+        var color = String(_gQtColor(_gColor(s["outline-color"], s.color)));
+        var solid = style === "solid" || style === "auto";
+        source = _gDrawnSource([width, width, width, width], [color, color, color, color],
+            [0, 1, 2, 3].map(function() { return solid ? "solid" : style; }), radii,
+            "anchors.fill: parent; anchors.margins: " + (-out) + "; z: 1; ");
+        if (raw.clip) {
+            _gWarn(raw, "outline", "the box clips, and that cuts its outline too");
+        }
+    }
+    _gReplaceShape(raw, "gOutline", source, source, raw, function() {}, Qt.resolvedUrl("eldur_paint"));
 }
 
 // A Rectangle's border is one width and colour; unequal sides are four strips.
@@ -12850,6 +12934,25 @@ function _gPaintEdges(raw, s, e, shown) {
 
 // --- What the converter parsed for a box's paint ----------------------------
 
+// A shadow in `em` is held at 100px to the `em`: see `em_as_hundreds`.
+function _gShadowsAt(prop, text, fontSize) {
+    var held = _gPaintValue(prop, text);
+    if (!held || !held.em) {
+        return held;
+    }
+    var k = fontSize / 100;
+    return {
+        css: held.css.replace(/-?[\d.]+px/g, function(px) { return parseFloat(px) * k + "px"; }),
+        list: held.list.map(function(one) {
+            return {
+                x: one.x * k, y: one.y * k, spread: one.spread * k, blur: one.blur * k,
+                inset: one.inset, c: one.c, a: one.a,
+                bands: one.bands.map(function(band) { return [band[0] * k, band[1]]; })
+            };
+        })
+    };
+}
+
 function _gPaintValue(prop, text) {
     if (_gPaintTable === null) {
         var written = _root ? _root.eldurPaintValues : undefined;
@@ -12878,8 +12981,12 @@ function _gStopsSource(stops, length) {
     var last = at[at.length - 1];
     // A gradient's stops are 0 to 1: the line is cut to where they are.
     var span = last > first ? last - first : 1;
+    // Qt sorts stops by position, and two at one place, a hard edge, may swap.
+    var before = -1;
     var parts = stops.map(function(p, i) {
-        return "GradientStop { position: " + (at[i] - first) / span + "; color: \"" + p.c + "\" } ";
+        var position = Math.max((at[i] - first) / span, before + 0.0001);
+        before = position;
+        return "GradientStop { position: " + Math.min(position, 1) + "; color: \"" + p.c + "\" } ";
     });
     return { first: first, last: last > first ? last : first + 1, text: parts.join("") };
 }
@@ -12906,6 +13013,12 @@ function _gGradientPath(layer, w, h, radii) {
         var from = at(line.first);
         var to = at(line.last);
         fill = "LinearGradient { " + spread + "x1: " + from[0] + "; y1: " + from[1] + "; x2: " + to[0] + "; y2: " + to[1] + "; " + line.text + "} ";
+    } else if (layer.kind === "conic") {
+        var turn = layer.stops.slice().reverse().map(function(p) {
+            return "GradientStop { position: " + (1 - Math.max(0, Math.min(1, p.frac))) + "; color: \"" + p.c + "\" } ";
+        });
+        fill = "ConicalGradient { centerX: " + (layer.cx[0] + layer.cx[1] * w / 100) + "; centerY: " + (layer.cy[0] + layer.cy[1] * h / 100)
+            + "; angle: " + ((90 - layer.from) % 360 + 360) % 360 + "; " + turn.join("") + "} ";
     } else {
         var cx = layer.cx[0] + layer.cx[1] * w / 100;
         var cy = layer.cy[0] + layer.cy[1] * h / 100;
@@ -12922,6 +13035,120 @@ function _gGradientPath(layer, w, h, radii) {
     return "ShapePath { strokeWidth: -1; fillGradient: " + fill + extra + _gRectSource(0, 0, w, h, radii) + "} ";
 }
 
+function _gCommaList(text) {
+    var out = [];
+    var depth = 0;
+    var part = "";
+    String(text).split("").forEach(function(c) {
+        depth += c === "(" ? 1 : c === ")" ? -1 : 0;
+        if (c === "," && depth === 0) {
+            out.push(part.trim());
+            part = "";
+        } else {
+            part += c;
+        }
+    });
+    out.push(part.trim());
+    return out;
+}
+
+// Whether one Shape over the padding box can draw this layer.
+function _gLayerIsPlain(layer, at) {
+    return layer.kind !== "image" && at.size === "auto" && /^0(%|px)?$/.test(at.x) && /^0(%|px)?$/.test(at.y)
+        && at.origin === "padding-box" && at.clip === "border-box" && at.attachment !== "fixed";
+}
+
+function _gLayerAt(s, l) {
+    function pick(name) {
+        var list = _gCommaList(s[name]);
+        return list[l % list.length];
+    }
+    return {
+        size: pick("background-size"), x: pick("background-position-x"), y: pick("background-position-y"),
+        repeat: pick("background-repeat"), origin: pick("background-origin"), clip: pick("background-clip"),
+        attachment: pick("background-attachment")
+    };
+}
+
+// The same item the converter writes for a layer in the page.
+function _gLayerSource(raw, s, e, layer, at, outerRadii) {
+    var w = raw.width;
+    var h = raw.height;
+    function padding(side) {
+        return _gPx(s["padding-" + side], w, s.fontSize, s.rootSize) || 0;
+    }
+    var border = { top: e.bt, right: e.br, bottom: e.bb, left: e.bl };
+    var content = {
+        top: e.bt + padding("top"), right: e.br + padding("right"),
+        bottom: e.bb + padding("bottom"), left: e.bl + padding("left")
+    };
+    var none = { top: 0, right: 0, bottom: 0, left: 0 };
+    if (at.clip === "text") {
+        _gWarn(raw, "background-clip", "`text` is not converted; the layer fills the box behind the text");
+    }
+    var clip = at.clip === "padding-box" ? border : at.clip === "content-box" ? content : none;
+    var origin = at.origin === "border-box" ? none : at.origin === "content-box" ? content : border;
+    var areaW = w - origin.left - origin.right;
+    var areaH = h - origin.top - origin.bottom;
+    var parts = "anchors.fill: parent; anchors.topMargin: " + clip.top + "; anchors.rightMargin: " + clip.right
+        + "; anchors.bottomMargin: " + clip.bottom + "; anchors.leftMargin: " + clip.left
+        + "; areaTop: " + (origin.top - clip.top) + "; areaRight: " + (origin.right - clip.right)
+        + "; areaBottom: " + (origin.bottom - clip.bottom) + "; areaLeft: " + (origin.left - clip.left) + "; ";
+    var given = at.size.split(/\s+/);
+    var tileW = areaW;
+    var tileH = areaH;
+    if (at.size === "cover" || at.size === "contain") {
+        parts += "sizing: " + (at.size === "cover" ? 1 : 2) + "; ";
+    } else if (at.size !== "auto") {
+        parts += "sizing: 3; ";
+        var side = function(text, px, percent, basis) {
+            if (text === undefined || text === "auto") {
+                return null;
+            }
+            if (/%$/.test(text)) {
+                var share = parseFloat(text);
+                parts += px + ": 0; " + percent + ": " + share + "; ";
+                return share / 100 * basis;
+            }
+            var value = _gPx(text, basis, s.fontSize, s.rootSize) || 0;
+            parts += px + ": " + value + "; ";
+            return value;
+        };
+        var gw = side(given[0], "sizeWidth", "sizeWidthPercent", areaW);
+        var gh = side(given[1], "sizeHeight", "sizeHeightPercent", areaH);
+        tileW = gw === null ? areaW : gw;
+        tileH = gh === null ? areaH : gh;
+    }
+    var named = { left: "0%", top: "0%", center: "50%", right: "100%", bottom: "100%" };
+    function position(written, px, percent, basis) {
+        var text = named[written] || written;
+        if (/%$/.test(text)) {
+            parts += percent + ": " + parseFloat(text) + "; ";
+        } else if (/^calc|^\d|^-/.test(text) && !/%/.test(text)) {
+            parts += px + ": " + (_gPx(text, basis, s.fontSize, s.rootSize) || 0) + "; ";
+        } else {
+            _gWarn(raw, "background-position", "`" + text + "` is placed at 0: only lengths, percentages and edge words place a layer here");
+        }
+    }
+    position(at.x, "positionX", "positionXPercent", areaW);
+    position(at.y, "positionY", "positionYPercent", areaH);
+    var repeat = at.repeat.split(/\s+/);
+    var acrossX = repeat[0] !== "no-repeat" && repeat[0] !== "repeat-y";
+    var acrossY = (repeat[1] || repeat[0]) !== "no-repeat" && repeat[0] !== "repeat-x";
+    parts += "repeatX: " + acrossX + "; repeatY: " + acrossY + "; spaced: " + (repeat[0] === "space")
+        + "; rounded: " + (repeat[0] === "round") + "; fixedToWindow: " + (at.attachment === "fixed") + "; ";
+    var less = function(r, a, b) { return Math.max(r - Math.max(a, b), 0); };
+    parts += "topLeftRadius: " + less(outerRadii[0], clip.top, clip.left)
+        + "; topRightRadius: " + less(outerRadii[1], clip.top, clip.right)
+        + "; bottomRightRadius: " + less(outerRadii[2], clip.bottom, clip.right)
+        + "; bottomLeftRadius: " + less(outerRadii[3], clip.bottom, clip.left) + "; ";
+    if (layer.kind === "image") {
+        return "EldurBackgroundLayer { " + parts + "source: Qt.resolvedUrl(\"" + layer.source + "\") } ";
+    }
+    return "EldurBackgroundLayer { " + parts + "isGradient: true; Shape { anchors.fill: parent; "
+        + _gGradientPath(layer, tileW, tileH, [0, 0, 0, 0]) + "} } ";
+}
+
 function _gRectSource(x, y, w, h, radii) {
     return "PathRectangle { x: " + x + "; y: " + y + "; width: " + Math.max(w, 0) + "; height: " + Math.max(h, 0)
         + "; topLeftRadius: " + Math.max(radii[0], 0) + "; topRightRadius: " + Math.max(radii[1], 0)
@@ -12935,6 +13162,18 @@ function _gBandColor(c, alpha) {
 
 // A hole has to stay clear for a box with no background of its own, and an odd
 // count of edges only says that where the shadow holds the whole box.
+// A box with a fill to hide what is under it takes the blur the static page has.
+// The formula is the one in `emit/decoration.rs`, fitted there to Chromium's.
+function _gOuterBlur(shadow, radii) {
+    var corners = radii[0] === radii[1] && radii[1] === radii[2] && radii[2] === radii[3]
+        ? "radius: " + radii[0] + "; "
+        : "topLeftRadius: " + radii[0] + "; topRightRadius: " + radii[1]
+            + "; bottomRightRadius: " + radii[2] + "; bottomLeftRadius: " + radii[3] + "; ";
+    return "RectangularShadow { anchors.fill: parent; offset: Qt.vector2d(" + shadow.x + ", " + shadow.y + "); "
+        + "blur: " + (shadow.blur > 0 ? 1.2 * shadow.blur + 2 : 0) + "; spread: " + shadow.spread + "; "
+        + "color: \"" + _gBandColor(shadow.c, shadow.a) + "\"; " + corners + "} ";
+}
+
 function _gOuterRing(shadow, band, w, h, radii) {
     var g = shadow.spread + band[0];
     var x = shadow.x - g;
@@ -12992,10 +13231,10 @@ function _gInsetRing(shadow, band, w, h, radii) {
 }
 
 function _gShapeSource(attrs, paths) {
-    return "import QtQuick; import QtQuick.Shapes; import QtQuick.Layouts; Shape { property Item eldurSlot: null; " + attrs + paths + "}";
+    return "import QtQuick; import QtQuick.Effects; import QtQuick.Shapes; import QtQuick.Layouts; Shape { property Item eldurSlot: null; " + attrs + paths + "}";
 }
 
-function _gReplaceShape(raw, slot, signature, source, host, place) {
+function _gReplaceShape(raw, slot, signature, source, host, place, url) {
     var m = _meta(raw);
     if (m[slot + "Sig"] === signature) {
         return m[slot];
@@ -13007,7 +13246,7 @@ function _gReplaceShape(raw, slot, signature, source, host, place) {
         m[slot] = null;
     }
     if (source !== null) {
-        m[slot] = Qt.createQmlObject(source, host, "eldur_paint");
+        m[slot] = Qt.createQmlObject(source, host, url || "eldur_paint");
         place(m[slot]);
     }
     return m[slot];
@@ -13035,32 +13274,43 @@ function _gPaintDecor(raw, s, e, radius) {
     var inner = outerRadii.map(function(r) { return Math.max(r - Math.max(e.bt, e.bl), 0); });
     var imageText = s["background-image"];
     var paths = "";
+    var placed = [];
+    var plainOnly = true;
     if (imageText !== "none") {
         var images = _gPaintValue("background-image", imageText);
         if (!images) {
-            _gWarn(raw, "background-image", "`" + imageText + "` is not painted: the converter never saw this value");
+            _gWarn(raw, "background-image", "`" + imageText + "` is not painted, so only the background colour shows: the converter never saw this value; write it in a style rule");
         } else {
             for (var l = images.layers.length - 1; l >= 0; --l) {
                 var layer = images.layers[l];
+                var layerAt = _gLayerAt(s, l);
                 if (layer.kind === "unpainted") {
-                    _gWarn(raw, "background-image", layer.what + " is not painted on a created box");
+                    _gWarn(raw, "background-image", layer.what + " paints nothing");
                 } else if (layer.kind !== "none") {
-                    paths += _gGradientPath(layer, pw, ph, inner);
+                    // Each drawn in order, so one that needs an item of its
+                    // own makes them all items.
+                    placed.push(_gLayerIsPlain(layer, layerAt)
+                        ? "Shape { x: " + e.bl + "; y: " + e.bt + "; width: " + Math.max(pw, 0) + "; height: " + Math.max(ph, 0) + "; "
+                            + _gGradientPath(layer, pw, ph, inner) + "} "
+                        : _gLayerSource(raw, s, e, layer, layerAt, outerRadii));
+                    plainOnly = plainOnly && _gLayerIsPlain(layer, layerAt);
+                    if (plainOnly) {
+                        paths += _gGradientPath(layer, pw, ph, inner);
+                    }
                 }
-            }
-            if (s["background-size"] !== "auto" || !/^0(%|px)?$/.test(s["background-position-x"]) || !/^0(%|px)?$/.test(s["background-position-y"])) {
-                _gWarn(raw, "background-size", "a created box paints its image once over the padding box");
             }
         }
     }
     var at = "x: " + e.bl + "; y: " + e.bt + "; width: " + Math.max(pw, 0) + "; height: " + Math.max(ph, 0) + "; ";
     var shadowText = s["box-shadow"];
     var outer = "";
+    var outerBlurs = "";
+    var outerSteps = "";
     var insets = "";
     if (shadowText !== "none") {
-        var shadows = _gPaintValue("box-shadow", shadowText);
+        var shadows = _gShadowsAt("box-shadow", shadowText, s.fontSize);
         if (!shadows) {
-            _gWarn(raw, "box-shadow", "`" + shadowText + "` is not painted: the converter never saw this value");
+            _gWarn(raw, "box-shadow", "`" + shadowText + "` is not painted, so the box has no shadow: the converter never saw this value, or it mixes `em` with `px`; write it in a style rule, in one unit");
         } else {
             var opaque = _gQtColor(s["background-color"]).a === 1 || imageText !== "none";
             for (var i = shadows.list.length - 1; i >= 0; --i) {
@@ -13068,9 +13318,14 @@ function _gPaintDecor(raw, s, e, radius) {
                 for (var b = 0; b < shadow.bands.length; ++b) {
                     if (shadow.inset) {
                         insets += _gInsetRing(shadow, shadow.bands[b], pw, ph, inner);
+                    } else if (opaque) {
+                        outerSteps += _gOuterRing(shadow, shadow.bands[b], w, h, outerRadii);
                     } else {
                         outer += _gOuterRing(shadow, shadow.bands[b], w, h, outerRadii);
                     }
+                }
+                if (!shadow.inset && opaque) {
+                    outerBlurs += _gOuterBlur(shadow, outerRadii);
                 }
                 var round = outerRadii.some(function(r) { return r > 0; });
                 if (!shadow.inset && round && !opaque && (shadow.x !== 0 || shadow.y !== 0)) {
@@ -13082,24 +13337,145 @@ function _gPaintDecor(raw, s, e, radius) {
     // Only a child with a negative z is below what the box holds, and that is
     // below the box's own fill too: with layers to show, they take the fill over.
     var shade = _gQtColor(s["background-color"]);
-    var layered = paths !== "" || insets !== "";
+    var clips = _gCommaList(s["background-clip"]);
+    var colourClip = clips[clips.length - 1];
+    var colourKept = colourClip === "padding-box" || colourClip === "content-box";
+    plainOnly = plainOnly && !colourKept;
+    var layered = paths !== "" || insets !== "" || !plainOnly;
     raw.color = layered ? "transparent" : shade;
     var under = "ShapePath { strokeWidth: -1; fillColor: \"" + shade + "\"; "
         + _gRectSource(-e.bl, -e.bt, w, h, outerRadii) + "} ";
     var layers = under + paths + insets;
     var attrs = "z: -1; " + at;
-    _gReplaceShape(raw, "gLayers", layers + at, layered ? _gShapeSource(attrs, layers) : null, raw, function() {});
+    if (plainOnly) {
+        _gReplaceShape(raw, "gLayers", layers + at, layered ? _gShapeSource(attrs, layers) : null, raw, function() {});
+    } else {
+        var byClip = colourClip === "content-box"
+            ? function(side) { return (_gPx(s["padding-" + side], w, s.fontSize, s.rootSize) || 0); }
+            : function() { return 0; };
+        var bottomColour = colourKept
+            ? "Rectangle { color: \"" + shade + "\"; x: " + (e.bl + byClip("left")) + "; y: " + (e.bt + byClip("top"))
+                + "; width: " + Math.max(w - e.bl - e.br - byClip("left") - byClip("right"), 0)
+                + "; height: " + Math.max(h - e.bt - e.bb - byClip("top") - byClip("bottom"), 0) + " } "
+            : "Rectangle { anchors.fill: parent; color: \"" + shade + "\"; topLeftRadius: " + outerRadii[0]
+                + "; topRightRadius: " + outerRadii[1] + "; bottomRightRadius: " + outerRadii[2]
+                + "; bottomLeftRadius: " + outerRadii[3] + " } ";
+        var over = insets === "" ? "" : "Shape { x: " + e.bl + "; y: " + e.bt + "; width: " + Math.max(pw, 0)
+            + "; height: " + Math.max(ph, 0) + "; " + insets + "} ";
+        _gReplaceShape(raw, "gLayers", placed.join("") + bottomColour + over + w + "x" + h,
+            "import QtQuick; import QtQuick.Shapes; import \".\"; Item { property Item eldurSlot: null; z: -1; width: " + w + "; height: " + h + "; "
+                + bottomColour + placed.join("") + over + "}",
+            raw, function() {}, Qt.resolvedUrl("eldur_paint"));
+    }
+    // The software scene graph draws no `RectangularShadow`, and steps are what it can.
+    if (outerBlurs !== "") {
+        outer += "Item { anchors.fill: parent; visible: GraphicsInfo.api !== GraphicsInfo.Software; " + outerBlurs + "} "
+            + "Shape { anchors.fill: parent; visible: GraphicsInfo.api === GraphicsInfo.Software; " + outerSteps + "} ";
+    }
     _gPaintOuterShadow(raw, outer, w, h);
     _gPaintMatrix(raw, s, w, h);
-    if (s.filter !== "none") {
-        _gWarn(raw, "filter", "`" + s.filter + "` is not painted on a created box");
+    if (s["text-shadow"] !== "none" && s["text-shadow"] !== undefined) {
+        _gWarn(raw, "text-shadow", "the text of a box a script made or restyled is drawn with no shadow; only text the page holds as written has one");
     }
     if (s["animation-name"] !== "none") {
-        _gWarn(raw, "animation-name", "`" + s["animation-name"] + "` does not run on a created box");
+        _gWarn(raw, "animation-name", "`" + s["animation-name"] + "` does not run on a created box: it stays as its rules leave it");
     }
-    if (raw.clip && radius > 0 && _rawElementChildren(raw).length > 0) {
-        _gWarn(raw, "border-radius", "overflow clips what this box holds to its square corners");
+    if (!_gPaintPicture(raw, s, w, h)) {
+        _gPaintLayer(raw, s, outerRadii,
+            raw.clip && _rawElementChildren(raw).length > 0 && outerRadii.some(function(r) { return r > 0; }));
     }
+}
+
+// The layer a box needs. QML's `clip` is square, so a clip to rounded corners is
+// a mask; a filter is the same kind of effect; a fading group is the layer alone.
+// An effect holds its values as written, so new values make a new one.
+function _gPaintLayer(raw, s, radii, clips) {
+    var m = _meta(raw);
+    var source = "";
+    if (s.filter !== "none" && s.filter !== undefined) {
+        var filter = _gPaintValue("filter", s.filter);
+        if (!filter) {
+            _gWarn(raw, "filter", "`" + s.filter + "` is not painted, so the box shows unfiltered: it has a `url()`, or the converter never saw this value; write its functions in a style rule");
+        } else {
+            source = "EldurFilter { " + filter.source + " }";
+            if (clips) {
+                _gWarn(raw, "filter", "the box clips to square corners under a filter: one layer holds one effect");
+            }
+        }
+    }
+    if (source === "" && clips) {
+        source = "EldurRoundClip { topLeftRadius: " + radii[0] + "; topRightRadius: " + radii[1]
+            + "; bottomRightRadius: " + radii[2] + "; bottomLeftRadius: " + radii[3] + " }";
+    }
+    if (m.gLayerEffect !== source) {
+        if (source !== "" || m.gLayerEffect !== undefined) {
+            raw.layer.effect = source === "" ? null : Qt.createQmlObject(
+                "import QtQuick; import \".\"; QtObject { property Component effect: " + source + " }",
+                raw, Qt.resolvedUrl("eldur_paint")).effect;
+        }
+        m.gLayerEffect = source;
+    }
+    // QML fades each thing drawn; CSS fades the box and what it holds as one.
+    var fades = _gNumber(s.opacity) < 1 && _rawElementChildren(raw).length > 0;
+    _gSet(raw.layer, "enabled", source !== "" || fades);
+}
+
+// A page's `<img>` is an `Image` in an item that keeps the CSS size; a created
+// one is the `Image`.
+function _gPictureOf(raw) {
+    if (raw.source !== undefined) {
+        return raw;
+    }
+    var kids = raw.eldurTag === "img" ? raw.children : [];
+    for (var i = 0; i < kids.length; ++i) {
+        if (kids[i].source !== undefined && kids[i].fillMode !== undefined) {
+            return kids[i];
+        }
+    }
+    return null;
+}
+
+function _gPaintPicture(raw, s, w, h) {
+    var picture = _gPictureOf(raw);
+    if (!picture) {
+        return false;
+    }
+    var radii = _gCorners(raw, s);
+    _gPaintLayer(raw, s, radii, radii.some(function(r) { return r > 0; }));
+    var fit = s["object-fit"];
+    var file = picture.sourceSize;
+    // The enums' values: a library script cannot see the QML type `Image`.
+    var modes = { fill: 0, contain: 1, cover: 2, none: 6 };
+    var mode = modes[fit];
+    if (fit === "scale-down") {
+        mode = file.width > w || file.height > h ? modes.contain : modes.none;
+    }
+    if (mode !== undefined) {
+        _gSet(picture, "fillMode", mode);
+    }
+    var names = { left: "0%", center: "50%", right: "100%", top: "0%", bottom: "100%" };
+    var at = s["object-position"].trim().split(/\s+/).map(function(part) {
+        return names[part] || part;
+    });
+    var pick = function(value, start, middle, end) {
+        var number = parseFloat(value);
+        if (number === 0) {
+            return start;
+        }
+        if (value === "50%") {
+            return middle;
+        }
+        if (value === "100%") {
+            return end;
+        }
+        _gWarn(raw, "object-position", "`" + value + "` on an image a script restyled is centred: "
+            + "only an edge or the middle can be placed at run time");
+        return middle;
+    };
+    _gSet(picture, "horizontalAlignment", pick(at[0], 1, 4, 2));
+    _gSet(picture, "verticalAlignment", pick(at[1] || "50%", 0x20, 0x80, 0x40));
+    _gSet(picture, "clip", fit === "none" || fit === "cover");
+    return true;
 }
 
 // Shadows lie outside the box, where its own clip would take them: a clipping
@@ -13115,7 +13491,7 @@ function _gPaintOuterShadow(raw, paths, w, h) {
         // A layout moves its children, so the shape sits in an item of no size
         // it can move as it likes, and follows the box from there.
         source = raw.clip && raw.parent
-            ? "import QtQuick; import QtQuick.Shapes; import QtQuick.Layouts; Item { property Item eldurSlot: null; "
+            ? "import QtQuick; import QtQuick.Effects; import QtQuick.Shapes; import QtQuick.Layouts; Item { property Item eldurSlot: null; "
                 + "property Item box: null; property alias shape: drawn; Layout.maximumWidth: 0; Layout.maximumHeight: 0; "
                 + "z: box ? box.z : 0; opacity: box ? box.opacity : 1; visible: box ? box.visible : false; "
                 + "Shape { id: drawn; x: box ? box.x - parent.x : 0; y: box ? box.y - parent.y : 0; width: " + w + "; height: " + h + "; " + paths + "} }"
@@ -13159,7 +13535,7 @@ function _gMatrixOf(raw, s, w, h, warn) {
     var value = _gPaintValue("transform", text);
     if (!value) {
         if (warn) {
-            _gWarn(raw, "transform", "`" + text + "` is not painted: the converter never saw this value");
+            _gWarn(raw, "transform", "`" + text + "` is not painted, so the box stays unmoved: the converter never saw this value; write it in a style rule");
         }
         return null;
     }
@@ -13167,11 +13543,13 @@ function _gMatrixOf(raw, s, w, h, warn) {
     for (var i = 0; i < value.fns.length; ++i) {
         var f = value.fns[i];
         if (f.t) {
-            out = _gMultiply(out, [1, 0, 0, 1, f.t[0][0] + f.t[0][1] * w / 100, f.t[1][0] + f.t[1][1] * h / 100]);
+            out = _gMultiply(out, [1, 0, 0, 1,
+                f.t[0][0] + f.t[0][1] * w / 100 + (f.t[0][2] || 0) * s.fontSize,
+                f.t[1][0] + f.t[1][1] * h / 100 + (f.t[1][2] || 0) * s.fontSize]);
         } else if (f.m) {
             out = _gMultiply(out, f.m);
         } else if (warn) {
-            _gWarn(raw, "transform", "`" + f.u + "` has no 2-D form and is left out");
+            _gWarn(raw, "transform", "`" + f.u + "` has no 2-D form and is left out; the rest of the transform still applies");
         }
     }
     return out;
@@ -13199,6 +13577,16 @@ function _gApplyMatrix(raw, v) {
     _meta(raw).gMatrix.matrix = Qt.matrix4x4(v[0], v[2], 0, v[4], v[1], v[3], 0, v[5], 0, 0, 1, 0, 0, 0, 0, 1);
 }
 
+function _gMatrixFollowSize(raw) {
+    var s = _gStyle(raw);
+    var written = _gMatrixOf(raw, s, raw.width, raw.height, false);
+    var origin = _gOrigin(s, raw.width, raw.height);
+    var about = _gMultiply(_gMultiply([1, 0, 0, 1, origin[0], origin[1]], written || [1, 0, 0, 1, 0, 0]),
+        [1, 0, 0, 1, -origin[0], -origin[1]]);
+    _meta(raw).gMatrixGoal = about;
+    _gApplyMatrix(raw, about);
+}
+
 function _gPaintMatrix(raw, s, w, h) {
     var m = _meta(raw);
     var written = _gMatrixOf(raw, s, w, h, true);
@@ -13213,6 +13601,11 @@ function _gPaintMatrix(raw, s, w, h) {
         m.gMatrix = Qt.createQmlObject("import QtQuick; Matrix4x4 {}", raw, "eldur_matrix");
         _gApplyMatrix(raw, about);
         _gSetTransforms(raw);
+        // A layout can size the box after this, as a grid row stretches its
+        // items, and the origin and percentages are of the size it ends with.
+        var resized = function() { _gMatrixFollowSize(raw); };
+        raw.widthChanged.connect(resized);
+        raw.heightChanged.connect(resized);
         return;
     }
     var now = m.gMatrixNow;
@@ -13930,7 +14323,9 @@ function _gAttached(raw, s, e) {
     }
     var centred = e.ml === null && e.mr === null;
     // Qt.AlignHCenter, Qt.AlignRight, Qt.AlignLeft.
-    _gSet(raw, "eldurAlign", centred ? 4 : e.ml === null ? 2 : 0);
+    // A grid item starts at its cell's top; a Layout would centre it.
+    var top = typeof parent.columnSpacing === "number" ? 32 : 0;
+    _gSet(raw, "eldurAlign", (centred ? 4 : e.ml === null ? 2 : 0) | top);
 }
 
 // Margins of a box on a line do not collapse: the line reads them as they are.
@@ -14007,8 +14402,12 @@ function _gLayoutRoots() {
 function _gTrackWidth(raw) {
     var grid = raw.parent;
     var tracks = grid.eldurTracks;
-    if (!tracks || tracks.length === 0) {
+    if (raw.eldurPw >= 0 && !raw.eldurFill) {
         return null;
+    }
+    // A converted grid has no list of tracks: the item took its own along.
+    if (!tracks || tracks.length === 0) {
+        return raw.eldurTrackLeft > 0 ? raw.eldurTrackLeft : null;
     }
     var column = _rawElementChildren(grid).indexOf(raw) % tracks.length;
     if (tracks[column] >= 0) {
@@ -14526,6 +14925,9 @@ function _gAdopt(raw) {
     next.eldurGapT = place.top;
     next.eldurGapL = place.left;
     next.eldurTrack = place.track;
+    if (place.cell) {
+        _gLayoutCell(next, place.cell);
+    }
     _gLive.push(next);
     return next;
 }
@@ -14546,8 +14948,10 @@ function _gConvertedPlace(raw) {
         place.left = row ? Math.min(gap, written.left) : 0;
         place.top = row ? 0 : Math.min(gap, written.top);
     } else if (typeof raw.parent.columns === "number") {
-        var most = _gLayoutMargins(raw).max;
-        place.track = isFinite(most) ? most : -1;
+        var cell = _gLayoutMargins(raw);
+        place.cell = cell;
+        place.track = !cell.fill && cell.wide >= 0 ? cell.wide + cell.left + cell.right
+            : isFinite(cell.max) ? cell.max : -1;
     }
     return place;
 }
@@ -14555,10 +14959,18 @@ function _gConvertedPlace(raw) {
 function _gLayoutMargins(raw) {
     if (!_gLayoutReader) {
         _gLayoutReader = Qt.createQmlObject("import QtQuick; import QtQuick.Layouts; QtObject { "
-            + "function read(i) { return { top: i.Layout.topMargin, left: i.Layout.leftMargin, max: i.Layout.maximumWidth }; } }",
+            + "function read(i) { return { top: i.Layout.topMargin, left: i.Layout.leftMargin, right: i.Layout.rightMargin, max: i.Layout.maximumWidth, "
+            + "wide: i.Layout.preferredWidth, fill: i.Layout.fillWidth, tall: i.Layout.fillHeight, row: i.Layout.row, column: i.Layout.column, "
+            + "rows: i.Layout.rowSpan, columns: i.Layout.columnSpan }; } "
+            + "function cell(i, c) { i.Layout.row = c.row; i.Layout.column = c.column; i.Layout.rowSpan = c.rows; i.Layout.columnSpan = c.columns; "
+            + "i.Layout.fillHeight = c.tall; } }",
             _qobjectParent(), "eldur_layout_reader");
     }
     return _gLayoutReader.read(raw);
+}
+
+function _gLayoutCell(raw, cell) {
+    _gLayoutReader.cell(raw, cell);
 }
 
 function _rawHasNoFlowParent(raw) {
@@ -14618,7 +15030,7 @@ function _gComputed(raw, prop) {
         return line === "" ? "none" : line;
     }
     if (name === "background-image" || name === "box-shadow") {
-        var parsed = s[name] === "none" ? null : _gPaintValue(name, s[name]);
+        var parsed = s[name] === "none" ? null : _gShadowsAt(name, s[name], s.fontSize);
         return parsed ? parsed.css : String(s[name]);
     }
     if (name === "transform") {

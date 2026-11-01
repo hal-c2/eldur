@@ -15,7 +15,13 @@ mod grid;
 mod ids;
 mod image;
 mod inline;
-pub(crate) use inline::ELDUR_LINES_QML;
+pub(crate) use background::ELDUR_BACKGROUND_LAYER_QML;
+pub(crate) use decoration::{ELDUR_BORDER_QML, ELDUR_ROUND_CLIP_QML};
+pub(crate) use text::ELDUR_TEXT_LINES_QML;
+pub(crate) const ELDUR_FILTER_QML: &str = include_str!("EldurFilter.qml");
+pub(crate) const ELDUR_FILTER_QSB: &[u8] = include_bytes!("eldur_filter.frag.qsb");
+pub(crate) const ELDUR_TEXT_SHADOW_QML: &str = include_str!("EldurTextShadow.qml");
+pub(crate) use inline::{ELDUR_INLINE_BOX_QML, ELDUR_LINES_QML, has_atomic, needs_lines_for_boxes};
 mod inline_model;
 mod links;
 mod lists;
@@ -24,7 +30,7 @@ pub(crate) mod shadow;
 mod table;
 pub(crate) mod templates;
 mod text;
-mod transform;
+pub(crate) mod transform;
 pub(crate) mod units;
 
 #[cfg(test)]
@@ -45,7 +51,7 @@ use crate::diag::Diagnostics;
 use crate::{Options, RootKind};
 use flow::{Emitted, MarginSet, has_height};
 use ids::Ids;
-use units::{ROOT_ID, color, number};
+use units::{ROOT_ID, color, fmt_number, number};
 
 const FLICKABLE_ID: &str = "flickable";
 const PAGE_ID: &str = "page";
@@ -134,6 +140,7 @@ pub(crate) struct Emitter<'a, 'd> {
     pub imports: std::collections::BTreeSet<&'static str>,
     /// The file each `<img>` shows.
     pub images: BTreeMap<NodeId, crate::images::ImageAsset>,
+    pub background_images: BTreeMap<String, String>,
     /// Scripts reach elements at run time, so every element object says
     /// what it is (`eldurTag`, `eldurClasses`).
     pub runtime_dom: bool,
@@ -177,11 +184,17 @@ pub(crate) struct Emitter<'a, 'd> {
     /// Elements whose border form differs between combinations: they draw
     /// strips on the sides visible in any of them, in every combination.
     strips: HashMap<NodeId, [bool; 4]>,
+    /// Boxes whose border or outline changes form under a state.
+    plain_edges: HashSet<NodeId>,
+    /// Whether the control being emitted is in `plain_edges`.
+    plain_control: bool,
     /// Elements `display: none` in the combination being emitted, laid out
     /// as shown and hidden with `visible`.
     collapsed: HashSet<NodeId>,
     /// The control being emitted is sticky.
     force_paint: bool,
+    /// The run being written has its elements' boxes painted by `EldurInlineBox`.
+    boxes_drawn: bool,
     /// Created inline elements laid out as items of their own in their
     /// line (`boxes::build_with`).
     inline_items: HashSet<NodeId>,
@@ -232,6 +245,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             in_float_run: false,
             imports: std::collections::BTreeSet::new(),
             images: BTreeMap::new(),
+            background_images: BTreeMap::new(),
             runtime_dom: false,
             open_elements: false,
             hides_items: false,
@@ -252,8 +266,11 @@ impl<'a, 'd> Emitter<'a, 'd> {
             excess: HashMap::new(),
             sticky: HashSet::new(),
             strips: HashMap::new(),
+            plain_edges: HashSet::new(),
+            plain_control: false,
             collapsed: HashSet::new(),
             force_paint: false,
+            boxes_drawn: false,
             inline_items: HashSet::new(),
             inline_covered: std::collections::BTreeSet::new(),
         }
@@ -519,6 +536,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             deco.paints = true;
         }
         deco.strips = b.node.and_then(|n| self.strips.get(&n).copied());
+        deco.plain_edges = b.node.is_some_and(|n| self.plain_edges.contains(&n));
         let wanted = b.node.is_some_and(|n| self.wanted.contains(&n));
         let mt = self.vertical_margin(&style.margin.top, line);
         let mb = self.vertical_margin(&style.margin.bottom, line);
@@ -669,7 +687,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 column.obj.map(|o| (o, "Content"))
             }
             Content::Inline(items)
-                if inline::has_atomic(items) || inline::needs_lines_for_leading(style, items) =>
+                if inline::has_atomic(items)
+                    || inline::needs_lines_for_leading(style, items)
+                    || inline::needs_lines_for_boxes(items) =>
             {
                 Some((self.inline_flow(b, decoration, items, line), "Content"))
             }
@@ -1090,8 +1110,84 @@ impl<'a, 'd> Emitter<'a, 'd> {
         }
         if opacity < 1.0 {
             obj.set("opacity", number(opacity));
+            // QML multiplies the opacity into each thing drawn, so overlaps
+            // would show through; CSS fades the group as one picture.
+            if paints_count(obj) > 1 {
+                obj.set("layer.enabled", true);
+            }
         }
+        self.filter(obj, style);
     }
+
+    /// `filter` as the effect of a layer.
+    fn filter(&mut self, obj: &mut Object, style: &ComputedStyle) {
+        let Some(text) = &style.filter else { return };
+        let what = hint_text(text);
+        let Some(filter) = crate::filter::parse(text, style.font_size, &self.options.viewport)
+        else {
+            self.diags.warning(
+                "css",
+                None,
+                format!("`filter: {what}` is not drawn: a `url()` reference has no conversion"),
+            );
+            return;
+        };
+        if obj.get("layer.effect").is_some() {
+            self.diags.warning(
+                "css",
+                None,
+                format!("`filter: {what}` is not drawn: the box already clips to rounded corners"),
+            );
+            return;
+        }
+        let mut effect = Object::new("EldurFilter");
+        if filter.recolours() {
+            let m = filter.matrix;
+            let cells: Vec<String> = m.iter().flatten().map(|v| fmt_number(*v)).collect();
+            effect.set(
+                "colorMatrix",
+                Value::expr(format!("Qt.matrix4x4({})", cells.join(", "))),
+            );
+            let o: Vec<String> = filter.offset.iter().map(|v| fmt_number(*v)).collect();
+            effect.set(
+                "colorOffset",
+                Value::expr(format!("Qt.vector4d({})", o.join(", "))),
+            );
+        }
+        if filter.blur > 0.0 {
+            effect.set("blurDeviation", Value::Number(filter.blur));
+        }
+        if let Some(d) = filter.drop {
+            effect.set("hasDrop", true);
+            effect.set("dropX", Value::Number(d.x));
+            effect.set("dropY", Value::Number(d.y));
+            effect.set("dropDeviation", Value::Number(d.deviation));
+            effect.set("dropColor", units::color(d.color));
+        }
+        obj.set("layer.enabled", true);
+        obj.set("layer.effect", Value::Object(Box::new(effect)));
+    }
+}
+
+/// How many things this object and what it holds draw, as far as two: a group
+/// of one needs no layer to fade.
+fn paints_count(obj: &Object) -> usize {
+    let own = matches!(
+        obj.type_name.as_str(),
+        "Rectangle" | "Text" | "Image" | "Shape" | "EldurLines" | "EldurBackgroundLayer"
+    );
+    let mut count = usize::from(own);
+    for child in obj.children() {
+        if count > 1 {
+            break;
+        }
+        count += paints_count(child);
+    }
+    count
+}
+
+fn hint_text(text: &str) -> String {
+    text.chars().take(60).collect()
 }
 
 /// An item the size of the initial containing block: the viewport's, at the

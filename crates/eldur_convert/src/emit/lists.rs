@@ -130,8 +130,16 @@ impl Emitter<'_, '_> {
                 obj
             }
             MarkerKind::Image(url) => {
+                let Some(source) = self.background_images.get(url).cloned() else {
+                    self.diags.warning(
+                        "css",
+                        line,
+                        format!("`list-style-image` `{url}` was not found; a disc is drawn"),
+                    );
+                    return bullet(&MarkerKind::Disc);
+                };
                 let mut obj = Object::new("Image");
-                obj.set("source", Value::String(url.clone()));
+                obj.set("source", Value::String(source));
                 obj.set("anchors.right", Value::expr("parent.left"));
                 obj.set("anchors.rightMargin", number(IMAGE_MARKER_GAP));
                 obj.set(

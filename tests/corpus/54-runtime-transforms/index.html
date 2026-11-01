@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Transforms a script turns on</title>
+<style>
+body { margin: 30px; font: 16px/1.5 sans-serif; color: #111; background: #fff; }
+#grid, #made { display: grid; grid-template-columns: repeat(4, 240px); gap: 40px; margin-bottom: 40px; }
+#grid > *, #made > * { margin: 0; }
+.box { width: 80px; height: 80px; background: #3b82f6; }
+.big { font-size: 20px; }
+.em { transform: translate(1em, .5em); }
+.flat { transform: rotateY(30deg) translateZ(10px); }
+.grow { transform: scale(1.5); transform-origin: 0 0; }
+.turn { transform: rotate(10deg); }
+.corner { transform: rotate(30deg); transform-origin: 0 0; }
+.both { transform: translate(10px, 5px) scale(.5); }
+</style></head><body><div id="grid">
+<div class="box big" id="x-em"></div><div class="box" id="x-flat"></div>
+<p id="x-grow">Grows</p><p id="x-turn">Turns</p>
+<div class="box" id="x-corner"></div><div class="box" id="x-both"></div>
+<p class="big" id="x-pem">In ems</p><p id="x-pboth">Moved and small</p>
+</div><div id="made"></div>
+<script>
+const on = { 'x-em': 'em', 'x-flat': 'flat', 'x-grow': 'grow', 'x-turn': 'turn', 'x-corner': 'corner', 'x-both': 'both', 'x-pem': 'em', 'x-pboth': 'both' };
+for (const id in on) document.getElementById(id).classList.add(on[id]);
+const grid = document.getElementById('made');
+for (const [id, name] of [['c-em', 'em big'], ['c-flat', 'flat'], ['c-both', 'both']]) {
+  const d = document.createElement('div');
+  d.id = id;
+  d.className = 'box ' + name;
+  grid.appendChild(d);
+}
+const p = document.createElement('p');
+p.id = 'c-text';
+p.className = 'grow';
+p.textContent = 'Made and grown';
+grid.appendChild(p);
+</script></body></html>

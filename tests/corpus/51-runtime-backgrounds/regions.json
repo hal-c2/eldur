@@ -1,0 +1,62 @@
+[
+  {
+    "selector": "#r-tile"
+  },
+  {
+    "selector": "#r-cover"
+  },
+  {
+    "selector": "#r-contain"
+  },
+  {
+    "selector": "#r-place"
+  },
+  {
+    "selector": "#r-repx"
+  },
+  {
+    "selector": "#r-round"
+  },
+  {
+    "selector": "#r-stripes"
+  },
+  {
+    "selector": "#r-sized"
+  },
+  {
+    "selector": "#r-conic"
+  },
+  {
+    "selector": "#r-clipc"
+  },
+  {
+    "selector": "#r-origin"
+  },
+  {
+    "selector": "#r-repr"
+  },
+  {
+    "selector": "#r-holds",
+    "max_mismatch": 0.005
+  },
+  {
+    "selector": "#r-i-round",
+    "max_mismatch": 0.01
+  },
+  {
+    "selector": "#r-i-cover",
+    "max_mismatch": 0.01
+  },
+  {
+    "selector": "#r-i-contain",
+    "max_mismatch": 0.01
+  },
+  {
+    "selector": "#r-i-corner",
+    "max_mismatch": 0.01
+  },
+  {
+    "selector": "#r-i-end",
+    "max_mismatch": 0.01
+  }
+]
