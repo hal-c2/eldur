@@ -264,3 +264,8 @@ fn flex_no_grow() {
 fn grid_fractions() {
     page("grid_fractions");
 }
+
+#[test]
+fn row_fractions() {
+    page("row_fractions");
+}

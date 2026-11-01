@@ -256,7 +256,7 @@ ApplicationWindow {
                         // <section class="pricing-grid">
                         RowLayout {
                             id: pricingGrid
-                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + plan.eldurCarry + 0.000001
 
                             spacing: 28
                             z: 1
@@ -386,19 +386,25 @@ ApplicationWindow {
                                         }
 
                                         Item {
+                                            id: item5
+                                            property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                             Layout.fillWidth: true
                                         }
                                     }
 
                                     // <ul class="features">
                                     GridLayout {
+                                        id: features
+                                        property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + li3.eldurCarry + 0.000001
+
                                         columns: 1
                                         columnSpacing: 12
                                         rowSpacing: 12
                                         Layout.fillHeight: false
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.topMargin: 28
+                                        Layout.topMargin: 28 - item5.eldurCarry
 
                                         // <li>
                                         RowLayout {
@@ -448,17 +454,24 @@ ApplicationWindow {
                                             }
 
                                             Item {
+                                                id: item
+                                                property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                 Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
                                         RowLayout {
+                                            id: li
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item2.eldurCarry + 0.000001
+
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                            Layout.topMargin: -item.eldurCarry
 
                                             // <span class="check">
                                             Text {
@@ -500,17 +513,24 @@ ApplicationWindow {
                                             }
 
                                             Item {
+                                                id: item2
+                                                property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                 Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
                                         RowLayout {
+                                            id: li2
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item3.eldurCarry + 0.000001
+
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                            Layout.topMargin: -li.eldurCarry
 
                                             // <span class="check">
                                             Text {
@@ -552,17 +572,24 @@ ApplicationWindow {
                                             }
 
                                             Item {
+                                                id: item3
+                                                property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                 Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
                                         RowLayout {
+                                            id: li3
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item4.eldurCarry + 0.000001
+
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                            Layout.topMargin: -li2.eldurCarry
 
                                             // <span class="check">
                                             Text {
@@ -604,6 +631,9 @@ ApplicationWindow {
                                             }
 
                                             Item {
+                                                id: item4
+                                                property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                 Layout.fillWidth: true
                                             }
                                         }
@@ -652,7 +682,7 @@ ApplicationWindow {
                                         Layout.preferredHeight: 50
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
-                                        Layout.topMargin: 32
+                                        Layout.topMargin: 32 - features.eldurCarry
                                         hoverEnabled: true
                                     }
                                 }
@@ -791,19 +821,25 @@ ApplicationWindow {
                                         }
 
                                         Item {
+                                            id: item11
+                                            property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                             Layout.fillWidth: true
                                         }
                                     }
 
                                     // <ul class="features">
                                     GridLayout {
+                                        id: features2
+                                        property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + li7.eldurCarry + 0.000001
+
                                         columns: 1
                                         columnSpacing: 12
                                         rowSpacing: 12
                                         Layout.fillHeight: false
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.topMargin: 28
+                                        Layout.topMargin: 28 - item11.eldurCarry
 
                                         // <li>
                                         RowLayout {
@@ -851,17 +887,24 @@ ApplicationWindow {
                                             }
 
                                             Item {
+                                                id: item6
+                                                property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                 Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
                                         RowLayout {
+                                            id: li4
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item7.eldurCarry + 0.000001
+
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                            Layout.topMargin: -item6.eldurCarry
 
                                             // <span class="check">
                                             Text {
@@ -901,17 +944,24 @@ ApplicationWindow {
                                             }
 
                                             Item {
+                                                id: item7
+                                                property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                 Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
                                         RowLayout {
+                                            id: li5
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item8.eldurCarry + 0.000001
+
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                            Layout.topMargin: -li4.eldurCarry
 
                                             // <span class="check">
                                             Text {
@@ -951,17 +1001,24 @@ ApplicationWindow {
                                             }
 
                                             Item {
+                                                id: item8
+                                                property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                 Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
                                         RowLayout {
+                                            id: li6
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item9.eldurCarry + 0.000001
+
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                            Layout.topMargin: -li5.eldurCarry
 
                                             // <span class="check">
                                             Text {
@@ -1001,17 +1058,24 @@ ApplicationWindow {
                                             }
 
                                             Item {
+                                                id: item9
+                                                property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                 Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
                                         RowLayout {
+                                            id: li7
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item10.eldurCarry + 0.000001
+
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                            Layout.topMargin: -li6.eldurCarry
 
                                             // <span class="check">
                                             Text {
@@ -1051,6 +1115,9 @@ ApplicationWindow {
                                             }
 
                                             Item {
+                                                id: item10
+                                                property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                 Layout.fillWidth: true
                                             }
                                         }
@@ -1089,7 +1156,7 @@ ApplicationWindow {
                                         Layout.preferredHeight: 50
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
-                                        Layout.topMargin: 32
+                                        Layout.topMargin: 32 - features2.eldurCarry
                                     }
                                 }
 
@@ -1131,6 +1198,9 @@ ApplicationWindow {
 
                             // <article class="plan">
                             Rectangle {
+                                id: plan
+                                property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                 color: "#ffffff"
                                 radius: 20
                                 implicitWidth: planContent3.implicitWidth + 66
@@ -1251,19 +1321,25 @@ ApplicationWindow {
                                         }
 
                                         Item {
+                                            id: item17
+                                            property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                             Layout.fillWidth: true
                                         }
                                     }
 
                                     // <ul class="features">
                                     GridLayout {
+                                        id: features3
+                                        property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + li11.eldurCarry + 0.000001
+
                                         columns: 1
                                         columnSpacing: 12
                                         rowSpacing: 12
                                         Layout.fillHeight: false
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.topMargin: 28
+                                        Layout.topMargin: 28 - item17.eldurCarry
 
                                         // <li>
                                         RowLayout {
@@ -1313,17 +1389,24 @@ ApplicationWindow {
                                             }
 
                                             Item {
+                                                id: item12
+                                                property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                 Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
                                         RowLayout {
+                                            id: li8
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item13.eldurCarry + 0.000001
+
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                            Layout.topMargin: -item12.eldurCarry
 
                                             // <span class="check">
                                             Text {
@@ -1365,17 +1448,24 @@ ApplicationWindow {
                                             }
 
                                             Item {
+                                                id: item13
+                                                property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                 Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
                                         RowLayout {
+                                            id: li9
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item14.eldurCarry + 0.000001
+
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                            Layout.topMargin: -li8.eldurCarry
 
                                             // <span class="check">
                                             Text {
@@ -1417,17 +1507,24 @@ ApplicationWindow {
                                             }
 
                                             Item {
+                                                id: item14
+                                                property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                 Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
                                         RowLayout {
+                                            id: li10
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item15.eldurCarry + 0.000001
+
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                            Layout.topMargin: -li9.eldurCarry
 
                                             // <span class="check">
                                             Text {
@@ -1469,17 +1566,24 @@ ApplicationWindow {
                                             }
 
                                             Item {
+                                                id: item15
+                                                property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                 Layout.fillWidth: true
                                             }
                                         }
 
                                         // <li>
                                         RowLayout {
+                                            id: li11
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item16.eldurCarry + 0.000001
+
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                            Layout.topMargin: -li10.eldurCarry
 
                                             // <span class="check">
                                             Text {
@@ -1521,6 +1625,9 @@ ApplicationWindow {
                                             }
 
                                             Item {
+                                                id: item16
+                                                property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                 Layout.fillWidth: true
                                             }
                                         }
@@ -1569,7 +1676,7 @@ ApplicationWindow {
                                         Layout.preferredHeight: 50
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
-                                        Layout.topMargin: 32
+                                        Layout.topMargin: 32 - features3.eldurCarry
                                         hoverEnabled: true
                                     }
                                 }

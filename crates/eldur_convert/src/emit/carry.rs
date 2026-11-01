@@ -337,6 +337,45 @@ impl Emitter<'_, '_> {
             .push(Member::Comment(format!("{EXCESS}{key}")));
     }
 
+    /// A row rounds its tallest item up once. What it adds is an excess, as
+    /// a carried column's is, for the column the row is in to take back.
+    /// Only plain items: a nested layout's implicit height is rounded already,
+    /// and a margin or fixed height is not in an item's implicit height.
+    pub(super) fn row_excess(&mut self, row: &mut Object) {
+        if self.no_carry {
+            return;
+        }
+        let kids: Vec<&Object> = row.children().collect();
+        let plain = kids.iter().all(|k| {
+            !is_layout(&k.type_name)
+                && [
+                    "Layout.topMargin",
+                    "Layout.bottomMargin",
+                    "Layout.margins",
+                    "Layout.preferredHeight",
+                    "Layout.minimumHeight",
+                ]
+                .iter()
+                .all(|p| k.get(p).is_none())
+        });
+        if !plain || !kids.iter().any(|k| holds_fractional_line(k)) {
+            return;
+        }
+        let item = kids.len() - 1;
+        let key = self.excess.len();
+        self.excess.insert(
+            key,
+            Excess::Pending {
+                item,
+                binding: format!(
+                    "(h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children)\
+                     .filter(k => k.visible).map(k => k.implicitHeight))) + {NUDGE}"
+                ),
+            },
+        );
+        row.members.push(Member::Comment(format!("{EXCESS}{key}")));
+    }
+
     /// A carried column's excess, plus `extra`; the last item declares
     /// its `eldurCarry` when it is first read.
     fn read_excess(&mut self, obj: &mut Object, key: usize, extra: f64) -> Carry {
@@ -509,6 +548,11 @@ fn hideable(obj: &Object) -> bool {
             .members
             .iter()
             .any(|m| matches!(m, Member::PropertyDecl { name, .. } if name == "eldurTag"))
+}
+
+fn holds_fractional_line(obj: &Object) -> bool {
+    matches!(obj.get("lineHeight"), Some(Value::Number(l)) if l.fract() != 0.0)
+        || obj.children().any(holds_fractional_line)
 }
 
 fn height(obj: &Object, excess: &HashMap<usize, Excess>) -> Height {

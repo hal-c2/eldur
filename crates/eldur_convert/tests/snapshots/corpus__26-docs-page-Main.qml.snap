@@ -1963,6 +1963,9 @@ ApplicationWindow {
                     }
 
                     Item {
+                        id: item
+                        property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                         Layout.fillWidth: true
                         Layout.horizontalStretchFactor: 1
                     }

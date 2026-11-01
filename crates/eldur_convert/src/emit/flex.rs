@@ -369,7 +369,9 @@ impl Emitter<'_, '_> {
                 .to_vec(),
             });
         }
-        if !row {
+        if row {
+            self.row_excess(&mut layout);
+        } else {
             self.carry(&mut layout);
         }
         layout

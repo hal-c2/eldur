@@ -570,6 +570,13 @@
   "clicks": [],
   "probes": []
  },
+ "row_fractions": {
+  "log": [
+   "CS 0 r2:43 r3:85 r4:128 after:170"
+  ],
+  "clicks": [],
+  "probes": []
+ },
  "span_line_height": {
   "log": [
    "CS 0 a:0,40 b:40,40 c:80,20 d:100,40 e:140,50 f:190,30 s:220,20 end:240,20",

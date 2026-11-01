@@ -257,6 +257,9 @@ ApplicationWindow {
                                         }
 
                                         Item {
+                                            id: item
+                                            property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                             Layout.fillWidth: true
                                         }
                                     }
@@ -756,6 +759,9 @@ ApplicationWindow {
 
                                                 // <strong>
                                                 Text {
+                                                    id: strong
+                                                    property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                     text: "128"
                                                     textFormat: Text.PlainText
                                                     color: "#ffffff"
@@ -777,6 +783,9 @@ ApplicationWindow {
 
                                             // <div class="meter">
                                             Rectangle {
+                                                id: meter
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + 8) - Layout.topMargin - 8 + 0.000001
+
                                                 color: "#33ffffff"
                                                 radius: 999
                                                 clip: true
@@ -784,7 +793,7 @@ ApplicationWindow {
                                                 implicitHeight: meterContent.implicitHeight
                                                 Layout.fillWidth: true
                                                 Layout.preferredHeight: 8
-                                                Layout.topMargin: 8
+                                                Layout.topMargin: 8 - strong.eldurCarry
                                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 ColumnLayout {
@@ -810,10 +819,13 @@ ApplicationWindow {
 
                                             // <div class="panel-row">
                                             RowLayout {
+                                                id: panelRow
+                                                property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + strong2.eldurCarry + 0.000001
+
                                                 spacing: 0
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                                Layout.topMargin: 18
+                                                Layout.topMargin: 18 - meter.eldurCarry
 
                                                 // <span>
                                                 Text {
@@ -840,6 +852,9 @@ ApplicationWindow {
 
                                                 // <strong>
                                                 Text {
+                                                    id: strong2
+                                                    property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                     text: "3.2 h"
                                                     textFormat: Text.PlainText
                                                     color: "#ffffff"
@@ -861,6 +876,9 @@ ApplicationWindow {
 
                                             // <div class="meter">
                                             Rectangle {
+                                                id: meter2
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + 8) - Layout.topMargin - 8 + 0.000001
+
                                                 color: "#33ffffff"
                                                 radius: 999
                                                 clip: true
@@ -868,7 +886,7 @@ ApplicationWindow {
                                                 implicitHeight: meterContent2.implicitHeight
                                                 Layout.fillWidth: true
                                                 Layout.preferredHeight: 8
-                                                Layout.topMargin: 8
+                                                Layout.topMargin: 8 - panelRow.eldurCarry
                                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 ColumnLayout {
@@ -894,10 +912,13 @@ ApplicationWindow {
 
                                             // <div class="panel-row">
                                             RowLayout {
+                                                id: panelRow2
+                                                property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + strong3.eldurCarry + 0.000001
+
                                                 spacing: 0
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                                Layout.topMargin: 18
+                                                Layout.topMargin: 18 - meter2.eldurCarry
 
                                                 // <span>
                                                 Text {
@@ -924,6 +945,9 @@ ApplicationWindow {
 
                                                 // <strong>
                                                 Text {
+                                                    id: strong3
+                                                    property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                     text: "41"
                                                     textFormat: Text.PlainText
                                                     color: "#ffffff"
@@ -952,7 +976,7 @@ ApplicationWindow {
                                                 implicitHeight: meterContent3.implicitHeight
                                                 Layout.fillWidth: true
                                                 Layout.preferredHeight: 8
-                                                Layout.topMargin: 8
+                                                Layout.topMargin: 8 - panelRow2.eldurCarry
                                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                 ColumnLayout {
@@ -1897,13 +1921,14 @@ ApplicationWindow {
                 // <footer class="site-footer">
                 Rectangle {
                     id: siteFooter
-                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+                    property real eldurCarry: Math.ceil(Layout.topMargin - (footerBottom.eldurCarry)) - Layout.topMargin + footerBottom.eldurCarry + 0.000001
 
                     color: "#111527"
                     implicitWidth: siteFooterContent.implicitWidth
                     implicitHeight: siteFooterContent.implicitHeight + 112
                     Layout.fillWidth: true
                     Layout.topMargin: -sectionTight.eldurCarry
+                    Layout.preferredHeight: implicitHeight - footerBottom.eldurCarry
 
                     ColumnLayout {
                         id: siteFooterContent
@@ -2515,11 +2540,15 @@ ApplicationWindow {
 
                                 // <div class="footer-bottom">
                                 Rectangle {
+                                    id: footerBottom
+                                    property real eldurCarry: Math.ceil(Layout.topMargin - (span.eldurCarry)) - Layout.topMargin + span.eldurCarry + 0.000001
+
                                     color: "#00000000"
                                     implicitWidth: footerBottomContent.implicitWidth
                                     implicitHeight: footerBottomContent.implicitHeight + 25
                                     Layout.fillWidth: true
                                     Layout.topMargin: 48
+                                    Layout.preferredHeight: implicitHeight - span.eldurCarry
 
                                     Rectangle {
                                         anchors.left: parent.left
@@ -2563,6 +2592,9 @@ ApplicationWindow {
 
                                         // <span>
                                         Text {
+                                            id: span
+                                            property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                             text: "Privacy · Terms"
                                             textFormat: Text.PlainText
                                             color: "#8b92aa"
