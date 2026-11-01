@@ -183,6 +183,14 @@ pub(crate) fn collect(
 
     let mut analysis = eldur_js::analyze(&inputs);
     note_inline_listeners(doc, &mut analysis);
+    // Its controls are held by the attribute, which only the runtime turns back.
+    if doc.descendants(doc.root()).any(|node| {
+        doc.element(node)
+            .is_some_and(|e| e.local_name() == "fieldset" && e.attr("disabled").is_some())
+    }) {
+        analysis.reads_attributes = true;
+        analysis.runtime_dom = true;
+    }
     warn_of_what_has_no_counterpart(doc, &analysis, diags);
     let mut matches = HashMap::new();
     let mut wanted: HashSet<NodeId> = keys.values().copied().collect();

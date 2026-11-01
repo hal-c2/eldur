@@ -1031,6 +1031,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
             e.obj.members.push(carry::hint_comment(&hint(self.doc, b)));
         }
         if let Some(node) = b.node {
+            if !self.by_path {
+                dynamic::takes_focus_by_tabindex(&mut e.obj, self.doc, node);
+            }
             if self.collapsed.contains(&node) {
                 e.obj.set("visible", false);
             }
@@ -1352,7 +1355,9 @@ fn fieldset_parts<'b, 'l>(
         return None;
     };
     let (first, rest) = children.split_first()?;
-    is(first.node, "legend").then_some((first, rest))
+    // Out of flow it is one more box, placed as any other and no fieldset's label.
+    (is(first.node, "legend") && !crate::boxes::is_out_of_flow(&first.style))
+        .then_some((first, rest))
 }
 
 /// A readable base for a generated id: the first class, else the tag.

@@ -1801,7 +1801,13 @@ impl Sources {
             if self.hover_enabled.contains(path) {
                 obj.set("hoverEnabled", true);
             }
-            if self.focusable.contains(path) {
+            // What a `tabindex` made focusable already has its handler.
+            if self.focusable.contains(path)
+                && !obj
+                    .members
+                    .iter()
+                    .any(|m| matches!(m, Member::Property { name, .. } if name == "activeFocusOnTab"))
+            {
                 obj.set("activeFocusOnTab", true);
                 obj.push_child(takes_focus_on_tap());
             }
@@ -1817,6 +1823,27 @@ impl Sources {
             root.push_child(takes_focus_on_tap());
         }
     }
+}
+
+/// A page with no runtime has only Qt to take the focus: a stop in its chain, or
+/// with a negative `tabindex` a press alone. A control has its own policy.
+pub(super) fn takes_focus_by_tabindex(obj: &mut Object, doc: &Document, node: NodeId) {
+    let Some(element) = doc.element(node) else {
+        return;
+    };
+    let Some(index) = element.attr("tabindex").and_then(|t| t.trim().parse::<i32>().ok()) else {
+        return;
+    };
+    if matches!(
+        element.local_name(),
+        "button" | "input" | "select" | "textarea" | "a" | "summary"
+    ) {
+        return;
+    }
+    if index >= 0 {
+        obj.set("activeFocusOnTab", true);
+    }
+    obj.push_child(takes_focus_on_tap());
 }
 
 fn takes_focus_on_tap() -> Object {

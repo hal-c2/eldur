@@ -185,6 +185,20 @@ function syncForm() {
 }
 
 #[test]
+fn a_page_that_keeps_attributes_reads_disabled_from_them() {
+    let resolver = FakeResolver::default().with_id("save", 1, "save", TargetKind::Button);
+    let scripts = [classic(
+        "app.js",
+        "function f() { return document.getElementById(\"save\").disabled; }",
+    )];
+    let mut analysis = analyze(&scripts);
+    analysis.reads_attributes = true;
+    analysis.live_queries.clear();
+    let out = rewrite(&scripts, &analysis, &resolver);
+    assert!(out.page_js.contains("Eldur.wrap(save).disabled"), "{}", out.page_js);
+}
+
+#[test]
 fn maps_style_classlist_dataset_attributes_and_innerhtml() {
     let resolver = FakeResolver::default()
         .with_id("panel", 1, "panel", TargetKind::Box)

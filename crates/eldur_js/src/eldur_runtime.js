@@ -4673,6 +4673,8 @@ function setAttribute(item, attrName, attrValue) {
         wrap(raw).type = val;
     } else if (name === "class") {
         setClassName(raw, val);
+    } else if (name === "disabled" && _nodeTag(raw) === "fieldset") {
+        _fieldsetTurned(raw);
     } else if (name === "disabled" && typeof raw.enabled === "boolean") {
         raw.enabled = false;
     } else if (name === "hidden" && typeof raw.visible === "boolean") {
@@ -4779,6 +4781,8 @@ function removeAttribute(item, attrName) {
         delete m.dataset[_kebabToCamel(name.slice(5))];
     } else if (name === "id" && typeof raw.objectName === "string") {
         raw.objectName = "";
+    } else if (name === "disabled" && _nodeTag(raw) === "fieldset") {
+        _fieldsetTurned(raw);
     } else if (name === "disabled" && typeof raw.enabled === "boolean") {
         raw.enabled = true;
     } else if (name === "hidden" && typeof raw.visible === "boolean") {
@@ -8207,11 +8211,13 @@ function wrap(rawItem) {
                 rawItem.checked = Boolean(v);
             }
         },
-        get disabled() { return _nodeTag(rawItem) === "fieldset" ? getAttribute(rawItem, "disabled") !== null : rawItem.__eldurInline ? _vGetAttr(rawItem, "disabled") !== null : rawItem.enabled !== undefined ? !rawItem.enabled : Boolean(m.explicitDisabled); },
+        get disabled() { return _nodeTag(rawItem) === "fieldset" ? getAttribute(rawItem, "disabled") !== null : rawItem.__eldurInline ? _vGetAttr(rawItem, "disabled") !== null : rawItem.enabled !== undefined ? getAttribute(rawItem, "disabled") !== null || (!rawItem.enabled && !_isDisabled(rawItem)) : Boolean(m.explicitDisabled); },
         set disabled(v) {
             m.explicitDisabled = Boolean(v);
             _reflectFlag(m, "disabled", v);
-            if (typeof rawItem.enabled === "boolean") {
+            if (_nodeTag(rawItem) === "fieldset") {
+                _fieldsetTurned(rawItem);
+            } else if (typeof rawItem.enabled === "boolean") {
                 rawItem.enabled = !v;
             }
             // `focus` stays set in Qt, and `activeElement` would go on reading it.
@@ -10391,22 +10397,6 @@ function _deepestAt(scene) {
     return _deepestUnder(top, scene) || top;
 }
 
-// Pressing what takes no focus moves it to the page.
-function _blurUnlessFocusable(target) {
-    var raw = target;
-    for (; raw; raw = _gParent(raw)) {
-        if (raw.activeFocusOnTab === true || typeof raw.clicked === "function"
-            || typeof raw.cursorPosition === "number" || getAttribute(raw, "tabindex") !== null
-            || _nodeTag(raw) === "summary") {
-            return;
-        }
-    }
-    var active = document.activeElement;
-    if (active && active.blur && active !== document.body) {
-        active.blur();
-    }
-}
-
 function _beginTap(qtEv, heardBy) {
     var scene = qtEv.scenePosition;
     if (_tap && _tap.x === scene.x && _tap.y === scene.y) {
@@ -10429,7 +10419,6 @@ function _beginTap(qtEv, heardBy) {
         }
     }
     t.target = t.target || _unwrap(document.body) || heardBy;
-    _blurUnlessFocusable(t.target);
     t.ev = event("click", wrap(t.target), qtEv);
     t.ev.target = wrap(t.target);
     t.ev.bubbles = true;
@@ -10603,7 +10592,15 @@ function _inElementOf(deep, scene) {
 }
 
 function _inHit(scene) {
-    return _dialogHit(_inElementOf(_deepestAt(scene), scene) || _unwrap(document.body));
+    return _dialogHit(_inElementOf(_deepestAt(scene), scene) || _inCanvasAt(scene));
+}
+
+// Past the body's own box, in its margin or below it, the press is on the root.
+function _inCanvasAt(scene) {
+    var body = document.body;
+    var box = body.getBoundingClientRect();
+    var inside = scene.x >= box.left && scene.x < box.right && scene.y >= box.top && scene.y < box.bottom;
+    return _unwrap(inside || !_taggedHtml() ? body : document.documentElement);
 }
 
 // A wheel only passive listeners hear scrolls without waiting, and cannot be stopped.
@@ -10763,8 +10760,9 @@ function _inDown(bit, scene, mods, heldBefore) {
     if (_in.noMouse) {
         return;
     }
-    var down = _inFire("mousedown", target, scene, mods, { button: button, detail: _in.count });
-    if (down.defaultPrevented) {
+    // Under a disabled control no mouse event starts, and focus moves as ever.
+    var barred = _inMouseBarred(target);
+    if (!barred && _inFire("mousedown", target, scene, mods, { button: button, detail: _in.count }).defaultPrevented) {
         _inKeepFocus(target);
     } else if (bit === Qt.LeftButton) {
         _inFocusOnPress(target);
@@ -10786,7 +10784,7 @@ function _inUp(bit, scene, mods) {
     } else {
         _inFire("pointermove", target, scene, mods, { button: button });
     }
-    if (!_in.noMouse) {
+    if (!_in.noMouse && !_inMouseBarred(target)) {
         _inFire("mouseup", target, scene, mods, { button: button, detail: count });
     }
     if (_in.held === 0) {
@@ -10844,6 +10842,9 @@ function _inClickOn(target, bit, button, count, scene, mods, moved) {
         _inFire("auxclick", target, scene, mods, { button: button, detail: count });
         return;
     }
+    if (_inMouseBarred(target)) {
+        return;
+    }
     var ev = _inClickEvent(target, scene, mods, count);
     if (typeof target.clicked === "function") {
         _clickedControlWith(target, ev);
@@ -10873,6 +10874,19 @@ function _inClickEvent(target, scene, mods, count) {
     ev.y = scene.y;
     _inOffset(ev, target, scene);
     return ev;
+}
+
+function _inIsOffControl(raw) {
+    return /^(button|input|select|textarea)$/.test(_nodeTag(raw)) && (raw.enabled === false || _isDisabled(raw));
+}
+
+function _inMouseBarred(target) {
+    for (var at = target; at; at = _gParent(at)) {
+        if (_inIsOffControl(at)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // A prevented `mousedown` keeps focus where it was. Only then is a control told
@@ -10905,9 +10919,16 @@ function _inRestoreFocus() {
     }
 }
 
-// The nearest ancestor that can take focus does, and with none, the page.
+// The one word on what a press does to focus where there is a layer; a page
+// without one has only what `EldurScrollInput` does. The nearest ancestor that
+// can take focus does, and with none, the page, whose scroller under the press
+// is then the one the keys move.
 function _inFocusOnPress(target) {
+    _in.tabFrom = null;
     for (var at = target; at; at = _gParent(at)) {
+        if (_inIsOffControl(at)) {
+            continue;
+        }
         if (typeof at.clicked === "function" || typeof at.cursorPosition === "number"
             || at.activeFocusOnTab === true) {
             return;
@@ -10917,7 +10938,27 @@ function _inFocusOnPress(target) {
             return;
         }
     }
-    _blurUnlessFocusable(target);
+    var active = document.activeElement;
+    if (active && active.blur && active !== document.body) {
+        active.blur();
+    }
+    // Where the next Tab starts, there being nothing focused to start from.
+    _in.tabFrom = target;
+    _inKeysToScroller(target);
+}
+
+function _inKeysToScroller(target) {
+    var from = target;
+    while (from && from.__eldurInline) {
+        from = _logicalParent(from);
+    }
+    for (var at = from; at; at = at.parent) {
+        var input = _meta(at).keysInput;
+        if (input) {
+            input.forceActiveFocus();
+            return;
+        }
+    }
 }
 
 // Dragging on what hears the mouse is the page's to answer; Chromium scrolls no
@@ -11108,6 +11149,10 @@ function _inWireControls(from) {
         if (typeof item.keyStep === "function") {
             // The scroller moves on keys in its own handler: ask first.
             item.keyGate = _inKeyGate;
+            _meta(item.scroller).keysInput = item;
+            if (item.overlaidOn) {
+                _meta(item.overlaidOn).keysInput = item;
+            }
         } else if (_startsEvents(item) || _inHasTabIndex(item)) {
             _inKeysOn(item);
             if (typeof item.clicked === "function") {
@@ -11415,7 +11460,7 @@ function _inRadioStep(raw, step) {
 }
 
 function _inCanFocus(raw) {
-    if (raw.enabled === false || _itHidden(raw)) {
+    if (raw.enabled === false || _itHidden(raw) || _inIsOffControl(raw)) {
         return false;
     }
     for (var at = raw; at; at = at.parent) {
@@ -11458,30 +11503,63 @@ function _inWindowActive() {
     return Boolean(_in.focusProbe && _in.focusProbe.active);
 }
 
-// From what has focus but is no stop (`tabindex="-1"`): the next stop by its place in the tree.
-function _inTabFrom(stops, back) {
-    var from = _in.tabFrom || _in.focused;
-    _in.tabFrom = null;
-    if (!from) {
-        return back ? stops.length - 1 : 0;
-    }
+// From what has focus but is no stop, or where a press or a fragment left off:
+// the nearest stop in the tree, whatever its number. Forward with none left starts
+// over at the page's first stop of no number.
+function _inTabFrom(stops, from, back) {
     var order = _elementsUnder(_root, function(node) { return !node.__eldurInline; }, false);
     var here = order.indexOf(from);
+    var best = -1;
+    var bestAt = back ? -1 : order.length;
     for (var i = 0; i < stops.length; ++i) {
-        if (order.indexOf(stops[i]) > here) {
-            return back ? (i - 1 + stops.length) % stops.length : i;
+        var at = order.indexOf(stops[i]);
+        if (back ? at < here && at > bestAt : at > here && at < bestAt) {
+            best = i;
+            bestAt = at;
         }
     }
-    return back ? stops.length - 1 : 0;
+    if (best >= 0 || back) {
+        return best;
+    }
+    for (var n = 0; n < stops.length; ++n) {
+        if (parseInt(getAttribute(stops[n], "tabindex"), 10) > 0 !== true) {
+            return n;
+        }
+    }
+    return 0;
+}
+
+// Past either end Tab leaves for the browser around the page, and the page is
+// left with nothing focused; from there it comes back in at the other end.
+function _inTabOut() {
+    var was = _in.focused;
+    if (was) {
+        wrap(was).blur();
+        _inKeysToScroller(was);
+    }
 }
 
 function _inTabStep(back) {
     var stops = _inTabStops();
     if (stops.length === 0) {
+        _inTabOut();
         return;
     }
-    var at = _in.tabFrom ? -1 : stops.indexOf(_in.focused);
-    var next = at < 0 ? _inTabFrom(stops, back) : (at + (back ? -1 : 1) + stops.length) % stops.length;
+    var from = _in.tabFrom;
+    _in.tabFrom = null;
+    var at = from ? -1 : stops.indexOf(_in.focused);
+    var next;
+    if (at >= 0) {
+        next = at + (back ? -1 : 1);
+    } else if (from || _in.focused) {
+        next = _inTabFrom(stops, from || _in.focused, back);
+    } else {
+        next = back ? stops.length - 1 : 0;
+    }
+    if (next < 0 || next >= stops.length) {
+        _inTabOut();
+        return;
+    }
     var raw = stops[next];
     focus(raw);
     // A field reached by Tab starts all selected, so typing replaces it.
@@ -11598,7 +11676,7 @@ function _inImplicitSubmit(raw) {
     }
     var submit = _inDefaultButton(form);
     if (submit) {
-        if (submit.enabled !== false) {
+        if (!_inIsOffControl(submit)) {
             _inPress(submit);
         }
         return;
@@ -11734,6 +11812,17 @@ function _isBarred(raw) {
         return true;
     }
     return _isDisabled(raw) || (tag !== "select" && tag !== "button" && getAttribute(raw, "readonly") !== null);
+}
+
+// Each control answers for itself: `enabled` passes to all an item holds, and a
+// fieldset's legend stays usable. A `GroupBox` with its legend was never held off.
+function _fieldsetTurned(raw) {
+    raw.enabled = true;
+    _elementsUnder(raw, function(node) {
+        return !node.__eldurInline && /^(button|input|select|textarea)$/.test(_nodeTag(node));
+    }, false).forEach(function(node) {
+        node.enabled = !_isDisabled(node);
+    });
 }
 
 // Written, or from a disabled fieldset other than through its first legend.

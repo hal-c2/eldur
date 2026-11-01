@@ -90,6 +90,17 @@ fn inline_run_next_to_block_gets_anonymous_box() {
 }
 
 #[test]
+fn out_of_flow_boxes_with_no_line_before_them_stay_in_tree_order() {
+    let out = outline(
+        "<body><section style='position:absolute'></section>\n\
+         <input style='position:absolute'>\n\
+         <article style='position:absolute'></article><p>x</p></body>",
+    );
+    let (a, b, c) = (out.find("<section"), out.find("<input"), out.find("<article"));
+    assert!(a.is_some() && a < b && b < c, "{out}");
+}
+
+#[test]
 fn whitespace_between_blocks_makes_no_box() {
     assert_eq!(
         outline("<body>\n  <p>a</p>\n  \n  <p>b</p>\n</body>"),

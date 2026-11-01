@@ -436,6 +436,8 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
             },
             "selectedIndex" => format!("{id}.currentIndex"),
             "checked" => format!("{id}.checked"),
+            // `enabled` also says what a fieldset holds, which `disabled` does not.
+            "disabled" if self.shared.reads_attributes => format!("Eldur.wrap({id}).disabled"),
             "disabled" => self.format_negated_flag(format!("{id}.enabled")),
             "hidden" => format!("Eldur.hiddenAttribute({id})"),
             "placeholder" => format!("{id}.placeholderText"),

@@ -39,6 +39,7 @@ const CLOSEDDETAILS: &str = "the margin of a closed details' hidden last child s
 const DIALOGTEXT: &str =
     "the page logs a fractional text width: Qt's glyphs make 71.77, Chromium's 71.81";
 const MADEINLINE: &str = "controls from innerHTML stack as blocks: a created box is laid out by itself, without a line to share";
+const BUTTONKIDS: &str = "a Button shows only the text of what it holds: an element inside is no item, so the button is the target";
 const NOBUBBLE: &str = "Qt has no validation bubble: the message goes to the log, on purpose";
 const H1LINE: &str = "the 22px heading line is 25px here and 26px in Chromium (font metrics, not in this work), so the centre of a row is a pixel higher and clientY says so";
 const COMPACT: &str = "a right-aligned row: its buttons are whole pixels wider (see BUTTONWIDTH), which would start this one 2px left; not confirmed";
@@ -69,6 +70,18 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("input_script", "* #mc[*] x:", MADEINLINE),
     ("input_script", "* #mc[*] y:", MADEINLINE),
     ("input_dialog", "* #stay[*] y:", CLOSEDDETAILS),
+    ("input_disabled", "*report wn log:*", BUTTONKIDS),
+    ("input_disabled_open", "*report wn log:*", BUTTONKIDS),
+    (
+        "input_disabled",
+        "*eldur: need: Please fill out this field.*",
+        NOBUBBLE,
+    ),
+    (
+        "input_disabled_open",
+        "*eldur: need: Please fill out this field.*",
+        NOBUBBLE,
+    ),
     (
         "app_dialogdetails",
         "*eldur: text: Please fill out this field.*",
@@ -669,6 +682,32 @@ fn app_dialogdetails() {
 #[test]
 fn app_dragsort() {
     page("app_dragsort");
+}
+
+#[test]
+fn input_disabled() {
+    page("input_disabled");
+}
+
+#[test]
+fn input_disabled_open() {
+    page("input_disabled_open");
+}
+
+#[test]
+fn input_disabled_closed() {
+    page("input_disabled_closed");
+}
+
+#[test]
+fn input_tabs() {
+    page("input_tabs");
+}
+
+// The same real mouse and keys as Chromium, heard line for line.
+#[test]
+fn input_real() {
+    page("input_real");
 }
 
 #[test]

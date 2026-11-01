@@ -1,0 +1,27 @@
+<!doctype html><html><head><style>
+body{margin:0}
+.x{position:absolute;box-sizing:border-box;width:100px;height:30px;margin:0;left:10px}
+.p{position:absolute;left:200px;width:100px;height:30px;background:#ccc}
+</style></head><body>
+<div id="top" class="p" style="top:10px"></div>
+<input id="a" class="x" style="top:10px">
+<div id="mid" class="p" style="top:50px"></div>
+<button id="b" class="x" style="top:50px">b</button>
+<div id="neg" class="p" tabindex="-1" style="top:90px"></div>
+<input id="c" class="x" style="top:90px" tabindex="2">
+<input id="d" class="x" style="top:130px" tabindex="1">
+<a id="l" href="#z" class="x" style="top:170px">link</a>
+<input id="r1" type="radio" name="r" class="x" style="top:210px;width:20px;height:20px" checked>
+<input id="r2" type="radio" name="r" class="x" style="top:240px;width:20px;height:20px">
+<input id="h" type="hidden">
+<div id="ti" tabindex="0" class="p" style="top:130px">ti</div>
+<div id="last" class="p" tabindex="-1" style="top:170px"></div>
+<div id="ps" class="p" style="top:250px"></div>
+<div id="tail" class="p" style="top:210px"></div>
+<script>
+const name=n=>n.id||n.tagName;
+for(const t of ["focus","blur"]){
+ document.addEventListener(t,e=>console.log(t+":"+name(e.target)),true);
+}
+document.getElementById("ps").addEventListener("mousedown",e=>e.preventDefault());
+</script></body></html>

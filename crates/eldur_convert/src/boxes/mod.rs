@@ -831,7 +831,10 @@ fn group<'a>(children: Vec<Child<'a>>, parent: &'a ComputedStyle) -> Content<'a>
         match child {
             Child::Inline(raw) => run.push(raw),
             Child::Block(b) if is_out_of_flow(&b.style) => {
-                if b.style.blockified_inline {
+                // With no line to sit below it stays where the tree has it: scripts
+                // walk the items for tree order, in Tab and in queries.
+                let no_line = matches!(inline_content(run.clone()), Content::Empty);
+                if b.style.blockified_inline || no_line {
                     blocks.push(*b);
                 } else {
                     below_run.push(*b);

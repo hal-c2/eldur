@@ -56,8 +56,8 @@ Item {
         for (;;) {
             const kid = at.childAt(p.x, p.y);
             if (!kid) return false;
-            if (kid instanceof Flickable || kid.activeFocusOnTab === true) return true;
-            if (kid.focusPolicy !== undefined && (kid.focusPolicy & Qt.ClickFocus)) return true;
+            if (kid instanceof Flickable || (kid.enabled && kid.activeFocusOnTab === true)) return true;
+            if (kid.enabled && kid.focusPolicy !== undefined && (kid.focusPolicy & Qt.ClickFocus)) return true;
             p = at.mapToItem(kid, p.x, p.y);
             at = kid;
         }
@@ -118,6 +118,9 @@ Item {
         parent: input.scroller
         gesturePolicy: TapHandler.DragThreshold
         onTapped: (eventPoint) => {
+            // With a layer, the press has been answered: a listener can have
+            // prevented it, which nothing here can know.
+            if (input.keyGate) return;
             if (!input.holdsInner(eventPoint.position)) input.forceActiveFocus();
         }
     }

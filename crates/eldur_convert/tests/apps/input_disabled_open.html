@@ -1,0 +1,46 @@
+<!doctype html><html><head><style>
+body{margin:0}
+.x{position:absolute;box-sizing:border-box;width:100px;height:30px;margin:0;padding:0}
+#wrapb{position:absolute;left:300px;top:10px;width:200px;height:50px;background:#eee}
+#fs{position:absolute;left:10px;top:200px;width:260px;height:150px;margin:0;padding:0;border:0}
+#lg{position:absolute;left:0;top:0;width:200px;height:40px;padding:0;margin:0}
+</style></head><body>
+<input id="start" class="x" style="left:10px;top:10px" value="s">
+<form id="f" action="#x">
+<input id="need" name="need" class="x" style="left:10px;top:50px" required>
+<button id="db" class="x" style="left:10px;top:90px" disabled>x</button>
+<input id="di" class="x" style="left:10px;top:130px" value="di" disabled>
+<input id="dc" class="x" type="checkbox" style="left:130px;top:130px;width:20px;height:20px" disabled>
+<textarea id="dt" class="x" style="left:170px;top:90px" disabled>t</textarea>
+<select id="ds" class="x" style="left:170px;top:130px" disabled><option>o</option></select>
+<fieldset id="fs" disabled>
+<legend id="lg"><button id="inlg" type="button" class="x" style="left:0;top:0">in legend</button></legend>
+<button id="fb" class="x" style="left:0;top:50px">f</button>
+<input id="fi" class="x" style="left:0;top:90px" value="fi">
+<input id="fc" type="checkbox" class="x" style="left:120px;top:50px;width:20px;height:20px">
+</fieldset>
+</form>
+<div id="wrapb" tabindex="0"><button id="wb" class="x" style="left:10px;top:10px" disabled>w</button></div>
+<div id="wrapn" style="position:absolute;left:300px;top:80px;width:200px;height:50px;background:#ddd"><button id="wn" class="x" style="left:10px;top:10px" disabled><span id="wns">span</span></button></div>
+<label id="ld" for="dc" style="position:absolute;left:300px;top:150px;width:100px;height:30px;background:#acc">L</label>
+<button id="live" class="x" style="left:300px;top:200px">live</button>
+<div id="made"></div><button id="livefs" class="x" style="left:300px;top:240px">fs</button>
+<div id="fl" style="position:absolute;left:600px;top:10px;width:50px;height:30px;background:#eee"></div>
+<script>
+const L=[];var tag="div";var m=document.createElement(tag);document.body.appendChild(m);
+const name=n=>n.id||n.tagName;
+for(const t of ["pointerover","pointerout","pointermove","mouseover","mouseout","mousemove","pointerdown","pointerup","mousedown","mouseup","click","dblclick","auxclick","contextmenu","focus","blur","focusin","focusout","input","change","invalid","submit"]){
+ document.addEventListener(t,e=>{if(e.target.id==="fl")return;L.push(t+":"+name(e.target))},true);
+}
+for(const i of ["wrapb","wrapn","f"]){
+ for(const t of ["mousedown","mouseup","click"])document.getElementById(i).addEventListener(t,e=>L.push("["+i+" "+t+"]"));
+}
+document.getElementById("f").addEventListener("submit",e=>e.preventDefault());
+document.getElementById("live").addEventListener("click",()=>{const b=document.getElementById("db");b.disabled=!b.disabled;L.push("db.disabled="+b.disabled)});
+document.getElementById("livefs").addEventListener("click",()=>{const b=document.getElementById("fs");b.disabled=!b.disabled;L.push("fs.disabled="+b.disabled)});
+const fl=document.getElementById("fl");
+fl.addEventListener("mousedown",e=>e.preventDefault());
+fl.addEventListener("click",()=>{console.log(L.join(" "));L.length=0;
+ const a=document.activeElement;
+ console.log(" = "+name(a)+" "+["db","di","fb","fi","inlg"].map(i=>i+":"+document.getElementById(i).matches(":disabled")).join(" ")+" c="+document.getElementById("dc").checked+document.getElementById("fc").checked)});
+</script></body></html>
