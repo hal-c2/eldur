@@ -194,8 +194,7 @@ Snapping a rounded box's position instead (`Translate` or margins) needs its sce
 - A rounded box whole in a fractional parent looks whole to its own binding and stays soft on its edges.
 - Faces whose real files are not on the measuring machine (§1.3) have no measured row: Qt's reported metrics stand in, scaled, so such glyphs can land a row off.
 - Text a row off Chromium through layout costs more with native glyphs than with soft ones: 11-positioning, 15-script-counter, 16-script-todo and 29-class-toggles score 0.7–1.7 below distance fields, and in each the worst band matches Chromium best shifted down 1 px.
-- A paragraph's lines without its tallest run land a row low (r9): Qt's descent is per line and the `Translate` per paragraph.
-- A monospace run the size of the body (r3) comes out a row above `floor(lh − descent)`; no formula from the reported metrics fits every measured pair, so it stays off. `lh` also stays the block's where Chromium's line box grows for a tall run (r4, r8): the row is right, the paragraph's height is not.
+- A paragraph with a taller run (r9) goes through `EldurLines` now; its last line is a row low at y fractions .5 and .75, first row right. The cause is not worked out.
 - A cell whose exact text position is half a pixel after a fractional height can land a row high (c9 at 695.5): Qt's sum comes out just under the half. Each case above is pinned in `PaintSnapTests.KNOWN_ROWS` or `richtext_lines_shift_to_chromiums_baseline`.
 - A page whose table is already off through a non-carried flex or grid parent can lose a little: 18-dashboard −0.74, where the old half pixel partly cancelled its 2 px offset.
 - Flex rows and grid cells round heights their own way (§1.1, not carried).
