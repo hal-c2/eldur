@@ -23,7 +23,7 @@ const PAGE: &str = r#"<!doctype html><html><body>
   <button id="go">Go</button>
   <button id="clear" type="reset">Clear</button>
 </form>
-<div id="hidden" style="display:none;width:200px;height:50px;background:#102030">
+<div id="hidden" hidden style="width:200px;height:50px;background:#102030">
   <span id="inner" style="color:#112233">Revealed</span>
 </div>
 <p id="after">after</p>

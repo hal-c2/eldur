@@ -1,0 +1,13 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.hidden{display:none}</style></head><body>
+<div id="a" class="hidden">a</div><div id="b">b</div><div id="c">c</div><div id="d" class="hidden">d</div><div id="e">e</div><div id="f">f</div><div id="g" hidden>g</div><div id="z">z</div>
+<script>
+var q=function(s){return document.getElementById(s)};
+function h(t,id){console.log("CS "+t+" "+id+" "+q(id).getBoundingClientRect().height+" z="+Math.round(q("z").getBoundingClientRect().top))}
+q("a").classList.remove("hidden");h("A1","a");q("a").classList.add("hidden");h("A2","a");
+q("b").classList.add("hidden");h("B1","b");q("b").classList.remove("hidden");h("B2","b");
+q("c").style.display="none";h("C1","c");q("c").style.display="";h("C2","c");q("c").classList.add("hidden");h("C3","c");
+q("d").classList.remove("hidden");q("d").style.display="none";h("D1","d");q("d").style.display="";h("D2","d");q("d").classList.add("hidden");h("D3","d");q("d").className="";h("D4","d");
+q("e").style.display="block";q("e").classList.add("hidden");h("E1","e");q("e").style.display="";h("E2","e");q("e").style.display="block";h("E3","e");q("e").style.removeProperty("display");h("E4","e");q("e").classList.remove("hidden");h("E5","e");
+q("f").hidden=true;h("F1","f");q("f").hidden=false;h("F2","f");q("f").classList.add("hidden");h("F3","f");q("f").classList.remove("hidden");h("F4","f");
+q("g").hidden=false;h("G1","g");q("g").classList.add("hidden");h("G2","g");q("g").classList.remove("hidden");h("G3","g");q("g").setAttribute("hidden","");h("G4","g");q("g").removeAttribute("hidden");h("G5","g");
+</script></body></html>

@@ -392,9 +392,13 @@ Item {
             for (const t of l.texts) {
                 const own = _ownLeading.get(t.item);
                 if (own !== undefined) {
-                    const half = (own - t.height) / 2;
-                    above = Math.max(above, t.ascent + Math.floor(half));
-                    below = Math.max(below, t.height - t.ascent + Math.ceil(half));
+                    // Rounded as the strut's are, or a span of the block's own font
+                    // comes out a pixel off the line it is on.
+                    const ascent = round(t.ascent);
+                    const descent = round(t.height - t.ascent);
+                    const half = (own - ascent - descent) / 2;
+                    above = Math.max(above, ascent + Math.floor(half));
+                    below = Math.max(below, descent + Math.ceil(half));
                 } else if (lineHeight === 0 && t.height > strutAbove + strutBelow + 1) {
                     above = Math.max(above, t.ascent);
                     below = Math.max(below, t.height - t.ascent);

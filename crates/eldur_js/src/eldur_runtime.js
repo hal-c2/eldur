@@ -1466,6 +1466,10 @@ function _unwrap(item) {
         if ((item === window || item === document) && _root) {
             return _root;
         }
+        // The script's id still names what the box replaced.
+        if (_gAdopted.size > 0 && _gAdopted.has(item)) {
+            return _gAdopted.get(item);
+        }
     }
     return item;
 }
@@ -3015,7 +3019,40 @@ function _setShown(raw, shown) {
             return shown && (slot.parent ? slot.parent.visible : false);
         });
     } else {
-        raw.visible = shown;
+        _inlineHold(raw, raw, "visible", shown);
+    }
+}
+
+// An imperative write ends the binding the converter wrote, and with it the
+// class variants that binding reads. A `Binding` object sits over the property
+// instead and gives the binding back when it lets go, re-evaluated: that is
+// what clearing an inline declaration means.
+
+function _inlineFind(raw, target, prop) {
+    var m = _meta(raw);
+    // An item swapped for another form took its holds with it.
+    m.inlineHolds = (m.inlineHolds || []).filter(function(h) { return Boolean(h.bind); });
+    return m.inlineHolds.find(function(h) { return h.target === target && h.prop === prop; });
+}
+
+function _inlineHold(raw, target, prop, value) {
+    var hold = _inlineFind(raw, target, prop);
+    if (!hold) {
+        var bind = Qt.createQmlObject("import QtQml; Binding { when: false; restoreMode: Binding.RestoreBindingOrValue }",
+            raw, "eldur_inline");
+        bind.target = target;
+        bind.property = prop;
+        hold = { target: target, prop: prop, bind: bind };
+        _meta(raw).inlineHolds.push(hold);
+    }
+    hold.bind.value = value;
+    hold.bind.when = true;
+}
+
+function _inlineRelease(raw, target, prop) {
+    var hold = _inlineFind(raw, target, prop);
+    if (hold) {
+        hold.bind.when = false;
     }
 }
 
@@ -3942,28 +3979,19 @@ function setStyle(item, prop, value) {
 
     if (name === "display") {
         if (typeof raw.visible === "boolean") {
-            // Clearing it leaves the display the rules give, which may be none.
-            if (str === "" && _gHasCascade()) {
+            if (_gHasCascade()) {
                 ++_gGen;
                 _gShowAsRules(raw);
+            } else if (str === "") {
+                _layoutChanged(raw.parent);
+                _inlineRelease(raw, raw, "visible");
             } else {
                 _setShown(raw, str !== "none");
                 _gShownInline(raw, str === "inline");
             }
         }
-    } else if (name === "visibility") {
-        var visible = str !== "hidden";
-        if (typeof raw.opacity === "number") {
-            raw.opacity = visible ? 1 : 0;
-        }
-        if (typeof raw.enabled === "boolean") {
-            raw.enabled = visible;
-        }
-    } else if (name === "opacity") {
-        var op = parseFloat(str);
-        if (!isNaN(op) && typeof raw.opacity === "number") {
-            raw.opacity = op;
-        }
+    } else if (name === "visibility" || name === "opacity") {
+        _inlineOpacity(raw, m);
     } else if (name === "position") {
         // A template holds the box's form, and layouts place what is in them.
         if (str === "absolute" || str === "fixed") {
@@ -3976,51 +4004,117 @@ function setStyle(item, prop, value) {
         if (!isNaN(zi) && typeof raw.z === "number") {
             raw.z = zi;
         }
+    } else if (name === "color") {
+        _inlineColor(raw, Boolean(m.styles.color));
+    } else if (_gActive() && _gStaticBase !== null) {
+        // The next pass adopts it: only the box form has all of a box's answers.
     } else if (name === "width") {
-        var w = parseFloat(str);
-        if (!isNaN(w) && typeof raw.width === "number") {
-            raw.width = w;
-        }
+        _inlinePx(raw, raw, "width", str);
     } else if (name === "height") {
-        var h = parseFloat(str);
-        if (!isNaN(h) && typeof raw.height === "number") {
-            raw.height = h;
-        }
+        _inlinePx(raw, raw, "height", str);
     } else if (name === "backgroundColor" || name === "background") {
         if (raw.background && raw.background.color !== undefined) {
-            raw.background.color = str;
+            _inlinePaint(raw, raw.background, "color", str);
         } else if (raw.color !== undefined && typeof raw.text !== "string") {
-            raw.color = str;
-        }
-    } else if (name === "color") {
-        if (typeof raw.text === "string" && raw.color !== undefined) {
-            raw.color = str;
-        } else {
-            var tc = _findTextChild(raw);
-            if (tc && tc.color !== undefined) {
-                tc.color = str;
-            }
+            _inlinePaint(raw, raw, "color", str);
         }
     } else if (name === "fontSize") {
-        var px = parseFloat(str);
-        if (!isNaN(px)) {
-            var fontTarget = raw.font !== undefined ? raw : _findTextChild(raw);
-            if (fontTarget && fontTarget.font !== undefined) {
-                fontTarget.font.pixelSize = px;
-            }
+        var fontTarget = raw.font !== undefined ? raw : _findTextChild(raw);
+        if (fontTarget && fontTarget.font !== undefined) {
+            _inlinePx(raw, fontTarget, "font.pixelSize", str);
         }
     } else if (name === "borderRadius" && typeof raw.radius === "number") {
-        var rad = parseFloat(str);
-        if (!isNaN(rad)) {
-            raw.radius = rad;
-        }
+        _inlinePx(raw, raw, "radius", str);
     } else if (name === "borderColor" && raw.border !== undefined) {
-        raw.border.color = str;
+        _inlinePaint(raw, raw, "border.color", str);
     } else if (name === "borderWidth" && raw.border !== undefined) {
-        var bw = parseFloat(str);
-        if (!isNaN(bw)) {
-            raw.border.width = bw;
+        _inlinePx(raw, raw, "border.width", str);
+    }
+}
+
+function _inlinePaint(raw, target, prop, str) {
+    if (str === "") {
+        _inlineRelease(raw, target, prop);
+    } else {
+        _inlineHold(raw, target, prop, str);
+    }
+}
+
+function _inlinePx(raw, target, prop, str) {
+    var px = parseFloat(str);
+    if (isNaN(px)) {
+        _inlineRelease(raw, target, prop);
+    } else {
+        _inlineHold(raw, target, prop, px);
+    }
+}
+
+// `color` is inherited: each `Text` below that has no inline colour of its own
+// takes what the rules now give it, or goes back to the converter's.
+function _inlineColor(raw, under) {
+    var m = _meta(raw);
+    var own = Boolean(m.styles.color);
+    var text = typeof raw.text === "string" && raw.color !== undefined ? raw : _findTextChild(raw);
+    if (text && text.color !== undefined) {
+        if (under || own) {
+            var color = own && !_gHasCascade() ? m.styles.color : null;
+            if (color === null) {
+                ++_gGen;
+                color = _gQtColor(_gStyle(raw).color);
+            }
+            _inlineHold(raw, text, "color", color);
+        } else {
+            _inlineRelease(raw, text, "color");
         }
+    }
+    var kids = _gHasCascade() ? _rawElementChildren(raw) : [];
+    for (var i = 0; i < kids.length; ++i) {
+        if (!_gIsBox(kids[i]) && !kids[i].__eldurInline) {
+            _inlineColor(kids[i], under || own);
+        }
+    }
+}
+
+function _shownByAttribute(raw, hidden) {
+    if (_gHasCascade()) {
+        ++_gGen;
+        _gShowAsRules(raw);
+    } else if (hidden) {
+        _setShown(raw, false);
+    } else if (_meta(raw).styles.display === "none") {
+        _setShown(raw, false);
+    } else {
+        // Nothing here but the page's item says it is hidden, and the attribute
+        // may be why, so there is no binding to go back to.
+        _setShown(raw, true);
+    }
+}
+
+// `visibility` has no property of its own here: it paints as no opacity.
+function _inlineOpacity(raw, m) {
+    if (typeof raw.opacity !== "number") {
+        return;
+    }
+    var hidden = m.styles.visibility;
+    var written = m.styles.opacity;
+    if (!hidden && !written) {
+        _inlineRelease(raw, raw, "opacity");
+        _inlineRelease(raw, raw, "enabled");
+        return;
+    }
+    var shown = true;
+    var opacity = parseFloat(written);
+    if (_gHasCascade()) {
+        ++_gGen;
+        var s = _gStyle(raw);
+        shown = s.visibility !== "hidden";
+        opacity = parseFloat(s.opacity);
+    } else if (hidden) {
+        shown = hidden !== "hidden";
+    }
+    _inlineHold(raw, raw, "opacity", !shown ? 0 : isNaN(opacity) ? 1 : opacity);
+    if (typeof raw.enabled === "boolean") {
+        _inlineHold(raw, raw, "enabled", shown);
     }
 }
 
@@ -4197,7 +4291,7 @@ function setAttribute(item, attrName, attrValue) {
     } else if (name === "disabled" && typeof raw.enabled === "boolean") {
         raw.enabled = false;
     } else if (name === "hidden" && typeof raw.visible === "boolean") {
-        _setShown(raw, false);
+        _shownByAttribute(raw, true);
     } else if (name === "readonly" && typeof raw.readOnly === "boolean") {
         raw.readOnly = true;
     } else if (name === "value") {
@@ -4303,7 +4397,7 @@ function removeAttribute(item, attrName) {
     } else if (name === "disabled" && typeof raw.enabled === "boolean") {
         raw.enabled = true;
     } else if (name === "hidden" && typeof raw.visible === "boolean") {
-        _setShown(raw, true);
+        _shownByAttribute(raw, false);
     } else if (name === "readonly" && typeof raw.readOnly === "boolean") {
         raw.readOnly = false;
     } else if (name === "class") {
@@ -4601,7 +4695,12 @@ function _borderOf(raw, side) {
             return width;
         }
     }
-    return raw.border && typeof raw.border.width === "number" ? raw.border.width : 0;
+    // A Rectangle nobody gave a border reads as one black pixel, and paints none.
+    var pen = raw.border;
+    if (!pen || typeof pen.width !== "number" || (pen.width === 1 && String(pen.color) === "#000000")) {
+        return 0;
+    }
+    return pen.width;
 }
 
 // An inline box has no client area.
@@ -6548,7 +6647,12 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
     // The page's own items are read by id from bindings written beside them.
     if (m.gKeepReplaced) {
         oldRaw.visible = false;
-        oldRaw.parent = null;
+        // Not `null`: its bindings go on reading `parent`.
+        if (!_gGrave) {
+            _gGrave = Qt.createQmlObject("import QtQuick; Item { visible: false }", _qobjectParent(), "eldur_grave");
+            _gGrave.parent = null;
+        }
+        oldRaw.parent = _gGrave;
     } else {
         oldRaw.destroy();
     }
@@ -7368,7 +7472,7 @@ function wrap(rawItem) {
             if (rawItem.__eldurInline) {
                 _vChanged(rawItem.model);
             } else if (typeof rawItem.visible === "boolean") {
-                _setShown(rawItem, !v);
+                _shownByAttribute(rawItem, Boolean(v));
             }
         },
         get src() {
@@ -11024,6 +11128,9 @@ var _gStaticBase = null;
 var _gClosedHidden = null;
 var _gStaticRoot = "";
 var _gReplaced = new Map();
+var _gAdopted = new Map();
+var _gLayoutReader = null;
+var _gGrave = null;
 var _gCascadeRules = null;
 var _gPaintTable = null;
 var _gWarned = {};
@@ -11109,7 +11216,10 @@ function _gBoxSource(tag, outOfFlow) {
         + "PauseAnimation { duration: eldurColorWait } ColorAnimation { duration: eldurColorMs; easing.type: eldurColorEase } } } "
         + "Behavior on opacity { enabled: eldurFadeMs + eldurFadeWait > 0; SequentialAnimation { "
         + "PauseAnimation { duration: eldurFadeWait } NumberAnimation { duration: eldurFadeMs; easing.type: eldurFadeEase } } } "
-        + "Layout.topMargin: eldurMt; Layout.rightMargin: eldurMr; Layout.bottomMargin: eldurMb; Layout.leftMargin: eldurMl; "
+        + "property real eldurGapT: 0; property real eldurGapL: 0; property real eldurTrack: -1; "
+        + "Layout.topMargin: eldurMt + eldurGapT; Layout.rightMargin: eldurMr; Layout.bottomMargin: eldurMb; Layout.leftMargin: eldurMl + eldurGapL; "
+        + "Layout.minimumWidth: eldurTrack < 0 ? 0 : eldurTrack - eldurMl - eldurMr; "
+        + "Layout.maximumWidth: eldurTrack < 0 ? Number.POSITIVE_INFINITY : eldurTrack - eldurMl - eldurMr; "
         + "Layout.fillWidth: eldurFill; Layout.preferredWidth: eldurPw; Layout.alignment: eldurAlign; "
         + "Text { " + _NATIVE_TEXT + "visible: text !== \"\"; wrapMode: Text.Wrap; color: \"black\"; font.pixelSize: 16 } }";
 }
@@ -13608,8 +13718,11 @@ function _gAttached(raw, s, e) {
         return;
     }
     if (width !== null) {
+        var least = _gPx(s["min-width"], avail, s.fontSize, s.rootSize);
+        var most = _gPx(s["max-width"], avail, s.fontSize, s.rootSize);
+        var clamped = most === null ? width : Math.min(width, most);
         _gSet(raw, "eldurFill", false);
-        _gSet(raw, "eldurPw", _gOuterWidth(s, e, width));
+        _gSet(raw, "eldurPw", _gOuterWidth(s, e, least === null ? clamped : Math.max(clamped, least)));
     } else if (shrinks) {
         _gSet(raw, "eldurFill", _gNumber(s["flex-grow"]) > 0);
         _gSet(raw, "eldurPw", _gIntrinsic(raw, s));
@@ -13813,6 +13926,7 @@ function _gSettle() {
     _gDirty = false;
     ++_gGen;
     _gPrune();
+    _gClosedHiddenBoxes();
     _gStaticChanges();
     var snapshot = _gLive.slice();
     for (var i = 0; i < snapshot.length; ++i) {
@@ -13903,7 +14017,17 @@ function _gStaticSig(raw) {
     for (var i = 0; i < matched.length && !uses; ++i) {
         uses = JSON.stringify(rules[matched[i]].decls).indexOf("var(") !== -1;
     }
-    return matched.join(",") + (uses ? JSON.stringify(_gStyle(raw).vars) : "");
+    return matched.join(",") + (uses ? JSON.stringify(_gStyle(raw).vars) : "") + _gBoxInline(raw);
+}
+
+var _G_IN_PLACE = /^(display|visibility|opacity|color|zIndex|left|top|right|bottom|position|cursor|pointerEvents)$/;
+
+// What a script wrote that the item as converted cannot answer to.
+function _gBoxInline(raw) {
+    var styles = _meta(raw).styles;
+    return Object.keys(styles).filter(function(k) {
+        return !_G_IN_PLACE.test(k) && k.indexOf("-") === -1;
+    }).sort().map(function(k) { return k + ":" + styles[k]; }).join(";");
 }
 
 function _gRootAttrs(html) {
@@ -13915,6 +14039,9 @@ function _gRootAttrs(html) {
 // or an earlier sibling, is what a selector can only have learned now.
 function _gUncovered(entry) {
     var raw = entry.raw;
+    if (_gBoxInline(raw) !== "") {
+        return true;
+    }
     var now = _meta(raw).classes;
     var changed = now.filter(function(c) { return entry.classes.indexOf(c) === -1; })
         .concat(entry.classes.filter(function(c) { return now.indexOf(c) === -1; }));
@@ -13947,12 +14074,33 @@ function _gVariantSupports(raw, name) {
     return literal !== undefined && literal.indexOf(name) !== -1;
 }
 
-// Shows or hides an item as the rules now say.
+// Shows or hides an item as the rules now say. The converter's binding answers
+// for all it knows; only where it disagrees does something hold over it.
 function _gShowAsRules(raw) {
     var display = _gStyle(raw).display;
-    var parent = raw.parent;
-    if ((display === "none") === (raw.visible === true) && (!parent || parent.visible !== false)) {
-        _setShown(raw, display !== "none");
+    if (raw.eldurSlot && raw.eldurBlock === undefined) {
+        var parent = raw.parent;
+        if ((display === "none") === (raw.visible === true) && (!parent || parent.visible !== false)) {
+            _setShown(raw, display !== "none");
+        }
+    } else {
+        _holdFocus();
+        _layoutChanged(raw.parent);
+        _inlineRelease(raw, raw, "visible");
+        var written = String(_meta(raw).styles.display || "") !== "";
+        if (raw.parent && raw.parent.visible === false) {
+            // `visible` reads false under a hidden parent, whatever it was told.
+            if (display === "none") {
+                _inlineHold(raw, raw, "visible", false);
+            }
+            _gWatchShown(raw);
+        } else if (written || (display === "none") === (raw.visible === true)) {
+            // A class change must not reach what an inline display decides.
+            _inlineHold(raw, raw, "visible", display !== "none");
+            if (!written) {
+                _gWatchShown(raw);
+            }
+        }
     }
     _gShownInline(raw, display === "inline");
 }
@@ -13984,8 +14132,20 @@ function _gFillHelper(raw) {
 
 // A closed page's templates cover what a class can show but an inline element,
 // which their variants cannot make a box of.
+// The rules may say something else about it after any later change.
+function _gWatchShown(raw) {
+    _gClosedHidden = _gClosedHidden || [];
+    if (_gClosedHidden.indexOf(raw) === -1) {
+        _gClosedHidden.push(raw);
+    }
+}
+
 function _gClosedHiddenBoxes() {
-    (_gClosedHidden || []).forEach(_gShowAsRules);
+    (_gClosedHidden || []).slice().forEach(function(raw) {
+        if (!_gAdopted.has(raw) && raw.parent) {
+            _gShowAsRules(raw);
+        }
+    });
 }
 
 function _gSnapshotClosedHidden() {
@@ -14158,14 +14318,50 @@ function _gAdopt(raw) {
     if (!_gWantsBox(tag) || _rawHasNoFlowParent(raw)) {
         return;
     }
+    var place = _gConvertedPlace(raw);
     m.createdTag = tag;
     var name = raw.objectName;
     m.gKeepReplaced = true;
     var next = _swapRawItem(raw, null, _gBoxSource(tag, false));
     delete m.gKeepReplaced;
+    _gAdopted.set(raw, next);
     next.objectName = name;
+    next.eldurGapT = place.top;
+    next.eldurGapL = place.left;
+    next.eldurTrack = place.track;
     _gLive.push(next);
     return next;
+}
+
+// What the converter wrote on an item for its parent's gaps and grid tracks,
+// which are no rule of the element's and which the box has to go on keeping.
+function _gConvertedPlace(raw) {
+    var place = { top: 0, left: 0, track: -1 };
+    var parent = _gParent(raw);
+    if (!parent || !raw.parent) {
+        return place;
+    }
+    var s = _gStyle(parent);
+    if (_gIsFlex(s)) {
+        var row = String(s["flex-direction"]).indexOf("row") === 0;
+        var gap = _gPx(s[row ? "column-gap" : "row-gap"], null, s.fontSize, s.rootSize) || 0;
+        var written = _gLayoutMargins(raw);
+        place.left = row ? Math.min(gap, written.left) : 0;
+        place.top = row ? 0 : Math.min(gap, written.top);
+    } else if (typeof raw.parent.columns === "number") {
+        var most = _gLayoutMargins(raw).max;
+        place.track = isFinite(most) ? most : -1;
+    }
+    return place;
+}
+
+function _gLayoutMargins(raw) {
+    if (!_gLayoutReader) {
+        _gLayoutReader = Qt.createQmlObject("import QtQuick; import QtQuick.Layouts; QtObject { "
+            + "function read(i) { return { top: i.Layout.topMargin, left: i.Layout.leftMargin, max: i.Layout.maximumWidth }; } }",
+            _qobjectParent(), "eldur_layout_reader");
+    }
+    return _gLayoutReader.read(raw);
 }
 
 function _rawHasNoFlowParent(raw) {

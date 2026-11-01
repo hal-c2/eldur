@@ -137,7 +137,12 @@ pub(crate) fn rewrite(
 ) -> JsOutput {
     let resolver = &StaticOnly {
         inner: resolver,
-        live: &analysis.live_queries,
+        // Adoption replaces the item an id names, so no lookup can stay a literal.
+        live: if analysis.adopts_for_inline {
+            &analysis.queries
+        } else {
+            &analysis.live_queries
+        },
     };
     let allocator = Allocator::default();
     let mut diagnostics: Vec<Diagnostic> = Vec::new();

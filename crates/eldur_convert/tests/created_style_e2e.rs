@@ -199,3 +199,33 @@ fn props() {
 fn statics() {
     page("statics");
 }
+
+/// An inline `display` or `hidden` over a class binding.
+#[test]
+fn inline_display() {
+    page("inline_display");
+}
+
+/// The same with no computed read, so no rule table on the page.
+#[test]
+fn inline_display_plain() {
+    page("inline_display_plain");
+}
+
+/// Inline paint wins, clearing it gives what the rules now say.
+#[test]
+fn inline_paint() {
+    page("inline_paint");
+}
+
+/// Inline box properties on a static element, with class changes around them.
+#[test]
+fn inline_box() {
+    page("inline_box");
+}
+
+/// Inline box properties on containers and on flex and grid items.
+#[test]
+fn inline_children() {
+    page("inline_children");
+}

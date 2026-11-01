@@ -61,6 +61,342 @@
   "clicks": [],
   "probes": []
  },
+ "inline_box": {
+  "log": [
+   "CS width 0 0,1,102,22 end=254",
+   "CS width 1inline 0,1,62,22 end=254",
+   "CS width 2both 0,1,62,22 end=254",
+   "CS width 3class 0,1,52,22 end=254",
+   "CS width 4base 0,1,102,22 end=254",
+   "CS width 5clear 0,1,102,22 end=254",
+   "CS width 6class 0,1,52,22 end=254",
+   "CS width 7base 0,1,102,22 end=254",
+   "CS height 0 0,24,102,22 end=254",
+   "CS height 1inline 0,24,102,42 end=274",
+   "CS height 2both 0,24,102,42 end=274",
+   "CS height 3class 0,24,102,32 end=264",
+   "CS height 4base 0,24,102,22 end=254",
+   "CS height 5clear 0,24,102,22 end=254",
+   "CS height 6class 0,24,102,32 end=264",
+   "CS height 7base 0,24,102,22 end=254",
+   "CS marginTop 0 0,47,102,22 end=254",
+   "CS marginTop 1inline 0,53,102,22 end=260",
+   "CS marginTop 2both 0,53,102,22 end=260",
+   "CS marginTop 3class 0,56,102,22 end=263",
+   "CS marginTop 4base 0,47,102,22 end=254",
+   "CS marginTop 5clear 0,47,102,22 end=254",
+   "CS marginTop 6class 0,56,102,22 end=263",
+   "CS marginTop 7base 0,47,102,22 end=254",
+   "CS marginLeft 0 0,70,102,22 end=254",
+   "CS marginLeft 1inline 7,70,102,22 end=254",
+   "CS marginLeft 2both 7,70,102,22 end=254",
+   "CS marginLeft 3class 10,70,102,22 end=254",
+   "CS marginLeft 4base 0,70,102,22 end=254",
+   "CS marginLeft 5clear 0,70,102,22 end=254",
+   "CS marginLeft 6class 10,70,102,22 end=254",
+   "CS marginLeft 7base 0,70,102,22 end=254",
+   "CS padding 0 0,93,102,22 end=254",
+   "CS padding 1inline 0,93,108,28 end=260",
+   "CS padding 2both 0,93,108,28 end=260",
+   "CS padding 3class 0,93,114,34 end=266",
+   "CS padding 4base 0,93,102,22 end=254",
+   "CS padding 5clear 0,93,102,22 end=254",
+   "CS padding 6class 0,93,114,34 end=266",
+   "CS padding 7base 0,93,102,22 end=254",
+   "CS paddingLeft 0 0,116,102,22 end=254",
+   "CS paddingLeft 1inline 0,116,105,22 end=254",
+   "CS paddingLeft 2both 0,116,105,22 end=254",
+   "CS paddingLeft 3class 0,116,108,22 end=254",
+   "CS paddingLeft 4base 0,116,102,22 end=254",
+   "CS paddingLeft 5clear 0,116,102,22 end=254",
+   "CS paddingLeft 6class 0,116,108,22 end=254",
+   "CS paddingLeft 7base 0,116,102,22 end=254",
+   "CS borderWidth 0 0,139,102,22 end=254",
+   "CS borderWidth 1inline 0,139,106,26 end=258",
+   "CS borderWidth 2both 0,139,106,26 end=258",
+   "CS borderWidth 3class 0,139,112,32 end=264",
+   "CS borderWidth 4base 0,139,102,22 end=254",
+   "CS borderWidth 5clear 0,139,102,22 end=254",
+   "CS borderWidth 6class 0,139,112,32 end=264",
+   "CS borderWidth 7base 0,139,102,22 end=254",
+   "CS minWidth 0 0,162,102,22 end=254",
+   "CS minWidth 1inline 0,162,202,22 end=254",
+   "CS minWidth 2both 0,162,202,22 end=254",
+   "CS minWidth 3class 0,162,222,22 end=254",
+   "CS minWidth 4base 0,162,102,22 end=254",
+   "CS minWidth 5clear 0,162,102,22 end=254",
+   "CS minWidth 6class 0,162,222,22 end=254",
+   "CS minWidth 7base 0,162,102,22 end=254",
+   "CS maxWidth 0 0,185,102,22 end=254",
+   "CS maxWidth 1inline 0,185,62,22 end=254",
+   "CS maxWidth 2both 0,185,62,22 end=254",
+   "CS maxWidth 3class 0,185,52,22 end=254",
+   "CS maxWidth 4base 0,185,102,22 end=254",
+   "CS maxWidth 5clear 0,185,102,22 end=254",
+   "CS maxWidth 6class 0,185,52,22 end=254",
+   "CS maxWidth 7base 0,185,102,22 end=254",
+   "CS lineHeight 0 0,208,102,22 end=254",
+   "CS lineHeight 1inline 0,208,102,32 end=264",
+   "CS lineHeight 2both 0,208,102,32 end=264",
+   "CS lineHeight 3class 0,208,102,42 end=274",
+   "CS lineHeight 4base 0,208,102,22 end=254",
+   "CS lineHeight 5clear 0,208,102,22 end=254",
+   "CS lineHeight 6class 0,208,102,42 end=274",
+   "CS lineHeight 7base 0,208,102,22 end=254",
+   "CS fontSize 0 0,231,102,22 end=254",
+   "CS fontSize 1inline 0,231,102,22 end=254",
+   "CS fontSize 2both 0,231,102,22 end=254",
+   "CS fontSize 3class 0,231,102,22 end=254",
+   "CS fontSize 4base 0,231,102,22 end=254",
+   "CS fontSize 5clear 0,231,102,22 end=254",
+   "CS fontSize 6class 0,231,102,22 end=254",
+   "CS fontSize 7base 0,231,102,22 end=254"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "inline_children": {
+  "log": [
+   "CS 0 cont:0,0,1280,44 c1:0,0,1280,20 c2:0,24,1280,20 fl:0,44,1280,20 f1:0,44,9,20 f2:13,44,9,20 f3:26,44,8,20 gr:0,64,1280,20 g1:0,64,100,20 g2:104,64,100,20 wrap:0,84,1280,6 fill:0,84,128,6 end:0,90,1280,20",
+   "CS pad cont:0,0,1280,64 c1:10,10,1260,20 c2:10,34,1260,20 fl:0,64,1280,20 f1:0,64,9,20 f2:13,64,9,20 f3:26,64,8,20 gr:0,84,1280,20 g1:0,84,100,20 g2:104,84,100,20 wrap:0,104,1280,6 fill:0,104,128,6 end:0,110,1280,20",
+   "CS unpad cont:0,0,1280,44 c1:0,0,1280,20 c2:0,24,1280,20 fl:0,44,1280,20 f1:0,44,9,20 f2:13,44,9,20 f3:26,44,8,20 gr:0,64,1280,20 g1:0,64,100,20 g2:104,64,100,20 wrap:0,84,1280,6 fill:0,84,128,6 end:0,90,1280,20",
+   "CS fw cont:0,0,1280,44 c1:0,0,1280,20 c2:0,24,1280,20 fl:0,44,1280,20 f1:0,44,9,20 f2:13,44,80,20 f3:97,44,8,20 gr:0,64,1280,20 g1:0,64,100,20 g2:104,64,100,20 wrap:0,84,1280,6 fill:0,84,128,6 end:0,90,1280,20",
+   "CS fw2 cont:0,0,1280,44 c1:0,0,1280,20 c2:0,24,1280,20 fl:0,44,1280,20 f1:0,44,9,20 f2:13,44,80,20 f3:97,44,8,20 gr:0,64,1280,20 g1:0,64,100,20 g2:104,64,100,20 wrap:0,84,1280,6 fill:0,84,128,6 end:0,90,1280,20",
+   "CS fw3 cont:0,0,1280,44 c1:0,0,1280,20 c2:0,24,1280,20 fl:0,44,1280,20 f1:0,44,9,20 f2:13,44,40,20 f3:57,44,8,20 gr:0,64,1280,20 g1:0,64,100,20 g2:104,64,100,20 wrap:0,84,1280,6 fill:0,84,128,6 end:0,90,1280,20",
+   "CS fw4 cont:0,0,1280,44 c1:0,0,1280,20 c2:0,24,1280,20 fl:0,44,1280,20 f1:0,44,9,20 f2:13,44,9,20 f3:26,44,8,20 gr:0,64,1280,20 g1:0,64,100,20 g2:104,64,100,20 wrap:0,84,1280,6 fill:0,84,128,6 end:0,90,1280,20",
+   "CS gm cont:0,0,1280,44 c1:0,0,1280,20 c2:0,24,1280,20 fl:0,44,1280,20 f1:0,44,9,20 f2:13,44,9,20 f3:26,44,8,20 gr:0,64,1280,20 g1:0,64,100,20 g2:114,64,90,20 wrap:0,84,1280,6 fill:0,84,128,6 end:0,90,1280,20",
+   "CS gm2 cont:0,0,1280,44 c1:0,0,1280,20 c2:0,24,1280,20 fl:0,44,1280,20 f1:0,44,9,20 f2:13,44,9,20 f3:26,44,8,20 gr:0,64,1280,20 g1:0,64,100,20 g2:104,64,100,20 wrap:0,84,1280,6 fill:0,84,128,6 end:0,90,1280,20",
+   "CS pct cont:0,0,1280,44 c1:0,0,1280,20 c2:0,24,1280,20 fl:0,44,1280,20 f1:0,44,9,20 f2:13,44,9,20 f3:26,44,8,20 gr:0,64,1280,20 g1:0,64,100,20 g2:104,64,100,20 wrap:0,84,1280,6 fill:0,84,640,6 end:0,90,1280,20",
+   "CS h cont:0,0,1280,44 c1:0,0,1280,20 c2:0,24,1280,20 fl:0,44,1280,20 f1:0,44,9,20 f2:13,44,9,20 f3:26,44,8,20 gr:0,64,1280,20 g1:0,64,100,20 g2:104,64,100,20 wrap:0,84,1280,10 fill:0,84,640,10 end:0,94,1280,20"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "inline_display": {
+  "log": [
+   "CS A1 a 20 z=100 block",
+   "CS A2 a 0 z=80 none",
+   "CS B1 b 0 z=60 none",
+   "CS B2 b 20 z=80 block",
+   "CS C1 c 0 z=60 none",
+   "CS C2 c 20 z=80 block",
+   "CS C3 c 0 z=60 none",
+   "CS D1 d 0 z=60 none",
+   "CS D2 d 20 z=80 block",
+   "CS D3 d 0 z=60 none",
+   "CS D4 d 20 z=80 block",
+   "CS E1 e 20 z=80 block",
+   "CS E2 e 0 z=60 none",
+   "CS E3 e 20 z=80 block",
+   "CS E4 e 0 z=60 none",
+   "CS E5 e 20 z=80 block",
+   "CS F1 f 0 z=60 none",
+   "CS F2 f 20 z=80 block",
+   "CS F3 f 0 z=60 none",
+   "CS F4 f 20 z=80 block",
+   "CS G1 g 20 z=100 block",
+   "CS G2 g 0 z=80 none",
+   "CS G3 g 20 z=100 block",
+   "CS G4 g 0 z=80 none",
+   "CS G5 g 20 z=100 block"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "inline_display_plain": {
+  "log": [
+   "CS A1 a 20 z=100",
+   "CS A2 a 0 z=80",
+   "CS B1 b 0 z=60",
+   "CS B2 b 20 z=80",
+   "CS C1 c 0 z=60",
+   "CS C2 c 20 z=80",
+   "CS C3 c 0 z=60",
+   "CS D1 d 0 z=60",
+   "CS D2 d 20 z=80",
+   "CS D3 d 0 z=60",
+   "CS D4 d 20 z=80",
+   "CS E1 e 20 z=80",
+   "CS E2 e 0 z=60",
+   "CS E3 e 20 z=80",
+   "CS E4 e 0 z=60",
+   "CS E5 e 20 z=80",
+   "CS F1 f 0 z=60",
+   "CS F2 f 20 z=80",
+   "CS F3 f 0 z=60",
+   "CS F4 f 20 z=80",
+   "CS G1 g 20 z=100",
+   "CS G2 g 0 z=80",
+   "CS G3 g 20 z=100",
+   "CS G4 g 0 z=80",
+   "CS G5 g 20 z=100"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "inline_paint": {
+  "log": [
+   "CS cola rgb(255, 0, 0)",
+   "CS cha rgb(255, 0, 0)",
+   "CS colb rgb(255, 0, 0)",
+   "CS chb rgb(255, 0, 0)",
+   "CS colc rgb(0, 0, 255)",
+   "CS chc rgb(0, 0, 255)",
+   "CS cold rgb(0, 0, 0)",
+   "CS chd rgb(0, 0, 0)",
+   "CS cole rgb(0, 0, 255)",
+   "CS che rgb(0, 0, 255)",
+   "CS colf rgb(0, 0, 0)",
+   "CS chf rgb(0, 0, 0)"
+  ],
+  "clicks": [],
+  "probes": [
+   {
+    "id": "bga",
+    "x": 50,
+    "y": 10,
+    "color": "#ff0000"
+   },
+   {
+    "id": "bgb",
+    "x": 50,
+    "y": 32,
+    "color": "#ff0000"
+   },
+   {
+    "id": "bgc",
+    "x": 50,
+    "y": 54,
+    "color": "#0000ff"
+   },
+   {
+    "id": "bgd",
+    "x": 50,
+    "y": 76,
+    "color": "#00ff00"
+   },
+   {
+    "id": "bge",
+    "x": 50,
+    "y": 98,
+    "color": "#0000ff"
+   },
+   {
+    "id": "bgf",
+    "x": 50,
+    "y": 120,
+    "color": "#00ff00"
+   },
+   {
+    "id": "bgsa",
+    "x": 50,
+    "y": 142,
+    "color": "#ff0000"
+   },
+   {
+    "id": "bgsb",
+    "x": 50,
+    "y": 164,
+    "color": "#ff0000"
+   },
+   {
+    "id": "bgsc",
+    "x": 50,
+    "y": 186,
+    "color": "#0000ff"
+   },
+   {
+    "id": "bgsd",
+    "x": 50,
+    "y": 208,
+    "color": "#00ff00"
+   },
+   {
+    "id": "bgse",
+    "x": 50,
+    "y": 230,
+    "color": "#0000ff"
+   },
+   {
+    "id": "bgsf",
+    "x": 50,
+    "y": 252,
+    "color": "#00ff00"
+   },
+   {
+    "id": "opa",
+    "x": 50,
+    "y": 274,
+    "color": "#80ff80"
+   },
+   {
+    "id": "opb",
+    "x": 50,
+    "y": 296,
+    "color": "#80ff80"
+   },
+   {
+    "id": "opc",
+    "x": 50,
+    "y": 318,
+    "color": "#bfffbf"
+   },
+   {
+    "id": "opd",
+    "x": 50,
+    "y": 340,
+    "color": "#00ff00"
+   },
+   {
+    "id": "ope",
+    "x": 50,
+    "y": 362,
+    "color": "#bfffbf"
+   },
+   {
+    "id": "opf",
+    "x": 50,
+    "y": 384,
+    "color": "#00ff00"
+   },
+   {
+    "id": "visa",
+    "x": 50,
+    "y": 406,
+    "color": "#ffffff"
+   },
+   {
+    "id": "visb",
+    "x": 50,
+    "y": 428,
+    "color": "#ffffff"
+   },
+   {
+    "id": "visc",
+    "x": 50,
+    "y": 450,
+    "color": "#00ff00"
+   },
+   {
+    "id": "visd",
+    "x": 50,
+    "y": 472,
+    "color": "#00ff00"
+   },
+   {
+    "id": "vise",
+    "x": 50,
+    "y": 494,
+    "color": "#00ff00"
+   },
+   {
+    "id": "visf",
+    "x": 50,
+    "y": 516,
+    "color": "#00ff00"
+   }
+  ]
+ },
  "markup": {
   "log": [
    "CS a 0,16 1280x40 | at 0,16 1280x10 | b 0,60 1280x62 | bh 5,68 1270x22 | bu 5,93 1270x24 | li1 15,93 1260x12 | li2 15,105 1260x12 | end 0,122 1280x10",
