@@ -37,8 +37,7 @@
     "selector": "#originb"
   },
   {
-    "selector": "#clipp",
-    "known": "dashed border drawn solid until item 5"
+    "selector": "#clipp"
   },
   {
     "selector": "#clipc"

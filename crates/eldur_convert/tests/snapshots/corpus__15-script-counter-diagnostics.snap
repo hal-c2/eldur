@@ -3,5 +3,5 @@ source: crates/eldur_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
 info[css]: <style>#1:41: unknown property `font-variant-numeric`
+info[css]: index.html: an outline that changes under a class or state is not drawn
 info[css]: index.html:195: <section id="details" class="panel"> is `display: none` and used by a script: it is kept invisible, as a block when shown
-info[css]: index.html:195: rounded corners with uneven borders: the borders are drawn square

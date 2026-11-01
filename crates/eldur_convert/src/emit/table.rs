@@ -922,6 +922,7 @@ impl<'a> Emitter<'a, '_> {
             inset_shadows: base.inset_shadows,
             hint: hint(self.doc, b),
             strips: None,
+            plain_edges: false,
         };
         let insets = deco.insets;
         let mut body = self.wrap(

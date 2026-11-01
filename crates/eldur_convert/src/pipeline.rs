@@ -336,6 +336,16 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
             contents: crate::emit::ELDUR_ROUND_CLIP_QML.as_bytes().to_vec(),
         });
     }
+    if main.contains("EldurBorder {")
+        || files
+            .iter()
+            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
+    {
+        files.push(OutputFile {
+            path: PathBuf::from("EldurBorder.qml"),
+            contents: crate::emit::ELDUR_BORDER_QML.as_bytes().to_vec(),
+        });
+    }
     if main.contains("EldurFilter {")
         || files
             .iter()

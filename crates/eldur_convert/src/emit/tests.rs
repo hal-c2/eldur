@@ -2078,3 +2078,34 @@ fn text_shadow_is_a_copy_of_the_text_behind_it() {
     assert!(qml.contains("EldurTextShadow"), "{qml}");
     assert!(qml.contains("blurDeviation: 2"), "{qml}");
 }
+
+#[test]
+fn a_style_a_rectangle_cannot_draw_goes_to_the_drawn_border() {
+    let (qml, diags) = convert(&page(".b{border:4px dashed #000}", "<div class=b>x</div>"));
+    assert!(qml.contains("EldurBorder"), "{qml}");
+    assert!(
+        qml.contains(r#"sideStyles: ["dashed", "dashed", "dashed", "dashed"]"#),
+        "{qml}"
+    );
+    assert!(
+        !diags.iter().any(|d| d.contains("drawn solid")),
+        "{diags:?}"
+    );
+}
+
+#[test]
+fn a_plain_border_stays_on_the_rectangle() {
+    let (qml, _) = convert(&page(".b{border:4px solid #000}", "<div class=b>x</div>"));
+    assert!(!qml.contains("EldurBorder"), "{qml}");
+    assert!(qml.contains("border.width: 4"), "{qml}");
+}
+
+#[test]
+fn an_outline_takes_no_room_and_sits_outside_the_box() {
+    let (qml, _) = convert(&page(
+        ".b{outline:3px solid red;outline-offset:2px}",
+        "<div class=b>x</div>",
+    ));
+    assert!(qml.contains("anchors.margins: -5"), "{qml}");
+    assert!(qml.contains("border.width: 3"), "{qml}");
+}

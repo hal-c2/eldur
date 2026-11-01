@@ -182,12 +182,18 @@ ApplicationWindow {
                                 bottomLeftRadius: 6
                                 implicitWidth: 6
                                 implicitHeight: 6
-                                border.width: 3
-                                border.color: "#3b6fe0"
                                 Layout.preferredHeight: 130
                                 Layout.preferredWidth: 200
                                 Layout.alignment: Qt.AlignHCenter
                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                EldurBorder {
+                                    sideWidths: [3, 3, 3, 3]
+                                    sideColors: ["#ff3b6fe0", "#ff3b6fe0", "#ff3b6fe0", "#ff3b6fe0"]
+                                    sideStyles: ["dashed", "dashed", "dashed", "dashed"]
+                                    radii: [40, 6, 40, 6]
+                                    anchors.fill: parent
+                                }
                             }
 
                             // <p class="caption">
@@ -227,12 +233,18 @@ ApplicationWindow {
                                 radius: 65
                                 implicitWidth: 6
                                 implicitHeight: 6
-                                border.width: 3
-                                border.color: "#2e8b57"
                                 Layout.preferredHeight: 130
                                 Layout.preferredWidth: 130
                                 Layout.alignment: Qt.AlignHCenter
                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                EldurBorder {
+                                    sideWidths: [3, 3, 3, 3]
+                                    sideColors: ["#ff2e8b57", "#ff2e8b57", "#ff2e8b57", "#ff2e8b57"]
+                                    sideStyles: ["dotted", "dotted", "dotted", "dotted"]
+                                    radii: [65, 65, 65, 65]
+                                    anchors.fill: parent
+                                }
                             }
 
                             // <p class="caption">
@@ -275,100 +287,12 @@ ApplicationWindow {
                                 Layout.preferredWidth: 200
                                 Layout.alignment: Qt.AlignHCenter
 
-                                Rectangle {
-                                    anchors.left: parent.left
-                                    anchors.right: parent.right
-                                    anchors.top: parent.top
-                                    height: 6
-                                    color: "#00000000"
-
-                                    Rectangle {
-                                        anchors.left: parent.left
-                                        anchors.right: parent.right
-                                        anchors.top: parent.top
-                                        height: 2
-                                        color: "#e74c3c"
-                                    }
-
-                                    Rectangle {
-                                        anchors.left: parent.left
-                                        anchors.right: parent.right
-                                        anchors.bottom: parent.bottom
-                                        height: 2
-                                        color: "#e74c3c"
-                                    }
-                                }
-
-                                Rectangle {
-                                    anchors.top: parent.top
-                                    anchors.bottom: parent.bottom
-                                    anchors.right: parent.right
-                                    width: 6
-                                    color: "#00000000"
-
-                                    Rectangle {
-                                        anchors.top: parent.top
-                                        anchors.bottom: parent.bottom
-                                        anchors.left: parent.left
-                                        width: 2
-                                        color: "#3b6fe0"
-                                    }
-
-                                    Rectangle {
-                                        anchors.top: parent.top
-                                        anchors.bottom: parent.bottom
-                                        anchors.right: parent.right
-                                        width: 2
-                                        color: "#3b6fe0"
-                                    }
-                                }
-
-                                Rectangle {
-                                    anchors.left: parent.left
-                                    anchors.right: parent.right
-                                    anchors.bottom: parent.bottom
-                                    height: 6
-                                    color: "#00000000"
-
-                                    Rectangle {
-                                        anchors.left: parent.left
-                                        anchors.right: parent.right
-                                        anchors.top: parent.top
-                                        height: 2
-                                        color: "#2ecc71"
-                                    }
-
-                                    Rectangle {
-                                        anchors.left: parent.left
-                                        anchors.right: parent.right
-                                        anchors.bottom: parent.bottom
-                                        height: 2
-                                        color: "#2ecc71"
-                                    }
-                                }
-
-                                Rectangle {
-                                    anchors.top: parent.top
-                                    anchors.bottom: parent.bottom
-                                    anchors.left: parent.left
-                                    width: 6
-                                    color: "#00000000"
-
-                                    Rectangle {
-                                        anchors.top: parent.top
-                                        anchors.bottom: parent.bottom
-                                        anchors.left: parent.left
-                                        width: 2
-                                        color: "#f1c40f"
-                                    }
-
-                                    Rectangle {
-                                        anchors.top: parent.top
-                                        anchors.bottom: parent.bottom
-                                        anchors.right: parent.right
-                                        width: 2
-                                        color: "#f1c40f"
-                                    }
+                                EldurBorder {
+                                    sideWidths: [6, 6, 6, 6]
+                                    sideColors: ["#ffe74c3c", "#ff3b6fe0", "#ff2ecc71", "#fff1c40f"]
+                                    sideStyles: ["double", "double", "double", "double"]
+                                    radii: [0, 0, 0, 0]
+                                    anchors.fill: parent
                                 }
                             }
 
@@ -717,12 +641,15 @@ ApplicationWindow {
                             Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                             // <div class="box b7">
-                            Item {
+                            Rectangle {
+                                color: "#00000000"
+                                radius: 8
                                 implicitWidth: 0
                                 implicitHeight: 0
                                 Layout.preferredHeight: 130
                                 Layout.preferredWidth: 200
                                 Layout.alignment: Qt.AlignHCenter
+                                antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                 Shape {
                                     id: boxGradient3
@@ -759,6 +686,17 @@ ApplicationWindow {
                                             radius: 8
                                         }
                                     }
+                                }
+
+                                Rectangle {
+                                    color: "transparent"
+                                    border.width: 3
+                                    border.color: "#6c5ce7"
+                                    radius: 17
+                                    anchors.fill: parent
+                                    anchors.margins: -9
+                                    z: 1
+                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
                                 }
                             }
 

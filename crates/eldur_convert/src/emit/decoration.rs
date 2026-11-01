@@ -32,6 +32,83 @@ impl Insets {
 }
 
 pub(crate) const ELDUR_ROUND_CLIP_QML: &str = include_str!("EldurRoundClip.qml");
+pub(crate) const ELDUR_BORDER_QML: &str = include_str!("EldurBorder.qml");
+
+fn style_name(style: BorderStyle) -> &'static str {
+    match style {
+        BorderStyle::None => "none",
+        BorderStyle::Hidden => "hidden",
+        BorderStyle::Solid => "solid",
+        BorderStyle::Dashed => "dashed",
+        BorderStyle::Dotted => "dotted",
+        BorderStyle::Double => "double",
+        BorderStyle::Groove => "groove",
+        BorderStyle::Ridge => "ridge",
+        BorderStyle::Inset => "inset",
+        BorderStyle::Outset => "outset",
+    }
+}
+
+/// The picture a Rectangle's one border and four square strips cannot give: a
+/// style other than solid, curves on sides that differ, or a join between colours.
+pub(super) fn needs_drawn_border(style: &ComputedStyle) -> bool {
+    let all = sides(style);
+    let plain = |s: &BorderSide| !is_visible(s) || s.style == BorderStyle::Solid;
+    if !all.iter().all(|s| plain(s)) {
+        return true;
+    }
+    let uniform = all.iter().all(|s| **s == *all[0]);
+    let r = &style.border_radius;
+    let rounded = [&r.top_left, &r.top_right, &r.bottom_right, &r.bottom_left]
+        .iter()
+        .any(|c| !c.is_zero());
+    let meet = (0..4).any(|i| {
+        let (a, b) = (all[i], all[(i + 1) % 4]);
+        is_visible(a) && is_visible(b) && a.color != b.color
+    });
+    all.iter().any(|s| is_visible(s)) && !uniform && (rounded || meet)
+}
+
+fn argb(c: eldur_css::Rgba) -> String {
+    format!("#{:02x}{:02x}{:02x}{:02x}", c.a, c.r, c.g, c.b)
+}
+
+fn drawn_border(sides: [&BorderSide; 4], radii: [f32; 4]) -> Object {
+    let mut drawn = Object::new("EldurBorder");
+    let list = |items: Vec<String>| Value::expr(format!("[{}]", items.join(", ")));
+    drawn.set(
+        "sideWidths",
+        list(
+            sides
+                .iter()
+                .map(|s| fmt_number(f64::from(border_width(s))))
+                .collect(),
+        ),
+    );
+    drawn.set(
+        "sideColors",
+        list(
+            sides
+                .iter()
+                .map(|s| format!("\"{}\"", argb(s.color)))
+                .collect(),
+        ),
+    );
+    drawn.set(
+        "sideStyles",
+        list(
+            sides
+                .iter()
+                .map(|s| format!("\"{}\"", style_name(s.style)))
+                .collect(),
+        ),
+    );
+    drawn.set(
+        "radii",
+        list(radii.iter().map(|r| fmt_number(f64::from(*r))).collect()),
+    );
+    drawn
+}
 
 pub(crate) fn is_visible(side: &BorderSide) -> bool {
     side.width > 0.0 && !matches!(side.style, BorderStyle::None | BorderStyle::Hidden)
@@ -69,6 +146,8 @@ pub(crate) struct Decoration {
     /// left), visible or not, so every combination of conditions has
     /// the same objects.
     pub strips: Option<[bool; 4]>,
+    /// Draw no `EldurBorder` or outline: states would change the box's objects.
+    pub plain_edges: bool,
 }
 
 impl Decoration {
@@ -142,13 +221,14 @@ impl Emitter<'_, '_> {
         }
         Decoration {
             insets,
-            paints: background || border || self.force_paint,
+            paints: background || border || is_visible(&style.outline) || self.force_paint,
             clips,
             gradients,
             shadows,
             inset_shadows,
             hint: "box".to_owned(),
             strips: None,
+            plain_edges: false,
         }
     }
 
@@ -251,8 +331,14 @@ impl Emitter<'_, '_> {
         let borders: Vec<&BorderSide> = sides(style).to_vec();
         let uniform = borders.iter().all(|s| **s == *borders[0]) && is_visible(borders[0]);
         let stripped = deco.strips.is_some() || !uniform;
+        let drawn = deco.strips.is_none() && !deco.plain_edges && needs_drawn_border(style);
         if let Some(forced) = deco.strips {
             self.border_strips(&mut wrapper, style, forced, line);
+        } else if drawn {
+            let radii = self.corner_radii(style, line);
+            let mut border = drawn_border(sides(style), radii);
+            border.set("anchors.fill", Value::expr("parent"));
+            wrapper.push_child(border);
         } else if uniform && painted {
             // The background is painted under the border (`background-clip:
             // border-box`), and a Rectangle draws its border below its
@@ -272,7 +358,7 @@ impl Emitter<'_, '_> {
         }
         for side in borders.iter().filter(|s| is_visible(s)) {
             let two_lines = stripped && is_double(side);
-            if !matches!(side.style, BorderStyle::Solid) && !two_lines {
+            if !drawn && !matches!(side.style, BorderStyle::Solid) && !two_lines {
                 self.diags.info(
                     "css",
                     line,
@@ -331,6 +417,7 @@ impl Emitter<'_, '_> {
         for child in extra {
             wrapper.push_child(child);
         }
+        self.outline(&mut wrapper, style, line);
         if deco.clips {
             let holds = wrapper.children().next().is_some();
             self.clip_edges(&mut wrapper, style, &deco.hint, holds, line);
@@ -561,6 +648,33 @@ impl Emitter<'_, '_> {
             BoxSizing::BorderBox => (0.0, 0.0),
         };
         Some((w + extra_w).min(h + extra_h))
+    }
+
+    /// An outline is above what the box holds and takes no room. It follows the
+    /// border's curve, grown by its distance, where a corner is rounded.
+    fn outline(&mut self, wrapper: &mut Object, style: &ComputedStyle, line: Option<u32>) {
+        let side = &style.outline;
+        if !is_visible(side) {
+            return;
+        }
+        let out = style.outline_offset + side.width;
+        let radii = self
+            .corner_radii(style, line)
+            .map(|r| if r > 0.0 { r + out } else { 0.0 });
+        let mut drawn = if side.style == BorderStyle::Solid {
+            let mut rect = Object::new("Rectangle");
+            rect.set("color", Value::string("transparent"));
+            rect.set("border.width", number(side.width));
+            rect.set("border.color", color(side.color));
+            set_radii(&mut rect, radii);
+            rect
+        } else {
+            drawn_border([side; 4], radii)
+        };
+        drawn.set("anchors.fill", Value::expr("parent"));
+        drawn.set("anchors.margins", number(-out));
+        drawn.set("z", 1.0);
+        wrapper.push_child(drawn);
     }
 
     /// Non-uniform borders: one thin `Rectangle` per visible side, and per

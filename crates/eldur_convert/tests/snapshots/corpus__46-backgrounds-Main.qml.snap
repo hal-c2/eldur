@@ -367,11 +367,12 @@ ApplicationWindow {
                             color: "#0ea5e9"
                         }
 
-                        Rectangle {
+                        EldurBorder {
+                            sideWidths: [10, 10, 10, 10]
+                            sideColors: ["#33000000", "#33000000", "#33000000", "#33000000"]
+                            sideStyles: ["dashed", "dashed", "dashed", "dashed"]
+                            radii: [0, 0, 0, 0]
                             anchors.fill: parent
-                            color: "transparent"
-                            border.width: 10
-                            border.color: "#33000000"
                         }
                     }
 

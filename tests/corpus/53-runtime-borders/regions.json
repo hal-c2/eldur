@@ -1,0 +1,62 @@
+[
+  {
+    "selector": "#r-sides",
+    "pad": 12
+  },
+  {
+    "selector": "#r-round",
+    "pad": 12
+  },
+  {
+    "selector": "#r-dashed",
+    "pad": 12
+  },
+  {
+    "selector": "#r-dotted",
+    "pad": 12
+  },
+  {
+    "selector": "#r-double",
+    "pad": 12
+  },
+  {
+    "selector": "#r-groove",
+    "pad": 12
+  },
+  {
+    "selector": "#r-ridge",
+    "pad": 12
+  },
+  {
+    "selector": "#r-inset",
+    "pad": 12
+  },
+  {
+    "selector": "#r-outset",
+    "pad": 12
+  },
+  {
+    "selector": "#r-dashround",
+    "pad": 12
+  },
+  {
+    "selector": "#r-line",
+    "pad": 12
+  },
+  {
+    "selector": "#r-away",
+    "pad": 12
+  },
+  {
+    "selector": "#r-oround",
+    "pad": 12
+  },
+  {
+    "selector": "#r-odash",
+    "pad": 12
+  },
+  {
+    "selector": "#r-short",
+    "pad": 12
+  }
+]

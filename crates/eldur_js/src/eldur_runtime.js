@@ -11357,7 +11357,8 @@ var _G_INITIAL = {
     "filter": "none", "animation-name": "none", "transition-property": "all", "transition-duration": "0s",
     "transition-delay": "0s", "transition-timing-function": "ease", "background-size": "auto",
     "background-position-x": "0%", "background-position-y": "0%", "background-repeat": "repeat",
-    "text-shadow": "none", "object-fit": "fill", "object-position": "50% 50%", "background-origin": "padding-box", "background-clip": "border-box", "background-attachment": "scroll"
+    "text-shadow": "none", "outline-style": "none", "outline-width": "medium",
+    "outline-color": "currentcolor", "outline-offset": "0px", "object-fit": "fill", "object-position": "50% 50%", "background-origin": "padding-box", "background-clip": "border-box", "background-attachment": "scroll"
 };
 // The controls whose box the UA sheet in the rule table describes: padding and
 // border are the control's insets.
@@ -11660,6 +11661,20 @@ function _gExpand(prop, value) {
             // `background: none` names no colour: the shorthand resets it.
             out.push(["background-color", /^none$/i.test(String(value).trim()) ? "rgba(0, 0, 0, 0)" : value]);
         }
+    } else if (prop === "outline") {
+        var lineWidth = "medium";
+        var lineStyle = "none";
+        var lineColor = "currentcolor";
+        for (var lp = 0; lp < parts.length; ++lp) {
+            if (/^(none|hidden|dotted|dashed|solid|double|groove|ridge|inset|outset|auto)$/.test(parts[lp])) {
+                lineStyle = parts[lp];
+            } else if (/^(thin|medium|thick|[-+.\d].*|calc\(.*)$/.test(parts[lp])) {
+                lineWidth = parts[lp];
+            } else {
+                lineColor = parts[lp];
+            }
+        }
+        out.push(["outline-width", lineWidth], ["outline-style", lineStyle], ["outline-color", lineColor]);
     } else if (/^border(-(top|right|bottom|left))?$/.test(prop)) {
         var which = prop === "border" ? names : [prop.slice(7)];
         var width = "medium";
@@ -12813,11 +12828,13 @@ function _gPaintBox(raw, s, e) {
     var uniform = e.bt === e.br && e.bt === e.bb && e.bt === e.bl
         && s["border-top-color"] === s["border-right-color"] && s["border-top-color"] === s["border-bottom-color"]
         && s["border-top-color"] === s["border-left-color"];
-    _gSet(raw.border, "width", uniform ? e.bt : 0);
-    if (uniform && e.bt > 0) {
+    var drawn = _gPaintDrawnBorder(raw, s, e, uniform);
+    _gSet(raw.border, "width", uniform && !drawn ? e.bt : 0);
+    if (uniform && !drawn && e.bt > 0) {
         raw.border.color = _gQtColor(s["border-top-color"]);
     }
-    _gPaintEdges(raw, s, e, !uniform);
+    _gPaintEdges(raw, s, e, !uniform && !drawn);
+    _gPaintOutline(raw, s);
     var z = s["z-index"] === "auto" ? (s.position !== "static" ? 1 : 0) : _gNumber(s["z-index"]);
     _gSet(raw, "z", z);
     _gSet(raw, "clip", s["overflow-x"] !== "visible" || s["overflow-y"] !== "visible");
@@ -12827,6 +12844,56 @@ function _gPaintBox(raw, s, e) {
         _meta(raw).gPainted = true;
         _gPaintTimings(raw, s);
     }
+}
+
+var _G_SIDES = ["top", "right", "bottom", "left"];
+
+function _gDrawnSource(widths, colors, styles, radii, attrs) {
+    return "import QtQuick; import \".\"; EldurBorder { " + attrs
+        + "sideWidths: " + JSON.stringify(widths) + "; sideColors: " + JSON.stringify(colors)
+        + "; sideStyles: " + JSON.stringify(styles) + "; radii: " + JSON.stringify(radii) + " }";
+}
+
+// The picture one Rectangle border and four square strips cannot give, as in
+// `needs_drawn_border`. Says whether it took the box's border over.
+function _gPaintDrawnBorder(raw, s, e, uniform) {
+    var widths = [e.bt, e.br, e.bb, e.bl];
+    var colors = _G_SIDES.map(function(side) { return String(_gQtColor(s["border-" + side + "-color"])); });
+    var styles = _G_SIDES.map(function(side) { return s["border-" + side + "-style"]; });
+    var radii = _gCorners(raw, s);
+    var fancy = styles.some(function(style, i) { return widths[i] > 0 && style !== "solid"; });
+    var meet = widths.some(function(w, i) {
+        var next = (i + 1) % 4;
+        return w > 0 && widths[next] > 0 && colors[i] !== colors[next];
+    });
+    var wanted = fancy || (!uniform && (meet || radii.some(function(r) { return r > 0; })));
+    var source = wanted ? _gDrawnSource(widths, colors, styles, radii, "anchors.fill: parent; ") : null;
+    _gReplaceShape(raw, "gBorder", source, source, raw, function() {}, Qt.resolvedUrl("eldur_paint"));
+    return wanted;
+}
+
+// Above what the box holds, taking no room, and on the box's curve grown by its
+// distance. A clip would cut it, as a child: a clipping box warns.
+function _gPaintOutline(raw, s) {
+    var known = { thin: 1, medium: 3, thick: 5 };
+    var named = known[s["outline-width"]];
+    var width = named !== undefined ? named : _gPx(s["outline-width"], null, s.fontSize, s.rootSize) || 0;
+    var style = s["outline-style"];
+    var shown = width > 0 && style !== "none" && style !== undefined && style !== "hidden";
+    var source = null;
+    if (shown) {
+        var out = (_gPx(s["outline-offset"], null, s.fontSize, s.rootSize) || 0) + width;
+        var radii = _gCorners(raw, s).map(function(r) { return r > 0 ? r + out : 0; });
+        var color = String(_gQtColor(_gColor(s["outline-color"], s.color)));
+        var solid = style === "solid" || style === "auto";
+        source = _gDrawnSource([width, width, width, width], [color, color, color, color],
+            [0, 1, 2, 3].map(function() { return solid ? "solid" : style; }), radii,
+            "anchors.fill: parent; anchors.margins: " + (-out) + "; z: 1; ");
+        if (raw.clip) {
+            _gWarn(raw, "outline", "the box clips, and that cuts its outline too");
+        }
+    }
+    _gReplaceShape(raw, "gOutline", source, source, raw, function() {}, Qt.resolvedUrl("eldur_paint"));
 }
 
 // A Rectangle's border is one width and colour; unequal sides are four strips.

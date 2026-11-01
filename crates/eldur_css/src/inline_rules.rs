@@ -149,6 +149,10 @@ fn box_property(longhand: Longhand) -> Option<&'static str> {
         L::BackgroundAttachment => "background-attachment",
         L::ObjectFit => "object-fit",
         L::TextShadow => "text-shadow",
+        L::OutlineWidth => "outline-width",
+        L::OutlineStyle => "outline-style",
+        L::OutlineColor => "outline-color",
+        L::OutlineOffset => "outline-offset",
         L::ObjectPosition => "object-position",
         _ => return None,
     })

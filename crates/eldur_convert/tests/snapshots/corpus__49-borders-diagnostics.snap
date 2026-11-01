@@ -2,14 +2,4 @@
 source: crates/eldur_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-info[css]: index.html:30: rounded corners with uneven borders: the borders are drawn square
-info[css]: index.html:30: border style `dashed` is drawn solid
-info[css]: index.html:31: border style `dotted` is drawn solid
-info[css]: index.html:31: border style `double` is drawn solid
-info[css]: index.html:31: border style `groove` is drawn solid
-info[css]: index.html:31: border style `ridge` is drawn solid
-info[css]: index.html:31: border style `inset` is drawn solid
-info[css]: index.html:31: border style `outset` is drawn solid
-info[css]: index.html:32: border style `dashed` is drawn solid
-info[css]: index.html:32: border style `dotted` is drawn solid
-info[css]: index.html:32: border style `double` is drawn solid
+

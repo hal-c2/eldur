@@ -1013,12 +1013,12 @@ ApplicationWindow {
                                 Layout.preferredHeight: implicitHeight - blockFlow.eldurCarry
                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
-                                Rectangle {
-                                    anchors.top: parent.top
-                                    anchors.bottom: parent.bottom
-                                    anchors.left: parent.left
-                                    width: 4
-                                    color: "#0969da"
+                                EldurBorder {
+                                    sideWidths: [0, 0, 0, 4]
+                                    sideColors: ["#00000000", "#00000000", "#00000000", "#ff0969da"]
+                                    sideStyles: ["none", "none", "none", "solid"]
+                                    radii: [0, 6, 6, 0]
+                                    anchors.fill: parent
                                 }
 
                                 ColumnLayout {

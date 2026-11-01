@@ -461,6 +461,7 @@ impl Emitter<'_, '_> {
         control: Control,
         line: Option<u32>,
     ) -> Emitted {
+        self.plain_control = self.plain_edges.contains(&node);
         let native = with_native_box(&b.style, control);
         let style = native.as_ref().unwrap_or(&*b.style);
         let id = self.control_id(node);
@@ -556,7 +557,8 @@ impl Emitter<'_, '_> {
     /// The element's box as the control's `background` (and the control's
     /// padding from its insets), so the Basic style's look never shows.
     fn apply_box(&mut self, obj: &mut Object, style: &ComputedStyle, line: Option<u32>) -> f32 {
-        let deco = self.decoration(style, true, line);
+        let mut deco = self.decoration(style, true, line);
+        deco.plain_edges = self.plain_control;
         let insets = deco.insets;
         let mut background = self.wrap(style, &deco, true, None, false, line);
         // The control sizes its background; the insets are its padding.
@@ -1437,6 +1439,7 @@ impl Emitter<'_, '_> {
         decoration: eldur_css::TextDecorationLine,
         line: Option<u32>,
     ) -> Emitted {
+        self.plain_control = self.plain_edges.contains(&node);
         let style = &*b.style;
         let html_id = self
             .doc
@@ -1448,7 +1451,8 @@ impl Emitter<'_, '_> {
             None => self.ids.claim("fieldset"),
         };
         let mut obj = Object::new("GroupBox").with_id(id.clone());
-        let deco = self.decoration(style, true, line);
+        let mut deco = self.decoration(style, true, line);
+        deco.plain_edges = self.plain_control;
         let insets = deco.insets;
         let border_top = super::decoration::border_width(&style.border.top);
         let mut background = self.wrap(style, &deco, true, None, false, line);

@@ -16,7 +16,7 @@ mod ids;
 mod image;
 mod inline;
 pub(crate) use background::ELDUR_BACKGROUND_LAYER_QML;
-pub(crate) use decoration::ELDUR_ROUND_CLIP_QML;
+pub(crate) use decoration::{ELDUR_BORDER_QML, ELDUR_ROUND_CLIP_QML};
 pub(crate) const ELDUR_FILTER_QML: &str = include_str!("EldurFilter.qml");
 pub(crate) const ELDUR_FILTER_QSB: &[u8] = include_bytes!("eldur_filter.frag.qsb");
 pub(crate) const ELDUR_TEXT_SHADOW_QML: &str = include_str!("EldurTextShadow.qml");
@@ -183,6 +183,10 @@ pub(crate) struct Emitter<'a, 'd> {
     /// Elements whose border form differs between combinations: they draw
     /// strips on the sides visible in any of them, in every combination.
     strips: HashMap<NodeId, [bool; 4]>,
+    /// Boxes whose border or outline changes form under a state.
+    plain_edges: HashSet<NodeId>,
+    /// Whether the control being emitted is in `plain_edges`.
+    plain_control: bool,
     /// Elements `display: none` in the combination being emitted, laid out
     /// as shown and hidden with `visible`.
     collapsed: HashSet<NodeId>,
@@ -261,6 +265,8 @@ impl<'a, 'd> Emitter<'a, 'd> {
             excess: HashMap::new(),
             sticky: HashSet::new(),
             strips: HashMap::new(),
+            plain_edges: HashSet::new(),
+            plain_control: false,
             collapsed: HashSet::new(),
             force_paint: false,
             boxes_drawn: false,
@@ -529,6 +535,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             deco.paints = true;
         }
         deco.strips = b.node.and_then(|n| self.strips.get(&n).copied());
+        deco.plain_edges = b.node.is_some_and(|n| self.plain_edges.contains(&n));
         let wanted = b.node.is_some_and(|n| self.wanted.contains(&n));
         let mt = self.vertical_margin(&style.margin.top, line);
         let mb = self.vertical_margin(&style.margin.bottom, line);

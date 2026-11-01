@@ -2,5 +2,4 @@
 source: crates/eldur_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-info[css]: index.html:229: rounded corners with uneven borders: the borders are drawn square
 warning[css]: index.html:237: `overflow: auto/scroll` clips but does not scroll yet
