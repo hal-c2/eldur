@@ -109,6 +109,8 @@ const PROBED_CSS_PROPERTIES: &[&str] = &[
     "background-origin",
     "background-clip",
     "background-attachment",
+    "object-fit",
+    "object-position",
     "box-shadow",
     "opacity",
     "overflow",

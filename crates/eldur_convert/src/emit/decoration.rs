@@ -31,6 +31,8 @@ impl Insets {
     }
 }
 
+pub(crate) const ELDUR_ROUND_CLIP_QML: &str = include_str!("EldurRoundClip.qml");
+
 pub(crate) fn is_visible(side: &BorderSide) -> bool {
     side.width > 0.0 && !matches!(side.style, BorderStyle::None | BorderStyle::Hidden)
 }
@@ -330,7 +332,8 @@ impl Emitter<'_, '_> {
             wrapper.push_child(child);
         }
         if deco.clips {
-            self.clip_edges(&mut wrapper, style, &deco.hint, line);
+            let holds = wrapper.children().next().is_some();
+            self.clip_edges(&mut wrapper, style, &deco.hint, holds, line);
         }
         if deco.shadows && deco.clips {
             // `overflow` clips the content, not the box's own shadow, and a
@@ -361,12 +364,14 @@ impl Emitter<'_, '_> {
     /// software backend (`MultiEffect` masks and `ShapePath.fillItem` draw
     /// nothing there), so the corners outside the rounded rect are painted
     /// over in the colour behind the box, and the border is drawn again on
-    /// top. Over anything but a plain colour the clip stays square.
+    /// top. Over anything else the box is masked, which takes a layer and so
+    /// is kept for a box that holds something to clip.
     fn clip_edges(
         &mut self,
         wrapper: &mut Object,
         style: &ComputedStyle,
         hint: &str,
+        holds: bool,
         line: Option<u32>,
     ) {
         let r = &style.border_radius;
@@ -404,12 +409,14 @@ impl Emitter<'_, '_> {
                     shape.push_child(path);
                     wrapper.push_child(shape);
                 }
-                None => self.diags.info(
-                    "css",
-                    line,
-                    "rounded `overflow` clip is square: what is behind the box is not a plain colour"
-                        .to_owned(),
-                ),
+                None if holds => {
+                    self.imports.insert("QtQuick.Effects");
+                    let mut mask = Object::new("EldurRoundClip");
+                    self.radius(&mut mask, style, line);
+                    wrapper.set("layer.enabled", true);
+                    wrapper.set("layer.effect", Value::Object(Box::new(mask)));
+                }
+                None => {}
             }
         }
         let borders = sides(style);

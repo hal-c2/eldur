@@ -1353,3 +1353,13 @@ fn a_colour_only_background_keeps_its_clip() {
     );
     assert!(s.background_layers[0].image.is_none());
 }
+
+#[test]
+fn object_position_is_kept() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    let mut s = ComputedStyle::default();
+    compute(&mut s, Longhand::ObjectPosition, "10px 100%", &ctx).expect("parses");
+    assert_eq!(s.object_position_x.as_px(), Some(10.0));
+    assert!(s.object_position_y.as_px().is_none());
+}

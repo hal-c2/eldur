@@ -1,13 +1,6 @@
 ---
 source: crates/eldur_convert/tests/corpus.rs
+assertion_line: 63
 expression: "diagnostics.join(\"\\n\")"
 ---
-info[css]: index.html:29: rounded `overflow` clip is square: what is behind the box is not a plain colour
-info[css]: index.html:30: rounded `overflow` clip is square: what is behind the box is not a plain colour
-info[css]: index.html:31: rounded `overflow` clip is square: what is behind the box is not a plain colour
-info[css]: index.html:32: rounded `overflow` clip is square: what is behind the box is not a plain colour
-info[css]: index.html:33: rounded `overflow` clip is square: what is behind the box is not a plain colour
-info[css]: index.html:34: rounded `overflow` clip is square: what is behind the box is not a plain colour
-info[css]: index.html:35: rounded `overflow` clip is square: what is behind the box is not a plain colour
-info[css]: index.html:39: `object-fit: scale-down` is drawn as `contain`
-info[css]: index.html:43: rounded `overflow` clip is square: what is behind the box is not a plain colour
+

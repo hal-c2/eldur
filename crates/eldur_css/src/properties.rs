@@ -1165,7 +1165,8 @@ pub(crate) fn compute(
             style.object_fit = parse_object_fit(cvs)?;
         }
         Longhand::ObjectPosition => {
-            let _ = parse_position_2d(cvs, &uctx_pct, true)?;
+            (style.object_position_x, style.object_position_y) =
+                parse_position_2d(cvs, &uctx_pct, true)?;
         }
         Longhand::Filter => {
             style.filter = parse_filter(cvs, &uctx_no_pct, style.color)?;
@@ -1610,7 +1611,10 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
         Longhand::OverflowX => dst.overflow_x = src.overflow_x,
         Longhand::OverflowY => dst.overflow_y = src.overflow_y,
         Longhand::ObjectFit => dst.object_fit = src.object_fit,
-        Longhand::ObjectPosition => {}
+        Longhand::ObjectPosition => {
+            dst.object_position_x = src.object_position_x;
+            dst.object_position_y = src.object_position_y;
+        }
         Longhand::Filter => dst.filter.clone_from(&src.filter),
 
         Longhand::Translate => {

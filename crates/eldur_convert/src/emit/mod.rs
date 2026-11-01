@@ -16,6 +16,7 @@ mod ids;
 mod image;
 mod inline;
 pub(crate) use background::ELDUR_BACKGROUND_LAYER_QML;
+pub(crate) use decoration::ELDUR_ROUND_CLIP_QML;
 pub(crate) use inline::{ELDUR_INLINE_BOX_QML, ELDUR_LINES_QML, has_atomic, needs_lines_for_boxes};
 mod inline_model;
 mod links;

@@ -16,7 +16,17 @@ body { margin: 10px; background: #fff; }
 .clipc { background: #0ea5e9 content-box; padding: 16px; height: 88px !important; }
 .origin { background: url(tile.png) no-repeat 0 0 content-box; padding: 20px; height: 80px !important; }
 .repr { background: repeating-radial-gradient(circle, #1e293b 0 10px, #e2e8f0 10px 20px); }
+.holds { overflow: hidden; border-radius: 30px; background-color: #e2e8f0 !important; }
+.holds p { margin: 0; height: 60px; background: #1d4ed8; }
+#pictures { display: grid; grid-template-columns: repeat(5, 200px); gap: 10px; margin-top: 10px; }
+#pictures img { display: block; width: 200px; height: 120px; }
+.i-round { border-radius: 24px; }
+.i-cover { object-fit: cover; }
+.i-contain { object-fit: contain; }
+.i-corner { object-fit: none; object-position: 0 0; }
+.i-end { object-fit: none; object-position: 100% 100%; }
 </style></head><body><div id="grid"></div>
+
 <script>
 const grid = document.getElementById('grid');
 for (const name of ['tile', 'cover', 'contain', 'place', 'repx', 'round', 'stripes', 'sized', 'conic', 'clipc', 'origin', 'repr']) {
@@ -25,4 +35,21 @@ for (const name of ['tile', 'cover', 'contain', 'place', 'repx', 'round', 'strip
   d.id = 'r-' + name;
   grid.appendChild(d);
 }
+const holder = document.createElement('div');
+holder.className = 'holds';
+holder.id = 'r-holds';
+holder.appendChild(document.createElement('p'));
+grid.appendChild(holder);
+// A file a script names is not found by the converter, which copies what the
+// page names under `assets/`: this path is both that copy and one for the browser.
+const pictures = document.createElement('section');
+pictures.id = 'pictures';
+for (const name of ['round', 'cover', 'contain', 'corner', 'end']) {
+  const i = document.createElement('img');
+  i.src = 'assets/photo.png';
+  i.className = 'i-' + name;
+  i.id = 'r-i-' + name;
+  pictures.appendChild(i);
+}
+document.body.appendChild(pictures);
 </script></body></html>

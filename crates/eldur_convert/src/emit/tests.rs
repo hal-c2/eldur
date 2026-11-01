@@ -1557,7 +1557,7 @@ fn rounded_clip_redraws_the_border_over_the_content() {
 }
 
 #[test]
-fn rounded_clip_over_a_gradient_stays_square_with_a_diagnostic() {
+fn rounded_clip_over_a_gradient_masks_what_it_holds() {
     let (qml, diags) = convert(&page(
         ".p{background:linear-gradient(red,blue)} \
          .m{width:100px;height:50px;border-radius:8px;overflow:hidden}",
@@ -1565,12 +1565,19 @@ fn rounded_clip_over_a_gradient_stays_square_with_a_diagnostic() {
     ));
     let m = object_after(&qml, "<div class=\"m\">");
     assert!(!m.contains("OddEvenFill"), "{m}");
-    assert!(
-        diags
-            .iter()
-            .any(|d| d.contains("rounded") && d.contains("square")),
-        "{diags:?}"
-    );
+    assert!(m.contains("EldurRoundClip"), "{m}");
+    assert!(m.contains("layer.enabled: true"), "{m}");
+    assert!(!diags.iter().any(|d| d.contains("square")), "{diags:?}");
+}
+
+#[test]
+fn a_rounded_clip_with_nothing_to_clip_takes_no_layer() {
+    let (qml, _) = convert(&page(
+        ".p{background:linear-gradient(red,blue)} \
+         .m{width:100px;height:50px;border-radius:8px;overflow:hidden;background:#fff}",
+        "<div class=p><div class=m></div></div>",
+    ));
+    assert!(!qml.contains("layer.enabled"), "{qml}");
 }
 
 #[test]

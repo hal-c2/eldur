@@ -11353,7 +11353,7 @@ var _G_INITIAL = {
     "filter": "none", "animation-name": "none", "transition-property": "all", "transition-duration": "0s",
     "transition-delay": "0s", "transition-timing-function": "ease", "background-size": "auto",
     "background-position-x": "0%", "background-position-y": "0%", "background-repeat": "repeat",
-    "background-origin": "padding-box", "background-clip": "border-box", "background-attachment": "scroll"
+    "object-fit": "fill", "object-position": "50% 50%", "background-origin": "padding-box", "background-clip": "border-box", "background-attachment": "scroll"
 };
 // The controls whose box the UA sheet in the rule table describes: padding and
 // border are the control's insets.
@@ -12235,6 +12235,7 @@ function _gPlace(raw, avail, opts, heightBasis) {
 
 function _gPlaceLeaf(raw, s, e, used, fixedH, margins, frameH) {
     _gPaintControl(raw, s, e);
+    _gPaintPicture(raw, s, used, fixedH === null ? raw.height : fixedH);
     // A created inline element with only text is a `Text` itself.
     if (_meta(raw).createdTag && _isPlainTextItem(raw)) {
         _gPaintText(raw, s, used);
@@ -13254,9 +13255,87 @@ function _gPaintDecor(raw, s, e, radius) {
     if (s["animation-name"] !== "none") {
         _gWarn(raw, "animation-name", "`" + s["animation-name"] + "` does not run on a created box");
     }
-    if (raw.clip && radius > 0 && _rawElementChildren(raw).length > 0) {
-        _gWarn(raw, "border-radius", "overflow clips what this box holds to its square corners");
+    if (!_gPaintPicture(raw, s, w, h)) {
+        _gPaintRoundClip(raw, outerRadii,
+            raw.clip && _rawElementChildren(raw).length > 0 && outerRadii.some(function(r) { return r > 0; }));
     }
+}
+
+// QML's `clip` is square, so a box that clips to rounded corners is a layer
+// with a mask. The effect holds its radii as written, so new radii make a new
+// one.
+function _gPaintRoundClip(raw, radii, wanted) {
+    var m = _meta(raw);
+    var signature = wanted ? radii.join(" ") : "";
+    if (m.gRoundClip === signature || (m.gRoundClip === undefined && !wanted)) {
+        return;
+    }
+    m.gRoundClip = signature;
+    if (wanted) {
+        raw.layer.effect = Qt.createQmlObject("import QtQuick; import \".\"; QtObject { property Component effect: EldurRoundClip { "
+            + "topLeftRadius: " + radii[0] + "; topRightRadius: " + radii[1]
+            + "; bottomRightRadius: " + radii[2] + "; bottomLeftRadius: " + radii[3] + " } }",
+            raw, Qt.resolvedUrl("eldur_paint")).effect;
+    }
+    raw.layer.enabled = wanted;
+}
+
+// A page's `<img>` is an `Image` in an item that keeps the CSS size; a created
+// one is the `Image`.
+function _gPictureOf(raw) {
+    if (raw.source !== undefined) {
+        return raw;
+    }
+    var kids = raw.eldurTag === "img" ? raw.children : [];
+    for (var i = 0; i < kids.length; ++i) {
+        if (kids[i].source !== undefined && kids[i].fillMode !== undefined) {
+            return kids[i];
+        }
+    }
+    return null;
+}
+
+function _gPaintPicture(raw, s, w, h) {
+    var picture = _gPictureOf(raw);
+    if (!picture) {
+        return false;
+    }
+    var radii = _gCorners(raw, s);
+    _gPaintRoundClip(raw, radii, radii.some(function(r) { return r > 0; }));
+    var fit = s["object-fit"];
+    var file = picture.sourceSize;
+    // The enums' values: a library script cannot see the QML type `Image`.
+    var modes = { fill: 0, contain: 1, cover: 2, none: 6 };
+    var mode = modes[fit];
+    if (fit === "scale-down") {
+        mode = file.width > w || file.height > h ? modes.contain : modes.none;
+    }
+    if (mode !== undefined) {
+        _gSet(picture, "fillMode", mode);
+    }
+    var names = { left: "0%", center: "50%", right: "100%", top: "0%", bottom: "100%" };
+    var at = s["object-position"].trim().split(/\s+/).map(function(part) {
+        return names[part] || part;
+    });
+    var pick = function(value, start, middle, end) {
+        var number = parseFloat(value);
+        if (number === 0) {
+            return start;
+        }
+        if (value === "50%") {
+            return middle;
+        }
+        if (value === "100%") {
+            return end;
+        }
+        _gWarn(raw, "object-position", "`" + value + "` on an image a script restyled is centred: "
+            + "only an edge or the middle can be placed at run time");
+        return middle;
+    };
+    _gSet(picture, "horizontalAlignment", pick(at[0], 1, 4, 2));
+    _gSet(picture, "verticalAlignment", pick(at[1] || "50%", 0x20, 0x80, 0x40));
+    _gSet(picture, "clip", fit === "none" || fit === "cover");
+    return true;
 }
 
 // Shadows lie outside the box, where its own clip would take them: a clipping

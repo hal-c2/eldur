@@ -326,6 +326,16 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
             contents: crate::emit::ELDUR_BACKGROUND_LAYER_QML.as_bytes().to_vec(),
         });
     }
+    if main.contains("EldurRoundClip {")
+        || files
+            .iter()
+            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
+    {
+        files.push(OutputFile {
+            path: PathBuf::from("EldurRoundClip.qml"),
+            contents: crate::emit::ELDUR_ROUND_CLIP_QML.as_bytes().to_vec(),
+        });
+    }
     if main.contains("EldurInlineBox {") {
         files.push(OutputFile {
             path: PathBuf::from("EldurInlineBox.qml"),

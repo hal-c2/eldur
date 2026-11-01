@@ -21,7 +21,7 @@ Item {
     // `background-attachment: fixed`: the window is that box.
     property bool fixedToWindow: false
 
-    // 0 auto, 1 cover, 2 contain, 3 the sizes below. A side below 0 is `auto`.
+    // 0 auto, 1 cover, 2 contain, 3 the sizes below, 4 `object-fit: scale-down`. A side below 0 is `auto`.
     property int sizing: 0
     property real sizeWidth: -1
     property real sizeWidthPercent: 0
@@ -61,6 +61,7 @@ Item {
     readonly property real naturalHeight: isGradient ? 0 : picture.sourceSize.height
     readonly property real fitScale: naturalWidth > 0 && naturalHeight > 0
         ? (sizing === 1 ? Math.max(areaWidth / naturalWidth, areaHeight / naturalHeight)
+         : sizing === 4 ? Math.min(1, areaWidth / naturalWidth, areaHeight / naturalHeight)
                         : Math.min(areaWidth / naturalWidth, areaHeight / naturalHeight))
         : 1
     readonly property real givenWidth: sizeWidth + sizeWidthPercent / 100 * areaWidth
@@ -70,7 +71,7 @@ Item {
     // CSS Backgrounds 3 §3.9: an `auto` side keeps the image's ratio, and an
     // image with no size of its own, a gradient, takes the box.
     readonly property real sizedWidth: {
-        if (sizing === 1 || sizing === 2)
+        if (sizing === 1 || sizing === 2 || sizing === 4)
             return naturalWidth > 0 ? naturalWidth * fitScale : areaWidth
         if (hasWidth)
             return givenWidth
@@ -79,7 +80,7 @@ Item {
         return hasHeight && naturalHeight > 0 ? naturalWidth * givenHeight / naturalHeight : naturalWidth
     }
     readonly property real sizedHeight: {
-        if (sizing === 1 || sizing === 2)
+        if (sizing === 1 || sizing === 2 || sizing === 4)
             return naturalHeight > 0 ? naturalHeight * fitScale : areaHeight
         if (hasHeight)
             return givenHeight

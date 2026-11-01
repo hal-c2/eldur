@@ -147,6 +147,8 @@ fn box_property(longhand: Longhand) -> Option<&'static str> {
         L::BackgroundOrigin => "background-origin",
         L::BackgroundClip => "background-clip",
         L::BackgroundAttachment => "background-attachment",
+        L::ObjectFit => "object-fit",
+        L::ObjectPosition => "object-position",
         _ => return None,
     })
 }

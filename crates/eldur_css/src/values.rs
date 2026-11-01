@@ -890,6 +890,8 @@ pub struct ComputedStyle {
     /// Percentages of the border box; default 50% 50%.
     pub transform_origin: (LengthPercentage, LengthPercentage),
     pub object_fit: ObjectFit,
+    pub object_position_x: LengthPercentage,
+    pub object_position_y: LengthPercentage,
     /// Raw `filter` value; QML has MultiEffect for blur/brightness etc.
     pub filter: Option<String>,
 
@@ -1029,6 +1031,8 @@ impl Default for ComputedStyle {
                 LengthPercentage::percent(50.0),
             ),
             object_fit: ObjectFit::Fill,
+            object_position_x: LengthPercentage::percent(50.0),
+            object_position_y: LengthPercentage::percent(50.0),
             filter: None,
             color: Rgba::BLACK,
             font_family: vec!["serif".to_owned()],

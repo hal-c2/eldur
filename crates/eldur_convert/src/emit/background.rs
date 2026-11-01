@@ -14,6 +14,7 @@
 use eldur_css::{
     BackgroundAttachment, BackgroundClip, BackgroundLayer, BackgroundOrigin, BackgroundRepeat,
     BackgroundSize, ColorStop, ComputedStyle, Image, Length, LengthAuto, LengthPercentage,
+    ObjectFit,
 };
 use eldur_qml::{Object, Value};
 
@@ -283,6 +284,45 @@ impl Emitter<'_, '_> {
             left: border_width(&style.border.left),
         };
         (padding, content)
+    }
+
+    /// An `<img>` as a layer: the replaced content is a no-repeat tile in
+    /// the content box, `object-fit` its size and `object-position` its place.
+    pub(super) fn image_layer(
+        &mut self,
+        style: &ComputedStyle,
+        source: &str,
+        hint: &str,
+        line: Option<u32>,
+    ) -> Object {
+        let (size, scale_down) = match style.object_fit {
+            ObjectFit::Fill => (
+                BackgroundSize::Explicit(
+                    LengthAuto::Length(Length::Linear(LengthPercentage::percent(100.0))),
+                    LengthAuto::Length(Length::Linear(LengthPercentage::percent(100.0))),
+                ),
+                false,
+            ),
+            ObjectFit::Contain => (BackgroundSize::Contain, false),
+            ObjectFit::Cover => (BackgroundSize::Cover, false),
+            ObjectFit::None => (BackgroundSize::Auto, false),
+            ObjectFit::ScaleDown => (BackgroundSize::Contain, true),
+        };
+        let layer = BackgroundLayer {
+            image: None,
+            size,
+            position_x: style.object_position_x,
+            position_y: style.object_position_y,
+            repeat: BackgroundRepeat::NoRepeat,
+            origin: BackgroundOrigin::ContentBox,
+            clip: BackgroundClip::ContentBox,
+            attachment: BackgroundAttachment::Scroll,
+        };
+        let mut item = self.background_layer(style, &layer, hint, Some(source), None, line);
+        if scale_down {
+            item.set("sizing", Value::Number(4.0));
+        }
+        item
     }
 
     /// An `EldurBackgroundLayer` holding an image file or a gradient tile.
