@@ -1,0 +1,29 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}
+.off{display:none}.w{width:80px}
+</style></head><body>
+<p id="a">Hello <span id="as" style="display:none">hidden <b>bold</b></span> world</p>
+<p id="b">Hello <span id="bs" class="off">hidden</span> world</p>
+<div id="c"><div>one</div><div style="display:none">two</div><div class="off">three</div><div hidden>four</div><div>five</div></div>
+<ul id="d"><li>a</li><li class="off">b</li><li>c</li></ul>
+<p id="e">x<span id="es" style="visibility:hidden">y</span>z</p>
+<div id="f" style="display:none">in <b>hidden</b> box</div>
+<input id="i1" class="off"><input id="i2" style="display:none"><input id="i3"><button id="b1" hidden>b</button>
+<div id="wr" class="w">one two <span id="sp">three four five six seven</span> eight</div>
+<p id="sh">a <input id="sh1" style="display:none;width:30px"> b <button id="sh2" style="display:none">k</button> c</p>
+<div id="end">end</div>
+<script>
+var q=function(s){return document.getElementById(s)};
+function t(n,v){console.log("CS "+n+" "+v)}
+["a","b","c","d","e","f"].forEach(function(i){t("it-"+i,JSON.stringify(q(i).innerText)+" "+JSON.stringify(q(i).textContent))});
+q("as").style.display="";t("it-a2",JSON.stringify(q("a").innerText));
+q("as").style.display="none";t("it-a3",JSON.stringify(q("a").innerText));
+q("bs").classList.remove("off");t("it-b2",JSON.stringify(q("b").innerText));
+["i1","i2","b1"].forEach(function(i){q(i).focus();t("focus-"+i,document.activeElement.tagName+" "+document.activeElement.id)});
+q("i3").focus();t("focus-i3",document.activeElement.id);
+q("i1").focus();t("focus-keep",document.activeElement.id);
+var rs=q("sp").getClientRects();t("rects-n",rs.length);
+for(var k=0;k<rs.length;k++){t("rects-"+k,Math.round(rs[k].left)+","+Math.round(rs[k].top-rs[0].top))}
+function sh(n){var b=q("sh").getBoundingClientRect();t("sh-"+n,Math.round(b.height)+" "+Math.round(q("end").getBoundingClientRect().top)+" "+JSON.stringify(q("sh").innerText))}
+sh(0);q("sh1").style.display="";sh(1);q("sh2").style.display="inline-block";sh(2);q("sh1").style.display="none";sh(3);
+var ci=document.createElement("input");ci.style.display="none";q("sh").appendChild(ci);sh(4);
+</script></body></html>

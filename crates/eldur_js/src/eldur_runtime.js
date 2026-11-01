@@ -3513,14 +3513,21 @@ var _IT_BLOCK = /^(address|article|aside|blockquote|center|dd|details|dialog|dir
 
 // The HTML standard's rendered text collection: what is shown, with a line
 // between blocks, two around a paragraph, and a tab between cells.
+var _IT_ATOM = "\uE000";
+
 function _itCollect(raw, out) {
     if (raw.__eldurInline) {
         if (raw.vtext) {
-            out.push(raw.data);
+            if (!raw.vparent || _vStyle(raw.vparent).visible !== false) {
+                out.push(raw.data);
+            }
             return;
         }
         if (raw.eldurTag === "br") {
             out.push("\n");
+            return;
+        }
+        if (_vStyle(raw).display === "none") {
             return;
         }
     } else if (_itHidden(raw)) {
@@ -3529,6 +3536,11 @@ function _itCollect(raw, out) {
     var tag = _inferTagName(raw).toLowerCase();
     if (tag === "br") {
         out.push("\n");
+        return;
+    }
+    // A control has no text, but the spaces either side of it do not collapse.
+    if (/^(input|select|textarea|img)$/.test(tag)) {
+        out.push(_IT_ATOM);
         return;
     }
     var edge = tag === "p" ? 2 : _IT_BLOCK.test(tag) ? 1 : 0;
@@ -3623,7 +3635,8 @@ function _innerText(raw) {
     }
     return text.replace(/[ \t\r\f]*\n[ \t\r\f]*(?=\S)/g, function(m) { return m.replace(/[^\n]/g, ""); })
         .replace(/[ \r\f\n]+/g, function(m) { return m.indexOf("\n") >= 0 ? m.replace(/[^\n]/g, "") : " "; })
-        .replace(/^ +| +$/g, "");
+        .replace(/^ +| +$/g, "")
+        .split(_IT_ATOM).join("");
 }
 
 function setText(item, value) {
@@ -4544,6 +4557,10 @@ function focus(item) {
     }
     var raw = _unwrap(item);
     if (!raw) {
+        return;
+    }
+    // What is not rendered cannot take focus, and whatever has it keeps it.
+    if (!raw.__eldurInline && _itHidden(raw)) {
         return;
     }
     var prev = _activeElement;
@@ -7284,6 +7301,9 @@ function wrap(rawItem) {
         },
         getClientRects: function() {
             var r = getBoundingClientRect(rawItem);
+            if (rawItem.__eldurInline && (r.width > 0 || r.height > 0)) {
+                return _asNodeList(_vClientRects(rawItem, r));
+            }
             return _asNodeList(r.width > 0 || r.height > 0 ? [r] : []);
         },
         get selected() { return rawItem.sel === true; },
@@ -9443,6 +9463,41 @@ function _vClientRect(v) {
         ? v.model.text.mapToItem(null, r.x, r.y) : { x: 0, y: 0 };
     return { x: origin.x, y: origin.y, left: origin.x, top: origin.y, right: origin.x + r.width,
         bottom: origin.y + r.height, width: r.width, height: r.height };
+}
+
+// One box a line: the same scan as `_vRect`, kept apart by the line it hit.
+function _vClientRects(v, whole) {
+    var text = v.model.text;
+    var lineHeight = text.contentHeight / Math.max(1, text.lineCount);
+    if (text.lineCount < 2 || !(lineHeight > 0)) {
+        return [whole];
+    }
+    var step = Math.max(1, Math.floor((_vTwin(v.model).font.pixelSize || 16) / 2));
+    var boxes = {};
+    for (var y = step / 2; y < text.height; y += step) {
+        for (var x = 0; x < text.width; x += 2) {
+            for (var o = _vHitAt(v.model, x, y); o; o = o.vparent) {
+                if (o === v) {
+                    var at = Math.floor(y / lineHeight);
+                    var box = boxes[at] || (boxes[at] = { min: x, max: x + 2 });
+                    box.min = Math.min(box.min, x);
+                    box.max = Math.max(box.max, x + 2);
+                    break;
+                }
+            }
+        }
+    }
+    var keys = Object.keys(boxes).map(Number).sort(function(a, b) { return a - b; });
+    if (keys.length < 2) {
+        return [whole];
+    }
+    var content = Math.min(lineHeight, _vMetrics(text).height || lineHeight);
+    return keys.map(function(at) {
+        var origin = text.mapToItem(null, boxes[at].min, at * lineHeight + (lineHeight - content) / 2);
+        var width = boxes[at].max - boxes[at].min;
+        return { x: origin.x, y: origin.y, left: origin.x, top: origin.y, right: origin.x + width,
+            bottom: origin.y + content, width: width, height: content };
+    });
 }
 
 // `_connectSignalOnce` for a node: what reaches it is its `Text`'s tap.

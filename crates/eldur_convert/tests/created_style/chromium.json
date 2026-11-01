@@ -80,6 +80,35 @@
   "clicks": [],
   "probes": []
  },
+ "hidden_reads": {
+  "log": [
+   "CS it-a \"Hello world\" \"Hello hidden bold world\"",
+   "CS it-b \"Hello world\" \"Hello hidden world\"",
+   "CS it-c \"one\\nfive\" \"onetwothreefourfive\"",
+   "CS it-d \"a\\nc\" \"abc\"",
+   "CS it-e \"xz\" \"xyz\"",
+   "CS it-f \"in hidden box\" \"in hidden box\"",
+   "CS it-a2 \"Hello hidden bold world\"",
+   "CS it-a3 \"Hello world\"",
+   "CS it-b2 \"Hello hidden world\"",
+   "CS focus-i1 BODY ",
+   "CS focus-i2 BODY ",
+   "CS focus-b1 BODY ",
+   "CS focus-i3 i3",
+   "CS focus-keep i3",
+   "CS rects-n 3",
+   "CS rects-0 0,0",
+   "CS rects-1 0,20",
+   "CS rects-2 0,40",
+   "CS sh-0 20 409 \"a b c\"",
+   "CS sh-1 21 410 \"a  b c\"",
+   "CS sh-2 21 410 \"a  b k c\"",
+   "CS sh-3 21 410 \"a b k c\"",
+   "CS sh-4 21 410 \"a b k c\""
+  ],
+  "clicks": [],
+  "probes": []
+ },
  "inline_box": {
   "log": [
    "CS width 0 0,1,102,22 end=254",

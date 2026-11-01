@@ -234,3 +234,8 @@ fn inline_children() {
 fn hidden_items() {
     page("hidden_items");
 }
+
+#[test]
+fn hidden_reads() {
+    page("hidden_reads");
+}
