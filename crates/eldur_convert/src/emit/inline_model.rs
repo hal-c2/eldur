@@ -33,6 +33,23 @@ fn computed(style: &ComputedStyle) -> Json {
     if let Some(keyword) = style.font_size_keyword {
         out["kw"] = json!(keyword);
     }
+    // An inline element's rect is its border box, which its line's text does not show.
+    let edge = |padding: &eldur_css::Length, border: &eldur_css::BorderSide| {
+        padding.as_px().unwrap_or(0.0).max(0.0) + super::decoration::border_width(border)
+    };
+    let edges = [
+        edge(&style.padding.top, &style.border.top),
+        edge(&style.padding.right, &style.border.right),
+        edge(&style.padding.bottom, &style.border.bottom),
+        edge(&style.padding.left, &style.border.left),
+    ];
+    if edges.iter().any(|e| *e != 0.0) {
+        out["edge"] = json!(edges);
+    }
+    let (rel_x, rel_y) = super::inline::relative_offset(style);
+    if (rel_x, rel_y) != (0.0, 0.0) {
+        out["rel"] = json!([rel_x, rel_y]);
+    }
     match style.line_height {
         LineHeight::Normal => {}
         LineHeight::Number(n) => {
@@ -250,7 +267,7 @@ impl Emitter<'_, '_> {
                         // through it.
                         let mut rest = self.run_nodes(&s.children, gen_boxes);
                         for kid in &mut rest {
-                            if kid.get("gen").is_none() && kid.get("under").is_none() {
+                            if kid.get("under").is_none() {
                                 kid["under"] = json!(n.index());
                             }
                         }

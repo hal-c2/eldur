@@ -564,7 +564,7 @@ ApplicationWindow {
                             }
 
                             EldurRun {
-                                property string eldurRun: "[{\"size\":12.75,\"family\":\"serif\",\"line\":0,\"align\":\"sub\"}]"
+                                property string eldurRun: "[{\"size\":12.75,\"family\":\"serif\",\"line\":0,\"relY\":3.1875,\"align\":\"sub\"}]"
 
                                 text: "2"
                                 color: "#1d1f23"
@@ -580,7 +580,7 @@ ApplicationWindow {
                             }
 
                             EldurRun {
-                                property string eldurRun: "[{\"size\":12.75,\"family\":\"serif\",\"line\":0,\"align\":\"super\"}]"
+                                property string eldurRun: "[{\"size\":12.75,\"family\":\"serif\",\"line\":0,\"relY\":-6.375,\"align\":\"super\"}]"
 
                                 text: "2"
                                 color: "#1d1f23"

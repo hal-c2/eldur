@@ -89,6 +89,24 @@ fn own_box(parent: &ComputedStyle, span: &ComputedStyle) -> bool {
             != super::fonts::expected_face(&parent.font_family)
         || super::fonts::extents(span) != super::fonts::extents(parent)
         || (line_height(span) - line_height(parent)).abs() > 1e-3
+        || relative_offset(span) != (0.0, 0.0)
+}
+
+/// How far `position: relative` moves an inline element from where its line has it.
+/// A `%` has nothing to resolve against here, and left and top win as in CSS 2.2 §9.4.3.
+pub(super) fn relative_offset(style: &ComputedStyle) -> (f32, f32) {
+    if style.position != eldur_css::Position::Relative {
+        return (0.0, 0.0);
+    }
+    let axis = |near: &LengthAuto, far: &LengthAuto| match (near, far) {
+        (LengthAuto::Length(l), _) => l.as_px().unwrap_or(0.0),
+        (LengthAuto::Auto, LengthAuto::Length(l)) => -l.as_px().unwrap_or(0.0),
+        (LengthAuto::Auto, LengthAuto::Auto) => 0.0,
+    };
+    (
+        axis(&style.left, &style.right),
+        axis(&style.top, &style.bottom),
+    )
 }
 
 fn holds_own_box(parent: &ComputedStyle, items: &[Inline<'_>]) -> bool {
@@ -140,7 +158,14 @@ fn sole_box<'a>(items: &[Inline<'a>]) -> Option<&'a ComputedStyle> {
 
 fn holds_box(items: &[Inline<'_>]) -> bool {
     items.iter().any(|item| match item {
-        Inline::Span(span) => paints_box(span.style) || holds_box(&span.children),
+        // RichText widens a joiner for side space, and that joiner's fallback font
+        // then decides the line's height.
+        Inline::Span(span) => {
+            paints_box(span.style)
+                || super::text::inline_space(span.style, super::text::Side::Left) > 0.0
+                || super::text::inline_space(span.style, super::text::Side::Right) > 0.0
+                || holds_box(&span.children)
+        }
         Inline::Text(_) | Inline::Atomic(_) | Inline::LineBreak => false,
     })
 }
@@ -161,7 +186,9 @@ fn holds_painted(items: &[Inline<'_>]) -> bool {
 /// the whole line is already the `Text`'s own (`whole_span`).
 pub(crate) fn needs_lines_for_runs(block: &ComputedStyle, items: &[Inline<'_>]) -> bool {
     match (super::text::whole_span(block, items), items) {
-        (Some(_), [Inline::Span(span)]) => holds_own_box(span.style, &span.children),
+        (Some(_), [Inline::Span(span)]) => {
+            relative_offset(span.style) != (0.0, 0.0) || holds_own_box(span.style, &span.children)
+        }
         _ => holds_own_box(block, items),
     }
 }
@@ -338,6 +365,13 @@ fn levels_json(levels: &[(&ComputedStyle, Option<NodeId>)]) -> String {
             }
             if let Some(line) = super::text::line_height(style) {
                 fields.push(format!("\"line\":{}", fmt_number(f64::from(line))));
+            }
+            let (rel_x, rel_y) = relative_offset(style);
+            if rel_x != 0.0 {
+                fields.push(format!("\"relX\":{}", fmt_number(f64::from(rel_x))));
+            }
+            if rel_y != 0.0 {
+                fields.push(format!("\"relY\":{}", fmt_number(f64::from(rel_y))));
             }
             let align = match style.vertical_align {
                 VerticalAlign::Baseline => None,

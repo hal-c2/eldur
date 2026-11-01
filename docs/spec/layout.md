@@ -293,6 +293,8 @@ Qt's document layout has no per-line box of this kind and no fractional heights,
 
 **Cost.** Qt's compile of a document grows faster than the number of JavaScript bindings and enum assignments in it: 400 paragraphs of seven runs took 22 s cold when each run wrote its own, and 0.6 s now (0.5 s for the same page as one `Text` each). So what all runs share lives in `EldurRun.qml`, `eldurRun` is a JSON string, and a run's family is a literal that `EldurLines` resolves once.
 
+**A run's own box.** Padding and border do not change the line box and are in the run's rect: left on the line it opens, right on the line it closes, top and bottom on every line. Generated content is in the rect of the element it belongs to, on whichever run it landed. `position: relative` moves a run where it is painted and in its rect, and does not grow the line. A span with horizontal padding is on `EldurLines` too: the joiner a `RichText` line would use made such a line 22 px where Chromium has 18.
+
 ## 2. Inline formatting context
 
 **Decision:** one `Text` per inline formatting context, with `textFormat: Text.StyledText`, as long as its runs share one size, family and line height, and nothing moves one off the baseline; `<b>`, `<i>`, `<a>` stay in it. Otherwise the content is laid out by `EldurLines`, one `EldurRun` per run with its exact size (§1.3), never `<big>` or `<small>`. Content holding an atomic box (a replaced element, a control, `inline-block`, `inline-flex`) goes the same way: see below. On a page with scripts a change to a run (`style.fontSize`, a class, `textContent`) splits a `Text` into lines at that moment and gives the runs their boxes (`setRunLevels`); a font set on the block itself stays in place and keeps the models.

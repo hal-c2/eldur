@@ -696,8 +696,12 @@ Item {
                 p.x -= left;
                 p.y -= high;
             });
-            item.x = left;
-            item.y = high;
+            // `position: relative` moves what the line placed, and nothing else on it.
+            const moved = _runLevels(item).reduce(function(sum, level) {
+                return { x: sum.x + (level.relX || 0), y: sum.y + (level.relY || 0) };
+            }, { x: 0, y: 0 });
+            item.x = left + moved.x;
+            item.y = high + moved.y;
             item.width = Math.max(0, right - left);
             item.forceLayout();
             // An inline element's own box is painted on these.

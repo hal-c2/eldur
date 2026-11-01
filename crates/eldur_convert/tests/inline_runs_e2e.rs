@@ -216,10 +216,6 @@ fn lines<'a>(chromium: &'a Value, key: &str) -> Vec<&'a str> {
 const KNOWN_CLOSED: &[(&str, &str)] = &[];
 const KNOWN_OPEN: &[(&str, &str)] = &[
     (
-        "open p99r",
-        "a culled <q> answers with one rect where Chromium has one for each quote and the text; its bounding box agrees",
-    ),
-    (
         "open p166r",
         "a long 13.33px run is drawn at 13px or 14px by Qt, which has no fractional size: 26 px across 875",
     ),
@@ -280,6 +276,8 @@ fn closed_paragraphs_are_where_chromium_has_them() {
 fn compare_log(name: &str, html: &str, key: &str, known_cases: &[(&str, &str)]) {
     let chromium = chromium();
     let want = lines(&chromium, key);
+    // A script Chromium cannot parse records nothing, and nothing equals nothing.
+    assert!(!want.is_empty(), "{key} was recorded empty");
     let (logged, problems) = run(name, html, 0);
     assert!(problems.is_empty(), "{}", problems.join("\n"));
     let mut found = BTreeMap::new();

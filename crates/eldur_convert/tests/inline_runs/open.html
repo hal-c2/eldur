@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html><head><style>body{margin:8px;font:14px Arial}p{margin:0 0 10px}</style></head><body>
+<html><head><style>body{margin:8px;font:14px Arial}p{margin:0 0 10px}.bef::before{content:"» ";font-size:24px}.aft::after{content:" «";font-size:10px}</style></head><body>
 <p id="p0">Text <span id=p0r style="font-size:8px">sized run</span> after</p>
 <p id="p1">Text <span id=p1r style="font-size:10px">sized run</span> after</p>
 <p id="p2">Text <span id=p2r style="font-size:11.67px">sized run</span> after</p>
@@ -178,6 +178,25 @@
 <p id="p175" style="white-space:pre">Kept  <span id=p175r style="font-size:20px">pre  run</span>
 next line</p>
 <p id="p176">One<br><span id=p176r style="font-size:20px">two<br>three</span><br>four</p>
+<p id="p177" style="font-family:'Nimbus Roman';font-weight:bold">Text <span id=p177r style="vertical-align:middle;font-size:30px">middle run</span> after</p>
+<p id="p178" style="font-family:'Nimbus Roman';font-style:italic">Text <span id=p178r style="vertical-align:middle;font-size:30px">middle run</span> after</p>
+<p id="p179" style="font-family:'Noto Sans';font-weight:bold">Text <span id=p179r style="vertical-align:middle;font-size:30px">middle run</span> after</p>
+<p id="p180" style="font-family:'Nimbus Sans';font-weight:bold;font-style:italic">Text <span id=p180r style="vertical-align:middle;font-size:30px">middle run</span> after</p>
+<p id="p181">Use <span id=p181r style="padding:3px 5px">padding only</span> after</p>
+<p id="p182">Use <span id=p182r style="padding:2px 6px;border:1px solid #999;border-radius:3px;background:#eee;font-size:12px">tag</span> after</p>
+<p id="p183">Use <span id=p183r style="background:#ff0;padding:1px">square</span> after</p>
+<p id="p184">Use <span id=p184r style="background:#ff0;padding:4px 0">tall only</span> after</p>
+<p id="p185">Use <kbd id=p185r style="border:1px solid #aaa;padding:0 3px">Ctrl</kbd>+<kbd style="border:1px solid #aaa;padding:0 3px">C</kbd> after</p>
+<p id="p186" style="width:150px">Use <span id=p186r style="padding:2px 6px;border:1px solid #999">a box that goes over lines</span> after</p>
+<p id="p187">Text <span id=p187r class="bef">before</span> after</p>
+<p id="p188">Text <span id=p188r class="aft">after it</span> after</p>
+<p id="p189">Text <span id=p189r class="bef aft">both sides</span> after</p>
+<p id="p190">Text <q id=p190r>quoted words</q> after</p>
+<p id="p191">Rel <span id=p191r style="position:relative;top:5px">moved run</span> after</p>
+<p id="p192">Rel <span id=p192r style="position:relative;bottom:5px;left:3px;font-size:20px">moved run</span> after</p>
+<p id="p193"><span id=p193r style="position:relative;top:4px">Whole paragraph moved</span></p>
+<p id="p194">Rel <span id=p194r style="position:relative;left:2px">out <b style="position:relative;top:3px">in</b> out</span> after</p>
+<p id="p195">x<sup id=p195r style="position:relative;top:-0.5em;vertical-align:baseline;font-size:75%;line-height:0">2</sup> and H<sub style="position:relative;bottom:-0.25em;vertical-align:baseline;font-size:75%;line-height:0">2</sub>O</p>
 <script>function rect(n){const r=n.getBoundingClientRect();return [r.x,r.y,r.width,r.height]}
 function rects(n){return Array.from(n.getClientRects()).map(r=>[r.x,r.y,r.width,r.height])}
 function report(tag,ids){for(const id of ids){const n=document.getElementById(id);if(n)console.log("LC "+tag+" "+id+" "+JSON.stringify({b:rect(n),l:rects(n)}))}}

@@ -44,12 +44,9 @@ const NOBUBBLE: &str = "Qt has no validation bubble: the message goes to the log
 const COMPACT: &str = "a right-aligned row: its buttons are whole pixels wider (see BUTTONWIDTH), which would start this one 2px left; not confirmed";
 const BUTTONWIDTH: &str = "a button's width is whole pixels (`Math.ceil` in emit/controls.rs): \
                            five on a line add up to 2.2px against Chromium's fractions";
-const SPANSCAN: &str = "a wrapped span's box comes from scanning its Text in half-font steps, so its height lands on a step: 56 for Chromium's 53";
 const CONTROLROW: &str = "with the form between them hidden, the heading's bottom margin of 21.44 looks lost, leaving only #done's 16; not confirmed";
 const CREATED_STRETCH: &str =
     "a grid a script filled leaves its items at their own height, not the row's";
-const HANGING: &str = "a span wrapped across lines measures the space hanging at its first line's end; \
-                       the scan over the Text's links cannot tell that space from the word before it";
 const SCRIPTPOSITION: &str = "style.position = \"absolute\" from a script leaves an element in the layout that holds it, \
                               since a template has one form; the runtime says so, and a class does work (input_real_made)";
 const AREALINE: &str = "a TextArea has no line height to set: `font: 13px/16px` keeps Qt's taller line, so three lines overflow what Chromium fits";
@@ -103,9 +100,7 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("theme", "* #compact[*] x:", COMPACT),
     ("theme", "* body[*] text:", NEVER_SCRIPT),
     ("form", "* #done[*] y:", CONTROLROW),
-    ("hidden_lines", "* #s4[*] width:", HANGING),
     ("cards", "* .card[*] height:", CREATED_STRETCH),
-    ("lines_created", "* #ws[*] width:", SPANSCAN),
     ("created_lines", "* #reset[*] x:", BUTTONWIDTH),
     (
         "input_real_more",

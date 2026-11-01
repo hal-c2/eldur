@@ -3399,16 +3399,20 @@ function _layoutForRead() {
     _aRead();
     if (_layoutDirty.length === 0) {
         // Lines lay out once when complete, which may be after a page's script.
-        if (!_linesLaidOut) {
-            _linesLaidOut = true;
-            _polishDown(_root);
+        if (_linesLaidOut) {
+            return;
         }
-        return;
+        _linesLaidOut = true;
+        _polishDown(_root);
     }
-    _settleLayouts();
-    _polishDown(_root);
-    _gAfterPolish();
-    _polishDown(_root);
+    // A polish can hand a block the width it was laid out without, which asks again.
+    for (var pass = 0; pass < 3 && (_layoutDirty.length > 0 || _gWidthMoved); ++pass) {
+        _gWidthMoved = false;
+        _settleLayouts();
+        _polishDown(_root);
+        _gAfterPolish();
+        _polishDown(_root);
+    }
 }
 
 var _linesLaidOut = false;
@@ -9329,7 +9333,13 @@ var _vKeyed = {};
 
 function _vBuild(json, parent, model) {
     if (json.gen) {
-        return { gen: json.gen };
+        var made = { gen: json.gen, model: model };
+        // An `::after` a run of its own is on: its element is in an earlier run.
+        var owner = json.under !== undefined ? _vKeyed[json.under] : null;
+        if (owner) {
+            owner.genRuns = (owner.genRuns || []).concat([made]);
+        }
+        return made;
     }
     if (json.under !== undefined && !parent) {
         // The rest of an element a run before this one started.
@@ -10146,6 +10156,11 @@ function _vStyle(v) {
     }
     v.cleanNow = clean;
     v.style = clean ? v.c : _vCascade(v, pc);
+    // A cascade works out fonts and colours; these stay what the converter resolved.
+    if (!clean && v.c) {
+        v.style.edge = v.c.edge;
+        v.style.rel = v.c.rel;
+    }
     v.styleGen = _vGen;
     return v.style;
 }
@@ -10499,6 +10514,10 @@ function _vBoxOf(c, v) {
     if (c.vp !== undefined) {
         box.percent = c.vp;
     }
+    if (c.rel) {
+        box.relX = c.rel[0];
+        box.relY = c.rel[1];
+    }
     if (v && (c.va === "top" || c.va === "bottom")) {
         box.group = _meta(v).lineGroup = _meta(v).lineGroup || ++_vLineGroups;
     }
@@ -10509,7 +10528,7 @@ var _vLineGroups = 0;
 
 // Whether an element with style `c` has a box its parent's `Text` could not be.
 function _vOwnBox(pc, c) {
-    if (c.va || c.vs !== undefined || c.vp !== undefined || c.size !== pc.size || c.lh !== pc.lh
+    if (c.va || c.vs !== undefined || c.vp !== undefined || c.rel || c.size !== pc.size || c.lh !== pc.lh
         || EldurFonts.family(c.family) !== EldurFonts.family(pc.family)) {
         return true;
     }
@@ -10836,6 +10855,7 @@ function _vPutRuns(line, models, runs, base, model) {
         var kept = [];
         entries.forEach(function(e) {
             if (e.gen) {
+                e.model = m;
                 kept.push(e);
                 return;
             }
@@ -10921,6 +10941,14 @@ function _vPieces(v) {
         (node.kids || []).forEach(function(k) {
             if (!k.gen) {
                 walk(k);
+            } else if (node.model && out.indexOf(node.model) === -1) {
+                // A `::before` of another font is a run of its own, and in the box.
+                out.push(node.model);
+            }
+        });
+        (node.genRuns || []).forEach(function(g) {
+            if (g.model && out.indexOf(g.model) === -1) {
+                out.push(g.model);
             }
         });
     })(v);
@@ -11001,7 +11029,9 @@ function _vFragments(v) {
                 : text.mapToItem(null, 0, baseline - box.ascent);
             var shift = onLine ? 0 : _gGlyphShift(text);
             var left = onLine ? line.mapToItem(null, x, 0).x : text.mapToItem(null, x, 0).x;
-            out.push({ x: left, y: pt.y - shift, width: width, height: box.ascent + box.descent, base: baseline });
+            // `x` comes off the run, which `position: relative` has moved already.
+            var moved = levels.reduce(function(sum, level) { return sum + (level.relY || 0); }, 0);
+            out.push({ x: left, y: pt.y - shift + moved, width: width, height: box.ascent + box.descent, base: baseline });
         }
         if (onLine) {
             var strut = line.lineStrut();
@@ -11052,6 +11082,18 @@ function _vFragments(v) {
             merged.push(f);
         }
     });
+    // The text is inside the border box: sides on the lines the box opens and closes.
+    var edge = _vStyle(v).edge;
+    if (edge) {
+        merged.forEach(function(f, n) {
+            var before = n === 0 ? edge[3] : 0;
+            var after = n === merged.length - 1 ? edge[1] : 0;
+            f.x -= before;
+            f.width += before + after;
+            f.y -= edge[0];
+            f.height += edge[0] + edge[2];
+        });
+    }
     return merged;
 }
 
@@ -11072,6 +11114,24 @@ function _vRows(v, model) {
             }
         }
     }
+    // The scan steps 2 px: bring each end to where the glyphs really change hands.
+    Object.keys(rows).forEach(function(at) {
+        var row = rows[at];
+        var y = (Number(at) + 0.5) * lineHeight;
+        function edge(inside, outside) {
+            for (var n = 0; n < 4; ++n) {
+                var middle = (inside + outside) / 2;
+                if (_vIn(_vHitAt(model, middle, y), v)) {
+                    inside = middle;
+                } else {
+                    outside = middle;
+                }
+            }
+            return inside;
+        }
+        row.min = edge(row.min, Math.max(0, row.min - 2));
+        row.max = edge(row.max - 2, Math.min(text.width, row.max));
+    });
     return rows;
 }
 
@@ -11185,6 +11245,9 @@ function _vCulled(v) {
     var kids = v.kids.filter(function(k) { return !k.gen && !k.vtext; });
     var own = _vStyle(v);
     var over = v.vparent ? _vStyle(v.vparent) : _vBase(v.model);
+    if (_vCullable(own) && !_vOwnBox(over, own) && kids.length === 0) {
+        return _vCulledGen(v, own, whole);
+    }
     // A child of another size gives the span a box after all (measured).
     var plain = kids.every(function(k) { return !_vOwnBox(own, _vStyle(k)); });
     if (kids.length === 0 || !plain || !_vCullable(own) || _vOwnBox(over, own)) {
@@ -11212,8 +11275,37 @@ function _vCulled(v) {
     return out;
 }
 
+// A box-less element's generated text of its own font is a box of its own (measured).
+function _vCulledGen(v, own, whole) {
+    function same(g) {
+        if (!g || !g.text) {
+            return false;
+        }
+        // What `c` does not name it has from `own`.
+        var c = g.c || {};
+        return ["size", "family", "lh", "va"].every(function(key) { return c[key] === undefined || c[key] === own[key]; });
+    }
+    if (!same(v.before) && !same(v.after)) {
+        return whole;
+    }
+    var metrics = _vMetrics(v.model.text);
+    var outer = whole[0];
+    var head = same(v.before) ? metrics.advanceWidth(v.before.text) : 0;
+    var tail = same(v.after) ? metrics.advanceWidth(v.after.text) : 0;
+    var parts = [];
+    function part(x, width) {
+        if (width > 0.01) {
+            parts.push({ x: x, y: outer.y, width: width, height: outer.height });
+        }
+    }
+    part(outer.x, head);
+    part(outer.x + head, outer.width - head - tail);
+    part(outer.x + outer.width - tail, tail);
+    return parts;
+}
+
 function _vCullable(style) {
-    return style.bg === "rgba(0, 0, 0, 0)" && !style.padding && !style.border;
+    return style.bg === "rgba(0, 0, 0, 0)" && !style.edge;
 }
 
 // One box a line.
@@ -19740,6 +19832,7 @@ function _gLayoutRoots() {
         }
         var margins = _gPlace(raw, Math.max(avail, 0), opts, null);
         _meta(raw).gMargins = margins;
+        _gFollowWidth(raw.parent);
         if (_isLines(raw.parent)) {
             _gLineMargins(raw, e);
         }
@@ -19749,6 +19842,21 @@ function _gLayoutRoots() {
     }
     _gMarginPass();
     return outOfFlow;
+}
+
+// A layout can still be polishing the width just used: the page's other blocks
+// wait for theirs too, and a box set on the passing width keeps its lines.
+var _gWidthMoved = false;
+
+function _gFollowWidth(parent) {
+    var m = _meta(parent);
+    if (!m.gFollowsWidth) {
+        m.gFollowsWidth = true;
+        parent.widthChanged.connect(function() {
+            _gWidthMoved = true;
+            _gTouch();
+        });
+    }
 }
 
 // A filled grid's item is as wide as its track, which only the grid knows.

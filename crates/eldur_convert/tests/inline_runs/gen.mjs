@@ -102,9 +102,32 @@ const CASES = [
   ["white-space:nowrap", `Kept <span id=@ style="font-size:20px">on one</span> ${LONG}`],
   ["white-space:pre", `Kept  <span id=@ style="font-size:20px">pre  run</span>\nnext line`],
   ["", `One<br><span id=@ style="font-size:20px">two<br>three</span><br>four`],
+  // `middle` sits on the x-height of the face its parent is in.
+  ["font-family:'Nimbus Roman';font-weight:bold", `Text <span id=@ style="vertical-align:middle;font-size:30px">middle run</span> after`],
+  ["font-family:'Nimbus Roman';font-style:italic", `Text <span id=@ style="vertical-align:middle;font-size:30px">middle run</span> after`],
+  ["font-family:'Noto Sans';font-weight:bold", `Text <span id=@ style="vertical-align:middle;font-size:30px">middle run</span> after`],
+  ["font-family:'Nimbus Sans';font-weight:bold;font-style:italic", `Text <span id=@ style="vertical-align:middle;font-size:30px">middle run</span> after`],
+  // A run's box: padding and border are in its rect, on the lines it opens and closes.
+  ["", `Use <span id=@ style="padding:3px 5px">padding only</span> after`],
+  ["", `Use <span id=@ style="padding:2px 6px;border:1px solid #999;border-radius:3px;background:#eee;font-size:12px">tag</span> after`],
+  ["", `Use <span id=@ style="background:#ff0;padding:1px">square</span> after`],
+  ["", `Use <span id=@ style="background:#ff0;padding:4px 0">tall only</span> after`],
+  ["", `Use <kbd id=@ style="border:1px solid #aaa;padding:0 3px">Ctrl</kbd>+<kbd style="border:1px solid #aaa;padding:0 3px">C</kbd> after`],
+  ["width:150px", `Use <span id=@ style="padding:2px 6px;border:1px solid #999">a box that goes over lines</span> after`],
+  // Generated content is in the element's box.
+  ["", `Text <span id=@ class="bef">before</span> after`],
+  ["", `Text <span id=@ class="aft">after it</span> after`],
+  ["", `Text <span id=@ class="bef aft">both sides</span> after`],
+  ["", `Text <q id=@>quoted words</q> after`],
+  // \`position: relative\`, normalize.css's sub and sup among them, moves and does not grow the line.
+  ["", `Rel <span id=@ style="position:relative;top:5px">moved run</span> after`],
+  ["", `Rel <span id=@ style="position:relative;bottom:5px;left:3px;font-size:20px">moved run</span> after`],
+  ["", `<span id=@ style="position:relative;top:4px">Whole paragraph moved</span>`],
+  ["", `Rel <span id=@ style="position:relative;left:2px">out <b style="position:relative;top:3px">in</b> out</span> after`],
+  ["", `x<sup id=@ style="position:relative;top:-0.5em;vertical-align:baseline;font-size:75%;line-height:0">2</sup> and H<sub style="position:relative;bottom:-0.25em;vertical-align:baseline;font-size:75%;line-height:0">2</sub>O`],
 ].map(([block, inner], i) => ({ id: `p${i}`, block, inner: inner.replaceAll("id=@", `id=p${i}r`) }));
 
-const STYLE = "body{margin:8px;font:14px Arial}p{margin:0 0 10px}";
+const STYLE = 'body{margin:8px;font:14px Arial}p{margin:0 0 10px}.bef::before{content:"» ";font-size:24px}.aft::after{content:" «";font-size:10px}';
 const body = CASES.map((c) => `<p id="${c.id}"${c.block ? ` style="${c.block}"` : ""}>${c.inner}</p>`).join("\n");
 
 // One decimal-free line per element, the way the test reads them back.
@@ -134,11 +157,6 @@ const CHANGES = [
   ["tall", `$("s12r").style.fontSize="14px"`],
   ["created", `const n=document.createElement("span");n.id="s13n";n.style.fontSize="24px";n.textContent="made";$("s13").appendChild(n)`],
   ["removed", `$("s14r").remove()`],
-  // `middle` sits on the x-height of the face its parent is in.
-  ["font-family:'Nimbus Roman';font-weight:bold", `Text <span id=@ style="vertical-align:middle;font-size:30px">middle run</span> after`],
-  ["font-family:'Nimbus Roman';font-style:italic", `Text <span id=@ style="vertical-align:middle;font-size:30px">middle run</span> after`],
-  ["font-family:'Noto Sans';font-weight:bold", `Text <span id=@ style="vertical-align:middle;font-size:30px">middle run</span> after`],
-  ["font-family:'Nimbus Sans';font-weight:bold;font-style:italic", `Text <span id=@ style="vertical-align:middle;font-size:30px">middle run</span> after`],
 ];
 const CHANGE_PAGE = `<!DOCTYPE html>
 <html><head><style>${STYLE}.big{font-size:22px}</style></head><body>
