@@ -91,6 +91,12 @@ Item {
         });
     }
 
+    // Where a run's lines are, in its own coordinates.
+    function runLines(item) {
+        const run = _runs.get(item);
+        return run && run.place ? run.place : [];
+    }
+
     function _isText(item) {
         return item.lineLaidOut !== undefined && typeof item.text === "string";
     }

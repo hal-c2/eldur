@@ -96,6 +96,9 @@ var wrapreal = get("wrapreal");
 wrapreal.appendChild(make("button", "rb", "", "x"));
 wrapreal.appendChild(make("span", "rs", "", "Words on a first line and then a much longer second line then short"));
 wrapreal.addEventListener("click", function (e) { log("press " + e.target.id); });
+
+// One rectangle a line, for a run and for a span with a Text of its own.
+log("rects " + ["ws", "ms", "rs"].map(function (id) { return id + ":" + get(id).getClientRects().length; }).join(" "));
 </script>
 </body>
 </html>

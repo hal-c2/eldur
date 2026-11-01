@@ -7304,6 +7304,15 @@ function wrap(rawItem) {
             if (rawItem.__eldurInline && (r.width > 0 || r.height > 0)) {
                 return _asNodeList(_vClientRects(rawItem, r));
             }
+            var holder = rawItem.parent;
+            var placed = holder && typeof holder.runLines === "function" ? holder.runLines(rawItem) : [];
+            if (placed.length > 1) {
+                return _asNodeList(placed.map(function(p) {
+                    var o = rawItem.mapToItem(null, p.x, p.y);
+                    return { x: o.x, y: o.y, left: o.x, top: o.y, right: o.x + p.width,
+                        bottom: o.y + p.height, width: p.width, height: p.height };
+                }));
+            }
             return _asNodeList(r.width > 0 || r.height > 0 ? [r] : []);
         },
         get selected() { return rawItem.sel === true; },
