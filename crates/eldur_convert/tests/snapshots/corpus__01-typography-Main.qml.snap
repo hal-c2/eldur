@@ -802,6 +802,10 @@ ApplicationWindow {
                                 width: parent.width
                                 height: parent.height
                                 scrollsY: false
+                                stickPadTop: 16
+                                stickPadRight: 20
+                                stickPadBottom: 16
+                                stickPadLeft: 20
                                 contentWidth: Math.max(width, preText.contentWidth + 40)
                                 contentHeight: height
 

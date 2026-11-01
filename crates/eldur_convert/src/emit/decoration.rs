@@ -292,6 +292,16 @@ impl Emitter<'_, '_> {
         let pad_y = deco.insets.top - top;
         let pad_right = deco.insets.right - right;
         let pad_bottom = deco.insets.bottom - bottom;
+        for (name, pad) in [
+            ("stickPadTop", pad_y),
+            ("stickPadRight", pad_right),
+            ("stickPadBottom", pad_bottom),
+            ("stickPadLeft", pad_x),
+        ] {
+            if pad != 0.0 {
+                scroller.set(name, number(pad));
+            }
+        }
         let mut wide = vec!["width".to_owned()];
         let mut tall = vec!["height".to_owned()];
         if let Some((mut inner, inner_id)) = inner {

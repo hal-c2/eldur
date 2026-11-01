@@ -38780,6 +38780,485 @@
    }
   }
  ],
+ "scroll_more": [
+  {
+   "name": "load",
+   "log": [
+    "pad 360 120 220 130",
+    "pad at 60 -45 20 -5",
+    "pad end 240 20",
+    "th 50 130 100",
+    "side 230 310",
+    "side far 170 240",
+    "wide 100 600 200 -100",
+    "hid 40 350",
+    "into 270 420",
+    "hit padFill",
+    "hit top padHead",
+    "hit border pad",
+    "cpad 360 120 220",
+    "cpad at 60 405 470 445",
+    "chit cfill",
+    "cpad end 240 470"
+   ],
+   "state": {
+    "#pad": [
+     {
+      "box": [
+       0,
+       0,
+       230,
+       130
+      ],
+      "shown": true,
+      "text": "heads"
+     }
+    ],
+    "#padStick": [
+     {
+      "box": [
+       15,
+       35,
+       200,
+       20
+      ],
+      "shown": true,
+      "text": "s"
+     }
+    ],
+    "#th1": [
+     {
+      "box": [
+       0,
+       130,
+       140,
+       20
+      ],
+      "shown": true,
+      "text": "A"
+     }
+    ],
+    "#td1": [
+     {
+      "box": [
+       0,
+       100,
+       140,
+       40
+      ],
+      "shown": true,
+      "text": "1"
+     }
+    ],
+    "#sideBar": [
+     {
+      "box": [
+       0,
+       240,
+       200,
+       50
+      ],
+      "shown": true,
+      "text": "bar"
+     }
+    ],
+    "#stickEnd": [
+     {
+      "box": [
+       0,
+       170,
+       200,
+       30
+      ],
+      "shown": true,
+      "text": "e"
+     }
+    ],
+    "#wideKid": [
+     {
+      "box": [
+       -100,
+       330,
+       600,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       420,
+       200,
+       30
+      ],
+      "shown": true,
+      "text": "t"
+     }
+    ],
+    "#cstick": [
+     {
+      "box": [
+       15,
+       470,
+       200,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "wheelPad",
+   "log": [],
+   "state": {
+    "#pad": [
+     {
+      "box": [
+       0,
+       0,
+       230,
+       130
+      ],
+      "shown": true,
+      "text": "heads"
+     }
+    ],
+    "#padStick": [
+     {
+      "box": [
+       15,
+       20,
+       200,
+       20
+      ],
+      "shown": true,
+      "text": "s"
+     }
+    ],
+    "#th1": [
+     {
+      "box": [
+       0,
+       130,
+       140,
+       20
+      ],
+      "shown": true,
+      "text": "A"
+     }
+    ],
+    "#td1": [
+     {
+      "box": [
+       0,
+       100,
+       140,
+       40
+      ],
+      "shown": true,
+      "text": "1"
+     }
+    ],
+    "#sideBar": [
+     {
+      "box": [
+       0,
+       240,
+       200,
+       50
+      ],
+      "shown": true,
+      "text": "bar"
+     }
+    ],
+    "#stickEnd": [
+     {
+      "box": [
+       0,
+       170,
+       200,
+       30
+      ],
+      "shown": true,
+      "text": "e"
+     }
+    ],
+    "#wideKid": [
+     {
+      "box": [
+       -100,
+       330,
+       600,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       420,
+       200,
+       30
+      ],
+      "shown": true,
+      "text": "t"
+     }
+    ],
+    "#cstick": [
+     {
+      "box": [
+       15,
+       470,
+       200,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "wheelTh",
+   "log": [],
+   "state": {
+    "#pad": [
+     {
+      "box": [
+       0,
+       0,
+       230,
+       130
+      ],
+      "shown": true,
+      "text": "heads"
+     }
+    ],
+    "#padStick": [
+     {
+      "box": [
+       15,
+       20,
+       200,
+       20
+      ],
+      "shown": true,
+      "text": "s"
+     }
+    ],
+    "#th1": [
+     {
+      "box": [
+       0,
+       130,
+       140,
+       20
+      ],
+      "shown": true,
+      "text": "A"
+     }
+    ],
+    "#td1": [
+     {
+      "box": [
+       0,
+       80,
+       140,
+       40
+      ],
+      "shown": true,
+      "text": "1"
+     }
+    ],
+    "#sideBar": [
+     {
+      "box": [
+       0,
+       240,
+       200,
+       50
+      ],
+      "shown": true,
+      "text": "bar"
+     }
+    ],
+    "#stickEnd": [
+     {
+      "box": [
+       0,
+       170,
+       200,
+       30
+      ],
+      "shown": true,
+      "text": "e"
+     }
+    ],
+    "#wideKid": [
+     {
+      "box": [
+       -100,
+       330,
+       600,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       420,
+       200,
+       30
+      ],
+      "shown": true,
+      "text": "t"
+     }
+    ],
+    "#cstick": [
+     {
+      "box": [
+       15,
+       470,
+       200,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "keyless",
+   "log": [],
+   "state": {
+    "#pad": [
+     {
+      "box": [
+       0,
+       0,
+       230,
+       130
+      ],
+      "shown": true,
+      "text": "heads"
+     }
+    ],
+    "#padStick": [
+     {
+      "box": [
+       15,
+       20,
+       200,
+       20
+      ],
+      "shown": true,
+      "text": "s"
+     }
+    ],
+    "#th1": [
+     {
+      "box": [
+       0,
+       130,
+       140,
+       20
+      ],
+      "shown": true,
+      "text": "A"
+     }
+    ],
+    "#td1": [
+     {
+      "box": [
+       0,
+       80,
+       140,
+       40
+      ],
+      "shown": true,
+      "text": "1"
+     }
+    ],
+    "#sideBar": [
+     {
+      "box": [
+       0,
+       240,
+       200,
+       50
+      ],
+      "shown": true,
+      "text": "bar"
+     }
+    ],
+    "#stickEnd": [
+     {
+      "box": [
+       0,
+       170,
+       200,
+       30
+      ],
+      "shown": true,
+      "text": "e"
+     }
+    ],
+    "#wideKid": [
+     {
+      "box": [
+       -100,
+       330,
+       600,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       420,
+       200,
+       30
+      ],
+      "shown": true,
+      "text": "t"
+     }
+    ],
+    "#cstick": [
+     {
+      "box": [
+       15,
+       470,
+       200,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
  "scroll_page": [
   {
    "name": "load",

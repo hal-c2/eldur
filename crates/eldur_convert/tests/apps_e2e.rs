@@ -528,3 +528,8 @@ fn motion_transitions() {
 fn scroll_created() {
     page("scroll_created");
 }
+
+#[test]
+fn scroll_more() {
+    page("scroll_more");
+}

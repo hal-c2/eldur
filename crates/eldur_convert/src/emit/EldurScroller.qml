@@ -16,6 +16,11 @@ Flickable {
     // box's: its bars go above them, on the box.
     property Item overlaidOn: null
     readonly property bool eldurChrome: true
+    // The box's padding, which position: sticky keeps clear of.
+    property real stickPadTop
+    property real stickPadRight
+    property real stickPadBottom
+    property real stickPadLeft
 
     boundsBehavior: Flickable.StopAtBounds
     clip: true

@@ -15,6 +15,8 @@ Translate {
     property real marginRight
     property real marginBottom
     property real marginLeft
+    // A table cell moves within its table, not within its row.
+    property bool cell: false
 
     readonly property Flickable scroller: {
         for (let at = target.parent; at; at = at.parent) {
@@ -43,7 +45,21 @@ Translate {
         return block.eldurScrollPort === scroller;
     }
 
+    // Chromium measures the insets from inside the scroller's padding.
+    function padded(inset, name) {
+        return inset === undefined ? undefined : inset + (scroller[name] || 0);
+    }
+
+    // The column of the table's rows and sections, around a cell's row.
+    function limit(block) {
+        if (!cell || !block.parent) return block;
+        let table = block.parent;
+        while (table.parent && table.parent.spacing !== undefined) table = table.parent;
+        return table;
+    }
+
     function blockEnd(block, along) {
+        if (cell && block.parent) return limit(block)[along];
         const box = block.parent;
         // Its children stay inside all it scrolls, not just what shows.
         if (held(block)) return along === "height" ? scroller.contentHeight : scroller.contentWidth;
@@ -60,8 +76,8 @@ Translate {
         if (!port || !block || (stickLeft === undefined && stickRight === undefined)) return 0;
         const lift = held(block) ? port.contentX : 0;
         const at = block.mapToItem(port.contentItem, target.x, target.y).x - lift;
-        const from = block.mapToItem(port.contentItem, 0, 0).x - lift;
-        return shift(stickLeft, stickRight, at, target.width, port.contentX, port.width + 0 * port.contentWidth,
+        const from = limit(block).mapToItem(port.contentItem, 0, 0).x - lift;
+        return shift(padded(stickLeft, "stickPadLeft"), padded(stickRight, "stickPadRight"), at, target.width, port.contentX, port.width + 0 * port.contentWidth,
                      from, from + blockEnd(block, "width"), marginLeft, marginRight);
     }
     y: {
@@ -70,8 +86,8 @@ Translate {
         if (!port || !block || (stickTop === undefined && stickBottom === undefined)) return 0;
         const lift = held(block) ? port.contentY : 0;
         const at = block.mapToItem(port.contentItem, target.x, target.y).y - lift;
-        const from = block.mapToItem(port.contentItem, 0, 0).y - lift;
-        return shift(stickTop, stickBottom, at, target.height, port.contentY, port.height + 0 * port.contentHeight,
+        const from = limit(block).mapToItem(port.contentItem, 0, 0).y - lift;
+        return shift(padded(stickTop, "stickPadTop"), padded(stickBottom, "stickPadBottom"), at, target.height, port.contentY, port.height + 0 * port.contentHeight,
                      from, from + blockEnd(block, "height"), marginTop, marginBottom);
     }
 }

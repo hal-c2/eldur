@@ -3293,6 +3293,7 @@ function _scrollIntoView(raw, arg) {
     for (var at = _logicalParent(raw); at && at !== _root; at = _logicalParent(at)) {
         var scroller = _ownScroller(at);
         if (!scroller) {
+            _scrollClippedIntoView(at, raw, block);
             continue;
         }
         var r = getBoundingClientRect(raw);
@@ -3308,6 +3309,20 @@ function _scrollIntoView(raw, arg) {
         scrollTo(_intoViewOffset(inline, page.contentX, rect.left, rect.width, page.width),
             _intoViewOffset(block, page.contentY, rect.top, rect.height, page.height));
     }
+}
+
+// A converted `overflow: hidden` box has no scroller: only scripts move it.
+function _scrollClippedIntoView(box, raw, block) {
+    if (box.clip !== true) {
+        return;
+    }
+    var el = wrap(box);
+    if (el.scrollHeight <= el.clientHeight) {
+        return;
+    }
+    var r = getBoundingClientRect(raw);
+    var port = box.mapToItem(null, 0, 0);
+    el.scrollTop = _intoViewOffset(block, el.scrollTop, r.top - port.y, r.height, box.height);
 }
 
 // The Flickable that scrolls a box's content: its own, or the page's when the
@@ -11849,6 +11864,9 @@ function _gExpand(prop, value) {
     var names = ["top", "right", "bottom", "left"];
     var out = [];
     var parts = _gSplitValue(value);
+    if (prop === "overflow") {
+        return [["overflow-x", parts[0]], ["overflow-y", parts[1] || parts[0]]];
+    }
     if (prop === "margin" || prop === "padding") {
         var sides = _gSides(parts);
         for (var i = 0; i < 4; ++i) {
@@ -16370,6 +16388,10 @@ function _gSyncScrollers() {
         port.scrollsY = scrollsY;
         // `hidden` scrolls for scripts alone.
         port.userScrolls = s["overflow-x"] !== "hidden" || s["overflow-y"] !== "hidden";
+        port.stickPadTop = e.pt;
+        port.stickPadRight = e.pr;
+        port.stickPadBottom = e.pb;
+        port.stickPadLeft = e.pl;
         port.contentWidth = wide;
         port.contentHeight = tall;
         port.contentX = Math.max(0, Math.min(port.contentX, wide - portW));

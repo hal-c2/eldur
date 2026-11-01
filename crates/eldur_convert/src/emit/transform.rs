@@ -8,7 +8,9 @@
 //! box's own size, so they refer to the item by id. Like CSS, a transform
 //! moves only the painting, not the layout.
 
-use eldur_css::{ComputedStyle, Length, LengthAuto, LengthPercentage, Position, TransformFn};
+use eldur_css::{
+    ComputedStyle, Display, Length, LengthAuto, LengthPercentage, Position, TransformFn,
+};
 use eldur_qml::{Object, Value};
 
 use super::Emitter;
@@ -161,6 +163,9 @@ impl Emitter<'_, '_> {
         };
         let mut sticky = Object::new("EldurSticky");
         sticky.set("target", Value::expr(id));
+        if style.display == Display::TableCell {
+            sticky.set("cell", true);
+        }
         let parent = |along: &str| format!("target.parent ? target.parent.{along} : 0");
         for (name, inset, along) in [
             ("stickTop", &style.top, "height"),

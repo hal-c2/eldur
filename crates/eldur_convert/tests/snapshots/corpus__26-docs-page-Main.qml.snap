@@ -1222,6 +1222,10 @@ ApplicationWindow {
                                     y: 1
                                     width: parent.width + -2
                                     height: parent.height + -2
+                                    stickPadTop: 16
+                                    stickPadRight: 16
+                                    stickPadBottom: 16
+                                    stickPadLeft: 16
                                     contentWidth: Math.max(width, preText.contentWidth + 32)
                                     contentHeight: Math.max(height, preText.implicitHeight + 32)
 
