@@ -1,0 +1,22 @@
+{"steps":[
+ {"name":"parent","clickAt":[40,40]},
+ {"name":"spill in parent","clickAt":[100,100]},
+ {"name":"spill out of parent","clickAt":[180,180]},
+ {"name":"clip inside","clickAt":[380,100]},
+ {"name":"clipped away","clickAt":[440,160]},
+ {"name":"through none","clickAt":[550,70]},
+ {"name":"z on top","clickAt":[750,70]},
+ {"name":"z below","clickAt":[810,130]},
+ {"name":"old place of transform","clickAt":[920,30]},
+ {"name":"new place of transform","clickAt":[1050,120]},
+ {"name":"visibility hidden","clickAt":[60,340]},
+ {"name":"wheel moves","wheel":["#roll",0,60],"settle":50},
+ {"name":"wheel stopped","wheel":["#stop",0,60],"settle":50},
+ {"name":"to handle","move":[920,320]},
+ {"name":"press handle","down":"left"},
+ {"name":"move out captured","move":[1100,500]},
+ {"name":"release","up":"left","settle":50},
+ {"name":"after capture","move":[1110,510]}
+],
+"quietLoad":true,
+"watch":[{"sel":"#roll"},{"sel":"#stop"},{"sel":"#handle"}]}

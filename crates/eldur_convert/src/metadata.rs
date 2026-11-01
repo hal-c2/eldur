@@ -133,6 +133,11 @@ fn has_no_item(doc: &Document, node: NodeId, live: &HashSet<NodeId>) -> bool {
     }
 }
 
+fn first_autofocus(doc: &Document) -> Option<NodeId> {
+    doc.descendants(doc.root())
+        .find(|n| doc.element(*n).is_some_and(|e| e.has_attr("autofocus")))
+}
+
 pub(crate) fn tag(obj: &mut Object, doc: &Document, node: NodeId) {
     let Some(element) = doc.element(node) else {
         return;
@@ -142,6 +147,11 @@ pub(crate) fn tag(obj: &mut Object, doc: &Document, node: NodeId) {
         "eldurTag",
         Value::String(element.local_name().to_ascii_lowercase()),
     )];
+    // A browser gives it to the first that asks. `focus: true` would lose to the
+    // page's scroll keys, which ask as well.
+    if element.has_attr("autofocus") && first_autofocus(doc) == Some(node) {
+        obj.set("Component.onCompleted", Value::expr("forceActiveFocus()"));
+    }
     if element.local_name() == "details" && element.has_attr("open") {
         decls.push(decl("bool", "eldurOpen", Value::Bool(true)));
     }

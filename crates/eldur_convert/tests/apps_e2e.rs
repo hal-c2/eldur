@@ -38,6 +38,7 @@ const NONAVIGATION: &str =
 const CLOSEDDETAILS: &str = "the margin of a closed details' hidden last child still collapses out of it, at conversion time";
 const DIALOGTEXT: &str =
     "the page logs a fractional text width: Qt's glyphs make 71.77, Chromium's 71.81";
+const MADEINLINE: &str = "controls from innerHTML stack as blocks: a created box is laid out by itself, without a line to share";
 const NOBUBBLE: &str = "Qt has no validation bubble: the message goes to the log, on purpose";
 const COMPACT: &str = "a right-aligned row: its buttons are whole pixels wider (see BUTTONWIDTH), which would start this one 2px left; not confirmed";
 const BUTTONWIDTH: &str = "a button's width is whole pixels (`Math.ceil` in emit/controls.rs): \
@@ -64,6 +65,8 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("input_forms", "api3 #*[*] y:", NONAVIGATION),
     ("input_forms", "api3 #name[*] value:", NONAVIGATION),
     ("input_forms", "*eldur: a form was submitted*", NONAVIGATION),
+    ("input_script", "* #mc[*] x:", MADEINLINE),
+    ("input_script", "* #mc[*] y:", MADEINLINE),
     ("input_dialog", "* #stay[*] y:", CLOSEDDETAILS),
     ("input_dialog", "plain show log:", DIALOGTEXT),
     (
@@ -639,6 +642,16 @@ fn input_forms() {
 #[test]
 fn input_bubble() {
     page("input_bubble");
+}
+
+#[test]
+fn input_hit() {
+    page("input_hit");
+}
+
+#[test]
+fn input_script() {
+    page("input_script");
 }
 
 #[test]

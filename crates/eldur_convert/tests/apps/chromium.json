@@ -24724,6 +24724,902 @@
    }
   }
  ],
+ "input_hit": [
+  {
+   "name": "load",
+   "log": [
+    "pointermove body 0 0 false"
+   ],
+   "state": {
+    "#roll": [
+     {
+      "box": [
+       300,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stop": [
+     {
+      "box": [
+       600,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#handle": [
+     {
+      "box": [
+       900,
+       300,
+       60,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "parent",
+   "log": [
+    "pointermove parent 40 40 false",
+    "pointerdown parent 40 40 false",
+    "pointerup parent 40 40 false",
+    "click parent parent>body>html>document>window 20 20"
+   ],
+   "state": {
+    "#roll": [
+     {
+      "box": [
+       300,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stop": [
+     {
+      "box": [
+       600,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#handle": [
+     {
+      "box": [
+       900,
+       300,
+       60,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "spill in parent",
+   "log": [
+    "pointermove spill 100 100 false",
+    "pointerdown spill 100 100 false",
+    "pointerup spill 100 100 false",
+    "click spill spill>parent>body>html>document>window 20 20"
+   ],
+   "state": {
+    "#roll": [
+     {
+      "box": [
+       300,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stop": [
+     {
+      "box": [
+       600,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#handle": [
+     {
+      "box": [
+       900,
+       300,
+       60,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "spill out of parent",
+   "log": [
+    "pointermove spill 180 180 false",
+    "pointerdown spill 180 180 false",
+    "pointerup spill 180 180 false",
+    "click spill spill>parent>body>html>document>window 100 100"
+   ],
+   "state": {
+    "#roll": [
+     {
+      "box": [
+       300,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stop": [
+     {
+      "box": [
+       600,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#handle": [
+     {
+      "box": [
+       900,
+       300,
+       60,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "clip inside",
+   "log": [
+    "pointermove clipped 380 100 false",
+    "pointerdown clipped 380 100 false",
+    "pointerup clipped 380 100 false",
+    "click clipped clipped>clip>body>html>document>window 20 20"
+   ],
+   "state": {
+    "#roll": [
+     {
+      "box": [
+       300,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stop": [
+     {
+      "box": [
+       600,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#handle": [
+     {
+      "box": [
+       900,
+       300,
+       60,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "clipped away",
+   "log": [
+    "pointermove body 440 160 false",
+    "pointerdown body 440 160 false",
+    "pointerup body 440 160 false",
+    "click body body>html>document>window 440 160"
+   ],
+   "state": {
+    "#roll": [
+     {
+      "box": [
+       300,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stop": [
+     {
+      "box": [
+       600,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#handle": [
+     {
+      "box": [
+       900,
+       300,
+       60,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "through none",
+   "log": [
+    "pointermove under 550 70 false",
+    "pointerdown under 550 70 false",
+    "pointerup under 550 70 false",
+    "click under under>body>html>document>window 50 50"
+   ],
+   "state": {
+    "#roll": [
+     {
+      "box": [
+       300,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stop": [
+     {
+      "box": [
+       600,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#handle": [
+     {
+      "box": [
+       900,
+       300,
+       60,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "z on top",
+   "log": [
+    "pointermove low 750 70 false",
+    "pointerdown low 750 70 false",
+    "pointerup low 750 70 false",
+    "click low low>body>html>document>window 50 50"
+   ],
+   "state": {
+    "#roll": [
+     {
+      "box": [
+       300,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stop": [
+     {
+      "box": [
+       600,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#handle": [
+     {
+      "box": [
+       900,
+       300,
+       60,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "z below",
+   "log": [
+    "pointermove high 810 130 false",
+    "pointerdown high 810 130 false",
+    "pointerup high 810 130 false",
+    "click high high>body>html>document>window 90 90"
+   ],
+   "state": {
+    "#roll": [
+     {
+      "box": [
+       300,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stop": [
+     {
+      "box": [
+       600,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#handle": [
+     {
+      "box": [
+       900,
+       300,
+       60,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "old place of transform",
+   "log": [
+    "pointermove body 920 30 false",
+    "pointerdown body 920 30 false",
+    "pointerup body 920 30 false",
+    "click body body>html>document>window 920 30"
+   ],
+   "state": {
+    "#roll": [
+     {
+      "box": [
+       300,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stop": [
+     {
+      "box": [
+       600,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#handle": [
+     {
+      "box": [
+       900,
+       300,
+       60,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "new place of transform",
+   "log": [
+    "pointermove slid 1050 120 false",
+    "pointerdown slid 1050 120 false",
+    "pointerup slid 1050 120 false",
+    "click slid slid>body>html>document>window 50 50"
+   ],
+   "state": {
+    "#roll": [
+     {
+      "box": [
+       300,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stop": [
+     {
+      "box": [
+       600,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#handle": [
+     {
+      "box": [
+       900,
+       300,
+       60,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "visibility hidden",
+   "log": [
+    "pointermove body 60 340 false",
+    "pointerdown body 60 340 false",
+    "pointerup body 60 340 false",
+    "click body body>html>document>window 60 340"
+   ],
+   "state": {
+    "#roll": [
+     {
+      "box": [
+       300,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stop": [
+     {
+      "box": [
+       600,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#handle": [
+     {
+      "box": [
+       900,
+       300,
+       60,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "wheel moves",
+   "log": [
+    "pointermove div 400 350 false",
+    "wheel div 0 60 0 false"
+   ],
+   "state": {
+    "#roll": [
+     {
+      "box": [
+       300,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stop": [
+     {
+      "box": [
+       600,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#handle": [
+     {
+      "box": [
+       900,
+       300,
+       60,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "wheel stopped",
+   "log": [
+    "pointermove div 700 350 false",
+    "stopped true",
+    "wheel div 0 60 0 true"
+   ],
+   "state": {
+    "#roll": [
+     {
+      "box": [
+       300,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stop": [
+     {
+      "box": [
+       600,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#handle": [
+     {
+      "box": [
+       900,
+       300,
+       60,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "to handle",
+   "log": [
+    "pointermove handle 920 320 false"
+   ],
+   "state": {
+    "#roll": [
+     {
+      "box": [
+       300,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stop": [
+     {
+      "box": [
+       600,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#handle": [
+     {
+      "box": [
+       900,
+       300,
+       60,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "press handle",
+   "log": [
+    "pointerdown handle 920 320 true"
+   ],
+   "state": {
+    "#roll": [
+     {
+      "box": [
+       300,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stop": [
+     {
+      "box": [
+       600,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#handle": [
+     {
+      "box": [
+       900,
+       300,
+       60,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "move out captured",
+   "log": [
+    "gotpointercapture handle 1100 500 true",
+    "pointermove handle 1100 500 true"
+   ],
+   "state": {
+    "#roll": [
+     {
+      "box": [
+       300,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stop": [
+     {
+      "box": [
+       600,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#handle": [
+     {
+      "box": [
+       900,
+       300,
+       60,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "release",
+   "log": [
+    "pointerup handle 1100 500 true",
+    "lostpointercapture handle 1100 500 false",
+    "click handle handle>body>html>document>window 200 200"
+   ],
+   "state": {
+    "#roll": [
+     {
+      "box": [
+       300,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stop": [
+     {
+      "box": [
+       600,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#handle": [
+     {
+      "box": [
+       900,
+       300,
+       60,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "after capture",
+   "log": [
+    "pointermove body 1110 510 false"
+   ],
+   "state": {
+    "#roll": [
+     {
+      "box": [
+       300,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stop": [
+     {
+      "box": [
+       600,
+       300,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#handle": [
+     {
+      "box": [
+       900,
+       300,
+       60,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
  "input_keys": [
   {
    "name": "load",
@@ -29997,6 +30893,1609 @@
      }
     ],
     "(focus)": ""
+   }
+  }
+ ],
+ "input_script": [
+  {
+   "name": "load",
+   "log": [
+    "load active=body focus=true"
+   ],
+   "state": {
+    "#auto": [
+     {
+      "box": [
+       16,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       205,
+       58,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#cl": [
+     {
+      "box": [
+       221,
+       57,
+       24,
+       17
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#dis": [
+     {
+      "box": [
+       245,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       160.5,
+       16,
+       44.91,
+       21
+      ],
+      "shown": true,
+      "text": "send"
+     }
+    ],
+    "#f": [
+     {
+      "box": [
+       16,
+       55,
+       1248,
+       22
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#made": [],
+    "#mc": [],
+    "(focus)": "auto"
+   }
+  },
+  {
+   "name": "once 1",
+   "log": [
+    "once"
+   ],
+   "state": {
+    "#auto": [
+     {
+      "box": [
+       16,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       205,
+       58,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#cl": [
+     {
+      "box": [
+       221,
+       57,
+       24,
+       17
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#dis": [
+     {
+      "box": [
+       245,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       160.5,
+       16,
+       44.91,
+       21
+      ],
+      "shown": true,
+      "text": "send"
+     }
+    ],
+    "#f": [
+     {
+      "box": [
+       16,
+       55,
+       1248,
+       22
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#made": [],
+    "#mc": [],
+    "(focus)": "once"
+   }
+  },
+  {
+   "name": "once 2",
+   "log": [],
+   "state": {
+    "#auto": [
+     {
+      "box": [
+       16,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       205,
+       58,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#cl": [
+     {
+      "box": [
+       221,
+       57,
+       24,
+       17
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#dis": [
+     {
+      "box": [
+       245,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       160.5,
+       16,
+       44.91,
+       21
+      ],
+      "shown": true,
+      "text": "send"
+     }
+    ],
+    "#f": [
+     {
+      "box": [
+       16,
+       55,
+       1248,
+       22
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#made": [],
+    "#mc": [],
+    "(focus)": "once"
+   }
+  },
+  {
+   "name": "stop immediate",
+   "log": [
+    "first"
+   ],
+   "state": {
+    "#auto": [
+     {
+      "box": [
+       16,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       205,
+       58,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#cl": [
+     {
+      "box": [
+       221,
+       57,
+       24,
+       17
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#dis": [
+     {
+      "box": [
+       245,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       160.5,
+       16,
+       44.91,
+       21
+      ],
+      "shown": true,
+      "text": "send"
+     }
+    ],
+    "#f": [
+     {
+      "box": [
+       16,
+       55,
+       1248,
+       22
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#made": [],
+    "#mc": [],
+    "(focus)": "stopper"
+   }
+  },
+  {
+   "name": "abort 1",
+   "log": [
+    "before abort"
+   ],
+   "state": {
+    "#auto": [
+     {
+      "box": [
+       16,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       205,
+       58,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#cl": [
+     {
+      "box": [
+       221,
+       57,
+       24,
+       17
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#dis": [
+     {
+      "box": [
+       245,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       160.5,
+       16,
+       44.91,
+       21
+      ],
+      "shown": true,
+      "text": "send"
+     }
+    ],
+    "#f": [
+     {
+      "box": [
+       16,
+       55,
+       1248,
+       22
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#made": [],
+    "#mc": [],
+    "(focus)": "aborted"
+   }
+  },
+  {
+   "name": "abort 2",
+   "log": [],
+   "state": {
+    "#auto": [
+     {
+      "box": [
+       16,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       205,
+       58,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#cl": [
+     {
+      "box": [
+       221,
+       57,
+       24,
+       17
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#dis": [
+     {
+      "box": [
+       245,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       160.5,
+       16,
+       44.91,
+       21
+      ],
+      "shown": true,
+      "text": "send"
+     }
+    ],
+    "#f": [
+     {
+      "box": [
+       16,
+       55,
+       1248,
+       22
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#made": [],
+    "#mc": [],
+    "(focus)": "aborted"
+   }
+  },
+  {
+   "name": "capture and bubble",
+   "log": [
+    "capture 1 in",
+    "bubble 3 in"
+   ],
+   "state": {
+    "#auto": [
+     {
+      "box": [
+       16,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       205,
+       58,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#cl": [
+     {
+      "box": [
+       221,
+       57,
+       24,
+       17
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#dis": [
+     {
+      "box": [
+       245,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       160.5,
+       16,
+       44.91,
+       21
+      ],
+      "shown": true,
+      "text": "send"
+     }
+    ],
+    "#f": [
+     {
+      "box": [
+       16,
+       55,
+       1248,
+       22
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#made": [],
+    "#mc": [],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "dispatched",
+   "log": [
+    "d1 true",
+    "hi  in box true false false false      in>box>body>html>document>window",
+    "hi  in document true false false false      in>box>body>html>document>window",
+    "d2 true",
+    "mine  in box true true false true 42     in>box>body>html>document>window",
+    "mine  in document true true false true 42     in>box>body>html>document>window",
+    "d3 false",
+    "mouse  in box true false false false 0   9 2 in>box>body>html>document>window",
+    "mouse  in document true false false false 0   9 2 in>box>body>html>document>window",
+    "d4 true",
+    "key  in box true false false false 0 x KeyX   in>box>body>html>document>window",
+    "key  in document true false false false 0 x KeyX   in>box>body>html>document>window",
+    "d5 true"
+   ],
+   "state": {
+    "#auto": [
+     {
+      "box": [
+       16,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       205,
+       58,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#cl": [
+     {
+      "box": [
+       221,
+       57,
+       24,
+       17
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#dis": [
+     {
+      "box": [
+       245,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       160.5,
+       16,
+       44.91,
+       21
+      ],
+      "shown": true,
+      "text": "send"
+     }
+    ],
+    "#f": [
+     {
+      "box": [
+       16,
+       55,
+       1248,
+       22
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#made": [],
+    "#mc": [],
+    "(focus)": "send"
+   }
+  },
+  {
+   "name": "fill",
+   "log": [
+    "filled made"
+   ],
+   "state": {
+    "#auto": [
+     {
+      "box": [
+       16,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       205,
+       58,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#cl": [
+     {
+      "box": [
+       221,
+       57,
+       24,
+       17
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#dis": [
+     {
+      "box": [
+       245,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       160.5,
+       16,
+       44.91,
+       21
+      ],
+      "shown": true,
+      "text": "send"
+     }
+    ],
+    "#f": [
+     {
+      "box": [
+       16,
+       55,
+       1248,
+       22
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#made": [
+     {
+      "box": [
+       16,
+       78,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "a"
+     }
+    ],
+    "#mc": [
+     {
+      "box": [
+       205,
+       80,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "(focus)": "fill"
+   }
+  },
+  {
+   "name": "made checkbox",
+   "log": [
+    "click mc true",
+    "input mc",
+    "change mc"
+   ],
+   "state": {
+    "#auto": [
+     {
+      "box": [
+       16,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       205,
+       58,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#cl": [
+     {
+      "box": [
+       221,
+       57,
+       24,
+       17
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#dis": [
+     {
+      "box": [
+       245,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       160.5,
+       16,
+       44.91,
+       21
+      ],
+      "shown": true,
+      "text": "send"
+     }
+    ],
+    "#f": [
+     {
+      "box": [
+       16,
+       55,
+       1248,
+       22
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#made": [
+     {
+      "box": [
+       16,
+       78,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "a"
+     }
+    ],
+    "#mc": [
+     {
+      "box": [
+       205,
+       80,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "(focus)": "mc"
+   }
+  },
+  {
+   "name": "made button",
+   "log": [
+    "click mb true"
+   ],
+   "state": {
+    "#auto": [
+     {
+      "box": [
+       16,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       205,
+       58,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#cl": [
+     {
+      "box": [
+       221,
+       57,
+       24,
+       17
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#dis": [
+     {
+      "box": [
+       245,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       160.5,
+       16,
+       44.91,
+       21
+      ],
+      "shown": true,
+      "text": "send"
+     }
+    ],
+    "#f": [
+     {
+      "box": [
+       16,
+       55,
+       1248,
+       22
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#made": [
+     {
+      "box": [
+       16,
+       78,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "a"
+     }
+    ],
+    "#mc": [
+     {
+      "box": [
+       205,
+       80,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "(focus)": "mb"
+   }
+  },
+  {
+   "name": "made text",
+   "log": [],
+   "state": {
+    "#auto": [
+     {
+      "box": [
+       16,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       205,
+       58,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#cl": [
+     {
+      "box": [
+       221,
+       57,
+       24,
+       17
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#dis": [
+     {
+      "box": [
+       245,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       160.5,
+       16,
+       44.91,
+       21
+      ],
+      "shown": true,
+      "text": "send"
+     }
+    ],
+    "#f": [
+     {
+      "box": [
+       16,
+       55,
+       1248,
+       22
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#made": [
+     {
+      "box": [
+       16,
+       78,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "a"
+     }
+    ],
+    "#mc": [
+     {
+      "box": [
+       205,
+       80,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "(focus)": "made"
+   }
+  },
+  {
+   "name": "made text types",
+   "log": [
+    "input made",
+    "input made"
+   ],
+   "state": {
+    "#auto": [
+     {
+      "box": [
+       16,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       205,
+       58,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#cl": [
+     {
+      "box": [
+       221,
+       57,
+       24,
+       17
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#dis": [
+     {
+      "box": [
+       245,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       160.5,
+       16,
+       44.91,
+       21
+      ],
+      "shown": true,
+      "text": "send"
+     }
+    ],
+    "#f": [
+     {
+      "box": [
+       16,
+       55,
+       1248,
+       22
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#made": [
+     {
+      "box": [
+       16,
+       78,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#mc": [
+     {
+      "box": [
+       205,
+       80,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "(focus)": "made"
+   }
+  },
+  {
+   "name": "made text leaves",
+   "log": [
+    "change made"
+   ],
+   "state": {
+    "#auto": [
+     {
+      "box": [
+       16,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       205,
+       58,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#cl": [
+     {
+      "box": [
+       221,
+       57,
+       24,
+       17
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#dis": [
+     {
+      "box": [
+       245,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       160.5,
+       16,
+       44.91,
+       21
+      ],
+      "shown": true,
+      "text": "send"
+     }
+    ],
+    "#f": [
+     {
+      "box": [
+       16,
+       55,
+       1248,
+       22
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#made": [
+     {
+      "box": [
+       16,
+       78,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#mc": [
+     {
+      "box": [
+       205,
+       80,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "(focus)": "mc"
+   }
+  },
+  {
+   "name": "hover",
+   "log": [],
+   "state": {
+    "#auto": [
+     {
+      "box": [
+       16,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       205,
+       58,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#cl": [
+     {
+      "box": [
+       221,
+       57,
+       24,
+       17
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#dis": [
+     {
+      "box": [
+       245,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       160.5,
+       16,
+       44.91,
+       21
+      ],
+      "shown": true,
+      "text": "send"
+     }
+    ],
+    "#f": [
+     {
+      "box": [
+       16,
+       55,
+       1248,
+       22
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#made": [
+     {
+      "box": [
+       16,
+       78,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#mc": [
+     {
+      "box": [
+       205,
+       80,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "(focus)": "mc"
+   }
+  },
+  {
+   "name": "label",
+   "log": [
+    "input c",
+    "change c"
+   ],
+   "state": {
+    "#auto": [
+     {
+      "box": [
+       16,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#c": [
+     {
+      "box": [
+       205,
+       58,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#cl": [
+     {
+      "box": [
+       221,
+       57,
+       24,
+       17
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#dis": [
+     {
+      "box": [
+       245,
+       56,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       160.5,
+       16,
+       44.91,
+       21
+      ],
+      "shown": true,
+      "text": "send"
+     }
+    ],
+    "#f": [
+     {
+      "box": [
+       16,
+       55,
+       1248,
+       22
+      ],
+      "shown": true,
+      "text": "box"
+     }
+    ],
+    "#made": [
+     {
+      "box": [
+       16,
+       78,
+       185,
+       21
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#mc": [
+     {
+      "box": [
+       205,
+       80,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "(focus)": "c"
    }
   }
  ],

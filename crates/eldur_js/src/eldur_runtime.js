@@ -5242,6 +5242,13 @@ var _BUBBLES = {
 };
 
 // Not bubbling, yet `document` is on their path for a capturing listener.
+// The page's own: the runtime delivers these at the root.
+var _ROOT_HEARS = {
+    load: true, DOMContentLoaded: true, resize: true, scroll: true, hashchange: true, popstate: true,
+    pageshow: true, pagehide: true, beforeunload: true, unload: true, visibilitychange: true,
+    message: true, error: true, storage: true, online: true, offline: true, readystatechange: true
+};
+
 var _DOCUMENT_HEARS = {
     mouseenter: true, mouseleave: true, pointerenter: true, pointerleave: true,
     focus: true, blur: true, invalid: true, toggle: true
@@ -5399,20 +5406,27 @@ function _uiEvent(type, opts) {
     return e;
 }
 
+// Only a mouse event has a place, and a button.
+function _withoutPlace(e) {
+    ["clientX", "clientY", "pageX", "pageY", "screenX", "screenY", "offsetX", "offsetY", "x", "y", "button", "buttons",
+        "relatedTarget"].forEach(function(name) { delete e[name]; });
+    return e;
+}
+
 function Event(type, opts) {
-    var e = _uiEvent(type, opts);
+    var e = _withoutPlace(_uiEvent(type, opts));
     delete e.detail;
     return e;
 }
 
 function CustomEvent(type, opts) {
-    var e = _uiEvent(type, opts);
+    var e = _withoutPlace(_uiEvent(type, opts));
     e.detail = opts && opts.detail !== undefined ? opts.detail : null;
     return e;
 }
 
 function KeyboardEvent(type, opts) {
-    return _uiEvent(type, opts);
+    return _withoutPlace(_uiEvent(type, opts));
 }
 
 function MouseEvent(type, opts) {
@@ -5534,7 +5548,11 @@ function _eventPath(raw) {
     // The root may be inside an item that is not the page's.
     for (var at = _logicalParent(raw); at; at = _logicalParent(at)) {
         if (at === _root) {
-            path.push(_root, document, window);
+            // Where the page has its `html`, the root item is no element of the page.
+            if (_nodeTag(path[path.length - 1]) !== "html") {
+                path.push(_root);
+            }
+            path.push(document, window);
             break;
         }
         if (_isDomTarget(at) && !_isInternalHelperNode(at)) {
@@ -5933,8 +5951,10 @@ function listenBound(item, eventType, handler, options) {
 // own listeners. What is fired only at the root (`resize`, `hashchange`, ...)
 // is listened for there.
 function _listenerHome(item, eventType) {
+    // A script's own event type is in no table, and goes up to the document as any other.
     if ((item === document || item === window)
-        && (_BUBBLES[String(eventType)] === true || _DOCUMENT_HEARS[String(eventType)] === true)) {
+        && (_BUBBLES[String(eventType)] === true || _DOCUMENT_HEARS[String(eventType)] === true
+            || _ROOT_HEARS[String(eventType)] !== true)) {
         return item;
     }
     return _unwrap(item);
@@ -7148,7 +7168,7 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
             _gGrave.parent = null;
         }
         oldRaw.parent = _gGrave;
-    } else {
+    } else if (!oldRaw.__eldurInline) {
         oldRaw.destroy();
     }
     // A new item starts with its template's place.
@@ -7819,7 +7839,12 @@ function wrap(rawItem) {
                 _in.release = true;
             }
         },
-        hasPointerCapture: function(id) { return Boolean(_in) && _in.capture === rawItem; },
+        hasPointerCapture: function(id) {
+            if (!_in) {
+                return false;
+            }
+            return (_in.captureNext === undefined ? _in.capture : _in.captureNext) === rawItem;
+        },
         get type() {
             // A static control's QML type is what it was written as.
             var written = m.inputType || getAttribute(rawItem, "type") || "";
@@ -10274,7 +10299,7 @@ function _isElementBetween(found, top) {
 
 // `pointer-events: none`, which is inherited and can be undone further down.
 function _hitOff(item) {
-    if (item.eldurNoHit === true) {
+    if (item.eldurNoHit === true || _focusIsGhost(item)) {
         return true;
     }
     return _gHasCascade() && _gIsElement(item) && _gStyle(item)["pointer-events"] === "none";
@@ -10439,6 +10464,8 @@ function _inInstall() {
     _in.focusProbe = probe;
     probe.heldChanged.connect(_inFocusChanged);
     _in.focused = null;
+    // `autofocus` asked before the layer was there to hear.
+    Qt.callLater(_inFocusChanged);
     _inKeysOn(home);
     _inWireControls(_root);
     // What listened before there was a layer got a handler of its own only if it
@@ -10498,6 +10525,18 @@ function _inHit(scene) {
     return _dialogHit(_inElementOf(_deepestAt(scene), scene) || _unwrap(document.body));
 }
 
+// A wheel only passive listeners hear scrolls without waiting, and cannot be stopped.
+function _inWheelWaits(raw) {
+    return _eventPath(raw).some(function(node) {
+        var m = _listenerMeta(node);
+        return Object.keys(m.listeners).some(function(key) {
+            return key.indexOf("wheel") === 0 && m.listeners[key].some(function(fn) {
+                return !_isPassive(m, key, fn, node, "wheel");
+            });
+        });
+    });
+}
+
 function _IN_BUTTON(bit) {
     return bit === Qt.RightButton ? 2 : bit === Qt.MiddleButton ? 1 : bit === Qt.BackButton ? 3
         : bit === Qt.ForwardButton ? 4 : 0;
@@ -10513,7 +10552,7 @@ function _inFire(type, raw, scene, mods, init) {
     var quiet = type === "mouseenter" || type === "mouseleave" || type === "pointerenter"
         || type === "pointerleave" || type === "gotpointercapture" || type === "lostpointercapture";
     ev.bubbles = !(type === "mouseenter" || type === "mouseleave" || type === "pointerenter" || type === "pointerleave");
-    ev.cancelable = !quiet && type !== "pointermove_";
+    ev.cancelable = !quiet && type !== "pointermove_" && (type !== "wheel" || _inWheelWaits(raw));
     ev.button = o.button === undefined ? 0 : o.button;
     ev.buttons = _in.held;
     ev.relatedTarget = o.related ? _eventTarget(o.related) : null;
@@ -10660,6 +10699,7 @@ function _inUp(bit, scene, mods) {
     var count = _in.count;
     var from = _in.downTarget[bit];
     delete _in.downTarget[bit];
+    var heldBy = _in.capture;
     if (_in.held === 0) {
         _inFire("pointerup", target, scene, mods, { button: button });
     } else {
@@ -10674,7 +10714,7 @@ function _inUp(bit, scene, mods) {
         _inRestoreFocus();
     }
     var moved = _inReleaseScrollers();
-    var hitNow = _inHit(scene);
+    var hitNow = heldBy || _inHit(scene);
     // After the release is delivered: what is under the point has had its say
     // on the press (a box toggled, a link followed), and listeners read that.
     _inLater(function() {
@@ -13515,6 +13555,9 @@ var document = {
     get head() { return _root ? wrap(_root) : null; },
     get hidden() { return false; },
     get visibilityState() { return "visible"; },
+    hasFocus: function() {
+        return Qt.application.state === Qt.ApplicationActive;
+    },
     get activeElement() {
         if (_in) {
             return _in.focused && !_in.focusShift ? wrap(_in.focused) : document.body;
