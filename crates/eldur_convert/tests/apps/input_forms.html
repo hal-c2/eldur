@@ -1,0 +1,119 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Forms</title>
+<style>
+html, body { margin: 0; padding: 0; }
+body { width: 1280px; height: 900px; font: 16px sans-serif; }
+input, button, select { display: block; margin: 4px; width: 160px; height: 26px; }
+input[type=checkbox], input[type=radio] { width: 18px; height: 18px; display: inline-block; }
+#out { position: absolute; left: 500px; top: 10px; width: 700px; }
+</style>
+</head>
+<body>
+<form id="f" action="#sent">
+  <input id="name" name="name" required minlength="2" maxlength="6" value="">
+  <input id="mail" name="mail" type="email" value="">
+  <input id="site" name="site" type="url" value="">
+  <input id="num" name="num" type="number" min="2" max="8" step="2" value="4">
+  <input id="pat" name="pat" pattern="[a-z]+" value="abc">
+  <input id="box" name="box" type="checkbox" value="yes" checked>
+  <input id="prev" type="checkbox">
+  <input id="r1" name="r" type="radio" value="1" checked><input id="r2" name="r" type="radio" value="2">
+  <select id="sel" name="sel"><option value="a">A</option><optgroup label="G"><option value="b" selected>B</option><option value="c">C</option></optgroup></select>
+  <select id="multi" name="multi" multiple><option value="x" selected>X</option><option value="y" selected>Y</option><option value="z">Z</option></select>
+  <fieldset id="fs" disabled><input id="inset" name="inset" value="in"></fieldset>
+  <input id="ro" name="ro" readonly value="fixed" placeholder="hold">
+  <label id="l1" for="ro">one</label><label id="l2"><input id="wrapped" name="wrapped" value="w"></label>
+  <button id="go">Go</button>
+  <button id="nov" formnovalidate>Skip</button>
+  <button id="again" type="reset">Reset</button>
+  <button id="plain" type="button">Plain</button>
+</form>
+<button id="outside" form="f" formnovalidate>Outside</button>
+<a id="frag" href="#out">frag</a>
+<a id="stop" href="#never">stop</a>
+<button id="api" type="button">api</button>
+<button id="api-sel" type="button">selection</button>
+<button id="api2" type="button">api2</button>
+<button id="api3" type="button">api3</button>
+<button id="report" type="button">report</button>
+<div id="out"></div>
+<script>
+function $(i) { return document.getElementById(i); }
+function name(n) { return !n ? "null" : n === document ? "document" : n.id || n.tagName.toLowerCase(); }
+var f = $("f");
+["submit","reset","invalid","input","change","select","click"].forEach(function (t) {
+  document.addEventListener(t, function (e) {
+    console.log([t, name(e.target), e.defaultPrevented, e.bubbles, e.cancelable, e.submitter === undefined ? "" : name(e.submitter)].join(" "));
+  }, true);
+});
+// Chromium's validation bubble kills the headless renderer: `input_bubble` records
+// the one thing that needs it, and everything else here goes without.
+document.body.addEventListener("invalid", function (e) { e.preventDefault(); }, true);
+f.addEventListener("submit", function (e) { e.preventDefault(); console.log("data " + new URLSearchParams(new FormData(f)).toString()); });
+$("prev").addEventListener("click", function (e) { console.log("in click " + e.target.checked); e.preventDefault(); console.log("after " + e.target.checked); });
+$("r2").addEventListener("click", function (e) { if (window.blockRadio) e.preventDefault(); console.log("r2 click " + $("r1").checked + " " + $("r2").checked); });
+$("stop").addEventListener("click", function (e) { e.preventDefault(); console.log("hash " + location.hash); });
+$("frag").addEventListener("click", function () { console.log("frag " + location.hash); });
+function validity(el) {
+  var v = el.validity;
+  return [el.id, el.willValidate, el.checkValidity(), v.valid, v.valueMissing, v.typeMismatch, v.patternMismatch, v.tooLong, v.tooShort,
+    v.rangeUnderflow, v.rangeOverflow, v.stepMismatch, v.badInput, v.customError, JSON.stringify(el.validationMessage)].join(" ");
+}
+$("api").addEventListener("click", function () {
+  console.log("elements " + f.elements.length + " " + f.length);
+  console.log("named " + name(f.elements.mail) + " " + name(f.elements["pat"]));
+  ["name","mail","site","num","pat","ro","inset"].forEach(function (i) { console.log(validity($(i))); });
+  $("mail").value = "nope"; $("site").value = "nope"; $("num").value = "3"; $("pat").value = "ABC"; $("name").value = "q";
+  ["name","mail","site","num","pat"].forEach(function (i) { console.log(validity($(i))); });
+  $("num").value = "1"; console.log(validity($("num")));
+  $("num").value = "10"; console.log(validity($("num")));
+  $("mail").setCustomValidity("Mine"); console.log(validity($("mail")));
+  console.log("form " + f.checkValidity());
+  $("mail").setCustomValidity("");
+  console.log("matches " + $("name").matches(":invalid") + " " + $("ro").matches(":valid") + " " + $("name").matches(":required") + " " + $("mail").matches(":optional") + " " + $("ro").matches(":read-only") + " " + $("inset").matches(":disabled") + " " + $("box").matches(":checked") + " " + $("ro").matches(":placeholder-shown"));
+  $("name").value = "hello";
+  console.log("defaults " + JSON.stringify($("pat").defaultValue) + " " + $("box").defaultChecked + " " + $("prev").defaultChecked);
+  $("name").defaultValue = "base";
+  console.log("still " + $("name").value + " " + $("name").getAttribute("value"));
+  console.log("select " + $("sel").selectedIndex + " " + $("sel").options.length + " " + $("sel").value + " " + $("sel").options[1].text + " " + $("sel").options[1].selected);
+  console.log("multi " + $("multi").multiple + " " + $("multi").selectedOptions.length + " " + $("multi").value);
+  console.log("labels " + $("ro").labels.length + " " + name($("ro").labels[0]) + " " + $("wrapped").labels.length + " " + name($("l1").control));
+  console.log("state " + $("inset").disabled + " " + $("fs").disabled + " " + $("ro").readOnly + " " + JSON.stringify($("ro").placeholder) + " " + $("name").required + " " + $("name").minLength + " " + $("name").maxLength + " " + $("name").form.id + " " + $("outside").form.id);
+  var fd = new FormData(f);
+  console.log("fd " + fd.get("mail") + " " + fd.has("inset") + " " + fd.getAll("multi").join() + " " + fd.has("plain"));
+  var q = new URLSearchParams("a=1&b=x%20y&a=2");
+  q.append("c", "d e");
+  console.log("q " + q.get("a") + " " + q.getAll("a").join() + " " + q.has("b") + " " + q.toString());
+});
+// Apart from the rest, as how many `select` events Chromium queues here depends
+// on more than the calls: see the entry in KNOWN.
+$("api-sel").addEventListener("click", function () {
+  $("name").setSelectionRange(1, 3);
+  console.log("sel " + $("name").selectionStart + " " + $("name").selectionEnd + " " + $("name").selectionDirection);
+  $("name").select();
+  console.log("all " + $("name").selectionStart + " " + $("name").selectionEnd);
+});
+$("report").addEventListener("click", function () {
+  console.log("form " + f.reportValidity());
+  console.log("focus " + name(document.activeElement));
+});
+$("api2").addEventListener("click", function () {
+  $("name").value = ""; $("mail").value = ""; $("site").value = ""; $("num").value = "4"; $("pat").value = "abc";
+  f.requestSubmit();
+  console.log("after request " + name(document.activeElement));
+});
+$("api3").addEventListener("click", function () {
+  $("name").value = "okay";
+  f.requestSubmit();
+  f.requestSubmit($("nov"));
+  f.submit();
+  console.log("after submit");
+  f.reset();
+  console.log("after reset " + JSON.stringify($("name").value) + " " + $("box").checked + " " + $("sel").selectedIndex);
+});
+</script>
+</body>
+</html>

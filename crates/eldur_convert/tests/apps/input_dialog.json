@@ -1,0 +1,19 @@
+{"steps":[
+ {"name":"open modal","click":"#open"},
+ {"name":"outside is inert","clickAt":[20,20]},
+ {"name":"tab","key":"Tab"},
+ {"name":"tab 2","key":"Tab"},
+ {"name":"close via b","click":"#b","settle":50},
+ {"name":"open again","click":"#open"},
+ {"name":"escape","key":"Escape","settle":50},
+ {"name":"open third","click":"#open"},
+ {"name":"form dialog","click":"#done","settle":50},
+ {"name":"plain show","click":"#plain"},
+ {"name":"summary","click":"#sum","settle":50},
+ {"name":"summary again","click":"#sum","settle":50},
+ {"name":"summary prevented","click":"#sum2","settle":50},
+ {"name":"popover","click":"#tog","settle":50},
+ {"name":"popover light dismiss","clickAt":[900,700],"settle":50}
+],
+"quietLoad":true,
+"watch":[{"sel":"#d"},{"sel":"#det"},{"sel":"#stay"},{"sel":"#inside"},{"sel":"#pop"}]}

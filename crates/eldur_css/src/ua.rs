@@ -19,6 +19,22 @@ noframes, noscript, param, rp, script, style, template, title {
     display: none;
 }
 
+[popover]:not(:popover-open) {
+    display: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: fit-content;
+    height: fit-content;
+    margin: auto;
+    border: solid;
+    padding: 0.25em;
+    color: black;
+    background-color: white;
+}
+
 dialog:not([open]) {
     display: none;
 }
@@ -425,7 +441,7 @@ rt {
     font-size: 50%;
 }
 
-dialog[open] {
+dialog {
     display: block;
     position: absolute;
     left: 0;

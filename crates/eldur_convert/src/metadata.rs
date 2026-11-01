@@ -181,6 +181,28 @@ pub(crate) fn declare_style(obj: &mut Object, doc: &Document, node: NodeId) {
     }
 }
 
+/// An element whose attributes the runtime acts on when it hears the person
+/// itself: what a control validates by, what a link follows, what takes a stop
+/// in the focus order or opens a dialog.
+pub(crate) fn acts_on_attrs(doc: &Document, node: NodeId) -> bool {
+    doc.element(node).is_some_and(|e| {
+        matches!(
+            e.local_name(),
+            "form"
+                | "input"
+                | "select"
+                | "textarea"
+                | "button"
+                | "label"
+                | "fieldset"
+                | "a"
+                | "dialog"
+                | "details"
+        ) || e.attr("tabindex").is_some()
+            || e.attr("popover").is_some()
+    })
+}
+
 /// `eldurAttrs`: what the markup says, for scripts that ask. `id` and `class`
 /// have their own properties, `style` was applied, `on*` became handlers.
 pub(crate) fn declare_attrs(obj: &mut Object, doc: &Document, node: NodeId) {

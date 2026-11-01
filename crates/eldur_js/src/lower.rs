@@ -808,6 +808,8 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             "Event" => Some("Eldur.Event"),
             "Option" => Some("Eldur.Option"),
             "FormData" => Some("Eldur.FormData"),
+            "URLSearchParams" => Some("Eldur.URLSearchParams"),
+            "AbortController" => Some("Eldur.AbortController"),
             "CustomEvent" => Some("Eldur.CustomEvent"),
             "EventTarget" => Some("Eldur.EventTarget"),
             "KeyboardEvent" => Some("Eldur.KeyboardEvent"),

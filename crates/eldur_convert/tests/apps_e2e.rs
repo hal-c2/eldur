@@ -28,6 +28,17 @@ const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 /// between the two text engines.
 const GEOMETRY_TOLERANCE: f64 = 2.0;
 
+const INLINECONTROL: &str = "a line of inline-block checkboxes or radios with margins is 4px taller than \
+                             Chromium's: their baseline in the line box";
+const SELECTQUEUE: &str = "setSelectionRange then select() on a field: Chromium queues a third `select` \
+                           whose cause a probe did not find; each call here queues one when it changes the selection";
+const FOCUSREVEAL: &str = "select()'s focus scrolls Chromium's page by all of its overflow; here only as far as the field needs";
+const NONAVIGATION: &str =
+    "form.submit() reloads the page in Chromium; a converted page does not navigate, and says so";
+const CLOSEDDETAILS: &str = "the margin of a closed details' hidden last child still collapses out of it, at conversion time";
+const DIALOGTEXT: &str =
+    "the page logs a fractional text width: Qt's glyphs make 71.77, Chromium's 71.81";
+const NOBUBBLE: &str = "Qt has no validation bubble: the message goes to the log, on purpose";
 const COMPACT: &str = "a right-aligned row: its buttons are whole pixels wider (see BUTTONWIDTH), which would start this one 2px left; not confirmed";
 const BUTTONWIDTH: &str = "a button's width is whole pixels (`Math.ceil` in emit/controls.rs): \
                            five on a line add up to 2.2px against Chromium's fractions";
@@ -43,6 +54,23 @@ const NEVER_SCRIPT: &str =
 /// `(page, what differs, why)`. `what` starts a difference's name, as printed by a
 /// failing test, `<step> <selector>[<row>] <field>:`; `*` stands for any text.
 const KNOWN: &[(&str, &str, &str)] = &[
+    ("input_keys", "* #sel[*] y:", INLINECONTROL),
+    ("input_forms", "* #box[*] y:", INLINECONTROL),
+    ("input_forms", "* #prev[*] y:", INLINECONTROL),
+    ("input_forms", "selection log:", SELECTQUEUE),
+    ("input_forms", "selection #*[*] y:", FOCUSREVEAL),
+    ("input_forms", "api2 #*[*] y:", FOCUSREVEAL),
+    ("input_forms", "api3 (focus):", NONAVIGATION),
+    ("input_forms", "api3 #*[*] y:", NONAVIGATION),
+    ("input_forms", "api3 #name[*] value:", NONAVIGATION),
+    ("input_forms", "*eldur: a form was submitted*", NONAVIGATION),
+    ("input_dialog", "* #stay[*] y:", CLOSEDDETAILS),
+    ("input_dialog", "plain show log:", DIALOGTEXT),
+    (
+        "input_bubble",
+        "*eldur: need: Please fill out this field.*",
+        NOBUBBLE,
+    ),
     ("theme", "* #compact[*] x:", COMPACT),
     ("cards", "* #cart[*] height:", FONT),
     ("cards", "* .buy[*] y:", FONTFOLLOW),
@@ -123,7 +151,7 @@ TestCase {
         for (const m of parts.slice(0, -1)) mod |= modOf[m]
         const last = parts[parts.length - 1]
         // Shift+Tab is what Qt calls Backtab.
-        keyClick(last === "Tab" && (mod & Qt.ShiftModifier) ? Qt.Key_Backtab : keyOf[last], mod)
+        keyClick(last === "Tab" && (mod & Qt.ShiftModifier) ? Qt.Key_Backtab : (keyOf[last] || last), mod)
     }
     function moveTo(x, y) {
         at = Qt.point(x, y)
@@ -280,7 +308,10 @@ fn differences(steps: &[Value], want: &[Value]) -> Vec<String> {
                 got["log"], want["log"]
             ));
         }
-        if got["state"]["(focus)"] != want["state"]["(focus)"] {
+        // A step recorded without state (`bubble`) has none to hold this to.
+        if !want["state"]["(focus)"].is_null()
+            && got["state"]["(focus)"] != want["state"]["(focus)"]
+        {
             out.push(format!(
                 "{step} (focus): got {} Chromium {}",
                 got["state"]["(focus)"], want["state"]["(focus)"]
@@ -593,6 +624,26 @@ fn created_empty_body() {
 #[test]
 fn input_pointer() {
     page("input_pointer");
+}
+
+#[test]
+fn input_keys() {
+    page("input_keys");
+}
+
+#[test]
+fn input_forms() {
+    page("input_forms");
+}
+
+#[test]
+fn input_bubble() {
+    page("input_bubble");
+}
+
+#[test]
+fn input_dialog() {
+    page("input_dialog");
 }
 
 #[test]

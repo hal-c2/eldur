@@ -1019,7 +1019,8 @@ impl<'a, 'd> Emitter<'a, 'd> {
             {
                 crate::metadata::declare_style(&mut e.obj, self.doc, node);
             }
-            if self.script_attrs {
+            if self.script_attrs || (self.by_path && crate::metadata::acts_on_attrs(self.doc, node))
+            {
                 crate::metadata::declare_attrs(&mut e.obj, self.doc, node);
             }
         }

@@ -12,6 +12,8 @@ Item {
     property Item keySource: scroller
     // A box whose children this scroller moves without holding them.
     property Item overlaidOn: null
+    // The runtime's say on a key first: a listener's `preventDefault` stops the move.
+    property var keyGate: null
 
     function moveTo(x, y) {
         const nextX = Math.max(0, Math.min(x, Math.max(0, scroller.contentWidth - scroller.width)));
@@ -64,6 +66,7 @@ Item {
     Connections {
         target: input.keySource.Keys
         function onPressed(event) {
+            if (input.keyGate && !input.keyGate(event)) return;
             event.accepted = input.scroller.interactive && input.keyStep(event.key);
         }
     }

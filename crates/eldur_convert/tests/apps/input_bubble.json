@@ -1,0 +1,6 @@
+{"steps":[
+ {"name":"go","click":"#go"}
+],
+"quietLoad":true,
+"bubble":true,
+"watch":[]}

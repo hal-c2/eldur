@@ -22151,6 +22151,6864 @@
    }
   }
  ],
+ "input_bubble": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "go",
+   "log": [
+    "focusin go go",
+    "click go go",
+    "invalid need go",
+    "invalid also go",
+    "focusin need need"
+   ],
+   "state": {}
+  }
+ ],
+ "input_dialog": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#d": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "ABDone"
+     }
+    ],
+    "#det": [
+     {
+      "box": [
+       0,
+       29,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Morehidden text"
+     }
+    ],
+    "#stay": [
+     {
+      "box": [
+       0,
+       47,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Staykept"
+     }
+    ],
+    "#inside": [
+     {
+      "box": [
+       0,
+       63,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "hidden text"
+     }
+    ],
+    "#pop": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "popped"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "open modal",
+   "log": [
+    "focusin open open true false false false ",
+    "click open open true true false false ",
+    "beforetoggle d open false true false false ",
+    "focusin a a true false true false ",
+    "modal true a true",
+    "toggle d a false false true false "
+   ],
+   "state": {
+    "#d": [
+     {
+      "box": [
+       588.11,
+       352,
+       103.78,
+       96
+      ],
+      "shown": true,
+      "text": "ABDone"
+     }
+    ],
+    "#det": [
+     {
+      "box": [
+       0,
+       29,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Morehidden text"
+     }
+    ],
+    "#stay": [
+     {
+      "box": [
+       0,
+       47,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Staykept"
+     }
+    ],
+    "#inside": [
+     {
+      "box": [
+       0,
+       63,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "hidden text"
+     }
+    ],
+    "#pop": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "popped"
+     }
+    ],
+    "(focus)": "a"
+   }
+  },
+  {
+   "name": "outside is inert",
+   "log": [
+    "focusin d d true false true false ",
+    "click d d true true true false "
+   ],
+   "state": {
+    "#d": [
+     {
+      "box": [
+       588.11,
+       352,
+       103.78,
+       96
+      ],
+      "shown": true,
+      "text": "ABDone"
+     }
+    ],
+    "#det": [
+     {
+      "box": [
+       0,
+       29,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Morehidden text"
+     }
+    ],
+    "#stay": [
+     {
+      "box": [
+       0,
+       47,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Staykept"
+     }
+    ],
+    "#inside": [
+     {
+      "box": [
+       0,
+       63,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "hidden text"
+     }
+    ],
+    "#pop": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "popped"
+     }
+    ],
+    "(focus)": "d"
+   }
+  },
+  {
+   "name": "tab",
+   "log": [
+    "focusin a a true false true false "
+   ],
+   "state": {
+    "#d": [
+     {
+      "box": [
+       588.11,
+       352,
+       103.78,
+       96
+      ],
+      "shown": true,
+      "text": "ABDone"
+     }
+    ],
+    "#det": [
+     {
+      "box": [
+       0,
+       29,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Morehidden text"
+     }
+    ],
+    "#stay": [
+     {
+      "box": [
+       0,
+       47,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Staykept"
+     }
+    ],
+    "#inside": [
+     {
+      "box": [
+       0,
+       63,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "hidden text"
+     }
+    ],
+    "#pop": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "popped"
+     }
+    ],
+    "(focus)": "a"
+   }
+  },
+  {
+   "name": "tab 2",
+   "log": [
+    "focusin b b true false true false "
+   ],
+   "state": {
+    "#d": [
+     {
+      "box": [
+       588.11,
+       352,
+       103.78,
+       96
+      ],
+      "shown": true,
+      "text": "ABDone"
+     }
+    ],
+    "#det": [
+     {
+      "box": [
+       0,
+       29,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Morehidden text"
+     }
+    ],
+    "#stay": [
+     {
+      "box": [
+       0,
+       47,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Staykept"
+     }
+    ],
+    "#inside": [
+     {
+      "box": [
+       0,
+       63,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "hidden text"
+     }
+    ],
+    "#pop": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "popped"
+     }
+    ],
+    "(focus)": "b"
+   }
+  },
+  {
+   "name": "close via b",
+   "log": [
+    "click b b true true true false ",
+    "beforetoggle d b false false true false ",
+    "focusin open open true false false false bye",
+    "closed bye open",
+    "close d open false false false false bye",
+    "toggle d open false false false false bye"
+   ],
+   "state": {
+    "#d": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "ABDone"
+     }
+    ],
+    "#det": [
+     {
+      "box": [
+       0,
+       29,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Morehidden text"
+     }
+    ],
+    "#stay": [
+     {
+      "box": [
+       0,
+       47,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Staykept"
+     }
+    ],
+    "#inside": [
+     {
+      "box": [
+       0,
+       63,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "hidden text"
+     }
+    ],
+    "#pop": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "popped"
+     }
+    ],
+    "(focus)": "open"
+   }
+  },
+  {
+   "name": "open again",
+   "log": [
+    "click open open true true false false bye",
+    "beforetoggle d open false true false false bye",
+    "focusin a a true false true false bye",
+    "modal true a true",
+    "toggle d a false false true false bye"
+   ],
+   "state": {
+    "#d": [
+     {
+      "box": [
+       588.11,
+       352,
+       103.78,
+       96
+      ],
+      "shown": true,
+      "text": "ABDone"
+     }
+    ],
+    "#det": [
+     {
+      "box": [
+       0,
+       29,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Morehidden text"
+     }
+    ],
+    "#stay": [
+     {
+      "box": [
+       0,
+       47,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Staykept"
+     }
+    ],
+    "#inside": [
+     {
+      "box": [
+       0,
+       63,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "hidden text"
+     }
+    ],
+    "#pop": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "popped"
+     }
+    ],
+    "(focus)": "a"
+   }
+  },
+  {
+   "name": "escape",
+   "log": [
+    "cancel d a false true true false bye",
+    "beforetoggle d a false false true false bye",
+    "focusin open open true false false false ",
+    "close d open false false false false ",
+    "toggle d open false false false false "
+   ],
+   "state": {
+    "#d": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "ABDone"
+     }
+    ],
+    "#det": [
+     {
+      "box": [
+       0,
+       29,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Morehidden text"
+     }
+    ],
+    "#stay": [
+     {
+      "box": [
+       0,
+       47,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Staykept"
+     }
+    ],
+    "#inside": [
+     {
+      "box": [
+       0,
+       63,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "hidden text"
+     }
+    ],
+    "#pop": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "popped"
+     }
+    ],
+    "(focus)": "open"
+   }
+  },
+  {
+   "name": "open third",
+   "log": [
+    "click open open true true false false ",
+    "beforetoggle d open false true false false ",
+    "focusin a a true false true false ",
+    "modal true a true",
+    "toggle d a false false true false "
+   ],
+   "state": {
+    "#d": [
+     {
+      "box": [
+       588.11,
+       352,
+       103.78,
+       96
+      ],
+      "shown": true,
+      "text": "ABDone"
+     }
+    ],
+    "#det": [
+     {
+      "box": [
+       0,
+       29,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Morehidden text"
+     }
+    ],
+    "#stay": [
+     {
+      "box": [
+       0,
+       47,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Staykept"
+     }
+    ],
+    "#inside": [
+     {
+      "box": [
+       0,
+       63,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "hidden text"
+     }
+    ],
+    "#pop": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "popped"
+     }
+    ],
+    "(focus)": "a"
+   }
+  },
+  {
+   "name": "form dialog",
+   "log": [
+    "focusin done done true false true false ",
+    "click done done true true true false ",
+    "beforetoggle d done false false true false ",
+    "focusin open open true false false false yes",
+    "close d open false false false false yes",
+    "toggle d open false false false false yes"
+   ],
+   "state": {
+    "#d": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "ABDone"
+     }
+    ],
+    "#det": [
+     {
+      "box": [
+       0,
+       29,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Morehidden text"
+     }
+    ],
+    "#stay": [
+     {
+      "box": [
+       0,
+       47,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Staykept"
+     }
+    ],
+    "#inside": [
+     {
+      "box": [
+       0,
+       63,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "hidden text"
+     }
+    ],
+    "#pop": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "popped"
+     }
+    ],
+    "(focus)": "open"
+   }
+  },
+  {
+   "name": "plain show",
+   "log": [
+    "focusin plain plain true false false false yes",
+    "click plain plain true true false false yes",
+    "beforetoggle p plain false true false false yes",
+    "focusin p p true false false false yes",
+    "shown true 71.8125",
+    "toggle p p false false false false yes"
+   ],
+   "state": {
+    "#d": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "ABDone"
+     }
+    ],
+    "#det": [
+     {
+      "box": [
+       0,
+       29,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Morehidden text"
+     }
+    ],
+    "#stay": [
+     {
+      "box": [
+       0,
+       47,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Staykept"
+     }
+    ],
+    "#inside": [
+     {
+      "box": [
+       0,
+       63,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "hidden text"
+     }
+    ],
+    "#pop": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "popped"
+     }
+    ],
+    "(focus)": "p"
+   }
+  },
+  {
+   "name": "summary",
+   "log": [
+    "focusin sum sum true false false false yes",
+    "click sum sum true true false false yes",
+    "toggle det sum false false false true yes",
+    "toggled true 18"
+   ],
+   "state": {
+    "#d": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "ABDone"
+     }
+    ],
+    "#det": [
+     {
+      "box": [
+       0,
+       29,
+       1280,
+       52
+      ],
+      "shown": true,
+      "text": "Morehidden text"
+     }
+    ],
+    "#stay": [
+     {
+      "box": [
+       0,
+       97,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Staykept"
+     }
+    ],
+    "#inside": [
+     {
+      "box": [
+       0,
+       63,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "hidden text"
+     }
+    ],
+    "#pop": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "popped"
+     }
+    ],
+    "(focus)": "sum"
+   }
+  },
+  {
+   "name": "summary again",
+   "log": [
+    "click sum sum true true false true yes",
+    "toggle det sum false false false false yes",
+    "toggled false 18"
+   ],
+   "state": {
+    "#d": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "ABDone"
+     }
+    ],
+    "#det": [
+     {
+      "box": [
+       0,
+       29,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Morehidden text"
+     }
+    ],
+    "#stay": [
+     {
+      "box": [
+       0,
+       47,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Staykept"
+     }
+    ],
+    "#inside": [
+     {
+      "box": [
+       0,
+       63,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "hidden text"
+     }
+    ],
+    "#pop": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "popped"
+     }
+    ],
+    "(focus)": "sum"
+   }
+  },
+  {
+   "name": "summary prevented",
+   "log": [
+    "focusin sum2 sum2 true false false false yes",
+    "click sum2 sum2 true true false false yes"
+   ],
+   "state": {
+    "#d": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "ABDone"
+     }
+    ],
+    "#det": [
+     {
+      "box": [
+       0,
+       29,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Morehidden text"
+     }
+    ],
+    "#stay": [
+     {
+      "box": [
+       0,
+       47,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Staykept"
+     }
+    ],
+    "#inside": [
+     {
+      "box": [
+       0,
+       63,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "hidden text"
+     }
+    ],
+    "#pop": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "popped"
+     }
+    ],
+    "(focus)": "sum2"
+   }
+  },
+  {
+   "name": "popover",
+   "log": [
+    "focusin tog tog true false false false yes",
+    "click tog tog true true false false yes",
+    "beforetoggle pop tog false true false false yes",
+    "toggle pop tog false false false false yes",
+    "pop closed open"
+   ],
+   "state": {
+    "#d": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "ABDone"
+     }
+    ],
+    "#det": [
+     {
+      "box": [
+       0,
+       29,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Morehidden text"
+     }
+    ],
+    "#stay": [
+     {
+      "box": [
+       0,
+       47,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Staykept"
+     }
+    ],
+    "#inside": [
+     {
+      "box": [
+       0,
+       63,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "hidden text"
+     }
+    ],
+    "#pop": [
+     {
+      "box": [
+       606.3,
+       384,
+       67.39,
+       32
+      ],
+      "shown": true,
+      "text": "popped"
+     }
+    ],
+    "(focus)": "tog"
+   }
+  },
+  {
+   "name": "popover light dismiss",
+   "log": [
+    "beforetoggle pop body false false false false yes",
+    "click body body true true false false yes",
+    "toggle pop body false false false false yes",
+    "pop open closed"
+   ],
+   "state": {
+    "#d": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "ABDone"
+     }
+    ],
+    "#det": [
+     {
+      "box": [
+       0,
+       29,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Morehidden text"
+     }
+    ],
+    "#stay": [
+     {
+      "box": [
+       0,
+       47,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "Staykept"
+     }
+    ],
+    "#inside": [
+     {
+      "box": [
+       0,
+       63,
+       1280,
+       18
+      ],
+      "shown": true,
+      "text": "hidden text"
+     }
+    ],
+    "#pop": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "popped"
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
+ "input_forms": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#name": [
+     {
+      "box": [
+       4,
+       4,
+       168,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#box": [
+     {
+      "box": [
+       4,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "yes",
+      "checked": true
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       64.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       90.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2",
+      "checked": false
+     }
+    ],
+    "#prev": [
+     {
+      "box": [
+       34.45,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "go invalid",
+   "log": [
+    "click go false true true ",
+    "invalid name false false true "
+   ],
+   "state": {
+    "#name": [
+     {
+      "box": [
+       4,
+       4,
+       168,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#box": [
+     {
+      "box": [
+       4,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "yes",
+      "checked": true
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       64.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       90.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2",
+      "checked": false
+     }
+    ],
+    "#prev": [
+     {
+      "box": [
+       34.45,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "(focus)": "go"
+   }
+  },
+  {
+   "name": "type name",
+   "log": [
+    "click name false true true ",
+    "input name false true false ",
+    "input name false true false ",
+    "input name false true false ",
+    "input name false true false ",
+    "input name false true false "
+   ],
+   "state": {
+    "#name": [
+     {
+      "box": [
+       4,
+       4,
+       168,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "hello"
+     }
+    ],
+    "#box": [
+     {
+      "box": [
+       4,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "yes",
+      "checked": true
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       64.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       90.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2",
+      "checked": false
+     }
+    ],
+    "#prev": [
+     {
+      "box": [
+       34.45,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "(focus)": "name"
+   }
+  },
+  {
+   "name": "go valid",
+   "log": [
+    "change name false true false ",
+    "click go false true true ",
+    "submit f false true true go",
+    "data name=hello&mail=&site=&num=4&pat=abc&box=yes&r=1&sel=b&multi=x&multi=y&ro=fixed&wrapped=w"
+   ],
+   "state": {
+    "#name": [
+     {
+      "box": [
+       4,
+       4,
+       168,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "hello"
+     }
+    ],
+    "#box": [
+     {
+      "box": [
+       4,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "yes",
+      "checked": true
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       64.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       90.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2",
+      "checked": false
+     }
+    ],
+    "#prev": [
+     {
+      "box": [
+       34.45,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "(focus)": "go"
+   }
+  },
+  {
+   "name": "skip",
+   "log": [
+    "click nov false true true ",
+    "submit f false true true nov",
+    "data name=hello&mail=&site=&num=4&pat=abc&box=yes&r=1&sel=b&multi=x&multi=y&ro=fixed&wrapped=w"
+   ],
+   "state": {
+    "#name": [
+     {
+      "box": [
+       4,
+       4,
+       168,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "hello"
+     }
+    ],
+    "#box": [
+     {
+      "box": [
+       4,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "yes",
+      "checked": true
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       64.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       90.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2",
+      "checked": false
+     }
+    ],
+    "#prev": [
+     {
+      "box": [
+       34.45,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "(focus)": "nov"
+   }
+  },
+  {
+   "name": "outside",
+   "log": [
+    "click outside false true true ",
+    "submit f false true true outside",
+    "data name=hello&mail=&site=&num=4&pat=abc&box=yes&r=1&sel=b&multi=x&multi=y&ro=fixed&wrapped=w"
+   ],
+   "state": {
+    "#name": [
+     {
+      "box": [
+       4,
+       4,
+       168,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "hello"
+     }
+    ],
+    "#box": [
+     {
+      "box": [
+       4,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "yes",
+      "checked": true
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       64.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       90.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2",
+      "checked": false
+     }
+    ],
+    "#prev": [
+     {
+      "box": [
+       34.45,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "(focus)": "outside"
+   }
+  },
+  {
+   "name": "plain",
+   "log": [
+    "click plain false true true "
+   ],
+   "state": {
+    "#name": [
+     {
+      "box": [
+       4,
+       4,
+       168,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "hello"
+     }
+    ],
+    "#box": [
+     {
+      "box": [
+       4,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "yes",
+      "checked": true
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       64.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       90.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2",
+      "checked": false
+     }
+    ],
+    "#prev": [
+     {
+      "box": [
+       34.45,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "(focus)": "plain"
+   }
+  },
+  {
+   "name": "prevented check",
+   "log": [
+    "click prev false true true ",
+    "in click true",
+    "after true"
+   ],
+   "state": {
+    "#name": [
+     {
+      "box": [
+       4,
+       4,
+       168,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "hello"
+     }
+    ],
+    "#box": [
+     {
+      "box": [
+       4,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "yes",
+      "checked": true
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       64.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       90.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2",
+      "checked": false
+     }
+    ],
+    "#prev": [
+     {
+      "box": [
+       34.45,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "(focus)": "prev"
+   }
+  },
+  {
+   "name": "radio",
+   "log": [
+    "click r2 false true true ",
+    "r2 click false true",
+    "input r2 false true false ",
+    "change r2 false true false "
+   ],
+   "state": {
+    "#name": [
+     {
+      "box": [
+       4,
+       4,
+       168,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "hello"
+     }
+    ],
+    "#box": [
+     {
+      "box": [
+       4,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "yes",
+      "checked": true
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       64.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1",
+      "checked": false
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       90.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2",
+      "checked": true
+     }
+    ],
+    "#prev": [
+     {
+      "box": [
+       34.45,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "(focus)": "r2"
+   }
+  },
+  {
+   "name": "reset button",
+   "log": [
+    "click again false true true ",
+    "reset f false true true "
+   ],
+   "state": {
+    "#name": [
+     {
+      "box": [
+       4,
+       4,
+       168,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#box": [
+     {
+      "box": [
+       4,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "yes",
+      "checked": true
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       64.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       90.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2",
+      "checked": false
+     }
+    ],
+    "#prev": [
+     {
+      "box": [
+       34.45,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "(focus)": "again"
+   }
+  },
+  {
+   "name": "stop link",
+   "log": [
+    "click stop false true true ",
+    "hash "
+   ],
+   "state": {
+    "#name": [
+     {
+      "box": [
+       4,
+       4,
+       168,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#box": [
+     {
+      "box": [
+       4,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "yes",
+      "checked": true
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       64.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       90.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2",
+      "checked": false
+     }
+    ],
+    "#prev": [
+     {
+      "box": [
+       34.45,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "(focus)": "stop"
+   }
+  },
+  {
+   "name": "fragment link",
+   "log": [
+    "click frag false true true ",
+    "frag "
+   ],
+   "state": {
+    "#name": [
+     {
+      "box": [
+       4,
+       -6,
+       168,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#box": [
+     {
+      "box": [
+       4,
+       178,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "yes",
+      "checked": true
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       64.91,
+       178,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       90.91,
+       178,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2",
+      "checked": false
+     }
+    ],
+    "#prev": [
+     {
+      "box": [
+       34.45,
+       178,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "report",
+   "log": [
+    "click report false true true ",
+    "invalid name false false true ",
+    "form false",
+    "focus report"
+   ],
+   "state": {
+    "#name": [
+     {
+      "box": [
+       4,
+       -6,
+       168,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#box": [
+     {
+      "box": [
+       4,
+       178,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "yes",
+      "checked": true
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       64.91,
+       178,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       90.91,
+       178,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2",
+      "checked": false
+     }
+    ],
+    "#prev": [
+     {
+      "box": [
+       34.45,
+       178,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "(focus)": "report"
+   }
+  },
+  {
+   "name": "api",
+   "log": [
+    "click api false true true ",
+    "elements 20 20",
+    "named mail pat",
+    "invalid name false false true ",
+    "name true false false true false false false false false false false false false \"Please fill out this field.\"",
+    "mail true true true false false false false false false false false false false \"\"",
+    "site true true true false false false false false false false false false false \"\"",
+    "num true true true false false false false false false false false false false \"\"",
+    "pat true true true false false false false false false false false false false \"\"",
+    "ro false true true false false false false false false false false false false \"\"",
+    "inset false true true false false false false false false false false false false \"\"",
+    "name true true true false false false false false false false false false false \"\"",
+    "invalid mail false false true ",
+    "mail true false false false true false false false false false false false false \"Please include an '@' in the email address. 'nope' is missing an '@'.\"",
+    "invalid site false false true ",
+    "site true false false false true false false false false false false false false \"Please enter a URL.\"",
+    "invalid num false false true ",
+    "num true false false false false false false false false false true false false \"Please enter a valid value. The two nearest valid values are 2 and 4.\"",
+    "invalid pat false false true ",
+    "pat true false false false false true false false false false false false false \"Please match the requested format.\"",
+    "invalid num false false true ",
+    "num true false false false false false false false true false true false false \"Value must be greater than or equal to 2.\"",
+    "invalid num false false true ",
+    "num true false false false false false false false false true false false false \"Value must be less than or equal to 8.\"",
+    "invalid mail false false true ",
+    "mail true false false false true false false false false false false false true \"Mine\"",
+    "invalid mail false false true ",
+    "invalid site false false true ",
+    "invalid num false false true ",
+    "invalid pat false false true ",
+    "form false",
+    "matches false false true true true true true false",
+    "defaults \"abc\" true false",
+    "still hello base",
+    "select 1 3 b B true",
+    "multi true 2 x",
+    "labels 1 l1 1 ro",
+    "state false true true \"hold\" true 2 6 f f",
+    "fd nope false x,y false",
+    "q 1 1,2 true a=1&b=x+y&a=2&c=d+e"
+   ],
+   "state": {
+    "#name": [
+     {
+      "box": [
+       4,
+       -6,
+       168,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "hello"
+     }
+    ],
+    "#box": [
+     {
+      "box": [
+       4,
+       178,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "yes",
+      "checked": true
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       64.91,
+       178,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       90.91,
+       178,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2",
+      "checked": false
+     }
+    ],
+    "#prev": [
+     {
+      "box": [
+       34.45,
+       178,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "(focus)": "api"
+   }
+  },
+  {
+   "name": "selection",
+   "log": [
+    "click api-sel false true true ",
+    "sel 1 3 forward",
+    "all 0 5",
+    "select name false true false ",
+    "select name false true false ",
+    "select name false true false "
+   ],
+   "state": {
+    "#name": [
+     {
+      "box": [
+       4,
+       -6,
+       168,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "hello"
+     }
+    ],
+    "#box": [
+     {
+      "box": [
+       4,
+       178,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "yes",
+      "checked": true
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       64.91,
+       178,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       90.91,
+       178,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2",
+      "checked": false
+     }
+    ],
+    "#prev": [
+     {
+      "box": [
+       34.45,
+       178,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "(focus)": "name"
+   }
+  },
+  {
+   "name": "api2",
+   "log": [
+    "click api2 false true true ",
+    "invalid name false false true ",
+    "after request api2"
+   ],
+   "state": {
+    "#name": [
+     {
+      "box": [
+       4,
+       -6,
+       168,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#box": [
+     {
+      "box": [
+       4,
+       178,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "yes",
+      "checked": true
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       64.91,
+       178,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       90.91,
+       178,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2",
+      "checked": false
+     }
+    ],
+    "#prev": [
+     {
+      "box": [
+       34.45,
+       178,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "(focus)": "api2"
+   }
+  },
+  {
+   "name": "api3",
+   "log": [
+    "click api3 false true true ",
+    "submit f false true true null",
+    "data name=okay&mail=&site=&num=4&pat=abc&box=yes&r=1&sel=b&multi=x&multi=y&ro=fixed&wrapped=w",
+    "submit f false true true nov",
+    "data name=okay&mail=&site=&num=4&pat=abc&box=yes&r=1&sel=b&multi=x&multi=y&ro=fixed&wrapped=w",
+    "after submit",
+    "reset f false true true ",
+    "after reset \"base\" true 1"
+   ],
+   "state": {
+    "#name": [
+     {
+      "box": [
+       4,
+       4,
+       168,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#box": [
+     {
+      "box": [
+       4,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "yes",
+      "checked": true
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       64.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "1",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       90.91,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "2",
+      "checked": false
+     }
+    ],
+    "#prev": [
+     {
+      "box": [
+       34.45,
+       188,
+       18,
+       18
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
+ "input_keys": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "ab"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "click text",
+   "log": [
+    "focus|t|document|1|||-|-|-|-|null|t|false|false|false|true|||ab|false",
+    "focusin|t|document|1|||-|-|-|-|null|t|false|true|false|true|||ab|false",
+    "focusin|t|body|3|||-|-|-|-|null|t|false|true|false|true|||ab|false",
+    "click|t|document|1|||-|-|-|-|null|t|false|true|true|true|||ab|false",
+    "click|t|body|3|||-|-|-|-|null|t|false|true|true|true|||ab|false"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "ab"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "t"
+   }
+  },
+  {
+   "name": "type c",
+   "log": [
+    "keydown|t|document|1|c|KeyC|-|-|-|-|null|t|false|true|true|true|||ab|false",
+    "keydown|t|body|3|c|KeyC|-|-|-|-|null|t|false|true|true|true|||ab|false",
+    "keypress|t|document|1|c|KeyC|-|-|-|-|null|t|false|true|true|true|||ab|false",
+    "keypress|t|body|3|c|KeyC|-|-|-|-|null|t|false|true|true|true|||ab|false",
+    "beforeinput|t|document|1|||-|-|-|-|null|t|false|true|true|true|insertText|c|ab|false",
+    "beforeinput|t|body|3|||-|-|-|-|null|t|false|true|true|true|insertText|c|ab|false",
+    "input|t|document|1|||-|-|-|-|null|t|false|true|false|true|insertText|c|abc|false",
+    "input|t|body|3|||-|-|-|-|null|t|false|true|false|true|insertText|c|abc|false",
+    "keyup|t|document|1|c|KeyC|-|-|-|-|null|t|false|true|true|true|||abc|false",
+    "keyup|t|body|3|c|KeyC|-|-|-|-|null|t|false|true|true|true|||abc|false"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "t"
+   }
+  },
+  {
+   "name": "shift A",
+   "log": [
+    "keydown|t|document|1|Shift|ShiftLeft|-|S|-|-|null|t|false|true|true|true|||abc|false",
+    "keydown|t|body|3|Shift|ShiftLeft|-|S|-|-|null|t|false|true|true|true|||abc|false",
+    "keydown|t|document|1|A|KeyA|-|S|-|-|null|t|false|true|true|true|||abc|false",
+    "keydown|t|body|3|A|KeyA|-|S|-|-|null|t|false|true|true|true|||abc|false",
+    "keypress|t|document|1|A|KeyA|-|S|-|-|null|t|false|true|true|true|||abc|false",
+    "keypress|t|body|3|A|KeyA|-|S|-|-|null|t|false|true|true|true|||abc|false",
+    "beforeinput|t|document|1|||-|-|-|-|null|t|false|true|true|true|insertText|A|abc|false",
+    "beforeinput|t|body|3|||-|-|-|-|null|t|false|true|true|true|insertText|A|abc|false",
+    "input|t|document|1|||-|-|-|-|null|t|false|true|false|true|insertText|A|abcA|false",
+    "input|t|body|3|||-|-|-|-|null|t|false|true|false|true|insertText|A|abcA|false",
+    "keyup|t|document|1|A|KeyA|-|S|-|-|null|t|false|true|true|true|||abcA|false",
+    "keyup|t|body|3|A|KeyA|-|S|-|-|null|t|false|true|true|true|||abcA|false",
+    "keyup|t|document|1|Shift|ShiftLeft|-|-|-|-|null|t|false|true|true|true|||abcA|false",
+    "keyup|t|body|3|Shift|ShiftLeft|-|-|-|-|null|t|false|true|true|true|||abcA|false"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abcA"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "t"
+   }
+  },
+  {
+   "name": "backspace",
+   "log": [
+    "keydown|t|document|1|Backspace|Backspace|-|-|-|-|null|t|false|true|true|true|||abcA|false",
+    "keydown|t|body|3|Backspace|Backspace|-|-|-|-|null|t|false|true|true|true|||abcA|false",
+    "beforeinput|t|document|1|||-|-|-|-|null|t|false|true|true|true|deleteContentBackward||abcA|false",
+    "beforeinput|t|body|3|||-|-|-|-|null|t|false|true|true|true|deleteContentBackward||abcA|false",
+    "input|t|document|1|||-|-|-|-|null|t|false|true|false|true|deleteContentBackward||abc|false",
+    "input|t|body|3|||-|-|-|-|null|t|false|true|false|true|deleteContentBackward||abc|false",
+    "keyup|t|document|1|Backspace|Backspace|-|-|-|-|null|t|false|true|true|true|||abc|false",
+    "keyup|t|body|3|Backspace|Backspace|-|-|-|-|null|t|false|true|true|true|||abc|false"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "t"
+   }
+  },
+  {
+   "name": "enter submits",
+   "log": [
+    "keydown|t|document|1|Enter|Enter|-|-|-|-|null|t|false|true|true|true|||abc|false",
+    "keydown|t|body|3|Enter|Enter|-|-|-|-|null|t|false|true|true|true|||abc|false",
+    "keypress|t|document|1|Enter|Enter|-|-|-|-|null|t|false|true|true|true|||abc|false",
+    "keypress|t|body|3|Enter|Enter|-|-|-|-|null|t|false|true|true|true|||abc|false",
+    "beforeinput|t|document|1|||-|-|-|-|null|t|false|true|true|true|insertLineBreak||abc|false",
+    "beforeinput|t|body|3|||-|-|-|-|null|t|false|true|true|true|insertLineBreak||abc|false",
+    "change|t|document|1|||-|-|-|-|null|t|false|true|false|true|||abc|false",
+    "change|t|body|3|||-|-|-|-|null|t|false|true|false|true|||abc|false",
+    "click|sub|document|1|||-|-|-|-|null|t|false|true|true|true||||",
+    "click|sub|body|3|||-|-|-|-|null|t|false|true|true|true||||",
+    "submit|f|document|1|||-|-|-|-|null|t|false|true|true|true||||",
+    "submit|f|body|3|||-|-|-|-|null|t|true|true|true|true||||",
+    "keyup|t|document|1|Enter|Enter|-|-|-|-|null|t|false|true|true|true|||abc|false",
+    "keyup|t|body|3|Enter|Enter|-|-|-|-|null|t|false|true|true|true|||abc|false"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "t"
+   }
+  },
+  {
+   "name": "tab to no",
+   "log": [
+    "keydown|t|document|1|Tab|Tab|-|-|-|-|null|t|false|true|true|true|||abc|false",
+    "keydown|t|body|3|Tab|Tab|-|-|-|-|null|t|false|true|true|true|||abc|false",
+    "blur|t|document|1|||-|-|-|-|no|body|false|false|false|true|||abc|false",
+    "focusout|t|document|1|||-|-|-|-|no|body|false|true|false|true|||abc|false",
+    "focusout|t|body|3|||-|-|-|-|no|body|false|true|false|true|||abc|false",
+    "focus|no|document|1|||-|-|-|-|t|no|false|false|false|true||||false",
+    "focusin|no|document|1|||-|-|-|-|t|no|false|true|false|true||||false",
+    "focusin|no|body|3|||-|-|-|-|t|no|false|true|false|true||||false",
+    "keyup|no|document|1|Tab|Tab|-|-|-|-|null|no|false|true|true|true||||false",
+    "keyup|no|body|3|Tab|Tab|-|-|-|-|null|no|false|true|true|true||||false"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "no"
+   }
+  },
+  {
+   "name": "blocked keydown",
+   "log": [
+    "keydown|no|document|1|x|KeyX|-|-|-|-|null|no|false|true|true|true||||false",
+    "keydown|no|body|3|x|KeyX|-|-|-|-|null|no|true|true|true|true||||false",
+    "keyup|no|document|1|x|KeyX|-|-|-|-|null|no|false|true|true|true||||false",
+    "keyup|no|body|3|x|KeyX|-|-|-|-|null|no|false|true|true|true||||false"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "no"
+   }
+  },
+  {
+   "name": "blocked beforeinput",
+   "log": [
+    "keydown|no|document|1|y|KeyY|-|-|-|-|null|no|false|true|true|true||||false",
+    "keydown|no|body|3|y|KeyY|-|-|-|-|null|no|false|true|true|true||||false",
+    "keypress|no|document|1|y|KeyY|-|-|-|-|null|no|false|true|true|true||||false",
+    "keypress|no|body|3|y|KeyY|-|-|-|-|null|no|false|true|true|true||||false",
+    "beforeinput|no|document|1|||-|-|-|-|null|no|false|true|true|true|insertText|y||false",
+    "beforeinput|no|body|3|||-|-|-|-|null|no|true|true|true|true|insertText|y||false",
+    "keyup|no|document|1|y|KeyY|-|-|-|-|null|no|false|true|true|true||||false",
+    "keyup|no|body|3|y|KeyY|-|-|-|-|null|no|false|true|true|true||||false"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "no"
+   }
+  },
+  {
+   "name": "typed z",
+   "log": [
+    "keydown|no|document|1|z|KeyZ|-|-|-|-|null|no|false|true|true|true||||false",
+    "keydown|no|body|3|z|KeyZ|-|-|-|-|null|no|false|true|true|true||||false",
+    "keypress|no|document|1|z|KeyZ|-|-|-|-|null|no|false|true|true|true||||false",
+    "keypress|no|body|3|z|KeyZ|-|-|-|-|null|no|false|true|true|true||||false",
+    "beforeinput|no|document|1|||-|-|-|-|null|no|false|true|true|true|insertText|z||false",
+    "beforeinput|no|body|3|||-|-|-|-|null|no|false|true|true|true|insertText|z||false",
+    "input|no|document|1|||-|-|-|-|null|no|false|true|false|true|insertText|z|z|false",
+    "input|no|body|3|||-|-|-|-|null|no|false|true|false|true|insertText|z|z|false",
+    "keyup|no|document|1|z|KeyZ|-|-|-|-|null|no|false|true|true|true|||z|false",
+    "keyup|no|body|3|z|KeyZ|-|-|-|-|null|no|false|true|true|true|||z|false"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "no"
+   }
+  },
+  {
+   "name": "tab commits change",
+   "log": [
+    "keydown|no|document|1|Tab|Tab|-|-|-|-|null|no|false|true|true|true|||z|false",
+    "keydown|no|body|3|Tab|Tab|-|-|-|-|null|no|false|true|true|true|||z|false",
+    "change|no|document|1|||-|-|-|-|null|body|false|true|false|true|||z|false",
+    "change|no|body|3|||-|-|-|-|null|body|false|true|false|true|||z|false",
+    "blur|no|document|1|||-|-|-|-|sub|body|false|false|false|true|||z|false",
+    "focusout|no|document|1|||-|-|-|-|sub|body|false|true|false|true|||z|false",
+    "focusout|no|body|3|||-|-|-|-|sub|body|false|true|false|true|||z|false",
+    "focus|sub|document|1|||-|-|-|-|no|sub|false|false|false|true||||",
+    "focusin|sub|document|1|||-|-|-|-|no|sub|false|true|false|true||||",
+    "focusin|sub|body|3|||-|-|-|-|no|sub|false|true|false|true||||",
+    "keyup|sub|document|1|Tab|Tab|-|-|-|-|null|sub|false|true|true|true||||",
+    "keyup|sub|body|3|Tab|Tab|-|-|-|-|null|sub|false|true|true|true||||"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "sub"
+   }
+  },
+  {
+   "name": "tab to box",
+   "log": [
+    "keydown|sub|document|1|Tab|Tab|-|-|-|-|null|sub|false|true|true|true||||",
+    "keydown|sub|body|3|Tab|Tab|-|-|-|-|null|sub|false|true|true|true||||",
+    "blur|sub|document|1|||-|-|-|-|box|body|false|false|false|true||||",
+    "focusout|sub|document|1|||-|-|-|-|box|body|false|true|false|true||||",
+    "focusout|sub|body|3|||-|-|-|-|box|body|false|true|false|true||||",
+    "focus|box|document|1|||-|-|-|-|sub|box|false|false|false|true||||",
+    "focusin|box|document|1|||-|-|-|-|sub|box|false|true|false|true||||",
+    "focusin|box|body|3|||-|-|-|-|sub|box|false|true|false|true||||",
+    "keyup|box|document|1|Tab|Tab|-|-|-|-|null|box|false|true|true|true||||",
+    "keyup|box|body|3|Tab|Tab|-|-|-|-|null|box|false|true|true|true||||"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "box"
+   }
+  },
+  {
+   "name": "arrow moves focus",
+   "log": [
+    "keydown|box|document|1|ArrowDown|ArrowDown|-|-|-|-|null|box|false|true|true|true||||",
+    "blur|box|document|1|||-|-|-|-|first|body|false|false|false|true||||",
+    "focusout|box|document|1|||-|-|-|-|first|body|false|true|false|true||||",
+    "focusout|box|body|3|||-|-|-|-|first|body|false|true|false|true||||",
+    "focus|first|document|1|||-|-|-|-|box|first|false|false|false|true||||",
+    "focusin|first|document|1|||-|-|-|-|box|first|false|true|false|true||||",
+    "focusin|first|body|3|||-|-|-|-|box|first|false|true|false|true||||",
+    "keydown|box|body|3|ArrowDown|ArrowDown|-|-|-|-|null|first|true|true|true|true||||",
+    "keyup|first|document|1|ArrowDown|ArrowDown|-|-|-|-|null|first|false|true|true|true||||",
+    "keyup|first|body|3|ArrowDown|ArrowDown|-|-|-|-|null|first|false|true|true|true||||"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "first"
+   }
+  },
+  {
+   "name": "tab after positive",
+   "log": [
+    "keydown|first|document|1|Tab|Tab|-|-|-|-|null|first|false|true|true|true||||",
+    "keydown|first|body|3|Tab|Tab|-|-|-|-|null|first|false|true|true|true||||",
+    "blur|first|document|1|||-|-|-|-|t|body|false|false|false|true||||",
+    "focusout|first|document|1|||-|-|-|-|t|body|false|true|false|true||||",
+    "focusout|first|body|3|||-|-|-|-|t|body|false|true|false|true||||",
+    "focus|t|document|1|||-|-|-|-|first|t|false|false|false|true|||abc|false",
+    "focusin|t|document|1|||-|-|-|-|first|t|false|true|false|true|||abc|false",
+    "focusin|t|body|3|||-|-|-|-|first|t|false|true|false|true|||abc|false",
+    "keyup|t|document|1|Tab|Tab|-|-|-|-|null|t|false|true|true|true|||abc|false",
+    "keyup|t|body|3|Tab|Tab|-|-|-|-|null|t|false|true|true|true|||abc|false"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "t"
+   }
+  },
+  {
+   "name": "tab to btn",
+   "log": [
+    "keydown|t|document|1|Tab|Tab|-|-|-|-|null|t|false|true|true|true|||abc|false",
+    "keydown|t|body|3|Tab|Tab|-|-|-|-|null|t|false|true|true|true|||abc|false",
+    "blur|t|document|1|||-|-|-|-|no|body|false|false|false|true|||abc|false",
+    "focusout|t|document|1|||-|-|-|-|no|body|false|true|false|true|||abc|false",
+    "focusout|t|body|3|||-|-|-|-|no|body|false|true|false|true|||abc|false",
+    "focus|no|document|1|||-|-|-|-|t|no|false|false|false|true|||z|false",
+    "focusin|no|document|1|||-|-|-|-|t|no|false|true|false|true|||z|false",
+    "focusin|no|body|3|||-|-|-|-|t|no|false|true|false|true|||z|false",
+    "keyup|no|document|1|Tab|Tab|-|-|-|-|null|no|false|true|true|true|||z|false",
+    "keyup|no|body|3|Tab|Tab|-|-|-|-|null|no|false|true|true|true|||z|false"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "no"
+   }
+  },
+  {
+   "name": "shift tab",
+   "log": [
+    "keydown|no|document|1|Shift|ShiftLeft|-|S|-|-|null|no|false|true|true|true|||z|false",
+    "keydown|no|body|3|Shift|ShiftLeft|-|S|-|-|null|no|false|true|true|true|||z|false",
+    "keydown|no|document|1|Tab|Tab|-|S|-|-|null|no|false|true|true|true|||z|false",
+    "keydown|no|body|3|Tab|Tab|-|S|-|-|null|no|false|true|true|true|||z|false",
+    "blur|no|document|1|||-|-|-|-|t|body|false|false|false|true|||z|false",
+    "focusout|no|document|1|||-|-|-|-|t|body|false|true|false|true|||z|false",
+    "focusout|no|body|3|||-|-|-|-|t|body|false|true|false|true|||z|false",
+    "focus|t|document|1|||-|-|-|-|no|t|false|false|false|true|||abc|false",
+    "focusin|t|document|1|||-|-|-|-|no|t|false|true|false|true|||abc|false",
+    "focusin|t|body|3|||-|-|-|-|no|t|false|true|false|true|||abc|false",
+    "keyup|t|document|1|Tab|Tab|-|S|-|-|null|t|false|true|true|true|||abc|false",
+    "keyup|t|body|3|Tab|Tab|-|S|-|-|null|t|false|true|true|true|||abc|false",
+    "keyup|t|document|1|Shift|ShiftLeft|-|-|-|-|null|t|false|true|true|true|||abc|false",
+    "keyup|t|body|3|Shift|ShiftLeft|-|-|-|-|null|t|false|true|true|true|||abc|false"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "t"
+   }
+  },
+  {
+   "name": "on to no",
+   "log": [
+    "keydown|t|document|1|Tab|Tab|-|-|-|-|null|t|false|true|true|true|||abc|false",
+    "keydown|t|body|3|Tab|Tab|-|-|-|-|null|t|false|true|true|true|||abc|false",
+    "blur|t|document|1|||-|-|-|-|no|body|false|false|false|true|||abc|false",
+    "focusout|t|document|1|||-|-|-|-|no|body|false|true|false|true|||abc|false",
+    "focusout|t|body|3|||-|-|-|-|no|body|false|true|false|true|||abc|false",
+    "focus|no|document|1|||-|-|-|-|t|no|false|false|false|true|||z|false",
+    "focusin|no|document|1|||-|-|-|-|t|no|false|true|false|true|||z|false",
+    "focusin|no|body|3|||-|-|-|-|t|no|false|true|false|true|||z|false",
+    "keyup|no|document|1|Tab|Tab|-|-|-|-|null|no|false|true|true|true|||z|false",
+    "keyup|no|body|3|Tab|Tab|-|-|-|-|null|no|false|true|true|true|||z|false"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "no"
+   }
+  },
+  {
+   "name": "on to sub",
+   "log": [
+    "keydown|no|document|1|Tab|Tab|-|-|-|-|null|no|false|true|true|true|||z|false",
+    "keydown|no|body|3|Tab|Tab|-|-|-|-|null|no|false|true|true|true|||z|false",
+    "blur|no|document|1|||-|-|-|-|sub|body|false|false|false|true|||z|false",
+    "focusout|no|document|1|||-|-|-|-|sub|body|false|true|false|true|||z|false",
+    "focusout|no|body|3|||-|-|-|-|sub|body|false|true|false|true|||z|false",
+    "focus|sub|document|1|||-|-|-|-|no|sub|false|false|false|true||||",
+    "focusin|sub|document|1|||-|-|-|-|no|sub|false|true|false|true||||",
+    "focusin|sub|body|3|||-|-|-|-|no|sub|false|true|false|true||||",
+    "keyup|sub|document|1|Tab|Tab|-|-|-|-|null|sub|false|true|true|true||||",
+    "keyup|sub|body|3|Tab|Tab|-|-|-|-|null|sub|false|true|true|true||||"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "sub"
+   }
+  },
+  {
+   "name": "enter on sub",
+   "log": [
+    "keydown|sub|document|1|Enter|Enter|-|-|-|-|null|sub|false|true|true|true||||",
+    "keydown|sub|body|3|Enter|Enter|-|-|-|-|null|sub|false|true|true|true||||",
+    "keypress|sub|document|1|Enter|Enter|-|-|-|-|null|sub|false|true|true|true||||",
+    "keypress|sub|body|3|Enter|Enter|-|-|-|-|null|sub|false|true|true|true||||",
+    "click|sub|document|1|||-|-|-|-|null|sub|false|true|true|true||||",
+    "click|sub|body|3|||-|-|-|-|null|sub|false|true|true|true||||",
+    "submit|f|document|1|||-|-|-|-|null|sub|false|true|true|true||||",
+    "submit|f|body|3|||-|-|-|-|null|sub|true|true|true|true||||",
+    "keyup|sub|document|1|Enter|Enter|-|-|-|-|null|sub|false|true|true|true||||",
+    "keyup|sub|body|3|Enter|Enter|-|-|-|-|null|sub|false|true|true|true||||"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "sub"
+   }
+  },
+  {
+   "name": "on to box",
+   "log": [
+    "keydown|sub|document|1|Tab|Tab|-|-|-|-|null|sub|false|true|true|true||||",
+    "keydown|sub|body|3|Tab|Tab|-|-|-|-|null|sub|false|true|true|true||||",
+    "blur|sub|document|1|||-|-|-|-|box|body|false|false|false|true||||",
+    "focusout|sub|document|1|||-|-|-|-|box|body|false|true|false|true||||",
+    "focusout|sub|body|3|||-|-|-|-|box|body|false|true|false|true||||",
+    "focus|box|document|1|||-|-|-|-|sub|box|false|false|false|true||||",
+    "focusin|box|document|1|||-|-|-|-|sub|box|false|true|false|true||||",
+    "focusin|box|body|3|||-|-|-|-|sub|box|false|true|false|true||||",
+    "keyup|box|document|1|Tab|Tab|-|-|-|-|null|box|false|true|true|true||||",
+    "keyup|box|body|3|Tab|Tab|-|-|-|-|null|box|false|true|true|true||||"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "box"
+   }
+  },
+  {
+   "name": "to btn",
+   "log": [
+    "keydown|box|document|1|Tab|Tab|-|-|-|-|null|box|false|true|true|true||||",
+    "keydown|box|body|3|Tab|Tab|-|-|-|-|null|box|false|true|true|true||||",
+    "blur|box|document|1|||-|-|-|-|btn|body|false|false|false|true||||",
+    "focusout|box|document|1|||-|-|-|-|btn|body|false|true|false|true||||",
+    "focusout|box|body|3|||-|-|-|-|btn|body|false|true|false|true||||",
+    "focus|btn|document|1|||-|-|-|-|box|btn|false|false|false|true||||",
+    "focusin|btn|document|1|||-|-|-|-|box|btn|false|true|false|true||||",
+    "focusin|btn|body|3|||-|-|-|-|box|btn|false|true|false|true||||",
+    "keyup|btn|document|1|Tab|Tab|-|-|-|-|null|btn|false|true|true|true||||",
+    "keyup|btn|body|3|Tab|Tab|-|-|-|-|null|btn|false|true|true|true||||"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "space on button",
+   "log": [
+    "keydown|btn|document|1| |Space|-|-|-|-|null|btn|false|true|true|true||||",
+    "keydown|btn|body|3| |Space|-|-|-|-|null|btn|false|true|true|true||||",
+    "keypress|btn|document|1| |Space|-|-|-|-|null|btn|false|true|true|true||||",
+    "keypress|btn|body|3| |Space|-|-|-|-|null|btn|false|true|true|true||||",
+    "keyup|btn|document|1| |Space|-|-|-|-|null|btn|false|true|true|true||||",
+    "keyup|btn|body|3| |Space|-|-|-|-|null|btn|false|true|true|true||||",
+    "click|btn|document|1|||-|-|-|-|null|btn|false|true|true|true||||",
+    "click|btn|body|3|||-|-|-|-|null|btn|false|true|true|true||||"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "enter on button",
+   "log": [
+    "keydown|btn|document|1|Enter|Enter|-|-|-|-|null|btn|false|true|true|true||||",
+    "keydown|btn|body|3|Enter|Enter|-|-|-|-|null|btn|false|true|true|true||||",
+    "keypress|btn|document|1|Enter|Enter|-|-|-|-|null|btn|false|true|true|true||||",
+    "keypress|btn|body|3|Enter|Enter|-|-|-|-|null|btn|false|true|true|true||||",
+    "click|btn|document|1|||-|-|-|-|null|btn|false|true|true|true||||",
+    "click|btn|body|3|||-|-|-|-|null|btn|false|true|true|true||||",
+    "keyup|btn|document|1|Enter|Enter|-|-|-|-|null|btn|false|true|true|true||||",
+    "keyup|btn|body|3|Enter|Enter|-|-|-|-|null|btn|false|true|true|true||||"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "to link",
+   "log": [
+    "keydown|btn|document|1|Tab|Tab|-|-|-|-|null|btn|false|true|true|true||||",
+    "keydown|btn|body|3|Tab|Tab|-|-|-|-|null|btn|false|true|true|true||||",
+    "blur|btn|document|1|||-|-|-|-|ln|body|false|false|false|true||||",
+    "focusout|btn|document|1|||-|-|-|-|ln|body|false|true|false|true||||",
+    "focusout|btn|body|3|||-|-|-|-|ln|body|false|true|false|true||||",
+    "focus|ln|document|1|||-|-|-|-|btn|ln|false|false|false|true||||",
+    "focusin|ln|document|1|||-|-|-|-|btn|ln|false|true|false|true||||",
+    "focusin|ln|body|3|||-|-|-|-|btn|ln|false|true|false|true||||",
+    "keyup|ln|document|1|Tab|Tab|-|-|-|-|null|ln|false|true|true|true||||",
+    "keyup|ln|body|3|Tab|Tab|-|-|-|-|null|ln|false|true|true|true||||"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "ln"
+   }
+  },
+  {
+   "name": "enter on link",
+   "log": [
+    "keydown|ln|document|1|Enter|Enter|-|-|-|-|null|ln|false|true|true|true||||",
+    "keydown|ln|body|3|Enter|Enter|-|-|-|-|null|ln|false|true|true|true||||",
+    "click|ln|document|1|||-|-|-|-|null|ln|false|true|true|true||||",
+    "click|ln|body|3|||-|-|-|-|null|ln|false|true|true|true||||",
+    "keyup|ln|document|1|Enter|Enter|-|-|-|-|null|ln|false|true|true|true||||",
+    "keyup|ln|body|3|Enter|Enter|-|-|-|-|null|ln|false|true|true|true||||"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "ln"
+   }
+  },
+  {
+   "name": "escape on link",
+   "log": [
+    "keydown|ln|document|1|Escape|Escape|-|-|-|-|null|ln|false|true|true|true||||",
+    "keydown|ln|body|3|Escape|Escape|-|-|-|-|null|ln|false|true|true|true||||",
+    "keyup|ln|document|1|Escape|Escape|-|-|-|-|null|ln|false|true|true|true||||",
+    "keyup|ln|body|3|Escape|Escape|-|-|-|-|null|ln|false|true|true|true||||"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "ln"
+   }
+  },
+  {
+   "name": "to check",
+   "log": [
+    "keydown|ln|document|1|Tab|Tab|-|-|-|-|null|ln|false|true|true|true||||",
+    "keydown|ln|body|3|Tab|Tab|-|-|-|-|null|ln|false|true|true|true||||",
+    "blur|ln|document|1|||-|-|-|-|chk|body|false|false|false|true||||",
+    "focusout|ln|document|1|||-|-|-|-|chk|body|false|true|false|true||||",
+    "focusout|ln|body|3|||-|-|-|-|chk|body|false|true|false|true||||",
+    "focus|chk|document|1|||-|-|-|-|ln|chk|false|false|false|true|||on|false",
+    "focusin|chk|document|1|||-|-|-|-|ln|chk|false|true|false|true|||on|false",
+    "focusin|chk|body|3|||-|-|-|-|ln|chk|false|true|false|true|||on|false",
+    "keyup|chk|document|1|Tab|Tab|-|-|-|-|null|chk|false|true|true|true|||on|false",
+    "keyup|chk|body|3|Tab|Tab|-|-|-|-|null|chk|false|true|true|true|||on|false"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "chk"
+   }
+  },
+  {
+   "name": "space on check",
+   "log": [
+    "keydown|chk|document|1| |Space|-|-|-|-|null|chk|false|true|true|true|||on|false",
+    "keydown|chk|body|3| |Space|-|-|-|-|null|chk|false|true|true|true|||on|false",
+    "keypress|chk|document|1| |Space|-|-|-|-|null|chk|false|true|true|true|||on|false",
+    "keypress|chk|body|3| |Space|-|-|-|-|null|chk|false|true|true|true|||on|false",
+    "keyup|chk|document|1| |Space|-|-|-|-|null|chk|false|true|true|true|||on|false",
+    "keyup|chk|body|3| |Space|-|-|-|-|null|chk|false|true|true|true|||on|false",
+    "click|chk|document|1|||-|-|-|-|null|chk|false|true|true|true|||on|true",
+    "click|chk|body|3|||-|-|-|-|null|chk|false|true|true|true|||on|true",
+    "input|chk|document|1|||-|-|-|-|null|chk|false|true|false|true|||on|true",
+    "input|chk|body|3|||-|-|-|-|null|chk|false|true|false|true|||on|true",
+    "change|chk|document|1|||-|-|-|-|null|chk|false|true|false|true|||on|true",
+    "change|chk|body|3|||-|-|-|-|null|chk|false|true|false|true|||on|true"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "chk"
+   }
+  },
+  {
+   "name": "click label",
+   "log": [
+    "blur|chk|document|1|||-|-|-|-|null|body|false|false|false|true|||on|true",
+    "focusout|chk|document|1|||-|-|-|-|null|body|false|true|false|true|||on|true",
+    "focusout|chk|body|3|||-|-|-|-|null|body|false|true|false|true|||on|true",
+    "click|lab|document|1|||-|-|-|-|null|body|false|true|true|true||||",
+    "click|lab|body|3|||-|-|-|-|null|body|false|true|true|true||||",
+    "focus|chk|document|1|||-|-|-|-|null|chk|false|false|false|true|||on|true",
+    "focusin|chk|document|1|||-|-|-|-|null|chk|false|true|false|true|||on|true",
+    "focusin|chk|body|3|||-|-|-|-|null|chk|false|true|false|true|||on|true",
+    "click|chk|document|1|||-|-|-|-|null|chk|false|true|true|true|||on|false",
+    "click|chk|body|3|||-|-|-|-|null|chk|false|true|true|true|||on|false",
+    "input|chk|document|1|||-|-|-|-|null|chk|false|true|false|true|||on|false",
+    "input|chk|body|3|||-|-|-|-|null|chk|false|true|false|true|||on|false",
+    "change|chk|document|1|||-|-|-|-|null|chk|false|true|false|true|||on|false",
+    "change|chk|body|3|||-|-|-|-|null|chk|false|true|false|true|||on|false"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "chk"
+   }
+  },
+  {
+   "name": "to radio",
+   "log": [
+    "keydown|chk|document|1|Tab|Tab|-|-|-|-|null|chk|false|true|true|true|||on|false",
+    "keydown|chk|body|3|Tab|Tab|-|-|-|-|null|chk|false|true|true|true|||on|false",
+    "blur|chk|document|1|||-|-|-|-|r1|body|false|false|false|true|||on|false",
+    "focusout|chk|document|1|||-|-|-|-|r1|body|false|true|false|true|||on|false",
+    "focusout|chk|body|3|||-|-|-|-|r1|body|false|true|false|true|||on|false",
+    "focus|r1|document|1|||-|-|-|-|chk|r1|false|false|false|true|||on|true",
+    "focusin|r1|document|1|||-|-|-|-|chk|r1|false|true|false|true|||on|true",
+    "focusin|r1|body|3|||-|-|-|-|chk|r1|false|true|false|true|||on|true",
+    "keyup|r1|document|1|Tab|Tab|-|-|-|-|null|r1|false|true|true|true|||on|true",
+    "keyup|r1|body|3|Tab|Tab|-|-|-|-|null|r1|false|true|true|true|||on|true"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "r1"
+   }
+  },
+  {
+   "name": "radio arrow",
+   "log": [
+    "keydown|r1|document|1|ArrowRight|ArrowRight|-|-|-|-|null|r1|false|true|true|true|||on|true",
+    "keydown|r1|body|3|ArrowRight|ArrowRight|-|-|-|-|null|r1|false|true|true|true|||on|true",
+    "blur|r1|document|1|||-|-|-|-|r2|body|false|false|false|true|||on|true",
+    "focusout|r1|document|1|||-|-|-|-|r2|body|false|true|false|true|||on|true",
+    "focusout|r1|body|3|||-|-|-|-|r2|body|false|true|false|true|||on|true",
+    "focus|r2|document|1|||-|-|-|-|r1|r2|false|false|false|true|||on|false",
+    "focusin|r2|document|1|||-|-|-|-|r1|r2|false|true|false|true|||on|false",
+    "focusin|r2|body|3|||-|-|-|-|r1|r2|false|true|false|true|||on|false",
+    "click|r2|document|1|||-|-|-|-|null|r2|false|true|true|true|||on|true",
+    "click|r2|body|3|||-|-|-|-|null|r2|false|true|true|true|||on|true",
+    "input|r2|document|1|||-|-|-|-|null|r2|false|true|false|true|||on|true",
+    "input|r2|body|3|||-|-|-|-|null|r2|false|true|false|true|||on|true",
+    "change|r2|document|1|||-|-|-|-|null|r2|false|true|false|true|||on|true",
+    "change|r2|body|3|||-|-|-|-|null|r2|false|true|false|true|||on|true",
+    "keyup|r2|document|1|ArrowRight|ArrowRight|-|-|-|-|null|r2|false|true|true|true|||on|true",
+    "keyup|r2|body|3|ArrowRight|ArrowRight|-|-|-|-|null|r2|false|true|true|true|||on|true"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "r2"
+   }
+  },
+  {
+   "name": "radio arrow 2",
+   "log": [
+    "keydown|r2|document|1|ArrowDown|ArrowDown|-|-|-|-|null|r2|false|true|true|true|||on|true",
+    "keydown|r2|body|3|ArrowDown|ArrowDown|-|-|-|-|null|r2|false|true|true|true|||on|true",
+    "blur|r2|document|1|||-|-|-|-|r3|body|false|false|false|true|||on|true",
+    "focusout|r2|document|1|||-|-|-|-|r3|body|false|true|false|true|||on|true",
+    "focusout|r2|body|3|||-|-|-|-|r3|body|false|true|false|true|||on|true",
+    "focus|r3|document|1|||-|-|-|-|r2|r3|false|false|false|true|||on|false",
+    "focusin|r3|document|1|||-|-|-|-|r2|r3|false|true|false|true|||on|false",
+    "focusin|r3|body|3|||-|-|-|-|r2|r3|false|true|false|true|||on|false",
+    "click|r3|document|1|||-|-|-|-|null|r3|false|true|true|true|||on|true",
+    "click|r3|body|3|||-|-|-|-|null|r3|false|true|true|true|||on|true",
+    "input|r3|document|1|||-|-|-|-|null|r3|false|true|false|true|||on|true",
+    "input|r3|body|3|||-|-|-|-|null|r3|false|true|false|true|||on|true",
+    "change|r3|document|1|||-|-|-|-|null|r3|false|true|false|true|||on|true",
+    "change|r3|body|3|||-|-|-|-|null|r3|false|true|false|true|||on|true",
+    "keyup|r3|document|1|ArrowDown|ArrowDown|-|-|-|-|null|r3|false|true|true|true|||on|true",
+    "keyup|r3|body|3|ArrowDown|ArrowDown|-|-|-|-|null|r3|false|true|true|true|||on|true"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "r3"
+   }
+  },
+  {
+   "name": "radio wrap",
+   "log": [
+    "keydown|r3|document|1|ArrowRight|ArrowRight|-|-|-|-|null|r3|false|true|true|true|||on|true",
+    "keydown|r3|body|3|ArrowRight|ArrowRight|-|-|-|-|null|r3|false|true|true|true|||on|true",
+    "blur|r3|document|1|||-|-|-|-|r1|body|false|false|false|true|||on|true",
+    "focusout|r3|document|1|||-|-|-|-|r1|body|false|true|false|true|||on|true",
+    "focusout|r3|body|3|||-|-|-|-|r1|body|false|true|false|true|||on|true",
+    "focus|r1|document|1|||-|-|-|-|r3|r1|false|false|false|true|||on|false",
+    "focusin|r1|document|1|||-|-|-|-|r3|r1|false|true|false|true|||on|false",
+    "focusin|r1|body|3|||-|-|-|-|r3|r1|false|true|false|true|||on|false",
+    "click|r1|document|1|||-|-|-|-|null|r1|false|true|true|true|||on|true",
+    "click|r1|body|3|||-|-|-|-|null|r1|false|true|true|true|||on|true",
+    "input|r1|document|1|||-|-|-|-|null|r1|false|true|false|true|||on|true",
+    "input|r1|body|3|||-|-|-|-|null|r1|false|true|false|true|||on|true",
+    "change|r1|document|1|||-|-|-|-|null|r1|false|true|false|true|||on|true",
+    "change|r1|body|3|||-|-|-|-|null|r1|false|true|false|true|||on|true",
+    "keyup|r1|document|1|ArrowRight|ArrowRight|-|-|-|-|null|r1|false|true|true|true|||on|true",
+    "keyup|r1|body|3|ArrowRight|ArrowRight|-|-|-|-|null|r1|false|true|true|true|||on|true"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "r1"
+   }
+  },
+  {
+   "name": "to select",
+   "log": [
+    "keydown|r1|document|1|Tab|Tab|-|-|-|-|null|r1|false|true|true|true|||on|true",
+    "keydown|r1|body|3|Tab|Tab|-|-|-|-|null|r1|false|true|true|true|||on|true",
+    "blur|r1|document|1|||-|-|-|-|sel|body|false|false|false|true|||on|true",
+    "focusout|r1|document|1|||-|-|-|-|sel|body|false|true|false|true|||on|true",
+    "focusout|r1|body|3|||-|-|-|-|sel|body|false|true|false|true|||on|true",
+    "focus|sel|document|1|||-|-|-|-|r1|sel|false|false|false|true|||one|",
+    "focusin|sel|document|1|||-|-|-|-|r1|sel|false|true|false|true|||one|",
+    "focusin|sel|body|3|||-|-|-|-|r1|sel|false|true|false|true|||one|",
+    "keyup|sel|document|1|Tab|Tab|-|-|-|-|null|sel|false|true|true|true|||one|",
+    "keyup|sel|body|3|Tab|Tab|-|-|-|-|null|sel|false|true|true|true|||one|"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "(focus)": "sel"
+   }
+  },
+  {
+   "name": "select arrow",
+   "log": [
+    "keydown|sel|document|1|ArrowDown|ArrowDown|-|-|-|-|null|sel|false|true|true|true|||one|",
+    "keydown|sel|body|3|ArrowDown|ArrowDown|-|-|-|-|null|sel|false|true|true|true|||one|",
+    "input|sel|document|1|||-|-|-|-|null|sel|false|true|false|true|||two|",
+    "input|sel|body|3|||-|-|-|-|null|sel|false|true|false|true|||two|",
+    "change|sel|document|1|||-|-|-|-|null|sel|false|true|false|true|||two|",
+    "change|sel|body|3|||-|-|-|-|null|sel|false|true|false|true|||two|",
+    "keyup|sel|document|1|ArrowDown|ArrowDown|-|-|-|-|null|sel|false|true|true|true|||two|",
+    "keyup|sel|body|3|ArrowDown|ArrowDown|-|-|-|-|null|sel|false|true|true|true|||two|"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "two"
+     }
+    ],
+    "(focus)": "sel"
+   }
+  },
+  {
+   "name": "to gone",
+   "log": [
+    "keydown|sel|document|1|Tab|Tab|-|-|-|-|null|sel|false|true|true|true|||two|",
+    "keydown|sel|body|3|Tab|Tab|-|-|-|-|null|sel|false|true|true|true|||two|",
+    "blur|sel|document|1|||-|-|-|-|gone|body|false|false|false|true|||two|",
+    "focusout|sel|document|1|||-|-|-|-|gone|body|false|true|false|true|||two|",
+    "focusout|sel|body|3|||-|-|-|-|gone|body|false|true|false|true|||two|",
+    "focus|gone|document|1|||-|-|-|-|sel|gone|false|false|false|true||||",
+    "focusin|gone|document|1|||-|-|-|-|sel|gone|false|true|false|true||||",
+    "focusin|gone|body|3|||-|-|-|-|sel|gone|false|true|false|true||||",
+    "keyup|gone|document|1|Tab|Tab|-|-|-|-|null|gone|false|true|true|true||||",
+    "keyup|gone|body|3|Tab|Tab|-|-|-|-|null|gone|false|true|true|true||||"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "two"
+     }
+    ],
+    "(focus)": "gone"
+   }
+  },
+  {
+   "name": "hide focused",
+   "log": [
+    "keydown|gone|document|1| |Space|-|-|-|-|null|gone|false|true|true|true||||",
+    "keydown|gone|body|3| |Space|-|-|-|-|null|gone|false|true|true|true||||",
+    "keypress|gone|document|1| |Space|-|-|-|-|null|gone|false|true|true|true||||",
+    "keypress|gone|body|3| |Space|-|-|-|-|null|gone|false|true|true|true||||",
+    "keyup|gone|document|1| |Space|-|-|-|-|null|gone|false|true|true|true||||",
+    "keyup|gone|body|3| |Space|-|-|-|-|null|gone|false|true|true|true||||",
+    "click|gone|document|1|||-|-|-|-|null|gone|false|true|true|true||||",
+    "click|gone|body|3|||-|-|-|-|null|gone|false|true|true|true||||",
+    "blur|gone|document|1|||-|-|-|-|null|body|false|false|false|true||||",
+    "focusout|gone|document|1|||-|-|-|-|null|body|false|true|false|true||||",
+    "focusout|gone|body|3|||-|-|-|-|null|body|false|true|false|true||||"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "two"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "click nothing",
+   "log": [
+    "click|body|document|1|||-|-|-|-|null|body|false|true|true|true||||",
+    "click|body|body|2|||-|-|-|-|null|body|false|true|true|true||||"
+   ],
+   "state": {
+    "#t": [
+     {
+      "box": [
+       8,
+       8,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "abc"
+     }
+    ],
+    "#no": [
+     {
+      "box": [
+       8,
+       54,
+       208,
+       38
+      ],
+      "shown": true,
+      "text": "",
+      "value": "z"
+     }
+    ],
+    "#chk": [
+     {
+      "box": [
+       49.8,
+       358,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r1": [
+     {
+      "box": [
+       8,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#r2": [
+     {
+      "box": [
+       44,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#r3": [
+     {
+      "box": [
+       80,
+       394,
+       20,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#sel": [
+     {
+      "box": [
+       8,
+       430,
+       200,
+       32
+      ],
+      "shown": true,
+      "text": "",
+      "value": "two"
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
  "input_pointer": [
   {
    "name": "load",
