@@ -3312,6 +3312,13 @@ function _scrollIntoView(raw, arg) {
 
 // The Flickable that scrolls a box's content: its own, or the page's when the
 // box is the root element's.
+function _listenToScroll(raw, moves) {
+    if (moves && typeof moves.contentYChanged === "function") {
+        moves.contentYChanged.connect(function() { _queueScrollEvent(raw); });
+        moves.contentXChanged.connect(function() { _queueScrollEvent(raw); });
+    }
+}
+
 function _scrollerOf(raw) {
     if (!raw) {
         return null;
@@ -3337,7 +3344,7 @@ function _childContainer(raw) {
         return null;
     }
     var base = (typeof raw.contentHeight === "number" && raw.contentItem) ? raw.contentItem
-        : _ownScroller(raw) ? _ownScroller(raw).contentItem : raw;
+        : raw.eldurScroller ? raw.eldurScroller.contentItem : raw;
     var m = _meta(raw);
     if (m.tableGrid) {
         return m.tableGrid;
@@ -3428,6 +3435,9 @@ function _rawKids(raw, withText) {
         // An out-of-flow box is its slot's child in the DOM, wherever it is
         // painted.
         if (child.eldurSlot !== undefined) {
+            continue;
+        }
+        if (child.eldurChrome) {
             continue;
         }
         // A layer's source and effect are made beside the item it belongs to.
@@ -5673,11 +5683,7 @@ function _connectSignalOnce(raw, type) {
         m.connected[type] = true;
         return true;
     } else if (type === "scroll") {
-        var moves = raw === _root ? _findRootScroller() : _scrollerOf(raw) || raw;
-        if (moves && typeof moves.contentYChanged === "function") {
-            moves.contentYChanged.connect(function() { _queueScrollEvent(raw); });
-            moves.contentXChanged.connect(function() { _queueScrollEvent(raw); });
-        }
+        _listenToScroll(raw, raw === _root ? _findRootScroller() : _scrollerOf(raw) || raw);
         m.connected[type] = true;
         return true;
     } else if (type === "resize" && typeof raw.widthChanged === "function") {
@@ -7363,6 +7369,7 @@ function wrap(rawItem) {
     function _applyScrollOffset(axis, rawVal) {
         var isY = axis === "y";
         var n = Number(rawVal) || 0;
+        _layoutForRead();
         var own = _scrollerOf(rawItem);
         if (own) {
             var far = isY ? own.contentHeight - own.height : own.contentWidth - own.width;
@@ -8003,6 +8010,7 @@ function wrap(rawItem) {
         get clientWidth() { return _clientSize(rawItem, "width"); },
         get clientHeight() { return _clientSize(rawItem, "height"); },
         get scrollTop() {
+            _layoutForRead();
             var scroller = _scrollerOf(rawItem);
             if (scroller) {
                 return scroller.contentY;
@@ -8016,6 +8024,7 @@ function wrap(rawItem) {
             _applyScrollOffset("y", v);
         },
         get scrollLeft() {
+            _layoutForRead();
             var scroller = _scrollerOf(rawItem);
             if (scroller) {
                 return scroller.contentX;
@@ -11611,7 +11620,7 @@ function _gIsBox(raw) {
 // inline node. `eldurFlowForm` boxes wait in a slot: see `_leaveFlow`.
 function _gBoxSource(tag, outOfFlow) {
     return "import QtQuick; import QtQuick.Layouts; Rectangle { color: \"transparent\"; "
-        + "property bool eldurCreatedBox: true; "
+        + "property bool eldurCreatedBox: true; property var eldurScrollPort: null; "
         + (outOfFlow ? "property Item eldurSlot: null; property var eldurBlock: \"parent\"; " : "")
         + "property real eldurMt: 0; property real eldurMr: 0; property real eldurMb: 0; property real eldurMl: 0; "
         + "property real eldurPw: -1; property bool eldurFill: false; property int eldurAlign: 0; "
@@ -13801,6 +13810,9 @@ function _gSetTransforms(raw) {
     }
     if (m.gSticky) {
         list.push(m.gSticky);
+    }
+    if (m.gScrolled) {
+        list.push(m.gScrolled);
     }
     raw.transform = list;
     // What stands in for the box moves with it.
@@ -16307,7 +16319,138 @@ function _gReposition() {
             _gPlaceOutOfFlow(raw);
         }
     }
+    _gSyncScrollers();
     return outs;
+}
+
+// A created box scrolls without its children changing parent, which layout and
+// the DOM both lean on: an empty Flickable beneath them holds the offset and
+// takes the input they leave, and a Translate carries each of them along.
+function _gSyncScrollers() {
+    for (var i = 0; i < _gLive.length; ++i) {
+        var raw = _gLive[i];
+        if (!_gIsBox(raw)) {
+            continue;
+        }
+        var s = _gStyle(raw);
+        var scrollsX = _gScrollable(s["overflow-x"]);
+        var scrollsY = _gScrollable(s["overflow-y"]);
+        var m = _meta(raw);
+        if ((!scrollsX && !scrollsY) || s.display === "none" || !_isConnected(raw)) {
+            if (m.gScroller) {
+                _gDropScroller(raw);
+            }
+            continue;
+        }
+        var e = _gEdges(raw, s, raw.parent ? raw.parent.width : 0);
+        var portW = Math.max(raw.width - e.bl - e.br, 0);
+        var portH = Math.max(raw.height - e.bt - e.bb, 0);
+        var content = _gScrollContent(raw);
+        var farX = 0;
+        var farY = 0;
+        for (var k = 0; k < content.length; ++k) {
+            var kid = content[k];
+            if (kid.visible) {
+                farX = Math.max(farX, kid.x + kid.width + (kid.eldurMr || 0));
+                farY = Math.max(farY, kid.y + kid.height + (kid.eldurMb || 0));
+            }
+        }
+        var wide = Math.max(portW, farX - e.bl + e.pr);
+        var tall = Math.max(portH, farY - e.bt + e.pb);
+        // Chromium's own overflow test rounds; a box that fits gains nothing.
+        if (!m.gScroller && Math.round(wide) <= Math.round(portW) && Math.round(tall) <= Math.round(portH)) {
+            continue;
+        }
+        var port = m.gScroller || _gMakeScroller(raw);
+        port.x = e.bl;
+        port.y = e.bt;
+        port.width = portW;
+        port.height = portH;
+        port.scrollsX = scrollsX;
+        port.scrollsY = scrollsY;
+        // `hidden` scrolls for scripts alone.
+        port.userScrolls = s["overflow-x"] !== "hidden" || s["overflow-y"] !== "hidden";
+        port.contentWidth = wide;
+        port.contentHeight = tall;
+        port.contentX = Math.max(0, Math.min(port.contentX, wide - portW));
+        port.contentY = Math.max(0, Math.min(port.contentY, tall - portH));
+        for (var c = 0; c < content.length; ++c) {
+            if (_meta(content[c]).gScrolled !== m.gScrollMove) {
+                _meta(content[c]).gScrolled = m.gScrollMove;
+                _gSetTransforms(content[c]);
+            }
+        }
+    }
+}
+
+function _gScrollable(overflow) {
+    return overflow === "auto" || overflow === "scroll" || overflow === "hidden";
+}
+
+// What scrolls: the box's children and text, not what paints the box itself.
+function _gScrollContent(raw) {
+    var out = [];
+    for (var i = 0; i < raw.children.length; ++i) {
+        var ch = raw.children[i];
+        if (ch.eldurCreatedBox === true || _isAnonLines(ch) || typeof ch.lineCount === "number"
+            || typeof ch.eldurTag === "string" || _meta(ch).createdTag) {
+            out.push(ch);
+        }
+    }
+    // Boxes positioned against this one or something in it paint in a gate above
+    // the page. One whose block is this box stays within what the box shows.
+    for (var j = 0; j < _gLive.length; ++j) {
+        var other = _gLive[j];
+        var gate = _meta(other).outOfFlowGate;
+        if (!gate || !_isConnected(other) || _gStyle(other).position !== "absolute") {
+            continue;
+        }
+        var block = _gContainingBlock(other, _gStyle(other));
+        if (_gNearestScrollBox(block) === raw) {
+            gate.clip = block === raw;
+            out.push(other);
+        }
+    }
+    return out;
+}
+
+function _gNearestScrollBox(raw) {
+    for (var at = raw; at && at !== _root; at = _logicalParent(at)) {
+        var s = _gStyle(at);
+        if (_gScrollable(s["overflow-x"]) || _gScrollable(s["overflow-y"])) {
+            return at;
+        }
+    }
+    return null;
+}
+
+function _gMakeScroller(raw) {
+    var m = _meta(raw);
+    var port = Qt.createComponent(Qt.resolvedUrl("EldurScroller.qml")).createObject(raw, { overlaidOn: raw, z: -1 });
+    m.gScroller = port;
+    m.gScrollMove = Qt.createQmlObject("import QtQuick; Translate {}", port, "eldur_scroll_move");
+    m.gScrollMove.x = Qt.binding(function() { return -port.contentX; });
+    m.gScrollMove.y = Qt.binding(function() { return -port.contentY; });
+    raw.eldurScrollPort = port;
+    if (m.connected && m.connected.scroll) {
+        _listenToScroll(raw, port);
+    }
+    return port;
+}
+
+function _gDropScroller(raw) {
+    var m = _meta(raw);
+    var content = _gScrollContent(raw);
+    for (var i = 0; i < content.length; ++i) {
+        if (_meta(content[i]).gScrolled) {
+            _meta(content[i]).gScrolled = null;
+            _gSetTransforms(content[i]);
+        }
+    }
+    raw.eldurScrollPort = null;
+    m.gScroller.destroy();
+    m.gScroller = null;
+    m.gScrollMove = null;
 }
 
 // Widths a layout hands down arrive only once it is polished.

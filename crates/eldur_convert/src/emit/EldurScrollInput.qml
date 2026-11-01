@@ -10,6 +10,8 @@ Item {
     // Where keys come through: the page's own takes those of fixed boxes too,
     // which sit beside it.
     property Item keySource: scroller
+    // A box whose children this scroller moves without holding them.
+    property Item overlaidOn: null
 
     function moveTo(x, y) {
         const nextX = Math.max(0, Math.min(x, Math.max(0, scroller.contentWidth - scroller.width)));
@@ -71,6 +73,8 @@ Item {
     Connections {
         target: input.Window.window
         function onActiveFocusItemChanged() {
+            // Dropped with its scroller: a created box can stop scrolling.
+            if (!input) return;
             const item = input.Window.activeFocusItem;
             if (item && item !== input) input.reveal(item);
         }
@@ -79,7 +83,7 @@ Item {
     function reveal(item) {
         let inside = false;
         for (let at = item; at && !inside; at = at.parent) {
-            inside = at === scroller;
+            inside = at === scroller || at === overlaidOn;
         }
         if (!inside) return;
         const box = item.mapToItem(scroller, 0, 0);

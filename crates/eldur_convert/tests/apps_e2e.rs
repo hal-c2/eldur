@@ -523,3 +523,8 @@ fn motion_keyframes() {
 fn motion_transitions() {
     page("motion_transitions");
 }
+
+#[test]
+fn scroll_created() {
+    page("scroll_created");
+}

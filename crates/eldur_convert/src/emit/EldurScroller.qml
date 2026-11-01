@@ -10,19 +10,42 @@ Flickable {
     // Whether an axis's overflow can be scrolled by the user.
     property bool scrollsX: true
     property bool scrollsY: true
+    // Whether the user can scroll at all, or only scripts can.
+    property bool userScrolls: true
+    // A created box's scroller lies under the box's children, which stay the
+    // box's: its bars go above them, on the box.
+    property Item overlaidOn: null
+    readonly property bool eldurChrome: true
 
     boundsBehavior: Flickable.StopAtBounds
     clip: true
+    interactive: userScrolls
     flickableDirection: scrollsX && scrollsY ? Flickable.AutoFlickIfNeeded
         : scrollsX ? Flickable.HorizontalFlick : Flickable.VerticalFlick
     ScrollBar.vertical: ScrollBar {
+        readonly property bool eldurChrome: true
         enabled: scroller.scrollsY
+        visible: scroller.userScrolls
+        parent: scroller.overlaidOn ?? scroller
+        z: scroller.overlaidOn ? 1000 : 0
+        x: scroller.overlaidOn ? scroller.x + scroller.width - width : 0
+        y: scroller.overlaidOn ? scroller.y : 0
+        height: scroller.height
     }
     ScrollBar.horizontal: ScrollBar {
+        readonly property bool eldurChrome: true
         enabled: scroller.scrollsX
+        visible: scroller.userScrolls
+        parent: scroller.overlaidOn ?? scroller
+        z: scroller.overlaidOn ? 1000 : 0
+        x: scroller.overlaidOn ? scroller.x : 0
+        y: scroller.overlaidOn ? scroller.y + scroller.height - height : 0
+        width: scroller.width
     }
 
     EldurScrollInput {
         scroller: scroller
+        enabled: scroller.userScrolls
+        overlaidOn: scroller.overlaidOn
     }
 }

@@ -38541,6 +38541,245 @@
    }
   }
  ],
+ "scroll_created": [
+  {
+   "name": "load",
+   "log": [
+    "made 400 100 0 0 400",
+    "set 50 -50 400",
+    "clamped 300",
+    "by 70 -70 400",
+    "late 400 100",
+    "abs 310 50 200 100",
+    "sticky 300 20 300 100",
+    "scrolled 70"
+   ],
+   "state": {
+    "#port": [
+     {
+      "box": [
+       0,
+       0,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#kid": [
+     {
+      "box": [
+       0,
+       -70,
+       200,
+       400
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#late": [
+     {
+      "box": [
+       0,
+       100,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       0,
+       400,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "s1",
+   "log": [
+    "events 1",
+    "opened 400 100 0",
+    "opened set 30 70 400"
+   ],
+   "state": {
+    "#port": [
+     {
+      "box": [
+       0,
+       0,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#kid": [
+     {
+      "box": [
+       0,
+       -70,
+       200,
+       400
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#late": [
+     {
+      "box": [
+       0,
+       100,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       0,
+       400,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "s2",
+   "log": [
+    "closed 0"
+   ],
+   "state": {
+    "#port": [
+     {
+      "box": [
+       0,
+       0,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#kid": [
+     {
+      "box": [
+       0,
+       -70,
+       200,
+       400
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#late": [
+     {
+      "box": [
+       0,
+       100,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       0,
+       400,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "wheel",
+   "log": [
+    "scrolled 190"
+   ],
+   "state": {
+    "#port": [
+     {
+      "box": [
+       0,
+       0,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#kid": [
+     {
+      "box": [
+       0,
+       -190,
+       200,
+       400
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#late": [
+     {
+      "box": [
+       0,
+       100,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       0,
+       400,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
  "scroll_page": [
   {
    "name": "load",

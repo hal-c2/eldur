@@ -1,0 +1,59 @@
+<!DOCTYPE html><html><head><title>Created scrollers</title><style>
+body{margin:0;font:16px/20px sans-serif}
+.port{height:100px;width:200px;overflow:auto;background:#eee}
+.tall{height:400px;background:#ccd}
+.plain{height:100px;width:200px;background:#dde}
+.opens{overflow:auto}
+.pos{position:relative;height:100px;overflow:auto}
+.abs{position:absolute;top:150px;left:10px;width:50px;height:50px;background:#c00}
+.stick{position:sticky;top:0;height:20px;background:#0a0}
+.head{height:20px}
+#after{height:20px;background:#888}
+</style></head><body><div id="host"></div><div id="after">after</div>
+<script>
+var $ = function(id) { return document.getElementById(id); };
+function make(id, cls, parent) { var d = document.createElement("div"); d.id = id; d.className = cls; (parent || $("host")).appendChild(d); return d; }
+var seen = 0;
+var port = make("port", "port");
+make("kid", "tall", port);
+port.addEventListener("scroll", function() { seen++; console.log("scrolled " + port.scrollTop); });
+var late = make("late", "plain");
+make("lateKid", "tall", late);
+var pos = make("pos", "port pos");
+make("abs", "abs", pos);
+make("filler", "tall", pos);
+var st = make("stport", "port");
+make("head", "head", st);
+make("stick", "stick", st);
+make("stfill", "tall", st);
+function rect(id) { var r = $(id).getBoundingClientRect(); return Math.round(r.top) + " " + Math.round(r.height); }
+console.log("made " + port.scrollHeight + " " + port.clientHeight + " " + port.scrollTop + " " + rect("kid"));
+port.scrollTop = 50;
+console.log("set " + port.scrollTop + " " + rect("kid"));
+port.scrollTop = 9999;
+console.log("clamped " + port.scrollTop);
+port.scrollTo(0, 60);
+port.scrollBy(0, 10);
+console.log("by " + port.scrollTop + " " + rect("kid"));
+console.log("late " + late.scrollHeight + " " + late.clientHeight);
+pos.scrollTop = 40;
+console.log("abs " + rect("abs") + " " + rect("pos"));
+st.scrollTop = 60;
+console.log("sticky " + rect("stick") + " " + rect("stport"));
+document.getElementById("btn");
+var step = 0;
+function act() {
+  step++;
+  if (step === 1) {
+    console.log("events " + seen);
+    late.classList.add("opens");
+    console.log("opened " + late.scrollHeight + " " + late.clientHeight + " " + late.scrollTop);
+    late.scrollTop = 30;
+    console.log("opened set " + late.scrollTop + " " + rect("lateKid"));
+  } else if (step === 2) {
+    late.classList.remove("opens");
+    console.log("closed " + late.scrollTop);
+  }
+}
+document.body.addEventListener("click", act);
+</script></body></html>

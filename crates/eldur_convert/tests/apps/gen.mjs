@@ -74,14 +74,18 @@ async function state(name, watch) {
   if (watch.some((w) => w.paint)) {
     const shot = (await page.screenshot()).toString("base64");
     await page.evaluate(async (data) => {
-      const image = new Image();
-      image.src = "data:image/png;base64," + data;
-      await image.decode();
-      const c = document.createElement("canvas");
-      c.width = image.width;
-      c.height = image.height;
-      window.__shot = c.getContext("2d", { willReadFrequently: true });
+      // One canvas, and each bitmap released: a page's captures add up, and after
+      // twenty or so Chromium's GPU process dies of them.
+      const blob = await (await fetch("data:image/png;base64," + data)).blob();
+      const image = await createImageBitmap(blob);
+      if (!window.__shot) {
+        const c = document.createElement("canvas");
+        c.width = image.width;
+        c.height = image.height;
+        window.__shot = c.getContext("2d", { willReadFrequently: true });
+      }
       window.__shot.drawImage(image, 0, 0);
+      image.close();
     }, shot);
     canvas = "(x, y) => { const d = window.__shot.getImageData(x, y, 1, 1).data; return `rgb(${d[0]}, ${d[1]}, ${d[2]})`; }";
   }

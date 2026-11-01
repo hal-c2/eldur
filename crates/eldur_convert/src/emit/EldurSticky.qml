@@ -18,6 +18,7 @@ Translate {
 
     readonly property Flickable scroller: {
         for (let at = target.parent; at; at = at.parent) {
+            if (at.eldurScrollPort) return at.eldurScrollPort;
             if (at instanceof Flickable) return at;
         }
         return null;
@@ -36,8 +37,16 @@ Translate {
         return by;
     }
 
+    // A created box's children are its own and not its scroller's content, so a
+    // child's offset doesn't count the scroll, unlike a converted box's.
+    function held(block) {
+        return block.eldurScrollPort === scroller;
+    }
+
     function blockEnd(block, along) {
         const box = block.parent;
+        // Its children stay inside all it scrolls, not just what shows.
+        if (held(block)) return along === "height" ? scroller.contentHeight : scroller.contentWidth;
         // A block column is as tall as its content, and the box round it may be taller.
         if (along === "height" && box && box.eldurInsetBottom !== undefined) {
             return box.height - box.eldurInsetBottom - block.y;
@@ -49,8 +58,9 @@ Translate {
         const port = scroller;
         const block = target.parent;
         if (!port || !block || (stickLeft === undefined && stickRight === undefined)) return 0;
-        const at = block.mapToItem(port.contentItem, target.x, target.y).x;
-        const from = block.mapToItem(port.contentItem, 0, 0).x;
+        const lift = held(block) ? port.contentX : 0;
+        const at = block.mapToItem(port.contentItem, target.x, target.y).x - lift;
+        const from = block.mapToItem(port.contentItem, 0, 0).x - lift;
         return shift(stickLeft, stickRight, at, target.width, port.contentX, port.width + 0 * port.contentWidth,
                      from, from + blockEnd(block, "width"), marginLeft, marginRight);
     }
@@ -58,8 +68,9 @@ Translate {
         const port = scroller;
         const block = target.parent;
         if (!port || !block || (stickTop === undefined && stickBottom === undefined)) return 0;
-        const at = block.mapToItem(port.contentItem, target.x, target.y).y;
-        const from = block.mapToItem(port.contentItem, 0, 0).y;
+        const lift = held(block) ? port.contentY : 0;
+        const at = block.mapToItem(port.contentItem, target.x, target.y).y - lift;
+        const from = block.mapToItem(port.contentItem, 0, 0).y - lift;
         return shift(stickTop, stickBottom, at, target.height, port.contentY, port.height + 0 * port.contentHeight,
                      from, from + blockEnd(block, "height"), marginTop, marginBottom);
     }
