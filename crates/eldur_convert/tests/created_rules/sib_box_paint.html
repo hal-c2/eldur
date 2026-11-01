@@ -1,0 +1,18 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;font:16px/20px sans-serif}
+#g{display:grid;grid-template-columns:repeat(4,100px);gap:10px}#b{width:200px}
+.t{height:50px;box-sizing:border-box}
+.dash{border:4px dashed rgb(0,0,0)}.line{outline:3px solid rgb(200,0,0)}.grad{background:linear-gradient(red,blue)}.shadow{box-shadow:0 0 5px 2px rgb(0,0,0)}
+</style></head><body>
+<div id="g"></div><div id="b"></div>
+<script>
+function rc(id){var b=document.getElementById(id).getBoundingClientRect();return id+":"+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)+","+Math.round(b.height)}
+function geo(){console.log("CS "+Array.prototype.map.call(arguments,rc).join(" "))}
+function mk(p,id,cl){var c=document.createElement("div");c.className=cl||"";c.id=id;document.getElementById(p).append(c);return c}
+["dash","line","grad","shadow"].forEach(function(n){mk("g","g"+n,"t "+n);mk("b","b"+n,n)});
+function kids(id){var e=document.getElementById(id);console.log("CS "+id+" children="+e.children.length+" nodes="+e.childNodes.length+" first="+(e.firstElementChild?e.firstElementChild.id:"none"))}
+["gdash","gline","ggrad","gshadow","bdash","bline","bgrad","bshadow"].forEach(kids);
+geo("g","gdash","gline","ggrad","gshadow","b","bdash","bline","bgrad","bshadow");
+var i=mk("bdash","in");i.append("x");kids("bdash");geo("bdash","in");
+var j=mk("gline","jn");j.style.height="10px";kids("gline");geo("gline","jn");
+</script></body></html>

@@ -1,0 +1,675 @@
+{
+ "closed_abs_host_abs": {
+  "log": [
+   "CS h:50,60,200,100 a:55,66,20,20"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "closed_abs_in_created_host": {
+  "log": [
+   "CS u:0,0,1280,30 h:40,60,324,124 a:47,68,20,20 d:358,176,3,4"
+  ],
+  "clicks": [],
+  "probes": [
+   {
+    "id": "a",
+    "x": 49,
+    "y": 70,
+    "color": "#ff0000"
+   }
+  ]
+ },
+ "closed_abs_in_static_host": {
+  "log": [
+   "CS host:40,30,324,224 a:47,38,20,20 pop2:335,234,20,10"
+  ],
+  "clicks": [],
+  "probes": [
+   {
+    "id": "a",
+    "x": 49,
+    "y": 40,
+    "color": "#ff0000"
+   }
+  ]
+ },
+ "closed_abs_inner_html": {
+  "log": [
+   "CS h:20,20,1240,80 a:1235,26,20,20"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "closed_attr": {
+  "log": [
+   "CS a:0,0,1280,12 b:5,12,1275,0 c:0,12,1280,23 d:0,35,50,0"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "closed_attr_toggle": {
+  "log": [
+   "CS a:0,0,1280,0",
+   "CS a:0,0,1280,40",
+   "CS a:0,0,1280,60",
+   "CS a:0,0,1280,60"
+  ],
+  "clicks": [
+   {
+    "name": "#go",
+    "x": 15.4140625,
+    "y": 10.5
+   }
+  ],
+  "probes": []
+ },
+ "closed_card_inner_id": {
+  "log": [
+   "CS t-a:4,4,1272,11 t-b:4,23,1272,22",
+   "CS t-a color=rgb(255, 0, 0)",
+   "CS t-b color=rgb(0, 0, 255)"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "closed_control_pos": {
+  "log": [
+   "CS w:20,20 st:220,25 bt:320,26 sl:420,27 ta:520,28 end:0,140",
+   "CS st position=absolute left=200px",
+   "CS bt position=absolute"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "closed_control_pos_created": {
+  "log": [
+   "CS w:20,20 st:220,25 bt:320,26 end:0,140",
+   "CS st position=absolute left=200px",
+   "CS fx 5,6"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "closed_control_pos_rule": {
+  "log": [
+   "CS b:15,15",
+   "CS b:45,55",
+   "CS 1255",
+   "CS absolute"
+  ],
+  "clicks": [
+   {
+    "name": "#go",
+    "x": 15.4140625,
+    "y": 140.5
+   }
+  ],
+  "probes": []
+ },
+ "closed_descendant": {
+  "log": [
+   "CS o:0,0,1280,39 i:0,0,1280,14 w:9,0,1271,0 j:0,14,1280,25 s:0,39,1280,8 t:0,39,1280,8 late:0,47,1280,3"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "closed_fixed_relative": {
+  "log": [
+   "CS host:10,10,1260,130 s:10,10,1260,50 f:3,4,6,8 r:15,67,1260,20 fx2:1271,788,6,8 rl2:19,81,1260,10 e:10,90,1260,50"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "closed_flex_stretch": {
+  "log": [
+   "CS f:0,0,1280,80 a:0,0,10,80 b:14,0,10,80 c:28,0,10,10 col:0,80,100,90 ca:0,80,100,0 cb:0,80,100,90 wr:0,170,100,100 w1:0,170,60,80 w2:0,250,60,10 w3:0,260,60,10 end:0,270,1280,20"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "closed_grid_stretch": {
+  "log": [
+   "CS g:0,0,1280,252 a:24,24,400,134 b:440,24,400,134 c:856,24,400,134 d:24,174,400,54 ai:41,41,366,100 bi:457,41,366,20 end:0,252,1280,20"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "closed_id_after": {
+  "log": [
+   "CS p:0,0,1280,28 x:0,0,1280,28 end:0,28,1280,20",
+   "CS x color=rgb(255, 0, 0) paddingTop=4px"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "closed_id_before": {
+  "log": [
+   "CS p:0,0,1280,65 x:0,0,1280,28 y:0,35,1280,30 end:0,65,1280,20",
+   "CS x color=rgb(255, 0, 0) paddingTop=4px backgroundColor=rgb(0, 0, 255)",
+   "CS y marginTop=7px height=30px"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "closed_id_change": {
+  "log": [
+   "CS p:0,0,1280,28 a:0,0,1280,28 end:0,28,1280,20",
+   "CS a color=rgb(255, 0, 0) paddingTop=4px",
+   "CS p:0,0,1280,38 b:0,0,1280,38 end:0,38,1280,20",
+   "CS b color=rgb(0, 128, 0) paddingTop=9px",
+   "CS p:0,0,1280,20 c:0,0,1280,20 end:0,20,1280,20",
+   "CS c color=rgb(0, 0, 0) paddingTop=0px"
+  ],
+  "clicks": [
+   {
+    "name": "#go",
+    "x": 15.4140625,
+    "y": 58.5
+   },
+   {
+    "name": "#off",
+    "x": 15.2890625,
+    "y": 89.5
+   }
+  ],
+  "probes": [
+   {
+    "id": "c",
+    "x": 1,
+    "y": 1,
+    "color": "#ffffff"
+   }
+  ]
+ },
+ "closed_id_descendant": {
+  "log": [
+   "CS x:0,0,1280,57 k1:0,0,1280,17 m1:6,17,1274,20",
+   "CS s1 color=rgb(255, 0, 0)"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "closed_id_dynamic": {
+  "log": [
+   "CS p:0,0,1280,66 c-a:0,0,1280,11 c-b:0,11,1280,22 c-c:0,33,1280,33"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "closed_id_set_attribute": {
+  "log": [
+   "CS p:0,0,1280,28 x:0,0,1280,28",
+   "CS x color=rgb(255, 0, 0) paddingTop=4px"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "closed_id_static_ancestor": {
+  "log": [
+   "CS a1:3,0,1277,15 b1:3,15,1277,0 c1:0,15,1280,99",
+   "CS a1 color=rgb(255, 0, 0)"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "closed_moved_between": {
+  "log": [
+   "CS k:0,0,1280,11",
+   "CS k:7,0,1273,22"
+  ],
+  "clicks": [
+   {
+    "name": "#go",
+    "x": 15.4140625,
+    "y": 21.5
+   }
+  ],
+  "probes": []
+ },
+ "closed_sibling": {
+  "log": [
+   "CS a1:0,0,1280,0 b1:0,0,1280,13 c1:0,13,1280,24 b2:0,37,1280,5"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "closed_structural": {
+  "log": [
+   "CS i0:0,0,1280,21 i1:4,21,1276,10 i2:0,31,1280,32 o:0,63,11,32",
+   "CS i1:0,0,1280,21 i2:4,21,1276,32"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "closed_text_inherit": {
+  "log": [
+   "CS x:0,0,200,60 c:0,0,200,30",
+   "CS c color=rgb(255, 0, 0) fontSize=20px textAlign=right",
+   "CS s color=rgb(255, 0, 0) fontSize=20px"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "grid_stretch_markup": {
+  "log": [
+   "CS g:0,0,1280,176 a:0,0,635,103 b:645,0,635,103 c:0,113,635,63 tp:645,113,635,32 ba:6,34,623,23 bb:651,74,623,23 end:0,176,1280,20"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "open_abs_host_abs": {
+  "log": [
+   "CS h:50,60,200,100 a:55,66,20,20"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "open_abs_in_created_host": {
+  "log": [
+   "CS u:0,0,1280,30 h:40,60,324,124 a:47,68,20,20 d:358,176,3,4"
+  ],
+  "clicks": [],
+  "probes": [
+   {
+    "id": "a",
+    "x": 49,
+    "y": 70,
+    "color": "#ff0000"
+   }
+  ]
+ },
+ "open_abs_in_static_host": {
+  "log": [
+   "CS host:40,30,324,224 a:47,38,20,20 pop2:335,234,20,10"
+  ],
+  "clicks": [],
+  "probes": [
+   {
+    "id": "a",
+    "x": 49,
+    "y": 40,
+    "color": "#ff0000"
+   }
+  ]
+ },
+ "open_abs_inner_html": {
+  "log": [
+   "CS h:20,20,1240,80 a:1235,26,20,20"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "open_attr": {
+  "log": [
+   "CS a:0,0,1280,12 b:5,12,1275,0 c:0,12,1280,23 d:0,35,50,0"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "open_attr_toggle": {
+  "log": [
+   "CS a:0,0,1280,0",
+   "CS a:0,0,1280,40",
+   "CS a:0,0,1280,60",
+   "CS a:0,0,1280,60"
+  ],
+  "clicks": [
+   {
+    "name": "#go",
+    "x": 15.4140625,
+    "y": 10.5
+   }
+  ],
+  "probes": []
+ },
+ "open_card_inner_id": {
+  "log": [
+   "CS t-a:4,4,1272,11 t-b:4,23,1272,22",
+   "CS t-a color=rgb(255, 0, 0)",
+   "CS t-b color=rgb(0, 0, 255)"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "open_control_pos": {
+  "log": [
+   "CS w:20,20 st:220,25 bt:320,26 sl:420,27 ta:520,28 end:0,140",
+   "CS st position=absolute left=200px",
+   "CS bt position=absolute"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "open_control_pos_created": {
+  "log": [
+   "CS w:20,20 st:220,25 bt:320,26 end:0,140",
+   "CS st position=absolute left=200px",
+   "CS fx 5,6"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "open_control_pos_rule": {
+  "log": [
+   "CS b:15,15",
+   "CS b:45,55",
+   "CS 1255",
+   "CS absolute"
+  ],
+  "clicks": [
+   {
+    "name": "#go",
+    "x": 15.4140625,
+    "y": 140.5
+   }
+  ],
+  "probes": []
+ },
+ "open_descendant": {
+  "log": [
+   "CS o:0,0,1280,39 i:0,0,1280,14 w:9,0,1271,0 j:0,14,1280,25 s:0,39,1280,8 t:0,39,1280,8 late:0,47,1280,3"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "open_fixed_relative": {
+  "log": [
+   "CS host:10,10,1260,130 s:10,10,1260,50 f:3,4,6,8 r:15,67,1260,20 fx2:1271,788,6,8 rl2:19,81,1260,10 e:10,90,1260,50"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "open_flex_stretch": {
+  "log": [
+   "CS f:0,0,1280,80 a:0,0,10,80 b:14,0,10,80 c:28,0,10,10 col:0,80,100,90 ca:0,80,100,0 cb:0,80,100,90 wr:0,170,100,100 w1:0,170,60,80 w2:0,250,60,10 w3:0,260,60,10 end:0,270,1280,20"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "open_grid_stretch": {
+  "log": [
+   "CS g:0,0,1280,252 a:24,24,400,134 b:440,24,400,134 c:856,24,400,134 d:24,174,400,54 ai:41,41,366,100 bi:457,41,366,20 end:0,252,1280,20"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "open_id_after": {
+  "log": [
+   "CS p:0,0,1280,28 x:0,0,1280,28 end:0,28,1280,20",
+   "CS x color=rgb(255, 0, 0) paddingTop=4px"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "open_id_before": {
+  "log": [
+   "CS p:0,0,1280,65 x:0,0,1280,28 y:0,35,1280,30 end:0,65,1280,20",
+   "CS x color=rgb(255, 0, 0) paddingTop=4px backgroundColor=rgb(0, 0, 255)",
+   "CS y marginTop=7px height=30px"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "open_id_change": {
+  "log": [
+   "CS p:0,0,1280,28 a:0,0,1280,28 end:0,28,1280,20",
+   "CS a color=rgb(255, 0, 0) paddingTop=4px",
+   "CS p:0,0,1280,38 b:0,0,1280,38 end:0,38,1280,20",
+   "CS b color=rgb(0, 128, 0) paddingTop=9px",
+   "CS p:0,0,1280,20 c:0,0,1280,20 end:0,20,1280,20",
+   "CS c color=rgb(0, 0, 0) paddingTop=0px"
+  ],
+  "clicks": [
+   {
+    "name": "#go",
+    "x": 15.4140625,
+    "y": 58.5
+   },
+   {
+    "name": "#off",
+    "x": 15.2890625,
+    "y": 89.5
+   }
+  ],
+  "probes": [
+   {
+    "id": "c",
+    "x": 1,
+    "y": 1,
+    "color": "#ffffff"
+   }
+  ]
+ },
+ "open_id_descendant": {
+  "log": [
+   "CS x:0,0,1280,57 k1:0,0,1280,17 m1:6,17,1274,20",
+   "CS s1 color=rgb(255, 0, 0)"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "open_id_dynamic": {
+  "log": [
+   "CS p:0,0,1280,66 c-a:0,0,1280,11 c-b:0,11,1280,22 c-c:0,33,1280,33"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "open_id_set_attribute": {
+  "log": [
+   "CS p:0,0,1280,28 x:0,0,1280,28",
+   "CS x color=rgb(255, 0, 0) paddingTop=4px"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "open_id_static_ancestor": {
+  "log": [
+   "CS a1:3,0,1277,15 b1:3,15,1277,0 c1:0,15,1280,99",
+   "CS a1 color=rgb(255, 0, 0)"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "open_moved_between": {
+  "log": [
+   "CS k:0,0,1280,11",
+   "CS k:7,0,1273,22"
+  ],
+  "clicks": [
+   {
+    "name": "#go",
+    "x": 15.4140625,
+    "y": 21.5
+   }
+  ],
+  "probes": []
+ },
+ "open_sibling": {
+  "log": [
+   "CS a1:0,0,1280,0 b1:0,0,1280,13 c1:0,13,1280,24 b2:0,37,1280,5"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "open_structural": {
+  "log": [
+   "CS i0:0,0,1280,21 i1:4,21,1276,10 i2:0,31,1280,32 o:0,63,11,32",
+   "CS i1:0,0,1280,21 i2:4,21,1276,32"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "open_text_inherit": {
+  "log": [
+   "CS x:0,0,200,60 c:0,0,200,30",
+   "CS c color=rgb(255, 0, 0) fontSize=20px textAlign=right",
+   "CS s color=rgb(255, 0, 0) fontSize=20px"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "sib_box_paint": {
+  "log": [
+   "CS gdash children=0 nodes=0 first=none",
+   "CS gline children=0 nodes=0 first=none",
+   "CS ggrad children=0 nodes=0 first=none",
+   "CS gshadow children=0 nodes=0 first=none",
+   "CS bdash children=0 nodes=0 first=none",
+   "CS bline children=0 nodes=0 first=none",
+   "CS bgrad children=0 nodes=0 first=none",
+   "CS bshadow children=0 nodes=0 first=none",
+   "CS g:0,0,1280,50 gdash:0,0,100,50 gline:110,0,100,50 ggrad:220,0,100,50 gshadow:330,0,100,50 b:0,50,200,8 bdash:0,50,200,8 bline:0,58,200,0 bgrad:0,58,200,0 bshadow:0,58,200,0",
+   "CS bdash children=1 nodes=1 first=in",
+   "CS bdash:0,50,200,28 in:4,54,192,20",
+   "CS gline children=1 nodes=1 first=jn",
+   "CS gline:110,0,100,50 jn:110,0,100,10"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "sib_flex_column_stretch": {
+  "log": [
+   "CS f:0,0,300,44 a:0,0,300,20 b:0,24,27,20"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "sib_flex_mixed": {
+  "log": [
+   "CS f:0,0,1280,62 st:0,0,102,62 a:112,0,102,62"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "sib_grid_align_center": {
+  "log": [
+   "CS g:0,0,1280,50 a:0,0,100,50 b:110,15,100,20"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "sib_grid_align_end": {
+  "log": [
+   "CS g:0,0,1280,50 a:0,0,100,50 b:110,30,100,20"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "sib_grid_align_self": {
+  "log": [
+   "CS g:0,0,1280,80 a:0,0,100,50 b:110,0,100,20 c:0,60,100,20"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "sib_grid_mixed": {
+  "log": [
+   "CS g:0,0,1280,62 st:0,0,100,62 a:110,0,100,62",
+   "CS g:0,0,1280,94 st:0,0,100,62 a:110,0,100,62 b:0,72,100,22"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "sib_id_on_static": {
+  "log": [
+   "CS st0:0,0,1280,20 k:0,1,9,17",
+   "CS k color=rgb(0, 0, 0)",
+   "CS 28",
+   "CS k color=rgb(0, 0, 255)",
+   "CS on color=rgb(255, 0, 0) paddingTop=4px"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "sib_inner_span_after": {
+  "log": [
+   "CS a:0,0,1280,20",
+   "CS b:0,0,1280,25 s:12,-7,60,33",
+   "CS s color=rgb(0, 128, 0)"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "sib_inner_span_class": {
+  "log": [
+   "CS b:0,0,1280,25 s:12,-7,65,33",
+   "CS s color=rgb(0, 128, 0) fontWeight=700"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "sib_inner_span_id": {
+  "log": [
+   "CS b:0,0,1280,25 s:12,-7,65,33",
+   "CS s color=rgb(0, 128, 0) fontWeight=700"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "sib_item_margin": {
+  "log": [
+   "CS g:0,0,1280,60 gi:0,0,100,60 gik:10,10,80,20",
+   "CS f:0,60,1280,60 fi:0,60,100,60 fik:10,70,80,20",
+   "CS a:0,120,1280,80 ai:0,120,100,60 aik:10,130,80,20",
+   "CS o:0,200,1280,60 oi:0,200,100,60 oik:10,210,80,20",
+   "CS n:0,270,1280,60 ni:0,270,100,60 nik:10,270,80,20"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "sib_literal_abs": {
+  "log": [
+   "CS h:30,30,210,110 o:216,124,20,10"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "sib_literal_child": {
+  "log": [
+   "CS w:0,0,1280,15 k:5,2,1273,11"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "sib_literal_fixed": {
+  "log": [
+   "CS h:30,30,1220,50 o:1256,6,20,10 r:35,37,1220,10"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "sib_literal_flex": {
+  "log": [
+   "CS f:0,0,1280,52 a:0,0,102,52 b:112,0,102,52"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "sib_literal_grid": {
+  "log": [
+   "CS g:0,0,1280,52 a:0,0,100,52 b:110,0,100,52"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "sib_static_class_abs": {
+  "log": [
+   "CS h:10,10,300,100 a:10,10,40,20 b:10,30,300,30",
+   "CS h:10,10,300,100 a:263,13,40,20 b:10,10,300,30",
+   "CS a:10,10,40,20 b:10,30,300,30"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "sib_static_style_pos": {
+  "log": [
+   "CS h:10,10,310,110 a:15,15,40,20 b:15,35,300,30 e:0,130,1280,20",
+   "CS h:10,10,310,110 a:273,97,40,20 b:15,15,300,30 e:0,130,1280,20",
+   "CS a:15,15,40,20 b:15,35,300,30"
+  ],
+  "clicks": [],
+  "probes": []
+ }
+}

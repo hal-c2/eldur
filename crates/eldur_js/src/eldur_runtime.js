@@ -3464,12 +3464,12 @@ function _detachNode(raw) {
     }
     _gTouch();
     var box = raw.eldurBox || raw;
-    var place = box.eldurSlot || box;
+    var place = _slotOf(box) || box;
     if (place.parent) {
         _layoutChanged(place.parent);
         place.parent = null;
     }
-    if (box.eldurSlot && box.eldurBlock !== undefined) {
+    if (_slotOf(box) && _blockOf(box) !== undefined) {
         box.parent = null;
     }
 }
@@ -3768,7 +3768,7 @@ function _rawKids(raw, withText) {
         if (child.eldurSlot !== undefined) {
             continue;
         }
-        if (child.eldurChrome) {
+        if (child.eldurChrome || _meta(child).gPaint) {
             continue;
         }
         // A layer's source and effect are made beside the item it belongs to.
@@ -3805,7 +3805,8 @@ function _rawKids(raw, withText) {
             continue;
         }
         if (!isLayout && _isPlainTextItem(child) && !child.objectName && !_meta(child).createdTag) {
-            if (withText && _vHasRules() && !_meta(child).vSplit) {
+            // A box's own Text, while it holds nothing, is no text node.
+            if (withText && _vHasRules() && !_meta(child).vSplit && child.text !== "") {
                 out.push(child);
             }
             continue;
@@ -3859,8 +3860,8 @@ function _logicalParent(raw) {
             return cutFrom;
         }
     }
-    if (raw && raw.eldurSlot) {
-        raw = raw.eldurSlot;
+    if (raw && _slotOf(raw)) {
+        raw = _slotOf(raw);
     }
     if (!raw || !raw.parent || raw.eldurSlot === null) {
         return null;
@@ -4324,9 +4325,12 @@ function setInnerHTML(item, html) {
         }
     }
     // A box the converter gave an empty line of text holds elements as any other.
+    // Inline elements too on a box of a script's: they answer to selectors and to
+    // `getElementById`, which a line of styled text does not.
     var blockInBox = typeof raw.text !== "string" && _gHasCascade() && _G_BLOCK_MARKUP.test(str)
         && typeof raw.eldurTag === "string" && !_G_CONTROL.test(raw.eldurTag);
-    if (blockInBox || _markupMakesElements(raw)) {
+    var elementsInBox = _gIsBox(raw) && /<(?!br\b)[a-z]/i.test(str);
+    if (blockInBox || elementsInBox || _markupMakesElements(raw)) {
         _replaceWithMarkup(raw, str);
         _rememberMarkup(raw, str);
         return;
@@ -4589,7 +4593,7 @@ function setStyle(item, prop, value) {
     } else if (name === "position") {
         // A template holds the box's form, and layouts place what is in them.
         // Not yet in the page: the item a template swaps it for is set this again.
-        if ((str === "absolute" || str === "fixed") && raw.parent) {
+        if ((str === "absolute" || str === "fixed") && raw.parent && !_gActive()) {
             console.warn("eldur: style.position = \"" + str + "\" from a script is not applied; use a class");
         }
     } else if (name === "left" || name === "top" || name === "right" || name === "bottom") {
@@ -4901,12 +4905,13 @@ function setAttribute(item, attrName, attrValue) {
     var val = String(attrValue);
     var m = _meta(raw);
     m.attrs[name] = val;
+    _gTouch();
+    _gNameChanged(raw, ["[" + name, "#" + val]);
 
     if (name.indexOf("data-") === 0 && name.length > 5) {
         m.dataset[_kebabToCamel(name.slice(5))] = val;
         return;
     }
-    _gTouch();
     if (name === "id" && typeof raw.objectName === "string") {
         raw.objectName = val;
     } else if (name === "type" && m.createdTag === "input") {
@@ -5017,6 +5022,7 @@ function removeAttribute(item, attrName) {
     var name = String(attrName);
     var m = _meta(raw);
     delete m.attrs[name];
+    _gTouch();
     if (name.indexOf("data-") === 0 && name.length > 5) {
         delete m.dataset[_kebabToCamel(name.slice(5))];
     } else if (name === "id" && typeof raw.objectName === "string") {
@@ -5318,11 +5324,14 @@ function getBoundingClientRect(item) {
             y += raw.fontTop;
             h = raw.fontHeight;
         }
-        // A created inline element is a box of its text; its rect is the font's.
-        if (_gHasCascade() && _gIsBox(raw) && _isLines(raw.parent) && _gStyle(raw).display === "inline") {
+        // A created inline element is a box or line of its text; its rect is the
+        // font's. One that wrapped reaches over all its lines.
+        if (_gHasCascade() && _meta(raw).createdTag && _isLines(raw.parent) && !(raw.lineCount > 1)
+            && _gStyle(raw).display === "inline") {
             var inlineBox = _gMetrics(_gStyle(raw));
             var inlineH = Math.round(inlineBox.ascent) + Math.round(inlineBox.descent);
-            y += (h - inlineH) / 2;
+            // A line of text already starts at its font's top.
+            y += _gIsBox(raw) ? (h - inlineH) / 2 : 0;
             h = inlineH;
         }
         if (_meta(raw).gShownInline && typeof raw.text === "string") {
@@ -6667,27 +6676,51 @@ function _expandInsertRawNodes(nodes) {
 // What stands for an out-of-flow box among its DOM siblings. Hidden: a layout
 // does not count it, and no script-made box reads a static position from it.
 function _slotFor(box) {
-    if (!box.eldurSlot) {
-        box.eldurSlot = Qt.createQmlObject(
+    var slot = _slotOf(box);
+    if (!slot) {
+        slot = Qt.createQmlObject(
             "import QtQuick; Item { visible: false; property Item eldurBox }",
             _qobjectParent(), "eldur_slot");
-        box.eldurSlot.eldurBox = box;
+        slot.eldurBox = box;
+        if (box.eldurSlot === undefined) {
+            _meta(box).gSlot = slot;
+        } else {
+            box.eldurSlot = slot;
+        }
     }
-    return box.eldurSlot;
+    return slot;
+}
+
+// A control's form is the page's or the template's, with handlers on it, and has
+// no property to hold these: they are kept beside it.
+function _slotOf(raw) {
+    return raw.eldurSlot || _meta(raw).gSlot || null;
+}
+
+function _blockOf(raw) {
+    return raw.eldurBlock !== undefined ? raw.eldurBlock : _meta(raw).gBlock;
+}
+
+function _setBlock(raw, block) {
+    if (raw.eldurBlock !== undefined) {
+        raw.eldurBlock = block;
+    } else {
+        _meta(raw).gBlock = block;
+    }
 }
 
 // A created box is painted in an item the size of its containing block, above
 // the page since a layout would place it there. The item goes with the box's
 // DOM parent, which is not its parent in QML.
 function _leaveFlow(item) {
-    var block = item.eldurBlock;
+    var block = _blockOf(item);
     if (block === undefined) {
         return;
     }
     var m = _meta(item);
     if (!m.outOfFlowGate) {
         m.outOfFlowGate = Qt.createQmlObject(
-            "import QtQuick; Item { property Item block; property Item dom; "
+            "import QtQuick; Item { property Item eldurSlot: null; property Item block; property Item dom; "
             + "function at(axis) { let n = 0; for (let i = block; i && i !== parent.parent; i = i.parent) n += i[axis]; return n } "
             + "x: parent ? at(\"x\") : 0; y: parent ? at(\"y\") : 0; "
             + "width: block ? block.width : parent ? parent.width : 0; height: block ? block.height : parent ? parent.height : 0; "
@@ -6699,6 +6732,10 @@ function _leaveFlow(item) {
     var dom = _logicalParent(item);
     var initial = _root.eldurInitialBlock;
     gate.dom = dom;
+    // Which ancestor it is depends on where the script put the box.
+    if (block === "containing") {
+        block = _gContainingBlock(item, _gStyle(item)) || "initial";
+    }
     gate.block = block === "parent" ? dom : (typeof block === "string" ? null : block);
     // Outside the Flickable, so it does not scroll.
     gate.parent = block === "window" ? initial.parent.parent.parent : initial;
@@ -6716,7 +6753,7 @@ function _joinsLine(node) {
     if (node && node.__eldurInline) {
         return node.eldurTag === "#text";
     }
-    if (!node || node.eldurSlot !== undefined || node.eldurBlock !== undefined) {
+    if (!node || node.eldurSlot !== undefined || _blockOf(node) !== undefined) {
         return false;
     }
     var tag = String(_meta(node).createdTag || "");
@@ -7077,12 +7114,12 @@ function _insertRawNodesBefore(container, rawNodes, rawRef) {
     var places = [];
     for (var n = 0; n < rawNodes.length; ++n) {
         var node = rawNodes[n];
-        places.push(node && node.eldurBlock !== undefined ? _slotFor(node) : (node && node.eldurSlot) || node);
+        places.push(node && _blockOf(node) !== undefined ? _slotFor(node) : (node && _slotOf(node)) || node);
     }
-    _insertInFlow(container, places, (rawRef && rawRef.eldurSlot) || rawRef);
+    _insertInFlow(container, places, (rawRef && _slotOf(rawRef)) || rawRef);
     _wsEnter(rawNodes.length, rawRef, container);
     for (var o = 0; o < rawNodes.length; ++o) {
-        if (rawNodes[o] && rawNodes[o].eldurBlock !== undefined) {
+        if (rawNodes[o] && _blockOf(rawNodes[o]) !== undefined) {
             _leaveFlow(rawNodes[o]);
         }
     }
@@ -7497,6 +7534,9 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
                     _slotFor(next).parent = parentContainer;
                 }
                 _leaveFlow(next);
+            }
+            if (m.gSlot) {
+                m.gSlot.eldurBox = next;
             }
         }
         if (_gActive() && next && m.createdTag) {
@@ -8279,10 +8319,13 @@ function wrap(rawItem) {
                 _vSetAttr(rawItem, "id", s);
                 return;
             }
+            var was = m.attrs.id || rawItem.objectName || "";
             m.attrs.id = s;
             if (typeof rawItem.objectName === "string") {
                 rawItem.objectName = s;
             }
+            _gTouch();
+            _gNameChanged(rawItem, ["#" + was, "#" + s]);
         },
         get tagName() { return _inferTagName(rawItem); },
         get nodeName() { return _inferTagName(rawItem); },
@@ -9413,8 +9456,11 @@ function _vModelOf(item) {
         });
     } else {
         // What the converter worked out holds until the rules matching a node
-        // change.
-        _vEachElement(model.kids, function(v) { v.sig0 = _vSig(v); });
+        // change. A model first asked for after a write can't tell what changed,
+        // since it has no earlier matches to compare with, so it works it out.
+        if (_vGen === 0) {
+            _vEachElement(model.kids, function(v) { v.sig0 = _vSig(v); });
+        }
         // A link takes the press, so nothing above hears of it otherwise.
         if (item.eldurInline.indexOf("\"tag\":\"a\"") !== -1 && _vHasRules()) {
             _vTapHandler(item);
@@ -15202,8 +15248,14 @@ var _gLiveTemplates = [];
 var _gMetricsCache = {};
 var _gRunning = false;
 var _gStaticBase = null;
+var _gStaticControls = [];
+// What keeps its item when the rules take it out of the flow.
+var _G_MOVES = /^(button|input|textarea|select|img|canvas|video|audio|svg|iframe)$/;
 var _gClosedHidden = null;
 var _gStaticRoot = "";
+// Weak: only a read holding the old item still asks, and that may be some passes later.
+// Kept past a settle, as a page's own variable can name the old item at any later
+// time. Not a WeakMap: Qt's crashes in a lookup once a key has been collected.
 var _gReplaced = new Map();
 var _gAdopted = new Map();
 var _gLayoutReader = null;
@@ -16337,8 +16389,15 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
     var pending = 0;
     var first = true;
     var through = 0;
-    var collapseTop = e.pt === 0 && e.bt === 0 && s["overflow-y"] === "visible" && s.display !== "inline-block" && s.display !== "flow-root";
-    var collapseBottom = autoH && e.pb === 0 && e.bb === 0 && s["overflow-y"] === "visible" && s.display !== "inline-block" && s.display !== "flow-root";
+    // Margins stop at a box that starts its own block formatting context.
+    var open = s["overflow-y"] === "visible" && s.display !== "inline-block" && s.display !== "flow-root" && !_gOutOfFlow(s);
+    var holder = _gParent(raw);
+    if (open && holder) {
+        var holderStyle = _gStyle(holder);
+        open = !_gIsFlex(holderStyle) && !_gIsGrid(holderStyle);
+    }
+    var collapseTop = e.pt === 0 && e.bt === 0 && open;
+    var collapseBottom = autoH && e.pb === 0 && e.bb === 0 && open;
     var text = _gTextOf(raw);
     if (text && text.text !== "") {
         _gPaintText(text, s, innerW, raw);
@@ -16673,11 +16732,16 @@ function _gLayoutGrid(raw, s, e, innerW, innerH) {
             var cell = kids[r * n + b];
             var cellStyle = _gStyle(cell);
             var cellEdges = _gEdges(cell, cellStyle, sizes[b]);
-            if (_gPx(cellStyle.height, null, cellStyle.fontSize, cellStyle.rootSize) === null) {
-                _gPlace(cell, sizes[b], { forceH: tallest - (cellEdges.mt || 0) - (cellEdges.mb || 0) }, null);
+            var outer = tallest - (cellEdges.mt || 0) - (cellEdges.mb || 0);
+            var along = cellStyle["align-self"] === "auto" ? s["align-items"] : cellStyle["align-self"];
+            var stretches = along === "normal" || along === "stretch";
+            if (stretches && _gPx(cellStyle.height, null, cellStyle.fontSize, cellStyle.rootSize) === null) {
+                _gPlace(cell, sizes[b], { forceH: outer }, null);
             }
+            var drop = along === "center" ? (outer - cell.height) / 2
+                : along === "end" || along === "flex-end" ? outer - cell.height : 0;
             cell.x = lefts[b] + (cellEdges.ml || 0);
-            cell.y = e.bt + e.pt + y + (cellEdges.mt || 0);
+            cell.y = e.bt + e.pt + y + (cellEdges.mt || 0) + drop;
         }
         y += tallest + (r < rows - 1 ? rowGap : 0);
     }
@@ -17189,6 +17253,9 @@ function _gReplaceShape(raw, slot, signature, source, host, place, url) {
     }
     if (source !== null) {
         m[slot] = Qt.createQmlObject(source, host, url || "eldur_paint");
+        // Paint made as a child is no child of the element: a box's layout would
+        // put it on a line with the box's content.
+        _meta(m[slot]).gPaint = true;
         place(m[slot]);
     }
     return m[slot];
@@ -19904,8 +19971,8 @@ function _gPlaceOutOfFlow(raw) {
     var m = _meta(raw);
     var block = _gContainingBlock(raw, s);
     var wanted = s.position === "fixed" ? "window" : (block || "initial");
-    if (raw.eldurBlock !== wanted) {
-        raw.eldurBlock = wanted;
+    if (_blockOf(raw) !== wanted) {
+        _setBlock(raw, wanted);
         _leaveFlow(raw);
     }
     var gate = m.outOfFlowGate;
@@ -19947,8 +20014,9 @@ function _gSyncFlowForm(raw) {
     if (wantOut) {
         var place = _slotFor(next);
         var container = next.parent;
+        var after = _nextSibling(next);
         next.parent = null;
-        _insertInFlow(container, [place], null);
+        _insertInFlow(container, [place], after);
         next.eldurBlock = "initial";
         _leaveFlow(next);
     } else if (kept) {
@@ -19958,6 +20026,59 @@ function _gSyncFlowForm(raw) {
         kept.destroy();
     }
     return next;
+}
+
+// A control keeps its item whatever the rules say, so it goes with a slot left
+// in its place, and comes back to where that was.
+function _gSyncControlFlow(raw) {
+    var m = _meta(raw);
+    var s = _gStyle(raw);
+    var wantOut = _gOutOfFlow(s) && s.display !== "none";
+    if (wantOut === (m.gBlock !== undefined)) {
+        return;
+    }
+    if (wantOut) {
+        var holder = raw.parent;
+        var tail = _nextSibling(raw);
+        m.gBlock = "initial";
+        var place = _slotFor(raw);
+        raw.parent = null;
+        _insertInFlow(holder, [place], tail);
+        _leaveFlow(raw);
+    } else {
+        var slot = m.gSlot;
+        var back = slot.parent;
+        delete m.gBlock;
+        delete m.gSlot;
+        _insertInFlow(back, [raw], slot);
+        slot.parent = null;
+        slot.destroy();
+        raw.x = 0;
+        raw.y = 0;
+    }
+}
+
+function _nextSibling(raw) {
+    var kids = raw.parent.children;
+    for (var i = 0; i < kids.length - 1; ++i) {
+        if (kids[i] === raw) {
+            return kids[i + 1];
+        }
+    }
+    return null;
+}
+
+function _gControls() {
+    var out = [];
+    var add = function(raw) {
+        if (raw && !_gIsBox(raw) && !raw.__eldurInline && _G_MOVES.test(_nodeTag(raw)) && raw.eldurBlock === undefined && _isConnected(raw)) {
+            out.push(raw);
+        }
+    };
+    _gLive.forEach(add);
+    _gLiveTemplates.forEach(add);
+    _gStaticControls.forEach(add);
+    return out;
 }
 
 function _gSettle() {
@@ -19977,8 +20098,6 @@ function _gSettle() {
         _gRunning = false;
         return;
     }
-    // Only a read right after a pass asks; holding more keeps dead items alive.
-    _gReplaced.clear();
     _gRunning = true;
     _gDirty = false;
     ++_gGen;
@@ -19998,6 +20117,7 @@ function _gSettle() {
             _gSyncFlowForm(snapshot[j]);
         }
     }
+    _gControls().forEach(_gSyncControlFlow);
     _gPrune();
     _gWatchStates();
     _gPaintFormStates();
@@ -20009,18 +20129,33 @@ function _gSettle() {
 
 // Lines are only made inside a box. A page's empty container that a script
 // fills with inline-level children becomes one, as nothing of its own is lost.
+// So does a flex or grid container: what its items do to each other is the
+// layout of `_gLayoutFlex` and `_gLayoutGrid`, which a QML layout has no way to
+// say for items whose size comes from a pass, not a binding.
 function _gFillsLine(raw) {
-    if (!raw.parent || _gIsBox(raw.parent) || _isLines(raw.parent) || !_gInlineLevel(_gStyle(raw))) {
+    if (!raw.parent || _gIsBox(raw.parent) || _isLines(raw.parent)) {
         return;
     }
     var parent = _gParent(raw);
     if (!parent || _gIsBox(parent) || _meta(parent).createdTag || /^(body|html)$/.test(_nodeTag(parent))) {
         return;
     }
+    var parentStyle = _gStyle(parent);
+    if (!_gInlineLevel(_gStyle(raw)) && !_gIsFlex(parentStyle) && !_gIsGrid(parentStyle)) {
+        return;
+    }
     var all = _rawElementChildren(parent);
+    var items = _gIsFlex(parentStyle) || _gIsGrid(parentStyle);
     for (var i = 0; i < all.length; ++i) {
-        if (!_meta(all[i]).createdTag) {
+        if (!_meta(all[i]).createdTag && !items) {
             return;
+        }
+    }
+    // The page's own items share their lines and tracks with the created ones,
+    // so the same pass has to place them all.
+    for (var k = 0; k < all.length; ++k) {
+        if (!_meta(all[k]).createdTag) {
+            _gAdopt(all[k]);
         }
     }
     _gAdopt(parent);
@@ -20034,6 +20169,11 @@ function _gReposition() {
             _gPlaceOutOfFlow(raw);
         }
     }
+    _gControls().forEach(function(control) {
+        if (_meta(control).gBlock !== undefined) {
+            _gPlaceOutOfFlow(control);
+        }
+    });
     _gSyncScrollers();
     return outs;
 }
@@ -20192,11 +20332,15 @@ function _gSnapshotStatics() {
         return;
     }
     _gStaticBase = [];
+    _gStaticControls = [];
     var html = _taggedHtml();
     _gStaticRoot = html ? _gRootAttrs(html) : "";
     _walkItems(_root, function(item) {
+        if (typeof item.eldurTag === "string" && _G_MOVES.test(item.eldurTag) && item.eldurSlot === undefined && !_meta(item).createdTag) {
+            _gStaticControls.push(item);
+        }
         if (typeof item.eldurTag === "string" && !_meta(item).createdTag) {
-            _gStaticBase.push({ raw: item, hiddenBox: item.visible === false, sig: _gStaticSig(item), classes: _meta(item).classes.slice() });
+            _gStaticBase.push({ raw: item, hiddenBox: item.visible === false, sig: _gStaticSig(item), classes: _meta(item).classes.slice(), attrs: _gAttrsSig(item) });
         }
         return false;
     });
@@ -20214,7 +20358,7 @@ function _gStaticSig(raw) {
     return matched.join(",") + (uses ? JSON.stringify(_gStyle(raw).vars) : "") + _gBoxInline(raw);
 }
 
-var _G_IN_PLACE = /^(display|visibility|opacity|color|zIndex|left|top|right|bottom|position|cursor|pointerEvents)$/;
+var _G_IN_PLACE = /^(display|visibility|opacity|color|zIndex|left|top|right|bottom|cursor|pointerEvents)$/;
 
 // What a script wrote that the item as converted cannot answer to.
 function _gBoxInline(raw) {
@@ -20235,6 +20379,42 @@ function _gBoxInline(raw) {
     }).sort().map(function(k) { return k + ":" + styles[k]; }).join(";");
 }
 
+// The converter has no variant for an id or attribute it did not see.
+// Only what an author's selector names: the `hidden` of the UA sheet is a binding
+// the converter already wrote, and an element shouldn't leave its form for it.
+function _gAttrsSig(raw) {
+    var attrs = _meta(raw).attrs || {};
+    var named = Object.keys(attrs).filter(function(name) { return _gNamedBySelector("[" + name); }).sort();
+    var sig = named.map(function(name) { return name + "=" + attrs[name]; });
+    return (_gNamedBySelector("#" + raw.objectName) ? raw.objectName : "") + "|" + sig.join("|");
+}
+
+// Text under the element is drawn from a cascade of its own, which no pass of
+// the boxes asks again.
+function _gNameChanged(raw, words) {
+    if (_gHasCascade() && _isConnected(raw) && words.some(_gNamedBySelector)) {
+        _vChanged(null);
+    }
+}
+
+// Asked for every element at each settle, of rules that don't change.
+var _gNamedWords = new Map();
+
+function _gNamedBySelector(word) {
+    var known = _gNamedWords.get(word);
+    if (known !== undefined) {
+        return known;
+    }
+    var rules = _gRules();
+    var named = false;
+    for (var i = 0; i < rules.length && !named; ++i) {
+        var at = rules[i].ua ? -1 : rules[i].sel.indexOf(word);
+        named = at !== -1 && !/[\w-]/.test(rules[i].sel.charAt(at + word.length));
+    }
+    _gNamedWords.set(word, named);
+    return named;
+}
+
 function _gRootAttrs(html) {
     var m = _meta(html);
     return m.classes.join(" ") + JSON.stringify(m.dataset);
@@ -20244,19 +20424,34 @@ function _gRootAttrs(html) {
 // or an earlier sibling, is what a selector can only have learned now.
 function _gUncovered(entry) {
     var raw = entry.raw;
-    if (_gBoxInline(raw) !== "") {
+    if (_gBoxInline(raw) !== "" || _gAttrsSig(raw) !== entry.attrs) {
         return true;
     }
     var now = _meta(raw).classes;
     var changed = now.filter(function(c) { return entry.classes.indexOf(c) === -1; })
         .concat(entry.classes.filter(function(c) { return now.indexOf(c) === -1; }));
     for (var i = 0; i < changed.length; ++i) {
+        if (_gClassMoves(changed[i])) {
+            return true;
+        }
         if (_gMentioned(changed[i])
             && (typeof raw[_sanitizeClassProp(changed[i])] !== "boolean" || !_gVariantSupports(raw, changed[i]))) {
             return true;
         }
     }
     return false;
+}
+
+// A variant repaints an item where it is, and has no way to take it out of its
+// layout, however literally the class was written.
+function _gClassMoves(name) {
+    var rules = _gRules();
+    var word = "." + name;
+    return rules.some(function(rule) {
+        var at = rule.sel.indexOf(word);
+        return at !== -1 && !/[\w-]/.test(rule.sel.charAt(at + word.length))
+            && rule.decls.some(function(d) { return d[0] === "position" && (d[1] === "absolute" || d[1] === "fixed"); });
+    });
 }
 
 // A class no selector names changes what no rule matches.

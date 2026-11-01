@@ -958,3 +958,51 @@ Attribute selectors on script-written attributes (`[aria-expanded=true]`,
    - **`http(s)` inputs:** the source URL.
    - **`<base href>`:** overrides both, resolved against them, as in
      HTML.
+
+## 15. Where a template stops: what makes a page open
+
+A template answers for a tag, classes and a place, and its conditions reach paint,
+height and margins. Some of what a stylesheet can say about a created element is
+outside that, and such a page is converted open (`selectors_outrun_templates` in
+`pipeline.rs`) so the runtime cascade answers instead:
+
+- a selector names an id a script writes (or the script computes an id);
+- a selector names an attribute a script writes, on a page that creates elements.
+  A page's own elements keep the converter's variants, so a theme switch on
+  `<html data-theme>` stays closed;
+- a class a script toggles takes an element out of flow;
+- a structural pseudo-class on something a script creates changes its width or the
+  kind of box it is. Structural paint, margins and height stay template conditions
+  (§5.5).
+
+`el.style.position` also opens the page: it is no longer written in place.
+
+At run time:
+
+- **A script-filled flex or grid container is laid out by the runtime.** Stretch and
+  alignment between items whose sizes come from a pass can't be said to a QML layout,
+  so `_gFillsLine` adopts the container. A page's own items in it are adopted with it,
+  since they share lines and tracks with the created ones.
+- **Out-of-flow is a state of any element.** `_leaveFlow` keeps a slot where the
+  element was. A template's block is `"containing"` and is resolved when it connects,
+  because the template is written before its parent is known. A control keeps its item
+  (`_G_MOVES`), with the slot held in its meta, as a control's type has no property for
+  it. `_gSyncFlowForm` and `_gSyncControlFlow` keep the slot in DOM order.
+- **An id or attribute that a selector names is noticed on a static element**:
+  `_gAttrsSig` is part of what `_gUncovered` compares. Attributes no author selector
+  names don't count, so `hidden` leaves an element in its converted form.
+- **`innerHTML` with inline elements on a created box makes elements**, not one styled
+  `Text`, so they answer to selectors and `getElementById`.
+- **`_gReplaced` lasts past a settle**, as a page's variable can hold the old item
+  at any later time. It is a `Map`: Qt's `WeakMap` crashes in a lookup once a key
+  has been collected.
+- **An inline model first built after a write has no baseline.** It can't tell which
+  matches changed, so it runs the cascade rather than trusting the converter's values.
+
+
+Two rules every box the runtime lays out now keeps, because a script-filled grid
+or flex container brings its items onto this path. Paint the runtime makes as a
+child (`_gReplaceShape`) is no child of the element: a script does not see it and
+a box's layout does not put it on a line. A grid item, a flex item and an
+out-of-flow box each start a block formatting context, so their children's margins
+stay inside them.

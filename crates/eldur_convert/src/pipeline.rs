@@ -60,6 +60,15 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     for d in &scripts.analysis.diagnostics {
         diags.push(js_diagnostic(d));
     }
+    if !scripts.is_empty()
+        && selectors_outrun_templates(
+            &scripts.analysis,
+            &eldur_css::runtime_rules(&sheets, &options.viewport),
+        )
+    {
+        scripts.analysis.open_elements = true;
+        scripts.analysis.adopts_for_inline = true;
+    }
 
     // 4–5: boxes, then QML.
     let no_scripts = HashSet::new();
@@ -486,4 +495,134 @@ fn js_diagnostic(d: &eldur_js::Diagnostic) -> Diagnostic {
         line: d.line,
         message: d.message.clone(),
     }
+}
+
+/// A template is written for a tag, classes and a place. A rule that asks about
+/// an id or attribute a script writes, or that gives a created element another
+/// form for where among its siblings it ended up, can only be answered once the
+/// page runs.
+fn selectors_outrun_templates(
+    analysis: &eldur_js::Analysis,
+    rules: &[eldur_css::RuntimeRule],
+) -> bool {
+    rules.iter().filter(|r| !r.user_agent).any(|rule| {
+        let selector = rule.selector.as_str();
+        names_written_id(selector, analysis)
+            || names_written_attribute(selector, analysis)
+            || class_takes_out_of_flow(rule, analysis)
+            || (changes_form(rule) && structural_on_created(selector, analysis))
+    })
+}
+
+/// A template's conditions reach paint, height and margins. Its width and what
+/// kind of box it is are one answer per template, whatever its place in the list.
+fn changes_form(rule: &eldur_css::RuntimeRule) -> bool {
+    rule.declarations.iter().any(|(p, _, _)| {
+        p.ends_with("width") && !p.starts_with("border") && !p.starts_with("outline")
+            || matches!(p.as_str(), "display" | "position" | "float")
+            || p.starts_with("flex")
+            || p.starts_with("grid")
+    })
+}
+
+/// A class variant changes what a form paints, and can't move it out of a layout.
+fn class_takes_out_of_flow(rule: &eldur_css::RuntimeRule, analysis: &eldur_js::Analysis) -> bool {
+    rule.declarations
+        .iter()
+        .any(|(p, v, _)| p == "position" && (v == "absolute" || v == "fixed"))
+        && names_after(&rule.selector, '.').any(|name| {
+            analysis
+                .class_writes
+                .iter()
+                .any(|w| w.names.iter().any(|n| n == name))
+        })
+}
+
+fn names_after(selector: &str, mark: char) -> impl Iterator<Item = &str> {
+    selector.match_indices(mark).map(move |(at, _)| {
+        let rest = &selector[at + mark.len_utf8()..];
+        let rest = rest.trim_start();
+        let end = rest
+            .find(|c: char| !(c.is_alphanumeric() || c == '-' || c == '_'))
+            .unwrap_or(rest.len());
+        &rest[..end]
+    })
+}
+
+fn names_written_id(selector: &str, analysis: &eldur_js::Analysis) -> bool {
+    names_after(selector, '#')
+        .any(|name| analysis.writes_computed_id || analysis.written_ids.contains(name))
+}
+
+/// The converter's variants answer for an attribute on a page's own elements; a
+/// template is written before anyone has set one on it.
+fn names_written_attribute(selector: &str, analysis: &eldur_js::Analysis) -> bool {
+    !analysis.created.is_empty()
+        && names_after(selector, '[').any(|name| {
+            analysis.writes_computed_attribute
+                || analysis
+                    .written_attributes
+                    .contains(&name.to_ascii_lowercase())
+        })
+}
+
+/// Whether the element a selector styles asks about its place, and could be one
+/// a script creates.
+fn structural_on_created(selector: &str, analysis: &eldur_js::Analysis) -> bool {
+    let subject = last_compound(selector);
+    let structural = [
+        ":first-child",
+        ":last-child",
+        ":only-child",
+        ":nth-",
+        ":first-of-type",
+        ":last-of-type",
+        ":only-of-type",
+        ":empty",
+    ];
+    if !structural.iter().any(|s| subject.contains(s)) {
+        return false;
+    }
+    let (tag, classes) = compound_names(subject);
+    analysis.created.iter().any(|created| {
+        (tag.is_empty() || tag == "*" || tag.eq_ignore_ascii_case(&created.tag))
+            && classes.iter().all(|class| {
+                created
+                    .class_sets
+                    .iter()
+                    .any(|set| set.iter().any(|c| c == class))
+            })
+    })
+}
+
+fn last_compound(selector: &str) -> &str {
+    let mut depth = 0_u32;
+    let mut start = 0;
+    for (at, c) in selector.char_indices() {
+        match c {
+            '(' | '[' => depth += 1,
+            ')' | ']' => depth = depth.saturating_sub(1),
+            ' ' | '>' | '+' | '~' if depth == 0 => start = at + c.len_utf8(),
+            _ => {}
+        }
+    }
+    &selector[start..]
+}
+
+/// A compound's type and required classes. What is inside `:not()` and the like
+/// says nothing about what the element has to be.
+fn compound_names(compound: &str) -> (String, Vec<String>) {
+    let mut outer = String::new();
+    let mut depth = 0_u32;
+    for c in compound.chars() {
+        match c {
+            '(' | '[' => depth += 1,
+            ')' | ']' => depth = depth.saturating_sub(1),
+            _ if depth == 0 => outer.push(c),
+            _ => {}
+        }
+    }
+    let tag_end = outer.find(['.', '#', ':']).unwrap_or(outer.len());
+    let classes = names_after(&outer, '.').map(str::to_owned).collect();
+    (outer[..tag_end].to_owned(), classes)
 }

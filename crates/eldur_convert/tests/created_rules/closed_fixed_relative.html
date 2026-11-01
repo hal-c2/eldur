@@ -1,0 +1,14 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;font:16px/20px sans-serif}
+.fx{position:fixed;left:3px;top:4px;width:6px;height:8px}.rl{position:relative;left:5px;top:7px;height:20px}#fx2{position:fixed;right:3px;bottom:4px;width:6px;height:8px}#rl2{position:relative;left:9px;top:1px;height:10px}.sp{height:50px}
+</style></head><body>
+<div id="host" style="position:relative;margin:10px"></div>
+<script>
+function rc(id){var b=document.getElementById(id).getBoundingClientRect();return id+":"+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)+","+Math.round(b.height)}
+function geo(){console.log("CS "+Array.prototype.map.call(arguments,rc).join(" "))}
+function cs(id){var s=getComputedStyle(document.getElementById(id)),o=[];for(var i=1;i<arguments.length;i++)o.push(arguments[i]+"="+s[arguments[i]]);console.log("CS "+id+" "+o.join(" "))}
+var h=document.getElementById("host");
+function mk(c,id){var d=document.createElement("div");if(c)d.className=c;d.id=id;h.append(d);return d}
+mk("sp","s");mk("fx","f");mk("rl","r");mk("","fx2");mk("","rl2");mk("sp","e");
+geo("host","s","f","r","fx2","rl2","e");
+</script></body></html>

@@ -45,10 +45,6 @@ const COMPACT: &str = "a right-aligned row: its buttons are whole pixels wider (
 const BUTTONWIDTH: &str = "a button's width is whole pixels (`Math.ceil` in emit/controls.rs): \
                            five on a line add up to 2.2px against Chromium's fractions";
 const CONTROLROW: &str = "with the form between them hidden, the heading's bottom margin of 21.44 looks lost, leaving only #done's 16; not confirmed";
-const CREATED_STRETCH: &str =
-    "a grid a script filled leaves its items at their own height, not the row's";
-const SCRIPTPOSITION: &str = "style.position = \"absolute\" from a script leaves an element in the layout that holds it, \
-                              since a template has one form; the runtime says so, and a class does work (input_real_made)";
 const AREALINE: &str = "a TextArea has no line height to set: `font: 13px/16px` keeps Qt's taller line, so three lines overflow what Chromium fits";
 const NEVER_SCRIPT: &str =
     "a script in the body makes no item, so its source is not in the body's textContent";
@@ -100,13 +96,7 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("theme", "* #compact[*] x:", COMPACT),
     ("theme", "* body[*] text:", NEVER_SCRIPT),
     ("form", "* #done[*] y:", CONTROLROW),
-    ("cards", "* .card[*] height:", CREATED_STRETCH),
     ("created_lines", "* #reset[*] x:", BUTTONWIDTH),
-    (
-        "input_real_more",
-        "*eldur: style.position = *",
-        SCRIPTPOSITION,
-    ),
     (
         "input_real_widgets",
         "report 6 (enter2) log:*scrollH=true*",
