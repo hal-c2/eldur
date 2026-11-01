@@ -30643,6 +30643,556 @@
    }
   }
  ],
+ "motion_running": [
+  {
+   "name": "load",
+   "log": [
+    "running"
+   ],
+   "state": {
+    "#ends": [
+     {
+      "box": [
+       0,
+       0,
+       1280,
+       53.34
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#keeps": [
+     {
+      "box": [
+       0,
+       53.34,
+       1280,
+       53.34
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#keepsRev": [
+     {
+      "box": [
+       0,
+       106.69,
+       1280,
+       26.64
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#twice": [
+     {
+      "box": [
+       0,
+       133.33,
+       1280,
+       33.28
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#fades": [
+     {
+      "box": [
+       0,
+       166.61,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(0, 136, 136)"
+     }
+    ],
+    "#tints": [
+     {
+      "box": [
+       0,
+       186.61,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(187, 187, 187)"
+     }
+    ],
+    "#stairs": [
+     {
+      "box": [
+       0,
+       206.61,
+       225,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#late": [
+     {
+      "box": [
+       0,
+       226.61,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#lateFill": [
+     {
+      "box": [
+       0,
+       246.61,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#forever": [
+     {
+      "box": [
+       0,
+       266.61,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#below": [
+     {
+      "box": [
+       0,
+       286.61,
+       1280,
+       10
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "finished",
+   "log": [],
+   "state": {
+    "#ends": [
+     {
+      "box": [
+       0,
+       0,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#keeps": [
+     {
+      "box": [
+       0,
+       20,
+       1280,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#keepsRev": [
+     {
+      "box": [
+       0,
+       80,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#twice": [
+     {
+      "box": [
+       0,
+       100,
+       1280,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#fades": [
+     {
+      "box": [
+       0,
+       160,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(153, 153, 153)"
+     }
+    ],
+    "#tints": [
+     {
+      "box": [
+       0,
+       180,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(0, 0, 255)"
+     }
+    ],
+    "#stairs": [
+     {
+      "box": [
+       0,
+       200,
+       150,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#late": [
+     {
+      "box": [
+       0,
+       220,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#lateFill": [
+     {
+      "box": [
+       0,
+       240,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#forever": [
+     {
+      "box": [
+       0,
+       260,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#below": [
+     {
+      "box": [
+       0,
+       280,
+       1280,
+       10
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
+ "motion_static": [
+  {
+   "name": "load",
+   "log": [
+    "pinned"
+   ],
+   "state": {
+    "#fade": [
+     {
+      "box": [
+       0,
+       0,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(153, 153, 153)"
+     }
+    ],
+    "#tint": [
+     {
+      "box": [
+       0,
+       20,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#ink": [
+     {
+      "box": [
+       0,
+       40,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "ink"
+     }
+    ],
+    "#grow": [
+     {
+      "box": [
+       0,
+       60,
+       1280,
+       70
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       0,
+       130,
+       1280,
+       10
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#wide": [
+     {
+      "box": [
+       0,
+       140,
+       200,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#move": [
+     {
+      "box": [
+       50,
+       160,
+       50,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#spin": [
+     {
+      "box": [
+       -12.5,
+       175,
+       75,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#three": [
+     {
+      "box": [
+       0,
+       200,
+       1280,
+       80
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#alt": [
+     {
+      "box": [
+       0,
+       280,
+       1280,
+       70
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#rev": [
+     {
+      "box": [
+       0,
+       350,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#eased": [
+     {
+      "box": [
+       0,
+       450,
+       1280,
+       51.53
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stepped": [
+     {
+      "box": [
+       0,
+       501.53,
+       1280,
+       70
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#before": [
+     {
+      "box": [
+       0,
+       571.53,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#beforeFill": [
+     {
+      "box": [
+       0,
+       591.53,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#doneFill": [
+     {
+      "box": [
+       0,
+       611.53,
+       1280,
+       120
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#done": [
+     {
+      "box": [
+       0,
+       731.53,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#ml": [
+     {
+      "box": [
+       50,
+       751.53,
+       1230,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#mt": [
+     {
+      "box": [
+       0,
+       791.53,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#slide": [
+     {
+      "box": [
+       50,
+       811.53,
+       50,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#half": [
+     {
+      "box": [
+       -30,
+       831.53,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
  "motion_transitions": [
   {
    "name": "load",

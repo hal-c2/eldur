@@ -329,6 +329,10 @@ fn page(name: &str) {
     let (steps, trouble) = parse(&text);
     let mut all = differences(&steps, chromium[name].as_array().expect("recorded"));
     all.extend(trouble);
+    // Read mid-flight on two real clocks, its load state has nothing to agree on.
+    if name == "motion_running" {
+        all.retain(|d| !d.starts_with("load "));
+    }
     // `ELDUR_APPS_ALL=1` prints every difference, the known ones too.
     if std::env::var_os("ELDUR_APPS_ALL").is_some() {
         eprintln!("{name}:\n  {}", all.join("\n  "));
@@ -527,6 +531,16 @@ fn motion_transitions() {
 #[test]
 fn scroll_created() {
     page("scroll_created");
+}
+
+#[test]
+fn motion_static() {
+    page("motion_static");
+}
+
+#[test]
+fn motion_running() {
+    page("motion_running");
 }
 
 #[test]

@@ -4899,6 +4899,16 @@ function _hiddenByAttribute(raw) {
     return false;
 }
 
+// A scale or a turn the page's own QML declares, which no script's style records.
+function _turnedInMarkup(raw) {
+    var list = raw.transform;
+    if (!list || !list.length) return false;
+    for (var i = 0; i < list.length; i++) {
+        if ("xScale" in list[i] || "angle" in list[i] || "matrix" in list[i]) return true;
+    }
+    return false;
+}
+
 function getBoundingClientRect(item) {
     _layoutForRead();
     var raw = _gCurrent(_unwrap(item));
@@ -4937,7 +4947,7 @@ function getBoundingClientRect(item) {
             h = fontBox;
         }
         // A transform moves what a box's rect reports: the corners' bounds.
-        if (_meta(raw).gMatrix) {
+        if (_meta(raw).gMatrix || _turnedInMarkup(raw)) {
             var corners = [pt, raw.mapToItem(null, w, 0), raw.mapToItem(null, 0, h), raw.mapToItem(null, w, h)];
             var xs = corners.map(function(c) { return c.x; });
             var ys = corners.map(function(c) { return c.y; });

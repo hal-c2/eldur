@@ -1,0 +1,1 @@
+{"steps": [{"name": "finished", "settle": 600}], "watch": [{"sel": "#ends"}, {"sel": "#keeps"}, {"sel": "#keepsRev"}, {"sel": "#twice"}, {"sel": "#fades", "paint": true}, {"sel": "#tints", "paint": true}, {"sel": "#stairs"}, {"sel": "#late"}, {"sel": "#lateFill"}, {"sel": "#forever"}, {"sel": "#below"}]}

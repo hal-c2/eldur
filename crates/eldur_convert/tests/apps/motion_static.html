@@ -1,0 +1,43 @@
+<!DOCTYPE html><html><head><title>Pinned</title><style>
+body{margin:0;font:16px/20px sans-serif}
+.p{animation-play-state:paused;animation-duration:10s;animation-timing-function:linear}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes tint{from{background-color:rgb(255,0,0)}to{background-color:rgb(0,0,255)}}
+@keyframes ink{from{color:rgb(255,0,0)}to{color:rgb(0,0,255)}}
+@keyframes grow{from{height:20px}to{height:120px}}
+@keyframes wide{from{width:100px}to{width:300px}}
+@keyframes move{from{transform:translateX(0)}to{transform:translateX(100px)}}
+@keyframes spin{from{transform:scale(1)}to{transform:scale(2)}}
+@keyframes three{0%{height:20px}50%{height:120px}100%{height:40px}}
+#fade{height:20px;background:#000;animation-name:fade;animation-delay:-4s}
+#tint{height:20px;animation-name:tint;animation-delay:-5s}
+#ink{animation-name:ink;animation-delay:-5s}
+#grow{background:#080;animation-name:grow;animation-delay:-5s}
+#after{height:10px;background:#888}
+#wide{height:20px;background:#008;animation-name:wide;animation-delay:-5s}
+#move{height:20px;width:50px;background:#800;animation-name:move;animation-delay:-5s}
+#spin{height:20px;width:50px;background:#808;animation-name:spin;animation-delay:-5s}
+#three{background:#088;animation-name:three;animation-delay:-7.5s}
+#alt{background:#088;animation-name:grow;animation-delay:-15s;animation-direction:alternate;animation-iteration-count:infinite}
+#rev{background:#088;animation-name:grow;animation-delay:-2s;animation-direction:reverse}
+#eased{background:#088;animation-name:grow;animation-delay:-5s;animation-timing-function:ease-in}
+#stepped{background:#088;animation-name:grow;animation-delay:-5s;animation-timing-function:steps(4,end)}
+#before{height:20px;background:#088;animation-name:grow;animation-delay:5s}
+#beforeFill{height:20px;background:#088;animation-name:grow;animation-delay:5s;animation-fill-mode:backwards}
+#doneFill{height:20px;background:#088;animation-name:grow;animation-delay:-20s;animation-fill-mode:forwards}
+@keyframes ml{from{margin-left:0}to{margin-left:100px}}
+@keyframes mt{from{margin-top:0}to{margin-top:40px}}
+@keyframes slide{from{left:0}to{left:100px}}
+@keyframes half{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+#ml{height:20px;background:#444;animation-name:ml;animation-delay:-5s}
+#mt{height:20px;background:#555;animation-name:mt;animation-delay:-5s}
+#slide{position:relative;width:50px;height:20px;background:#666;animation-name:slide;animation-delay:-5s}
+#half{width:60px;height:20px;background:#777;animation-name:half;animation-delay:-5s}
+#done{height:20px;background:#088;animation-name:grow;animation-delay:-20s}
+</style></head><body>
+<div id="fade" class="p"></div><div id="tint" class="p"></div><div id="ink" class="p">ink</div><div id="grow" class="p"></div><div id="after"></div>
+<div id="wide" class="p"></div><div id="move" class="p"></div><div id="spin" class="p"></div><div id="three" class="p"></div>
+<div id="alt" class="p"></div><div id="rev" class="p"></div><div id="eased" class="p"></div><div id="stepped" class="p"></div>
+<div id="before" class="p"></div><div id="beforeFill" class="p"></div><div id="doneFill" class="p"></div><div id="done" class="p"></div>
+<div id="ml" class="p"></div><div id="mt" class="p"></div><div id="slide" class="p"></div><div id="half" class="p"></div>
+<script>console.log("pinned");</script></body></html>

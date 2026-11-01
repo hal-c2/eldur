@@ -125,14 +125,6 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     let mut extra_imports = emission.imports;
     let mut gated = emission.gated;
 
-    if options.animations && !styles.keyframes.is_empty() {
-        diags.info(
-            "css",
-            None,
-            "CSS animations are not converted yet".to_owned(),
-        );
-    }
-
     let mut qml = eldur_qml::Document::default();
     let mut files = images.files;
 

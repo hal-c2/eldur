@@ -26,6 +26,7 @@ pub(crate) const ELDUR_FILTER_QSB: &[u8] = include_bytes!("eldur_filter.frag.qsb
 pub(crate) const ELDUR_TEXT_SHADOW_QML: &str = include_str!("EldurTextShadow.qml");
 pub(crate) use inline::{ELDUR_INLINE_BOX_QML, ELDUR_LINES_QML, has_atomic, needs_lines_for_boxes};
 mod inline_model;
+mod keyframes;
 mod links;
 mod lists;
 mod paint;
@@ -452,6 +453,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         self.finish_resets(&mut root);
         self.report_inline_labels();
         carry::strip_hints(&mut root);
+        keyframes::bind_layout_motion(&mut root);
         paint::snap_rounded_boxes(&mut root, false);
         paint::native_text(&mut root, false);
         root
@@ -756,7 +758,13 @@ impl<'a, 'd> Emitter<'a, 'd> {
             inner = Some((self.text(style, decoration, &[], line), "Text"));
         }
 
-        if inner.is_none() && top_open && bottom_open && !wanted && overlays.is_empty() {
+        if inner.is_none()
+            && top_open
+            && bottom_open
+            && !wanted
+            && overlays.is_empty()
+            && !self.static_animation(style)
+        {
             let mut top = MarginSet::of(mt);
             // With no item, every child margin is in `escaped_top`.
             top.join(escaped_top);
@@ -957,10 +965,13 @@ impl<'a, 'd> Emitter<'a, 'd> {
 
     /// `e` with `b`'s `transform`, which every kind of box takes.
     fn transformed(&mut self, mut e: Emitted, b: &LayoutBox<'_>, line: Option<u32>) -> Emitted {
-        if !b.style.transform.is_empty() {
-            let what = b
-                .node
-                .map_or_else(|| "a generated box".to_owned(), |n| describe(self.doc, n));
+        let what = b
+            .node
+            .map_or_else(|| "a generated box".to_owned(), |n| describe(self.doc, n));
+        let moved = b.node.is_some_and(|node| {
+            self.keyframes(&mut e.obj, node, &b.style, &hint(self.doc, b), &what, line)
+        });
+        if !b.style.transform.is_empty() && !moved {
             self.transform(&mut e.obj, &b.style, &hint(self.doc, b), &what, line);
         }
         self.sticky_transform(&mut e.obj, &b.style, &hint(self.doc, b));
