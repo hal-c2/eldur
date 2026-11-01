@@ -256,7 +256,7 @@ ApplicationWindow {
                         // <section class="pricing-grid">
                         RowLayout {
                             id: pricingGrid
-                            property real eldurCarry: Math.round(Layout.topMargin) - Layout.topMargin + plan.eldurCarry + 0.000001
+                            property real eldurCarry: (Layout.topMargin < 0 ? Math.round(Layout.topMargin) : Math.ceil(Layout.topMargin)) - Layout.topMargin + plan.eldurCarry + 0.000001
 
                             spacing: 28
                             z: 1
@@ -464,7 +464,7 @@ ApplicationWindow {
                                         // <li>
                                         RowLayout {
                                             id: li
-                                            property real eldurCarry: Math.round(Layout.topMargin) - Layout.topMargin + item2.eldurCarry + 0.000001
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item2.eldurCarry + 0.000001
 
                                             spacing: 0
                                             Layout.fillWidth: true
@@ -523,7 +523,7 @@ ApplicationWindow {
                                         // <li>
                                         RowLayout {
                                             id: li2
-                                            property real eldurCarry: Math.round(Layout.topMargin) - Layout.topMargin + item3.eldurCarry + 0.000001
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item3.eldurCarry + 0.000001
 
                                             spacing: 0
                                             Layout.fillWidth: true
@@ -582,7 +582,7 @@ ApplicationWindow {
                                         // <li>
                                         RowLayout {
                                             id: li3
-                                            property real eldurCarry: Math.round(Layout.topMargin) - Layout.topMargin + item4.eldurCarry + 0.000001
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item4.eldurCarry + 0.000001
 
                                             spacing: 0
                                             Layout.fillWidth: true
@@ -897,7 +897,7 @@ ApplicationWindow {
                                         // <li>
                                         RowLayout {
                                             id: li4
-                                            property real eldurCarry: Math.round(Layout.topMargin) - Layout.topMargin + item7.eldurCarry + 0.000001
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item7.eldurCarry + 0.000001
 
                                             spacing: 0
                                             Layout.fillWidth: true
@@ -954,7 +954,7 @@ ApplicationWindow {
                                         // <li>
                                         RowLayout {
                                             id: li5
-                                            property real eldurCarry: Math.round(Layout.topMargin) - Layout.topMargin + item8.eldurCarry + 0.000001
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item8.eldurCarry + 0.000001
 
                                             spacing: 0
                                             Layout.fillWidth: true
@@ -1011,7 +1011,7 @@ ApplicationWindow {
                                         // <li>
                                         RowLayout {
                                             id: li6
-                                            property real eldurCarry: Math.round(Layout.topMargin) - Layout.topMargin + item9.eldurCarry + 0.000001
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item9.eldurCarry + 0.000001
 
                                             spacing: 0
                                             Layout.fillWidth: true
@@ -1068,7 +1068,7 @@ ApplicationWindow {
                                         // <li>
                                         RowLayout {
                                             id: li7
-                                            property real eldurCarry: Math.round(Layout.topMargin) - Layout.topMargin + item10.eldurCarry + 0.000001
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item10.eldurCarry + 0.000001
 
                                             spacing: 0
                                             Layout.fillWidth: true
@@ -1399,7 +1399,7 @@ ApplicationWindow {
                                         // <li>
                                         RowLayout {
                                             id: li8
-                                            property real eldurCarry: Math.round(Layout.topMargin) - Layout.topMargin + item13.eldurCarry + 0.000001
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item13.eldurCarry + 0.000001
 
                                             spacing: 0
                                             Layout.fillWidth: true
@@ -1458,7 +1458,7 @@ ApplicationWindow {
                                         // <li>
                                         RowLayout {
                                             id: li9
-                                            property real eldurCarry: Math.round(Layout.topMargin) - Layout.topMargin + item14.eldurCarry + 0.000001
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item14.eldurCarry + 0.000001
 
                                             spacing: 0
                                             Layout.fillWidth: true
@@ -1517,7 +1517,7 @@ ApplicationWindow {
                                         // <li>
                                         RowLayout {
                                             id: li10
-                                            property real eldurCarry: Math.round(Layout.topMargin) - Layout.topMargin + item15.eldurCarry + 0.000001
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item15.eldurCarry + 0.000001
 
                                             spacing: 0
                                             Layout.fillWidth: true
@@ -1576,7 +1576,7 @@ ApplicationWindow {
                                         // <li>
                                         RowLayout {
                                             id: li11
-                                            property real eldurCarry: Math.round(Layout.topMargin) - Layout.topMargin + item16.eldurCarry + 0.000001
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + item16.eldurCarry + 0.000001
 
                                             spacing: 0
                                             Layout.fillWidth: true

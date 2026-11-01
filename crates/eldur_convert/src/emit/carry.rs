@@ -135,6 +135,7 @@ impl Emitter<'_, '_> {
             Some(Value::Number(s)) if s.fract() == 0.0 => {}
             Some(_) => return,
         }
+        let in_column = layout.type_name == "ColumnLayout";
         // A spacer's cell is between two whole cell edges whatever it
         // takes, so the carry goes past it.
         let indices: Vec<usize> = layout
@@ -261,6 +262,10 @@ impl Emitter<'_, '_> {
                     Some(Carry::Static((t + last_bottom).ceil() - t - last_bottom))
                 }
                 (Height::Excess { key, extra }, top) => {
+                    let plain_row = in_column
+                        && obj.type_name == "RowLayout"
+                        && matches!(self.excess.get(&key), Some(Excess::Pending { binding, .. })
+                            if binding.starts_with("(h =>"));
                     let e = self.read_excess(obj, key, extra);
                     match (top, e) {
                         (Gap::Static(t), Carry::Static(e)) => Some(Carry::Static(
@@ -273,19 +278,17 @@ impl Emitter<'_, '_> {
                             fmt_carry(t.ceil() - t),
                             carry_text(&e)
                         ))),
-                        // A row's cell is its whole height less the margin, to the nearest
-                        // pixel (measured), where a column's is rounded up.
-                        (Gap::Expr(_), e) => {
-                            let cell = if obj.type_name == "RowLayout" {
-                                "round"
-                            } else {
-                                "ceil"
-                            };
-                            Some(Carry::Binding(format!(
-                                "Math.{cell}(Layout.topMargin) - Layout.topMargin + {} + {NUDGE}",
-                                carry_text(&e)
-                            )))
-                        }
+                        // A row of plain items with only the carry for a margin is a whole height less
+                        // it, to the nearest pixel (measured); with a margin, rounded up.
+                        (Gap::Expr(_), e) if plain_row => Some(Carry::Binding(format!(
+                            "(Layout.topMargin < 0 ? Math.round(Layout.topMargin) : \
+                                 Math.ceil(Layout.topMargin)) - Layout.topMargin + {} + {NUDGE}",
+                            carry_text(&e)
+                        ))),
+                        (Gap::Expr(_), e) => Some(Carry::Binding(format!(
+                            "Math.ceil(Layout.topMargin) - Layout.topMargin + {} + {NUDGE}",
+                            carry_text(&e)
+                        ))),
                     }
                 }
                 _ if last_bottom != 0.0 => None,

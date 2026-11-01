@@ -820,7 +820,7 @@ ApplicationWindow {
                                             // <div class="panel-row">
                                             RowLayout {
                                                 id: panelRow
-                                                property real eldurCarry: Math.round(Layout.topMargin) - Layout.topMargin + strong2.eldurCarry + 0.000001
+                                                property real eldurCarry: (Layout.topMargin < 0 ? Math.round(Layout.topMargin) : Math.ceil(Layout.topMargin)) - Layout.topMargin + strong2.eldurCarry + 0.000001
 
                                                 spacing: 0
                                                 Layout.fillWidth: true
@@ -913,7 +913,7 @@ ApplicationWindow {
                                             // <div class="panel-row">
                                             RowLayout {
                                                 id: panelRow2
-                                                property real eldurCarry: Math.round(Layout.topMargin) - Layout.topMargin + strong3.eldurCarry + 0.000001
+                                                property real eldurCarry: (Layout.topMargin < 0 ? Math.round(Layout.topMargin) : Math.ceil(Layout.topMargin)) - Layout.topMargin + strong3.eldurCarry + 0.000001
 
                                                 spacing: 0
                                                 Layout.fillWidth: true

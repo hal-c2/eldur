@@ -507,7 +507,7 @@ ApplicationWindow {
                             // <div class="hero-actions">
                             RowLayout {
                                 id: heroActions
-                                property real eldurCarry: Math.round(Layout.topMargin) - Layout.topMargin + item.eldurCarry + 0.000001
+                                property real eldurCarry: (Layout.topMargin < 0 ? Math.round(Layout.topMargin) : Math.ceil(Layout.topMargin)) - Layout.topMargin + item.eldurCarry + 0.000001
 
                                 spacing: 0
                                 Layout.fillHeight: false
