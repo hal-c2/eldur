@@ -61,8 +61,8 @@ use self::{
         parse_flex_wrap, parse_gap_side, parse_order,
     },
     font::{
-        parse_font_family, parse_font_size, parse_font_style, parse_font_variant_caps,
-        parse_font_weight, parse_line_height,
+        font_size_origin, parse_font_family, parse_font_size, parse_font_style,
+        parse_font_variant_caps, parse_font_weight, parse_line_height,
     },
     grid::{
         parse_grid_auto_flow, parse_grid_auto_tracks, parse_grid_line, parse_grid_template_areas,
@@ -759,11 +759,13 @@ pub(crate) fn is_inherited(l: Longhand) -> bool {
 /// * `5`: `background-image`, `transition-property`, `animation-name` (determine list lengths)
 /// * `6`: `translate`, `rotate`, `scale` (individual transforms in spec order before `transform`)
 /// * `7`: `transform` and all remaining longhands
+pub(crate) use font::settle_font_size;
+
 pub(crate) fn priority(l: Longhand) -> u8 {
     match l {
-        Longhand::FontSize => 0,
-        Longhand::FontFamily
-        | Longhand::FontWeight
+        // The family says what the size comes to.
+        Longhand::FontSize | Longhand::FontFamily => 0,
+        Longhand::FontWeight
         | Longhand::FontStyle
         | Longhand::FontVariantCaps
         | Longhand::LineHeight => 1,
@@ -820,6 +822,8 @@ pub(crate) fn compute(
         // Priority 0 & 1: Font & line-height
         Longhand::FontSize => {
             style.font_size = parse_font_size(cvs, ctx)?;
+            (style.font_size_unscaled, style.font_size_keyword) =
+                font_size_origin(cvs, style.font_size, ctx);
         }
         Longhand::FontFamily => {
             style.font_family = parse_font_family(cvs)?;
@@ -1394,7 +1398,11 @@ fn set_color(style: &mut ComputedStyle, c: crate::Rgba) {
 /// `initial`, `unset`, and `revert`).
 pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
     match l {
-        Longhand::FontSize => dst.font_size = src.font_size,
+        Longhand::FontSize => {
+            dst.font_size = src.font_size;
+            dst.font_size_unscaled = src.font_size_unscaled;
+            dst.font_size_keyword = src.font_size_keyword;
+        }
         Longhand::FontFamily => dst.font_family.clone_from(&src.font_family),
         Longhand::FontWeight => dst.font_weight = src.font_weight,
         Longhand::FontStyle => dst.font_style = src.font_style,

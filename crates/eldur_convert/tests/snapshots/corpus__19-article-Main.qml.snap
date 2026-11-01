@@ -357,7 +357,7 @@ ApplicationWindow {
                         // <div class="prose">
                         ColumnLayout {
                             id: prose
-                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + p4.eldurCarry + 0.000001
+                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + p3.eldurCarry + 0.000001
 
                             spacing: 0
                             z: 1
@@ -377,30 +377,25 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: implicitHeight
 
-                                Text {
+                                EldurRun {
                                     text: "The first rewrite moved us from a set of hand-written scripts to a single orchestrator. It worked for a while. Then the scripts came back in the form of "
-                                    textFormat: Text.PlainText
                                     color: "#1f1d1a"
-                                    font.family: EldurFonts.family("serif")
+                                    font.family: "serif"
                                     font.pixelSize: 19
-                                    wrapMode: Text.WordWrap
-                                    renderType: Text.NativeRendering
                                 }
 
-                                Text {
+                                EldurRun {
                                     id: inlineRun
                                     readonly property real eldurMarginRight: 6
                                     readonly property real eldurMarginLeft: 6
                                     property var eldurFragments: []
+                                    property string eldurRun: "[{\"size\":16.149999618530273,\"family\":\"monospace\",\"line\":28.26249885559082}]"
 
                                     text: "pre-build.sh"
-                                    textFormat: Text.PlainText
                                     color: "#1f1d1a"
-                                    font.family: EldurFonts.family("monospace")
+                                    font.family: "monospace"
                                     font.pixelSize: 16
                                     font.letterSpacing: 0.09
-                                    wrapMode: Text.WordWrap
-                                    renderType: Text.NativeRendering
 
                                     EldurInlineBox {
                                         fragments: inlineRun.eldurFragments
@@ -416,14 +411,11 @@ ApplicationWindow {
                                     }
                                 }
 
-                                Text {
+                                EldurRun {
                                     text: " hooks, one for each team, each with its own idea of what a clean checkout means."
-                                    textFormat: Text.PlainText
                                     color: "#1f1d1a"
-                                    font.family: EldurFonts.family("serif")
+                                    font.family: "serif"
                                     font.pixelSize: 19
-                                    wrapMode: Text.WordWrap
-                                    renderType: Text.NativeRendering
                                 }
                             }
 
@@ -629,14 +621,14 @@ ApplicationWindow {
                             // <aside class="note">
                             Rectangle {
                                 id: note
-                                property real eldurCarry: Math.ceil(Layout.topMargin - (p3.eldurCarry)) - Layout.topMargin + p3.eldurCarry + 0.000001
+                                property real eldurCarry: Math.ceil(Layout.topMargin - (pFlow2.eldurCarry)) - Layout.topMargin + pFlow2.eldurCarry + 0.000001
 
                                 color: "#eef3f2"
                                 implicitWidth: noteContent.implicitWidth + 52
                                 implicitHeight: noteContent.implicitHeight + 36
                                 Layout.fillWidth: true
                                 Layout.topMargin: 45.6 - figure.eldurCarry
-                                Layout.preferredHeight: implicitHeight - p3.eldurCarry
+                                Layout.preferredHeight: implicitHeight - pFlow2.eldurCarry
 
                                 Rectangle {
                                     anchors.top: parent.top
@@ -657,22 +649,34 @@ ApplicationWindow {
                                     anchors.topMargin: 18
 
                                     // <p>
-                                    Text {
-                                        id: p3
+                                    EldurLines {
+                                        id: pFlow2
                                         property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
-                                        text: "<div style=\"line-height:31.59px\"><b><font color=\"#2f5558\"><span style=\"font-family:'Liberation Sans','Arimo','Noto Sans','DejaVu Sans'\">Note.</span></font></b> Declared inputs are not the same as fast builds. The speedup came from the cache finally being trustworthy, which let us stop disabling it on CI.</div>"
-                                        textFormat: Text.RichText
                                         color: "#1f1d1a"
                                         font.family: EldurFonts.family("serif")
                                         font.pixelSize: 18
-                                        wrapMode: Text.WordWrap
-                                        transform: Translate {
-                                            y: -6
-                                        }
+                                        lineHeight: 31.59
+                                        cssSize: 18.05
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: implicitHeight
-                                        renderType: Text.NativeRendering
+
+                                        EldurRun {
+                                            property string eldurRun: "[{\"size\":18.049999237060547,\"family\":\"sans-serif\",\"weight\":700,\"line\":31.58749771118164}]"
+
+                                            text: "Note."
+                                            color: "#2f5558"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 18
+                                            font.weight: 700
+                                        }
+
+                                        EldurRun {
+                                            text: " Declared inputs are not the same as fast builds. The speedup came from the cache finally being trustworthy, which let us stop disabling it on CI."
+                                            color: "#1f1d1a"
+                                            font.family: "serif"
+                                            font.pixelSize: 18
+                                        }
                                     }
                                 }
                             }
@@ -1018,7 +1022,7 @@ ApplicationWindow {
 
                             // <p>
                             Text {
-                                id: p4
+                                id: p3
                                 property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                                 text: "None of these steps is novel. The discipline was in refusing to skip the first one when the tooling made it tempting to jump straight to the second."

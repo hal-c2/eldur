@@ -431,16 +431,10 @@ class PaintSnapTests(unittest.TestCase):
     # Lines that do not land (layout.md §1.2, known limits). This fails when
     # one starts to; take it out then.
     KNOWN_ROWS: dict[str, tuple[list[int], list[int]]] = {
-        # A monospace run of the body's size: a row above what its metrics give.
-        "r3 240": ([245, 256], [244, 255]),
-        "r3 240.25": ([245, 256], [244, 255]),
-        "r3 240.5": ([246, 257], [245, 256]),
-        "r3 240.75": ([246, 257], [245, 256]),
-        # The shift is the tallest run's, so a line without the run is low.
-        "r9 540": ([546, 583], [547, 583]),
-        "r9 540.25": ([546, 583], [547, 583]),
-        "r9 540.5": ([547, 583], [548, 584]),
-        "r9 540.75": ([547, 583], [548, 584]),
+        # A run on the paragraph's last line is a row low at these two fractions:
+        # its first row is right. Not worked out.
+        "r9 540.5": ([547, 583], [547, 584]),
+        "r9 540.75": ([547, 583], [547, 584]),
         # Half a pixel from a fractional height: Qt's sum is just under it.
         "c9 695.5": ([712, 721], [711, 720]),
     }

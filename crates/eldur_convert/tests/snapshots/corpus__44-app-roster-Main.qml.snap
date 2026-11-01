@@ -1766,18 +1766,15 @@ ApplicationWindow {
                         }
                     }
 
-                    Text {
-                        readonly property string eldurInline: "{\"bare\":false,\"hoisted\":true,\"html\":false,\"k\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(34, 34, 34)\",\"display\":\"block\",\"family\":\"Arial, sans-serif\",\"italic\":false,\"size\":14.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"attrs\":[[\"id\",\"page-label\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(34, 34, 34)\",\"display\":\"inline\",\"family\":\"Arial, sans-serif\",\"italic\":false,\"size\":14.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[],\"tag\":\"span\"}],\"lh\":19.600000381469727,\"pre\":false,\"strike\":false,\"underline\":false}"
+                    EldurRun {
+                        readonly property string eldurInline: "{\"bare\":false,\"hoisted\":true,\"html\":false,\"k\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(34, 34, 34)\",\"display\":\"block\",\"family\":\"Arial, sans-serif\",\"italic\":false,\"lf\":1.399999976158142,\"lh\":19.600000381469727,\"size\":14.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"attrs\":[[\"id\",\"page-label\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(34, 34, 34)\",\"display\":\"inline\",\"family\":\"Arial, sans-serif\",\"italic\":false,\"lf\":1.399999976158142,\"lh\":19.600000381469727,\"size\":14.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[],\"tag\":\"span\"}],\"lh\":19.600000381469727,\"pre\":false,\"strike\":false,\"underline\":false}"
                         readonly property real eldurMarginRight: 8
                         readonly property real eldurMarginLeft: 8
 
                         text: ""
-                        textFormat: Text.PlainText
                         color: "#222222"
-                        font.family: EldurFonts.family("Arial, sans-serif")
+                        font.family: "Arial, sans-serif"
                         font.pixelSize: 14
-                        wrapMode: Text.WordWrap
-                        renderType: Text.NativeRendering
                     }
 
                     // <button id="next">

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Runs of another size in a paragraph</title>
+<style>
+  body { font: 15px/1.5 Arial, sans-serif; color: #223; margin: 24px; max-width: 640px; }
+  h2 { font-size: 20px; margin: 18px 0 6px; }
+  p { margin: 0 0 10px; }
+  .lead { font-size: 22px; font-weight: bold; color: #174; }
+  .note { font-size: 80%; color: #667; }
+  .fixed { line-height: 21px; }
+  .serif { font-family: Georgia, serif; font-size: 18px; }
+  .up { vertical-align: 6px; font-size: 11px; }
+  .big { font-size: 1.6em; }
+  .root { font-size: 1.25rem; }
+</style></head><body>
+<h2>Sizes</h2>
+<p><span class="lead">Opening words</span> then the body of the paragraph goes on long enough that it has to wrap to a second line and carry on below the tall first line.</p>
+<p>A sentence with <span class="note">a quieter aside inside it</span> and a <span class="big">louder</span> word and a <span class="root">rem-sized</span> one.</p>
+<p class="fixed">A fixed line with <span style="font-size:24px">a tall run</span> that decides how tall this one line is, whatever the fixed line says, while the following lines of the paragraph stay at it.</p>
+<p style="line-height:normal">Normal line with <span style="font-size:smaller">smaller</span>, <span style="font-size:larger">larger</span> and <span style="font-size:150%">half as much again</span>.</p>
+<h2>Families</h2>
+<p>Body with <span class="serif">a serif run that goes on long enough to break across the lines of this paragraph because it keeps on going and going and going and going</span> and the end.</p>
+<h2>Alignment</h2>
+<p>Raised<span class="up">by six</span>, <span style="vertical-align:middle;font-size:24px">middle</span>, <span style="vertical-align:top;font-size:11px">top</span>, <span style="vertical-align:bottom;font-size:11px">bottom</span> and on the line.</p>
+</body></html>

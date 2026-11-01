@@ -525,6 +525,9 @@ pub enum VerticalAlign {
     Bottom,
     TextBottom,
     Length(f32),
+    /// A percentage of the box's own line height, which only its font can tell
+    /// when that is `normal`.
+    Percent(f32),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -903,6 +906,12 @@ pub struct ComputedStyle {
     pub color: Rgba,
     pub font_family: Vec<String>,
     pub font_size: f32,
+    /// What `font_size` is before the generic `monospace` shrinks it: `None`
+    /// once a length has fixed it, which that shrinking leaves alone.
+    pub font_size_unscaled: Option<f32>,
+    /// The absolute keyword, by its place in `xx-small`..`xxx-large`, that
+    /// `font_size_unscaled` was set by: those have a table of their own.
+    pub font_size_keyword: Option<u8>,
     pub font_weight: u16,
     pub font_style: FontStyle,
     pub small_caps: bool,
@@ -1044,6 +1053,8 @@ impl Default for ComputedStyle {
             color: Rgba::BLACK,
             font_family: vec!["serif".to_owned()],
             font_size: 16.0,
+            font_size_unscaled: Some(16.0),
+            font_size_keyword: Some(3),
             font_weight: 400,
             font_style: FontStyle::Normal,
             small_caps: false,

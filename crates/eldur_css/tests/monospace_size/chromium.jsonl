@@ -1,0 +1,49 @@
+{"name": "code", "html": "<code id=t>x</code>", "select": "#t", "font-size": "13px"}
+{"name": "small code", "html": "<small><code id=t>x</code></small>", "select": "#t", "font-size": "10.8333px"}
+{"name": "code small", "html": "<code><small id=t>x</small></code>", "select": "#t", "font-size": "10.8333px"}
+{"name": "kw small mono", "html": "<span id=t style='font-family:monospace;font-size:small'>x</span>", "select": "#t", "font-size": "12px"}
+{"name": "kw large mono", "html": "<span id=t style='font-family:monospace;font-size:x-large'>x</span>", "select": "#t", "font-size": "20px"}
+{"name": "medium mono", "html": "<span id=t style='font-family:monospace;font-size:medium'>x</span>", "select": "#t", "font-size": "13px"}
+{"name": "px parent", "html": "<p style='font-size:14px'><code id=t>x</code>", "select": "#t", "font-size": "14px"}
+{"name": "px body", "html": "<body style='font-size:16px'><code id=t>x</code>", "select": "#t", "font-size": "16px"}
+{"name": "mono list", "html": "<span id=t style='font-family:monospace,serif'>x</span>", "select": "#t", "font-size": "16px"}
+{"name": "named mono", "html": "<span id=t style='font-family:Liberation Mono'>x</span>", "select": "#t", "font-size": "16px"}
+{"name": "back serif", "html": "<code><span id=t style='font-family:serif'>x</span></code>", "select": "#t", "font-size": "16px"}
+{"name": "pre code", "html": "<pre><code id=t>x</code></pre>", "select": "#t", "font-size": "13px"}
+{"name": "em on code", "html": "<code id=t style='font-size:2em'>x</code>", "select": "#t", "font-size": "26px"}
+{"name": "pct on code", "html": "<code id=t style='font-size:150%'>x</code>", "select": "#t", "font-size": "19.5px"}
+{"name": "em child", "html": "<code><span id=t style='font-size:2em'>x</span></code>", "select": "#t", "font-size": "26px"}
+{"name": "larger code", "html": "<code id=t style='font-size:larger'>x</code>", "select": "#t", "font-size": "15.6px"}
+{"name": "inherit size", "html": "<code><span id=t style='font-size:inherit'>x</span></code>", "select": "#t", "font-size": "13px"}
+{"name": "px in code", "html": "<code><span id=t style='font-size:20px'><i id=u>x</i></span></code>", "select": "#u", "font-size": "20px"}
+{"name": "px em parent", "html": "<div style='font-size:1em'><code id=t>x</code></div>", "select": "#t", "font-size": "13px"}
+{"name": "rem mono", "html": "<span id=t style='font-family:monospace;font-size:1rem'>x</span>", "select": "#t", "font-size": "16px"}
+{"name": "h1 code", "html": "<h1><code id=t>x</code></h1>", "select": "#t", "font-size": "26px"}
+{"name": "small em mono", "html": "<div style='font-size:small'><div style='font-size:2em'><code id=t>x</code></div></div>", "select": "#t", "font-size": "21.125px"}
+{"name": "font tag", "html": "<font size=4><code id=t>x</code></font>", "select": "#t", "font-size": "16px"}
+{"name": "kbd", "html": "<kbd id=t>x</kbd>", "select": "#t", "font-size": "13px"}
+{"name": "samp", "html": "<samp id=t>x</samp>", "select": "#t", "font-size": "13px"}
+{"name": "tt", "html": "<tt id=t>x</tt>", "select": "#t", "font-size": "13px"}
+{"name": "textarea mono", "html": "<div style='font-family:monospace'><div id=t>x</div></div>", "select": "#t", "font-size": "13px"}
+{"name": "body mono then serif", "html": "<body style='font-family:monospace'><p style='font-family:serif' id=t>x", "select": "#t", "font-size": "16px"}
+{"name": "root px", "html": "<style>html{font-size:20px}</style><code id=t>x</code>", "select": "#t", "font-size": "20px"}
+{"name": "root medium", "html": "<style>html{font-size:medium}</style><code id=t>x</code>", "select": "#t", "font-size": "13px"}
+{"name": "xx-small", "html": "<span id=t style='font-family:monospace;font-size:xx-small'>x</span>", "select": "#t", "font-size": "9px"}
+{"name": "x-small", "html": "<span id=t style='font-family:monospace;font-size:x-small'>x</span>", "select": "#t", "font-size": "10px"}
+{"name": "small", "html": "<span id=t style='font-family:monospace;font-size:small'>x</span>", "select": "#t", "font-size": "12px"}
+{"name": "medium", "html": "<span id=t style='font-family:monospace;font-size:medium'>x</span>", "select": "#t", "font-size": "13px"}
+{"name": "large", "html": "<span id=t style='font-family:monospace;font-size:large'>x</span>", "select": "#t", "font-size": "16px"}
+{"name": "x-large", "html": "<span id=t style='font-family:monospace;font-size:x-large'>x</span>", "select": "#t", "font-size": "20px"}
+{"name": "xx-large", "html": "<span id=t style='font-family:monospace;font-size:xx-large'>x</span>", "select": "#t", "font-size": "26px"}
+{"name": "xxx-large", "html": "<span id=t style='font-family:monospace;font-size:xxx-large'>x</span>", "select": "#t", "font-size": "39px"}
+{"name": "font1", "html": "<font size=1><code id=t>x</code></font>", "select": "#t", "font-size": "10px"}
+{"name": "font2", "html": "<font size=2><code id=t>x</code></font>", "select": "#t", "font-size": "12px"}
+{"name": "font3", "html": "<font size=3><code id=t>x</code></font>", "select": "#t", "font-size": "13px"}
+{"name": "font4", "html": "<font size=4><code id=t>x</code></font>", "select": "#t", "font-size": "16px"}
+{"name": "font5", "html": "<font size=5><code id=t>x</code></font>", "select": "#t", "font-size": "20px"}
+{"name": "font6", "html": "<font size=6><code id=t>x</code></font>", "select": "#t", "font-size": "26px"}
+{"name": "font7", "html": "<font size=7><code id=t>x</code></font>", "select": "#t", "font-size": "39px"}
+{"name": "small then 2em direct", "html": "<div style='font-size:small'><span id=t style='font-family:monospace;font-size:1em'>x</span></div>", "select": "#t", "font-size": "10.5625px"}
+{"name": "small inherited mono", "html": "<div style='font-size:small'><code id=t>x</code></div>", "select": "#t", "font-size": "12px"}
+{"name": "large inherited mono", "html": "<div style='font-size:large'><code id=t>x</code></div>", "select": "#t", "font-size": "16px"}
+{"name": "sub code", "html": "<sub><code id=t>x</code></sub>", "select": "#t", "font-size": "10.8333px"}

@@ -377,14 +377,11 @@ ApplicationWindow {
                                 }
                             }
 
-                            Text {
+                            EldurRun {
                                 text: " "
-                                textFormat: Text.PlainText
                                 color: "#1a202c"
-                                font.family: EldurFonts.family("Arial, sans-serif")
+                                font.family: "Arial, sans-serif"
                                 font.pixelSize: 16
-                                wrapMode: Text.WordWrap
-                                renderType: Text.NativeRendering
                             }
 
                             // <button id="toggle">
@@ -491,7 +488,7 @@ ApplicationWindow {
                         // <p>
                         Text {
                             property string eldurTag: "p"
-                            readonly property string eldurInline: "{\"bare\":false,\"hoisted\":false,\"html\":false,\"k\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(26, 32, 44)\",\"display\":\"block\",\"family\":\"Arial, sans-serif\",\"italic\":false,\"size\":16.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"Nothing much happened. \"},{\"attrs\":[[\"href\",\"#more\"],[\"id\",\"more\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(43, 108, 176)\",\"display\":\"inline\",\"family\":\"Arial, sans-serif\",\"italic\":false,\"size\":16.0,\"strike\":false,\"underline\":true,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"Read more\"}],\"tag\":\"a\"},{\"text\":\" if you must.\"}],\"lh\":24.0,\"pre\":false,\"strike\":false,\"underline\":false}"
+                            readonly property string eldurInline: "{\"bare\":false,\"hoisted\":false,\"html\":false,\"k\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(26, 32, 44)\",\"display\":\"block\",\"family\":\"Arial, sans-serif\",\"italic\":false,\"kw\":3,\"lf\":1.5,\"lh\":24.0,\"size\":16.0,\"strike\":false,\"underline\":false,\"us\":16.0,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"Nothing much happened. \"},{\"attrs\":[[\"href\",\"#more\"],[\"id\",\"more\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(43, 108, 176)\",\"display\":\"inline\",\"family\":\"Arial, sans-serif\",\"italic\":false,\"kw\":3,\"lf\":1.5,\"lh\":24.0,\"size\":16.0,\"strike\":false,\"underline\":true,\"us\":16.0,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"Read more\"}],\"tag\":\"a\"},{\"text\":\" if you must.\"}],\"lh\":24.0,\"pre\":false,\"strike\":false,\"underline\":false}"
                             property string eldurWs: "\n  "
 
                             text: "Nothing much happened. <a href=\"#more\">Read more</a> if you must."

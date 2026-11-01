@@ -2,5 +2,4 @@
 source: crates/eldur_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-info[qml]: index.html:210: <sub>: `vertical-align` on inline text is not converted
-info[qml]: index.html:210: <sup>: `vertical-align` on inline text is not converted
+

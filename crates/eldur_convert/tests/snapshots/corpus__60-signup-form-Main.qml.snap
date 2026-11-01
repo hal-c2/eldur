@@ -487,16 +487,14 @@ ApplicationWindow {
                                     }
                                 }
 
-                                Text {
-                                    readonly property string eldurInline: "{\"bare\":false,\"hoisted\":true,\"html\":false,\"k\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(28, 34, 48)\",\"display\":\"block\",\"family\":\"Arial, sans-serif\",\"italic\":false,\"size\":16.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"attrs\":[[\"for\",\"terms\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(28, 34, 48)\",\"display\":\"inline\",\"family\":\"Arial, sans-serif\",\"italic\":false,\"size\":14.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"I accept the terms\"}],\"tag\":\"label\"}],\"pre\":false,\"strike\":false,\"underline\":false}"
+                                EldurRun {
+                                    readonly property string eldurInline: "{\"bare\":false,\"hoisted\":true,\"html\":false,\"k\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(28, 34, 48)\",\"display\":\"block\",\"family\":\"Arial, sans-serif\",\"italic\":false,\"kw\":3,\"size\":16.0,\"strike\":false,\"underline\":false,\"us\":16.0,\"visible\":true,\"weight\":400},\"kids\":[{\"attrs\":[[\"for\",\"terms\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(28, 34, 48)\",\"display\":\"inline\",\"family\":\"Arial, sans-serif\",\"italic\":false,\"size\":14.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"I accept the terms\"}],\"tag\":\"label\"}],\"pre\":false,\"strike\":false,\"underline\":false}"
+                                    property string eldurRun: "[{\"size\":14,\"family\":\"Arial, sans-serif\"}]"
 
                                     text: "I accept the terms"
-                                    textFormat: Text.PlainText
                                     color: "#1c2230"
-                                    font.family: EldurFonts.family("Arial, sans-serif")
+                                    font.family: "Arial, sans-serif"
                                     font.pixelSize: 14
-                                    wrapMode: Text.WordWrap
-                                    renderType: Text.NativeRendering
 
                                     TapHandler {
                                         onTapped: (eventPoint, button) => {
@@ -559,14 +557,11 @@ ApplicationWindow {
                                     }
                                 }
 
-                                Text {
+                                EldurRun {
                                     text: " "
-                                    textFormat: Text.PlainText
                                     color: "#1c2230"
-                                    font.family: EldurFonts.family("Arial, sans-serif")
+                                    font.family: "Arial, sans-serif"
                                     font.pixelSize: 16
-                                    wrapMode: Text.WordWrap
-                                    renderType: Text.NativeRendering
                                 }
 
                                 // <button id="clear">

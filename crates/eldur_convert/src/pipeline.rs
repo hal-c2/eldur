@@ -319,6 +319,7 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         qml.import(Import::module(module));
     }
     qml.root = root;
+    crate::emit::name_runs(&mut qml.root);
     let main = qml.to_qml();
     // A script makes lines of its own; a page without one needs it only if it uses it.
     if main.contains("EldurLines {")
@@ -329,6 +330,10 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         files.push(OutputFile {
             path: PathBuf::from("EldurLines.qml"),
             contents: crate::emit::ELDUR_LINES_QML.as_bytes().to_vec(),
+        });
+        files.push(OutputFile {
+            path: PathBuf::from("EldurRun.qml"),
+            contents: crate::emit::ELDUR_RUN_QML.as_bytes().to_vec(),
         });
     }
     if main.contains("EldurBackgroundLayer {")

@@ -26,7 +26,10 @@ pub(crate) use text::ELDUR_TEXT_LINES_QML;
 pub(crate) const ELDUR_FILTER_QML: &str = include_str!("EldurFilter.qml");
 pub(crate) const ELDUR_FILTER_QSB: &[u8] = include_bytes!("eldur_filter.frag.qsb");
 pub(crate) const ELDUR_TEXT_SHADOW_QML: &str = include_str!("EldurTextShadow.qml");
-pub(crate) use inline::{ELDUR_INLINE_BOX_QML, ELDUR_LINES_QML, has_atomic, needs_lines_for_boxes};
+pub(crate) use inline::{
+    ELDUR_INLINE_BOX_QML, ELDUR_LINES_QML, ELDUR_RUN_QML, has_atomic, name_runs,
+    needs_lines_for_boxes,
+};
 mod inline_model;
 mod keyframes;
 mod links;
@@ -208,6 +211,8 @@ pub(crate) struct Emitter<'a, 'd> {
     inline_items: HashSet<NodeId>,
     /// Inline elements and options a script reaches through `eldurInline`.
     pub inline_covered: std::collections::BTreeSet<NodeId>,
+    /// Inline elements the current flow's runs cut into pieces.
+    cut_nodes: HashSet<NodeId>,
 }
 
 impl<'a, 'd> Emitter<'a, 'd> {
@@ -282,6 +287,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             boxes_drawn: false,
             inline_items: HashSet::new(),
             inline_covered: std::collections::BTreeSet::new(),
+            cut_nodes: HashSet::new(),
         }
     }
 
@@ -736,7 +742,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             }
             Content::Inline(items)
                 if inline::has_atomic(items)
-                    || inline::needs_lines_for_leading(style, items)
+                    || inline::needs_lines_for_runs(style, items)
                     || inline::needs_lines_for_boxes(items)
                     // RichText has no `lineLaidOut` to make the triangle's room.
                     || (b.marker.as_ref().is_some_and(|m| m.in_line)

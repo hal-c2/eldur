@@ -236,6 +236,14 @@ small {
     font-size: smaller;
 }
 
+q::before {
+    content: open-quote;
+}
+
+q::after {
+    content: close-quote;
+}
+
 sub {
     vertical-align: sub;
     font-size: smaller;

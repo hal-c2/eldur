@@ -356,6 +356,7 @@ pub(crate) struct CascadeEngine<'a> {
     pseudo_rules: RuleIndex<(PseudoElement, IndexedRule<'a>)>,
     variant_prefixes: RuleIndex<PseudoState>,
     inline_styles: Vec<Vec<ParsedDecl>>,
+    hint_styles: Vec<Vec<ParsedDecl>>,
     /// All active longhands sorted by `(properties::priority(l), l)`.
     ordered_longhands: Vec<Longhand>,
     /// Subset of `ordered_longhands` where `properties::is_inherited(l)` is true.
@@ -381,6 +382,44 @@ pub(crate) struct BasePass {
 
 /// Runs the full CSS cascade, inheritance, computed-value fix-ups, pseudo-elements,
 /// and dynamic state variants over `doc`.
+/// `<font>`'s attributes as the declarations they are presentational hints for
+/// (WHATWG HTML §15.3.4). `None` for any other element.
+fn font_hints(elem: &eldur_dom::Element) -> Option<String> {
+    if !elem.is_html() || elem.local_name() != "font" {
+        return None;
+    }
+    let mut hints = String::new();
+    if let Some(face) = elem.attr("face") {
+        hints.push_str(&format!("font-family:{face};"));
+    }
+    if let Some(color) = elem.attr("color") {
+        hints.push_str(&format!("color:{color};"));
+    }
+    let size = elem.attr("size").map(str::trim).and_then(|size| {
+        let digits = size.trim_start_matches(['+', '-']);
+        let n: i32 = digits.parse().ok()?;
+        Some(match size.as_bytes().first() {
+            Some(b'+') => 3 + n,
+            Some(b'-') => 3 - n,
+            _ => n,
+        })
+    });
+    if let Some(size) = size {
+        const NAMES: [&str; 7] = [
+            "x-small",
+            "small",
+            "medium",
+            "large",
+            "x-large",
+            "xx-large",
+            "xxx-large",
+        ];
+        let at = size.clamp(1, 7) as usize - 1;
+        hints.push_str(&format!("font-size:{};", NAMES[at]));
+    }
+    Some(hints)
+}
+
 pub(crate) fn compute_styles(
     doc: &Document,
     sheets: &[Stylesheet],
@@ -479,10 +518,18 @@ pub(crate) fn prepare<'a>(
     //    their diagnostics and discovering any referenced longhands.
     let mut diagnostics: Vec<Diagnostic> = Vec::new();
     let mut inline_styles: Vec<Vec<ParsedDecl>> = vec![Vec::new(); doc.len()];
+    let mut hint_styles: Vec<Vec<ParsedDecl>> = vec![Vec::new(); doc.len()];
     for node in doc.descendants(doc.root()) {
         let Some(elem) = doc.element(node) else {
             continue;
         };
+        if let Some(hints) = font_hints(elem) {
+            let (decls, _) = parse_inline_style(&hints, "<font> attributes", Origin::Author);
+            for d in &decls {
+                record_decl_longhand(d, &mut longhand_set);
+            }
+            hint_styles[node.index()] = decls;
+        }
         if let Some(style_attr) = elem.attr("style")
             && !style_attr.trim().is_empty()
         {
@@ -605,6 +652,7 @@ pub(crate) fn prepare<'a>(
         pseudo_rules,
         variant_prefixes,
         inline_styles,
+        hint_styles,
         ordered_longhands,
         inherited_longhands,
     };
@@ -830,8 +878,13 @@ pub(crate) fn keyframe_style(
         16.0
     };
     let mut root_fs_updated = !is_root;
+    let mut settled = false;
 
     for (l, action) in ordered {
+        if !settled && properties::priority(l) > 0 {
+            properties::settle_font_size(&mut style);
+            settled = true;
+        }
         if !root_fs_updated && properties::priority(l) > 0 {
             effective_root_fs = style.font_size;
             root_fs_updated = true;
@@ -842,6 +895,9 @@ pub(crate) fn keyframe_style(
             viewport: &map.viewport,
         };
         apply_resolved_action(&mut style, l, action, parent_style, &initial, &ctx);
+    }
+    if !settled {
+        properties::settle_font_size(&mut style);
     }
 
     apply_box_fixups(&mut style, is_root, enclosing_box_display);
@@ -1069,6 +1125,18 @@ impl<'a> CascadeEngine<'a> {
                     }
                 }
             });
+
+        // Before any rule of the page's, so that any rule beats it.
+        for (offset, decl) in self.hint_styles[node.index()].iter().enumerate() {
+            let key = CascadeKey {
+                tier: OriginTier::of(Origin::Author, false),
+                is_inline_style: false,
+                layer_key: LayerOrderKey::unlayered(),
+                specificity: Specificity::default(),
+                order: offset as u32,
+            };
+            matched_decls.push((key, &decl.value));
+        }
 
         let inline = &self.inline_styles[node.index()];
         let inline_base_order = u32::MAX - (inline.len() as u32) - 1;
@@ -1305,7 +1373,12 @@ impl<'a> CascadeEngine<'a> {
 
         // 3. Compute winning longhands in `properties::priority` order.
         let mut root_fs_updated = !is_root;
+        let mut settled = false;
         for &l in &self.ordered_longhands {
+            if !settled && properties::priority(l) > 0 {
+                properties::settle_font_size(&mut style);
+                settled = true;
+            }
             if !root_fs_updated && properties::priority(l) > 0 {
                 *root_font_size = style.font_size;
                 root_fs_updated = true;
@@ -1888,6 +1961,20 @@ mod tests {
         };
         apply_box_fixups(&mut root_contents, true, None);
         assert_eq!(root_contents.display, Display::Block);
+    }
+
+    #[test]
+    fn font_attributes_are_presentational_hints() {
+        // Chromium's box for p115r in tests/inline_runs/chromium.json is 11 high: 10 px.
+        let doc = Document::parse(
+            r#"<!doctype html><body><font id="a" size="1" color="red" face="serif">x</font>
+            <font id="b" size="7" style="font-size:20px">y</font></body>"#,
+        );
+        let map = compute_styles(&doc, &[], &Viewport::default());
+        let of = |id: &str| map.style(doc.element_by_id(id).expect(id)).expect(id);
+        assert_eq!(of("a").font_size, 10.0);
+        assert_eq!(of("a").font_family, vec!["serif".to_owned()]);
+        assert_eq!(of("b").font_size, 20.0);
     }
 
     #[test]

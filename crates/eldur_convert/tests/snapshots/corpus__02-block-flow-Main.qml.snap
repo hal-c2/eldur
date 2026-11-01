@@ -66,7 +66,7 @@ ApplicationWindow {
                         // <header class="hero">
                         Rectangle {
                             id: hero
-                            property real eldurCarry: Math.ceil(Layout.topMargin - (p3.eldurCarry)) - Layout.topMargin + p3.eldurCarry + 0.000001
+                            property real eldurCarry: Math.ceil(Layout.topMargin - (p2.eldurCarry)) - Layout.topMargin + p2.eldurCarry + 0.000001
 
                             color: "#e9eef6"
                             implicitWidth: heroContent.implicitWidth + 66
@@ -74,7 +74,7 @@ ApplicationWindow {
                             border.width: 1
                             border.color: "#b8c4d6"
                             Layout.fillWidth: true
-                            Layout.preferredHeight: implicitHeight - p3.eldurCarry
+                            Layout.preferredHeight: implicitHeight - p2.eldurCarry
 
                             ColumnLayout {
                                 id: heroContent
@@ -111,7 +111,7 @@ ApplicationWindow {
 
                                 // <p>
                                 Text {
-                                    id: p3
+                                    id: p2
                                     property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                                     text: "Nested block boxes, collapsing margins, and widths in normal flow."
@@ -265,22 +265,40 @@ ApplicationWindow {
                                 }
 
                                 // <p>
-                                Text {
-                                    id: p
-                                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+                                EldurLines {
+                                    id: pFlow
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
-                                    text: "<div style=\"line-height:24px\">The outer padding is set in pixels. The box below uses <span style=\"font-family:'JetBrainsMono Nerd Font','Liberation Mono','Cousine','Noto Sans Mono','DejaVu Sans Mono'\">padding: 1em 1.5em</span> and a slightly smaller font, so its spacing scales with its own text.</div>"
-                                    textFormat: Text.RichText
                                     color: "#1f2430"
                                     font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 16
-                                    wrapMode: Text.WordWrap
-                                    transform: Translate {
-                                        y: -2
-                                    }
+                                    lineHeight: 24
                                     Layout.fillWidth: true
                                     Layout.topMargin: 10
-                                    renderType: Text.NativeRendering
+                                    Layout.preferredHeight: implicitHeight
+
+                                    EldurRun {
+                                        text: "The outer padding is set in pixels. The box below uses "
+                                        color: "#1f2430"
+                                        font.family: "sans-serif"
+                                        font.pixelSize: 16
+                                    }
+
+                                    EldurRun {
+                                        property string eldurRun: "[{\"size\":16,\"family\":\"monospace\",\"line\":24}]"
+
+                                        text: "padding: 1em 1.5em"
+                                        color: "#1f2430"
+                                        font.family: "monospace"
+                                        font.pixelSize: 16
+                                    }
+
+                                    EldurRun {
+                                        text: " and a slightly smaller font, so its spacing scales with its own text."
+                                        color: "#1f2430"
+                                        font.family: "sans-serif"
+                                        font.pixelSize: 16
+                                    }
                                 }
 
                                 // <div class="em-padded">
@@ -294,7 +312,7 @@ ApplicationWindow {
                                     border.width: 1
                                     border.color: "#e0b4b4"
                                     Layout.fillWidth: true
-                                    Layout.topMargin: 16 - p.eldurCarry
+                                    Layout.topMargin: 16 - pFlow.eldurCarry
                                     Layout.preferredHeight: implicitHeight
 
                                     Text {
@@ -503,8 +521,8 @@ ApplicationWindow {
                                     property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                                     color: "#f6f1e4"
-                                    implicitWidth: fixedBoxText.implicitWidth + 34
-                                    implicitHeight: fixedBoxText.implicitHeight + 34
+                                    implicitWidth: fixedBoxFlow.implicitWidth + 34
+                                    implicitHeight: fixedBoxFlow.implicitHeight + 34
                                     border.width: 1
                                     border.color: "#d8c9a0"
                                     Layout.preferredWidth: 514
@@ -512,24 +530,41 @@ ApplicationWindow {
                                     Layout.topMargin: 10
                                     Layout.preferredHeight: implicitHeight
 
-                                    Text {
-                                        id: fixedBoxText
-                                        text: "<div style=\"line-height:24px\">A 480 pixel box with <span style=\"font-family:'JetBrainsMono Nerd Font','Liberation Mono','Cousine','Noto Sans Mono','DejaVu Sans Mono'\">margin: 0 auto</span> centres itself in the page wrapper, so the free space is split equally on both sides.</div>"
-                                        textFormat: Text.RichText
+                                    EldurLines {
+                                        id: fixedBoxFlow
                                         color: "#1f2430"
                                         font.family: EldurFonts.family("sans-serif")
                                         font.pixelSize: 16
-                                        wrapMode: Text.WordWrap
-                                        transform: Translate {
-                                            y: -2
-                                        }
+                                        lineHeight: 24
                                         anchors.left: parent.left
                                         anchors.right: parent.right
                                         anchors.top: parent.top
                                         anchors.leftMargin: 17
                                         anchors.rightMargin: 17
                                         anchors.topMargin: 17
-                                        renderType: Text.NativeRendering
+
+                                        EldurRun {
+                                            text: "A 480 pixel box with "
+                                            color: "#1f2430"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 16
+                                        }
+
+                                        EldurRun {
+                                            property string eldurRun: "[{\"size\":16,\"family\":\"monospace\",\"line\":24}]"
+
+                                            text: "margin: 0 auto"
+                                            color: "#1f2430"
+                                            font.family: "monospace"
+                                            font.pixelSize: 16
+                                        }
+
+                                        EldurRun {
+                                            text: " centres itself in the page wrapper, so the free space is split equally on both sides."
+                                            color: "#1f2430"
+                                            font.family: "sans-serif"
+                                            font.pixelSize: 16
+                                        }
                                     }
                                 }
 
@@ -621,7 +656,7 @@ ApplicationWindow {
 
                                 // <p>
                                 Text {
-                                    id: p2
+                                    id: p
                                     property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                                     text: "The heading's top margin collapses through the grey parent, so the parent's top edge sits at the margin set on the parent itself and the heading appears flush with it."
@@ -656,7 +691,7 @@ ApplicationWindow {
                                     bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
-                                    Layout.topMargin: 12 - p2.eldurCarry
+                                    Layout.topMargin: 12 - p.eldurCarry
                                     Layout.bottomMargin: 12
                                     renderType: Text.NativeRendering
                                 }

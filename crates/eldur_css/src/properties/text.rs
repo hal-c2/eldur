@@ -617,6 +617,18 @@ pub(crate) fn parse_vertical_align(
     }
 
     let uctx = UnitContext::for_vertical_align(style, ctx);
+    // The line height a percentage is of depends on the run's own font, which
+    // is only known on the line; a parse with a base would have spent it.
+    let unresolved = UnitContext {
+        percent_base: None,
+        ..UnitContext::for_vertical_align(style, ctx)
+    };
+    if let Ok(Length::Linear(lp)) = parse_length_cvs(cvs, &unresolved, false)
+        && lp.px == 0.0
+        && lp.percent != 0.0
+    {
+        return Ok(VerticalAlign::Percent(lp.percent));
+    }
     let len = parse_length_cvs(cvs, &uctx, false)?;
     let px = length_to_px(&len, &uctx, false)?;
     Ok(VerticalAlign::Length(px))

@@ -3,4 +3,3 @@ source: crates/eldur_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
 info[css]: index.html:48: <div id="done"> is `display: none` and used by a script: it is kept invisible, as a block when shown
-info[qml]: index.html:43: <label>: font size 14px inside 16px text is approximated with <small>

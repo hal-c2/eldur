@@ -39,7 +39,7 @@ enum Token<'a> {
 
 /// Collapses white space in an inline formatting context. Returns no items
 /// when nothing but collapsible white space remains.
-pub(crate) fn collapse(raw: Vec<Raw<'_>>) -> Vec<Inline<'_>> {
+pub(crate) fn collapse<'a>(raw: Vec<Raw<'a>>, parent: &ComputedStyle) -> Vec<Inline<'a>> {
     let mut tokens = Vec::new();
     flatten(raw, &mut tokens);
     let mut tokens = remove_line_edge_spaces(tokens);
@@ -53,7 +53,7 @@ pub(crate) fn collapse(raw: Vec<Raw<'_>>) -> Vec<Inline<'_>> {
     // Between boxes an empty span still has a place on the line: a script can
     // measure it or give it text, and each run keeps its own model of them.
     let keep_empty = tokens.iter().any(|t| matches!(t, Token::Atomic(_)));
-    rebuild(tokens, keep_empty)
+    rebuild(tokens, keep_empty, parent)
 }
 
 fn flatten<'a>(raw: Vec<Raw<'a>>, out: &mut Vec<Token<'a>>) {
@@ -210,7 +210,16 @@ fn trim_trailing_space(out: &mut Vec<Token<'_>>) {
     }
 }
 
-fn rebuild(tokens: Vec<Token<'_>>, keep_empty: bool) -> Vec<Inline<'_>> {
+/// An empty inline box still takes part in its line, with the font and line height
+/// that are its own (layout.md §1.3).
+fn changes_line(parent: &ComputedStyle, span: &ComputedStyle) -> bool {
+    span.font_size != parent.font_size
+        || span.font_family != parent.font_family
+        || span.line_height != parent.line_height
+        || span.vertical_align != parent.vertical_align
+}
+
+fn rebuild<'a>(tokens: Vec<Token<'a>>, keep_empty: bool, block: &ComputedStyle) -> Vec<Inline<'a>> {
     let mut stack: Vec<Span<'_>> = Vec::new();
     let mut root: Vec<Inline<'_>> = Vec::new();
     for token in tokens {
@@ -224,8 +233,15 @@ fn rebuild(tokens: Vec<Token<'_>>, keep_empty: bool) -> Vec<Inline<'_>> {
                 continue;
             }
             Token::Close => match stack.pop() {
-                // Empty inline boxes have no effect on the text.
-                Some(span) if span.children.is_empty() && !(keep_empty && span.node.is_some()) => {
+                Some(span)
+                    if span.children.is_empty()
+                        && !(span.node.is_some()
+                            && (keep_empty
+                                || changes_line(
+                                    stack.last().map_or(block, |s| s.style),
+                                    span.style,
+                                ))) =>
+                {
                     continue;
                 }
                 Some(span) => Inline::Span(span),

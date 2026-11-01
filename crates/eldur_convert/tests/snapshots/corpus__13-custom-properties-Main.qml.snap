@@ -808,14 +808,11 @@ ApplicationWindow {
                                     }
                                 }
 
-                                Text {
+                                EldurRun {
                                     text: " "
-                                    textFormat: Text.PlainText
                                     color: "#1c2233"
-                                    font.family: EldurFonts.family("sans-serif")
+                                    font.family: "sans-serif"
                                     font.pixelSize: 16
-                                    wrapMode: Text.WordWrap
-                                    renderType: Text.NativeRendering
                                 }
 
                                 // <span class="tag">
@@ -858,14 +855,11 @@ ApplicationWindow {
                                     }
                                 }
 
-                                Text {
+                                EldurRun {
                                     text: " "
-                                    textFormat: Text.PlainText
                                     color: "#1c2233"
-                                    font.family: EldurFonts.family("sans-serif")
+                                    font.family: "sans-serif"
                                     font.pixelSize: 16
-                                    wrapMode: Text.WordWrap
-                                    renderType: Text.NativeRendering
                                 }
 
                                 // <span class="tag">
@@ -908,14 +902,11 @@ ApplicationWindow {
                                     }
                                 }
 
-                                Text {
+                                EldurRun {
                                     text: " "
-                                    textFormat: Text.PlainText
                                     color: "#1c2233"
-                                    font.family: EldurFonts.family("sans-serif")
+                                    font.family: "sans-serif"
                                     font.pixelSize: 16
-                                    wrapMode: Text.WordWrap
-                                    renderType: Text.NativeRendering
                                 }
 
                                 // <span class="tag">

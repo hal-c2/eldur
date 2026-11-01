@@ -1156,6 +1156,12 @@ fn richtext_lines_shift_to_chromiums_baseline() {
             .find(|(k, _)| *k == class)
             .map_or(measured, |(_, v)| v);
         let p = object_after(&qml, &format!("<p class=\"{class}\">"));
+        // A run of another font has its own box, so its paragraph is on lines
+        // (layout.md §1.3), where the baseline is the line's and no `Text` shifts.
+        if run.contains("font") {
+            assert!(p.contains("EldurLines"), "{class}: {p}");
+            continue;
+        }
         assert!(p.contains("Text.RichText"), "{p}");
         let t = p
             .find("transform: Translate {")
@@ -1183,12 +1189,33 @@ fn render_type_of(qml: &str, text: &str) -> Option<String> {
 const NATIVE: &str = "renderType: Text.NativeRendering";
 
 #[test]
+fn runs_leave_what_they_share_to_their_type() {
+    // A binding or an enum on every run cost 22 s of Qt's cold compile on a page
+    // of 400 paragraphs, against 0.6 s without.
+    let (qml, _) = convert(&page(
+        "",
+        "<p>body <span style=\"font-size:20px\">big</span> and <span style=\"white-space:nowrap\">kept</span></p>",
+    ));
+    assert!(qml.contains("EldurRun {"), "{qml}");
+    let big = qml
+        .split("EldurRun {")
+        .find(|r| r.contains("\"big\""))
+        .expect("the big run");
+    let first = big.split("\n                    }").next().expect("a body");
+    assert!(first.contains("font.family: \""), "{first}");
+    assert!(first.contains("property string eldurRun: \"["), "{first}");
+    assert!(!first.contains("wrapMode"), "{first}");
+    assert!(!first.contains("renderType"), "{first}");
+    assert!(!first.contains("textFormat"), "{first}");
+}
+
+#[test]
 fn text_asks_for_native_glyphs() {
     // Distance fields are softer than Chromium's glyphs: 89.40 vs 90.45 over
     // the corpus. A baseline's Translate moves whole pixels and does not count.
     let (qml, _) = convert(&page(
         "p{font:15px/22px sans-serif}",
-        "<p>plain</p><p>a <code>rich</code> line</p>",
+        "<p>plain</p><p>a <span style=\"background:#eee\">rich</span> line</p>",
     ));
     assert!(qml.contains("Translate"), "{qml}");
     assert_eq!(

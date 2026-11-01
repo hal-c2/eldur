@@ -4,7 +4,8 @@
 //! values spare the runtime a cascade until a script changes something.
 
 use eldur_css::{
-    ComputedStyle, Display, FontStyle, Position, Rgba, TextDecorationLine, WhiteSpace,
+    ComputedStyle, Display, FontStyle, LineHeight, Position, Rgba, TextDecorationLine,
+    VerticalAlign, WhiteSpace,
 };
 use eldur_dom::{NodeData, NodeId};
 use eldur_qml::{Member, Object, Value};
@@ -25,6 +26,54 @@ fn rgb(c: Rgba) -> String {
 }
 
 fn computed(style: &ComputedStyle) -> Json {
+    let mut out = plain_computed(style);
+    if let Some(unscaled) = style.font_size_unscaled {
+        out["us"] = json!(unscaled);
+    }
+    if let Some(keyword) = style.font_size_keyword {
+        out["kw"] = json!(keyword);
+    }
+    // An inline element's rect is its border box, which its line's text does not show.
+    let edge = |padding: &eldur_css::Length, border: &eldur_css::BorderSide| {
+        padding.as_px().unwrap_or(0.0).max(0.0) + super::decoration::border_width(border)
+    };
+    let edges = [
+        edge(&style.padding.top, &style.border.top),
+        edge(&style.padding.right, &style.border.right),
+        edge(&style.padding.bottom, &style.border.bottom),
+        edge(&style.padding.left, &style.border.left),
+    ];
+    if edges.iter().any(|e| *e != 0.0) {
+        out["edge"] = json!(edges);
+    }
+    let (rel_x, rel_y) = super::inline::relative_offset(style);
+    if (rel_x, rel_y) != (0.0, 0.0) {
+        out["rel"] = json!([rel_x, rel_y]);
+    }
+    match style.line_height {
+        LineHeight::Normal => {}
+        LineHeight::Number(n) => {
+            out["lf"] = json!(n);
+            out["lh"] = json!(n * style.font_size);
+        }
+        LineHeight::Px(px) => out["lh"] = json!(px),
+    }
+    match style.vertical_align {
+        VerticalAlign::Baseline => {}
+        VerticalAlign::Sub => out["va"] = json!("sub"),
+        VerticalAlign::Super => out["va"] = json!("super"),
+        VerticalAlign::Top => out["va"] = json!("top"),
+        VerticalAlign::TextTop => out["va"] = json!("text-top"),
+        VerticalAlign::Middle => out["va"] = json!("middle"),
+        VerticalAlign::Bottom => out["va"] = json!("bottom"),
+        VerticalAlign::TextBottom => out["va"] = json!("text-bottom"),
+        VerticalAlign::Length(px) => out["vs"] = json!(px),
+        VerticalAlign::Percent(p) => out["vp"] = json!(p),
+    }
+    out
+}
+
+fn plain_computed(style: &ComputedStyle) -> Json {
     json!({
         "color": rgb(style.color),
         "weight": style.font_weight,
@@ -212,9 +261,17 @@ impl Emitter<'_, '_> {
                 continue;
             };
             match s.node {
-                Some(n) if !self.all_inline(n) => {
+                Some(n) if self.cut_nodes.contains(&n) || !self.all_inline(n) => {
                     if self.inline_covered.contains(&n) {
-                        out.push(json!({ "gen": generated(s) }));
+                        // The element is the first piece's; a script reaches this
+                        // through it.
+                        let mut rest = self.run_nodes(&s.children, gen_boxes);
+                        for kid in &mut rest {
+                            if kid.get("under").is_none() {
+                                kid["under"] = json!(n.index());
+                            }
+                        }
+                        out.extend(rest);
                         continue;
                     }
                     let Some(mut node) = self.dom_node_shallow(n, gen_boxes) else {

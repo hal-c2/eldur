@@ -272,6 +272,7 @@ pub(crate) fn build_with<'a>(
         own,
         diags,
         counters: counters::Counters::new(),
+        quote_depth: 0,
     };
     builder.counters.apply(style);
     // The root element always establishes a block formatting context; its
@@ -305,6 +306,7 @@ struct Builder<'a, 'd> {
     own: Option<&'a HashSet<NodeId>>,
     diags: &'d mut Diagnostics,
     counters: counters::Counters,
+    quote_depth: usize,
 }
 
 impl<'a> Builder<'a, '_> {
@@ -416,7 +418,10 @@ impl<'a> Builder<'a, '_> {
                 Child::Block(_) => None,
             })
             .collect();
-        match inline_content(raw) {
+        let Some(own) = self.styles.computed(node).map(|c| &c.style) else {
+            return Content::Empty;
+        };
+        match inline_content(raw, own) {
             Content::Inline(items)
                 if crate::emit::has_atomic(&items)
                     || crate::emit::needs_lines_for_boxes(&items) =>
@@ -646,8 +651,23 @@ impl<'a> Builder<'a, '_> {
                 ContentItem::Attr(name) => {
                     text.push_str(element.and_then(|e| e.attr(name)).unwrap_or(""));
                 }
-                ContentItem::OpenQuote => text.push('\u{201c}'),
-                ContentItem::CloseQuote => text.push('\u{201d}'),
+                // Chromium's en quotes: double, then single at every depth under it.
+                ContentItem::OpenQuote => {
+                    text.push(if self.quote_depth == 0 {
+                        '\u{201c}'
+                    } else {
+                        '\u{2018}'
+                    });
+                    self.quote_depth += 1;
+                }
+                ContentItem::CloseQuote => {
+                    self.quote_depth = self.quote_depth.saturating_sub(1);
+                    text.push(if self.quote_depth == 0 {
+                        '\u{201d}'
+                    } else {
+                        '\u{2019}'
+                    });
+                }
                 ContentItem::Counter(name, list_style) => {
                     text.push_str(&counters::format(self.counters.value(name), *list_style));
                 }
@@ -857,7 +877,7 @@ fn group<'a>(children: Vec<Child<'a>>, parent: &'a ComputedStyle) -> Content<'a>
                 Child::Block(_) => None,
             })
             .collect();
-        return inline_content(raw);
+        return inline_content(raw, parent);
     }
     let mut blocks = Vec::new();
     let mut run = Vec::new();
@@ -865,7 +885,7 @@ fn group<'a>(children: Vec<Child<'a>>, parent: &'a ComputedStyle) -> Content<'a>
     // them, so they follow the run they interrupt without ending it.
     let mut below_run = Vec::new();
     let flush = |run: &mut Vec<whitespace::Raw<'a>>, blocks: &mut Vec<LayoutBox<'a>>| {
-        if let Content::Inline(items) = inline_content(std::mem::take(run)) {
+        if let Content::Inline(items) = inline_content(std::mem::take(run), parent) {
             blocks.push(LayoutBox {
                 node: None,
                 style: Cow::Owned(anonymous_style(parent)),
@@ -881,7 +901,7 @@ fn group<'a>(children: Vec<Child<'a>>, parent: &'a ComputedStyle) -> Content<'a>
             Child::Block(b) if is_out_of_flow(&b.style) => {
                 // With no line to sit below it stays where the tree has it: scripts
                 // walk the items for tree order, in Tab and in queries.
-                let no_line = matches!(inline_content(run.clone()), Content::Empty);
+                let no_line = matches!(inline_content(run.clone(), parent), Content::Empty);
                 if b.style.blockified_inline || no_line {
                     blocks.push(*b);
                 } else {
@@ -900,8 +920,8 @@ fn group<'a>(children: Vec<Child<'a>>, parent: &'a ComputedStyle) -> Content<'a>
     Content::Blocks(blocks)
 }
 
-fn inline_content(raw: Vec<whitespace::Raw<'_>>) -> Content<'_> {
-    let items = whitespace::collapse(raw);
+fn inline_content<'a>(raw: Vec<whitespace::Raw<'a>>, parent: &ComputedStyle) -> Content<'a> {
+    let items = whitespace::collapse(raw, parent);
     if items.is_empty() {
         Content::Empty
     } else {

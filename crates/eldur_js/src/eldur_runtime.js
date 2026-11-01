@@ -2299,7 +2299,14 @@ function _flowInText(text) {
     flow.width = Qt.binding(function() { return text.width; });
     var sizer = Qt.createQmlObject("import QtQuick; import QtQuick.Layouts; QtObject { "
         + "function hold(item, height) { item.Layout.preferredHeight = Qt.binding(height); } }", flow, "eldur_flow_size");
-    sizer.hold(text, function() { return lines() + flow.implicitHeight; });
+    // The column's height is whole; a box's is not when its last line is not.
+    var inner = function() {
+        var kids = flow.children;
+        var last = kids.length > 0 ? kids[kids.length - 1] : null;
+        var exact = last && last.cssSize !== undefined ? last.implicitHeight : 0;
+        return flow.implicitHeight - (Math.ceil(exact) - exact);
+    };
+    sizer.hold(text, function() { return lines() + inner(); });
     // Rendering a model's runs is not a script replacing the text.
     text.textChanged.connect(function() {
         if (!_vRendering) {
@@ -3392,16 +3399,20 @@ function _layoutForRead() {
     _aRead();
     if (_layoutDirty.length === 0) {
         // Lines lay out once when complete, which may be after a page's script.
-        if (!_linesLaidOut) {
-            _linesLaidOut = true;
-            _polishDown(_root);
+        if (_linesLaidOut) {
+            return;
         }
-        return;
+        _linesLaidOut = true;
+        _polishDown(_root);
     }
-    _settleLayouts();
-    _polishDown(_root);
-    _gAfterPolish();
-    _polishDown(_root);
+    // A polish can hand a block the width it was laid out without, which asks again.
+    for (var pass = 0; pass < 3 && (_layoutDirty.length > 0 || _gWidthMoved); ++pass) {
+        _gWidthMoved = false;
+        _settleLayouts();
+        _polishDown(_root);
+        _gAfterPolish();
+        _polishDown(_root);
+    }
 }
 
 var _linesLaidOut = false;
@@ -4545,6 +4556,9 @@ function setStyle(item, prop, value) {
         m.styles[rawName] = str;
     }
     _gTouch();
+    if (_vBlockFont(raw, name)) {
+        return;
+    }
     if (_gIsBox(raw)) {
         return;
     }
@@ -9236,7 +9250,7 @@ var _vModels = [];
 var _vGen = 0;
 var _vSyncing = false;
 var _vVoid = { area: 1, base: 1, br: 1, col: 1, embed: 1, hr: 1, img: 1, input: 1, link: 1, meta: 1, source: 1, track: 1, wbr: 1 };
-var _vProps = ["color", "font-weight", "font-style", "font-size", "font-family", "display", "visibility", "background-color", "text-decoration-line"];
+var _vProps = ["line-height", "vertical-align", "color", "font-weight", "font-style", "font-size", "font-family", "display", "visibility", "background-color", "text-decoration-line"];
 var _vDefault = { color: "rgb(0, 0, 0)", weight: 400, italic: false, underline: false, strike: false, size: 16, family: "", bg: "rgba(0, 0, 0, 0)", display: "inline", visible: true };
 
 function _vHasRules() {
@@ -9314,15 +9328,39 @@ function _vElement(tag, attrs, parent, model) {
     return v;
 }
 
+// The elements runs after their first may go on in, by the converter's key.
+var _vKeyed = {};
+
 function _vBuild(json, parent, model) {
     if (json.gen) {
-        return { gen: json.gen };
+        var made = { gen: json.gen, model: model };
+        // An `::after` a run of its own is on: its element is in an earlier run.
+        var owner = json.under !== undefined ? _vKeyed[json.under] : null;
+        if (owner) {
+            owner.genRuns = (owner.genRuns || []).concat([made]);
+        }
+        return made;
+    }
+    if (json.under !== undefined && !parent) {
+        // The rest of an element a run before this one started.
+        var holder = _vKeyed[json.under];
+        var rest = Object.assign({}, json);
+        delete rest.under;
+        var node = _vBuild(rest, holder, model);
+        if (!holder) {
+            return node;
+        }
+        holder.kids.push(node);
+        return { gen: {}, live: node };
     }
     if (json.text !== undefined) {
         return _vLeaf(json.text, parent, model);
     }
     var v = _vElement(json.tag, json.attrs, parent, model);
     v.eldurKey = json.key;
+    if (json.key !== undefined) {
+        _vKeyed[json.key] = v;
+    }
     v.c = json.c || null;
     v.before = json.before || null;
     v.after = json.after || null;
@@ -9350,6 +9388,15 @@ function _vModelOf(item) {
     }
     if (typeof item.eldurInline !== "string") {
         return null;
+    }
+    // A run can go on an element an earlier one started, which must be there.
+    var line = item.parent;
+    if (line && typeof line.firstBaseline === "number" && !_meta(line).vRunsBuilt) {
+        _meta(line).vRunsBuilt = true;
+        for (var r = 0; r < line.children.length; ++r) {
+            _vModelOf(line.children[r]);
+        }
+        return _vModelOf(item);
     }
     var m = _meta(item);
     var model = JSON.parse(item.eldurInline);
@@ -9876,10 +9923,17 @@ function _vBase(model) {
     if (model.hoisted) {
         return model.k;
     }
-    var live = _vLiveBase(model.text);
+    // A run's own font is its innermost box's; what it inherits is the block's.
+    var line = model.text.parent;
+    var live = _vLiveBase(line && typeof line.firstBaseline === "number" ? line : model.text);
     live.family = model.k.family;
     live.underline = model.k.underline;
     live.strike = model.k.strike;
+    live.size = model.k.size;
+    live.lh = model.k.lh;
+    live.lf = model.k.lf;
+    live.us = model.k.us;
+    live.kw = model.k.kw;
     return live;
 }
 
@@ -9954,15 +10008,25 @@ function _vApply(out, prop, value, pc) {
         out.italic = low === "italic" || low.indexOf("oblique") === 0;
     } else if (prop === "font-size") {
         var size = /^([\d.]+)(px|em|rem|%|pt)$/.exec(low);
+        var named = _V_SIZE_KEYWORDS.indexOf(low);
+        // What the cascade's `font_size_origin` says, for the same reason.
+        out.kw = undefined;
         if (size) {
             var n = parseFloat(size[1]);
+            var scale = size[2] === "em" ? n : size[2] === "%" ? n / 100 : 0;
+            out.us = scale > 0 && pc.us !== undefined ? pc.us * scale : undefined;
             out.size = size[2] === "px" ? n : size[2] === "em" ? n * pc.size : size[2] === "rem" ? n * 16
                 : size[2] === "%" ? n * pc.size / 100 : n * 4 / 3;
-        } else {
-            out.size = low === "smaller" ? pc.size / 1.2 : low === "larger" ? pc.size * 1.2 : out.size;
+        } else if (named !== -1) {
+            out.size = out.us = _V_SIZES[named];
+            out.kw = named;
+        } else if (low === "smaller" || low === "larger") {
+            var by = low === "smaller" ? 1 / 1.2 : 1.2;
+            out.us = pc.us !== undefined ? pc.us * by : undefined;
+            out.size = pc.size * by;
         }
     } else if (prop === "font-family") {
-        out.family = EldurFonts.family(v);
+        out.family = low === "monospace" ? "monospace" : EldurFonts.family(v);
     } else if (prop === "display") {
         out.display = low;
     } else if (prop === "visibility") {
@@ -10028,11 +10092,53 @@ function _vCascade(v, pc) {
         out.display = "none";
     }
     for (var w = 0; w < _vProps.length; ++w) {
-        if (won[_vProps[w]]) {
+        if (won[_vProps[w]] && _vProps[w] !== "line-height" && _vProps[w] !== "vertical-align") {
             _vApply(out, _vProps[w], won[_vProps[w]].value, pc);
         }
     }
+    if (out.us !== undefined) {
+        out.size = out.family !== "monospace" ? out.us
+            : out.kw !== undefined ? _V_MONO_SIZES[out.kw] : out.us * 13 / 16;
+    }
+    _vLineOf(out, won["line-height"], pc);
+    _vAlignOf(out, won["vertical-align"]);
     return out;
+}
+
+// `line-height`: a number is inherited as the number, anything else as its pixels.
+var _V_SIZE_KEYWORDS = ["xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large", "xxx-large"];
+var _V_SIZES = [9, 10, 13, 16, 18, 24, 32, 48];
+// Measured from Chromium: the generic `monospace` has sizes of its own.
+var _V_MONO_SIZES = [9, 10, 12, 13, 16, 20, 26, 39];
+
+function _vLineOf(out, won, pc) {
+    var written = won ? String(won.value).trim().toLowerCase() : "inherit";
+    if (written === "inherit" || written === "unset") {
+        out.lf = pc.lf;
+        out.lh = pc.lf !== undefined ? pc.lf * out.size : pc.lh;
+    } else if (/^[0-9.+-]+$/.test(written)) {
+        out.lf = parseFloat(written);
+        out.lh = out.lf * out.size;
+    } else if (written !== "normal" && written !== "initial") {
+        var n = parseFloat(written);
+        out.lh = isNaN(n) ? undefined
+            : /%$/.test(written) ? n / 100 * out.size
+            : /r?em$/.test(written) ? n * (/rem$/.test(written) ? 16 : out.size) : n;
+    }
+}
+
+function _vAlignOf(out, won) {
+    if (!won) {
+        return;
+    }
+    var written = String(won.value).trim().toLowerCase();
+    if (/^(sub|super|top|bottom|middle|text-top|text-bottom)$/.test(written)) {
+        out.va = written;
+    } else if (/%$/.test(written)) {
+        out.vp = parseFloat(written);
+    } else if (written !== "baseline" && !isNaN(parseFloat(written))) {
+        out.vs = parseFloat(written) * (/r?em$/.test(written) ? out.size : 1);
+    }
 }
 
 function _vStyle(v) {
@@ -10046,10 +10152,15 @@ function _vStyle(v) {
         clean = parent.cleanNow;
     } else if (clean) {
         var k = v.model && v.model.k;
-        clean = !k || (pc.color === k.color && pc.weight === k.weight && pc.italic === k.italic);
+        clean = !k || (!v.model.fontMoved && pc.color === k.color && pc.weight === k.weight && pc.italic === k.italic);
     }
     v.cleanNow = clean;
     v.style = clean ? v.c : _vCascade(v, pc);
+    // A cascade works out fonts and colours; these stay what the converter resolved.
+    if (!clean && v.c) {
+        v.style.edge = v.c.edge;
+        v.style.rel = v.c.rel;
+    }
     v.styleGen = _vGen;
     return v.style;
 }
@@ -10137,7 +10248,7 @@ function _vNeedsHtml(kids, pc, family) {
     for (var i = 0; i < kids.length; ++i) {
         if (kids[i].kids) {
             var c = _vStyle(kids[i]);
-            if ((c.bg !== "rgba(0, 0, 0, 0)" && c.bg !== "transparent") || (c.family !== family && c.family !== "")
+            if ((c.bg !== "rgba(0, 0, 0, 0)" && c.bg !== "transparent")
                 || _vNeedsHtml(kids[i].kids, c, family)) {
                 return true;
             }
@@ -10220,39 +10331,58 @@ function _vWrap(st, c, pc, isLink, href, body) {
     }
     if (st.html) {
         var css = [];
-        if (c.size !== pc.size) {
-            css.push("font-size:" + c.size + "px");
-        }
-        if (c.family !== pc.family && c.family !== "") {
-            css.push("font-family:'" + c.family + "'");
-        }
         if (c.bg !== "rgba(0, 0, 0, 0)" && c.bg !== "transparent") {
             css.push("background-color:" + _vHex(c.bg));
         }
         if (css.length > 0) {
             open("span", " style=\"" + css.join(";") + "\"");
         }
-    } else if (c.size > pc.size) {
-        open("big");
-    } else if (c.size < pc.size) {
-        open("small");
     }
     body();
     st.inLink = wasLink;
     st.out += close;
 }
 
+// What of an element started in another run is in this one, inside that element.
+function _vWriteLive(st, node, pc) {
+    if (node.model !== st.model) {
+        return;
+    }
+    var chain = [];
+    for (var at = node.vparent; at; at = at.vparent) {
+        chain.unshift(at);
+    }
+    (function write(i, outer) {
+        if (i === chain.length) {
+            _vWriteKids(st, [node], outer, node.vparent);
+            return;
+        }
+        var c = _vStyle(chain[i]);
+        _vWrap(st, c, outer, false, null, function() { write(i + 1, _vLined(c, outer)); });
+    })(0, pc);
+}
+
 function _vWriteKids(st, kids, pc, owner) {
     for (var i = 0; i < kids.length; ++i) {
         var k = kids[i];
-        if (k.gen) {
+        if (k.live) {
+            _vWriteLive(st, k.live, pc);
+        } else if (k.gen) {
             _vWriteGen(st, k.gen, pc, owner);
+        } else if (k.model !== st.model) {
+            continue;
         } else if (k.vtext) {
             _vWriteText(st, k.data, owner);
         } else {
             _vWriteElement(st, k, pc);
         }
     }
+}
+
+function _vLined(c, pc) {
+    return { color: c.color, weight: c.weight, italic: c.italic, size: c.size, family: c.family, bg: c.bg,
+        underline: c.underline || (pc.underline && pc.inlineLine), strike: c.strike || (pc.strike && pc.inlineLine),
+        inlineLine: true, visible: c.visible, display: c.display };
 }
 
 function _vWriteElement(st, v, pc) {
@@ -10266,9 +10396,7 @@ function _vWriteElement(st, v, pc) {
         return;
     }
     var href = v.eldurTag === "a" ? _vGetAttr(v, "href") : null;
-    var lined = { color: c.color, weight: c.weight, italic: c.italic, size: c.size, family: c.family, bg: c.bg,
-        underline: c.underline || (pc.underline && pc.inlineLine), strike: c.strike || (pc.strike && pc.inlineLine),
-        inlineLine: true, visible: c.visible, display: c.display };
+    var lined = _vLined(c, pc);
     _vWrap(st, c, pc, href !== null, href === null ? null : _vEscapeText(href).replace(/"/g, "&quot;"), function() {
         if (v.before) {
             _vWriteGen(st, v.before, lined, v);
@@ -10285,7 +10413,7 @@ function _vMarkup(model, twin) {
     // A run between boxes starts and ends mid-line: the line takes its edge spaces.
     var inLine = model.text.parent && typeof model.text.parent.firstBaseline === "number";
     var st = {
-        out: "", prevSpace: !inLine, pre: model.pre, html: model.html, twin: twin,
+        out: "", prevSpace: !inLine, pre: model.pre, html: model.html, twin: twin, model: model,
         owners: [], inLink: false, linkColor: null,
         bareLink: model.bare && model.kids.length === 1 && Boolean(model.kids[0].kids)
             && !_vStyle(model.kids[0]).underline
@@ -10295,44 +10423,6 @@ function _vMarkup(model, twin) {
         st.out = st.out.replace(/ ((?:<\/[a-z]+>)*)$/, "$1");
     }
     return st;
-}
-
-// The tallest `line-height` an element in the model writes, in pixels; 0 if none.
-function _vTallestLine(model) {
-    var tallest = 0;
-    _vEachElement(model.kids, function(v) {
-        var own = /(?:^|;)\s*line-height:\s*([^;]+)/.exec(_vCssText(_meta(v)));
-        var written = own ? own[1].trim() : _vComputedOther(v, "line-height");
-        var n = parseFloat(written);
-        if (!isNaN(n)) {
-            tallest = Math.max(tallest, /px$/.test(written) ? n : n * _vStyle(v).size);
-        }
-    });
-    return tallest;
-}
-
-// A `Text` has one line height, so a taller element is told to the line placing
-// it or, alone in its block, stands as padding around the block's own lines: its
-// words stay on their baseline, though every wrapped line of it is short of the
-// room Chromium gives the one line holding the element.
-function _vRaiseLine(model) {
-    var text = model.text;
-    var tallest = _vTallestLine(model);
-    if (text.parent && typeof text.parent.setRunLineHeight === "function") {
-        if (tallest > 0 || text.eldurOwnLine !== undefined) {
-            text.parent.setRunLineHeight(text, tallest);
-        }
-        return;
-    }
-    var fixed = text.lineHeightMode === 1; // Text.FixedHeight; a library script has no `Text`
-    var line = fixed ? text.lineHeight
-        : model.lh !== undefined ? model.lh : EldurFonts.normalLine(text.font, model.k.size);
-    var room = Math.max(0, tallest - line);
-    if (room > 0 || model.raised) {
-        text.topPadding = Math.floor(room / 2);
-        text.bottomPadding = Math.ceil(room / 2);
-        model.raised = room > 0;
-    }
 }
 
 // The first write takes the `Text` over from what the converter emitted: a
@@ -10352,6 +10442,7 @@ function _vRender(model) {
         text.font.pixelSize = k.size;
         model.hoisted = false;
     }
+    // On a line of runs each has its own font; only a background still takes markup.
     if (!model.html && _vNeedsHtml(model.kids, _vBase(model), model.k.family)) {
         model.html = true;
     }
@@ -10371,7 +10462,6 @@ function _vRender(model) {
     _vRendering = true;
     text.text = markup;
     _vRendering = false;
-    _vRaiseLine(model);
     model.rendered = true;
     model.twinText = null;
     _layoutChanged(text);
@@ -10381,8 +10471,12 @@ function _vRender(model) {
 // what the converter wrote for it.
 function _vChanged(model) {
     ++_vGen;
-    for (var i = 0; i < _vModels.length; ++i) {
-        var each = _vModels[i];
+    var models = _vModels.slice();
+    for (var i = 0; i < models.length; ++i) {
+        var each = models[i];
+        if (_vModels.indexOf(each) === -1) {
+            continue;
+        }
         if (each.select) {
             if (each === model) {
                 _vSyncSelect(each);
@@ -10396,10 +10490,405 @@ function _vChanged(model) {
                 render = render || !v.cleanNow;
             });
         }
-        if (render) {
+        // Runs of one element are one thing to what a script changed.
+        render = render || (model && !model.select && each.text.parent === model.text.parent
+            && each.text.parent && typeof each.text.parent.firstBaseline === "number");
+        if (render && !_vRunsFor(each)) {
             _vRender(each);
         }
     }
+}
+
+// `v`'s box on a line, for `EldurFonts.placeRun`.
+function _vBoxOf(c, v) {
+    var box = { size: c.size, family: c.family, weight: c.weight, italic: c.italic };
+    if (c.lh > 0) {
+        box.line = c.lh;
+    }
+    if (c.va) {
+        box.align = c.va;
+    }
+    if (c.vs !== undefined) {
+        box.shift = c.vs;
+    }
+    if (c.vp !== undefined) {
+        box.percent = c.vp;
+    }
+    if (c.rel) {
+        box.relX = c.rel[0];
+        box.relY = c.rel[1];
+    }
+    if (v && (c.va === "top" || c.va === "bottom")) {
+        box.group = _meta(v).lineGroup = _meta(v).lineGroup || ++_vLineGroups;
+    }
+    return box;
+}
+
+var _vLineGroups = 0;
+
+// Whether an element with style `c` has a box its parent's `Text` could not be.
+function _vOwnBox(pc, c) {
+    if (c.va || c.vs !== undefined || c.vp !== undefined || c.rel || c.size !== pc.size || c.lh !== pc.lh
+        || EldurFonts.family(c.family) !== EldurFonts.family(pc.family)) {
+        return true;
+    }
+    var a = EldurFonts.inlineBox(_vBoxOf(pc));
+    var b = EldurFonts.inlineBox(_vBoxOf(c));
+    return a.ascent !== b.ascent || a.descent !== b.descent;
+}
+
+function _vHoldsOwn(kids, pc) {
+    return kids.some(function(k) {
+        if (!k.kids || k.gen) {
+            return false;
+        }
+        var c = _vStyle(k);
+        return c.display !== "none" && (_vOwnBox(pc, c) || _vHoldsOwn(k.kids, c));
+    });
+}
+
+// `roots` cut where a box changes, as the converter cuts them.
+function _vCutRuns(roots, base) {
+    var runs = [];
+    var cur = null;
+    function flush() {
+        if (cur) {
+            runs.push(cur);
+        }
+        cur = null;
+    }
+    function put(k) {
+        cur = cur || [];
+        cur.push(k);
+    }
+    (function walk(kids, pc) {
+        kids.forEach(function(k) {
+            if (!k.kids || k.gen) {
+                put(k);
+                return;
+            }
+            var c = _vStyle(k);
+            if (c.display === "none") {
+                put(k);
+                return;
+            }
+            var own = _vOwnBox(pc, c);
+            if (_vHoldsOwn(k.kids, c)) {
+                if (own) {
+                    flush();
+                }
+                walk(k.kids, c);
+                if (own) {
+                    flush();
+                }
+            } else if (own) {
+                flush();
+                put(k);
+                flush();
+            } else {
+                put(k);
+            }
+        });
+    })(roots, base);
+    flush();
+    return runs;
+}
+
+// The boxes around a run's text, outermost first: those of the elements it is in
+// that differ from what holds them.
+function _vRunLevels(entries, base) {
+    var first = entries[0];
+    var chain = [];
+    for (var at = first ? first.vparent : null; at; at = at.vparent) {
+        chain.unshift(at);
+    }
+    if (first && first.kids && !first.gen && entries.length === 1) {
+        chain.push(first);
+    }
+    var levels = [];
+    var pc = base;
+    var leaf = base;
+    chain.forEach(function(v) {
+        var c = _vStyle(v);
+        if (c.display !== "none" && _vOwnBox(pc, c)) {
+            levels.push(_vBoxOf(c, v));
+            leaf = c;
+        }
+        pc = c;
+    });
+    return { levels: levels, leaf: leaf };
+}
+
+function _vSameRuns(models, runs) {
+    return models.length === runs.length && models.every(function(m, i) {
+        return m.entries && m.entries.length === runs[i].length
+            && m.entries.every(function(e, j) { return e === runs[i][j]; });
+    });
+}
+
+// The runs on `model`'s line, in order: those with a model, up to any box.
+function _vLineModels(model) {
+    var line = model.text.parent;
+    var kids = Array.from(line.children).filter(function(c) { return typeof c.text === "string"; });
+    var models = kids.map(_vModelOf);
+    var at = kids.indexOf(model.text);
+    var from = at, to = at;
+    var siblings = Array.from(line.children);
+    function adjacent(i, j) {
+        return siblings.slice(siblings.indexOf(kids[i]) + 1, siblings.indexOf(kids[j]))
+            .every(function(c) { return c.eldurInlineOwner !== undefined || c.width === 0; });
+    }
+    while (from > 0 && models[from - 1] && adjacent(from - 1, from)) {
+        --from;
+    }
+    while (to < kids.length - 1 && models[to + 1] && adjacent(to, to + 1)) {
+        ++to;
+    }
+    return models.slice(from, to + 1);
+}
+
+// Keeps a model's text on a line of its own boxes when its elements differ, and
+// renders what that touched. False when `model` stays as it is, to render.
+var _V_BLOCK_FONT = /^(fontSize|fontFamily|lineHeight|fontWeight|fontStyle)$/;
+
+// The inline models a block's own text hangs on.
+function _vBlockModels(raw) {
+    var line = _vSplitLine(raw);
+    return _vModels.filter(function(m) {
+        return !m.select && (m.text === raw || m.text.parent === raw || (line && m.text.parent === line));
+    });
+}
+
+// The line a block's text became when a run needed one (`_vLineFor`), or the
+// one the converter put in it.
+function _vSplitLine(raw) {
+    var flow = _meta(raw).flow;
+    var kids = Array.from((flow || raw).children || []);
+    return kids.find(function(c) { return typeof c.setRunLevels === "function"; }) || null;
+}
+
+// A block's font reaches its runs as a parent's does: the block keeps its item,
+// and with it the elements a script holds in its text. Adopting it would lose them.
+function _vBlockFont(raw, name) {
+    if (!_V_BLOCK_FONT.test(name) || !_gHasCascade() || _vBlockModels(raw).length === 0) {
+        return false;
+    }
+    ++_gGen;
+    var s = _gStyle(raw);
+    var line = _gLineHeight(s);
+    var models = _vBlockModels(raw);
+    var host = typeof raw.setRunLevels === "function" ? raw : _vSplitLine(raw);
+    var texts = host ? Array.from(host.children).filter(function(c) { return typeof c.text === "string"; }) : [];
+    [host].concat(texts, models.map(function(m) { return m.text; })).forEach(function(item) {
+        if (!item) {
+            return;
+        }
+        item.font = _gFontOf(s);
+        if (item === host) {
+            item.cssSize = s.fontSize;
+            item.lineHeight = line === null ? 0 : line;
+        }
+    });
+    models.forEach(function(m) {
+        m.fontMoved = true;
+        m.k.size = s.fontSize;
+        m.k.family = _gFamily(s["font-family"]);
+        m.k.lf = s.lineFactor === null ? undefined : s.lineFactor;
+        m.k.lh = line === null ? undefined : line;
+        if (name === "fontSize") {
+            m.k.us = s.fontSize;
+            m.k.kw = undefined;
+        }
+    });
+    if (!host && raw.lineHeightMode !== undefined) {
+        raw.lineHeightMode = 1; // Text.FixedHeight; a library script has no `Text`
+        raw.lineHeight = line === null ? EldurFonts.normalLine(raw.font) : line;
+    }
+    _vChanged(models[0]);
+    return true;
+}
+
+function _vRunsFor(model) {
+    if (model.select || _vRunning) {
+        return false;
+    }
+    var text = model.text;
+    var line = text.parent;
+    var onLine = Boolean(line) && typeof line.firstBaseline === "number" && typeof line.setRunLevels === "function";
+    if (!onLine && (!_linesAvailable() || !text.parent)) {
+        return false;
+    }
+    var models = onLine ? _vLineModels(model) : [model];
+    var base = _vBase(model);
+    var roots = [];
+    models.forEach(function(m) {
+        m.kids.forEach(function(k) {
+            if (!k.live && !k.gen && roots.indexOf(k) === -1) {
+                roots.push(k);
+            } else if (k.gen && !k.live) {
+                roots.push(k);
+            }
+        });
+    });
+    var runs = _vCutRuns(roots, base);
+    if (!onLine && runs.length < 2 && (runs.length === 0 || _vRunLevels(runs[0], base).levels.length === 0)) {
+        return false;
+    }
+    _vRunning = true;
+    if (!onLine) {
+        line = _vLineFor(model, base);
+        models = [];
+    }
+    _vPutRuns(line, models, runs, base, model);
+    _vRunning = false;
+    return true;
+}
+
+var _vRunning = false;
+
+// `model`'s `Text` makes way for a line: the element holds the line from here on.
+function _vLineFor(model, base) {
+    var text = model.text;
+    var raw = typeof text.parent.spacing === "number" ? text : text.parent;
+    var lines = _newLines(raw);
+    lines.font = text.font;
+    lines.font.pixelSize = Math.max(1, Math.round(base.size));
+    lines.font.family = EldurFonts.family(base.family);
+    lines.font.weight = base.weight;
+    lines.font.italic = base.italic;
+    lines.cssSize = base.size;
+    lines.color = base.color;
+    if (base.lh > 0) {
+        lines.lineHeight = base.lh;
+    }
+    _meta(lines).vRunsBuilt = true;
+    _vModels.splice(_vModels.indexOf(model), 1);
+    var m = _meta(text);
+    m.vModel = null;
+    m.vSplit = true;
+    delete m.explicitText;
+    _vRendering = true;
+    text.textFormat = 0; // Text.PlainText; a library script has no `Text`
+    text.text = "";
+    _vRendering = false;
+    _insertInFlow(_appendTarget(raw), [lines], null);
+    _vCarryAfter(raw);
+    return lines;
+}
+
+// The converter gave what comes after a whole-height paragraph a number for
+// its margin: a line of runs makes that height fractional, and the cell's
+// rounding goes to the next item as the converter's own carry does.
+function _vCarryAfter(raw) {
+    var tool = _gMarginTool();
+    if (raw.eldurCarry !== undefined) {
+        raw.eldurCarry = Qt.binding(function() {
+            if (!raw.visible) {
+                return 0;
+            }
+            var top = tool.top(raw);
+            var h = tool.preferred(raw);
+            var c = Math.ceil(top + h) - top - h;
+            return c > 1e-6 ? c + 1e-6 : 0;
+        });
+        return;
+    }
+    var column = raw.parent;
+    if (!column || typeof column.spacing !== "number") {
+        return;
+    }
+    // What follows has a fractional top now, and so its cell a rounding to
+    // pass on, until an item the converter already gave a carry takes it up.
+    var kids = Array.from(column.children);
+    var at = kids.indexOf(raw);
+    for (var k = at === -1 ? kids.length : at + 1; k < kids.length; ++k) {
+        var prev = kids[k - 1];
+        if (prev.eldurCarry !== undefined || _meta(prev).vCarried) {
+            continue;
+        }
+        _meta(prev).vCarried = true;
+        tool.hold(kids[k], tool.top(kids[k]), tool.bottom(kids[k]), prev);
+    }
+}
+
+function _vRunText(line, like) {
+    var made = Qt.createQmlObject(
+        "import QtQuick; Text { wrapMode: Text.Wrap; textFormat: Text.StyledText; renderType: Text.NativeRendering }",
+        _qobjectParent(), "eldur_run");
+    made.font = line.font;
+    made.color = line.color;
+    if (like) {
+        made.horizontalAlignment = like.horizontalAlignment;
+    }
+    return made;
+}
+
+// One `Text` a run: those already there, in order, then new ones.
+function _vPutRuns(line, models, runs, base, model) {
+    var same = _vSameRuns(models, runs);
+    var after = models.length > 0 ? models[models.length - 1].text : null;
+    var kids = Array.from(line.children);
+    var next = after ? kids[kids.indexOf(after) + 1] || null : null;
+    var pass = {};
+    var made = runs.map(function(entries, i) {
+        var m = models[i];
+        if (!m) {
+            var text = _vRunText(line, model.text);
+            _insertInFlow(line, [text], next);
+            m = { text: text, k: model.k, hoisted: false, bare: false, html: false, pre: model.pre,
+                  underline: Boolean(model.underline), strike: Boolean(model.strike) };
+            _meta(text).vModel = m;
+            _vModels.push(m);
+        }
+        m.hoisted = false;
+        m.entries = entries;
+        return m;
+    });
+    for (var extra = runs.length; extra < models.length; ++extra) {
+        var gone = models[extra];
+        _vModels.splice(_vModels.indexOf(gone), 1);
+        gone.text.parent = null;
+        gone.text.destroy();
+    }
+    runs.forEach(function(entries, i) {
+        var m = made[i];
+        var kept = [];
+        entries.forEach(function(e) {
+            if (e.gen) {
+                e.model = m;
+                kept.push(e);
+                return;
+            }
+            _vSetModel(e, m);
+            var top = e;
+            for (var at = e.vparent; at; at = at.vparent) {
+                if (at.runPass !== pass) {
+                    at.runPass = pass;
+                    at.model = m;
+                }
+                top = at;
+            }
+            if (top === e || top.model !== m) {
+                kept.push(top === e ? e : { gen: {}, live: e });
+            } else if (kept.indexOf(top) === -1) {
+                kept.push(top);
+            }
+        });
+        m.kids = kept;
+        var boxes = _vRunLevels(entries, base);
+        var font = m.text.font;
+        font.pixelSize = Math.max(1, Math.round(boxes.leaf.size));
+        font.family = EldurFonts.family(boxes.leaf.family);
+        font.weight = base.weight;
+        font.italic = base.italic;
+        m.text.font = font;
+        line.setRunLevels(m.text, boxes.levels);
+        m.twinText = null;
+        // The model of an element a script moved keeps its place; what the
+        // converter wrote is right only until a run changes.
+        _vRender(m);
+    });
+    return same;
 }
 
 // Text has `linkAt` and nothing like `positionAt`. Making every run of the
@@ -10410,7 +10899,7 @@ function _vTwin(model) {
     var text = model.text;
     if (!model.twin) {
         model.twin = Qt.createQmlObject(
-            "import QtQuick; Text { visible: false; width: parent.width; font: parent.font; "
+            "import QtQuick; Text { objectName: \"eldurTwin\"; visible: false; width: parent.width; font: parent.font; "
             + "wrapMode: parent.wrapMode; lineHeight: parent.lineHeight; lineHeightMode: parent.lineHeightMode; "
             + "horizontalAlignment: parent.horizontalAlignment }", text, "eldur_twin");
         _meta(model.twin).isFragment = true;
@@ -10442,50 +10931,232 @@ function _vHitAt(model, x, y) {
     return model.twinOwners[Number(link.slice(6))] || null;
 }
 
-function _vRect(v) {
-    var none = { x: 0, y: 0, width: 0, height: 0 };
-    if (!v.model || v.model.select || v.vtext || v.model.text.visible === false) {
-        return none;
-    }
-    for (var at = v; at; at = at.vparent) {
-        if (_vStyle(at).display === "none") {
-            return none;
+// Every piece of `v` by the model it is drawn in.
+function _vPieces(v) {
+    var out = [];
+    (function walk(node) {
+        if (node.model && out.indexOf(node.model) === -1 && (node.vtext || !node.kids || node.kids.length === 0)) {
+            out.push(node.model);
+        }
+        (node.kids || []).forEach(function(k) {
+            if (!k.gen) {
+                walk(k);
+            } else if (node.model && out.indexOf(node.model) === -1) {
+                // A `::before` of another font is a run of its own, and in the box.
+                out.push(node.model);
+            }
+        });
+        (node.genRuns || []).forEach(function(g) {
+            if (g.model && out.indexOf(g.model) === -1) {
+                out.push(g.model);
+            }
+        });
+    })(v);
+    return out;
+}
+
+function _vLeaves2(node, out) {
+    (node.kids || []).forEach(function(k) {
+        if (k.live) {
+            out.push(k.live);
+        } else if (!k.gen) {
+            out.push(k);
+        }
+    });
+    return out;
+}
+
+// Whether all there is to draw in `model` is in `v`.
+function _vFills(v, model) {
+    return _vLeaves2(model, []).every(function(k) {
+        for (var at = k; at; at = at.vparent) {
+            if (at === v) {
+                return true;
+            }
+        }
+        return k.kids ? _vFillsInside(k, v) : false;
+    });
+}
+
+function _vFillsInside(node, v) {
+    return node.kids.every(function(k) {
+        if (k.gen) {
+            return true;
+        }
+        if (k.model !== node.model) {
+            return true;
+        }
+        if (k === v) {
+            return true;
+        }
+        return k.kids ? _vFillsInside(k, v) : false;
+    });
+}
+
+function _vIn(owner, v) {
+    for (var o = owner; o; o = o.vparent) {
+        if (o === v) {
+            return true;
         }
     }
-    var twin = _vTwin(v.model);
-    var line = Math.max(1, Math.floor((twin.font.pixelSize || 16) / 2));
-    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (var y = line / 2; y < v.model.text.height; y += line) {
-        for (var x = 0; x < v.model.text.width; x += 2) {
-            var owner = _vHitAt(v.model, x, y);
-            for (var o = owner; o; o = o.vparent) {
-                if (o === v) {
-                    minX = Math.min(minX, x);
-                    maxX = Math.max(maxX, x + 2);
-                    minY = Math.min(minY, y - line / 2);
-                    maxY = Math.max(maxY, y + line / 2);
-                    break;
+    return false;
+}
+
+// `v`'s box on each line, in the window: left and right from its glyphs, top and
+// height from its font on the line's baseline (layout.md §1.3).
+function _vFragments(v) {
+    var chain = [];
+    for (var at = v; at; at = at.vparent) {
+        if (_vStyle(at).display === "none") {
+            return [];
+        }
+        chain.unshift(at);
+    }
+    var out = [];
+    _vPieces(v).forEach(function(model) {
+        if (model.select || !model.text || model.text.visible === false) {
+            return;
+        }
+        var text = model.text;
+        var line = text.parent;
+        var onLine = Boolean(line) && typeof line.setRunLevels === "function";
+        var base = model.hoisted ? model.k : _vBase(model);
+        var levels = chain.map(function(a) { return _vBoxOf(_vStyle(a), a); });
+        var own = _vStyle(v);
+        var box = EldurFonts.inlineBox(_vBoxOf(own));
+        function push(x, width, baseline) {
+            var pt = onLine ? line.mapToItem(null, 0, baseline - box.ascent)
+                : text.mapToItem(null, 0, baseline - box.ascent);
+            var shift = onLine ? 0 : _gGlyphShift(text);
+            var left = onLine ? line.mapToItem(null, x, 0).x : text.mapToItem(null, x, 0).x;
+            // `x` comes off the run, which `position: relative` has moved already.
+            var moved = levels.reduce(function(sum, level) { return sum + (level.relY || 0); }, 0);
+            out.push({ x: left, y: pt.y - shift + moved, width: width, height: box.ascent + box.descent, base: baseline });
+        }
+        if (onLine) {
+            var strut = line.lineStrut();
+            var placed = EldurFonts.placeRun(levels, strut);
+            var rows = line.runLines(text);
+            var fills = _vFills(v, model);
+            var scan = fills ? null : _vRows(v, model);
+            rows.forEach(function(p, n) {
+                var base2 = (placed.group ? p.hung : p.baseline) + placed.shift;
+                if (fills) {
+                    push(text.x + p.x + (p.lead || 0), Math.max(0, p.width - (p.lead || 0) - (p.trail || 0)), base2);
+                } else if (scan[n]) {
+                    push(text.x + p.x + scan[n].min, scan[n].max - scan[n].min, base2);
+                } else if (!v.kids || v.kids.length === 0) {
+                    var before = _vCharsBefore(model.kids, v);
+                    push(text.x + p.x + before.width, 0, base2);
                 }
+            });
+            return;
+        }
+        // One `Text`: its lines are all alike, so they add up from its first.
+        var strutBox = EldurFonts.inlineBox(_vBoxOf(base));
+        var reach = EldurFonts.placeRun(levels, strutBox);
+        var above = strutBox.above;
+        var below = strutBox.below;
+        reach.boxes.forEach(function(b) {
+            above = Math.max(above, b.above);
+            below = Math.max(below, b.below);
+        });
+        var rowsOf = _vRows(v, model);
+        var keys = Object.keys(rowsOf).map(Number).sort(function(a, b) { return a - b; });
+        keys.forEach(function(k) {
+            push(rowsOf[k].min, rowsOf[k].max - rowsOf[k].min, k * (above + below) + above + reach.shift);
+        });
+        if (keys.length === 0 && v.kids && v.kids.length === 0) {
+            push(Math.min(text.width, _vCharsBefore(model.kids, v).width), 0, above + reach.shift);
+        }
+    });
+    // Pieces of one line are one box.
+    var merged = [];
+    out.forEach(function(f) {
+        var same = merged.filter(function(g) { return Math.abs(g.y - f.y) < 1 / 128; })[0];
+        if (same) {
+            var right = Math.max(same.x + same.width, f.x + f.width);
+            same.x = Math.min(same.x, f.x);
+            same.width = right - same.x;
+        } else {
+            merged.push(f);
+        }
+    });
+    // The text is inside the border box: sides on the lines the box opens and closes.
+    var edge = _vStyle(v).edge;
+    if (edge) {
+        merged.forEach(function(f, n) {
+            var before = n === 0 ? edge[3] : 0;
+            var after = n === merged.length - 1 ? edge[1] : 0;
+            f.x -= before;
+            f.width += before + after;
+            f.y -= edge[0];
+            f.height += edge[0] + edge[2];
+        });
+    }
+    return merged;
+}
+
+// Where `v`'s glyphs are on each line of `model`'s hidden copy.
+function _vRows(v, model) {
+    var twin = _vTwin(model);
+    var text = model.text;
+    var lineHeight = twin.contentHeight / Math.max(1, twin.lineCount);
+    var step = Math.max(1, Math.floor((twin.font.pixelSize || 16) / 2));
+    var rows = {};
+    for (var y = step / 2; y < twin.contentHeight; y += step) {
+        for (var x = 0; x < text.width; x += 2) {
+            if (_vIn(_vHitAt(model, x, y), v)) {
+                var at = Math.floor(y / lineHeight);
+                var row = rows[at] || (rows[at] = { min: x, max: x + 2 });
+                row.min = Math.min(row.min, x);
+                row.max = Math.max(row.max, x + 2);
             }
         }
     }
-    // A box on the line cut out of it counts across the line, margins too; an
-    // inline box's own height is its font's whatever sits on its baseline.
+    // The scan steps 2 px: bring each end to where the glyphs really change hands.
+    Object.keys(rows).forEach(function(at) {
+        var row = rows[at];
+        var y = (Number(at) + 0.5) * lineHeight;
+        function edge(inside, outside) {
+            for (var n = 0; n < 4; ++n) {
+                var middle = (inside + outside) / 2;
+                if (_vIn(_vHitAt(model, middle, y), v)) {
+                    inside = middle;
+                } else {
+                    outside = middle;
+                }
+            }
+            return inside;
+        }
+        row.min = edge(row.min, Math.max(0, row.min - 2));
+        row.max = edge(row.max - 2, Math.min(text.width, row.max));
+    });
+    return rows;
+}
+
+function _vRect(v) {
+    if (!v.model || v.model.select || v.vtext) {
+        return { x: 0, y: 0, width: 0, height: 0 };
+    }
+    var parts = _vFragments(v);
+    if (parts.length === 0) {
+        return { x: 0, y: 0, width: 0, height: 0 };
+    }
+    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    parts.forEach(function(p) {
+        minX = Math.min(minX, p.x);
+        maxX = Math.max(maxX, p.x + p.width);
+        minY = Math.min(minY, p.y);
+        maxY = Math.max(maxY, p.y + p.height);
+    });
+    // A box on the line cut out of it counts across the line, margins too.
     _vCutBoxes(v).forEach(function(box) {
-        var from = box.mapToItem(v.model.text, 0, 0).x;
+        var from = box.mapToItem(null, 0, 0).x;
         minX = Math.min(minX, from);
         maxX = Math.max(maxX, from + box.width);
     });
-    if (maxX >= minX) {
-        return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
-    }
-    // An element with nothing in it still has a place on its line.
-    if (v.kids && v.kids.length === 0) {
-        var chars = _vCharsBefore(v.model.kids, v);
-        var height = v.model.text.contentHeight / Math.max(1, v.model.text.lineCount);
-        return { x: Math.min(v.model.text.width, chars.width), y: 0, width: 0, height: height };
-    }
-    return none;
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
 
 // How far along its `Text` the empty element `v` sits, read off the twin's
@@ -10560,44 +11231,92 @@ function _vCutOwner(raw) {
 
 function _vClientRect(v) {
     var r = _vRect(v);
-    var origin = v.model && !v.model.select && (r.width > 0 || r.height > 0)
-        ? v.model.text.mapToItem(null, r.x, r.y) : { x: 0, y: 0 };
-    return { x: origin.x, y: origin.y, left: origin.x, top: origin.y, right: origin.x + r.width,
-        bottom: origin.y + r.height, width: r.width, height: r.height };
+    return { x: r.x, y: r.y, left: r.x, top: r.y, right: r.x + r.width,
+        bottom: r.y + r.height, width: r.width, height: r.height };
 }
 
-// One box a line: the same scan as `_vRect`, kept apart by the line it hit.
-function _vClientRects(v, whole) {
-    var text = v.model.text;
-    var lineHeight = text.contentHeight / Math.max(1, text.lineCount);
-    if (text.lineCount < 2 || !(lineHeight > 0)) {
-        return [whole];
+// A span with nothing of its own to paint has no box to report: it answers with
+// its text and with its children's boxes, a rect for each (measured).
+function _vCulled(v) {
+    var whole = _vFragments(v);
+    if (whole.length !== 1 || !v.kids) {
+        return whole;
     }
-    var step = Math.max(1, Math.floor((_vTwin(v.model).font.pixelSize || 16) / 2));
-    var boxes = {};
-    for (var y = step / 2; y < text.height; y += step) {
-        for (var x = 0; x < text.width; x += 2) {
-            for (var o = _vHitAt(v.model, x, y); o; o = o.vparent) {
-                if (o === v) {
-                    var at = Math.floor(y / lineHeight);
-                    var box = boxes[at] || (boxes[at] = { min: x, max: x + 2 });
-                    box.min = Math.min(box.min, x);
-                    box.max = Math.max(box.max, x + 2);
-                    break;
-                }
-            }
+    var kids = v.kids.filter(function(k) { return !k.gen && !k.vtext; });
+    var own = _vStyle(v);
+    var over = v.vparent ? _vStyle(v.vparent) : _vBase(v.model);
+    if (_vCullable(own) && !_vOwnBox(over, own) && kids.length === 0) {
+        return _vCulledGen(v, own, whole);
+    }
+    // A child of another size gives the span a box after all (measured).
+    var plain = kids.every(function(k) { return !_vOwnBox(own, _vStyle(k)); });
+    if (kids.length === 0 || !plain || !_vCullable(own) || _vOwnBox(over, own)) {
+        return whole;
+    }
+    var outer = whole[0];
+    var boxes = [];
+    kids.forEach(function(k) { boxes = boxes.concat(_vFragments(k)); });
+    if (boxes.length === 0) {
+        return whole;
+    }
+    boxes.sort(function(a, b) { return a.x - b.x; });
+    var out = [];
+    var x = outer.x;
+    boxes.forEach(function(b) {
+        if (b.x > x + 0.01) {
+            out.push({ x: x, y: outer.y, width: b.x - x, height: outer.height });
+        }
+        out.push(b);
+        x = b.x + b.width;
+    });
+    if (outer.x + outer.width > x + 0.01) {
+        out.push({ x: x, y: outer.y, width: outer.x + outer.width - x, height: outer.height });
+    }
+    return out;
+}
+
+// A box-less element's generated text of its own font is a box of its own (measured).
+function _vCulledGen(v, own, whole) {
+    function same(g) {
+        if (!g || !g.text) {
+            return false;
+        }
+        // What `c` does not name it has from `own`.
+        var c = g.c || {};
+        return ["size", "family", "lh", "va"].every(function(key) { return c[key] === undefined || c[key] === own[key]; });
+    }
+    if (!same(v.before) && !same(v.after)) {
+        return whole;
+    }
+    var metrics = _vMetrics(v.model.text);
+    var outer = whole[0];
+    var head = same(v.before) ? metrics.advanceWidth(v.before.text) : 0;
+    var tail = same(v.after) ? metrics.advanceWidth(v.after.text) : 0;
+    var parts = [];
+    function part(x, width) {
+        if (width > 0.01) {
+            parts.push({ x: x, y: outer.y, width: width, height: outer.height });
         }
     }
-    var keys = Object.keys(boxes).map(Number).sort(function(a, b) { return a - b; });
-    if (keys.length < 2) {
+    part(outer.x, head);
+    part(outer.x + head, outer.width - head - tail);
+    part(outer.x + outer.width - tail, tail);
+    return parts;
+}
+
+function _vCullable(style) {
+    return style.bg === "rgba(0, 0, 0, 0)" && !style.edge;
+}
+
+// One box a line.
+function _vClientRects(v, whole) {
+    var parts = v.model && !v.model.select && !v.vtext ? _vCulled(v) : [];
+    if (parts.length < 2) {
         return [whole];
     }
-    var content = Math.min(lineHeight, _vMetrics(text).height || lineHeight);
-    return keys.map(function(at) {
-        var origin = text.mapToItem(null, boxes[at].min, at * lineHeight + (lineHeight - content) / 2);
-        var width = boxes[at].max - boxes[at].min;
-        return { x: origin.x, y: origin.y, left: origin.x, top: origin.y, right: origin.x + width,
-            bottom: origin.y + content, width: width, height: content };
+    return parts.map(function(p) {
+        return { x: p.x, y: p.y, left: p.x, top: p.y, right: p.x + p.width,
+            bottom: p.y + p.height, width: p.width, height: p.height };
     });
 }
 
@@ -18701,6 +19420,7 @@ function _gMarginTool() {
             + "return c > 1e-6 ? c + 1e-6 : 0; } "
             + "function hold(i, t, b, p) { i.Layout.topMargin = p ? Qt.binding(function() { return t - carry(p); }) : t; i.Layout.bottomMargin = b; } "
             + "function top(i) { return i.Layout.topMargin; } "
+            + "function preferred(i) { return i.Layout.preferredHeight; } "
             + "function bottom(i) { return i.Layout.bottomMargin; } }", _root, "eldur_margins");
     }
     return _gMarginHelper;
@@ -19112,6 +19832,7 @@ function _gLayoutRoots() {
         }
         var margins = _gPlace(raw, Math.max(avail, 0), opts, null);
         _meta(raw).gMargins = margins;
+        _gFollowWidth(raw.parent);
         if (_isLines(raw.parent)) {
             _gLineMargins(raw, e);
         }
@@ -19121,6 +19842,21 @@ function _gLayoutRoots() {
     }
     _gMarginPass();
     return outOfFlow;
+}
+
+// A layout can still be polishing the width just used: the page's other blocks
+// wait for theirs too, and a box set on the passing width keeps its lines.
+var _gWidthMoved = false;
+
+function _gFollowWidth(parent) {
+    var m = _meta(parent);
+    if (!m.gFollowsWidth) {
+        m.gFollowsWidth = true;
+        parent.widthChanged.connect(function() {
+            _gWidthMoved = true;
+            _gTouch();
+        });
+    }
 }
 
 // A filled grid's item is as wide as its track, which only the grid knows.
@@ -19483,8 +20219,19 @@ var _G_IN_PLACE = /^(display|visibility|opacity|color|zIndex|left|top|right|bott
 // What a script wrote that the item as converted cannot answer to.
 function _gBoxInline(raw) {
     var styles = _meta(raw).styles;
+    // Asked of every element at each settle, and most have written nothing.
+    var held = null;
     return Object.keys(styles).filter(function(k) {
-        return !_G_IN_PLACE.test(k) && k.indexOf("-") === -1;
+        if (_G_IN_PLACE.test(k) || k.indexOf("-") !== -1) {
+            return false;
+        }
+        if (!_V_BLOCK_FONT.test(k)) {
+            return true;
+        }
+        if (held === null) {
+            held = _vBlockModels(raw).length > 0;
+        }
+        return !held;
     }).sort().map(function(k) { return k + ":" + styles[k]; }).join(";");
 }
 
@@ -19771,6 +20518,10 @@ function _gRepaintCanvas(html) {
 // From now on the element is the same as one a script made. The item stays, for
 // bindings that read it by id, but nothing is left of it on screen.
 function _gAdopt(raw) {
+    // An inline element is its text's to draw and has no item to swap.
+    if (raw.vparent !== undefined) {
+        return undefined;
+    }
     var m = _meta(raw);
     var tag = _nodeTag(raw);
     if (!_gWantsBox(tag) || _rawHasNoFlowParent(raw)) {

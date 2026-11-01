@@ -242,3 +242,64 @@ fn paint_text() {
 fn paint_control() {
     page("paint_control");
 }
+
+/// A created paragraph after a wrapped one and a flex row, in a real window
+/// (under qmltestrunner the host has its size first): its parent was 8px wide
+/// when the box was first placed, and the box kept those 16 lines.
+#[test]
+fn width_late() {
+    use std::io::{BufRead, BufReader};
+    let html = std::fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/created_paint/width_late.html"),
+    )
+    .expect("page");
+    let data: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/created_paint/chromium.json"),
+        )
+        .expect("chromium.json"),
+    )
+    .expect("json");
+    let want: Vec<String> = data["width_late"]["log"]
+        .as_array()
+        .expect("recorded log")
+        .iter()
+        .map(|l| l.as_str().expect("line").to_owned())
+        .collect();
+    assert!(!want.is_empty(), "width_late was recorded empty");
+    let out = convert_str(&html, &Options::default());
+    let dir = std::env::temp_dir().join(format!("eldur-width-late-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    for file in &out.files {
+        std::fs::write(dir.join(&file.path), &file.contents).expect("write output");
+    }
+    let mut child = Command::new("timeout")
+        .args([
+            "-k",
+            "1",
+            "120",
+            "qml6",
+            "-platform",
+            "offscreen",
+            "Main.qml",
+        ])
+        .current_dir(&dir)
+        .env("QT_FORCE_STDERR_LOGGING", "1")
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .expect("run qml6");
+    let mut got = Vec::new();
+    for line in BufReader::new(child.stderr.take().expect("stderr")).lines() {
+        let line = line.expect("line");
+        if let Some(at) = line.find("CS ") {
+            got.push(line[at..].to_owned());
+            if line.ends_with("CS done") {
+                break;
+            }
+        }
+    }
+    child.kill().expect("stop qml6");
+    child.wait().expect("reap qml6");
+    std::fs::remove_dir_all(&dir).expect("remove temp dir");
+    assert_eq!(got, want);
+}

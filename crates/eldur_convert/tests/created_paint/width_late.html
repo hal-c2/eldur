@@ -1,0 +1,15 @@
+<!doctype html><html><head><style>
+body{margin:8px;font-family:Helvetica,Arial,sans-serif}
+.row{display:flex;align-items:baseline;gap:8px}
+</style></head><body>
+<p id="wrapped">Tight line height wrapped over two lines because it is long enough to reach the far right edge of the wide page without doubt at all really</p>
+<div class="row" id="row"><span>small</span><span style="font-size:28px">big</span></div>
+<div id="scr"></div>
+<script>
+var d=document.createElement('p');d.id='made';d.textContent='Created paragraph';d.style.fontSize='19px';document.getElementById('scr').appendChild(d);
+function r(id){var b=document.getElementById(id).getBoundingClientRect();return id+'='+Math.round(b.top)+'+'+Math.round(b.width)+'x'+Math.round(b.height)}
+setTimeout(function(){
+console.log('CS '+['scr','made'].map(r).join(' '));
+console.log('CS done');
+},100);
+</script></body></html>

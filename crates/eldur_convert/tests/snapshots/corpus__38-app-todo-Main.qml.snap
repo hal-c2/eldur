@@ -370,14 +370,11 @@ ApplicationWindow {
                                         }
                                     }
 
-                                    Text {
+                                    EldurRun {
                                         text: " "
-                                        textFormat: Text.PlainText
                                         color: "#4a5568"
-                                        font.family: EldurFonts.family("Arial, sans-serif")
+                                        font.family: "Arial, sans-serif"
                                         font.pixelSize: 13
-                                        wrapMode: Text.WordWrap
-                                        renderType: Text.NativeRendering
                                     }
 
                                     // <button id="f-active">
@@ -423,14 +420,11 @@ ApplicationWindow {
                                         }
                                     }
 
-                                    Text {
+                                    EldurRun {
                                         text: " "
-                                        textFormat: Text.PlainText
                                         color: "#4a5568"
-                                        font.family: EldurFonts.family("Arial, sans-serif")
+                                        font.family: "Arial, sans-serif"
                                         font.pixelSize: 13
-                                        wrapMode: Text.WordWrap
-                                        renderType: Text.NativeRendering
                                     }
 
                                     // <button id="f-done">

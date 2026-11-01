@@ -452,6 +452,8 @@ container filled with inline-level children (`_gFillsLine`).
 - A flat `Text` with a script-made tall span gets padding, not per-line room: wrapped lines are approximate.
 - A static fixed-size item moved into a grid takes no track position.
 - On a page without a cascade `getBoundingClientRect` of a `Text` counts its baseline translate, about 1 px low.
+- An inline element's rect is its font's ascent + descent around its run's baseline, as Chromium's (`tests/inline_runs_e2e.rs`). `getClientRects` follows Chromium's culled inline boxes: a span with no box of its own gives one rect per child unless a child differs in font. Generated content of the element's own font, as `<q>`'s quotes, is a child here: one rect for each quote and one for the text. Padding, border and generated text of another font give it a box.
+- A `querySelectorAll` matching any element inside a single `Text` goes to the runtime, so those are found; a partial static list would have dropped them.
 - A created row in a collapsed table reports a top half a border off; columns of a static collapsed table do not share created borders.
 - A closed page's template keeps the converter's picture, except its margins:
   after a script changes the tree, the runtime works out each changed column's

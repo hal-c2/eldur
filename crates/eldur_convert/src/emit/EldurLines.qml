@@ -28,6 +28,7 @@ Item {
     readonly property real fontHeight: fontExtents.ascent + fontExtents.descent
 
     property var _runs: new Map()
+    property var _levels: new Map()
     property var _watched: new Set()
     // The fractional CSS size, where the font's own is rounded to a whole one.
     property real cssSize: 0
@@ -95,6 +96,19 @@ Item {
         });
     }
 
+    // What a script's changes make of a run's boxes; see `_runLevels`.
+    function setRunLevels(item, levels) {
+        _levels.set(item, levels);
+        schedule();
+    }
+
+    // The block's own box on each line.
+    function lineStrut() {
+        return EldurFonts.inlineBox({ size: cssSize > 0 ? cssSize : lines.font.pixelSize,
+                                      family: lines.font.family, weight: lines.font.weight,
+                                      italic: lines.font.italic, line: lineHeight });
+    }
+
     // Where a run's lines are, in its own coordinates.
     function runLines(item) {
         const run = _runs.get(item);
@@ -116,12 +130,39 @@ Item {
         item.implicitWidthChanged.connect(lines, schedule);
         item.implicitHeightChanged.connect(lines, schedule);
         if (_isText(item)) {
+            // The converter leaves a run's stack for here, resolved once.
+            item.font.family = EldurFonts.family(item.font.family);
             item.textChanged.connect(lines, schedule);
             item.lineLaidOut.connect(lines, function(line) { _placeLine(item, line); });
+            // A `Text` lays out when its implicit size is first asked for: not in a
+            // binding that asks, which would take in what the handler reads.
+            void item.implicitHeight;
         } else {
             item.widthChanged.connect(lines, schedule);
             item.heightChanged.connect(lines, schedule);
         }
+    }
+
+    // The boxes of `item`'s run on a line: what the converter or the runtime said,
+    // or, for text a script made, its font on what it was told.
+    function _runLevels(item) {
+        const told = _levels.get(item);
+        if (told) {
+            return told;
+        }
+        if (item.eldurRun) {
+            const parsed = JSON.parse(item.eldurRun);
+            _levels.set(item, parsed);
+            return parsed;
+        }
+        const leading = _ownLeading.get(item);
+        const own = leading !== undefined ? leading : item.eldurOwnLine;
+        if (own === undefined && item.font.family === lines.font.family
+            && item.font.pixelSize === lines.font.pixelSize) {
+            return [];
+        }
+        return [{ size: item.font.pixelSize, family: item.font.family, weight: item.font.weight,
+                  italic: item.font.italic, line: own === undefined ? lineHeight : own }];
     }
 
     function _placeLine(item, line) {
@@ -131,6 +172,10 @@ Item {
         }
         if (line.number === 0) {
             line.width = Math.max(1, run.room);
+        }
+        // A last word that cannot part from what comes next goes down with it.
+        if (run.squeeze && run.squeeze.number === line.number) {
+            line.width = Math.max(1, run.squeeze.width);
         }
         if (run.place) {
             const at = run.place[line.number];
@@ -262,6 +307,35 @@ Item {
         return null;
     }
 
+    // What must stay on the line after `item` with no break: the next run's first
+    // word, and the words after it while nothing in those runs allows a break.
+    function _glued(children, index) {
+        let width = 0;
+        for (let i = index + 1; i < children.length; ++i) {
+            const next = children[i];
+            if (!next.visible) {
+                continue;
+            }
+            if (!_isText(next)) {
+                return width;
+            }
+            const plain = _plain(next);
+            if (plain === "") {
+                continue;
+            }
+            const word = /^\S*/.exec(plain)[0];
+            if (word === "") {
+                return width;
+            }
+            runMetrics.font = next.font;
+            width += runMetrics.advanceWidth(word);
+            if (word.length < plain.length) {
+                return width;
+            }
+        }
+        return width;
+    }
+
     function _newLine() {
         return { texts: [], boxes: [], blanks: [], end: 0, empty: true };
     }
@@ -279,6 +353,8 @@ Item {
         const built = [];
         let line = _newLine();
         let pending = false;
+        // The last thing on the line was a word with no space after it.
+        let inWord = false;
         let natural = 0;
         let naturalPending = false;
         const runs = new Map();
@@ -308,6 +384,7 @@ Item {
                 line.end = start + across + item.width;
                 line.empty = false;
                 pending = false;
+                inWord = false;
                 natural += (item.implicitWidth || item.width) + across + (naturalPending ? space : 0);
                 naturalPending = false;
                 continue;
@@ -318,7 +395,7 @@ Item {
             natural += marginLeft + marginRight;
             if (plain === "") {
                 item.width = 0;
-                line.blanks.push({ item: item, x: line.end + marginLeft });
+                line.blanks.push({ item: item, x: line.end + marginLeft, box: true });
                 line.end += marginLeft + marginRight;
                 continue;
             }
@@ -327,7 +404,7 @@ Item {
                 || item.textFormat === Text.AutoText && item.text.indexOf("<") === -1;
             if (!preserveSpace && /^\s*$/.test(plain)) {
                 item.width = 0;
-                line.blanks.push({ item: item, x: line.end + (line.empty ? 0 : space) + marginLeft });
+                line.blanks.push({ item: item, x: line.end + (line.empty ? 0 : space) + marginLeft, box: true });
                 if (marginLeft + marginRight > 0) {
                     line.end += (line.empty ? 0 : space) + marginLeft + marginRight;
                 }
@@ -335,8 +412,10 @@ Item {
                 naturalPending = natural > 0;
                 continue;
             }
-            const lead = !preserveSpace && /^\s/.test(plain);
-            const trail = !preserveSpace && /\s$/.test(plain);
+            // A `<br>` at either end is no space to take off, and one at the end
+            // Qt lays out no line after, so the next run has to be told.
+            const lead = !preserveSpace && /^\s/.test(plain) && plain[0] !== "\n";
+            const trail = !preserveSpace && /\s$/.test(plain) && !/\n$/.test(plain);
             const leadWidth = lead && keeps ? space : 0;
             const trailWidth = trail && keeps ? space : 0;
             const before = (pending || lead) && !line.empty ? space : 0;
@@ -346,21 +425,34 @@ Item {
             if (justified && item.font.wordSpacing !== 0) {
                 item.font.wordSpacing = 0;
             }
-            const run = { room: room, measured: [], place: null };
+            const run = { room: room, measured: [], place: null, squeeze: null };
             runs.set(item, run);
             _runs.set(item, run);
             item.width = room;
             run.room = room - start + leadWidth;
             _measure(item, run);
             let first = run.measured[0];
-            if (wraps && !line.empty && first
-                && start + first.width - leadWidth - (run.measured.length > 1 ? trailWidth : 0) > room + 0.01) {
+            const glued = wraps && !trail ? _glued(children, children.indexOf(item)) : 0;
+            const single = run.measured.length === 1;
+            // No break inside a word that runs over from the last run.
+            if (wraps && !line.empty && first && !(inWord && !lead && !pending)
+                && start + first.width - leadWidth - (single ? trailWidth : 0)
+                   + (single && !/\s/.test(plain.trim()) ? glued : 0) > room + 0.01) {
                 built.push(line);
                 line = _newLine();
                 start = marginLeft;
                 run.room = room + leadWidth - marginLeft;
                 _measure(item, run);
                 first = run.measured[0];
+            }
+            if (glued > 0 && first) {
+                const last = run.measured.length - 1;
+                const left = last === 0 ? run.room : room;
+                if (run.measured[last].width + glued > left + 0.01 && /\s/.test(plain.trim())) {
+                    run.squeeze = { number: last, width: left - glued };
+                    _measure(item, run);
+                    first = run.measured[0];
+                }
             }
             // RichText has no `lineLaidOut`, so nothing can move its lines: after
             // something on this line it moves as a whole, as a box does.
@@ -371,6 +463,7 @@ Item {
                 line.boxes.push({ item: item, x: start, gap: before > 0, top: 0, bottom: 0, wholeAscent: true });
                 line.end = start + item.width + marginRight;
                 pending = trail;
+                inWord = !trail;
                 natural += item.implicitWidth + ((naturalPending || lead) && natural > 0 ? space : 0);
                 naturalPending = trail;
                 continue;
@@ -393,7 +486,13 @@ Item {
                     line = _newLine();
                 }
             }
+            const broken = /\n$/.test(plain);
+            if (broken) {
+                built.push(line);
+                line = _newLine();
+            }
             pending = trail;
+            inWord = !trail && !broken;
             natural += item.implicitWidth - leadWidth - trailWidth
                 + ((naturalPending || lead && keeps) && natural > 0 ? space : 0);
             naturalPending = trail;
@@ -404,11 +503,10 @@ Item {
         const extents = lines.fontExtents;
         const fontAscent = extents.ascent;
         const fontDescent = extents.descent;
-        // CSS gives the odd pixel of leading to the bottom, as Chromium rounds it.
-        const leading = lineHeight > 0 ? lineHeight - fontAscent - fontDescent : extents.gap;
-        const strutAbove = fontAscent + Math.floor(leading / 2);
-        // A fractional line-height stays fractional: lines add up as the block's do.
-        const strutBelow = fontDescent + leading - Math.floor(leading / 2);
+        // Lines add up as the block's do, so a fractional line height stays fractional.
+        const strutBox = lineStrut();
+        const strutAbove = strutBox.above;
+        const strutBelow = strutBox.below;
         const size = lines.font.pixelSize;
         let top = 0;
         let baseline = 0;
@@ -424,22 +522,30 @@ Item {
             let above = strutAbove;
             let below = strutBelow;
             const late = [];
-            // Text of the block's font is the strut already; only a larger span adds.
+            const groups = new Map();
+            // Every inline box with something on this line takes part, its own
+            // font and line height on its own baseline (layout.md §1.3).
+            const reach = function(placed) {
+                for (const b of placed.boxes) {
+                    if (b.group) {
+                        const g = groups.get(b.group.id) || { align: b.group.align, above: 0, below: 0 };
+                        g.above = Math.max(g.above, b.above);
+                        g.below = Math.max(g.below, b.below);
+                        groups.set(b.group.id, g);
+                    } else {
+                        above = Math.max(above, b.above);
+                        below = Math.max(below, b.below);
+                    }
+                }
+            };
             for (const t of l.texts) {
-                // Told by the runtime, or what the converter saw in the page.
-                const told = _ownLeading.get(t.item);
-                const own = told !== undefined ? told : t.item.eldurOwnLine;
-                if (own !== undefined) {
-                    // Rounded as the strut's are, or a span of the block's own font
-                    // comes out a pixel off the line it is on.
-                    const ascent = round(t.ascent);
-                    const descent = round(t.height - t.ascent);
-                    const half = (own - ascent - descent) / 2;
-                    above = Math.max(above, ascent + Math.floor(half));
-                    below = Math.max(below, descent + Math.ceil(half));
-                } else if (lineHeight === 0 && t.height > strutAbove + strutBelow + 1) {
-                    above = Math.max(above, t.ascent);
-                    below = Math.max(below, t.height - t.ascent);
+                t.placed = EldurFonts.placeRun(_runLevels(t.item), strutBox);
+                reach(t.placed);
+            }
+            for (const blank of l.blanks) {
+                if (blank.box) {
+                    blank.placed = EldurFonts.placeRun(_runLevels(blank.item), strutBox);
+                    reach(blank.placed);
                 }
             }
             for (const b of l.boxes) {
@@ -482,7 +588,25 @@ Item {
                     }
                 }
             }
+            groups.forEach(function(g) {
+                const missing = g.above + g.below - above - below;
+                if (missing > 0) {
+                    if (g.align === "top") {
+                        below += missing;
+                    } else {
+                        above += missing;
+                    }
+                }
+            });
             baseline = top + above;
+            // The baseline a run hangs from: the line's, or its aligned box's.
+            const hung = function(placed) {
+                if (!placed.group) {
+                    return baseline;
+                }
+                const g = groups.get(placed.group.id);
+                return placed.group.align === "top" ? top + g.above : top + above + below - g.below;
+            };
             if (index === 0) {
                 firstBaseline = baseline;
             }
@@ -512,7 +636,12 @@ Item {
             }
             for (const blank of l.blanks) {
                 blank.item.x = blank.x + shift;
-                blank.item.y = baseline - blank.item.baselineOffset;
+                blank.item.y = (blank.placed ? hung(blank.placed) + blank.placed.shift : baseline)
+                    - blank.item.baselineOffset;
+                // An empty element still has a box where it is, for a script to ask.
+                _runs.set(blank.item, { place: [{ x: 0, y: 0, width: 0, baseline: baseline,
+                                                  hung: blank.placed ? hung(blank.placed) : baseline,
+                                                  lead: 0, trail: 0 }] });
             }
             for (const t of l.texts) {
                 if (!t.run.place) {
@@ -522,8 +651,14 @@ Item {
                 const followed = t.trail > 0 && l.boxes.concat(l.texts).some(function(o) { return o.x > t.x; });
                 // Qt draws a line on its own whole pixel, adding the ascent rounded to
                 // the row its Text starts on, so the row must come from the same sum.
-                t.run.place[t.number] = { x: t.x + shift - t.lead, y: baseline - round(t.ascent), height: t.height,
+                const runBase = hung(t.placed) + t.placed.shift;
+                t.run.place[t.number] = { x: t.x + shift - t.lead, y: runBase - round(t.ascent), height: t.height,
+                                          baseline: baseline, hung: hung(t.placed),
+                                          lead: t.lead, trail: t.trail || 0,
                                           ascent: round(t.ascent),
+                                          // The box of its inline element, as far under this row.
+                                          boxTop: round(t.ascent) - (t.placed.box || strutBox).ascent,
+                                          boxHeight: (t.placed.box || strutBox).ascent + (t.placed.box || strutBox).descent,
                                           width: (t.spread || t.width) + t.lead + (followed ? t.trail : 0) };
                 if (t.spread) {
                     // Qt justifies every line of a Text but its last, whose
@@ -561,8 +696,12 @@ Item {
                 p.x -= left;
                 p.y -= high;
             });
-            item.x = left;
-            item.y = high;
+            // `position: relative` moves what the line placed, and nothing else on it.
+            const moved = _runLevels(item).reduce(function(sum, level) {
+                return { x: sum.x + (level.relX || 0), y: sum.y + (level.relY || 0) };
+            }, { x: 0, y: 0 });
+            item.x = left + moved.x;
+            item.y = high + moved.y;
             item.width = Math.max(0, right - left);
             item.forceLayout();
             // An inline element's own box is painted on these.
