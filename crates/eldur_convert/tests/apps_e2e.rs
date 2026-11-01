@@ -40,14 +40,9 @@ const HANGING: &str = "a span wrapped across lines measures the space hanging at
 const NEVER_SCRIPT: &str =
     "a script in the body makes no item, so its source is not in the body's textContent";
 
-const TEMPLATE_MARGIN: &str = "a template's margins are worked out where the converter tried it, \
-     as the last child of the body, so a created box's bottom margin collapsed away";
-
 /// `(page, what differs, why)`. `what` starts a difference's name, as printed by a
 /// failing test, `<step> <selector>[<row>] <field>:`; `*` stands for any text.
 const KNOWN: &[(&str, &str, &str)] = &[
-    ("created_empty_body", "load log:", TEMPLATE_MARGIN),
-    ("created_empty_body", "load #two[*] y:", TEMPLATE_MARGIN),
     ("theme", "* #compact[*] x:", COMPACT),
     ("cards", "* #cart[*] height:", FONT),
     ("cards", "* .buy[*] y:", FONTFOLLOW),

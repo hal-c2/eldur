@@ -337,6 +337,7 @@ function init(rootItem, baseUrl, documentUrl) {
         // match its nodes change, so they must be read before any write.
         _walkItems(_root, function() { return false; });
         _gLive = [];
+        _gLiveTemplates = [];
         _gStaticBase = null;
         _gSnapshotStatics();
     }
@@ -6965,6 +6966,9 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
                 _leaveFlow(next);
             }
         }
+        if (_gActive() && next && m.createdTag) {
+            _gLiveTemplates.push(next);
+        }
         m.templateComponent = component;
     } else {
         var tag = String(m.createdTag || "div").toLowerCase();
@@ -11678,6 +11682,9 @@ var window = {
 var _gDirty = false;
 var _gGen = 0;
 var _gLive = [];
+// An open page's templates paint themselves, but the margins between them and
+// what a script adds beside them are still this page's to work out.
+var _gLiveTemplates = [];
 var _gMetricsCache = {};
 var _gRunning = false;
 var _gStaticBase = null;
@@ -16178,6 +16185,8 @@ function _gMarginPass() {
     };
     if (_gActive()) {
         _gLive.forEach(visit);
+        _gLiveTemplates = _gLiveTemplates.filter(function(raw) { return Boolean(raw); });
+        _gLiveTemplates.forEach(visit);
     } else {
         _walkItems(_root, function(item) {
             if (_meta(item).createdTag) {
