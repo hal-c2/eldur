@@ -38,6 +38,7 @@ pub(crate) enum PseudoElement {
     After,
     Placeholder,
     Marker,
+    FirstLetter,
 }
 
 /// Combinator between adjacent compound selectors.
@@ -1216,7 +1217,14 @@ fn convert_compound_selector(
                             found_pe = Some(PseudoElement::After);
                             continue;
                         }
-                        "first-line" | "first-letter" => {
+                        "first-letter" => {
+                            if !allow_pseudo_element {
+                                return Err(ConvertError::Invalid);
+                            }
+                            found_pe = Some(PseudoElement::FirstLetter);
+                            continue;
+                        }
+                        "first-line" => {
                             if !allow_pseudo_element {
                                 return Err(ConvertError::Invalid);
                             }
@@ -1359,12 +1367,12 @@ fn convert_pseudo_element(pe: &ast::PseudoElementSelector) -> Result<PseudoEleme
         "after" => Ok(PseudoElement::After),
         "placeholder" => Ok(PseudoElement::Placeholder),
         "marker" => Ok(PseudoElement::Marker),
+        "first-letter" => Ok(PseudoElement::FirstLetter),
         _ if name_lower.starts_with('-') => Err(ConvertError::UnsupportedPseudoElement(format!(
             "::{name_lower}"
         ))),
         "selection"
         | "first-line"
-        | "first-letter"
         | "backdrop"
         | "file-selector-button"
         | "target-text"

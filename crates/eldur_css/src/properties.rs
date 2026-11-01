@@ -1220,6 +1220,7 @@ pub(crate) fn compute(
         }
         Longhand::TextDecorationStyle => {
             style.text_decoration_style = parse_text_decoration_style(cvs)?;
+            style.text_decoration_wavy = text::is_wavy(cvs);
         }
         Longhand::TextDecorationColor => {
             style.text_decoration_color = parse_text_decoration_color(cvs, style.color)?;
@@ -1644,7 +1645,10 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
         Longhand::TextIndent => dst.text_indent.clone_from(&src.text_indent),
         Longhand::TextTransform => dst.text_transform = src.text_transform,
         Longhand::TextDecorationLine => dst.text_decoration_line = src.text_decoration_line,
-        Longhand::TextDecorationStyle => dst.text_decoration_style = src.text_decoration_style,
+        Longhand::TextDecorationStyle => {
+            dst.text_decoration_style = src.text_decoration_style;
+            dst.text_decoration_wavy = src.text_decoration_wavy;
+        }
         Longhand::TextDecorationColor => dst.text_decoration_color = src.text_decoration_color,
         Longhand::TextDecorationThickness | Longhand::TextUnderlineOffset => {}
         Longhand::TextOverflow => dst.text_overflow = src.text_overflow,

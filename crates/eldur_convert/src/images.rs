@@ -106,6 +106,9 @@ pub(crate) fn collect_backgrounds(
 ) {
     let mut urls = std::collections::BTreeSet::new();
     let mut add = |style: &eldur_css::ComputedStyle| {
+        if let Some(url) = &style.list_style_image {
+            urls.insert(url.clone());
+        }
         for layer in &style.background_layers {
             if let Some(eldur_css::Image::Url(url)) = &layer.image {
                 urls.insert(url.clone());

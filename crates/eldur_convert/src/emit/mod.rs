@@ -17,6 +17,7 @@ mod image;
 mod inline;
 pub(crate) use background::ELDUR_BACKGROUND_LAYER_QML;
 pub(crate) use decoration::{ELDUR_BORDER_QML, ELDUR_ROUND_CLIP_QML};
+pub(crate) use text::ELDUR_TEXT_LINES_QML;
 pub(crate) const ELDUR_FILTER_QML: &str = include_str!("EldurFilter.qml");
 pub(crate) const ELDUR_FILTER_QSB: &[u8] = include_bytes!("eldur_filter.frag.qsb");
 pub(crate) const ELDUR_TEXT_SHADOW_QML: &str = include_str!("EldurTextShadow.qml");

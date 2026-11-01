@@ -2109,3 +2109,78 @@ fn an_outline_takes_no_room_and_sits_outside_the_box() {
     assert!(qml.contains("anchors.margins: -5"), "{qml}");
     assert!(qml.contains("border.width: 3"), "{qml}");
 }
+
+#[test]
+fn a_third_dimension_flattens_with_a_warning_and_no_perspective() {
+    let (qml, diags) = convert(&page(
+        ".b{width:80px;height:80px;background:#000;transform:rotateY(60deg) translateZ(10px)}",
+        "<div class=b></div>",
+    ));
+    // cos 60° on x; the z move through the turn lands sin 60° × 10 on x.
+    assert!(qml.contains("Qt.matrix4x4(0.5, 0, 0, 8.66"), "{qml}");
+    assert!(diags.iter().any(|d| d.contains("flattened")), "{diags:?}");
+}
+
+#[test]
+fn perspective_stays_left_out() {
+    let (qml, diags) = convert(&page(
+        ".b{width:80px;height:80px;background:#000;transform:perspective(100px) rotateY(60deg)}",
+        "<div class=b></div>",
+    ));
+    // The turn is still drawn flat, as it is with the perspective gone.
+    assert!(qml.contains("Qt.matrix4x4(0.5, 0, 0, 0"), "{qml}");
+    assert!(
+        diags
+            .iter()
+            .any(|d| d.contains("`perspective(100px)` on") && d.contains("left out")),
+        "{diags:?}"
+    );
+}
+
+#[test]
+fn ellipsis_elides_a_line_that_cannot_wrap() {
+    let (qml, _) = convert(&page(
+        ".e{width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
+        "<p class=e>A long line of text</p>",
+    ));
+    assert!(qml.contains("elide: Text.ElideRight"), "{qml}");
+    let (qml, _) = convert(&page(
+        ".e{width:80px;white-space:nowrap;text-overflow:ellipsis}",
+        "<p class=e>A long line of text</p>",
+    ));
+    assert!(
+        !qml.contains("elide"),
+        "visible overflow has no ellipsis: {qml}"
+    );
+}
+
+#[test]
+fn a_line_a_font_cannot_draw_is_drawn_beside_the_text() {
+    let (qml, _) = convert(&page(
+        ".u{text-decoration:underline wavy #16a34a}",
+        "<p class=u>x</p>",
+    ));
+    assert!(qml.contains("EldurTextLines {"), "{qml}");
+    assert!(qml.contains(r#"lineStyle: "wavy""#), "{qml}");
+    assert!(!qml.contains("font.underline"), "{qml}");
+    let (qml, _) = convert(&page(".u{text-decoration:underline}", "<p class=u>x</p>"));
+    assert!(qml.contains("font.underline: true"), "{qml}");
+    assert!(!qml.contains("EldurTextLines"), "{qml}");
+}
+
+#[test]
+fn a_first_letter_is_a_run_of_its_own() {
+    let (qml, diags) = convert(&page(
+        "p::first-letter{color:#dc2626}",
+        "<p>First words</p>",
+    ));
+    assert!(
+        qml.contains(r##"<font color=\"#dc2626\">F</font>"##),
+        "{qml}"
+    );
+    assert!(qml.contains("irst words"), "{qml}");
+    assert!(
+        !diags.iter().any(|d| d.contains("first-letter")),
+        "{diags:?}"
+    );
+}

@@ -336,6 +336,12 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
             contents: crate::emit::ELDUR_ROUND_CLIP_QML.as_bytes().to_vec(),
         });
     }
+    if main.contains("EldurTextLines {") {
+        files.push(OutputFile {
+            path: PathBuf::from("EldurTextLines.qml"),
+            contents: crate::emit::ELDUR_TEXT_LINES_QML.as_bytes().to_vec(),
+        });
+    }
     if main.contains("EldurBorder {")
         || files
             .iter()

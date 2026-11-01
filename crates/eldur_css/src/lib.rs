@@ -257,6 +257,8 @@ pub struct ElementStyle {
     /// `::marker` rules of a `list-item`, when there are any. The marker's
     /// content is derived by the converter from `list_style_*`.
     pub marker: Option<Box<ComputedStyle>>,
+    /// `::first-letter`, when a rule styles it.
+    pub first_letter: Option<Box<ComputedStyle>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

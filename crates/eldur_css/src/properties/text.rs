@@ -508,6 +508,12 @@ pub(crate) fn eat_text_decoration_style(cur: &mut Cursor<'_>) -> Option<BorderSt
     Some(st)
 }
 
+pub(crate) fn is_wavy(cvs: &[ComponentValue]) -> bool {
+    Cursor::new(cvs)
+        .eat_ident()
+        .is_some_and(|id| id.eq_ignore_ascii_case("wavy"))
+}
+
 pub(crate) fn parse_text_decoration_style(cvs: &[ComponentValue]) -> Result<BorderStyle, String> {
     let mut cur = Cursor::new(cvs);
     let st = eat_text_decoration_style(&mut cur)

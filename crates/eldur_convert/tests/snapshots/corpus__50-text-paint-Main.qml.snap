@@ -57,7 +57,6 @@ ApplicationWindow {
                         color: "#111111"
                         font.family: "sans-serif"
                         font.pixelSize: 16
-                        font.underline: true
                         lineHeight: 24
                         lineHeightMode: Text.FixedHeight
                         transform: Translate {
@@ -71,6 +70,14 @@ ApplicationWindow {
                         Layout.maximumWidth: 280
                         Layout.fillHeight: true
                         renderType: Text.NativeRendering
+
+                        EldurTextLines {
+                            underline: true
+                            overline: false
+                            lineThrough: false
+                            lineStyle: "solid"
+                            lineColor: "#dc2626"
+                        }
                     }
 
                     // <p id="d-dashed">
@@ -81,7 +88,6 @@ ApplicationWindow {
                         color: "#111111"
                         font.family: "sans-serif"
                         font.pixelSize: 16
-                        font.underline: true
                         lineHeight: 24
                         lineHeightMode: Text.FixedHeight
                         transform: Translate {
@@ -95,6 +101,14 @@ ApplicationWindow {
                         Layout.maximumWidth: 280
                         Layout.fillHeight: true
                         renderType: Text.NativeRendering
+
+                        EldurTextLines {
+                            underline: true
+                            overline: false
+                            lineThrough: false
+                            lineStyle: "dashed"
+                            lineColor: "#2563eb"
+                        }
                     }
 
                     // <p id="d-wavy">
@@ -105,7 +119,6 @@ ApplicationWindow {
                         color: "#111111"
                         font.family: "sans-serif"
                         font.pixelSize: 16
-                        font.underline: true
                         lineHeight: 24
                         lineHeightMode: Text.FixedHeight
                         transform: Translate {
@@ -119,6 +132,14 @@ ApplicationWindow {
                         Layout.maximumWidth: 280
                         Layout.fillHeight: true
                         renderType: Text.NativeRendering
+
+                        EldurTextLines {
+                            underline: true
+                            overline: false
+                            lineThrough: false
+                            lineStyle: "wavy"
+                            lineColor: "#16a34a"
+                        }
                     }
 
                     // <p id="d-double">
@@ -129,7 +150,6 @@ ApplicationWindow {
                         color: "#111111"
                         font.family: "sans-serif"
                         font.pixelSize: 16
-                        font.underline: true
                         lineHeight: 24
                         lineHeightMode: Text.FixedHeight
                         transform: Translate {
@@ -143,6 +163,14 @@ ApplicationWindow {
                         Layout.maximumWidth: 280
                         Layout.fillHeight: true
                         renderType: Text.NativeRendering
+
+                        EldurTextLines {
+                            underline: true
+                            overline: false
+                            lineThrough: false
+                            lineStyle: "double"
+                            lineColor: "#111111"
+                        }
                     }
 
                     // <p id="d-over">
@@ -194,6 +222,7 @@ ApplicationWindow {
                                 y: 3
                             }
                             wrapMode: Text.NoWrap
+                            elide: Text.ElideRight
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.top: parent.top
@@ -204,17 +233,15 @@ ApplicationWindow {
                     // <p id="first">
                     Text {
                         id: first
-                        text: "First letter of a line"
-                        textFormat: Text.PlainText
+                        text: "<div style=\"line-height:24px\"><font color=\"#dc2626\"><span style=\"font-size:32px\">F</span></font>irst letter of a line</div>"
+                        textFormat: Text.RichText
                         color: "#111111"
                         font.family: "sans-serif"
                         font.pixelSize: 16
-                        lineHeight: 24
-                        lineHeightMode: Text.FixedHeight
-                        transform: Translate {
-                            y: 3
-                        }
                         wrapMode: Text.WordWrap
+                        transform: Translate {
+                            y: 6
+                        }
                         Layout.row: 1
                         Layout.column: 2
                         Layout.preferredWidth: 280
@@ -678,14 +705,11 @@ ApplicationWindow {
                                     renderType: Text.NativeRendering
                                 }
 
-                                Rectangle {
-                                    x: -16
-                                    y: 10
-                                    width: 5
-                                    height: 5
-                                    color: "#111111"
-                                    radius: 2.5
-                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                                Image {
+                                    source: "assets/dot.png"
+                                    anchors.right: parent.left
+                                    anchors.rightMargin: 7
+                                    y: 0 + (24 - height) / 2
                                 }
                             }
 
@@ -714,14 +738,11 @@ ApplicationWindow {
                                     renderType: Text.NativeRendering
                                 }
 
-                                Rectangle {
-                                    x: -16
-                                    y: 10
-                                    width: 5
-                                    height: 5
-                                    color: "#111111"
-                                    radius: 2.5
-                                    antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                                Image {
+                                    source: "assets/dot.png"
+                                    anchors.right: parent.left
+                                    anchors.rightMargin: 7
+                                    y: 0 + (24 - height) / 2
                                 }
                             }
                         }
@@ -936,6 +957,19 @@ ApplicationWindow {
                                 implicitWidth: 0
                                 implicitHeight: 0
                                 z: 1
+                                transform: [
+                                    Translate {
+                                        x: -(x3d.width * 0.5)
+                                        y: -(x3d.height * 0.5)
+                                    },
+                                    Matrix4x4 {
+                                        matrix: Qt.matrix4x4(0.866, 0, 0, 5, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+                                    },
+                                    Translate {
+                                        x: x3d.width * 0.5
+                                        y: x3d.height * 0.5
+                                    }
+                                ]
                                 Layout.preferredWidth: 80
                                 Layout.preferredHeight: 80
                             }
@@ -994,6 +1028,157 @@ ApplicationWindow {
                                 }
                             }
                         }
+                    }
+
+                    // <p id="d-dot">
+                    Text {
+                        id: dDot
+                        text: "Dotted line"
+                        textFormat: Text.PlainText
+                        color: "#111111"
+                        font.family: "sans-serif"
+                        font.pixelSize: 16
+                        lineHeight: 24
+                        lineHeightMode: Text.FixedHeight
+                        transform: Translate {
+                            y: 3
+                        }
+                        wrapMode: Text.WordWrap
+                        Layout.row: 5
+                        Layout.column: 2
+                        Layout.preferredWidth: 280
+                        Layout.minimumWidth: 280
+                        Layout.maximumWidth: 280
+                        Layout.fillHeight: true
+                        renderType: Text.NativeRendering
+
+                        EldurTextLines {
+                            underline: true
+                            overline: false
+                            lineThrough: false
+                            lineStyle: "dotted"
+                            lineColor: "#dc2626"
+                        }
+                    }
+
+                    // <p id="d-thru">
+                    Text {
+                        id: dThru
+                        text: "Struck out"
+                        textFormat: Text.PlainText
+                        color: "#111111"
+                        font.family: "sans-serif"
+                        font.pixelSize: 16
+                        lineHeight: 24
+                        lineHeightMode: Text.FixedHeight
+                        transform: Translate {
+                            y: 3
+                        }
+                        wrapMode: Text.WordWrap
+                        Layout.row: 5
+                        Layout.column: 3
+                        Layout.preferredWidth: 280
+                        Layout.minimumWidth: 280
+                        Layout.maximumWidth: 280
+                        Layout.fillHeight: true
+                        renderType: Text.NativeRendering
+
+                        EldurTextLines {
+                            underline: false
+                            overline: false
+                            lineThrough: true
+                            lineStyle: "solid"
+                            lineColor: "#dc2626"
+                        }
+                    }
+
+                    // <p id="d-two">
+                    Text {
+                        id: dTwo
+                        text: "Two rows of underlined words"
+                        textFormat: Text.PlainText
+                        color: "#111111"
+                        font.family: "sans-serif"
+                        font.pixelSize: 16
+                        lineHeight: 24
+                        lineHeightMode: Text.FixedHeight
+                        transform: Translate {
+                            y: 3
+                        }
+                        wrapMode: Text.WordWrap
+                        Layout.row: 6
+                        Layout.column: 0
+                        Layout.rightMargin: 190
+                        Layout.preferredWidth: 90
+                        Layout.fillHeight: true
+                        renderType: Text.NativeRendering
+
+                        EldurTextLines {
+                            underline: true
+                            overline: false
+                            lineThrough: false
+                            lineStyle: "solid"
+                            lineColor: "#16a34a"
+                        }
+                    }
+
+                    // <p id="x-para">
+                    Text {
+                        id: xPara
+                        text: "Own scale"
+                        textFormat: Text.PlainText
+                        color: "#111111"
+                        font.family: "sans-serif"
+                        font.pixelSize: 16
+                        lineHeight: 24
+                        lineHeightMode: Text.FixedHeight
+                        transform: [
+                            Translate {
+                                y: 3
+                            },
+                            Scale {
+                                xScale: 1.5
+                                yScale: 1.5
+                            }
+                        ]
+                        wrapMode: Text.WordWrap
+                        z: 1
+                        Layout.row: 6
+                        Layout.column: 1
+                        Layout.preferredWidth: 280
+                        Layout.minimumWidth: 280
+                        Layout.maximumWidth: 280
+                        Layout.fillHeight: true
+                    }
+
+                    // <p id="x-para2">
+                    Text {
+                        id: xPara2
+                        text: "Own turn"
+                        textFormat: Text.PlainText
+                        color: "#111111"
+                        font.family: "sans-serif"
+                        font.pixelSize: 16
+                        lineHeight: 24
+                        lineHeightMode: Text.FixedHeight
+                        transform: [
+                            Translate {
+                                y: 3
+                            },
+                            Rotation {
+                                angle: 10
+                                origin.x: xPara2.width * 0.5
+                                origin.y: xPara2.height * 0.5
+                            }
+                        ]
+                        wrapMode: Text.WordWrap
+                        z: 1
+                        Layout.row: 6
+                        Layout.column: 2
+                        Layout.preferredWidth: 280
+                        Layout.minimumWidth: 280
+                        Layout.maximumWidth: 280
+                        Layout.fillHeight: true
                     }
 
                     Item {

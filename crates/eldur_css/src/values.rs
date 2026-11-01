@@ -940,6 +940,8 @@ pub struct ComputedStyle {
     pub text_decoration_line: TextDecorationLine,
     pub text_decoration_color: Option<Rgba>,
     pub text_decoration_style: BorderStyle,
+    /// `wavy` is no border style; `text_decoration_style` says solid with it.
+    pub text_decoration_wavy: bool,
     pub text_overflow: TextOverflow,
     pub vertical_align: VerticalAlign,
 
@@ -1069,6 +1071,7 @@ impl Default for ComputedStyle {
             text_decoration_line: TextDecorationLine::default(),
             text_decoration_color: None,
             text_decoration_style: BorderStyle::Solid,
+            text_decoration_wavy: false,
             text_overflow: TextOverflow::Clip,
             vertical_align: VerticalAlign::Baseline,
             transitions: Vec::new(),

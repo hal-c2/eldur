@@ -9,6 +9,9 @@ body { margin: 20px; font: 16px/1.5 sans-serif; color: #111; background: #fff; }
 #d-wavy { text-decoration: underline wavy #16a34a; }
 #d-double { text-decoration: underline double; }
 #d-over { text-decoration: overline; }
+#d-dot { text-decoration: underline dotted #dc2626; }
+#d-thru { text-decoration: line-through #dc2626; }
+#d-two { width: 90px; text-decoration: underline #16a34a; }
 #ell { width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #l-square { list-style-type: square; padding-left: 24px; }
 #l-roman { list-style-type: upper-roman; padding-left: 40px; }
@@ -27,6 +30,8 @@ body { margin: 20px; font: 16px/1.5 sans-serif; color: #111; background: #fff; }
 #x-skew { transform: skewX(20deg); }
 #x-3d { transform: rotateY(30deg) translateZ(10px); }
 #x-text { transform: scale(1.5); transform-origin: 0 0; width: 120px; height: 40px; background: none; }
+#x-para { transform: scale(1.5); transform-origin: 0 0; }
+#x-para2 { transform: rotate(10deg); }
 </style></head><body><div class="g">
 <p id="d-color">Coloured underline</p><p id="d-dashed">Dashed underline</p><p id="d-wavy">Wavy underline</p><p id="d-double">Double underline</p>
 <p id="d-over">Overline</p><p id="ell">A long line of text that is cut with an ellipsis</p><p id="first">First letter of a line</p><p id="line">First line in blue and bold, and the next line of this paragraph is not at all.</p>
@@ -34,4 +39,6 @@ body { margin: 20px; font: 16px/1.5 sans-serif; color: #111; background: #fff; }
 <ul id="l-marker"><li>One</li><li>Two</li></ul><ul id="l-image"><li>One</li><li>Two</li></ul><div></div><div></div>
 <div class="st"><div class="box" id="x-scale"></div></div><div class="st"><div class="box" id="x-origin"></div></div><div class="st"><div class="box" id="x-em"></div></div><div class="st"><div class="box" id="x-skew"></div></div>
 <div class="st"><div class="box" id="x-3d"></div></div><div class="st"><div class="box" id="x-text">Scaled</div></div>
+<p id="d-dot">Dotted line</p><p id="d-thru">Struck out</p><p id="d-two">Two rows of underlined words</p>
+<p id="x-para">Own scale</p><p id="x-para2">Own turn</p>
 </div></body></html>

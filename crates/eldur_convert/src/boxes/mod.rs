@@ -414,6 +414,17 @@ impl<'a> Builder<'a, '_> {
         if let Some(before) = element_style.and_then(|s| s.before.as_deref()) {
             self.pseudo(node, before, out);
         }
+        let mut first_letter = element_style
+            .filter(|s| is_block_level(s.style.display) || s.style.display == Display::ListItem)
+            .and_then(|s| s.first_letter.as_deref());
+        if first_letter.is_some_and(|l| l.float != Float::None) {
+            self.diags.warning(
+                "css",
+                node_line(self.doc, node),
+                "a floated `::first-letter` is not converted; the letter stays plain".to_owned(),
+            );
+            first_letter = None;
+        }
         for child in self.doc.children(node) {
             match &self.doc.node(child).data {
                 NodeData::Text(text) => {
@@ -422,12 +433,43 @@ impl<'a> Builder<'a, '_> {
                         .computed(node)
                         .map(|s| s.style.white_space)
                         .unwrap_or_default();
+                    if let Some((letter_style, (letter, rest))) = first_letter
+                        .filter(|_| !text.trim().is_empty())
+                        .and_then(|l| Some((l, split_first_letter(text)?)))
+                    {
+                        first_letter = None;
+                        out.push(Child::Inline(whitespace::Raw::Span {
+                            node: None,
+                            style: letter_style,
+                            children: vec![whitespace::Raw::Text {
+                                text: letter.into(),
+                                white_space,
+                            }],
+                        }));
+                        out.push(Child::Inline(whitespace::Raw::Text {
+                            text: rest.into(),
+                            white_space,
+                        }));
+                        continue;
+                    }
                     out.push(Child::Inline(whitespace::Raw::Text {
                         text: text.clone(),
                         white_space,
                     }));
                 }
-                NodeData::Element(_) => self.element(child, out),
+                NodeData::Element(_) => {
+                    // The letter of a nested element is that element's text.
+                    if first_letter.take().is_some() {
+                        self.diags.info(
+                            "css",
+                            node_line(self.doc, node),
+                            "`::first-letter` reaches only text directly in its element; \
+                             the letter stays plain"
+                                .to_owned(),
+                        );
+                    }
+                    self.element(child, out)
+                }
                 _ => {}
             }
         }
@@ -690,18 +732,7 @@ impl<'a> Builder<'a, '_> {
     /// The marker of a list item, unless `list-style` says there is none.
     fn list_marker(&mut self, node: NodeId, style: &ComputedStyle) -> Option<MarkerKind> {
         if let Some(url) = &style.list_style_image {
-            // No asset pipeline yet: only a self-contained image can load.
-            if url.starts_with("data:") {
-                return Some(MarkerKind::Image(url.clone()));
-            }
-            self.diags.warning(
-                "css",
-                node_line(self.doc, node),
-                format!(
-                    "`list-style-image: url({url})` on {} is not converted; using `list-style-type`",
-                    describe(self.doc, node)
-                ),
-            );
+            return Some(MarkerKind::Image(url.clone()));
         }
         let text = |s: String| Some(MarkerKind::Text(format!("{s}. ")));
         match style.list_style_type {
@@ -1053,4 +1084,14 @@ fn roman(n: i64) -> String {
         }
     }
     out
+}
+
+/// The first letter with the punctuation before it (and the space there, which
+/// the white-space pass collapses), and what follows.
+fn split_first_letter(text: &str) -> Option<(&str, &str)> {
+    let end = text
+        .char_indices()
+        .find(|(_, c)| c.is_alphanumeric())
+        .map(|(i, c)| i + c.len_utf8())?;
+    Some(text.split_at(end))
 }

@@ -69,7 +69,15 @@ impl Emitter<'_, '_> {
             t
         };
         let mut list = Vec::new();
+        // Neighbouring 3-D functions multiply before z goes: a move along z
+        // through a turn lands in the plane.
+        let mut depth: Option<([[f32; 4]; 4], Vec<&str>)> = None;
         for f in style.transform.iter().rev() {
+            if !matches!(f, TransformFn::Unsupported(_))
+                && let Some(run) = depth.take()
+            {
+                self.flatten(&mut list, run, &origin_x, &origin_y, what, line);
+            }
             match f {
                 TransformFn::Translate(x, y) => {
                     list.push(translate(
@@ -98,6 +106,12 @@ impl Emitter<'_, '_> {
                 TransformFn::Matrix(m) => {
                     self.matrix(&mut list, *m, &origin_x, &origin_y);
                 }
+                TransformFn::Unsupported(text) if flat::matrix(text).is_some() => {
+                    let m = flat::matrix(text).expect("just checked");
+                    let (after, mut texts) = depth.take().unwrap_or((flat::IDENTITY, Vec::new()));
+                    texts.insert(0, text);
+                    depth = Some((flat::multiply(&m, &after), texts));
+                }
                 TransformFn::Unsupported(text) => {
                     self.diags.warning(
                         "css",
@@ -106,6 +120,9 @@ impl Emitter<'_, '_> {
                     );
                 }
             }
+        }
+        if let Some(run) = depth.take() {
+            self.flatten(&mut list, run, &origin_x, &origin_y, what, line);
         }
         if list.is_empty() {
             return;
@@ -127,6 +144,34 @@ impl Emitter<'_, '_> {
             Value::List(values)
         };
         obj.set("transform", value);
+    }
+
+    /// A browser without `perspective` also draws a 3-D transform flat, so the
+    /// plane's part of the matrix is its picture.
+    fn flatten(
+        &mut self,
+        list: &mut Vec<Object>,
+        (m, texts): ([[f32; 4]; 4], Vec<&str>),
+        ox: &Value,
+        oy: &Value,
+        what: &str,
+        line: Option<u32>,
+    ) {
+        self.diags.warning(
+            "css",
+            line,
+            format!(
+                "`{}` on {what} is flattened to the plane: it has no depth here, \
+                 and what it overlaps stays in document order",
+                texts.join(" ")
+            ),
+        );
+        self.matrix(
+            list,
+            [m[0][0], m[1][0], m[0][1], m[1][1], m[0][3], m[1][3]],
+            ox,
+            oy,
+        );
     }
 
     /// The 2-D matrix `[a b c d e f]` about the origin: moved there, applied
@@ -170,4 +215,128 @@ fn translate(x: Value, y: Value) -> Object {
 /// Scale factors keep three decimals: a px rounding would lose them.
 fn round_factor(v: f32) -> f64 {
     (f64::from(v) * 1000.0).round() / 1000.0
+}
+
+/// The 3-D functions a parsed `transform` keeps as text, as matrices (rows).
+mod flat {
+    pub(super) const IDENTITY: [[f32; 4]; 4] = [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0],
+    ];
+
+    pub(super) fn multiply(a: &[[f32; 4]; 4], b: &[[f32; 4]; 4]) -> [[f32; 4]; 4] {
+        let mut out = [[0.0; 4]; 4];
+        for (r, row) in out.iter_mut().enumerate() {
+            for (c, cell) in row.iter_mut().enumerate() {
+                *cell = (0..4).map(|k| a[r][k] * b[k][c]).sum();
+            }
+        }
+        out
+    }
+
+    fn angle(text: &str) -> Option<f32> {
+        let text = text.trim();
+        for (unit, per_degree) in [
+            ("grad", 0.9),
+            ("deg", 1.0),
+            ("rad", 180.0 / std::f32::consts::PI),
+            ("turn", 360.0),
+        ] {
+            if let Some(n) = text.strip_suffix(unit) {
+                return n
+                    .trim()
+                    .parse::<f32>()
+                    .ok()
+                    .map(|n| (n * per_degree).to_radians());
+            }
+        }
+        (text == "0").then_some(0.0)
+    }
+
+    /// `None` for `perspective()`, which a flat picture cannot show, and for
+    /// lengths other than pixels.
+    pub(super) fn matrix(text: &str) -> Option<[[f32; 4]; 4]> {
+        let (name, args) = text.trim().split_once('(')?;
+        let args = args.trim_end().strip_suffix(')')?;
+        let mut m = IDENTITY;
+        match name.trim().to_ascii_lowercase().as_str() {
+            "translatez" => {
+                let z = args.trim();
+                m[2][3] = z.strip_suffix("px").unwrap_or(z).trim().parse().ok()?;
+            }
+            "scalez" => m[2][2] = args.trim().parse().ok()?,
+            "rotatex" => {
+                let (sin, cos) = angle(args)?.sin_cos();
+                m[1][1] = cos;
+                m[1][2] = -sin;
+                m[2][1] = sin;
+                m[2][2] = cos;
+            }
+            "rotatey" => {
+                let (sin, cos) = angle(args)?.sin_cos();
+                m[0][0] = cos;
+                m[0][2] = sin;
+                m[2][0] = -sin;
+                m[2][2] = cos;
+            }
+            "rotate3d" => {
+                let parts: Vec<&str> = args.split(',').collect();
+                let [x, y, z, a] = parts[..] else {
+                    return None;
+                };
+                let (x, y, z): (f32, f32, f32) = (
+                    x.trim().parse().ok()?,
+                    y.trim().parse().ok()?,
+                    z.trim().parse().ok()?,
+                );
+                let length = (x * x + y * y + z * z).sqrt();
+                if length == 0.0 {
+                    return Some(m);
+                }
+                let (x, y, z) = (x / length, y / length, z / length);
+                let (sin, cos) = angle(a)?.sin_cos();
+                let t = 1.0 - cos;
+                m[0] = [
+                    t * x * x + cos,
+                    t * x * y - sin * z,
+                    t * x * z + sin * y,
+                    0.0,
+                ];
+                m[1] = [
+                    t * x * y + sin * z,
+                    t * y * y + cos,
+                    t * y * z - sin * x,
+                    0.0,
+                ];
+                m[2] = [
+                    t * x * z - sin * y,
+                    t * y * z + sin * x,
+                    t * z * z + cos,
+                    0.0,
+                ];
+            }
+            "matrix3d" => {
+                let parts: Vec<f32> = args
+                    .split(',')
+                    .map(|n| n.trim().parse().ok())
+                    .collect::<Option<_>>()?;
+                if parts.len() != 16 {
+                    return None;
+                }
+                // Written column by column; perspective terms would be lost.
+                if parts[3] != 0.0 || parts[7] != 0.0 || parts[11] != 0.0 || parts[15] != 1.0 {
+                    return None;
+                }
+                for c in 0..4 {
+                    for (r, row) in m.iter_mut().enumerate() {
+                        row[c] = parts[c * 4 + r];
+                    }
+                }
+            }
+            _ => return None,
+        }
+        Some(m)
+    }
 }
