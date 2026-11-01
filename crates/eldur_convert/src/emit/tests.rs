@@ -1201,7 +1201,7 @@ fn runs_leave_what_they_share_to_their_type() {
         .split("EldurRun {")
         .find(|r| r.contains("\"big\""))
         .expect("the big run");
-    let first = big.split('}').next().expect("a body");
+    let first = big.split("\n                    }").next().expect("a body");
     assert!(first.contains("font.family: \""), "{first}");
     assert!(first.contains("property string eldurRun: \"["), "{first}");
     assert!(!first.contains("wrapMode"), "{first}");
