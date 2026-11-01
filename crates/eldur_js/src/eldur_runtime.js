@@ -9237,6 +9237,44 @@ function _vMarkup(model, twin) {
     return st;
 }
 
+// The tallest `line-height` an element in the model writes, in pixels; 0 if none.
+function _vTallestLine(model) {
+    var tallest = 0;
+    _vEachElement(model.kids, function(v) {
+        var own = /(?:^|;)\s*line-height:\s*([^;]+)/.exec(_vCssText(_meta(v)));
+        var written = own ? own[1].trim() : _vComputedOther(v, "line-height");
+        var n = parseFloat(written);
+        if (!isNaN(n)) {
+            tallest = Math.max(tallest, /px$/.test(written) ? n : n * _vStyle(v).size);
+        }
+    });
+    return tallest;
+}
+
+// A `Text` has one line height, so a taller element is told to the line placing
+// it or, alone in its block, stands as padding around the block's own lines: its
+// words stay on their baseline, though every wrapped line of it is short of the
+// room Chromium gives the one line holding the element.
+function _vRaiseLine(model) {
+    var text = model.text;
+    var tallest = _vTallestLine(model);
+    if (text.parent && typeof text.parent.setRunLineHeight === "function") {
+        if (tallest > 0 || text.eldurOwnLine !== undefined) {
+            text.parent.setRunLineHeight(text, tallest);
+        }
+        return;
+    }
+    var fixed = text.lineHeightMode === 1; // Text.FixedHeight; a library script has no `Text`
+    var line = fixed ? text.lineHeight
+        : model.lh !== undefined ? model.lh : Math.round(model.k.size * 1.15);
+    var room = Math.max(0, tallest - line);
+    if (room > 0 || model.raised) {
+        text.topPadding = Math.floor(room / 2);
+        text.bottomPadding = Math.ceil(room / 2);
+        model.raised = room > 0;
+    }
+}
+
 // The first write takes the `Text` over from what the converter emitted: a
 // `Text` styled as its one element goes back to the block's style, as that
 // element's style now comes from the markup.
@@ -9271,6 +9309,7 @@ function _vRender(model) {
     _vRendering = true;
     text.text = markup;
     _vRendering = false;
+    _vRaiseLine(model);
     model.rendered = true;
     model.twinText = null;
     _layoutChanged(text);

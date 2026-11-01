@@ -239,3 +239,8 @@ fn hidden_items() {
 fn hidden_reads() {
     page("hidden_reads");
 }
+
+#[test]
+fn span_line_height() {
+    page("span_line_height");
+}

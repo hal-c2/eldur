@@ -68,6 +68,10 @@ Item {
     // A run keeps its font's natural height to be placed, so what its own
     // `line-height` asks of the line is told here. Null is `normal`.
     function setRunLineHeight(item, pixels) {
+        // Its text may not have changed, and nothing else would lay the line out.
+        if (_ownLeading.get(item) !== (pixels === null ? undefined : pixels)) {
+            schedule();
+        }
         if (pixels === null) {
             _ownLeading.delete(item);
         } else {
@@ -390,7 +394,9 @@ Item {
             const late = [];
             // Text of the block's font is the strut already; only a larger span adds.
             for (const t of l.texts) {
-                const own = _ownLeading.get(t.item);
+                // Told by the runtime, or what the converter saw in the page.
+                const told = _ownLeading.get(t.item);
+                const own = told !== undefined ? told : t.item.eldurOwnLine;
                 if (own !== undefined) {
                     // Rounded as the strut's are, or a span of the block's own font
                     // comes out a pixel off the line it is on.

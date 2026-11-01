@@ -587,7 +587,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 only_slots = column.only_slots;
                 column.obj.map(|o| (o, "Content"))
             }
-            Content::Inline(items) if inline::has_atomic(items) => {
+            Content::Inline(items)
+                if inline::has_atomic(items) || inline::needs_lines_for_leading(style, items) =>
+            {
                 Some((self.inline_flow(b, decoration, items, line), "Content"))
             }
             Content::Inline(items) => {
