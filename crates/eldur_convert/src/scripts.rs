@@ -28,11 +28,13 @@ pub(crate) struct Scripts {
     pub(crate) gains: Gains,
     /// The static tables a script can reach into. See [`live_tables`].
     pub(crate) live_tables: HashSet<NodeId>,
+    /// A `<details>` opens and closes by the runtime, script or no script.
+    has_details: bool,
 }
 
 impl Scripts {
     pub(crate) fn is_empty(&self) -> bool {
-        self.inputs.is_empty()
+        self.inputs.is_empty() && !self.has_details
     }
 
     /// The elements a literal query finds.
@@ -191,6 +193,13 @@ pub(crate) fn collect(
         analysis.reads_attributes = true;
         analysis.runtime_dom = true;
     }
+    let has_details = doc.descendants(doc.root()).any(|node| {
+        doc.element(node)
+            .is_some_and(|e| e.local_name() == "details")
+    });
+    if has_details {
+        analysis.runtime_dom = true;
+    }
     warn_of_what_has_no_counterpart(doc, &analysis, diags);
     let mut matches = HashMap::new();
     let mut wanted: HashSet<NodeId> = keys.values().copied().collect();
@@ -235,6 +244,7 @@ pub(crate) fn collect(
         wanted,
         gains,
         live_tables,
+        has_details,
     }
 }
 

@@ -96,6 +96,8 @@ pub(super) fn format(n: i64, style: ListStyleType) -> String {
         ListStyleType::Disc => "\u{2022}".to_owned(),
         ListStyleType::Circle => "\u{25e6}".to_owned(),
         ListStyleType::Square => "\u{25aa}".to_owned(),
+        ListStyleType::DisclosureClosed => "\u{25b8}".to_owned(),
+        ListStyleType::DisclosureOpen => "\u{25be}".to_owned(),
         ListStyleType::Decimal => n.to_string(),
         ListStyleType::DecimalLeadingZero => {
             let sign = if n < 0 { "-" } else { "" };

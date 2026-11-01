@@ -1244,7 +1244,8 @@ fn ua_stylesheet_defaults() {
             <hr id="hr">
             <blockquote id="bq">Quote</blockquote>
             <ul id="ul"><li id="li">Item</li></ul>
-            <details id="det"><summary id="sum">More</summary></details>
+            <details id="det"><summary id="sum">More</summary><summary id="sum2">Two</summary></details>
+            <summary id="sum-lone">Lone</summary>
             <dialog id="dlg-closed">Closed</dialog>
             <dialog id="dlg-open" open>Open</dialog>
             <input id="inp-hidden" type="hidden">
@@ -1300,7 +1301,15 @@ fn ua_stylesheet_defaults() {
         Rgba::new(128, 128, 128, 255)
     );
 
-    for block_id in ["p", "hr", "bq", "ul", "det", "sum", "dlg-open"] {
+    // Chromium's getComputedStyle: only a details' first summary is a list item.
+    assert_eq!(
+        map.style(doc.element_by_id("sum").expect("sum"))
+            .expect("sum")
+            .display,
+        Display::ListItem
+    );
+
+    for block_id in ["p", "hr", "bq", "ul", "det", "sum2", "sum-lone", "dlg-open"] {
         let el = doc.element_by_id(block_id).expect(block_id);
         assert_eq!(
             map.style(el).expect(block_id).display,

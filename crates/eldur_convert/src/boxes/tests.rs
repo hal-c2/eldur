@@ -96,7 +96,11 @@ fn out_of_flow_boxes_with_no_line_before_them_stay_in_tree_order() {
          <input style='position:absolute'>\n\
          <article style='position:absolute'></article><p>x</p></body>",
     );
-    let (a, b, c) = (out.find("<section"), out.find("<input"), out.find("<article"));
+    let (a, b, c) = (
+        out.find("<section"),
+        out.find("<input"),
+        out.find("<article"),
+    );
     assert!(a.is_some() && a < b && b < c, "{out}");
 }
 

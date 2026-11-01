@@ -20,6 +20,7 @@ pub(crate) use decoration::{
     ELDUR_BORDER_QML, ELDUR_ROUND_CLIP_QML, ELDUR_SCROLL_INPUT_QML, ELDUR_SCROLLER_QML,
     ELDUR_STICKY_QML,
 };
+pub(crate) use lists::ELDUR_DISCLOSURE_QML;
 pub(crate) use text::ELDUR_TEXT_LINES_QML;
 pub(crate) const ELDUR_FILTER_QML: &str = include_str!("EldurFilter.qml");
 pub(crate) const ELDUR_FILTER_QSB: &[u8] = include_bytes!("eldur_filter.frag.qsb");
@@ -735,7 +736,10 @@ impl<'a, 'd> Emitter<'a, 'd> {
             Content::Inline(items)
                 if inline::has_atomic(items)
                     || inline::needs_lines_for_leading(style, items)
-                    || inline::needs_lines_for_boxes(items) =>
+                    || inline::needs_lines_for_boxes(items)
+                    // RichText has no `lineLaidOut` to make the triangle's room.
+                    || (b.marker.as_ref().is_some_and(|m| m.in_line)
+                        && text::needs_html(items, &text::font_family(&style.font_family))) =>
             {
                 Some((self.inline_flow(b, decoration, items, line), "Content"))
             }
@@ -773,6 +777,12 @@ impl<'a, 'd> Emitter<'a, 'd> {
         if inner.is_none() && (wanted || gains || b.marker.is_some()) {
             // Scripts write text into it; a marker still has its line.
             inner = Some((self.text(style, decoration, &[], line), "Text"));
+        }
+        if let Some(marker) = b.marker.as_ref().filter(|m| m.in_line)
+            && let Some((obj, _)) = &mut inner
+        {
+            let own_colour = marker.style.color != style.color;
+            lists::disclosure_in_line(obj, marker, own_colour);
         }
 
         if inner.is_none()
@@ -826,7 +836,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             || inner.is_none()
             || (has_height(style) && inner.is_some())
             || (inner_has_id && outer_id.is_some())
-            || b.marker.is_some()
+            || b.marker.as_ref().is_some_and(|m| !m.in_line)
             || !overlays.is_empty()
             || !corner_slots.is_empty()
             || style.display == Display::TableCell;
@@ -847,7 +857,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             // items, so they fill it; block flow keeps its content height.
             let fill = matches!(b.kind, BoxKind::Flex | BoxKind::Grid);
             let mut extra = Vec::new();
-            if let Some(marker) = &b.marker {
+            if let Some(marker) = b.marker.as_ref().filter(|m| !m.in_line) {
                 extra.push(self.marker(b, marker));
             }
             extra.append(&mut corner_slots);

@@ -343,6 +343,16 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
             contents: crate::emit::ELDUR_ROUND_CLIP_QML.as_bytes().to_vec(),
         });
     }
+    if main.contains("EldurDisclosure {")
+        || files
+            .iter()
+            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
+    {
+        files.push(OutputFile {
+            path: PathBuf::from("EldurDisclosure.qml"),
+            contents: crate::emit::ELDUR_DISCLOSURE_QML.as_bytes().to_vec(),
+        });
+    }
     // The page's own scroller uses it as well as every box's.
     files.push(OutputFile {
         path: PathBuf::from("EldurScrollInput.qml"),

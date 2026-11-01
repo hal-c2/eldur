@@ -195,7 +195,11 @@ fn a_page_that_keeps_attributes_reads_disabled_from_them() {
     analysis.reads_attributes = true;
     analysis.live_queries.clear();
     let out = rewrite(&scripts, &analysis, &resolver);
-    assert!(out.page_js.contains("Eldur.wrap(save).disabled"), "{}", out.page_js);
+    assert!(
+        out.page_js.contains("Eldur.wrap(save).disabled"),
+        "{}",
+        out.page_js
+    );
 }
 
 #[test]

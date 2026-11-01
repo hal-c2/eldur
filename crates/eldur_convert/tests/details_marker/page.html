@@ -1,0 +1,41 @@
+<!DOCTYPE html><html><head><title>Details markers</title><style>
+html,body{margin:0;background:#fff}
+details{position:absolute;width:180px;color:#000}
+summary{font:16px Arial}
+#s13{font-size:13px}
+#s24{font-size:24px}
+#s40{font-size:40px}
+#sred{color:#f00}
+#snone{list-style:none}
+#stype{list-style-type:none}
+#swk::-webkit-details-marker{display:none}
+#sblock{display:block}
+#spad{padding:8px}
+#slh{line-height:40px}
+#sh3 h3{margin:0;font:16px Arial}
+#sbox{}
+#sbox span{background:#eee}
+#smk::marker{color:#00f}
+#sout{list-style-position:outside;margin-left:40px}
+details p{margin:0;font:12px Arial}
+</style></head><body>
+<details style="left:10px;top:10px"><summary id="s16" data-click="4,9">Hx</summary><p>Inside</p></details>
+<details style="left:210px;top:10px" open><summary id="so16" data-click="4,9">Hx</summary><p>Inside</p></details>
+<details style="left:410px;top:10px"><summary id="s13" data-click="4,8">Hx</summary><p>Inside</p></details>
+<details style="left:610px;top:10px"><summary id="s24" data-click="5,14">Hx</summary><p>Inside</p></details>
+<details style="left:10px;top:90px"><summary id="s40" data-click="8,22">Hx</summary><p>Inside</p></details>
+<details style="left:210px;top:90px" open><summary id="so40" data-click="8,22" style="font-size:40px">Hx</summary><p>Inside</p></details>
+<details style="left:410px;top:90px"><summary id="sred" data-click="4,9">Hx</summary><p>Inside</p></details>
+<details style="left:610px;top:90px"><summary id="snone" data-click="4,9" data-plain>Hx</summary><p>Inside</p></details>
+<details style="left:10px;top:190px"><summary id="stype" data-click="4,9" data-plain>Hx</summary><p>Inside</p></details>
+<details style="left:210px;top:190px"><summary id="swk" data-click="4,9">Hx</summary><p>Inside</p></details>
+<details style="left:410px;top:190px"><summary id="sblock" data-click="4,9" data-plain>Hx</summary><p>Inside</p></details>
+<details style="left:610px;top:190px"><summary id="spad" data-click="12,17" data-pad="8">Hx</summary><p>Inside</p></details>
+<details style="left:10px;top:270px"><summary id="slh" data-click="4,20">Hx</summary><p>Inside</p></details>
+<details style="left:210px;top:270px"><summary id="sh3" data-click="4,9" data-rows="36"><h3>Hx</h3></summary><p>Inside</p></details>
+<details style="left:410px;top:270px"><summary id="sbox" data-click="4,9"><span>Hx</span></summary><p>Inside</p></details>
+<details style="left:610px;top:270px"><summary id="smk" data-click="4,9">Hx</summary><p>Inside</p></details>
+<details style="left:10px;top:370px"><summary id="swrap" data-click="4,9" data-rows="54" style="width:60px">Hello there friend</summary><p>Inside</p></details>
+<details style="left:410px;top:370px"><summary id="swl" data-click="4,12" data-rows="72" style="width:60px;line-height:24px">Hello there friend</summary><p>Inside</p></details>
+<details style="left:210px;top:370px"><summary id="sout" data-click="-14,9" data-out>Hx</summary><p>Inside</p></details>
+</body></html>

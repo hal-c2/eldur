@@ -150,6 +150,15 @@ ol, ul, menu, dir {
     padding-left: 40px;
 }
 
+details > summary:first-of-type {
+    display: list-item;
+    list-style: disclosure-closed inside;
+}
+
+details[open] > summary:first-of-type {
+    list-style-type: disclosure-open;
+}
+
 ul, menu, dir {
     list-style-type: disc;
 }

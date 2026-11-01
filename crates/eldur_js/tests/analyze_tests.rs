@@ -1456,12 +1456,13 @@ fn a_class_written_after_insertion_opens_the_page() {
 
 #[test]
 fn computed_access_to_an_unknown_name_may_hear_anything() {
-    let hears = |source: &str| {
-        analyze(&[classic("a.js", source)])
-        .may_hear("submit")
-    };
+    let hears = |source: &str| analyze(&[classic("a.js", source)]).may_hear("submit");
     assert!(hears("var e = document.body; e[\"on\" + x] = f;"));
-    assert!(hears("var e = document.body; var m = \"addEventListener\"; e[m](\"submit\", f);"));
+    assert!(hears(
+        "var e = document.body; var m = \"addEventListener\"; e[m](\"submit\", f);"
+    ));
     assert!(hears("var e = document.body; e[\"onsubmit\"] = f;"));
-    assert!(!hears("var e = document.body; e[\"title\"] = f; var a = [1]; a[0] = 2;"));
+    assert!(!hears(
+        "var e = document.body; e[\"title\"] = f; var a = [1]; a[0] = 2;"
+    ));
 }

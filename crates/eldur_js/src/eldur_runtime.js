@@ -588,12 +588,31 @@ function _detailsShow(raw, open) {
     if (_gHasCascade()) {
         _gTouch(raw);
     }
+    var seenSummary = false;
     _rawElementChildren(raw).forEach(function(kid) {
         if (_nodeTag(kid) !== "summary") {
             kid.visible = open && _gStyleAllowsShow(kid);
+        } else if (!seenSummary) {
+            seenSummary = true;
+            _detailsTurnMarker(kid, open);
         }
     });
     _layoutChanged(raw);
+}
+
+// It hangs off whichever item holds the summary's first line.
+function _detailsTurnMarker(item, open) {
+    if (item.eldurDisclosure === true) {
+        item.open = open;
+        return true;
+    }
+    var kids = item.children || [];
+    for (var i = 0; i < kids.length; ++i) {
+        if (_detailsTurnMarker(kids[i], open)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function _gStyleAllowsShow(kid) {

@@ -358,6 +358,19 @@ Item {
                 _measure(item, run);
                 first = run.measured[0];
             }
+            // RichText has no `lineLaidOut`, so nothing can move its lines: after
+            // something on this line it moves as a whole, as a box does.
+            if (run.measured.length === 0 && !line.empty) {
+                runs.delete(item);
+                _runs.delete(item);
+                item.width = Math.min(item.implicitWidth, room - start);
+                line.boxes.push({ item: item, x: start, gap: before > 0, top: 0, bottom: 0, wholeAscent: true });
+                line.end = start + item.width + marginRight;
+                pending = trail;
+                natural += item.implicitWidth + ((naturalPending || lead) && natural > 0 ? space : 0);
+                naturalPending = trail;
+                continue;
+            }
             const ascent = item.baselineOffset - (first ? first.y : 0);
             const inner = justified ? _innerSpaces(item, run.measured) : [];
             for (let n = 0; n < run.measured.length; ++n) {
@@ -443,7 +456,7 @@ Item {
                 } else if (align === "text-bottom") {
                     from = fontDescent - h;
                 } else {
-                    const own = _baselineOf(item);
+                    const own = b.wholeAscent ? round(item.baselineOffset) : _baselineOf(item);
                     from = -(own === null ? h + b.bottom : own);
                     if (align === "sub") {
                         from += size / 5 + 1;

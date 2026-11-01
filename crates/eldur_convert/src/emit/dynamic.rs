@@ -1803,10 +1803,9 @@ impl Sources {
             }
             // What a `tabindex` made focusable already has its handler.
             if self.focusable.contains(path)
-                && !obj
-                    .members
-                    .iter()
-                    .any(|m| matches!(m, Member::Property { name, .. } if name == "activeFocusOnTab"))
+                && !obj.members.iter().any(
+                    |m| matches!(m, Member::Property { name, .. } if name == "activeFocusOnTab"),
+                )
             {
                 obj.set("activeFocusOnTab", true);
                 obj.push_child(takes_focus_on_tap());
@@ -1831,7 +1830,10 @@ pub(super) fn takes_focus_by_tabindex(obj: &mut Object, doc: &Document, node: No
     let Some(element) = doc.element(node) else {
         return;
     };
-    let Some(index) = element.attr("tabindex").and_then(|t| t.trim().parse::<i32>().ok()) else {
+    let Some(index) = element
+        .attr("tabindex")
+        .and_then(|t| t.trim().parse::<i32>().ok())
+    else {
         return;
     };
     if matches!(

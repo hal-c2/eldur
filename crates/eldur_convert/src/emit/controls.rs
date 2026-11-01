@@ -1741,7 +1741,8 @@ mod tests {
 
     #[test]
     fn an_out_of_flow_legend_is_no_label() {
-        let (q, _) = qml("<fieldset><legend style='position:absolute'>Plan</legend><p>x</p></fieldset>");
+        let (q, _) =
+            qml("<fieldset><legend style='position:absolute'>Plan</legend><p>x</p></fieldset>");
         assert!(!q.contains("GroupBox {"), "{q}");
     }
 
