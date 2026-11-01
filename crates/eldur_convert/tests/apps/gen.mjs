@@ -107,7 +107,8 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
   page = await openTab();
   await page.mouse.move(1200, 790);
   await page.goto("file://" + path.join(here, file), { waitUntil: "load" });
-  const steps = [await state("load", spec.watch)];
+  // A page caught mid-flight at load has nothing to record there that a rerun would repeat.
+  const steps = [await state("load", spec.loadMoves ? [] : spec.watch)];
   for (const step of spec.steps) {
     await act(step);
     steps.push(await state(step.name, spec.watch));
