@@ -346,6 +346,12 @@ pub(crate) fn open_elements_decl() -> Member {
     decl("bool", "eldurOpenElements", Value::Bool(true))
 }
 
+/// `root.eldurNoMotion`: converted without animations, so the runtime starts no
+/// transition and no CSS animation either.
+pub(crate) fn no_motion_decl() -> Member {
+    decl("bool", "eldurNoMotion", Value::Bool(true))
+}
+
 /// `root.eldurControlFonts`: what sizes a created control, the converter's table.
 pub(crate) fn control_fonts_decl() -> Member {
     decl(

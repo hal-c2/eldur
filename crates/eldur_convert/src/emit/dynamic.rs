@@ -1280,6 +1280,9 @@ impl Dynamic<'_, '_> {
 
     /// A `Behavior` for `prop` when its owner's style transitions it.
     fn behavior(&self, change: &Change, prop: &str, gate: bool) -> Option<Member> {
+        if !self.cx.options.animations {
+            return None;
+        }
         let owner = change.owner?;
         let longhands = css_of(&change.ty, prop)?;
         let kind = change

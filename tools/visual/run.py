@@ -54,7 +54,9 @@ SELFTEST_DIR = SCRIPT_DIR / "selftest"
 
 DEFAULT_CORPUS_DIR = Path("tests/corpus")
 DEFAULT_OUT_DIR = Path("target/visual")
-DEFAULT_CONVERT_CMD = "cargo run -q -p eldur_cli -- convert"
+# The Chromium side turns animations and transitions off too: a captured frame is
+# never one caught part way through, on either side.
+DEFAULT_CONVERT_CMD = "cargo run -q -p eldur_cli -- convert --no-animations"
 REGRESSION_THRESHOLD_POINTS = 2.0
 SELFTEST_MIN_GOOD_SCORE = 85.0
 SELFTEST_MIN_NEAR_MISS_GAP = 10.0

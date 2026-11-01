@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Sticky</title>
+<style>
+body { margin: 0; font: 16px/24px sans-serif; background: #fff; color: #222; }
+header { position: sticky; top: 0; background: #234; color: #fff; padding: 8px; }
+.wrap { height: 220px; overflow: auto; padding: 8px; background: #eef; margin: 12px; }
+table { border-collapse: collapse; width: 100%; }
+thead th { position: sticky; top: 0; background: #cde; text-align: left; }
+td { padding: 4px; }
+.side { display: flex; align-items: flex-start; margin: 12px; }
+.side aside { position: sticky; top: 48px; width: 120px; background: #fec; }
+.side main { flex: 1; height: 900px; background: #f5f5f5; }
+</style></head><body>
+<header id="s-head">Sticky header</header>
+<div class="wrap" id="s-wrap"><table id="s-table"><thead><tr><th id="s-th">Name</th><th>Value</th></tr></thead><tbody>
+<tr><td>a</td><td>1</td></tr><tr><td>b</td><td>2</td></tr><tr><td>c</td><td>3</td></tr><tr><td>d</td><td>4</td></tr>
+<tr><td>e</td><td>5</td></tr><tr><td>f</td><td>6</td></tr><tr><td>g</td><td>7</td></tr><tr><td>h</td><td>8</td></tr>
+<tr><td>i</td><td>9</td></tr><tr><td>j</td><td>10</td></tr></tbody></table></div>
+<div class="side"><aside id="s-aside">Sidebar</aside><main id="s-main">Main</main></div>
+</body></html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Keyframes</title>
+<style>
+body { margin: 0; padding: 16px; font: 16px/24px sans-serif; color: #223; background: #f5f6fa; }
+@keyframes pulse { 0% { opacity: .4 } 50% { opacity: 1 } 100% { opacity: .4 } }
+@keyframes slide { from { transform: translateX(-100%) } to { transform: translateX(0) } }
+@keyframes tint { from { background-color: #fde } to { background-color: #def } }
+@keyframes grow { from { height: 24px } to { height: 72px } }
+@keyframes ink { from { color: #a00 } to { color: #00a } }
+@keyframes spin { to { transform: rotate(360deg) } }
+.card { margin: 0 0 12px; padding: 8px 12px; background: #fff; }
+.pulse { animation: pulse 2s ease-in-out infinite }
+.slide { animation: slide 600ms cubic-bezier(.2, .8, .2, 1) both }
+.tint { animation: tint 1s steps(4, end) 200ms 3 alternate forwards }
+.bar { background: #36c; animation: grow 800ms linear 150ms backwards }
+.ink { animation: ink 1s infinite alternate-reverse }
+.spin { width: 40px; height: 40px; background: #c63; animation: spin 3s linear infinite }
+.held { width: 80px; height: 24px; background: #6a6; animation: grow 10s linear -5s paused }
+.unknown { animation: nothing 1s }
+</style></head><body>
+<div class="card pulse" id="k-pulse">Pulses for ever</div>
+<div class="card slide" id="k-slide">Slides in from its own width</div>
+<div class="card tint" id="k-tint">Steps between tints three times</div>
+<div class="bar" id="k-bar"></div>
+<div class="card ink" id="k-ink">Changes its ink</div>
+<div class="spin" id="k-spin"></div>
+<div class="held" id="k-held"></div>
+<div class="card unknown" id="k-unknown">Names no rule</div>
+</body></html>

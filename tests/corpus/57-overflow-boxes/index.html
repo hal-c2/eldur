@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Overflow boxes</title>
+<style>
+body { margin: 0; padding: 16px; font: 16px/24px sans-serif; background: #eee; color: #222; }
+.tall { height: 120px; overflow: auto; background: #fff; padding: 8px; margin-bottom: 12px; }
+.wide { overflow-x: scroll; overflow-y: hidden; background: #fff; margin-bottom: 12px; }
+.wide div { width: 900px; height: 40px; background: #cde; }
+.plain { overflow: auto; background: #fff; padding: 8px; margin-bottom: 12px; }
+.positioned { position: relative; height: 100px; overflow: scroll; background: #fed; margin-bottom: 12px; }
+.positioned .abs { position: absolute; left: 10px; top: 150px; width: 60px; height: 30px; background: #c33; }
+.hidden { height: 40px; overflow: hidden; background: #dfd; }
+.tall p { margin: 0 0 8px; }
+</style></head><body>
+<div class="tall" id="o-tall"><p>One</p><p>Two</p><p>Three</p><p>Four</p><p>Five</p><p>Six</p><p>Seven</p><p>Eight</p></div>
+<div class="wide" id="o-wide"><div></div></div>
+<div class="plain" id="o-plain">Fits, so it gains nothing.</div>
+<div class="positioned" id="o-pos"><div class="abs" id="o-abs"></div><p>Beside</p></div>
+<div class="hidden" id="o-hidden"><p>Clipped text in a box that does not scroll by hand.</p><p>More</p><p>More</p></div>
+</body></html>

@@ -1,0 +1,14 @@
+[
+{
+"selector": "#m-first",
+"pad": 8
+},
+{
+"selector": "#m-second",
+"pad": 8
+},
+{
+"selector": "#m-third",
+"pad": 8
+}
+]

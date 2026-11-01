@@ -1,0 +1,22 @@
+[
+{
+"selector": "#o-tall",
+"pad": 8
+},
+{
+"selector": "#o-wide",
+"pad": 8
+},
+{
+"selector": "#o-plain",
+"pad": 8
+},
+{
+"selector": "#o-pos",
+"pad": 8
+},
+{
+"selector": "#o-hidden",
+"pad": 8
+}
+]

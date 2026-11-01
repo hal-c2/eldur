@@ -1,0 +1,34 @@
+[
+{
+"selector": "#k-pulse",
+"pad": 8
+},
+{
+"selector": "#k-slide",
+"pad": 8
+},
+{
+"selector": "#k-tint",
+"pad": 8
+},
+{
+"selector": "#k-bar",
+"pad": 8
+},
+{
+"selector": "#k-ink",
+"pad": 8
+},
+{
+"selector": "#k-spin",
+"pad": 8
+},
+{
+"selector": "#k-held",
+"pad": 8
+},
+{
+"selector": "#k-unknown",
+"pad": 8
+}
+]

@@ -1,0 +1,22 @@
+[
+{
+"selector": "#t-linear",
+"pad": 8
+},
+{
+"selector": "#t-delayed",
+"pad": 8
+},
+{
+"selector": "#t-stepped",
+"pad": 8
+},
+{
+"selector": "#t-starting",
+"pad": 8
+},
+{
+"selector": "#t-curve",
+"pad": 8
+}
+]

@@ -250,7 +250,9 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
                     .collect();
                 decls.push(metadata::literal_classes_decl(&literal));
                 decls.push(metadata::open_elements_decl());
-                if !styles.keyframes.is_empty() {
+                if !options.animations {
+                    decls.push(metadata::no_motion_decl());
+                } else if !styles.keyframes.is_empty() {
                     decls.push(metadata::keyframes_decl(&styles.keyframes));
                 }
                 decls.push(metadata::control_fonts_decl());

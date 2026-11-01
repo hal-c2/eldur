@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Transition timing</title>
+<style>
+body { margin: 0; padding: 16px; font: 16px/24px sans-serif; background: #fff; color: #222; }
+a { display: block; width: 240px; padding: 8px; margin-bottom: 8px; color: #fff; text-decoration: none; }
+.linear { background: #356; transition: background-color 300ms linear; }
+.linear:hover { background: #5a8; }
+.delayed { background: #365; transition: background-color 300ms ease-out 150ms; }
+.delayed:hover { background: #8a5; }
+.stepped { background: #635; transition: background-color 400ms steps(4, end); }
+.stepped:hover { background: #a58; }
+.starting { background: #536; transition: opacity 400ms steps(2, start) 100ms; }
+.starting:hover { opacity: .5; }
+.curve { background: #653; transition: opacity 250ms cubic-bezier(.1, .7, .3, 1); }
+.curve:hover { opacity: .6; }
+</style></head><body>
+<a class="linear" id="t-linear" href="#a">Linear</a>
+<a class="delayed" id="t-delayed" href="#b">Delayed</a>
+<a class="stepped" id="t-stepped" href="#c">Stepped</a>
+<a class="starting" id="t-starting" href="#d">Steps at the start, delayed</a>
+<a class="curve" id="t-curve" href="#e">A curve</a>
+</body></html>

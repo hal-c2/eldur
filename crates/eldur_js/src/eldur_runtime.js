@@ -15341,7 +15341,7 @@ function _aScanTree(raw, rendered) {
 
 // Run after each style pass: starts and stops what the styles now ask for.
 function _aScan() {
-    if (!_gActive() || _aBusy) {
+    if (!_gActive() || _aBusy || _root.eldurNoMotion === true) {
         return;
     }
     _aScanned = true;
