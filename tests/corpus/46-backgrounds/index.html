@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Backgrounds</title>
+<style>
+body { margin: 10px; background: #fff; }
+.g { display: grid; grid-template-columns: repeat(6, 200px); gap: 10px; }
+.g div { height: 120px; background-color: #f1f5f9; }
+#auto { background-image: url(photo.png); background-repeat: no-repeat; }
+#tile { background-image: url(tile.png); }
+#cover { background: url(photo.png) center / cover no-repeat; }
+#contain { background: url(photo.png) center / contain no-repeat; }
+#length { background: url(photo.png) 10px 20px / 60px 40px no-repeat; }
+#percent { background: url(photo.png) no-repeat 100% 100% / 50% 50%; }
+#repx { background: url(tile.png) repeat-x 0 30px; }
+#repy { background: url(tile.png) repeat-y 40px 0; }
+#scaled { background: url(tile.png) 0 0 / 40px 40px; }
+#offset { background: url(tile.png) 10px 10px; }
+#originc { background: url(tile.png) no-repeat 0 0 content-box; padding: 20px; height: 80px !important; }
+#originb { background: url(photo.png) no-repeat 0 0; background-origin: border-box; border: 10px solid rgba(0,0,0,.3); height: 100px !important; }
+#clipp { background: #0ea5e9; background-clip: padding-box; border: 10px dashed rgba(0,0,0,.2); height: 100px !important; }
+#clipc { background: #0ea5e9 content-box; padding: 16px; height: 88px !important; }
+#multi { background: url(tile.png) no-repeat 10px 10px, linear-gradient(90deg, #f43f5e, #6366f1); }
+#round { background: url(photo.png) center / cover; border-radius: 24px; }
+#lin45 { background: linear-gradient(45deg, #ef4444, #3b82f6); }
+#lin120 { background: linear-gradient(120deg, #10b981 20%, #f59e0b 60%, #8b5cf6); }
+#corner { background: linear-gradient(to top right, #ec4899, #22d3ee); }
+#replin { background: repeating-linear-gradient(45deg, #111 0 8px, #fde047 8px 16px); }
+#stripes { background: linear-gradient(90deg, #6366f1 50%, #e0e7ff 50%) 0 0 / 40px 40px; }
+#gridp { background-image: linear-gradient(#94a3b8 1px, transparent 1px), linear-gradient(90deg, #94a3b8 1px, transparent 1px); background-size: 20px 20px; }
+#gradsize { background: linear-gradient(135deg, #f97316, #1d4ed8) 20px 20px / 100px 60px no-repeat; }
+#rad { background: radial-gradient(circle, #fbbf24, #b91c1c); }
+#radell { background: radial-gradient(#34d399, #1e3a8a); }
+#radat { background: radial-gradient(circle at 25% 25%, #f0abfc, #4c1d95 70%); }
+#repr { background: repeating-radial-gradient(circle, #1e293b 0 10px, #e2e8f0 10px 20px); }
+#conic { background: conic-gradient(#ef4444, #eab308, #22c55e, #3b82f6, #ef4444); }
+#conicat { background: conic-gradient(from 45deg at 30% 40%, #0f172a 25%, #fb7185 25% 50%, #0f172a 50% 75%, #fb7185 75%); }
+#fixed { background: url(tile.png) fixed; }
+</style></head><body><div class="g">
+<div id="auto"></div><div id="tile"></div><div id="cover"></div><div id="contain"></div><div id="length"></div><div id="percent"></div>
+<div id="repx"></div><div id="repy"></div><div id="scaled"></div><div id="offset"></div><div id="originc"></div><div id="originb"></div>
+<div id="clipp"></div><div id="clipc"></div><div id="multi"></div><div id="round"></div><div id="lin45"></div><div id="lin120"></div>
+<div id="corner"></div><div id="replin"></div><div id="stripes"></div><div id="gridp"></div><div id="gradsize"></div><div id="rad"></div>
+<div id="radell"></div><div id="radat"></div><div id="repr"></div><div id="conic"></div><div id="conicat"></div><div id="fixed"></div>
+</div></body></html>

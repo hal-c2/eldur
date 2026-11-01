@@ -15,7 +15,7 @@ mod grid;
 mod ids;
 mod image;
 mod inline;
-pub(crate) use inline::ELDUR_LINES_QML;
+pub(crate) use inline::{ELDUR_INLINE_BOX_QML, ELDUR_LINES_QML, has_atomic, needs_lines_for_boxes};
 mod inline_model;
 mod links;
 mod lists;
@@ -182,6 +182,8 @@ pub(crate) struct Emitter<'a, 'd> {
     collapsed: HashSet<NodeId>,
     /// The control being emitted is sticky.
     force_paint: bool,
+    /// The run being written has its elements' boxes painted by `EldurInlineBox`.
+    boxes_drawn: bool,
     /// Created inline elements laid out as items of their own in their
     /// line (`boxes::build_with`).
     inline_items: HashSet<NodeId>,
@@ -254,6 +256,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             strips: HashMap::new(),
             collapsed: HashSet::new(),
             force_paint: false,
+            boxes_drawn: false,
             inline_items: HashSet::new(),
             inline_covered: std::collections::BTreeSet::new(),
         }
@@ -669,7 +672,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 column.obj.map(|o| (o, "Content"))
             }
             Content::Inline(items)
-                if inline::has_atomic(items) || inline::needs_lines_for_leading(style, items) =>
+                if inline::has_atomic(items)
+                    || inline::needs_lines_for_leading(style, items)
+                    || inline::needs_lines_for_boxes(items) =>
             {
                 Some((self.inline_flow(b, decoration, items, line), "Content"))
             }

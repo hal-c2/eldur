@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Inline boxes</title>
+<style>
+body { margin: 20px; font: 16px/1.5 sans-serif; color: #111; background: #fff; }
+p { margin: 0 0 12px; width: 460px; }
+.pill { background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 999px; margin-left: 6px; font-size: 12px; }
+.code { background: #e2e8f0; padding: 1px 4px; border-radius: 4px; font-family: monospace; font-size: 14px; }
+.edge { border: 2px solid #b91c1c; padding: 0 6px; }
+.mark { background: #fde68a; }
+.long { background: #bfdbfe; border: 1px solid #1d4ed8; border-radius: 6px; padding: 0 4px; }
+.sides { border-left: 4px solid #7c3aed; border-bottom: 2px solid #059669; background: #f5f3ff; padding: 2px 6px; }
+.tall { background: #fecaca; padding: 6px 8px; }
+.btn { font: 600 15px sans-serif; padding: 0 22px; height: 40px; border: 0; border-radius: 999px; background: #e5e7eb; color: #64748b; display: block; margin-bottom: 12px; }
+.btn img { width: 16px; height: 16px; vertical-align: middle; }
+.chip { display: inline-block; width: 12px; height: 12px; background: #dc2626; border-radius: 3px; }
+</style></head><body>
+<p id="p-pill">Yearly plan <span class="pill">Save 20%</span> today.</p>
+<p id="p-code">Call <code class="code">render()</code> and then <code class="code">flush()</code> once.</p>
+<p id="p-edge">Before <span class="edge">bordered</span> after.</p>
+<p id="p-mark">Plain <span class="mark">marked text</span> plain.</p>
+<p id="p-sides">Side <span class="sides">uneven edges</span> side.</p>
+<p id="p-long">This sentence runs on <span class="long">with a highlighted stretch of words that is long enough to break across two lines of the paragraph</span> and ends.</p>
+<p id="p-tall">Square <span class="tall">padded</span> corners.</p>
+<button id="b-span" class="btn" type="button">Yearly <span class="pill">Save 20%</span></button>
+<button id="b-chip" class="btn" type="button"><span class="chip"></span> With chip</button>
+</body></html>

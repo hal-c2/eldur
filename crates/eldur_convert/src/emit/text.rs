@@ -85,7 +85,11 @@ impl Emitter<'_, '_> {
             styled: String::new(),
             plain: String::new(),
             rich: false,
-            html: needs_html(items, &state.family),
+            html: if self.boxes_drawn {
+                needs_html_around_boxes(items, &state.family)
+            } else {
+                needs_html(items, &state.family)
+            },
             preserve: !matches!(style.white_space, WhiteSpace::Normal | WhiteSpace::NoWrap),
             prev_space: true,
             link_colors: Vec::new(),
@@ -472,14 +476,15 @@ impl Emitter<'_, '_> {
                 ),
             );
         }
-        if m.html && !style.background_color.is_transparent() {
+        let drawn = self.boxes_drawn && super::inline::paints_box(style);
+        if m.html && !drawn && !style.background_color.is_transparent() {
             css.push(format!(
                 "background-color:{}",
                 css_color(style.background_color)
             ));
         }
         if !style.background_layers.is_empty()
-            || (!m.html && !style.background_color.is_transparent())
+            || (!m.html && !drawn && !style.background_color.is_transparent())
         {
             self.diags.info(
                 "qml",
@@ -519,7 +524,9 @@ impl Emitter<'_, '_> {
                 .iter()
                 .any(|c| !c.is_zero())
         };
-        if m.html {
+        if drawn {
+            // `EldurInlineBox` paints it, and the line leaves its room.
+        } else if m.html {
             // The space padding and borders take on the line, as a zero-width
             // joiner widened by `letter-spacing`, inside the background.
             if boxed {
@@ -571,11 +578,11 @@ impl Emitter<'_, '_> {
         for o in &open {
             m.styled.push_str(o);
         }
-        if m.html && lead > 0.0 {
+        if m.html && !drawn && lead > 0.0 {
             push_space(m, lead);
         }
         self.markup(&span.children, &state, m);
-        if m.html && trail > 0.0 {
+        if m.html && !drawn && trail > 0.0 {
             push_space(m, trail);
         }
         for c in close.iter().rev() {
@@ -797,6 +804,22 @@ pub(super) fn needs_html(items: &[Inline<'_>], family: &str) -> bool {
                 || inline_space(style, Side::Left) > 0.0
                 || inline_space(style, Side::Right) > 0.0
                 || needs_html(&span.children, &own)
+        }
+        _ => false,
+    })
+}
+
+/// As `needs_html`, with what `EldurInlineBox` paints and the line makes room for
+/// left out.
+fn needs_html_around_boxes(items: &[Inline<'_>], family: &str) -> bool {
+    items.iter().any(|item| match item {
+        Inline::Span(span) => {
+            let own = font_family(&span.style.font_family);
+            let bare = !super::inline::paints_box(span.style)
+                && (!span.style.background_color.is_transparent()
+                    || inline_space(span.style, Side::Left) > 0.0
+                    || inline_space(span.style, Side::Right) > 0.0);
+            own != family || bare || needs_html_around_boxes(&span.children, &own)
         }
         _ => false,
     })

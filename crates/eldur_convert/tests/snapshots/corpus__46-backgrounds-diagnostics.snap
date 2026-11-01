@@ -1,0 +1,14 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+warning[css]: index.html:38: background image `url(photo.png)` is not converted yet
+warning[css]: index.html:38: background image `url(tile.png)` is not converted yet
+warning[css]: index.html:39: background image `url(tile.png)` is not converted yet
+warning[css]: index.html:39: background image `url(photo.png)` is not converted yet
+info[css]: index.html:40: border style `dashed` is drawn solid
+warning[css]: index.html:40: background image `url(tile.png)` is not converted yet
+warning[css]: index.html:40: background image `url(photo.png)` is not converted yet
+info[css]: index.html:41: `background-size` on a gradient is not converted; it fills the box
+info[css]: index.html:42: `repeating-radial-gradient()` is drawn without repeating
+warning[css]: index.html:42: background image `url(tile.png)` is not converted yet

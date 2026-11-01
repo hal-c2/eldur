@@ -1,0 +1,8 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+warning[css]: <style>#1:33: unsupported property `mix-blend-mode`
+warning[css]: <style>#1:35: unsupported property `backdrop-filter`
+info[css]: index.html:46: percentage `border-radius` uses its px part only
+info[css]: index.html:49: `text-shadow` is not converted

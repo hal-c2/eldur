@@ -1,0 +1,47 @@
+[
+  {
+"selector": "#square"
+},
+  {
+"selector": "#bordered"
+},
+  {
+"selector": "#uneven"
+},
+  {
+"selector": "#circle"
+},
+  {
+"selector": "#plain"
+},
+  {
+"selector": "#i-round"
+},
+  {
+"selector": "#i-circle"
+},
+  {
+"selector": "#i-cover"
+},
+  {
+"selector": "#i-contain"
+},
+  {
+"selector": "#i-none"
+},
+  {
+"selector": "#i-down"
+},
+  {
+"selector": "#i-pos"
+},
+  {
+"selector": "#i-pos2"
+},
+  {
+"selector": "#i-posc"
+},
+  {
+"selector": "#i-rcover"
+}
+]

@@ -1,0 +1,122 @@
+[
+  {
+"selector": "#s-blur",
+"pad": 24
+},
+  {
+"selector": "#s-spread",
+"pad": 24
+},
+  {
+"selector": "#s-both",
+"pad": 24
+},
+  {
+"selector": "#s-multi",
+"pad": 24
+},
+  {
+"selector": "#s-round",
+"pad": 24
+},
+  {
+"selector": "#s-em",
+"pad": 24
+},
+  {
+"selector": "#s-inset",
+"pad": 24
+},
+  {
+"selector": "#s-inset2",
+"pad": 24
+},
+  {
+"selector": "#s-inset3",
+"pad": 24
+},
+  {
+"selector": "#s-none",
+"pad": 24
+},
+  {
+"selector": "#f-blur",
+"pad": 24
+},
+  {
+"selector": "#f-bright",
+"pad": 24
+},
+  {
+"selector": "#f-dark",
+"pad": 24
+},
+  {
+"selector": "#f-contrast",
+"pad": 24
+},
+  {
+"selector": "#f-gray",
+"pad": 24
+},
+  {
+"selector": "#f-opacity",
+"pad": 24
+},
+  {
+"selector": "#f-drop",
+"pad": 24
+},
+  {
+"selector": "#f-sepia",
+"pad": 24
+},
+  {
+"selector": "#f-hue",
+"pad": 24
+},
+  {
+"selector": "#f-invert",
+"pad": 24
+},
+  {
+"selector": "#f-sat",
+"pad": 24
+},
+  {
+"selector": "#f-chain",
+"pad": 24
+},
+  {
+"selector": "#o-group",
+"pad": 24
+},
+  {
+"selector": "#o-nest",
+"pad": 24
+},
+  {
+"selector": "#b-multiply",
+"pad": 24
+},
+  {
+"selector": "#b-backdrop",
+"pad": 24
+},
+  {
+"selector": "#t-hard",
+"pad": 24
+},
+  {
+"selector": "#t-blur",
+"pad": 24
+},
+  {
+"selector": "#t-multi",
+"pad": 24
+},
+  {
+"selector": "#t-em",
+"pad": 24
+}
+]

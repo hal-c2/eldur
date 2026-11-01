@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Borders</title>
+<style>
+body { margin: 20px; background: #fff; }
+.g { display: grid; grid-template-columns: repeat(6, 160px); gap: 30px; }
+.g div { height: 100px; box-sizing: border-box; background: #f8fafc; }
+#solid4 { border-style: solid; border-width: 8px; border-color: #dc2626 #16a34a #2563eb #eab308; }
+#widths { border-style: solid; border-color: #0f172a; border-width: 2px 6px 10px 14px; }
+#mitre { border-top: 12px solid #dc2626; border-left: 12px solid #2563eb; }
+#tworad { border-style: solid; border-width: 10px; border-color: #dc2626 #16a34a; border-radius: 24px; }
+#unevenrad { border: 1px solid #000; border-left: 8px solid #7c3aed; border-radius: 16px; }
+#dashed { border: 4px dashed #0f172a; }
+#dotted { border: 6px dotted #dc2626; }
+#double { border: 9px double #0f172a; }
+#groove { border: 10px groove #64748b; }
+#ridge { border: 10px ridge #64748b; }
+#inset { border: 10px inset #64748b; }
+#outset { border: 10px outset #64748b; }
+#dashrad { border: 4px dashed #2563eb; border-radius: 20px; }
+#dotrad { border: 5px dotted #16a34a; border-radius: 30px; }
+#doublerad { border: 9px double #dc2626; border-radius: 24px; }
+#mixed { border-top: 6px dashed #dc2626; border-right: 6px dotted #16a34a; border-bottom: 6px double #2563eb; border-left: 6px solid #eab308; }
+#o-solid { outline: 3px solid #dc2626; }
+#o-offset { outline: 2px solid #2563eb; outline-offset: 6px; }
+#o-dashed { outline: 3px dashed #16a34a; outline-offset: 2px; }
+#o-round { outline: 3px solid #7c3aed; border-radius: 20px; }
+#o-neg { outline: 4px solid #eab308; outline-offset: -10px; }
+#o-double { outline: 6px double #0f172a; outline-offset: 2px; }
+</style></head><body><div class="g">
+<div id="solid4"></div><div id="widths"></div><div id="mitre"></div><div id="tworad"></div><div id="unevenrad"></div><div id="dashed"></div>
+<div id="dotted"></div><div id="double"></div><div id="groove"></div><div id="ridge"></div><div id="inset"></div><div id="outset"></div>
+<div id="dashrad"></div><div id="dotrad"></div><div id="doublerad"></div><div id="mixed"></div><div id="o-solid"></div><div id="o-offset"></div>
+<div id="o-dashed"></div><div id="o-round"></div><div id="o-neg"></div><div id="o-double"></div>
+</div></body></html>

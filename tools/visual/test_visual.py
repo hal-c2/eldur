@@ -24,6 +24,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import compare  # noqa: E402
 import drift  # noqa: E402
+import regions  # noqa: E402
 import render_qml  # noqa: E402
 import run as visual_run  # noqa: E402
 
@@ -337,6 +338,22 @@ def _assert_delayed_final_state(test: unittest.TestCase, png: Path) -> None:
     # The bar ends at x = 40 + 5 * 24 = 160.
     test.assertEqual(arr[80, 155].tolist(), [0, 0, 0], "bar is not at its final width")
     test.assertEqual(arr[80, 165].tolist(), [255, 255, 255], "bar is wider than its final width")
+
+
+class PaintRegionTests(unittest.TestCase):
+    """Each paint feature's own pixels against Chromium's (`regions.py`): a layout
+    test cannot see paint, nor a page's score one wrong box."""
+
+    CASES = ["45-inline-boxes"]
+
+    def test_regions_hold(self) -> None:
+        corpus = Path(visual_run.__file__).resolve().parents[2] / "tests" / "corpus"
+        for name in self.CASES:
+            with self.subTest(case=name), tempfile.TemporaryDirectory() as tmp:
+                html, qml, warnings = regions.render_case(corpus / name, Path(tmp))
+                self.assertEqual(warnings, [])
+                bad = [r for r in regions.check_case(corpus / name, html, qml) if not r["ok"]]
+                self.assertEqual(bad, [])
 
 
 class PaintSnapTests(unittest.TestCase):

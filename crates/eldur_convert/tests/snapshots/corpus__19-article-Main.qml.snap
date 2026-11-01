@@ -343,7 +343,7 @@ ApplicationWindow {
                         // <div class="prose">
                         ColumnLayout {
                             id: prose
-                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + p5.eldurCarry + 0.000001
+                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + p4.eldurCarry + 0.000001
 
                             spacing: 0
                             z: 1
@@ -352,26 +352,68 @@ ApplicationWindow {
                             Layout.topMargin: 27.04 - lead.eldurCarry
 
                             // <p>
-                            Text {
-                                id: p
-                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+                            EldurLines {
+                                id: pFlow
+                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
-                                text: "<div style=\"line-height:33.25px\">The first rewrite moved us from a set of hand-written scripts to a single orchestrator. It worked for a while. Then the scripts came back in the form of <span style=\"font-size:16px;font-family:'monospace';background-color:#f0ebe0\"><span style=\"letter-spacing:6px\">&#8288;</span>pre-build.sh<span style=\"letter-spacing:6px\">&#8288;</span></span> hooks, one for each team, each with its own idea of what a clean checkout means.</div>"
-                                textFormat: Text.RichText
                                 color: "#1f1d1a"
                                 font.family: "serif"
                                 font.pixelSize: 19
-                                wrapMode: Text.WordWrap
-                                transform: Translate {
-                                    y: -5
-                                }
+                                lineHeight: 33.25
                                 Layout.fillWidth: true
-                                renderType: Text.NativeRendering
+                                Layout.preferredHeight: implicitHeight
+
+                                Text {
+                                    text: "The first rewrite moved us from a set of hand-written scripts to a single orchestrator. It worked for a while. Then the scripts came back in the form of "
+                                    textFormat: Text.PlainText
+                                    color: "#1f1d1a"
+                                    font.family: "serif"
+                                    font.pixelSize: 19
+                                    wrapMode: Text.WordWrap
+                                    renderType: Text.NativeRendering
+                                }
+
+                                Text {
+                                    id: inlineRun
+                                    readonly property real eldurMarginRight: 6
+                                    readonly property real eldurMarginLeft: 6
+                                    property var eldurFragments: []
+
+                                    text: "pre-build.sh"
+                                    textFormat: Text.PlainText
+                                    color: "#1f1d1a"
+                                    font.family: "monospace"
+                                    font.pixelSize: 16
+                                    wrapMode: Text.WordWrap
+                                    renderType: Text.NativeRendering
+
+                                    EldurInlineBox {
+                                        fragments: inlineRun.eldurFragments
+                                        font.family: "monospace"
+                                        font.pixelSize: 16
+                                        fill: "#f0ebe0"
+                                        radii: [4, 4, 4, 4]
+                                        paddingTop: 1
+                                        paddingBottom: 1
+                                        reachLeft: 6
+                                        reachRight: 6
+                                    }
+                                }
+
+                                Text {
+                                    text: " hooks, one for each team, each with its own idea of what a clean checkout means."
+                                    textFormat: Text.PlainText
+                                    color: "#1f1d1a"
+                                    font.family: "serif"
+                                    font.pixelSize: 19
+                                    wrapMode: Text.WordWrap
+                                    renderType: Text.NativeRendering
+                                }
                             }
 
                             // <p>
                             Text {
-                                id: p2
+                                id: p
                                 property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
 
                                 text: "The second rewrite replaced the orchestrator with a faster one. Builds dropped from eleven minutes to four, and everyone celebrated. Six months later, the cache was returning stale artifacts for about one change in fifty, and nobody could say which change."
@@ -386,7 +428,7 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 24.7 - p.eldurCarry
+                                Layout.topMargin: 24.7 - pFlow.eldurCarry
                                 renderType: Text.NativeRendering
                             }
 
@@ -401,7 +443,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 Layout.leftMargin: 0
                                 Layout.rightMargin: 0
-                                Layout.topMargin: 52.8 - p2.eldurCarry
+                                Layout.topMargin: 52.8 - p.eldurCarry
                                 Layout.preferredHeight: implicitHeight
 
                                 Rectangle {
@@ -437,7 +479,7 @@ ApplicationWindow {
 
                             // <p>
                             Text {
-                                id: p3
+                                id: p2
                                 property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
 
                                 text: "The third time we started with a question instead of a tool: what must be true about an artifact before we are allowed to ship it? The answer was short. A build must be reproducible from its inputs, and every input must be declared."
@@ -464,7 +506,7 @@ ApplicationWindow {
                                 spacing: 0
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                Layout.topMargin: 45.6 - p3.eldurCarry
+                                Layout.topMargin: 45.6 - p2.eldurCarry
 
                                 // <div class="figure-art">
                                 Item {
@@ -567,14 +609,14 @@ ApplicationWindow {
                             // <aside class="note">
                             Rectangle {
                                 id: note
-                                property real eldurCarry: Math.ceil(Layout.topMargin - (p4.eldurCarry)) - Layout.topMargin + p4.eldurCarry + 0.000001
+                                property real eldurCarry: Math.ceil(Layout.topMargin - (p3.eldurCarry)) - Layout.topMargin + p3.eldurCarry + 0.000001
 
                                 color: "#eef3f2"
                                 implicitWidth: noteContent.implicitWidth + 52
                                 implicitHeight: noteContent.implicitHeight + 36
                                 Layout.fillWidth: true
                                 Layout.topMargin: 45.6 - figure.eldurCarry
-                                Layout.preferredHeight: implicitHeight - p4.eldurCarry
+                                Layout.preferredHeight: implicitHeight - p3.eldurCarry
 
                                 Rectangle {
                                     anchors.top: parent.top
@@ -596,7 +638,7 @@ ApplicationWindow {
 
                                     // <p>
                                     Text {
-                                        id: p4
+                                        id: p3
                                         property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                                         text: "<div style=\"line-height:31.59px\"><b><font color=\"#2f5558\"><span style=\"font-family:'sans-serif'\">Note.</span></font></b> Declared inputs are not the same as fast builds. The speedup came from the cache finally being trustworthy, which let us stop disabling it on CI.</div>"
@@ -951,7 +993,7 @@ ApplicationWindow {
 
                             // <p>
                             Text {
-                                id: p5
+                                id: p4
                                 property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                                 text: "None of these steps is novel. The discipline was in refusing to skip the first one when the tooling made it tempting to jump straight to the second."

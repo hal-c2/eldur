@@ -119,7 +119,7 @@ ApplicationWindow {
 
                         // <p>
                         Text {
-                            id: p11
+                            id: p9
                             property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                             text: "A short essay on rhythm, measure and the <b>quiet</b> work that <b>good type</b> does when nobody is looking. Read it at your own pace; the <i>argument</i> is <i>deliberately</i> simple."
@@ -143,12 +143,12 @@ ApplicationWindow {
                     // <main>
                     ColumnLayout {
                         id: main
-                        property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + p12.eldurCarry + 0.000001
+                        property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + p10.eldurCarry + 0.000001
 
                         spacing: 0
                         Layout.fillWidth: true
                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                        Layout.topMargin: 42 - p11.eldurCarry
+                        Layout.topMargin: 42 - p9.eldurCarry
 
                         // <h2>
                         Rectangle {
@@ -263,22 +263,64 @@ ApplicationWindow {
                         }
 
                         // <p>
-                        Text {
-                            id: p4
-                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+                        EldurLines {
+                            id: pFlow
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
-                            text: "<div style=\"line-height:27.2px\">A modular scale gives headings a consistent relationship to body text. Here the steps are expressed in <span style=\"font-size:15px;font-family:'monospace';background-color:#f1efe8\"><span style=\"letter-spacing:5.35px\">&#8288;</span>rem<span style=\"letter-spacing:5.35px\">&#8288;</span></span> so that they follow the user's preferred base size.</div>"
-                            textFormat: Text.RichText
                             color: "#1d1f23"
                             font.family: "serif"
                             font.pixelSize: 17
-                            wrapMode: Text.WordWrap
-                            transform: Translate {
-                                y: -3
-                            }
+                            lineHeight: 27.2
                             Layout.fillWidth: true
                             Layout.topMargin: 11 - h3.eldurCarry
-                            renderType: Text.NativeRendering
+                            Layout.preferredHeight: implicitHeight
+
+                            Text {
+                                text: "A modular scale gives headings a consistent relationship to body text. Here the steps are expressed in "
+                                textFormat: Text.PlainText
+                                color: "#1d1f23"
+                                font.family: "serif"
+                                font.pixelSize: 17
+                                wrapMode: Text.WordWrap
+                                renderType: Text.NativeRendering
+                            }
+
+                            Text {
+                                id: inlineRun
+                                readonly property real eldurMarginRight: 5.35
+                                readonly property real eldurMarginLeft: 5.35
+                                property var eldurFragments: []
+
+                                text: "rem"
+                                textFormat: Text.PlainText
+                                color: "#1d1f23"
+                                font.family: "monospace"
+                                font.pixelSize: 15
+                                wrapMode: Text.WordWrap
+                                renderType: Text.NativeRendering
+
+                                EldurInlineBox {
+                                    fragments: inlineRun.eldurFragments
+                                    font.family: "monospace"
+                                    font.pixelSize: 15
+                                    fill: "#f1efe8"
+                                    radii: [3, 3, 3, 3]
+                                    paddingTop: 1.53
+                                    paddingBottom: 1.53
+                                    reachLeft: 5.35
+                                    reachRight: 5.35
+                                }
+                            }
+
+                            Text {
+                                text: " so that they follow the user's preferred base size."
+                                textFormat: Text.PlainText
+                                color: "#1d1f23"
+                                font.family: "serif"
+                                font.pixelSize: 17
+                                wrapMode: Text.WordWrap
+                                renderType: Text.NativeRendering
+                            }
                         }
 
                         // <h4>
@@ -299,13 +341,13 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
-                            Layout.topMargin: 27 - p4.eldurCarry
+                            Layout.topMargin: 27 - pFlow.eldurCarry
                             renderType: Text.NativeRendering
                         }
 
                         // <p>
                         Text {
-                            id: p5
+                            id: p4
                             property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
 
                             text: "Serif faces suit long reading, while sans-serif faces are often preferred for interface labels and captions. Mixing the two is common, provided each has a clear job."
@@ -344,13 +386,13 @@ ApplicationWindow {
                             }
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
-                            Layout.topMargin: 24 - p5.eldurCarry
+                            Layout.topMargin: 24 - p4.eldurCarry
                             renderType: Text.NativeRendering
                         }
 
                         // <p>
                         Text {
-                            id: p6
+                            id: p5
                             property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
 
                             text: "Test every heading at the smallest supported width before you ship it."
@@ -384,13 +426,13 @@ ApplicationWindow {
                             lineHeightMode: Text.FixedHeight
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
-                            Layout.topMargin: 21 - p6.eldurCarry
+                            Layout.topMargin: 21 - p5.eldurCarry
                             renderType: Text.NativeRendering
                         }
 
                         // <p>
                         Text {
-                            id: p7
+                            id: p6
                             property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
 
                             text: "Figures in this section come from the 2025 readability survey."
@@ -418,7 +460,7 @@ ApplicationWindow {
                             implicitWidth: h2Text2.implicitWidth
                             implicitHeight: h2Text2.implicitHeight + 5
                             Layout.fillWidth: true
-                            Layout.topMargin: 42 - p7.eldurCarry
+                            Layout.topMargin: 42 - p6.eldurCarry
 
                             Rectangle {
                                 anchors.left: parent.left
@@ -451,7 +493,7 @@ ApplicationWindow {
 
                         // <p>
                         Text {
-                            id: p8
+                            id: p7
                             property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
 
                             text: "<div style=\"line-height:27.2px\">Emphasis should be used sparingly. <span style=\"background-color:#fff1a8\"><span style=\"letter-spacing:3.4px\">&#8288;</span>Highlighted passages<span style=\"letter-spacing:3.4px\">&#8288;</span></span> help a reader find their place during revision, but they are not a substitute for structure. Water is H<span style=\"font-size:13px\">2</span>O, and the area of a circle is πr<span style=\"font-size:13px\">2</span>. Footnotes are often set in <font color=\"#5b616e\"><span style=\"font-size:13px\">smaller type, typically around 13 pixels</span></font>, so that they do not compete with the main text.</div>"
@@ -477,7 +519,7 @@ ApplicationWindow {
                             implicitWidth: h2Text3.implicitWidth
                             implicitHeight: h2Text3.implicitHeight + 5
                             Layout.fillWidth: true
-                            Layout.topMargin: 42 - p8.eldurCarry
+                            Layout.topMargin: 42 - p7.eldurCarry
 
                             Rectangle {
                                 anchors.left: parent.left
@@ -623,22 +665,101 @@ ApplicationWindow {
                         }
 
                         // <p>
-                        Text {
-                            id: p9
-                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+                        EldurLines {
+                            id: pFlow2
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
-                            text: "<div style=\"line-height:27.2px\">Inline identifiers such as <span style=\"font-size:15px;font-family:'monospace';background-color:#f1efe8\"><span style=\"letter-spacing:5.35px\">&#8288;</span>line-height<span style=\"letter-spacing:5.35px\">&#8288;</span></span> or <span style=\"font-size:15px;font-family:'monospace';background-color:#f1efe8\"><span style=\"letter-spacing:5.35px\">&#8288;</span>max-width<span style=\"letter-spacing:5.35px\">&#8288;</span></span> sit on the baseline. Longer examples belong in a block:</div>"
-                            textFormat: Text.RichText
                             color: "#1d1f23"
                             font.family: "serif"
                             font.pixelSize: 17
-                            wrapMode: Text.WordWrap
-                            transform: Translate {
-                                y: -3
-                            }
+                            lineHeight: 27.2
                             Layout.fillWidth: true
                             Layout.topMargin: 14 - h23.eldurCarry
-                            renderType: Text.NativeRendering
+                            Layout.preferredHeight: implicitHeight
+
+                            Text {
+                                text: "Inline identifiers such as "
+                                textFormat: Text.PlainText
+                                color: "#1d1f23"
+                                font.family: "serif"
+                                font.pixelSize: 17
+                                wrapMode: Text.WordWrap
+                                renderType: Text.NativeRendering
+                            }
+
+                            Text {
+                                id: inlineRun2
+                                readonly property real eldurMarginRight: 5.35
+                                readonly property real eldurMarginLeft: 5.35
+                                property var eldurFragments: []
+
+                                text: "line-height"
+                                textFormat: Text.PlainText
+                                color: "#1d1f23"
+                                font.family: "monospace"
+                                font.pixelSize: 15
+                                wrapMode: Text.WordWrap
+                                renderType: Text.NativeRendering
+
+                                EldurInlineBox {
+                                    fragments: inlineRun2.eldurFragments
+                                    font.family: "monospace"
+                                    font.pixelSize: 15
+                                    fill: "#f1efe8"
+                                    radii: [3, 3, 3, 3]
+                                    paddingTop: 1.53
+                                    paddingBottom: 1.53
+                                    reachLeft: 5.35
+                                    reachRight: 5.35
+                                }
+                            }
+
+                            Text {
+                                text: " or "
+                                textFormat: Text.PlainText
+                                color: "#1d1f23"
+                                font.family: "serif"
+                                font.pixelSize: 17
+                                wrapMode: Text.WordWrap
+                                renderType: Text.NativeRendering
+                            }
+
+                            Text {
+                                id: inlineRun3
+                                readonly property real eldurMarginRight: 5.35
+                                readonly property real eldurMarginLeft: 5.35
+                                property var eldurFragments: []
+
+                                text: "max-width"
+                                textFormat: Text.PlainText
+                                color: "#1d1f23"
+                                font.family: "monospace"
+                                font.pixelSize: 15
+                                wrapMode: Text.WordWrap
+                                renderType: Text.NativeRendering
+
+                                EldurInlineBox {
+                                    fragments: inlineRun3.eldurFragments
+                                    font.family: "monospace"
+                                    font.pixelSize: 15
+                                    fill: "#f1efe8"
+                                    radii: [3, 3, 3, 3]
+                                    paddingTop: 1.53
+                                    paddingBottom: 1.53
+                                    reachLeft: 5.35
+                                    reachRight: 5.35
+                                }
+                            }
+
+                            Text {
+                                text: " sit on the baseline. Longer examples belong in a block:"
+                                textFormat: Text.PlainText
+                                color: "#1d1f23"
+                                font.family: "serif"
+                                font.pixelSize: 17
+                                wrapMode: Text.WordWrap
+                                renderType: Text.NativeRendering
+                            }
                         }
 
                         // <pre>
@@ -652,7 +773,7 @@ ApplicationWindow {
                             implicitWidth: preText.implicitWidth + 40
                             implicitHeight: preText.implicitHeight + 32
                             Layout.fillWidth: true
-                            Layout.topMargin: 20 - p9.eldurCarry
+                            Layout.topMargin: 20 - pFlow2.eldurCarry
                             antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                             Text {
@@ -702,7 +823,7 @@ ApplicationWindow {
 
                         // <p>
                         Text {
-                            id: p10
+                            id: p8
                             property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
 
                             text: "Lists remain simple:"
@@ -729,7 +850,7 @@ ApplicationWindow {
                             implicitWidth: ulContent.implicitWidth + 24
                             implicitHeight: ulContent.implicitHeight
                             Layout.fillWidth: true
-                            Layout.topMargin: 16 - p10.eldurCarry
+                            Layout.topMargin: 16 - p8.eldurCarry
 
                             ColumnLayout {
                                 id: ulContent
@@ -886,7 +1007,7 @@ ApplicationWindow {
 
                         // <p>
                         Text {
-                            id: p12
+                            id: p10
                             property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                             text: "Continue reading in the next issue."
@@ -915,7 +1036,7 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Layout.topMargin: 40 - main.eldurCarry
                         Layout.bottomMargin: 16
-                        Layout.preferredHeight: implicitHeight - p13.eldurCarry
+                        Layout.preferredHeight: implicitHeight - p11.eldurCarry
 
                         Rectangle {
                             anchors.left: parent.left
@@ -935,7 +1056,7 @@ ApplicationWindow {
 
                             // <p>
                             Text {
-                                id: p13
+                                id: p11
                                 property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                                 text: "Typography notes is a test page. All faces are generic families."

@@ -1,0 +1,9 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+warning[css]: <style>#1:18: unsupported pseudo-element `::first-letter`
+warning[css]: <style>#1:19: unsupported pseudo-element `::first-line`
+warning[css]: index.html:34: `list-style-image: url(dot.png)` on <li> is not converted; using `list-style-type`
+warning[css]: index.html:36: `translateZ(10px)` on <div id="x-3d" class="box"> has no 2-D form and is left out
+warning[css]: index.html:36: `rotateY(30deg)` on <div id="x-3d" class="box"> has no 2-D form and is left out

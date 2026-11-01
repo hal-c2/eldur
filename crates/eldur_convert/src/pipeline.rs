@@ -291,6 +291,12 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
             contents: crate::emit::ELDUR_LINES_QML.as_bytes().to_vec(),
         });
     }
+    if main.contains("EldurInlineBox {") {
+        files.push(OutputFile {
+            path: PathBuf::from("EldurInlineBox.qml"),
+            contents: crate::emit::ELDUR_INLINE_BOX_QML.as_bytes().to_vec(),
+        });
+    }
     files.insert(
         0,
         OutputFile {

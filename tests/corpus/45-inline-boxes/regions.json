@@ -1,0 +1,11 @@
+[
+  {"selector": "#p-pill", "max_mismatch": 0.1, "max_delta": 7},
+  {"selector": "#p-code", "max_mismatch": 0.1, "max_delta": 7},
+  {"selector": "#p-edge", "max_mismatch": 0.1, "max_delta": 7},
+  {"selector": "#p-mark", "max_mismatch": 0.1, "max_delta": 7},
+  {"selector": "#p-sides", "max_mismatch": 0.1, "max_delta": 7},
+  {"selector": "#p-long", "max_mismatch": 0.1, "max_delta": 7},
+  {"selector": "#p-tall", "pad": 6, "max_mismatch": 0.06, "max_delta": 4, "known": "a square inline background stays RichText (emit/tests.rs richtext_lines holds it there): its vertical padding is not painted"},
+  {"selector": "#b-span", "max_mismatch": 0.1, "max_delta": 7},
+  {"selector": "#b-chip", "max_mismatch": 0.1, "max_delta": 7}
+]

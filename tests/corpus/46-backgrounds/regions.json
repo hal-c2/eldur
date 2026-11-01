@@ -1,0 +1,92 @@
+[
+  {
+"selector": "#auto"
+},
+  {
+"selector": "#tile"
+},
+  {
+"selector": "#cover"
+},
+  {
+"selector": "#contain"
+},
+  {
+"selector": "#length"
+},
+  {
+"selector": "#percent"
+},
+  {
+"selector": "#repx"
+},
+  {
+"selector": "#repy"
+},
+  {
+"selector": "#scaled"
+},
+  {
+"selector": "#offset"
+},
+  {
+"selector": "#originc"
+},
+  {
+"selector": "#originb"
+},
+  {
+"selector": "#clipp"
+},
+  {
+"selector": "#clipc"
+},
+  {
+"selector": "#multi"
+},
+  {
+"selector": "#round"
+},
+  {
+"selector": "#lin45"
+},
+  {
+"selector": "#lin120"
+},
+  {
+"selector": "#corner"
+},
+  {
+"selector": "#replin"
+},
+  {
+"selector": "#stripes"
+},
+  {
+"selector": "#gridp"
+},
+  {
+"selector": "#gradsize"
+},
+  {
+"selector": "#rad"
+},
+  {
+"selector": "#radell"
+},
+  {
+"selector": "#radat"
+},
+  {
+"selector": "#repr"
+},
+  {
+"selector": "#conic"
+},
+  {
+"selector": "#conicat"
+},
+  {
+"selector": "#fixed"
+}
+]

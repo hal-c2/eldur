@@ -312,7 +312,7 @@ impl<'a> Builder<'a, '_> {
                 node: Some(node),
                 style: Cow::Borrowed(style),
                 kind,
-                content: Content::Empty,
+                content: self.button_content(node),
                 marker: None,
             };
         }
@@ -364,6 +364,45 @@ impl<'a> Builder<'a, '_> {
             kind,
             content,
             marker,
+        }
+    }
+
+    /// What a `<button>` draws beyond its text: inline content some of which has a
+    /// box. Children a script can reach stay what they were: the text of the
+    /// `Button`, as the runtime knows it.
+    fn button_content(&mut self, node: NodeId) -> Content<'a> {
+        let is_button = self
+            .doc
+            .element(node)
+            .is_some_and(|e| e.is_html() && e.local_name() == "button");
+        if !is_button
+            || self
+                .doc
+                .element_children(node)
+                .any(|child| self.keeps_descendant(child))
+        {
+            return Content::Empty;
+        }
+        let mut children = Vec::new();
+        self.children_of(node, &mut children);
+        if children.iter().any(|c| matches!(c, Child::Block(_))) {
+            return Content::Empty;
+        }
+        let raw = children
+            .into_iter()
+            .filter_map(|c| match c {
+                Child::Inline(raw) => Some(raw),
+                Child::Block(_) => None,
+            })
+            .collect();
+        match inline_content(raw) {
+            Content::Inline(items)
+                if crate::emit::has_atomic(&items)
+                    || crate::emit::needs_lines_for_boxes(&items) =>
+            {
+                Content::Inline(items)
+            }
+            _ => Content::Empty,
         }
     }
 
