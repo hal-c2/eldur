@@ -187,25 +187,31 @@ ApplicationWindow {
         return heights
     }
 
-    function scrollToFragment(link) {
-        let name = link.slice(1);
-        const targets = Object.assign(Object.create(null), {
+    function scrollToFragment(eldurLink) {
+        let eldurName = eldurLink.slice(1);
+        const eldurTargets = Object.assign(Object.create(null), {
             "card": card,
             "compact": compact,
             "toggle": toggle
         });
-        if (!(name in targets)) {
+        flickableInput.forceActiveFocus();
+        Eldur.fragmentFollowed(eldurLink);
+        if (!(eldurName in eldurTargets)) {
             try {
-                name = decodeURIComponent(name);
+                eldurName = decodeURIComponent(eldurName);
             } catch (e) {
-                name = null;
+                eldurName = null;
             }
         }
-        const target = name === null ? undefined : targets[name];
-        if (target) {
-            const y = target.mapToItem(flickable.contentItem, 0, 0).y;
-            flickable.contentY = Math.max(0, Math.min(y, flickable.contentHeight - flickable.height));
-        } else if (name !== null && (name === "" || name.toLowerCase() === "top")) {
+        const eldurTarget = eldurName === null ? undefined : eldurTargets[eldurName];
+        if (eldurTarget) {
+            for (let eldurAt = eldurTarget.parent; eldurAt && eldurAt !== flickable; eldurAt = eldurAt.parent) {
+                if (eldurAt instanceof Flickable)
+                    eldurAt.contentY = Math.max(0, Math.min(eldurTarget.mapToItem(eldurAt.contentItem, 0, 0).y, eldurAt.contentHeight - eldurAt.height));
+            }
+            const eldurY = eldurTarget.mapToItem(flickable.contentItem, 0, 0).y;
+            flickable.contentY = Math.max(0, Math.min(eldurY, flickable.contentHeight - flickable.height));
+        } else if (eldurName !== null && (eldurName === "" || eldurName.toLowerCase() === "top")) {
             flickable.contentY = 0;
         }
     }
@@ -221,6 +227,13 @@ ApplicationWindow {
         boundsBehavior: Flickable.StopAtBounds
         ScrollBar.vertical: ScrollBar {}
         contentHeight: Math.max(page.implicitHeight, initialContainingBlock.childrenRect.y + initialContainingBlock.childrenRect.height)
+
+        EldurScrollInput {
+            id: flickableInput
+            scroller: flickable
+            keySource: flickable.parent
+            focus: true
+        }
 
         // <html>
         ColumnLayout {

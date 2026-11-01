@@ -677,6 +677,12 @@ function _ensureRafAnim() {
         "eldur_raf"
     );
     _rafAnim.triggered.connect(function() {
+        // HTML's update the rendering: scroll steps run before the frame's callbacks.
+        var moved = _scrollEvents.slice();
+        _scrollEvents.length = 0;
+        for (var at = 0; at < moved.length; ++at) {
+            _dispatchDynamic(moved[at], "scroll", null);
+        }
         var batch = _rafQueue.slice();
         _rafQueue.length = 0;
         if (_rafQueue.length === 0) {
@@ -691,6 +697,53 @@ function _ensureRafAnim() {
         }
     });
     return _rafAnim;
+}
+
+// HTML's "scroll to the fragment", for a hash a script sets.
+function _scrollToFragment(hash) {
+    var name = hash.slice(1);
+    var decoded = name;
+    try {
+        decoded = decodeURIComponent(name);
+    } catch (e) {
+        decoded = null;
+    }
+    var found = document.getElementById(name) || (decoded !== null ? document.getElementById(decoded) : null);
+    var page = _findRootScroller();
+    if (!found && name !== "" && String(decoded).toLowerCase() !== "top") {
+        return;
+    }
+    var active = document.activeElement;
+    if (active && active !== document.body && typeof active.blur === "function") {
+        active.blur();
+    }
+    if (found) {
+        _scrollIntoView(_unwrap(found), { block: "start" });
+    } else if (page) {
+        scrollTo(page.contentX, 0);
+    }
+}
+
+// A link took the page to `link`: the address moved without the scroll a script's would need.
+function fragmentFollowed(link) {
+    if (_locState.hash === link) {
+        return;
+    }
+    _locState.hash = link;
+    if (_locState.href) {
+        _locState.href = _locState.href.split("#")[0] + link;
+    }
+    _dispatchDynamic(_root, "hashchange", null);
+}
+
+var _scrollEvents = [];
+
+// A box scrolled any number of times in a frame has one event, on the next.
+function _queueScrollEvent(raw) {
+    if (_scrollEvents.indexOf(raw) === -1) {
+        _scrollEvents.push(raw);
+    }
+    _ensureRafAnim().running = true;
 }
 
 function requestAnimationFrame(callback) {
@@ -1332,6 +1385,7 @@ var location = {
             _locState.href = baseHref + normalized;
         }
         if (changed && _root) {
+            _scrollToFragment(normalized);
             _dispatchDynamic(_root, "hashchange", null);
         }
     },
@@ -3199,11 +3253,85 @@ function _findTextChild(raw) {
     return null;
 }
 
+// Where a scroller's offset puts `start..start + size` of its content for an
+// `align` of CSSOM View's: `start`, `end`, `center`, `nearest`.
+function _intoViewOffset(align, now, before, size, port) {
+    if (align === "start") {
+        return now + before;
+    }
+    if (align === "end") {
+        return now + before + size - port;
+    }
+    if (align === "center") {
+        return now + before - (port - size) / 2;
+    }
+    var after = before + size - port;
+    if ((before < 0 && after > 0) || (before >= 0 && after <= 0)) {
+        return now;
+    }
+    return Math.abs(before) < Math.abs(after) ? now + before : now + after;
+}
+
+// Every scroller around the element, nearest first, and the page last: moving
+// one changes where the element is for the next.
+function _scrollIntoView(raw, arg) {
+    var block = "start";
+    var inline = "nearest";
+    if (arg === false) {
+        block = "end";
+    } else if (arg && typeof arg === "object") {
+        block = typeof arg.block === "string" ? arg.block : block;
+        inline = typeof arg.inline === "string" ? arg.inline : inline;
+    }
+    _layoutForRead();
+    for (var at = _logicalParent(raw); at && at !== _root; at = _logicalParent(at)) {
+        var scroller = _ownScroller(at);
+        if (!scroller) {
+            continue;
+        }
+        var r = getBoundingClientRect(raw);
+        var port = scroller.mapToItem(null, 0, 0);
+        var y = _intoViewOffset(block, scroller.contentY, r.top - port.y, r.height, scroller.height);
+        var x = _intoViewOffset(inline, scroller.contentX, r.left - port.x, r.width, scroller.width);
+        scroller.contentY = Math.max(0, Math.min(y, Math.max(0, scroller.contentHeight - scroller.height)));
+        scroller.contentX = Math.max(0, Math.min(x, Math.max(0, scroller.contentWidth - scroller.width)));
+    }
+    var page = _findRootScroller();
+    if (page) {
+        var rect = getBoundingClientRect(raw);
+        scrollTo(_intoViewOffset(inline, page.contentX, rect.left, rect.width, page.width),
+            _intoViewOffset(block, page.contentY, rect.top, rect.height, page.height));
+    }
+}
+
+// The Flickable that scrolls a box's content: its own, or the page's when the
+// box is the root element's.
+function _scrollerOf(raw) {
+    if (!raw) {
+        return null;
+    }
+    if (raw === _root || raw.eldurTag === "html") {
+        return _findRootScroller();
+    }
+    return _ownScroller(raw);
+}
+
+function _ownScroller(raw) {
+    if (!raw) {
+        return null;
+    }
+    if (raw.eldurScroller) {
+        return raw.eldurScroller;
+    }
+    return _meta(raw).gScroller || null;
+}
+
 function _childContainer(raw) {
     if (!raw) {
         return null;
     }
-    var base = (typeof raw.contentHeight === "number" && raw.contentItem) ? raw.contentItem : raw;
+    var base = (typeof raw.contentHeight === "number" && raw.contentItem) ? raw.contentItem
+        : _ownScroller(raw) ? _ownScroller(raw).contentItem : raw;
     var m = _meta(raw);
     if (m.tableGrid) {
         return m.tableGrid;
@@ -4585,7 +4713,9 @@ function _holdFocus() {
     }
     _focusLooked = true;
     Qt.callLater(_focusSettle);
-    _focusHeld = _focusIn(_root);
+    var held = _focusIn(_root);
+    // A scroller's key input isn't an element the page can focus.
+    _focusHeld = held && typeof held.keyStep === "function" ? null : held;
 }
 
 function _focusIn(item) {
@@ -4786,6 +4916,11 @@ function getBoundingClientRect(item) {
             h = Math.max.apply(null, ys) - y;
         }
     }
+    // A column's millionth-of-a-pixel carries are not positions.
+    x = _cleanPx(x);
+    y = _cleanPx(y);
+    w = _cleanPx(w);
+    h = _cleanPx(h);
     return {
         x: x,
         y: y,
@@ -4796,6 +4931,10 @@ function getBoundingClientRect(item) {
         right: x + w,
         bottom: y + h
     };
+}
+
+function _cleanPx(value) {
+    return Math.round(value * 10000) / 10000;
 }
 
 // CSSOM View 7: whole pixels; a box that isn't rendered has none.
@@ -4824,6 +4963,10 @@ function _borderOf(raw, side) {
 function _clientSize(item, axis) {
     _layoutForRead();
     var raw = _gCurrent(_unwrap(item));
+    // The root element's client area is the viewport.
+    if (raw && (raw === _root || raw.eldurTag === "html") && _findRootScroller()) {
+        return Math.round(_findRootScroller()[axis]);
+    }
     if (!raw || raw.__eldurInline || raw.visible === false || typeof raw[axis] !== "number"
         || _meta(raw).gShownInline) {
         return 0;
@@ -5524,11 +5667,10 @@ function _connectSignalOnce(raw, type) {
         m.connected[type] = true;
         return true;
     } else if (type === "scroll") {
-        if (typeof raw.contentYChanged === "function") {
-            raw.contentYChanged.connect(function() { _dispatchDynamic(raw, "scroll", null); });
-        }
-        if (typeof raw.contentXChanged === "function") {
-            raw.contentXChanged.connect(function() { _dispatchDynamic(raw, "scroll", null); });
+        var moves = raw === _root ? _findRootScroller() : _scrollerOf(raw) || raw;
+        if (moves && typeof moves.contentYChanged === "function") {
+            moves.contentYChanged.connect(function() { _queueScrollEvent(raw); });
+            moves.contentXChanged.connect(function() { _queueScrollEvent(raw); });
         }
         m.connected[type] = true;
         return true;
@@ -7174,6 +7316,10 @@ function wrap(rawItem) {
         var contentProp = isY ? "contentHeight" : "contentWidth";
         var sizeProp = isY ? "height" : "width";
         var implicitProp = isY ? "implicitHeight" : "implicitWidth";
+        var scroller = _scrollerOf(rawItem);
+        if (scroller) {
+            return Math.round(scroller[contentProp]);
+        }
         if (typeof rawItem[contentProp] === "number" && rawItem[contentProp] > 0) {
             return rawItem[contentProp];
         }
@@ -7210,6 +7356,13 @@ function wrap(rawItem) {
     function _applyScrollOffset(axis, rawVal) {
         var isY = axis === "y";
         var n = Number(rawVal) || 0;
+        var own = _scrollerOf(rawItem);
+        if (own) {
+            var far = isY ? own.contentHeight - own.height : own.contentWidth - own.width;
+            n = Math.max(0, Math.min(n, Math.max(0, far)));
+            own[isY ? "contentY" : "contentX"] = n;
+            return;
+        }
         var scrollDim = _computeScrollDimension(axis);
         var clientDim = isY
             ? (typeof rawItem.height === "number" ? rawItem.height : 0)
@@ -7275,7 +7428,7 @@ function wrap(rawItem) {
             }
         }
         if (n !== prev) {
-            _dispatchDynamic(rawItem, "scroll", null);
+            _queueScrollEvent(rawItem);
         }
     }
     m.raw = rawItem;
@@ -7843,6 +7996,10 @@ function wrap(rawItem) {
         get clientWidth() { return _clientSize(rawItem, "width"); },
         get clientHeight() { return _clientSize(rawItem, "height"); },
         get scrollTop() {
+            var scroller = _scrollerOf(rawItem);
+            if (scroller) {
+                return scroller.contentY;
+            }
             if (typeof rawItem.contentY === "number") {
                 return rawItem.contentY;
             }
@@ -7852,6 +8009,10 @@ function wrap(rawItem) {
             _applyScrollOffset("y", v);
         },
         get scrollLeft() {
+            var scroller = _scrollerOf(rawItem);
+            if (scroller) {
+                return scroller.contentX;
+            }
             if (typeof rawItem.contentX === "number") {
                 return rawItem.contentX;
             }
@@ -7983,52 +8144,7 @@ function wrap(rawItem) {
             }
         },
         scrollIntoView: function(arg) {
-            var scroller = _findRootScroller();
-            if (!scroller) {
-                return;
-            }
-            var rect = getBoundingClientRect(rawItem);
-            var curX = window.scrollX;
-            var curY = window.scrollY;
-            var vw = (typeof scroller.width === "number" && scroller.width > 0) ? scroller.width : window.innerWidth;
-            var vh = (typeof scroller.height === "number" && scroller.height > 0) ? scroller.height : window.innerHeight;
-            var block = "start";
-            var inline = "nearest";
-            if (arg === false) {
-                block = "end";
-            } else if (arg && typeof arg === "object") {
-                if (typeof arg.block === "string") { block = arg.block; }
-                if (typeof arg.inline === "string") { inline = arg.inline; }
-            }
-            var nextX = curX;
-            if (inline === "start") {
-                nextX = curX + rect.left;
-            } else if (inline === "end") {
-                nextX = curX + rect.right - vw;
-            } else if (inline === "center") {
-                nextX = curX + rect.left - (vw - rect.width) / 2;
-            } else {
-                if (rect.left < 0) {
-                    nextX = curX + rect.left;
-                } else if (vw > 0 && rect.right > vw) {
-                    nextX = curX + rect.right - vw;
-                }
-            }
-            var nextY = curY;
-            if (block === "end") {
-                nextY = curY + rect.bottom - vh;
-            } else if (block === "center") {
-                nextY = curY + rect.top - (vh - rect.height) / 2;
-            } else if (block === "nearest") {
-                if (rect.top < 0) {
-                    nextY = curY + rect.top;
-                } else if (vh > 0 && rect.bottom > vh) {
-                    nextY = curY + rect.bottom - vh;
-                }
-            } else {
-                nextY = curY + rect.top;
-            }
-            scrollTo(nextX, nextY);
+            _scrollIntoView(rawItem, arg);
         },
         getBoundingClientRect: function() { return getBoundingClientRect(rawItem); },
         matches: function(sel) {
@@ -11096,7 +11212,7 @@ function scrollTo(xOrOpts, y) {
     scroller.contentX = clampedX;
     scroller.contentY = clampedY;
     if ((clampedX !== curX || clampedY !== curY) && _root) {
-        _dispatchDynamic(_root, "scroll", null);
+        _queueScrollEvent(_root);
     }
 }
 
@@ -11120,7 +11236,50 @@ function scrollBy(xOrOpts, y) {
 
 var scroll = scrollTo;
 
+// Paint order backwards: later siblings and higher z first, children over
+// their box, and nothing outside a box that clips.
+function _hitAt(item, x, y) {
+    if (!item || item.visible === false || typeof item.mapFromItem !== "function") {
+        return null;
+    }
+    var local = item.mapFromItem(null, x, y);
+    var inside = local.x >= 0 && local.y >= 0 && local.x < item.width && local.y < item.height;
+    if (item.clip && !inside) {
+        return null;
+    }
+    var kids = [];
+    for (var i = 0; i < item.children.length; ++i) {
+        kids.push({ item: item.children[i], at: i });
+    }
+    kids.sort(function(a, b) { return (b.item.z - a.item.z) || (b.at - a.at); });
+    for (var k = 0; k < kids.length; ++k) {
+        var hit = _hitAt(kids[k].item, x, y);
+        if (hit) {
+            return hit;
+        }
+    }
+    return inside && _gIsElement(item) ? item : null;
+}
+
+function _hitFrom(x, y) {
+    if (!_root) {
+        return null;
+    }
+    return _hitAt(_root.contentItem || _root, x, y);
+}
+
 var document = {
+    get scrollingElement() { return document.documentElement; },
+    elementFromPoint: function(x, y) {
+        _layoutForRead();
+        var w = _root ? _root.width : 0;
+        var h = _root ? _root.height : 0;
+        if (!(x >= 0 && y >= 0 && x < w && y < h)) {
+            return null;
+        }
+        var hit = _hitFrom(x, y);
+        return hit ? wrap(hit) : document.documentElement;
+    },
     get title() { return getTitle(); },
     set title(v) { setTitle(v); },
     get baseURI() { return _getDocumentBaseUrl(); },
@@ -11156,6 +11315,11 @@ var document = {
         var focused = null;
         if (_root) {
             _walkItems(_root, function(node) {
+                // A scroller's key input holding the focus is the page with none of its own.
+                if ((node.activeFocus || node.focus) && typeof node.keyStep === "function") {
+                    focused = null;
+                    return true;
+                }
                 if (node !== _root && (node.activeFocus || node.focus) && !_focusGone(node)) {
                     focused = node;
                 }
@@ -11169,6 +11333,7 @@ var document = {
         if (_activeElement && typeof _activeElement.focus !== "boolean") {
             return wrap(_activeElement);
         }
+
         return this.body;
     },
     getElementById: function(id) {
@@ -13621,6 +13786,9 @@ function _gSetTransforms(raw) {
     if (m.gShift) {
         list.push(m.gShift);
     }
+    if (m.gSticky) {
+        list.push(m.gSticky);
+    }
     raw.transform = list;
     // What stands in for the box moves with it.
     if (m.gOuter && m.gOuter.shape) {
@@ -13901,11 +14069,41 @@ function _gWatchStates() {
     });
 }
 
+function _gPlaceSticky(raw, s) {
+    var m = _meta(raw);
+    if (m.gShift) {
+        m.gShift.x = 0;
+        m.gShift.y = 0;
+    }
+    if (!m.gSticky) {
+        m.gSticky = Qt.createComponent(Qt.resolvedUrl("EldurSticky.qml")).createObject(raw, { target: raw });
+        _gSetTransforms(raw);
+    }
+    var width = raw.parent ? raw.parent.width : 0;
+    var height = raw.parent ? raw.parent.height : 0;
+    var inset = function(value, base) {
+        var px = _gPx(value, base, s.fontSize, s.rootSize);
+        return px === null ? undefined : px;
+    };
+    m.gSticky.stickTop = inset(s.top, height);
+    m.gSticky.stickRight = inset(s.right, width);
+    m.gSticky.stickBottom = inset(s.bottom, height);
+    m.gSticky.stickLeft = inset(s.left, width);
+}
+
 function _gPlaceRelative(raw, s) {
     var m = _meta(raw);
     var dx = 0;
     var dy = 0;
-    if (s.position === "relative" || s.position === "sticky") {
+    if (s.position === "sticky") {
+        _gPlaceSticky(raw, s);
+        return;
+    }
+    if (m.gSticky) {
+        m.gSticky = null;
+        _gSetTransforms(raw);
+    }
+    if (s.position === "relative") {
         var parentWidth = raw.parent ? raw.parent.width : 0;
         var left = _gPx(s.left, parentWidth, s.fontSize, s.rootSize);
         var right = _gPx(s.right, parentWidth, s.fontSize, s.rootSize);

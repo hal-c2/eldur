@@ -100,7 +100,7 @@ fn smooth_edges(obj: &mut Object) {
 fn resamples(obj: &Object) -> bool {
     fn turning(value: &Value) -> bool {
         match value {
-            Value::Object(o) => o.type_name != "Translate",
+            Value::Object(o) => !["Translate", "EldurSticky"].contains(&o.type_name.as_str()),
             Value::List(items) => items.iter().any(turning),
             _ => true,
         }

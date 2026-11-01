@@ -232,6 +232,16 @@ Item {
             return Math.round(item.baselineOffset);
         }
         const kids = Array.from(item.children).filter(k => k.visible);
+        // A flex row takes its first item's baseline, that item's bottom edge
+        // when it has no text (css-flexbox §8.5); a spacer here has no height.
+        if (item instanceof RowLayout) {
+            const first = kids.find(k => k.height > 0);
+            if (first) {
+                const inside = _baselineOf(first);
+                return first.y + (inside === null ? first.height : inside);
+            }
+            return null;
+        }
         if (kind !== "first") {
             kids.reverse();
         }

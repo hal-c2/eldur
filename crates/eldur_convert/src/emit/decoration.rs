@@ -3,7 +3,7 @@
 //! by padding + border.
 
 use eldur_css::{BorderSide, BorderStyle, BoxSizing, ComputedStyle, Overflow, Sides, Size};
-use eldur_qml::{Object, Value};
+use eldur_qml::{Member, Object, Value};
 
 use super::Emitter;
 use super::units::{color, fmt_number, number, px_part, round};
@@ -33,6 +33,9 @@ impl Insets {
 
 pub(crate) const ELDUR_ROUND_CLIP_QML: &str = include_str!("EldurRoundClip.qml");
 pub(crate) const ELDUR_BORDER_QML: &str = include_str!("EldurBorder.qml");
+pub(crate) const ELDUR_SCROLLER_QML: &str = include_str!("EldurScroller.qml");
+pub(crate) const ELDUR_STICKY_QML: &str = include_str!("EldurSticky.qml");
+pub(crate) const ELDUR_SCROLL_INPUT_QML: &str = include_str!("EldurScrollInput.qml");
 
 fn style_name(style: BorderStyle) -> &'static str {
     match style {
@@ -134,6 +137,8 @@ pub(crate) struct Decoration {
     pub insets: Insets,
     pub paints: bool,
     pub clips: bool,
+    /// `overflow: auto/scroll`, per axis: the content sits in an `EldurScroller`.
+    pub scroll: Option<(bool, bool)>,
     /// Gradient layers to paint, bottom first.
     pub gradients: bool,
     /// Outer `box-shadow`s to draw behind the box.
@@ -210,19 +215,14 @@ impl Emitter<'_, '_> {
             .any(|l| l.image.is_some() || !matches!(l.clip, eldur_css::BackgroundClip::BorderBox));
         let inset_shadows = style.box_shadow.iter().any(|s| s.inset);
         let shadows = style.box_shadow.iter().any(|s| !s.inset);
-        if matches!(style.overflow_x, Overflow::Auto | Overflow::Scroll)
-            || matches!(style.overflow_y, Overflow::Auto | Overflow::Scroll)
-        {
-            self.diags.warning(
-                "css",
-                line,
-                "`overflow: auto/scroll` clips but does not scroll yet".to_owned(),
-            );
-        }
+        let scrolls = |o: Overflow| matches!(o, Overflow::Auto | Overflow::Scroll);
+        let scroll = (scrolls(style.overflow_x) || scrolls(style.overflow_y))
+            .then_some((scrolls(style.overflow_x), scrolls(style.overflow_y)));
         Decoration {
             insets,
             paints: background || border || is_visible(&style.outline) || self.force_paint,
             clips,
+            scroll,
             gradients,
             shadows,
             inset_shadows,
@@ -255,6 +255,122 @@ impl Emitter<'_, '_> {
         )
     }
 
+    /// The content of an `overflow: auto/scroll` box, in a scroller filling its
+    /// padding box. The content keeps the width of that box; what is wider makes
+    /// `contentWidth` wider. Overlays keep the wrapper's coordinates, and their
+    /// percentages and far edges keep its size: they scroll with the content but
+    /// are not sized by it.
+    #[allow(clippy::too_many_arguments)]
+    fn scroller(
+        &mut self,
+        wrapper: &mut Object,
+        style: &ComputedStyle,
+        deco: &Decoration,
+        (scroll_x, scroll_y): (bool, bool),
+        inner: Option<(Object, String)>,
+        extra: Vec<Object>,
+        fill_height: bool,
+    ) {
+        let [top, right, bottom, left] = sides(style).map(border_width);
+        let id = self.ids.claim(&format!("{} scroller", deco.hint));
+        let mut scroller = Object::new("EldurScroller");
+        scroller.id = Some(id.clone());
+        scroller.set("x", number(left));
+        scroller.set("y", number(top));
+        scroller.set("width", Value::expr(plus("parent.width", -(left + right))));
+        scroller.set(
+            "height",
+            Value::expr(plus("parent.height", -(top + bottom))),
+        );
+        if !scroll_x {
+            scroller.set("scrollsX", false);
+        }
+        if !scroll_y {
+            scroller.set("scrollsY", false);
+        }
+        let pad_x = deco.insets.left - left;
+        let pad_y = deco.insets.top - top;
+        let pad_right = deco.insets.right - right;
+        let pad_bottom = deco.insets.bottom - bottom;
+        let mut wide = vec!["width".to_owned()];
+        let mut tall = vec!["height".to_owned()];
+        if let Some((mut inner, inner_id)) = inner {
+            inner.set("x", number(pad_x));
+            inner.set("y", number(pad_y));
+            inner.set(
+                "width",
+                Value::expr(plus(&format!("{id}.width"), -(pad_x + pad_right))),
+            );
+            if fill_height {
+                inner.set(
+                    "height",
+                    Value::expr(format!(
+                        "Math.max(implicitHeight, {})",
+                        plus(&format!("{id}.height"), -(pad_y + pad_bottom))
+                    )),
+                );
+            }
+            // A `Text` draws past its width without children to measure.
+            let reach = if inner.type_name == "Text" {
+                format!("{inner_id}.contentWidth")
+            } else {
+                format!("{inner_id}.childrenRect.x + {inner_id}.childrenRect.width")
+            };
+            wide.push(plus(&reach, pad_x + pad_right));
+            tall.push(plus(
+                &format!("{inner_id}.implicitHeight"),
+                pad_y + pad_bottom,
+            ));
+            scroller.push_child(inner);
+        }
+        if !extra.is_empty() {
+            let holder = format!("{id}Overlays");
+            let mut overlays = Object::new("Item");
+            overlays.id = Some(holder.clone());
+            overlays.set("x", number(-left));
+            overlays.set("y", number(-top));
+            overlays.set("width", Value::expr("parent.parent.parent.width"));
+            overlays.set("height", Value::expr("parent.parent.parent.height"));
+            for child in extra {
+                overlays.push_child(child);
+            }
+            wide.push(plus(
+                &format!("{holder}.childrenRect.x + {holder}.childrenRect.width"),
+                -left,
+            ));
+            tall.push(plus(
+                &format!("{holder}.childrenRect.y + {holder}.childrenRect.height"),
+                -top,
+            ));
+            scroller.push_child(overlays);
+        }
+        let extent = |parts: &[String]| Value::expr(format!("Math.max({})", parts.join(", ")));
+        scroller.set(
+            "contentWidth",
+            if scroll_x {
+                extent(&wide)
+            } else {
+                Value::expr("width")
+            },
+        );
+        scroller.set(
+            "contentHeight",
+            if scroll_y {
+                extent(&tall)
+            } else {
+                Value::expr("height")
+            },
+        );
+        wrapper.members.push(Member::PropertyDecl {
+            ty: "Item".to_owned(),
+            name: "eldurScroller".to_owned(),
+            value: Some(Value::expr(id)),
+            readonly: false,
+            required: false,
+        });
+        wrapper.push_child(scroller);
+    }
+
     /// [`Self::wrap`], with `extra` children (markers, overlays) after the
     /// content, inside the clipping item.
     #[allow(clippy::too_many_arguments)]
@@ -281,6 +397,27 @@ impl Emitter<'_, '_> {
         }
         if deco.clips {
             wrapper.set("clip", true);
+        }
+        // EldurSticky's limit: the column inside is only as tall as its content.
+        if let Some((content, _)) = &inner
+            && content.members.iter().any(|m| {
+                matches!(m, Member::Child(c) if matches!(
+                    c.get("transform"),
+                    Some(Value::Object(t)) if t.type_name == "EldurSticky"
+                ) || matches!(
+                    c.get("transform"),
+                    Some(Value::List(list)) if list.iter().any(
+                        |t| matches!(t, Value::Object(t) if t.type_name == "EldurSticky"))
+                ))
+            })
+        {
+            wrapper.members.push(Member::PropertyDecl {
+                name: "eldurInsetBottom".to_owned(),
+                ty: "real".to_owned(),
+                value: Some(number(deco.insets.bottom)),
+                readonly: true,
+                required: false,
+            });
         }
         match &inner {
             Some((content, id)) => {
@@ -366,6 +503,13 @@ impl Emitter<'_, '_> {
                 );
             }
         }
+        let (inner, extra) = match deco.scroll {
+            Some(axes) if inner.is_some() || !extra.is_empty() => {
+                self.scroller(&mut wrapper, style, deco, axes, inner, extra, fill_height);
+                (None, Vec::new())
+            }
+            _ => (inner, extra),
+        };
         if let Some((mut inner, _)) = inner {
             inner.set("anchors.left", Value::expr("parent.left"));
             inner.set("anchors.right", Value::expr("parent.right"));
@@ -439,6 +583,13 @@ impl Emitter<'_, '_> {
                 Value::expr(format!("{id}.implicitHeight")),
             );
             self.shadows(&mut outer, style, line);
+            // The outer item is the element a script holds.
+            let scroller = wrapper.members.iter().find(
+                |m| matches!(m, Member::PropertyDecl { name, .. } if name == "eldurScroller"),
+            );
+            if let Some(scroller) = scroller.cloned() {
+                outer.members.push(scroller);
+            }
             outer.push_child(wrapper);
             return outer;
         }

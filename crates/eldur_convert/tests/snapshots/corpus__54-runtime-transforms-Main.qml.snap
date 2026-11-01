@@ -200,6 +200,13 @@ ApplicationWindow {
         ScrollBar.vertical: ScrollBar {}
         contentHeight: Math.max(page.implicitHeight, initialContainingBlock.childrenRect.y + initialContainingBlock.childrenRect.height)
 
+        EldurScrollInput {
+            id: flickableInput
+            scroller: flickable
+            keySource: flickable.parent
+            focus: true
+        }
+
         // <html>
         ColumnLayout {
             id: page

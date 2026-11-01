@@ -917,6 +917,7 @@ impl<'a> Emitter<'a, '_> {
             },
             paints: base.paints,
             clips: base.clips,
+            scroll: base.scroll,
             gradients: base.gradients,
             shadows: base.shadows,
             inset_shadows: base.inset_shadows,

@@ -599,6 +599,16 @@ pub(crate) fn wire(
                 };
                 add_handler(obj, "onActiveFocusChanged", &[], vec![body]);
             }
+            // A scroll event waits for the next frame, which only the runtime keeps.
+            ("scroll", _) => add_handler(
+                obj,
+                "Component.onCompleted",
+                &[],
+                vec![format!(
+                    "Eldur.listen({id}, \"scroll\", Page.{});",
+                    binding.function
+                )],
+            ),
             (_, Some(signal)) => {
                 let mut body = call(event, "null");
                 // TextArea has no "edited by the user" signal.

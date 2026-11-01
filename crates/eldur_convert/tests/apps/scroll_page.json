@@ -1,0 +1,3 @@
+{"steps":[{"name":"to","click":"#btn"},{"name":"by","click":"#btn"},{"name":"end","click":"#btn"},{"name":"hash","click":"#btn"},{"name":"focus","click":"#btn"},{"name":"hit","click":"#btn"},
+{"name":"wheel","wheel":["page",0,300]},{"name":"keys","key":"Home","settle":800},{"name":"anchor","click":"#jump","settle":800}],
+ "watch":[{"sel":"nav"},{"sel":"#stick"},{"sel":"#stickWrap"},{"sel":"#target"},{"sel":"#far"},{"sel":"#abs"},{"sel":"#fix"}]}

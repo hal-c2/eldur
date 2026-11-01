@@ -1219,6 +1219,21 @@ fn text_asks_for_native_glyphs() {
 }
 
 #[test]
+fn text_in_a_sticky_box_stays_native() {
+    // A sticky box only moves: 17-landing-page's navbar came out lighter.
+    let (qml, _) = convert(&page(
+        ".t{position:sticky;top:0}",
+        "<div class=t><p>stuck</p></div>",
+    ));
+    assert_eq!(
+        render_type_of(&qml, "\"stuck\"").as_deref(),
+        Some(NATIVE),
+        "{qml}"
+    );
+    assert!(!qml.contains("antialiasing: true"), "{qml}");
+}
+
+#[test]
 fn text_under_a_scale_or_rotation_keeps_qts_default() {
     // Native glyphs resample badly: 20-pricing's featured card, 86.21 vs 85.84.
     for transform in ["scale(1.05)", "rotate(-8deg)", "matrix(1, 0.2, 0, 1, 0, 0)"] {

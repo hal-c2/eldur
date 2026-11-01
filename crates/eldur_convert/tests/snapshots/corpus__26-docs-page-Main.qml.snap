@@ -184,6 +184,13 @@ ApplicationWindow {
         ScrollBar.vertical: ScrollBar {}
         contentHeight: page.implicitHeight
 
+        EldurScrollInput {
+            id: flickableInput
+            scroller: flickable
+            keySource: flickable.parent
+            focus: true
+        }
+
         // <html>
         ColumnLayout {
             id: page
@@ -1194,6 +1201,7 @@ ApplicationWindow {
                             // <pre>
                             Rectangle {
                                 id: pre
+                                property Item eldurScroller: preScroller
                                 property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                                 color: "#f6f8fa"
@@ -1208,23 +1216,30 @@ ApplicationWindow {
                                 Layout.preferredHeight: implicitHeight
                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
-                                Text {
-                                    id: preText
-                                    text: "[queue]\nurl = \"redis://localhost:6379/0\"\n\n[worker]\nconcurrency = 4\nmax_attempts = 5"
-                                    textFormat: Text.PlainText
-                                    color: "#24292f"
-                                    font.family: "monospace"
-                                    font.pixelSize: 13
-                                    lineHeight: 18.85
-                                    lineHeightMode: Text.FixedHeight
-                                    wrapMode: Text.NoWrap
-                                    anchors.left: parent.left
-                                    anchors.right: parent.right
-                                    anchors.top: parent.top
-                                    anchors.leftMargin: 17
-                                    anchors.rightMargin: 17
-                                    anchors.topMargin: 17
-                                    renderType: Text.NativeRendering
+                                EldurScroller {
+                                    id: preScroller
+                                    x: 1
+                                    y: 1
+                                    width: parent.width + -2
+                                    height: parent.height + -2
+                                    contentWidth: Math.max(width, preText.contentWidth + 32)
+                                    contentHeight: Math.max(height, preText.implicitHeight + 32)
+
+                                    Text {
+                                        id: preText
+                                        text: "[queue]\nurl = \"redis://localhost:6379/0\"\n\n[worker]\nconcurrency = 4\nmax_attempts = 5"
+                                        textFormat: Text.PlainText
+                                        color: "#24292f"
+                                        font.family: "monospace"
+                                        font.pixelSize: 13
+                                        lineHeight: 18.85
+                                        lineHeightMode: Text.FixedHeight
+                                        wrapMode: Text.NoWrap
+                                        x: 16
+                                        y: 16
+                                        width: preScroller.width + -32
+                                        renderType: Text.NativeRendering
+                                    }
                                 }
 
                                 Shape {

@@ -1,9 +1,7 @@
 ---
 source: crates/eldur_convert/tests/corpus.rs
-assertion_line: 63
 expression: "diagnostics.join(\"\\n\")"
 ---
-warning[css]: index.html:428: `position: sticky` on <header class="navbar"> is laid out in normal flow (not implemented yet)
 info[qml]: index.html:445: `fr` columns 1.1:0.9 on <div class="container hero-grid"> are split into equal sub-columns as 5:4
 info[css]: index.html:433: styles under `:hover` of <a> are left out: it has no item of its own
 info[css]: index.html:434: styles under `:hover` of <a> are left out: it has no item of its own

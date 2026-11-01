@@ -107,7 +107,8 @@ TestCase {
     }
     function press(name) {
         const keys = { Enter: Qt.Key_Return, Escape: Qt.Key_Escape, Tab: Qt.Key_Tab, End: Qt.Key_End,
-            ArrowDown: Qt.Key_Down, ArrowUp: Qt.Key_Up, Backspace: Qt.Key_Backspace }
+            ArrowDown: Qt.Key_Down, ArrowUp: Qt.Key_Up, Backspace: Qt.Key_Backspace,
+            Home: Qt.Key_Home, PageDown: Qt.Key_PageDown, PageUp: Qt.Key_PageUp, Space: Qt.Key_Space }
         keyClick(keys[name])
     }
     function act(s) {
@@ -122,6 +123,14 @@ TestCase {
             for (const c of s.type[1]) keyClick(c)
         }
         if (s.key) press(s.key)
+        if (s.wheel) {
+            const p = s.wheel[0] === "page" ? { x: 1200, y: 400 } : center(s.wheel[0])
+            mouseMove(page, p.x, p.y)
+            // A notch is 120 and moves a scroller 60px.
+            mouseWheel(page, p.x, p.y, -2 * s.wheel[1], -2 * s.wheel[2])
+            wait(400)
+        }
+        if (s.settle) wait(100)
         if (s.viewport) { page.width = s.viewport[0]; page.height = s.viewport[1] }
     }
 
@@ -493,4 +502,14 @@ fn lines_open() {
 #[test]
 fn lines_created() {
     page("lines_created");
+}
+
+#[test]
+fn scroll_box() {
+    page("scroll_box");
+}
+
+#[test]
+fn scroll_page() {
+    page("scroll_page");
 }

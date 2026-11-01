@@ -82,11 +82,11 @@ impl Emitter<'_, '_> {
     /// as written, then percent-decoded; a bad escape just fails to match.
     /// `targets` has no prototype, so `#constructor` is not a target.
     pub(super) fn scroll_to_fragment(&self, root: &mut Object) {
-        let mut body = vec!["let name = link.slice(1);".to_owned()];
+        let mut body = vec!["let eldurName = eldurLink.slice(1);".to_owned()];
         if self.fragments.is_empty() {
-            body.push("const targets = Object.create(null);".to_owned());
+            body.push("const eldurTargets = Object.create(null);".to_owned());
         } else {
-            body.push("const targets = Object.assign(Object.create(null), {".to_owned());
+            body.push("const eldurTargets = Object.assign(Object.create(null), {".to_owned());
             let last = self.fragments.len() - 1;
             for (i, (html, qml)) in self.fragments.iter().enumerate() {
                 let comma = if i == last { "" } else { "," };
@@ -94,30 +94,48 @@ impl Emitter<'_, '_> {
             }
             body.push("});".to_owned());
         }
-        body.push("if (!(name in targets)) {".to_owned());
+        // Following a fragment moves the focus off what held it.
+        body.push(format!("{FLICKABLE_ID}Input.forceActiveFocus();"));
+        if self.runtime_dom {
+            body.push("Eldur.fragmentFollowed(eldurLink);".to_owned());
+        }
+        body.push("if (!(eldurName in eldurTargets)) {".to_owned());
         body.push("    try {".to_owned());
-        body.push("        name = decodeURIComponent(name);".to_owned());
+        body.push("        eldurName = decodeURIComponent(eldurName);".to_owned());
         body.push("    } catch (e) {".to_owned());
-        body.push("        name = null;".to_owned());
+        body.push("        eldurName = null;".to_owned());
         body.push("    }".to_owned());
         body.push("}".to_owned());
-        body.push("const target = name === null ? undefined : targets[name];".to_owned());
-        body.push("if (target) {".to_owned());
+        body.push(
+            "const eldurTarget = eldurName === null ? undefined : eldurTargets[eldurName];"
+                .to_owned(),
+        );
+        body.push("if (eldurTarget) {".to_owned());
+        // A target in a box that scrolls comes into that box's view first.
         body.push(format!(
-            "    const y = target.mapToItem({FLICKABLE_ID}.contentItem, 0, 0).y;"
+            "    for (let eldurAt = eldurTarget.parent; eldurAt && eldurAt !== {FLICKABLE_ID}; eldurAt = eldurAt.parent) {{"
+        ));
+        body.push("        if (eldurAt instanceof Flickable)".to_owned());
+        body.push(
+            "            eldurAt.contentY = Math.max(0, Math.min(eldurTarget.mapToItem(eldurAt.contentItem, 0, 0).y, eldurAt.contentHeight - eldurAt.height));"
+                .to_owned(),
+        );
+        body.push("    }".to_owned());
+        body.push(format!(
+            "    const eldurY = eldurTarget.mapToItem({FLICKABLE_ID}.contentItem, 0, 0).y;"
         ));
         body.push(format!(
-            "    {FLICKABLE_ID}.contentY = Math.max(0, Math.min(y, {FLICKABLE_ID}.contentHeight - {FLICKABLE_ID}.height));"
+            "    {FLICKABLE_ID}.contentY = Math.max(0, Math.min(eldurY, {FLICKABLE_ID}.contentHeight - {FLICKABLE_ID}.height));"
         ));
         body.push(
-            "} else if (name !== null && (name === \"\" || name.toLowerCase() === \"top\")) {"
+            "} else if (eldurName !== null && (eldurName === \"\" || eldurName.toLowerCase() === \"top\")) {"
                 .to_owned(),
         );
         body.push(format!("    {FLICKABLE_ID}.contentY = 0;"));
         body.push("}".to_owned());
         root.members.push(Member::Function {
             name: "scrollToFragment".to_owned(),
-            params: vec!["link".to_owned()],
+            params: vec!["eldurLink".to_owned()],
             body,
         });
     }
