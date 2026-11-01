@@ -4,8 +4,9 @@
 use swc_css_ast::ComponentValue;
 
 use crate::{
-    BackgroundLayer, BackgroundRepeat, BackgroundSize, ColorStop, ComputedStyle, Image, LengthAuto,
-    LengthPercentage, ObjectFit, Overflow, Rgba, Shadow,
+    BackgroundAttachment, BackgroundClip, BackgroundLayer, BackgroundOrigin, BackgroundRepeat,
+    BackgroundSize, ColorStop, ComputedStyle, Image, LengthAuto, LengthPercentage, ObjectFit,
+    Overflow, Rgba, Shadow,
 };
 
 use super::{
@@ -909,38 +910,63 @@ pub(crate) fn parse_bg_repeat_list(
     Ok(out)
 }
 
-pub(crate) fn validate_bg_attachment_list(cvs: &[ComponentValue]) -> Result<(), String> {
+pub(crate) fn parse_bg_attachment_list(
+    cvs: &[ComponentValue],
+) -> Result<Vec<BackgroundAttachment>, String> {
+    let mut out = Vec::new();
     for part in split_comma_separated(cvs)? {
         let mut cur = Cursor::new(part);
         let id = cur
             .eat_ident()
             .ok_or_else(|| "expected background-attachment keyword".to_owned())?;
-        if !matches!(
-            id.to_ascii_lowercase().as_str(),
-            "scroll" | "fixed" | "local"
-        ) {
-            return Err(format!("invalid background-attachment '{id}'"));
-        }
+        out.push(match id.to_ascii_lowercase().as_str() {
+            "scroll" => BackgroundAttachment::Scroll,
+            "fixed" => BackgroundAttachment::Fixed,
+            "local" => BackgroundAttachment::Local,
+            _ => return Err(format!("invalid background-attachment '{id}'")),
+        });
         cur.expect_eof()?;
     }
-    Ok(())
+    Ok(out)
 }
 
-pub(crate) fn validate_bg_box_list(cvs: &[ComponentValue], allow_text: bool) -> Result<(), String> {
+pub(crate) fn parse_bg_origin_list(
+    cvs: &[ComponentValue],
+) -> Result<Vec<BackgroundOrigin>, String> {
+    let mut out = Vec::new();
     for part in split_comma_separated(cvs)? {
         let mut cur = Cursor::new(part);
         let id = cur
             .eat_ident()
             .ok_or_else(|| "expected box keyword".to_owned())?;
-        let lower = id.to_ascii_lowercase();
-        let ok = matches!(lower.as_str(), "border-box" | "padding-box" | "content-box")
-            || (allow_text && lower == "text");
-        if !ok {
-            return Err(format!("invalid background box '{id}'"));
-        }
+        out.push(match id.to_ascii_lowercase().as_str() {
+            "border-box" => BackgroundOrigin::BorderBox,
+            "padding-box" => BackgroundOrigin::PaddingBox,
+            "content-box" => BackgroundOrigin::ContentBox,
+            _ => return Err(format!("invalid background box '{id}'")),
+        });
         cur.expect_eof()?;
     }
-    Ok(())
+    Ok(out)
+}
+
+pub(crate) fn parse_bg_clip_list(cvs: &[ComponentValue]) -> Result<Vec<BackgroundClip>, String> {
+    let mut out = Vec::new();
+    for part in split_comma_separated(cvs)? {
+        let mut cur = Cursor::new(part);
+        let id = cur
+            .eat_ident()
+            .ok_or_else(|| "expected box keyword".to_owned())?;
+        out.push(match id.to_ascii_lowercase().as_str() {
+            "border-box" => BackgroundClip::BorderBox,
+            "padding-box" => BackgroundClip::PaddingBox,
+            "content-box" => BackgroundClip::ContentBox,
+            "text" => BackgroundClip::Text,
+            _ => return Err(format!("invalid background box '{id}'")),
+        });
+        cur.expect_eof()?;
+    }
+    Ok(out)
 }
 
 /// Applies a parsed `background-image` list to `style.background_layers` (CSS Backgrounds 3 §2.1:

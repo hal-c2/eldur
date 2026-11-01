@@ -766,6 +766,7 @@ pub(crate) fn add(
             options: cx.options,
             wanted: &wanted,
             images: cx.images,
+            background_images: cx.background_images,
             runtime_dom: cx.runtime_dom,
             scripts: cx.scripts,
             probe: Some(&probe),

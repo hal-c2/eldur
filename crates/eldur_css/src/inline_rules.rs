@@ -139,11 +139,14 @@ fn box_property(longhand: Longhand) -> Option<&'static str> {
         L::TransitionDuration => "transition-duration",
         L::TransitionTimingFunction => "transition-timing-function",
         L::TransitionDelay => "transition-delay",
-        // Read only to say that a created box does not paint them.
+        // How a created box places its background layers.
         L::BackgroundSize => "background-size",
         L::BackgroundPositionX => "background-position-x",
         L::BackgroundPositionY => "background-position-y",
         L::BackgroundRepeat => "background-repeat",
+        L::BackgroundOrigin => "background-origin",
+        L::BackgroundClip => "background-clip",
+        L::BackgroundAttachment => "background-attachment",
         _ => return None,
     })
 }

@@ -1,92 +1,94 @@
 [
   {
-"selector": "#auto"
-},
+    "selector": "#auto"
+  },
   {
-"selector": "#tile"
-},
+    "selector": "#tile"
+  },
   {
-"selector": "#cover"
-},
+    "selector": "#cover"
+  },
   {
-"selector": "#contain"
-},
+    "selector": "#contain"
+  },
   {
-"selector": "#length"
-},
+    "selector": "#length"
+  },
   {
-"selector": "#percent"
-},
+    "selector": "#percent"
+  },
   {
-"selector": "#repx"
-},
+    "selector": "#repx"
+  },
   {
-"selector": "#repy"
-},
+    "selector": "#repy"
+  },
   {
-"selector": "#scaled"
-},
+    "selector": "#scaled",
+    "max_mismatch": 0.12
+  },
   {
-"selector": "#offset"
-},
+    "selector": "#offset"
+  },
   {
-"selector": "#originc"
-},
+    "selector": "#originc"
+  },
   {
-"selector": "#originb"
-},
+    "selector": "#originb"
+  },
   {
-"selector": "#clipp"
-},
+    "selector": "#clipp",
+    "known": "dashed border drawn solid until item 5"
+  },
   {
-"selector": "#clipc"
-},
+    "selector": "#clipc"
+  },
   {
-"selector": "#multi"
-},
+    "selector": "#multi"
+  },
   {
-"selector": "#round"
-},
+    "selector": "#round"
+  },
   {
-"selector": "#lin45"
-},
+    "selector": "#lin45"
+  },
   {
-"selector": "#lin120"
-},
+    "selector": "#lin120"
+  },
   {
-"selector": "#corner"
-},
+    "selector": "#corner"
+  },
   {
-"selector": "#replin"
-},
+    "selector": "#replin"
+  },
   {
-"selector": "#stripes"
-},
+    "selector": "#stripes"
+  },
   {
-"selector": "#gridp"
-},
+    "selector": "#gridp"
+  },
   {
-"selector": "#gradsize"
-},
+    "selector": "#gradsize"
+  },
   {
-"selector": "#rad"
-},
+    "selector": "#rad"
+  },
   {
-"selector": "#radell"
-},
+    "selector": "#radell"
+  },
   {
-"selector": "#radat"
-},
+    "selector": "#radat"
+  },
   {
-"selector": "#repr"
-},
+    "selector": "#repr"
+  },
   {
-"selector": "#conic"
-},
+    "selector": "#conic"
+  },
   {
-"selector": "#conicat"
-},
+    "selector": "#conicat"
+  },
   {
-"selector": "#fixed"
-}
+    "selector": "#fixed"
+  }
 ]

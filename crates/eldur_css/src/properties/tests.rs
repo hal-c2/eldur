@@ -1304,3 +1304,52 @@ fn clear_keeps_its_side() {
     }
     assert!(!is_inherited(Longhand::Clear));
 }
+
+#[test]
+fn background_boxes_and_attachment_are_kept_per_layer() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    let mut s = ComputedStyle::default();
+    compute(
+        &mut s,
+        Longhand::BackgroundImage,
+        "url(a.png), url(b.png)",
+        &ctx,
+    )
+    .expect("image");
+    compute(
+        &mut s,
+        Longhand::BackgroundOrigin,
+        "content-box, border-box",
+        &ctx,
+    )
+    .expect("origin");
+    compute(&mut s, Longhand::BackgroundClip, "padding-box", &ctx).expect("clip");
+    compute(
+        &mut s,
+        Longhand::BackgroundAttachment,
+        "scroll, fixed",
+        &ctx,
+    )
+    .expect("attachment");
+    let (a, b) = (&s.background_layers[0], &s.background_layers[1]);
+    assert_eq!(a.origin, crate::BackgroundOrigin::ContentBox);
+    assert_eq!(b.origin, crate::BackgroundOrigin::BorderBox);
+    assert_eq!(a.clip, crate::BackgroundClip::PaddingBox);
+    assert_eq!(b.clip, crate::BackgroundClip::PaddingBox);
+    assert_eq!(a.attachment, crate::BackgroundAttachment::Scroll);
+    assert_eq!(b.attachment, crate::BackgroundAttachment::Fixed);
+}
+
+#[test]
+fn a_colour_only_background_keeps_its_clip() {
+    let vp = Viewport::default();
+    let ctx = default_ctx(&vp);
+    let mut s = ComputedStyle::default();
+    compute(&mut s, Longhand::BackgroundClip, "padding-box", &ctx).expect("clip");
+    assert_eq!(
+        s.background_layers[0].clip,
+        crate::BackgroundClip::PaddingBox
+    );
+    assert!(s.background_layers[0].image.is_none());
+}

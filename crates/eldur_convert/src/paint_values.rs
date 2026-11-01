@@ -150,7 +150,12 @@ fn written_head(written: &str) -> Option<String> {
     says_shape.then(|| lower.split_whitespace().collect::<Vec<_>>().join(" "))
 }
 
-fn image_json(image: Option<&Image>, written: &str, viewport: (f32, f32)) -> (Json, String) {
+fn image_json(
+    image: Option<&Image>,
+    written: &str,
+    viewport: (f32, f32),
+    files: &BTreeMap<String, String>,
+) -> (Json, String) {
     let head = written_head(written);
     let with_head = |name: &str, stops: &str, head: Option<String>| match head {
         Some(h) => format!("{name}({h}, {stops})"),
@@ -226,23 +231,47 @@ fn image_json(image: Option<&Image>, written: &str, viewport: (f32, f32)) -> (Js
                 head,
             ),
         ),
-        Some(Image::ConicGradient { stops, .. }) => (
-            json!({"kind": "unpainted", "what": "a conic gradient"}),
+        Some(Image::ConicGradient {
+            from_deg,
+            center_x,
+            center_y,
+            stops,
+        }) => (
+            json!({
+                "kind": "conic",
+                "from": from_deg,
+                "cx": lp_json(center_x, viewport),
+                "cy": lp_json(center_y, viewport),
+                "stops": stops_json(stops, viewport),
+            }),
             with_head("conic-gradient", &css_stops(stops), head),
         ),
         Some(Image::Url(url)) => (
-            json!({"kind": "unpainted", "what": "an image"}),
+            files.get(url).map_or_else(
+                || json!({"kind": "unpainted", "what": format!("image `{url}` was not found and")}),
+                |source| json!({"kind": "image", "source": source}),
+            ),
             format!("url(\"{url}\")"),
         ),
     }
 }
 
-fn images_json(layers: &[Option<Image>], text: &str, viewport: (f32, f32)) -> Json {
+fn images_json(
+    layers: &[Option<Image>],
+    text: &str,
+    viewport: (f32, f32),
+    files: &BTreeMap<String, String>,
+) -> Json {
     let written = split_commas(text);
     let mut list = Vec::new();
     let mut css = Vec::new();
     for (i, layer) in layers.iter().enumerate() {
-        let (one, read) = image_json(layer.as_ref(), written.get(i).unwrap_or(&""), viewport);
+        let (one, read) = image_json(
+            layer.as_ref(),
+            written.get(i).unwrap_or(&""),
+            viewport,
+            files,
+        );
         list.push(one);
         css.push(read);
     }
@@ -314,17 +343,64 @@ fn transform_json(fns: &[TransformFn], viewport: (f32, f32)) -> Json {
     json!({"fns": list})
 }
 
-fn entry(property: &str, text: &str, viewport: &Viewport) -> Option<Json> {
+fn entry(
+    property: &str,
+    text: &str,
+    viewport: &Viewport,
+    files: &BTreeMap<String, String>,
+) -> Option<Json> {
     let size = (viewport.width, viewport.height);
     match eldur_css::parse_paint_value(property, text, viewport)? {
-        PaintValue::Images(layers) => Some(images_json(&layers, text, size)),
+        PaintValue::Images(layers) => Some(images_json(&layers, text, size, files)),
         PaintValue::Shadows(list) => Some(shadows_json(&list)),
         PaintValue::Transform(fns) => Some(transform_json(&fns, size)),
     }
 }
 
+/// Every background `url()` the page's rules can give at run time: a script may
+/// set a class no element has yet, so these are not all in the computed styles.
+pub(crate) fn background_urls(rules: &[RuntimeRule], viewport: &Viewport) -> BTreeSet<String> {
+    let mut vars: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
+    for rule in rules {
+        for (name, value, _) in &rule.declarations {
+            if name.starts_with("--") {
+                vars.entry(name).or_default().insert(value.trim());
+            }
+        }
+    }
+    let mut urls = BTreeSet::new();
+    for rule in rules {
+        for (name, value, _) in &rule.declarations {
+            if !matches!(name.as_str(), "background" | "background-image") {
+                continue;
+            }
+            for reading in readings(value, &vars, 0) {
+                let image = if name == "background" {
+                    eldur_css::background_parts(&reading).and_then(|(image, _)| image)
+                } else {
+                    Some(reading)
+                };
+                let Some(image) = image else { continue };
+                if let Some(PaintValue::Images(layers)) =
+                    eldur_css::parse_paint_value("background-image", &image, viewport)
+                {
+                    urls.extend(layers.into_iter().filter_map(|l| match l {
+                        Some(Image::Url(url)) => Some(url),
+                        _ => None,
+                    }));
+                }
+            }
+        }
+    }
+    urls
+}
+
 /// Every value the page's rules can give a paint property.
-pub(crate) fn paint_values_decl(rules: &[RuntimeRule], viewport: &Viewport) -> Member {
+pub(crate) fn paint_values_decl(
+    rules: &[RuntimeRule],
+    viewport: &Viewport,
+    files: &BTreeMap<String, String>,
+) -> Member {
     let mut vars: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
     for rule in rules {
         for (name, value, _) in &rule.declarations {
@@ -335,7 +411,7 @@ pub(crate) fn paint_values_decl(rules: &[RuntimeRule], viewport: &Viewport) -> M
     }
     let mut table = serde_json::Map::new();
     let mut add = |property: &str, text: &str| {
-        if let Some(found) = entry(property, text, viewport) {
+        if let Some(found) = entry(property, text, viewport, files) {
             table.insert(key(property, text), found);
         }
     };

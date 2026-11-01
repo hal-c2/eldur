@@ -62,6 +62,7 @@ pub(crate) struct Inputs<'a> {
     pub options: &'a Options,
     pub wanted: &'a HashSet<NodeId>,
     pub images: &'a BTreeMap<NodeId, ImageAsset>,
+    pub background_images: &'a BTreeMap<String, String>,
     pub runtime_dom: bool,
     /// The page's scripts, when it has any.
     pub scripts: Option<&'a Scripts>,
@@ -206,6 +207,7 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
     let body = cx.doc.body().and_then(|b| cx.styles.style(b));
     let mut emitter = Emitter::new(cx.doc, cx.styles, cx.options, diags, cx.wanted);
     emitter.images = cx.images.clone();
+    emitter.background_images = cx.background_images.clone();
     emitter.runtime_dom = cx.runtime_dom;
     if let Some(scripts) = cx.scripts {
         emitter.open_elements = scripts.analysis.open_elements;
@@ -1029,6 +1031,7 @@ impl Dynamic<'_, '_> {
         let body = cx.doc.body().and_then(|b| styles.style(b));
         let mut emitter = Emitter::new(cx.doc, styles, cx.options, diags, cx.wanted);
         emitter.images = cx.images.clone();
+        emitter.background_images = cx.background_images.clone();
         emitter.runtime_dom = cx.runtime_dom;
         if let Some(scripts) = cx.scripts {
             emitter.open_elements = scripts.analysis.open_elements;

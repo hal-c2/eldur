@@ -599,33 +599,43 @@ ApplicationWindow {
                                                 Layout.maximumHeight: 120
                                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
-                                                Shape {
-                                                    id: tileGradient
+                                                EldurBackgroundLayer {
+                                                    id: tileBackground
                                                     anchors.fill: parent
+                                                    areaTop: 1
+                                                    areaRight: 1
+                                                    areaBottom: 1
+                                                    areaLeft: 1
+                                                    radius: 12
+                                                    isGradient: true
 
-                                                    ShapePath {
-                                                        strokeWidth: -1
-                                                        fillGradient: LinearGradient {
-                                                            x1: tileGradient.width * 0.125 - tileGradient.height * 0.2165
-                                                            y1: -tileGradient.width * 0.2165 + tileGradient.height * 0.375
-                                                            x2: tileGradient.width * 0.875 + tileGradient.height * 0.2165
-                                                            y2: tileGradient.width * 0.2165 + tileGradient.height * 0.625
+                                                    Shape {
+                                                        id: tileGradient
+                                                        anchors.fill: parent
 
-                                                            GradientStop {
-                                                                position: 0
-                                                                color: "#0f766e"
+                                                        ShapePath {
+                                                            strokeWidth: -1
+                                                            fillGradient: LinearGradient {
+                                                                x1: tileGradient.width * 0.125 - tileGradient.height * 0.2165
+                                                                y1: -tileGradient.width * 0.2165 + tileGradient.height * 0.375
+                                                                x2: tileGradient.width * 0.875 + tileGradient.height * 0.2165
+                                                                y2: tileGradient.width * 0.2165 + tileGradient.height * 0.625
+
+                                                                GradientStop {
+                                                                    position: 0
+                                                                    color: "#0f766e"
+                                                                }
+
+                                                                GradientStop {
+                                                                    position: 1
+                                                                    color: "#155e75"
+                                                                }
                                                             }
 
-                                                            GradientStop {
-                                                                position: 1
-                                                                color: "#155e75"
+                                                            PathRectangle {
+                                                                width: tileGradient.width
+                                                                height: tileGradient.height
                                                             }
-                                                        }
-
-                                                        PathRectangle {
-                                                            width: tileGradient.width
-                                                            height: tileGradient.height
-                                                            radius: 12
                                                         }
                                                     }
                                                 }

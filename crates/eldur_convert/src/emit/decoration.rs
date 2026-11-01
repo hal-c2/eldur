@@ -45,7 +45,7 @@ pub(crate) fn border_width(side: &BorderSide) -> f32 {
     if is_visible(side) { side.width } else { 0.0 }
 }
 
-fn sides(style: &ComputedStyle) -> [&BorderSide; 4] {
+pub(super) fn sides(style: &ComputedStyle) -> [&BorderSide; 4] {
     let b = &style.border;
     [&b.top, &b.right, &b.bottom, &b.left]
 }
@@ -123,7 +123,10 @@ impl Emitter<'_, '_> {
         let clips = style.overflow_x != Overflow::Visible || style.overflow_y != Overflow::Visible;
         // The canvas propagation only takes the colour; gradients stay on
         // the box, which is close for the body of a page.
-        let gradients = style.background_layers.iter().any(|l| l.image.is_some());
+        let gradients = style
+            .background_layers
+            .iter()
+            .any(|l| l.image.is_some() || !matches!(l.clip, eldur_css::BackgroundClip::BorderBox));
         let inset_shadows = style.box_shadow.iter().any(|s| s.inset);
         let shadows = style.box_shadow.iter().any(|s| !s.inset);
         if matches!(style.overflow_x, Overflow::Auto | Overflow::Scroll)
@@ -186,7 +189,7 @@ impl Emitter<'_, '_> {
         let mut wrapper = Object::new(if deco.paints { "Rectangle" } else { "Item" });
         let insets = deco.insets;
         if deco.paints {
-            let bg = if paint_background {
+            let bg = if paint_background && colour_clip_inset(style).is_none() {
                 style.background_color
             } else {
                 eldur_css::Rgba::TRANSPARENT
@@ -228,7 +231,14 @@ impl Emitter<'_, '_> {
         } else {
             Vec::new()
         };
-        let painted = !gradients.is_empty();
+        let colour_box = (paint_background && !style.background_color.is_transparent())
+            .then(|| colour_clip_inset(style))
+            .flatten();
+        let painted = !gradients.is_empty() || colour_box.is_some();
+        if let Some(by_content) = colour_box {
+            let colour = self.clipped_colour(style, by_content, line);
+            wrapper.push_child(colour);
+        }
         for shape in gradients {
             wrapper.push_child(shape);
         }
@@ -450,6 +460,50 @@ impl Emitter<'_, '_> {
         }
     }
 
+    /// The background colour, painted in the box the bottom layer clips to.
+    fn clipped_colour(
+        &mut self,
+        style: &ComputedStyle,
+        to_content: bool,
+        line: Option<u32>,
+    ) -> Object {
+        let by = if to_content {
+            self.insets(style, line)
+        } else {
+            Insets {
+                top: border_width(&style.border.top),
+                right: border_width(&style.border.right),
+                bottom: border_width(&style.border.bottom),
+                left: border_width(&style.border.left),
+            }
+        };
+        let mut rect = Object::new("Rectangle");
+        rect.set("anchors.fill", Value::expr("parent"));
+        for (name, v) in [
+            ("anchors.topMargin", by.top),
+            ("anchors.rightMargin", by.right),
+            ("anchors.bottomMargin", by.bottom),
+            ("anchors.leftMargin", by.left),
+        ] {
+            if v != 0.0 {
+                rect.set(name, number(v));
+            }
+        }
+        rect.set("color", color(style.background_color));
+        let radii = self.corner_radii(style, line);
+        let less = |r: f32, a: f32, b: f32| (r - a.max(b)).max(0.0);
+        set_radii(
+            &mut rect,
+            [
+                less(radii[0], by.top, by.left),
+                less(radii[1], by.top, by.right),
+                less(radii[2], by.bottom, by.right),
+                less(radii[3], by.bottom, by.left),
+            ],
+        );
+        rect
+    }
+
     pub(super) fn radius(
         &mut self,
         wrapper: &mut Object,
@@ -579,6 +633,17 @@ impl Emitter<'_, '_> {
 }
 
 /// `radius`, or one radius per corner when they differ.
+/// `Some(to_content)` when the background colour stops inside the border box:
+/// the bottom layer's `background-clip` says for the colour too (CSS
+/// Backgrounds 3 §3.7).
+fn colour_clip_inset(style: &ComputedStyle) -> Option<bool> {
+    match style.background_layers.last()?.clip {
+        eldur_css::BackgroundClip::PaddingBox => Some(false),
+        eldur_css::BackgroundClip::ContentBox => Some(true),
+        eldur_css::BackgroundClip::BorderBox | eldur_css::BackgroundClip::Text => None,
+    }
+}
+
 pub(super) fn set_radii(obj: &mut Object, px: [f32; 4]) {
     let names = [
         "topLeftRadius",

@@ -77,7 +77,16 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     } else {
         &scripts.wanted
     };
-    let images = crate::images::collect(&doc, &input.url, resources, &mut diags);
+    let mut images = crate::images::collect(&doc, &input.url, resources, &mut diags);
+    crate::images::collect_backgrounds(
+        &mut images,
+        &doc,
+        &styles,
+        &sheets,
+        &input.url,
+        resources,
+        &mut diags,
+    );
     // An inline element or option has no object for a script's static target,
     // so a script that wants one finds it at run time.
     let runtime_dom = !scripts.is_empty()
@@ -103,6 +112,7 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         options,
         wanted,
         images: &images.by_node,
+        background_images: &images.backgrounds,
         runtime_dom,
         scripts: (!scripts.is_empty()).then_some(&scripts),
         probe: None,
@@ -190,9 +200,24 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
             }
             if scripts.analysis.needs_cascade() {
                 let rules = eldur_css::runtime_rules(&sheets, &options.viewport);
+                let mut with_rules = crate::images::Images {
+                    backgrounds: images.backgrounds.clone(),
+                    files: std::mem::take(&mut files),
+                    ..Default::default()
+                };
+                crate::images::add_background_files(
+                    &mut with_rules,
+                    crate::paint_values::background_urls(&rules, &options.viewport),
+                    &sheets,
+                    &input.url,
+                    resources,
+                    &mut diags,
+                );
+                files = with_rules.files;
                 decls.push(crate::paint_values::paint_values_decl(
                     &rules,
                     &options.viewport,
+                    &with_rules.backgrounds,
                 ));
                 if !open_elements {
                     decls.push(metadata::cascade_rules_decl(&rules));
@@ -289,6 +314,16 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         files.push(OutputFile {
             path: PathBuf::from("EldurLines.qml"),
             contents: crate::emit::ELDUR_LINES_QML.as_bytes().to_vec(),
+        });
+    }
+    if main.contains("EldurBackgroundLayer {")
+        || files
+            .iter()
+            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
+    {
+        files.push(OutputFile {
+            path: PathBuf::from("EldurBackgroundLayer.qml"),
+            contents: crate::emit::ELDUR_BACKGROUND_LAYER_QML.as_bytes().to_vec(),
         });
     }
     if main.contains("EldurInlineBox {") {

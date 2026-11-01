@@ -601,6 +601,33 @@ pub enum BackgroundRepeat {
     Round,
 }
 
+/// `background-origin`: the box a layer is positioned and sized against.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum BackgroundOrigin {
+    BorderBox,
+    #[default]
+    PaddingBox,
+    ContentBox,
+}
+
+/// `background-clip`: the box a layer is painted within.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum BackgroundClip {
+    #[default]
+    BorderBox,
+    PaddingBox,
+    ContentBox,
+    Text,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum BackgroundAttachment {
+    #[default]
+    Scroll,
+    Fixed,
+    Local,
+}
+
 /// One background layer (`background-image` and its parallel lists).
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct BackgroundLayer {
@@ -609,6 +636,9 @@ pub struct BackgroundLayer {
     pub position_x: LengthPercentage,
     pub position_y: LengthPercentage,
     pub repeat: BackgroundRepeat,
+    pub origin: BackgroundOrigin,
+    pub clip: BackgroundClip,
+    pub attachment: BackgroundAttachment,
 }
 
 #[derive(Debug, Clone, PartialEq)]

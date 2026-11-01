@@ -15,6 +15,7 @@ mod grid;
 mod ids;
 mod image;
 mod inline;
+pub(crate) use background::ELDUR_BACKGROUND_LAYER_QML;
 pub(crate) use inline::{ELDUR_INLINE_BOX_QML, ELDUR_LINES_QML, has_atomic, needs_lines_for_boxes};
 mod inline_model;
 mod links;
@@ -134,6 +135,7 @@ pub(crate) struct Emitter<'a, 'd> {
     pub imports: std::collections::BTreeSet<&'static str>,
     /// The file each `<img>` shows.
     pub images: BTreeMap<NodeId, crate::images::ImageAsset>,
+    pub background_images: BTreeMap<String, String>,
     /// Scripts reach elements at run time, so every element object says
     /// what it is (`eldurTag`, `eldurClasses`).
     pub runtime_dom: bool,
@@ -234,6 +236,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             in_float_run: false,
             imports: std::collections::BTreeSet::new(),
             images: BTreeMap::new(),
+            background_images: BTreeMap::new(),
             runtime_dom: false,
             open_elements: false,
             hides_items: false,

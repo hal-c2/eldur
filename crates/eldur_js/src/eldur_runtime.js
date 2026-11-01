@@ -11352,7 +11352,8 @@ var _G_INITIAL = {
     "background-image": "none", "box-shadow": "none", "transform": "none", "transform-origin": "50% 50%",
     "filter": "none", "animation-name": "none", "transition-property": "all", "transition-duration": "0s",
     "transition-delay": "0s", "transition-timing-function": "ease", "background-size": "auto",
-    "background-position-x": "0%", "background-position-y": "0%", "background-repeat": "repeat"
+    "background-position-x": "0%", "background-position-y": "0%", "background-repeat": "repeat",
+    "background-origin": "padding-box", "background-clip": "border-box", "background-attachment": "scroll"
 };
 // The controls whose box the UA sheet in the rule table describes: padding and
 // border are the control's insets.
@@ -12878,8 +12879,12 @@ function _gStopsSource(stops, length) {
     var last = at[at.length - 1];
     // A gradient's stops are 0 to 1: the line is cut to where they are.
     var span = last > first ? last - first : 1;
+    // Qt sorts stops by position, and two at one place, a hard edge, may swap.
+    var before = -1;
     var parts = stops.map(function(p, i) {
-        return "GradientStop { position: " + (at[i] - first) / span + "; color: \"" + p.c + "\" } ";
+        var position = Math.max((at[i] - first) / span, before + 0.0001);
+        before = position;
+        return "GradientStop { position: " + Math.min(position, 1) + "; color: \"" + p.c + "\" } ";
     });
     return { first: first, last: last > first ? last : first + 1, text: parts.join("") };
 }
@@ -12906,6 +12911,12 @@ function _gGradientPath(layer, w, h, radii) {
         var from = at(line.first);
         var to = at(line.last);
         fill = "LinearGradient { " + spread + "x1: " + from[0] + "; y1: " + from[1] + "; x2: " + to[0] + "; y2: " + to[1] + "; " + line.text + "} ";
+    } else if (layer.kind === "conic") {
+        var turn = layer.stops.slice().reverse().map(function(p) {
+            return "GradientStop { position: " + (1 - Math.max(0, Math.min(1, p.frac))) + "; color: \"" + p.c + "\" } ";
+        });
+        fill = "ConicalGradient { centerX: " + (layer.cx[0] + layer.cx[1] * w / 100) + "; centerY: " + (layer.cy[0] + layer.cy[1] * h / 100)
+            + "; angle: " + ((90 - layer.from) % 360 + 360) % 360 + "; " + turn.join("") + "} ";
     } else {
         var cx = layer.cx[0] + layer.cx[1] * w / 100;
         var cy = layer.cy[0] + layer.cy[1] * h / 100;
@@ -12920,6 +12931,120 @@ function _gGradientPath(layer, w, h, radii) {
         }
     }
     return "ShapePath { strokeWidth: -1; fillGradient: " + fill + extra + _gRectSource(0, 0, w, h, radii) + "} ";
+}
+
+function _gCommaList(text) {
+    var out = [];
+    var depth = 0;
+    var part = "";
+    String(text).split("").forEach(function(c) {
+        depth += c === "(" ? 1 : c === ")" ? -1 : 0;
+        if (c === "," && depth === 0) {
+            out.push(part.trim());
+            part = "";
+        } else {
+            part += c;
+        }
+    });
+    out.push(part.trim());
+    return out;
+}
+
+// Whether one Shape over the padding box can draw this layer.
+function _gLayerIsPlain(layer, at) {
+    return layer.kind !== "image" && at.size === "auto" && /^0(%|px)?$/.test(at.x) && /^0(%|px)?$/.test(at.y)
+        && at.origin === "padding-box" && at.clip === "border-box" && at.attachment !== "fixed";
+}
+
+function _gLayerAt(s, l) {
+    function pick(name) {
+        var list = _gCommaList(s[name]);
+        return list[l % list.length];
+    }
+    return {
+        size: pick("background-size"), x: pick("background-position-x"), y: pick("background-position-y"),
+        repeat: pick("background-repeat"), origin: pick("background-origin"), clip: pick("background-clip"),
+        attachment: pick("background-attachment")
+    };
+}
+
+// The same item the converter writes for a layer in the page.
+function _gLayerSource(raw, s, e, layer, at, outerRadii) {
+    var w = raw.width;
+    var h = raw.height;
+    function padding(side) {
+        return _gPx(s["padding-" + side], w, s.fontSize, s.rootSize) || 0;
+    }
+    var border = { top: e.bt, right: e.br, bottom: e.bb, left: e.bl };
+    var content = {
+        top: e.bt + padding("top"), right: e.br + padding("right"),
+        bottom: e.bb + padding("bottom"), left: e.bl + padding("left")
+    };
+    var none = { top: 0, right: 0, bottom: 0, left: 0 };
+    if (at.clip === "text") {
+        _gWarn(raw, "background-clip", "`text` is not converted; the layer fills the box behind the text");
+    }
+    var clip = at.clip === "padding-box" ? border : at.clip === "content-box" ? content : none;
+    var origin = at.origin === "border-box" ? none : at.origin === "content-box" ? content : border;
+    var areaW = w - origin.left - origin.right;
+    var areaH = h - origin.top - origin.bottom;
+    var parts = "anchors.fill: parent; anchors.topMargin: " + clip.top + "; anchors.rightMargin: " + clip.right
+        + "; anchors.bottomMargin: " + clip.bottom + "; anchors.leftMargin: " + clip.left
+        + "; areaTop: " + (origin.top - clip.top) + "; areaRight: " + (origin.right - clip.right)
+        + "; areaBottom: " + (origin.bottom - clip.bottom) + "; areaLeft: " + (origin.left - clip.left) + "; ";
+    var given = at.size.split(/\s+/);
+    var tileW = areaW;
+    var tileH = areaH;
+    if (at.size === "cover" || at.size === "contain") {
+        parts += "sizing: " + (at.size === "cover" ? 1 : 2) + "; ";
+    } else if (at.size !== "auto") {
+        parts += "sizing: 3; ";
+        var side = function(text, px, percent, basis) {
+            if (text === undefined || text === "auto") {
+                return null;
+            }
+            if (/%$/.test(text)) {
+                var share = parseFloat(text);
+                parts += px + ": 0; " + percent + ": " + share + "; ";
+                return share / 100 * basis;
+            }
+            var value = _gPx(text, basis, s.fontSize, s.rootSize) || 0;
+            parts += px + ": " + value + "; ";
+            return value;
+        };
+        var gw = side(given[0], "sizeWidth", "sizeWidthPercent", areaW);
+        var gh = side(given[1], "sizeHeight", "sizeHeightPercent", areaH);
+        tileW = gw === null ? areaW : gw;
+        tileH = gh === null ? areaH : gh;
+    }
+    var named = { left: "0%", top: "0%", center: "50%", right: "100%", bottom: "100%" };
+    function position(written, px, percent, basis) {
+        var text = named[written] || written;
+        if (/%$/.test(text)) {
+            parts += percent + ": " + parseFloat(text) + "; ";
+        } else if (/^calc|^\d|^-/.test(text) && !/%/.test(text)) {
+            parts += px + ": " + (_gPx(text, basis, s.fontSize, s.rootSize) || 0) + "; ";
+        } else {
+            _gWarn(raw, "background-position", "`" + text + "` is placed at 0");
+        }
+    }
+    position(at.x, "positionX", "positionXPercent", areaW);
+    position(at.y, "positionY", "positionYPercent", areaH);
+    var repeat = at.repeat.split(/\s+/);
+    var acrossX = repeat[0] !== "no-repeat" && repeat[0] !== "repeat-y";
+    var acrossY = (repeat[1] || repeat[0]) !== "no-repeat" && repeat[0] !== "repeat-x";
+    parts += "repeatX: " + acrossX + "; repeatY: " + acrossY + "; spaced: " + (repeat[0] === "space")
+        + "; rounded: " + (repeat[0] === "round") + "; fixedToWindow: " + (at.attachment === "fixed") + "; ";
+    var less = function(r, a, b) { return Math.max(r - Math.max(a, b), 0); };
+    parts += "topLeftRadius: " + less(outerRadii[0], clip.top, clip.left)
+        + "; topRightRadius: " + less(outerRadii[1], clip.top, clip.right)
+        + "; bottomRightRadius: " + less(outerRadii[2], clip.bottom, clip.right)
+        + "; bottomLeftRadius: " + less(outerRadii[3], clip.bottom, clip.left) + "; ";
+    if (layer.kind === "image") {
+        return "EldurBackgroundLayer { " + parts + "source: Qt.resolvedUrl(\"" + layer.source + "\") } ";
+    }
+    return "EldurBackgroundLayer { " + parts + "isGradient: true; Shape { anchors.fill: parent; "
+        + _gGradientPath(layer, tileW, tileH, [0, 0, 0, 0]) + "} } ";
 }
 
 function _gRectSource(x, y, w, h, radii) {
@@ -12995,7 +13120,7 @@ function _gShapeSource(attrs, paths) {
     return "import QtQuick; import QtQuick.Shapes; import QtQuick.Layouts; Shape { property Item eldurSlot: null; " + attrs + paths + "}";
 }
 
-function _gReplaceShape(raw, slot, signature, source, host, place) {
+function _gReplaceShape(raw, slot, signature, source, host, place, url) {
     var m = _meta(raw);
     if (m[slot + "Sig"] === signature) {
         return m[slot];
@@ -13007,7 +13132,7 @@ function _gReplaceShape(raw, slot, signature, source, host, place) {
         m[slot] = null;
     }
     if (source !== null) {
-        m[slot] = Qt.createQmlObject(source, host, "eldur_paint");
+        m[slot] = Qt.createQmlObject(source, host, url || "eldur_paint");
         place(m[slot]);
     }
     return m[slot];
@@ -13035,6 +13160,8 @@ function _gPaintDecor(raw, s, e, radius) {
     var inner = outerRadii.map(function(r) { return Math.max(r - Math.max(e.bt, e.bl), 0); });
     var imageText = s["background-image"];
     var paths = "";
+    var placed = [];
+    var plainOnly = true;
     if (imageText !== "none") {
         var images = _gPaintValue("background-image", imageText);
         if (!images) {
@@ -13042,14 +13169,21 @@ function _gPaintDecor(raw, s, e, radius) {
         } else {
             for (var l = images.layers.length - 1; l >= 0; --l) {
                 var layer = images.layers[l];
+                var layerAt = _gLayerAt(s, l);
                 if (layer.kind === "unpainted") {
-                    _gWarn(raw, "background-image", layer.what + " is not painted on a created box");
+                    _gWarn(raw, "background-image", layer.what + " paints nothing");
                 } else if (layer.kind !== "none") {
-                    paths += _gGradientPath(layer, pw, ph, inner);
+                    // Each drawn in order, so one that needs an item of its
+                    // own makes them all items.
+                    placed.push(_gLayerIsPlain(layer, layerAt)
+                        ? "Shape { x: " + e.bl + "; y: " + e.bt + "; width: " + Math.max(pw, 0) + "; height: " + Math.max(ph, 0) + "; "
+                            + _gGradientPath(layer, pw, ph, inner) + "} "
+                        : _gLayerSource(raw, s, e, layer, layerAt, outerRadii));
+                    plainOnly = plainOnly && _gLayerIsPlain(layer, layerAt);
+                    if (plainOnly) {
+                        paths += _gGradientPath(layer, pw, ph, inner);
+                    }
                 }
-            }
-            if (s["background-size"] !== "auto" || !/^0(%|px)?$/.test(s["background-position-x"]) || !/^0(%|px)?$/.test(s["background-position-y"])) {
-                _gWarn(raw, "background-size", "a created box paints its image once over the padding box");
             }
         }
     }
@@ -13082,13 +13216,36 @@ function _gPaintDecor(raw, s, e, radius) {
     // Only a child with a negative z is below what the box holds, and that is
     // below the box's own fill too: with layers to show, they take the fill over.
     var shade = _gQtColor(s["background-color"]);
-    var layered = paths !== "" || insets !== "";
+    var clips = _gCommaList(s["background-clip"]);
+    var colourClip = clips[clips.length - 1];
+    var colourKept = colourClip === "padding-box" || colourClip === "content-box";
+    plainOnly = plainOnly && !colourKept;
+    var layered = paths !== "" || insets !== "" || !plainOnly;
     raw.color = layered ? "transparent" : shade;
     var under = "ShapePath { strokeWidth: -1; fillColor: \"" + shade + "\"; "
         + _gRectSource(-e.bl, -e.bt, w, h, outerRadii) + "} ";
     var layers = under + paths + insets;
     var attrs = "z: -1; " + at;
-    _gReplaceShape(raw, "gLayers", layers + at, layered ? _gShapeSource(attrs, layers) : null, raw, function() {});
+    if (plainOnly) {
+        _gReplaceShape(raw, "gLayers", layers + at, layered ? _gShapeSource(attrs, layers) : null, raw, function() {});
+    } else {
+        var byClip = colourClip === "content-box"
+            ? function(side) { return (_gPx(s["padding-" + side], w, s.fontSize, s.rootSize) || 0); }
+            : function() { return 0; };
+        var bottomColour = colourKept
+            ? "Rectangle { color: \"" + shade + "\"; x: " + (e.bl + byClip("left")) + "; y: " + (e.bt + byClip("top"))
+                + "; width: " + Math.max(w - e.bl - e.br - byClip("left") - byClip("right"), 0)
+                + "; height: " + Math.max(h - e.bt - e.bb - byClip("top") - byClip("bottom"), 0) + " } "
+            : "Rectangle { anchors.fill: parent; color: \"" + shade + "\"; topLeftRadius: " + outerRadii[0]
+                + "; topRightRadius: " + outerRadii[1] + "; bottomRightRadius: " + outerRadii[2]
+                + "; bottomLeftRadius: " + outerRadii[3] + " } ";
+        var over = insets === "" ? "" : "Shape { x: " + e.bl + "; y: " + e.bt + "; width: " + Math.max(pw, 0)
+            + "; height: " + Math.max(ph, 0) + "; " + insets + "} ";
+        _gReplaceShape(raw, "gLayers", placed.join("") + bottomColour + over + w + "x" + h,
+            "import QtQuick; import QtQuick.Shapes; import \".\"; Item { property Item eldurSlot: null; z: -1; width: " + w + "; height: " + h + "; "
+                + bottomColour + placed.join("") + over + "}",
+            raw, function() {}, Qt.resolvedUrl("eldur_paint"));
+    }
     _gPaintOuterShadow(raw, outer, w, h);
     _gPaintMatrix(raw, s, w, h);
     if (s.filter !== "none") {

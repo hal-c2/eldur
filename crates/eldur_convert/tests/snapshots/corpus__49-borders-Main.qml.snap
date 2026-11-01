@@ -307,7 +307,7 @@ ApplicationWindow {
 
                     // <div id="double">
                     Rectangle {
-                        id: double
+                        id: double_
                         color: "#f8fafc"
                         implicitWidth: 18
                         implicitHeight: 18
