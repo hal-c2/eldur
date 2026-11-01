@@ -214,6 +214,9 @@ ApplicationWindow {
                                     Keys.onPressed: (event) => {
                                         event.accepted = !Eldur.fire(todoInput, "keydown", event);
                                     }
+                                    Keys.onReleased: (event) => {
+                                        event.accepted = !Eldur.fire(todoInput, "keyup", event);
+                                    }
                                 }
 
                                 // <button id="add-btn" class="btn">
@@ -255,6 +258,9 @@ ApplicationWindow {
 
                                     Keys.onPressed: (event) => {
                                         event.accepted = !Eldur.fire(addBtn, "keydown", event);
+                                    }
+                                    Keys.onReleased: (event) => {
+                                        event.accepted = !Eldur.fire(addBtn, "keyup", event);
                                     }
                                 }
                             }

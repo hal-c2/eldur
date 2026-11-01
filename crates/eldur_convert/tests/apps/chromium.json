@@ -50450,6 +50450,385 @@
    }
   }
  ],
+ "input_real_invalid": [
+  {
+   "name": "load",
+   "log": [
+    "H start one| c=false r2=false active=BODY valid=false"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       10,
+       10,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       10,
+       50,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "type b",
+   "log": [],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       10,
+       10,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       10,
+       50,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "(focus)": "b"
+   }
+  },
+  {
+   "name": "fill",
+   "log": [],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       10,
+       10,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       10,
+       50,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "hi"
+     }
+    ],
+    "(focus)": "b"
+   }
+  },
+  {
+   "name": "report 0 (filled)",
+   "log": [
+    "H 0 mousedown:b focus:b focusin:b mouseup:b click:b keydown:b=h input:b keyup:b=h keydown:b=i input:b keyup:b=i",
+    "H   = one|hi c=false r2=false active=b valid=true"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       10,
+       10,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       10,
+       50,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "hi"
+     }
+    ],
+    "(focus)": "b"
+   }
+  },
+  {
+   "name": "reset",
+   "log": [],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       10,
+       10,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       10,
+       50,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "(focus)": "res"
+   }
+  },
+  {
+   "name": "report 1 (reset)",
+   "log": [
+    "H 1 mousedown:res change:b blur:b focusout:b focus:res focusin:res mouseup:res click:res reset",
+    "H   = one| c=false r2=false active=res valid=false"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       10,
+       10,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       10,
+       50,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "(focus)": "res"
+   }
+  },
+  {
+   "name": "submit",
+   "log": [],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       10,
+       10,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       10,
+       50,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "(focus)": "b"
+   }
+  },
+  {
+   "name": "report 2 (submit)",
+   "log": [
+    "H 2 mousedown:sub blur:res focusout:res focus:sub focusin:sub mouseup:sub click:sub invalid:b blur:sub focusout:sub focus:b focusin:b",
+    "H   = one| c=false r2=false active=b valid=false"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       10,
+       10,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       10,
+       50,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "(focus)": "b"
+   }
+  },
+  {
+   "name": "typing clears it",
+   "log": [],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       10,
+       10,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       10,
+       50,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "x"
+     }
+    ],
+    "(focus)": "b"
+   }
+  },
+  {
+   "name": "submit now",
+   "log": [],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       10,
+       10,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       10,
+       50,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "x"
+     }
+    ],
+    "(focus)": "sub"
+   }
+  },
+  {
+   "name": "report 3 (submit now)",
+   "log": [
+    "H 3 keydown:b=x input:b keyup:b=x mousedown:sub change:b blur:b focusout:b focus:sub focusin:sub mouseup:sub click:sub submit:sub:one:x",
+    "H   = one|x c=false r2=false active=sub valid=true"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       10,
+       10,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "one"
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       10,
+       50,
+       100,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "x"
+     }
+    ],
+    "(focus)": "sub"
+   }
+  }
+ ],
  "input_script": [
   {
    "name": "load",
@@ -59940,6 +60319,210 @@
    ],
    "state": {
     "(focus)": "ti"
+   }
+  }
+ ],
+ "input_timing": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "button",
+   "log": [
+    "pointerdown:b",
+    "promise after pointerdown:b",
+    "microtask after pointerdown:b",
+    "mousedown:b",
+    "promise after mousedown:b",
+    "microtask after mousedown:b",
+    "focus:b",
+    "pointerup:b",
+    "promise after pointerup:b",
+    "microtask after pointerup:b",
+    "mouseup:b",
+    "promise after mouseup:b",
+    "microtask after mouseup:b",
+    "click:b checked=false",
+    "timeout after pointerdown:b",
+    "timeout after mousedown:b",
+    "timeout after pointerup:b",
+    "timeout after mouseup:b"
+   ],
+   "state": {
+    "(focus)": "b"
+   }
+  },
+  {
+   "name": "plain",
+   "log": [
+    "pointerdown:d",
+    "promise after pointerdown:d",
+    "microtask after pointerdown:d",
+    "mousedown:d",
+    "promise after mousedown:d",
+    "microtask after mousedown:d",
+    "blur:b",
+    "pointerup:d",
+    "promise after pointerup:d",
+    "microtask after pointerup:d",
+    "mouseup:d",
+    "promise after mouseup:d",
+    "microtask after mouseup:d",
+    "click:d checked=false",
+    "timeout after pointerdown:d",
+    "timeout after mousedown:d",
+    "timeout after pointerup:d",
+    "timeout after mouseup:d"
+   ],
+   "state": {
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "field",
+   "log": [
+    "pointerdown:t",
+    "promise after pointerdown:t",
+    "microtask after pointerdown:t",
+    "mousedown:t",
+    "promise after mousedown:t",
+    "microtask after mousedown:t",
+    "focus:t",
+    "pointerup:t",
+    "promise after pointerup:t",
+    "microtask after pointerup:t",
+    "mouseup:t",
+    "promise after mouseup:t",
+    "microtask after mouseup:t",
+    "click:t checked=false",
+    "timeout after pointerdown:t",
+    "timeout after mousedown:t",
+    "timeout after pointerup:t",
+    "timeout after mouseup:t"
+   ],
+   "state": {
+    "(focus)": "t"
+   }
+  },
+  {
+   "name": "label",
+   "log": [
+    "pointerdown:l",
+    "promise after pointerdown:l",
+    "microtask after pointerdown:l",
+    "mousedown:l",
+    "promise after mousedown:l",
+    "microtask after mousedown:l",
+    "blur:t",
+    "pointerup:l",
+    "promise after pointerup:l",
+    "microtask after pointerup:l",
+    "mouseup:l",
+    "promise after mouseup:l",
+    "microtask after mouseup:l",
+    "click:l checked=false",
+    "focus:c",
+    "click:c checked=true",
+    "input:c",
+    "change:c checked=true",
+    "timeout after pointerdown:l",
+    "timeout after mousedown:l",
+    "timeout after pointerup:l",
+    "timeout after mouseup:l"
+   ],
+   "state": {
+    "(focus)": "c"
+   }
+  },
+  {
+   "name": "right",
+   "log": [
+    "pointerdown:d",
+    "promise after pointerdown:d",
+    "microtask after pointerdown:d",
+    "mousedown:d",
+    "promise after mousedown:d",
+    "microtask after mousedown:d",
+    "blur:c",
+    "contextmenu:d",
+    "pointerup:d",
+    "promise after pointerup:d",
+    "microtask after pointerup:d",
+    "mouseup:d",
+    "promise after mouseup:d",
+    "microtask after mouseup:d",
+    "auxclick:d",
+    "timeout after pointerdown:d",
+    "timeout after mousedown:d",
+    "timeout after pointerup:d",
+    "timeout after mouseup:d"
+   ],
+   "state": {
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "double",
+   "log": [
+    "pointerdown:dbl",
+    "promise after pointerdown:dbl",
+    "microtask after pointerdown:dbl",
+    "mousedown:dbl",
+    "promise after mousedown:dbl",
+    "microtask after mousedown:dbl",
+    "pointerup:dbl",
+    "promise after pointerup:dbl",
+    "microtask after pointerup:dbl",
+    "mouseup:dbl",
+    "promise after mouseup:dbl",
+    "microtask after mouseup:dbl",
+    "click:dbl checked=true",
+    "pointerdown:dbl",
+    "promise after pointerdown:dbl",
+    "microtask after pointerdown:dbl",
+    "mousedown:dbl",
+    "promise after mousedown:dbl",
+    "microtask after mousedown:dbl",
+    "pointerup:dbl",
+    "promise after pointerup:dbl",
+    "microtask after pointerup:dbl",
+    "mouseup:dbl",
+    "promise after mouseup:dbl",
+    "microtask after mouseup:dbl",
+    "click:dbl checked=true",
+    "dblclick:dbl",
+    "timeout after pointerdown:dbl",
+    "timeout after mousedown:dbl",
+    "timeout after pointerup:dbl",
+    "timeout after mouseup:dbl",
+    "timeout after pointerdown:dbl",
+    "timeout after mousedown:dbl",
+    "timeout after pointerup:dbl",
+    "timeout after mouseup:dbl"
+   ],
+   "state": {
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "key",
+   "log": [
+    "keydown:Tab",
+    "promise after keydown:BODY",
+    "microtask after keydown:BODY",
+    "focus:b",
+    "keyup:Tab",
+    "promise after keyup:b",
+    "microtask after keyup:b",
+    "timeout after keydown:BODY",
+    "timeout after keyup:b"
+   ],
+   "state": {
+    "(focus)": "b"
    }
   }
  ],

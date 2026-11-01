@@ -793,6 +793,7 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             "requestAnimationFrame" => Some("Eldur.requestAnimationFrame"),
             "cancelAnimationFrame" => Some("Eldur.cancelAnimationFrame"),
             "queueMicrotask" => Some("Eldur.queueMicrotask"),
+            "Promise" => Some("Eldur.Promise"),
             "structuredClone" => Some("Eldur.structuredClone"),
             "performance" => Some("Eldur.performance"),
             "localStorage" => Some("Eldur.localStorage"),

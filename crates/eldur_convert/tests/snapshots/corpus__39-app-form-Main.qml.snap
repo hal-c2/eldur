@@ -187,6 +187,12 @@ ApplicationWindow {
                                 onAccepted: {
                                     Eldur.fire(signup, "submit", null);
                                 }
+                                Keys.onPressed: (event) => {
+                                    event.accepted = !Eldur.fire(name, "keydown", event);
+                                }
+                                Keys.onReleased: (event) => {
+                                    event.accepted = !Eldur.fire(name, "keyup", event);
+                                }
                             }
                         }
 
@@ -297,6 +303,12 @@ ApplicationWindow {
                                 onAccepted: {
                                     Eldur.fire(signup, "submit", null);
                                 }
+                                Keys.onPressed: (event) => {
+                                    event.accepted = !Eldur.fire(email, "keydown", event);
+                                }
+                                Keys.onReleased: (event) => {
+                                    event.accepted = !Eldur.fire(email, "keyup", event);
+                                }
                             }
                         }
 
@@ -406,6 +418,12 @@ ApplicationWindow {
 
                                 onAccepted: {
                                     Eldur.fire(signup, "submit", null);
+                                }
+                                Keys.onPressed: (event) => {
+                                    event.accepted = !Eldur.fire(pass, "keydown", event);
+                                }
+                                Keys.onReleased: (event) => {
+                                    event.accepted = !Eldur.fire(pass, "keyup", event);
                                 }
                             }
                         }
@@ -528,6 +546,13 @@ ApplicationWindow {
                                     width: implicitWidth
                                     x: 4
                                     y: 3
+
+                                    Keys.onPressed: (event) => {
+                                        event.accepted = !Eldur.fire(terms, "keydown", event);
+                                    }
+                                    Keys.onReleased: (event) => {
+                                        event.accepted = !Eldur.fire(terms, "keyup", event);
+                                    }
                                 }
                             }
 
@@ -620,6 +645,12 @@ ApplicationWindow {
 
                             onClicked: {
                                 Eldur.fire(signup, "submit", null);
+                            }
+                            Keys.onPressed: (event) => {
+                                event.accepted = !Eldur.fire(go, "keydown", event);
+                            }
+                            Keys.onReleased: (event) => {
+                                event.accepted = !Eldur.fire(go, "keyup", event);
                             }
 
                             FontMetrics {

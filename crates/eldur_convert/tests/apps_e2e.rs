@@ -70,6 +70,11 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("input_script", "* #mc[*] x:", MADEINLINE),
     ("input_script", "* #mc[*] y:", MADEINLINE),
     ("input_dialog", "* #stay[*] y:", CLOSEDDETAILS),
+    (
+        "input_real_invalid",
+        "*eldur: b: Please fill out this field.*",
+        NOBUBBLE,
+    ),
     ("input_disabled", "*report wn log:*", BUTTONKIDS),
     ("input_disabled_open", "*report wn log:*", BUTTONKIDS),
     (
@@ -705,6 +710,16 @@ fn input_tabs() {
 }
 
 // The same real mouse and keys as Chromium, heard line for line.
+#[test]
+fn input_real_invalid() {
+    page("input_real_invalid");
+}
+
+#[test]
+fn input_timing() {
+    page("input_timing");
+}
+
 #[test]
 fn input_real() {
     page("input_real");

@@ -1233,6 +1233,24 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
         walk::walk_this_expression(self, it);
     }
 
+    fn visit_computed_member_expression(&mut self, it: &ComputedMemberExpression<'a>) {
+        // `el["on" + x] = f` can be any listener; no name reads, none is ruled out.
+        match &it.expression {
+            Expression::StringLiteral(name) => {
+                let name = name.value.as_str();
+                if name == "addEventListener" {
+                    self.listener_mentions += 1;
+                }
+                if let Some(event) = name.strip_prefix("on") {
+                    self.analysis.heard_events.insert(event.to_owned());
+                }
+            }
+            Expression::NumericLiteral(_) => {}
+            _ => self.analysis.hears_unnamed_events = true,
+        }
+        walk::walk_computed_member_expression(self, it);
+    }
+
     fn visit_static_member_expression(&mut self, it: &StaticMemberExpression<'a>) {
         let prop = it.property.name.as_str();
         if prop == "addEventListener" {

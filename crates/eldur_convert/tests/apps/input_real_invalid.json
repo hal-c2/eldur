@@ -1,0 +1,13 @@
+{"steps":[
+ {"name": "type b", "clickAt": [50, 65]},
+ {"name": "fill", "keys": "hi"},
+ {"name": "report 0 (filled)", "clickAt": [620, 25]},
+ {"name": "reset", "clickAt": [50, 255]},
+ {"name": "report 1 (reset)", "clickAt": [620, 25]},
+ {"name": "submit", "clickAt": [50, 215]},
+ {"name": "report 2 (submit)", "clickAt": [620, 25]},
+ {"name": "typing clears it", "keys": "x"},
+ {"name": "submit now", "clickAt": [50, 215]},
+ {"name": "report 3 (submit now)", "clickAt": [620, 25]}
+],
+"watch":[{"sel": "#a"}, {"sel": "#b"}]}

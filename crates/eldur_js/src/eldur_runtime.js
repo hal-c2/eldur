@@ -30,6 +30,189 @@
 // 1. Standard library polyfills for Qt 6.11
 // ---------------------------------------------------------------------------
 
+
+// A page tells when its promises run: after each listener a browser runs them,
+// while the engine's own wait for the event loop, past all of a press's events.
+// Nothing reaches the engine's queue from a script, so promises are made here.
+var _micro = { queue: [], draining: false, native: false };
+
+function _microEnqueue(job) {
+    _micro.queue.push(job);
+    Qt.callLater(_microDrain);
+}
+
+function _microDrain() {
+    if (_micro.draining) {
+        return;
+    }
+    _micro.draining = true;
+    while (_micro.queue.length > 0) {
+        var job = _micro.queue.shift();
+        try {
+            job();
+        } catch (err) {
+            console.error(err && err.stack ? err.stack : err);
+        }
+    }
+    _micro.draining = false;
+}
+
+var Promise = (function() {
+    var PENDING = 0, FULFILLED = 1, REJECTED = 2;
+
+    function settle(p, state, value) {
+        if (p._state !== PENDING) {
+            return;
+        }
+        p._state = state;
+        p._value = value;
+        var waiting = p._waiting;
+        p._waiting = [];
+        waiting.forEach(function(w) { schedule(p, w); });
+    }
+
+    function schedule(p, w) {
+        _microEnqueue(function() {
+            var handler = p._state === FULFILLED ? w.onFulfilled : w.onRejected;
+            if (typeof handler !== "function") {
+                (p._state === FULFILLED ? w.resolve : w.reject)(p._value);
+                return;
+            }
+            var result;
+            try {
+                result = handler(p._value);
+            } catch (err) {
+                w.reject(err);
+                return;
+            }
+            w.resolve(result);
+        });
+    }
+
+    function resolver(p) {
+        var called = false;
+        function reject(reason) {
+            if (!called) {
+                called = true;
+                settle(p, REJECTED, reason);
+            }
+        }
+        function resolve(value) {
+            if (called) {
+                return;
+            }
+            called = true;
+            if (value === p) {
+                settle(p, REJECTED, new TypeError("Chaining cycle detected for promise"));
+                return;
+            }
+            if (value && (typeof value === "object" || typeof value === "function")) {
+                var then;
+                try {
+                    then = value.then;
+                } catch (err) {
+                    settle(p, REJECTED, err);
+                    return;
+                }
+                if (typeof then === "function") {
+                    _microEnqueue(function() {
+                        var inner = resolver(p);
+                        try {
+                            then.call(value, inner.resolve, inner.reject);
+                        } catch (err) {
+                            inner.reject(err);
+                        }
+                    });
+                    return;
+                }
+            }
+            settle(p, FULFILLED, value);
+        }
+        return { resolve: resolve, reject: reject };
+    }
+
+    function Promise(executor) {
+        if (typeof executor !== "function") {
+            throw new TypeError("Promise resolver " + executor + " is not a function");
+        }
+        this._state = PENDING;
+        this._value = undefined;
+        this._waiting = [];
+        var r = resolver(this);
+        try {
+            executor(r.resolve, r.reject);
+        } catch (err) {
+            r.reject(err);
+        }
+    }
+
+    Promise.prototype.then = function(onFulfilled, onRejected) {
+        var self = this;
+        return new Promise(function(resolve, reject) {
+            var w = { onFulfilled: onFulfilled, onRejected: onRejected, resolve: resolve, reject: reject };
+            if (self._state === PENDING) {
+                self._waiting.push(w);
+            } else {
+                schedule(self, w);
+            }
+        });
+    };
+    Promise.prototype["catch"] = function(onRejected) {
+        return this.then(undefined, onRejected);
+    };
+    Promise.prototype["finally"] = function(run) {
+        if (typeof run !== "function") {
+            return this.then(run, run);
+        }
+        return this.then(function(value) {
+            return Promise.resolve(run()).then(function() { return value; });
+        }, function(reason) {
+            return Promise.resolve(run()).then(function() { throw reason; });
+        });
+    };
+    Object.defineProperty(Promise.prototype, Symbol.toStringTag, { value: "Promise" });
+
+    Promise.resolve = function(value) {
+        return value instanceof Promise ? value : new Promise(function(resolve) { resolve(value); });
+    };
+    Promise.reject = function(reason) {
+        return new Promise(function(_resolve, reject) { reject(reason); });
+    };
+    Promise.all = function(iterable) {
+        var items = Array.from(iterable);
+        return new Promise(function(resolve, reject) {
+            var left = items.length;
+            var out = new Array(left);
+            if (left === 0) {
+                resolve(out);
+            }
+            items.forEach(function(item, i) {
+                Promise.resolve(item).then(function(value) {
+                    out[i] = value;
+                    if (--left === 0) {
+                        resolve(out);
+                    }
+                }, reject);
+            });
+        });
+    };
+    Promise.race = function(iterable) {
+        var items = Array.from(iterable);
+        return new Promise(function(resolve, reject) {
+            items.forEach(function(item) { Promise.resolve(item).then(resolve, reject); });
+        });
+    };
+    Promise.withResolvers = function() {
+        var out = {};
+        out.promise = new Promise(function(resolve, reject) {
+            out.resolve = resolve;
+            out.reject = reject;
+        });
+        return out;
+    };
+    return Promise;
+})();
+
 (function installPolyfills() {
     if (!Array.prototype.at) {
         Object.defineProperty(Array.prototype, "at", {
@@ -659,10 +842,7 @@ function _wakeForTimers() {
     _timerWake.start();
 }
 
-// One callback a turn of the event loop: the engine posts a promise's reactions as
-// events, so they run after this turn and before the next callback, as a microtask
-// checkpoint would have them. Reactions that queue further reactions can still lose
-// the race, since nothing here can see or drain the engine's queue.
+// One callback a turn of the event loop, with what it queued run before the next.
 function _timerTurn() {
     _timerTurnQueued = true;
     Qt.callLater(_timerRunOne);
@@ -670,6 +850,7 @@ function _timerTurn() {
 
 function _timerRunOne() {
     _timerTurnQueued = false;
+    _microDrain();
     var t = _timers[0];
     if (!t || t.due > Date.now()) {
         _wakeForTimers();
@@ -685,6 +866,7 @@ function _timerRunOne() {
     try {
         t.callback.apply(null, t.args);
     } finally {
+        _microDrain();
         if (_timers.length > 0 && _timers[0].due <= Date.now()) {
             _timerTurn();
         } else {
@@ -767,6 +949,7 @@ function _ensureRafAnim() {
         var timestamp = Date.now() - _startTime;
         for (var i = 0; i < batch.length; ++i) {
             batch[i].cb(timestamp);
+            _microDrain();
         }
         if (_rafQueue.length > 0) {
             _rafAnim.running = true;
@@ -852,7 +1035,7 @@ function cancelAnimationFrame(id) {
 }
 
 function queueMicrotask(callback) {
-    Promise.resolve().then(callback);
+    _microEnqueue(callback);
 }
 
 function structuredClone(value) {
@@ -5647,7 +5830,14 @@ function _runListeners(raw, key, type, domEv, phase) {
             }
         }
         domEv._passive = _isPassive(m, key, fn, raw, type);
+        // With no script under it, a listener's end is where promises run.
+        var native = _micro.native;
+        _micro.native = false;
         fn.call(target, domEv);
+        _micro.native = native;
+        if (native) {
+            _microDrain();
+        }
         domEv._passive = false;
         if (domEv._immediateStopped) {
             break;
@@ -10650,7 +10840,9 @@ function _inFire(type, raw, scene, mods, init) {
         ev.deltaX = o.delta.x;
         ev.deltaY = o.delta.y;
     }
+    _micro.native = true;
     _dispatchDynamic(raw, type, ev);
+    _micro.native = false;
     return ev;
 }
 
@@ -10764,7 +10956,7 @@ function _inDown(bit, scene, mods, heldBefore) {
     var barred = _inMouseBarred(target);
     if (!barred && _inFire("mousedown", target, scene, mods, { button: button, detail: _in.count }).defaultPrevented) {
         _inKeepFocus(target);
-    } else if (bit === Qt.LeftButton) {
+    } else {
         _inFocusOnPress(target);
     }
     if (bit === Qt.RightButton) {
@@ -11218,7 +11410,9 @@ function _inKeyEvent(type, raw, qtEv) {
     } else if (qtEv.key === Qt.Key_Meta) {
         ev.metaKey = going;
     }
+    _micro.native = true;
     _dispatchDynamic(raw, type, ev);
+    _micro.native = false;
     return ev;
 }
 
@@ -13922,6 +14116,7 @@ var window = {
     requestAnimationFrame: requestAnimationFrame,
     cancelAnimationFrame: cancelAnimationFrame,
     queueMicrotask: queueMicrotask,
+    Promise: Promise,
     structuredClone: structuredClone,
     fetch: fetch,
     alert: alert,

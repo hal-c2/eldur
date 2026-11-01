@@ -137,6 +137,9 @@ ApplicationWindow {
                                 Keys.onPressed: (event) => {
                                     event.accepted = !Eldur.fire(search, "keydown", event);
                                 }
+                                Keys.onReleased: (event) => {
+                                    event.accepted = !Eldur.fire(search, "keyup", event);
+                                }
                             }
                         }
                     }
@@ -456,6 +459,9 @@ ApplicationWindow {
 
                             Keys.onPressed: (event) => {
                                 event.accepted = !Eldur.fire(after, "keydown", event);
+                            }
+                            Keys.onReleased: (event) => {
+                                event.accepted = !Eldur.fire(after, "keyup", event);
                             }
 
                             FontMetrics {

@@ -721,7 +721,7 @@ class Counter extends Base {
 
     bump(step) {
     return Eldur.asyncRun(this, function*() {
-        const delta = (yield (Promise.resolve(step)));
+        const delta = (yield (Eldur.Promise.resolve(step)));
         this.count += delta;
         return this.count;
     });
@@ -739,7 +739,7 @@ function loadGreeting(raw) {
     } catch (__eldur_err) {
         status = "fallback";
     }
-    const compute = (x) => Eldur.asyncRun(this, function*() { return ((yield (Promise.resolve(x)))) + 1; });
+    const compute = (x) => Eldur.asyncRun(this, function*() { return ((yield (Eldur.Promise.resolve(x)))) + 1; });
     const n = (yield (compute(2)));
     msgText.text = status + ":" + n + ":" + extra;
 });
