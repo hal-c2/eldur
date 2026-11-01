@@ -1,0 +1,13 @@
+{"steps":[
+ {"name":"click still","click":"#still"},
+ {"name":"down","key":"ArrowDown","settle":500},
+ {"name":"page down","key":"PageDown","settle":500},
+ {"name":"end","key":"End","settle":500},
+ {"name":"home","key":"Home","settle":500},
+ {"name":"click made","click":"#made"},
+ {"name":"made down","key":"ArrowDown","settle":500},
+ {"name":"made page down","key":"PageDown","settle":500},
+ {"name":"made end","key":"End","settle":500},
+ {"name":"made home","key":"Home","settle":500}
+],
+"watch":[{"sel":"#still-kid"},{"sel":"#made-kid"}]}

@@ -1,0 +1,2 @@
+{"steps":[{"name":"before its delay","click":"#go"},{"name":"after","settle":1500}],
+"watch":[{"sel":"#box","props":["opacity"]}]}

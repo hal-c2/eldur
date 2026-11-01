@@ -3258,6 +3258,41 @@
    }
   }
  ],
+ "created_empty_body": [
+  {
+   "name": "load",
+   "log": [
+    "rects 8 8 1264 54 16px"
+   ],
+   "state": {
+    "#one": [
+     {
+      "box": [
+       8,
+       8,
+       1264,
+       40
+      ],
+      "shown": true,
+      "text": "one"
+     }
+    ],
+    "#two": [
+     {
+      "box": [
+       8,
+       54,
+       1264,
+       40
+      ],
+      "shown": true,
+      "text": "two"
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
  "created_lines": [
   {
    "name": "load",
@@ -30389,6 +30424,74 @@
    }
   }
  ],
+ "motion_closed": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#box": [
+     {
+      "box": [
+       8,
+       29,
+       120,
+       60
+      ],
+      "shown": true,
+      "text": "",
+      "props": {
+       "opacity": "1"
+      }
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "before its delay",
+   "log": [],
+   "state": {
+    "#box": [
+     {
+      "box": [
+       8,
+       29,
+       120,
+       60
+      ],
+      "shown": true,
+      "text": "",
+      "props": {
+       "opacity": "1"
+      }
+     }
+    ],
+    "(focus)": "go"
+   }
+  },
+  {
+   "name": "after",
+   "log": [],
+   "state": {
+    "#box": [
+     {
+      "box": [
+       8,
+       29,
+       120,
+       60
+      ],
+      "shown": true,
+      "text": "",
+      "props": {
+       "opacity": "0.25"
+      }
+     }
+    ],
+    "(focus)": "go"
+   }
+  }
+ ],
  "motion_keyframes": [
   {
    "name": "load",
@@ -30656,7 +30759,7 @@
        0,
        0,
        1280,
-       53.34
+       53.36
       ],
       "shown": true,
       "text": ""
@@ -30666,9 +30769,9 @@
      {
       "box": [
        0,
-       53.34,
+       53.36,
        1280,
-       53.34
+       53.36
       ],
       "shown": true,
       "text": ""
@@ -30678,9 +30781,9 @@
      {
       "box": [
        0,
-       106.69,
+       106.72,
        1280,
-       26.64
+       26.63
       ],
       "shown": true,
       "text": ""
@@ -30690,9 +30793,9 @@
      {
       "box": [
        0,
-       133.33,
+       133.34,
        1280,
-       33.3
+       33.27
       ],
       "shown": true,
       "text": ""
@@ -30702,7 +30805,7 @@
      {
       "box": [
        0,
-       166.63,
+       166.61,
        1280,
        20
       ],
@@ -30715,7 +30818,7 @@
      {
       "box": [
        0,
-       186.63,
+       186.61,
        1280,
        20
       ],
@@ -30728,7 +30831,7 @@
      {
       "box": [
        0,
-       206.63,
+       206.61,
        225,
        20
       ],
@@ -30740,7 +30843,7 @@
      {
       "box": [
        0,
-       226.63,
+       226.61,
        1280,
        20
       ],
@@ -30752,7 +30855,7 @@
      {
       "box": [
        0,
-       246.63,
+       246.61,
        1280,
        20
       ],
@@ -30764,7 +30867,7 @@
      {
       "box": [
        0,
-       266.63,
+       266.61,
        1280,
        20
       ],
@@ -30776,7 +30879,7 @@
      {
       "box": [
        0,
-       286.63,
+       286.61,
        1280,
        10
       ],
@@ -39324,6 +39427,349 @@
       ],
       "shown": true,
       "text": "after"
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
+ "scroll_keys": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       8,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       218,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "click still",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       8,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       218,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "down",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       -32,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       218,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "page down",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       -207,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       218,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "end",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       -692,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       218,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "home",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       8,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       218,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "click made",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       8,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       218,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "made down",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       8,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       178,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "made page down",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       8,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       3,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "made end",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       8,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       -482,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "made home",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       8,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       218,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
      }
     ],
     "(focus)": ""
@@ -56405,6 +56851,51 @@
      }
     ],
     "(focus)": "compact"
+   }
+  }
+ ],
+ "timers_order": [
+  {
+   "name": "load",
+   "log": [
+    "one stamp a frame true",
+    "frames number true true true"
+   ],
+   "state": {
+    "#out": [
+     {
+      "box": [
+       8,
+       16,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "waiting"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "later",
+   "log": [
+    "order micro t0 t0b micro-in-t0b t0c nested t20 iv iv t100 iv"
+   ],
+   "state": {
+    "#out": [
+     {
+      "box": [
+       8,
+       16,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "done"
+     }
+    ],
+    "(focus)": ""
    }
   }
  ],

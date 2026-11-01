@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head><style>
+body { margin: 8px; }
+.port { height: 200px; width: 400px; overflow: auto; background: #eee; margin-bottom: 10px; }
+.tall { height: 900px; background: #cde; }
+</style></head>
+<body>
+<div class="port" id="still"><div class="tall" id="still-kid">written</div></div>
+<script>
+// A box a script made, in a page that is otherwise closed.
+const port = document.createElement("div");
+port.className = "port";
+port.id = "made";
+const tall = document.createElement("div");
+tall.className = "tall";
+tall.id = "made-kid";
+tall.textContent = "made";
+port.appendChild(tall);
+document.body.appendChild(port);
+</script>
+</body>
+</html>

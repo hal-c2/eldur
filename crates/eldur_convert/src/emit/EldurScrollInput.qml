@@ -23,9 +23,9 @@ Item {
     }
 
     // The steps Chromium takes for each key: 40px an arrow, and a page less the
-    // 40px it keeps in sight.
+    // 40px it keeps in sight, or an eighth of a port too short for that.
     function keyStep(key) {
-        const pageY = Math.max(scroller.height - 40, 40);
+        const pageY = Math.max(scroller.height - 40, scroller.height * 0.875, 1);
         let x = scroller.contentX;
         let y = scroller.contentY;
         if (key === Qt.Key_Down) y += 40;

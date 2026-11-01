@@ -614,7 +614,73 @@ function _qobjectParent() {
 // ---------------------------------------------------------------------------
 
 var _nextTimerId = 1;
-var _timers = {};
+var _timers = [];
+var _timerSeq = 0;
+var _timerWake = null;
+var _timerTurnQueued = false;
+
+// A QML Timer fires on the animation clock's tick, and those due on one tick in the
+// order they were made, whatever they were set for; so one wake-up, and a queue that
+// knows when each is due.
+function _wakeForTimers() {
+    if (!_timerWake) {
+        _timerWake = Qt.createQmlObject(
+            "import QtQuick; Timer { running: false }",
+            _qobjectParent(),
+            "eldur_timer"
+        );
+        _timerWake.triggered.connect(_timerTurn);
+    }
+    _timerWake.stop();
+    if (_timers.length === 0 || _timerTurnQueued) {
+        return;
+    }
+    _timerWake.interval = Math.max(0, Math.ceil(_timers[0].due - Date.now()));
+    _timerWake.start();
+}
+
+// One callback a turn of the event loop: the engine posts a promise's reactions as
+// events, so they run after this turn and before the next callback, as a microtask
+// checkpoint would have them. Reactions that queue further reactions can still lose
+// the race, since nothing here can see or drain the engine's queue.
+function _timerTurn() {
+    _timerTurnQueued = true;
+    Qt.callLater(_timerRunOne);
+}
+
+function _timerRunOne() {
+    _timerTurnQueued = false;
+    var t = _timers[0];
+    if (!t || t.due > Date.now()) {
+        _wakeForTimers();
+        return;
+    }
+    _timers.shift();
+    if (t.repeat) {
+        // Late intervals keep their beat against other timers, without a burst to catch up.
+        t.due = Math.max(t.due + t.ms, Date.now());
+        t.seq = _timerSeq++;
+        _timerInsert(t);
+    }
+    try {
+        t.callback.apply(null, t.args);
+    } finally {
+        if (_timers.length > 0 && _timers[0].due <= Date.now()) {
+            _timerTurn();
+        } else {
+            _wakeForTimers();
+        }
+    }
+}
+
+function _timerInsert(t) {
+    var at = _timers.length;
+    while (at > 0 && (_timers[at - 1].due > t.due
+        || (_timers[at - 1].due === t.due && _timers[at - 1].seq > t.seq))) {
+        --at;
+    }
+    _timers.splice(at, 0, t);
+}
 
 function _scheduleTimer(callback, delay, repeat, extraArgs) {
     if (typeof callback !== "function") {
@@ -622,25 +688,11 @@ function _scheduleTimer(callback, delay, repeat, extraArgs) {
     }
     var id = _nextTimerId++;
     var ms = Math.max(0, Number(delay) || 0);
-    var timer = Qt.createQmlObject(
-        "import QtQuick; Timer { running: false }",
-        _qobjectParent(),
-        "eldur_timer_" + id
-    );
-    timer.interval = ms;
-    timer.repeat = Boolean(repeat);
-    _timers[id] = timer;
-    timer.triggered.connect(function() {
-        if (!_timers[id]) {
-            return;
-        }
-        if (!repeat) {
-            delete _timers[id];
-            timer.destroy();
-        }
-        callback.apply(null, extraArgs);
+    _timerInsert({
+        id: id, ms: ms, due: Date.now() + ms, seq: _timerSeq++,
+        repeat: Boolean(repeat), callback: callback, args: extraArgs
     });
-    timer.start();
+    _wakeForTimers();
     return id;
 }
 
@@ -655,13 +707,12 @@ function setInterval(callback, delay) {
 }
 
 function clearTimeout(id) {
-    var timer = _timers[id];
-    if (!timer) {
-        return;
+    for (var i = 0; i < _timers.length; ++i) {
+        if (_timers[i].id === id) {
+            _timers.splice(i, 1);
+            return;
+        }
     }
-    delete _timers[id];
-    timer.running = false;
-    timer.destroy();
 }
 
 function clearInterval(id) {
@@ -4454,7 +4505,7 @@ function getComputedStyle(item) {
             raw = _gCurrent(raw);
             var settled = _gComputed(raw, p);
             if (settled !== null) {
-                return settled;
+                return _gInFlight(raw, p, settled);
             }
         }
         var explicit = getStyle(raw, p);
@@ -16976,6 +17027,28 @@ function _gGlyphShift(raw) {
 
 function _gNumberText(n) {
     return String(Number(n.toPrecision(6)));
+}
+
+// A closed page's transitions are Behaviors, which the cascade knows nothing of:
+// the value on the way is on the item. On open pages `_aRead` has put it in the style.
+function _gInFlight(raw, prop, settled) {
+    if (_gActive()) {
+        return settled;
+    }
+    var name = _camelToKebab(prop);
+    var read = {
+        "opacity": function() { return String(raw.opacity); },
+        "width": function() { return raw.width + "px"; },
+        "height": function() { return raw.height + "px"; },
+        "background-color": function() {
+            return raw.color !== undefined && typeof raw.text !== "string" ? _vLiveColor(raw.color) : settled;
+        }
+    }[name];
+    if (!read || !/[1-9]/.test(_gComputed(raw, "transition-duration") + _gComputed(raw, "transition-delay"))) {
+        return settled;
+    }
+    var listed = String(_gComputed(raw, "transition-property")).split(/\s*,\s*/);
+    return listed.indexOf("all") >= 0 || listed.indexOf(name) >= 0 ? read() : settled;
 }
 
 function _gComputed(raw, prop) {

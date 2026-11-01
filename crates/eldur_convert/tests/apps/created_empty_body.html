@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head><style>
+.card { height: 40px; background: #cde; margin-bottom: 6px; transition: opacity 0.1s; }
+</style></head>
+<body>
+<script>
+// Nothing in the body but what this makes, and a page that must stay open for it.
+for (const name of ["one", "two"]) {
+  const card = document.createElement("div");
+  card.className = "card";
+  card.id = name;
+  card.textContent = name;
+  card.addEventListener("transitionend", () => {});
+  document.body.appendChild(card);
+}
+const r = (e) => e.getBoundingClientRect();
+const [a, b] = [document.getElementById("one"), document.getElementById("two")];
+console.log("rects", r(a).left, r(a).top, r(a).width, r(b).top, getComputedStyle(a).fontSize);
+</script>
+</body>
+</html>
