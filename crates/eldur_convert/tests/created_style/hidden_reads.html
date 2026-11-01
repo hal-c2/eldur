@@ -26,4 +26,5 @@ for(var k=0;k<rs.length;k++){t("rects-"+k,Math.round(rs[k].left)+","+Math.round(
 function sh(n){var b=q("sh").getBoundingClientRect();t("sh-"+n,Math.round(b.height)+" "+Math.round(q("end").getBoundingClientRect().top)+" "+JSON.stringify(q("sh").innerText))}
 sh(0);q("sh1").style.display="";sh(1);q("sh2").style.display="inline-block";sh(2);q("sh1").style.display="none";sh(3);
 var ci=document.createElement("input");ci.style.display="none";q("sh").appendChild(ci);sh(4);
+q("sh1").style.display="block";sh(5);
 </script></body></html>

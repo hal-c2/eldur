@@ -2399,7 +2399,24 @@ function _tablePlaceAll(host, live) {
         });
     };
     var spacing = _tableSpacing(host);
-    var adapters = measure();
+    // Collapsed, a cell made from a template shares its side borders with the cells
+    // beside it and its top border with the row above. It has all four of its own,
+    // where a static cell paints the sides it won.
+    var collapsed = _tableCollapses(host);
+    var sharedAcross = function(c) {
+        return collapsed && c.column > 0 && c.item.eldurTemplate !== undefined && c.item.border
+            ? c.item.border.width : 0;
+    };
+    var sharedRight = function(c) {
+        return collapsed && c.item.eldurTemplate !== undefined && c.item.border ? c.item.border.width : 0;
+    };
+    var adapters = measure().map(function(a, i) {
+        var over = sharedAcross(placed.cells[i]);
+        return Object.assign({}, a, {
+            implicitWidth: a.implicitWidth - over,
+            minContentWidth: a.minContentWidth - over
+        });
+    });
     var widths;
     if (isStatic) {
         host.eldurCreatedCells = adapters;
@@ -2418,7 +2435,8 @@ function _tablePlaceAll(host, live) {
                 host.eldurCreatedCells = placed.cells.map(function(c, i) {
                     var exact = Object.assign({}, adapters[i]);
                     var last = c.column + c.columnSpan === host.columnSpecs.length;
-                    exact.implicitWidth = _tableCellWidth(c.item, true) - (last ? host.eldurOuterEdge : 0);
+                    exact.implicitWidth = _tableCellWidth(c.item, true)
+                        - (sharedRight(c) || (last ? host.eldurOuterEdge : 0));
                     exact.minContentWidth = Math.min(exact.minContentWidth, exact.implicitWidth);
                     return exact;
                 });
@@ -2457,17 +2475,17 @@ function _tablePlaceAll(host, live) {
         return sum;
     };
     placed.cells.forEach(function(c) {
+        // Its right border lies on the next cell's left one, which static cells paint.
+        var last = c.column + c.columnSpan >= widths.length;
         c.item.x = left[c.column] || 0;
-        c.item.width = acrossFrom(c);
+        _meta(c.item).tableBorderOver = last ? 0 : sharedRight(c);
+        c.item.width = acrossFrom(c) + _meta(c.item).tableBorderOver;
     });
     // Text wraps in the width it now has.
     var zeros = rows.map(function() { return 0; });
     rows.forEach(function(row, r) {
         zeros[r] = row.item.eldurMinHeight || 0;
     });
-    // Collapsed, a cell made from a template shares its top border with the row
-    // above. It has all four of its own, where a static cell paints the sides it won.
-    var collapsed = _tableCollapses(host);
     var shared = function(c) {
         return collapsed && c.row > 0 && c.item.eldurTemplate !== undefined && c.item.border
             ? c.item.border.width : 0;
@@ -2866,11 +2884,57 @@ function _placeGrid(grid) {
     }
 }
 
+// A page's grid holds its free cells with placeholders: an item moved in takes the
+// next one, and its column's width unless it has its own.
+function _placeInStaticGrid(grid) {
+    var kids = Array.prototype.filter.call(grid.children, function(kid) {
+        return typeof kid.eldurTag === "string";
+    });
+    var free = Array.prototype.filter.call(grid.children, function(kid) {
+        return typeof kid.eldurTag !== "string" && kid.visible !== false;
+    });
+    if (free.length === 0) {
+        return;
+    }
+    var m = _meta(grid);
+    if (!m.gridTaker) {
+        m.gridTaker = Qt.createQmlObject("import QtQuick; import QtQuick.Layouts; QtObject { "
+            + "function same(a, b) { return a.Layout.row === b.Layout.row && a.Layout.column === b.Layout.column; } "
+            + "function isCell(cell, last) { return cell.Layout.column < last; } "
+            + "function take(item, cell) { item.Layout.row = cell.Layout.row; item.Layout.column = cell.Layout.column; "
+            + "if (item.Layout.preferredWidth < 0) { item.Layout.preferredWidth = cell.Layout.preferredWidth; "
+            + "item.Layout.maximumWidth = cell.Layout.maximumWidth; item.Layout.fillWidth = cell.Layout.fillWidth; } "
+            + "else { item.Layout.rightMargin = Math.max(0, cell.Layout.preferredWidth - item.Layout.preferredWidth); } } }",
+            grid);
+    }
+    // A Layout's row reads 0 unset, so what has not been placed shares a taken cell.
+    for (var i = 0; i < kids.length; ++i) {
+        var taken = false;
+        for (var o = 0; o < kids.length && !taken; ++o) {
+            taken = o !== i && m.gridTaker.same(kids[i], kids[o]) && o < i;
+        }
+        for (var e = 0; e < free.length && !taken; ++e) {
+            taken = free[e].visible !== false && m.gridTaker.same(kids[i], free[e]);
+        }
+        if (taken) {
+            for (var c = 0; c < free.length; ++c) {
+                if (free[c].visible !== false && m.gridTaker.isCell(free[c], grid.columns - 1)) {
+                    free[c].visible = false;
+                    m.gridTaker.take(kids[i], free[c]);
+                    break;
+                }
+            }
+        }
+    }
+}
+
 function _reflowFilled(container, force) {
     if (typeof container.eldurPack === "string") {
         _packFlex(container, force);
     } else if (container.eldurTracks) {
         _placeGrid(container);
+    } else if (typeof container.columnSpacing === "number" && typeof container.columns === "number") {
+        _placeInStaticGrid(container);
     }
 }
 
@@ -4672,7 +4736,7 @@ function getBoundingClientRect(item) {
     if (!raw || raw.visible === false && !_inClosedDetails(raw)) {
         return { x: 0, y: 0, top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0 };
     }
-    var w = typeof raw.width === "number" ? raw.width : 0;
+    var w = (typeof raw.width === "number" ? raw.width : 0) - (_meta(raw).tableBorderOver || 0);
     var h = typeof raw.height === "number" ? raw.height : 0;
     var x = typeof raw.x === "number" ? raw.x : 0;
     var y = typeof raw.y === "number" ? raw.y : 0;
@@ -4680,7 +4744,7 @@ function getBoundingClientRect(item) {
         var pt = raw.mapToItem(null, 0, 0);
         if (pt) {
             x = pt.x;
-            y = pt.y - (_gHasCascade() ? _gGlyphShift(raw) : 0);
+            y = pt.y - _gGlyphShift(raw);
         }
         // An inline element is as tall as its font, whatever its line holds.
         if (_isLines(raw) && !_isAnonLines(raw) && _vInlineTag(_nodeTag(raw))
@@ -14501,8 +14565,9 @@ function _rawHasNoFlowParent(raw) {
 // What the converter moved a static line by to put its glyphs where a browser
 // does; the box stays where it was.
 function _gGlyphShift(raw) {
-    if (typeof raw.lineHeightMode !== "number" || !raw.transform || raw.transform.length !== 1
-        || raw.transform[0].y === undefined || _gStyle(raw).won["transform"]) {
+    if (typeof raw.lineHeightMode !== "number" || !raw.transform || raw.transform.length < 1
+        || raw.transform[0].y === undefined || raw.transform[0].objectName === "eldurCss"
+        || _gHasCascade() && (raw.transform.length !== 1 || _gStyle(raw).won["transform"])) {
         return 0;
     }
     return raw.transform[0].y;

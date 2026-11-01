@@ -1,14 +1,18 @@
 <!doctype html><html><head><style>body{margin:0;font:14px/1.4 sans-serif}
 table{border-collapse:collapse;width:300px}th,td{border:1px solid #ddd;padding:6px 10px;text-align:left}td.num{text-align:right}
 </style></head><body>
-<table id="t"><thead><tr><th id="h">Name</th><th id="h2">Age</th></tr></thead><tbody id="rows"></tbody></table>
+<table id="t"><thead><tr><th id="h">Name</th><th id="h2">Age</th><th id="h3">City</th></tr></thead><tbody id="rows"></tbody></table>
 <p id="after" style="margin:0">after</p>
 <script>
 var q=function(s){return document.getElementById(s)};
 function row(i){var tr=document.createElement("tr");tr.id="r"+i;
  var a=document.createElement("td");a.id="a"+i;a.textContent="name";tr.appendChild(a);
- var b=document.createElement("td");b.id="b"+i;b.textContent="36";b.className="num";tr.appendChild(b);return tr}
+ var b=document.createElement("td");b.id="b"+i;b.textContent="36";b.className="num";tr.appendChild(b);
+ var c=document.createElement("td");c.id="c"+i;c.textContent="x";tr.appendChild(c);return tr}
 for(var i=0;i<4;i++)q("rows").appendChild(row(i));
 console.log("CS after "+Math.round(q("after").getBoundingClientRect().top));
+console.log("CS rows "+[0,1,2,3].map(function(i){return Math.round(q("r"+i).getBoundingClientRect().top)}).join(","));
+function r(i){var b=q(i).getBoundingClientRect();return i+":"+Math.round(b.left)+","+Math.round(b.width)}
+console.log("CS cells "+["h","h2","h3","a0","b0","c0","a3","b3","c3"].map(r).join(" "));
 console.log("CS align "+getComputedStyle(q("b0")).textAlign);
 </script></body></html>

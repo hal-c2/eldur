@@ -115,6 +115,11 @@ impl Emitter<'_, '_> {
             Some(old) => vec![old.clone()],
             None => Vec::new(),
         };
+        // The runtime tells a page's move of a Text from the one that places its
+        // baseline, which a rect leaves out.
+        if values.is_empty() && obj.type_name == "Text" {
+            list[0].set("objectName", "eldurCss");
+        }
         values.extend(list.into_iter().map(|t| Value::Object(Box::new(t))));
         let value = if values.len() == 1 {
             values.pop().expect("one transform")

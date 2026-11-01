@@ -1400,6 +1400,21 @@ impl Emitter<'_, '_> {
         let layout_item = is_layout(&obj.type_name);
         let h_align = self_alignment(container.justify_items, style.justify_self, true);
         let v_align = self_alignment(container.align_items, style.align_self, false);
+        // A column is as wide as what it holds: an item narrower than its fixed track
+        // keeps the rest of it open, or the next column would start at its edge.
+        if p.col_span == 1
+            && h_align.is_none()
+            && let Some(TrackSize::Fixed(Value::Number(track))) = cols.tracks.get(p.col)
+            && let Size::Length(l) = &style.width
+            && let Some(width) = l.as_px()
+            && f64::from(width + extra_w) < *track
+        {
+            add_margin(
+                obj,
+                "Layout.rightMargin",
+                (*track - f64::from(width + extra_w)) as f32,
+            );
+        }
         let mut flags = Vec::new();
         let mut ignored_alignment = false;
         for (plan, start, span, align, size, horizontal, extra) in [

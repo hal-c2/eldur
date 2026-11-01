@@ -4,10 +4,20 @@
 <div class="b" id="m3">c</div>
 <div class="b" id="m4">d</div>
 <div class="r" id="row"><div class="b" id="k">k</div></div>
+<div id="grid" style="display:grid;grid-template-columns:100px 100px"><div class="b" id="g">g</div></div>
+<div id="end">end</div>
+<div id="tt" style="transform:translateY(10px)">moved</div>
+<div id="t2" style="line-height:18px;transform:translateY(10px)">moved</div>
+<div id="after">a</div>
 <script>
 var q=function(s){return document.getElementById(s)};
 var ids=["k","m1","m2","m3"];
 function d(t){console.log("CS "+t+" "+ids.map(function(i){var b=q(i).getBoundingClientRect();return i+":"+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)}).join(" "))}
 d("0");
 q("row").appendChild(q("m1"));q("row").appendChild(q("m2"));d("row");
+function e(t){var b=q("end").getBoundingClientRect();console.log("CS end-"+t+" "+Math.round(b.top)+","+Math.round(b.height))}
+e(0);
+function f(t){console.log("CS tt-"+t+" "+["tt","t2","after"].map(function(i){return Math.round(q(i).getBoundingClientRect().top)}).join(","))}
+f(0);
+q("grid").appendChild(q("m4"));var b=q("m4").getBoundingClientRect();console.log("CS grid "+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width));e(1);
 </script></body></html>
