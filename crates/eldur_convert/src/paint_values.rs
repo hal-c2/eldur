@@ -13,6 +13,7 @@ use serde_json::{Value as Json, json};
 
 use crate::emit::background::fixup_stops;
 use crate::emit::shadow::bands;
+use crate::emit::transform::flat;
 
 /// How many readings of one value's `var()`s are worth writing down.
 const MAX_READINGS: usize = 16;
@@ -320,9 +321,22 @@ fn lp_json(l: &LengthPercentage, viewport: (f32, f32)) -> [f32; 2] {
 }
 
 fn transform_json(fns: &[TransformFn], viewport: (f32, f32)) -> Json {
-    let list: Vec<Json> = fns
-        .iter()
-        .map(|f| match f {
+    let mut list: Vec<Json> = Vec::new();
+    let mut depth: Option<[[f32; 4]; 4]> = None;
+    let settle = |list: &mut Vec<Json>, depth: &mut Option<[[f32; 4]; 4]>| {
+        if let Some(m) = depth.take() {
+            list.push(json!({"m": flat::plane(&m)}));
+        }
+    };
+    for f in fns {
+        if let TransformFn::Unsupported(text) = f
+            && let Some(m) = flat::matrix(text)
+        {
+            depth = Some(flat::multiply(&depth.unwrap_or(flat::IDENTITY), &m));
+            continue;
+        }
+        settle(&mut list, &mut depth);
+        list.push(match f {
             TransformFn::Translate(x, y) => {
                 json!({"t": [lp_json(x, viewport), lp_json(y, viewport)]})
             }
@@ -338,9 +352,80 @@ fn transform_json(fns: &[TransformFn], viewport: (f32, f32)) -> Json {
             }
             TransformFn::Matrix(m) => json!({"m": m}),
             TransformFn::Unsupported(text) => json!({"u": text}),
-        })
-        .collect();
+        });
+    }
+    settle(&mut list, &mut depth);
     json!({"fns": list})
+}
+
+/// A `transform` in ems: the font is known only at run time, so a translation
+/// carries what one em adds. Reading the value at 0 and at 1 px per em separates
+/// that from its pixels, whatever the mix.
+fn transform_in_ems(text: &str, viewport: &Viewport) -> Option<Json> {
+    let at =
+        |px: f32| match eldur_css::parse_paint_value("transform", &ems_as_px(text, px)?, viewport)?
+        {
+            PaintValue::Transform(fns) => Some(fns),
+            _ => None,
+        };
+    let (zero, one) = (at(0.0)?, at(1.0)?);
+    let size = (viewport.width, viewport.height);
+    let mut value = transform_json(&zero, size);
+    let mut slots = value["fns"].as_array_mut()?.iter_mut();
+    let mut in_depth = false;
+    for (z, o) in zero.iter().zip(&one) {
+        if let TransformFn::Unsupported(text) = z
+            && flat::matrix(text).is_some()
+        {
+            // Neighbouring 3-D functions are one entry, and a depth does not
+            // show in the plane's picture, so its ems change nothing.
+            if !in_depth {
+                slots.next()?;
+            }
+            in_depth = true;
+            continue;
+        }
+        in_depth = false;
+        let slot = slots.next()?;
+        match (z, o) {
+            (TransformFn::Translate(zx, zy), TransformFn::Translate(ox, oy)) => {
+                let x = lp_json(zx, size);
+                let y = lp_json(zy, size);
+                slot["t"] = json!([[x[0], x[1], ox.px - zx.px], [y[0], y[1], oy.px - zy.px]]);
+            }
+            _ if z == o => {}
+            _ => return None,
+        }
+    }
+    Some(value)
+}
+
+/// `text` with each em length written in pixels, or `None` if it has none.
+fn ems_as_px(text: &str, px_per_em: f32) -> Option<String> {
+    let mut out = String::new();
+    let mut any = false;
+    let mut rest = text;
+    while let Some(at) = rest.find("em") {
+        let before = &rest[..at];
+        let digits = before
+            .rfind(|c: char| !(c.is_ascii_digit() || c == '.' || c == '-' || c == '+'))
+            .map_or(0, |i| i + 1);
+        let after = rest[at + 2..].chars().next();
+        match before[digits..].parse::<f32>() {
+            Ok(n) if !after.is_some_and(char::is_alphanumeric) => {
+                any = true;
+                out.push_str(&before[..digits]);
+                out.push_str(&format!("{}px", n * px_per_em));
+            }
+            _ => {
+                out.push_str(before);
+                out.push_str("em");
+            }
+        }
+        rest = &rest[at + 2..];
+    }
+    out.push_str(rest);
+    any.then_some(out)
 }
 
 fn entry(
@@ -351,6 +436,11 @@ fn entry(
 ) -> Option<Json> {
     if property == "filter" {
         return filter_json(text, viewport);
+    }
+    if property == "transform"
+        && let Some(value) = transform_in_ems(text, viewport)
+    {
+        return Some(value);
     }
     if property == "box-shadow"
         && let Some(hundreds) = em_as_hundreds(text)
@@ -476,6 +566,33 @@ pub(crate) fn background_urls(rules: &[RuntimeRule], viewport: &Viewport) -> BTr
     urls
 }
 
+/// The rules' `transform` values with a third dimension, which a script's class
+/// flattens with no word at run time: pages reach them there, so it is said here.
+pub(crate) fn flattened_transforms(rules: &[RuntimeRule]) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
+    for rule in rules {
+        for (name, value, _) in &rule.declarations {
+            let depth = |word: &str| {
+                let word = word.trim().to_ascii_lowercase();
+                [
+                    "rotatex(",
+                    "rotatey(",
+                    "rotate3d(",
+                    "translatez(",
+                    "scalez(",
+                    "matrix3d(",
+                ]
+                .iter()
+                .any(|f| word.contains(f))
+            };
+            if name == "transform" && depth(value) {
+                out.insert(value.trim().to_owned());
+            }
+        }
+    }
+    out
+}
+
 /// Every value the page's rules can give a paint property.
 pub(crate) fn paint_values_decl(
     rules: &[RuntimeRule],
@@ -544,5 +661,48 @@ pub(crate) fn paint_values_decl(
         value: Some(Value::String(Json::Object(table).to_string())),
         readonly: false,
         required: false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn value(text: &str) -> Json {
+        entry("transform", text, &Viewport::default(), &BTreeMap::new()).expect(text)
+    }
+
+    #[test]
+    fn a_translation_in_ems_carries_what_one_em_adds() {
+        let v = value("translate(1em, .5em)");
+        assert_eq!(v["fns"][0]["t"][0][0].as_f64(), Some(0.0));
+        assert_eq!(v["fns"][0]["t"][0][2].as_f64(), Some(1.0));
+        assert_eq!(v["fns"][0]["t"][1][2].as_f64(), Some(0.5));
+    }
+
+    #[test]
+    fn neighbouring_depth_is_one_flat_matrix_and_keeps_what_follows_apart() {
+        let v = value("rotateY(60deg) translateZ(1em) translate(1em, 2px)");
+        let fns = v["fns"].as_array().expect("list");
+        assert_eq!(fns.len(), 2, "{fns:?}");
+        let a = fns[0]["m"][0].as_f64().expect("a");
+        assert!((a - 0.5).abs() < 1e-3, "{a}");
+        assert_eq!(fns[1]["t"][0][2].as_f64(), Some(1.0));
+        assert_eq!(fns[1]["t"][1][0].as_f64(), Some(2.0));
+    }
+
+    #[test]
+    fn perspective_stays_a_function_with_no_form() {
+        let v = value("perspective(9px) scale(2)");
+        assert_eq!(v["fns"][0]["u"].as_str(), Some("perspective(9px)"));
+    }
+
+    #[test]
+    fn only_an_em_length_counts_as_one() {
+        assert_eq!(ems_as_px("translate(1rem, 2px)", 3.0), None);
+        assert_eq!(
+            ems_as_px("translate(-1.5em, 2px)", 2.0).as_deref(),
+            Some("translate(-3px, 2px)")
+        );
     }
 }

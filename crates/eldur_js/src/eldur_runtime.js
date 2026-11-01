@@ -2871,8 +2871,8 @@ function _placeGrid(grid) {
     var m = _meta(grid);
     if (!m.gridPlacer) {
         m.gridPlacer = Qt.createQmlObject("import QtQuick; import QtQuick.Layouts; QtObject { "
-            + "function place(item, row, column, size) { "
-            + "item.Layout.row = row; item.Layout.column = column; "
+            + "function place(item, row, column, size, cellOnly) { "
+            + "item.Layout.row = row; item.Layout.column = column; if (cellOnly) return; "
             + "if (size >= 0) { item.Layout.fillWidth = false; item.Layout.minimumWidth = size; "
             + "item.Layout.preferredWidth = size; item.Layout.maximumWidth = size; } "
             + "else { item.Layout.fillWidth = true; item.Layout.minimumWidth = 0; item.Layout.preferredWidth = 0; "
@@ -2880,7 +2880,14 @@ function _placeGrid(grid) {
     }
     var kids = _rawElementChildren(grid);
     for (var i = 0; i < kids.length; ++i) {
-        m.gridPlacer.place(kids[i], Math.floor(i / n), i % n, tracks[i % n]);
+        var size = tracks[i % n];
+        // A box reads its width from its own rules, within this track.
+        if (size >= 0 && kids[i].eldurTrack !== undefined) {
+            kids[i].eldurTrack = size;
+            m.gridPlacer.place(kids[i], Math.floor(i / n), i % n, -1, true);
+        } else {
+            m.gridPlacer.place(kids[i], Math.floor(i / n), i % n, size);
+        }
     }
 }
 
@@ -11420,9 +11427,13 @@ function _gBoxSource(tag, outOfFlow) {
         + "Behavior on opacity { enabled: eldurFadeMs + eldurFadeWait > 0; SequentialAnimation { "
         + "PauseAnimation { duration: eldurFadeWait } NumberAnimation { duration: eldurFadeMs; easing.type: eldurFadeEase } } } "
         + "property real eldurGapT: 0; property real eldurGapL: 0; property real eldurTrack: -1; "
-        + "Layout.topMargin: eldurMt + eldurGapT; Layout.rightMargin: eldurMr; Layout.bottomMargin: eldurMb; Layout.leftMargin: eldurMl + eldurGapL; "
-        + "Layout.minimumWidth: eldurTrack < 0 ? 0 : eldurTrack - eldurMl - eldurMr; "
-        + "Layout.maximumWidth: eldurTrack < 0 ? Number.POSITIVE_INFINITY : eldurTrack - eldurMl - eldurMr; "
+        // A box narrower than its grid track keeps the track's width in its
+        // margin, as the converter's own grid items do: the track has no other size.
+        + "readonly property real eldurTrackLeft: eldurTrack < 0 ? 0 : eldurTrack - eldurMl - eldurMr; "
+        + "Layout.topMargin: eldurMt + eldurGapT; Layout.rightMargin: eldurMr + (eldurPw >= 0 ? Math.max(0, eldurTrackLeft - eldurPw) : 0); "
+        + "Layout.bottomMargin: eldurMb; Layout.leftMargin: eldurMl + eldurGapL; "
+        + "Layout.minimumWidth: eldurTrack < 0 ? 0 : eldurPw >= 0 ? Math.min(eldurPw, eldurTrackLeft) : eldurTrackLeft; "
+        + "Layout.maximumWidth: eldurTrack < 0 ? Number.POSITIVE_INFINITY : eldurPw >= 0 ? Math.min(eldurPw, eldurTrackLeft) : eldurTrackLeft; "
         + "Layout.fillWidth: eldurFill; Layout.preferredWidth: eldurPw; Layout.alignment: eldurAlign; "
         + "Text { " + _NATIVE_TEXT + "visible: text !== \"\"; wrapMode: Text.Wrap; color: \"black\"; font.pixelSize: 16 } }";
 }
@@ -13116,7 +13127,7 @@ function _gLayerSource(raw, s, e, layer, at, outerRadii) {
         } else if (/^calc|^\d|^-/.test(text) && !/%/.test(text)) {
             parts += px + ": " + (_gPx(text, basis, s.fontSize, s.rootSize) || 0) + "; ";
         } else {
-            _gWarn(raw, "background-position", "`" + text + "` is placed at 0");
+            _gWarn(raw, "background-position", "`" + text + "` is placed at 0: only lengths, percentages and edge words place a layer here");
         }
     }
     position(at.x, "positionX", "positionXPercent", areaW);
@@ -13268,7 +13279,7 @@ function _gPaintDecor(raw, s, e, radius) {
     if (imageText !== "none") {
         var images = _gPaintValue("background-image", imageText);
         if (!images) {
-            _gWarn(raw, "background-image", "`" + imageText + "` is not painted: the converter never saw this value");
+            _gWarn(raw, "background-image", "`" + imageText + "` is not painted, so only the background colour shows: the converter never saw this value; write it in a style rule");
         } else {
             for (var l = images.layers.length - 1; l >= 0; --l) {
                 var layer = images.layers[l];
@@ -13299,7 +13310,7 @@ function _gPaintDecor(raw, s, e, radius) {
     if (shadowText !== "none") {
         var shadows = _gShadowsAt("box-shadow", shadowText, s.fontSize);
         if (!shadows) {
-            _gWarn(raw, "box-shadow", "`" + shadowText + "` is not painted: the converter never saw this value, or it mixes `em` with `px`");
+            _gWarn(raw, "box-shadow", "`" + shadowText + "` is not painted, so the box has no shadow: the converter never saw this value, or it mixes `em` with `px`; write it in a style rule, in one unit");
         } else {
             var opaque = _gQtColor(s["background-color"]).a === 1 || imageText !== "none";
             for (var i = shadows.list.length - 1; i >= 0; --i) {
@@ -13364,10 +13375,10 @@ function _gPaintDecor(raw, s, e, radius) {
     _gPaintOuterShadow(raw, outer, w, h);
     _gPaintMatrix(raw, s, w, h);
     if (s["text-shadow"] !== "none" && s["text-shadow"] !== undefined) {
-        _gWarn(raw, "text-shadow", "the text of a box a script made or restyled has no shadow");
+        _gWarn(raw, "text-shadow", "the text of a box a script made or restyled is drawn with no shadow; only text the page holds as written has one");
     }
     if (s["animation-name"] !== "none") {
-        _gWarn(raw, "animation-name", "`" + s["animation-name"] + "` does not run on a created box");
+        _gWarn(raw, "animation-name", "`" + s["animation-name"] + "` does not run on a created box: it stays as its rules leave it");
     }
     if (!_gPaintPicture(raw, s, w, h)) {
         _gPaintLayer(raw, s, outerRadii,
@@ -13384,7 +13395,7 @@ function _gPaintLayer(raw, s, radii, clips) {
     if (s.filter !== "none" && s.filter !== undefined) {
         var filter = _gPaintValue("filter", s.filter);
         if (!filter) {
-            _gWarn(raw, "filter", "`" + s.filter + "` is not painted: it has a `url()`, or the converter never saw this value");
+            _gWarn(raw, "filter", "`" + s.filter + "` is not painted, so the box shows unfiltered: it has a `url()`, or the converter never saw this value; write its functions in a style rule");
         } else {
             source = "EldurFilter { " + filter.source + " }";
             if (clips) {
@@ -13524,7 +13535,7 @@ function _gMatrixOf(raw, s, w, h, warn) {
     var value = _gPaintValue("transform", text);
     if (!value) {
         if (warn) {
-            _gWarn(raw, "transform", "`" + text + "` is not painted: the converter never saw this value");
+            _gWarn(raw, "transform", "`" + text + "` is not painted, so the box stays unmoved: the converter never saw this value; write it in a style rule");
         }
         return null;
     }
@@ -13532,11 +13543,13 @@ function _gMatrixOf(raw, s, w, h, warn) {
     for (var i = 0; i < value.fns.length; ++i) {
         var f = value.fns[i];
         if (f.t) {
-            out = _gMultiply(out, [1, 0, 0, 1, f.t[0][0] + f.t[0][1] * w / 100, f.t[1][0] + f.t[1][1] * h / 100]);
+            out = _gMultiply(out, [1, 0, 0, 1,
+                f.t[0][0] + f.t[0][1] * w / 100 + (f.t[0][2] || 0) * s.fontSize,
+                f.t[1][0] + f.t[1][1] * h / 100 + (f.t[1][2] || 0) * s.fontSize]);
         } else if (f.m) {
             out = _gMultiply(out, f.m);
         } else if (warn) {
-            _gWarn(raw, "transform", "`" + f.u + "` has no 2-D form and is left out");
+            _gWarn(raw, "transform", "`" + f.u + "` has no 2-D form and is left out; the rest of the transform still applies");
         }
     }
     return out;
@@ -14295,7 +14308,9 @@ function _gAttached(raw, s, e) {
     }
     var centred = e.ml === null && e.mr === null;
     // Qt.AlignHCenter, Qt.AlignRight, Qt.AlignLeft.
-    _gSet(raw, "eldurAlign", centred ? 4 : e.ml === null ? 2 : 0);
+    // A grid item starts at its cell's top; a Layout would centre it.
+    var top = typeof parent.columnSpacing === "number" ? 32 : 0;
+    _gSet(raw, "eldurAlign", (centred ? 4 : e.ml === null ? 2 : 0) | top);
 }
 
 // Margins of a box on a line do not collapse: the line reads them as they are.
@@ -14373,6 +14388,9 @@ function _gTrackWidth(raw) {
     var grid = raw.parent;
     var tracks = grid.eldurTracks;
     if (!tracks || tracks.length === 0) {
+        return null;
+    }
+    if (raw.eldurPw >= 0 && !raw.eldurFill) {
         return null;
     }
     var column = _rawElementChildren(grid).indexOf(raw) % tracks.length;
@@ -14891,6 +14909,9 @@ function _gAdopt(raw) {
     next.eldurGapT = place.top;
     next.eldurGapL = place.left;
     next.eldurTrack = place.track;
+    if (place.cell) {
+        _gLayoutCell(next, place.cell);
+    }
     _gLive.push(next);
     return next;
 }
@@ -14911,8 +14932,10 @@ function _gConvertedPlace(raw) {
         place.left = row ? Math.min(gap, written.left) : 0;
         place.top = row ? 0 : Math.min(gap, written.top);
     } else if (typeof raw.parent.columns === "number") {
-        var most = _gLayoutMargins(raw).max;
-        place.track = isFinite(most) ? most : -1;
+        var cell = _gLayoutMargins(raw);
+        place.cell = cell;
+        place.track = !cell.fill && cell.wide >= 0 ? cell.wide + cell.left + cell.right
+            : isFinite(cell.max) ? cell.max : -1;
     }
     return place;
 }
@@ -14920,10 +14943,18 @@ function _gConvertedPlace(raw) {
 function _gLayoutMargins(raw) {
     if (!_gLayoutReader) {
         _gLayoutReader = Qt.createQmlObject("import QtQuick; import QtQuick.Layouts; QtObject { "
-            + "function read(i) { return { top: i.Layout.topMargin, left: i.Layout.leftMargin, max: i.Layout.maximumWidth }; } }",
+            + "function read(i) { return { top: i.Layout.topMargin, left: i.Layout.leftMargin, right: i.Layout.rightMargin, max: i.Layout.maximumWidth, "
+            + "wide: i.Layout.preferredWidth, fill: i.Layout.fillWidth, tall: i.Layout.fillHeight, row: i.Layout.row, column: i.Layout.column, "
+            + "rows: i.Layout.rowSpan, columns: i.Layout.columnSpan }; } "
+            + "function cell(i, c) { i.Layout.row = c.row; i.Layout.column = c.column; i.Layout.rowSpan = c.rows; i.Layout.columnSpan = c.columns; "
+            + "i.Layout.fillHeight = c.tall; } }",
             _qobjectParent(), "eldur_layout_reader");
     }
     return _gLayoutReader.read(raw);
+}
+
+function _gLayoutCell(raw, cell) {
+    _gLayoutReader.cell(raw, cell);
 }
 
 function _rawHasNoFlowParent(raw) {

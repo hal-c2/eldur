@@ -166,12 +166,7 @@ impl Emitter<'_, '_> {
                 texts.join(" ")
             ),
         );
-        self.matrix(
-            list,
-            [m[0][0], m[1][0], m[0][1], m[1][1], m[0][3], m[1][3]],
-            ox,
-            oy,
-        );
+        self.matrix(list, flat::plane(&m), ox, oy);
     }
 
     /// The 2-D matrix `[a b c d e f]` about the origin: moved there, applied
@@ -218,15 +213,20 @@ fn round_factor(v: f32) -> f64 {
 }
 
 /// The 3-D functions a parsed `transform` keeps as text, as matrices (rows).
-mod flat {
-    pub(super) const IDENTITY: [[f32; 4]; 4] = [
+pub(crate) mod flat {
+    pub(crate) const IDENTITY: [[f32; 4]; 4] = [
         [1.0, 0.0, 0.0, 0.0],
         [0.0, 1.0, 0.0, 0.0],
         [0.0, 0.0, 1.0, 0.0],
         [0.0, 0.0, 0.0, 1.0],
     ];
 
-    pub(super) fn multiply(a: &[[f32; 4]; 4], b: &[[f32; 4]; 4]) -> [[f32; 4]; 4] {
+    /// What a browser with no `perspective` draws of a 3-D matrix: `[a b c d e f]`.
+    pub(crate) fn plane(m: &[[f32; 4]; 4]) -> [f32; 6] {
+        [m[0][0], m[1][0], m[0][1], m[1][1], m[0][3], m[1][3]]
+    }
+
+    pub(crate) fn multiply(a: &[[f32; 4]; 4], b: &[[f32; 4]; 4]) -> [[f32; 4]; 4] {
         let mut out = [[0.0; 4]; 4];
         for (r, row) in out.iter_mut().enumerate() {
             for (c, cell) in row.iter_mut().enumerate() {
@@ -257,7 +257,7 @@ mod flat {
 
     /// `None` for `perspective()`, which a flat picture cannot show, and for
     /// lengths other than pixels.
-    pub(super) fn matrix(text: &str) -> Option<[[f32; 4]; 4]> {
+    pub(crate) fn matrix(text: &str) -> Option<[[f32; 4]; 4]> {
         let (name, args) = text.trim().split_once('(')?;
         let args = args.trim_end().strip_suffix(')')?;
         let mut m = IDENTITY;

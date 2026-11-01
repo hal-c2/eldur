@@ -30,7 +30,7 @@ pub(crate) mod shadow;
 mod table;
 pub(crate) mod templates;
 mod text;
-mod transform;
+pub(crate) mod transform;
 pub(crate) mod units;
 
 #[cfg(test)]

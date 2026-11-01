@@ -1,0 +1,6 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[js]: index.html:23: a class written on an element the script finds at run time, with a computed name, is not followed
+info[css]: index.html: `rotateY(30deg) translateZ(10px)`, where a script applies it, is flattened to the plane: it has no depth here, and what it overlaps stays in document order

@@ -1,0 +1,14 @@
+[
+  {"selector": "#x-em", "pad": 12},
+  {"selector": "#x-flat", "pad": 12},
+  {"selector": "#x-grow", "pad": 12},
+  {"selector": "#x-turn", "pad": 12},
+  {"selector": "#x-corner", "pad": 12},
+  {"selector": "#x-both", "pad": 12},
+  {"selector": "#x-pem", "pad": 12},
+  {"selector": "#x-pboth", "pad": 12},
+  {"selector": "#c-em", "pad": 12},
+  {"selector": "#c-flat", "pad": 12},
+  {"selector": "#c-both", "pad": 12},
+  {"selector": "#c-text", "pad": 12}
+]

@@ -214,6 +214,16 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
                     &mut diags,
                 );
                 files = with_rules.files;
+                for text in crate::paint_values::flattened_transforms(&rules) {
+                    diags.info(
+                        "css",
+                        None,
+                        format!(
+                            "`{text}`, where a script applies it, is flattened to the plane: \
+                             it has no depth here, and what it overlaps stays in document order"
+                        ),
+                    );
+                }
                 decls.push(crate::paint_values::paint_values_decl(
                     &rules,
                     &options.viewport,
