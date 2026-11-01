@@ -140,7 +140,7 @@ ApplicationWindow {
                                     spacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                    Layout.fillHeight: true
+                                    Layout.fillHeight: false
                                     Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                     // <label class="field__label">
@@ -174,6 +174,7 @@ ApplicationWindow {
                                     TextField {
                                         id: name
                                         property string name: "name"
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + 41) - Layout.topMargin - 41 + 0.000001
 
                                         color: "#1d2433"
                                         font.family: "sans-serif"
@@ -218,11 +219,15 @@ ApplicationWindow {
 
                                 // <div class="field">
                                 ColumnLayout {
+                                    id: field
+                                    property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + email.eldurCarry + 0.000001
+
                                     spacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                    Layout.fillHeight: true
+                                    Layout.fillHeight: false
                                     Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                    Layout.topMargin: -name.eldurCarry
 
                                     // <label class="field__label">
                                     Text {
@@ -255,6 +260,7 @@ ApplicationWindow {
                                     TextField {
                                         id: email
                                         property string name: "email"
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + 41) - Layout.topMargin - 41 + 0.000001
 
                                         color: "#1d2433"
                                         font.family: "sans-serif"
@@ -300,11 +306,15 @@ ApplicationWindow {
 
                                 // <div class="field">
                                 ColumnLayout {
+                                    id: field2
+                                    property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + password.eldurCarry + 0.000001
+
                                     spacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                    Layout.fillHeight: true
+                                    Layout.fillHeight: false
                                     Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                    Layout.topMargin: -field.eldurCarry
 
                                     // <label class="field__label">
                                     Text {
@@ -337,6 +347,7 @@ ApplicationWindow {
                                     TextField {
                                         id: password
                                         property string name: "password"
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + 41) - Layout.topMargin - 41 + 0.000001
 
                                         color: "#1d2433"
                                         font.family: "sans-serif"
@@ -382,11 +393,15 @@ ApplicationWindow {
 
                                 // <div class="field">
                                 ColumnLayout {
+                                    id: field3
+                                    property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + team.eldurCarry + 0.000001
+
                                     spacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                    Layout.fillHeight: true
+                                    Layout.fillHeight: false
                                     Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                    Layout.topMargin: -field2.eldurCarry
 
                                     // <label class="field__label">
                                     Text {
@@ -419,6 +434,7 @@ ApplicationWindow {
                                     ComboBox {
                                         id: team
                                         property string name: "team"
+                                        property real eldurCarry: Math.ceil(Layout.topMargin + 39) - Layout.topMargin - 39 + 0.000001
 
                                         model: [{ text: "Just me", value: "1" }, { text: "2 to 10 people", value: "2" }, { text: "11 to 50 people", value: "3" }, { text: "More than 50 people", value: "4" }]
                                         textRole: "text"
@@ -483,11 +499,15 @@ ApplicationWindow {
 
                                 // <div class="field">
                                 ColumnLayout {
+                                    id: field4
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                     spacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                    Layout.fillHeight: true
+                                    Layout.fillHeight: false
                                     Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                    Layout.topMargin: -field3.eldurCarry
 
                                     // <label class="field__label">
                                     Text {
@@ -569,6 +589,8 @@ ApplicationWindow {
                                 // <fieldset class="group">
                                 GroupBox {
                                     id: fieldset
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                     background: Rectangle {
                                         color: "#00000000"
                                         radius: 8
@@ -610,7 +632,9 @@ ApplicationWindow {
                                     bottomPadding: 13
                                     leftPadding: 13
                                     Layout.fillWidth: true
-                                    Layout.fillHeight: true
+                                    Layout.fillHeight: false
+                                    Layout.topMargin: -field4.eldurCarry
+                                    Layout.preferredHeight: implicitHeight
 
                                     ColumnLayout {
                                         spacing: 0
@@ -860,13 +884,17 @@ ApplicationWindow {
 
                                 // <div class="row">
                                 GridLayout {
+                                    id: row
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                     columns: 2
                                     columnSpacing: 14
                                     rowSpacing: 14
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                    Layout.fillHeight: true
+                                    Layout.fillHeight: false
                                     Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                    Layout.topMargin: -fieldset.eldurCarry
 
                                     // <div class="field">
                                     ColumnLayout {
@@ -1075,11 +1103,15 @@ ApplicationWindow {
 
                                 // <label class="check">
                                 RowLayout {
+                                    id: check
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                     spacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                    Layout.fillHeight: true
+                                    Layout.fillHeight: false
                                     Layout.maximumHeight: Number.POSITIVE_INFINITY
+                                    Layout.topMargin: -row.eldurCarry
 
                                     // <input>
                                     CheckBox {
@@ -1150,12 +1182,15 @@ ApplicationWindow {
 
                                 // <div class="actions">
                                 RowLayout {
+                                    id: actions
+                                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                     spacing: 0
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                    Layout.fillHeight: true
+                                    Layout.fillHeight: false
                                     Layout.maximumHeight: Number.POSITIVE_INFINITY
-                                    Layout.topMargin: 6
+                                    Layout.topMargin: 6 - check.eldurCarry
 
                                     Item {
                                         Layout.fillWidth: true

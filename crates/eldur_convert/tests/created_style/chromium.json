@@ -68,6 +68,13 @@
   "clicks": [],
   "probes": []
  },
+ "grid_fractions": {
+  "log": [
+   "CS 0 f2:80 f4:239 f6:398 f8:557 after:628"
+  ],
+  "clicks": [],
+  "probes": []
+ },
  "helper": {
   "log": [
    "CS 0+40 44+60 104+40 148+60 208+10",

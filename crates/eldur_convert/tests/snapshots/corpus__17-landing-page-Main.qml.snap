@@ -2041,6 +2041,9 @@ ApplicationWindow {
 
                                             // <li>
                                             Text {
+                                                id: li
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                 text: "Features"
                                                 textFormat: Text.PlainText
                                                 color: "#c9cee0"
@@ -2053,7 +2056,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.fillHeight: true
+                                                Layout.fillHeight: false
                                                 renderType: Text.NativeRendering
 
                                                 TapHandler {
@@ -2067,6 +2070,9 @@ ApplicationWindow {
 
                                             // <li>
                                             Text {
+                                                id: li2
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                 text: "Pricing"
                                                 textFormat: Text.PlainText
                                                 color: "#c9cee0"
@@ -2079,7 +2085,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.fillHeight: true
+                                                Layout.fillHeight: false
+                                                Layout.topMargin: -li.eldurCarry
                                                 renderType: Text.NativeRendering
 
                                                 TapHandler {
@@ -2093,6 +2100,9 @@ ApplicationWindow {
 
                                             // <li>
                                             Text {
+                                                id: li3
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                 text: "Changelog"
                                                 textFormat: Text.PlainText
                                                 color: "#c9cee0"
@@ -2105,7 +2115,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.fillHeight: true
+                                                Layout.fillHeight: false
+                                                Layout.topMargin: -li2.eldurCarry
                                                 renderType: Text.NativeRendering
 
                                                 TapHandler {
@@ -2119,6 +2130,9 @@ ApplicationWindow {
 
                                             // <li>
                                             Text {
+                                                id: li4
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                 text: "Security"
                                                 textFormat: Text.PlainText
                                                 color: "#c9cee0"
@@ -2131,7 +2145,9 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.fillHeight: true
+                                                Layout.fillHeight: false
+                                                Layout.topMargin: -li3.eldurCarry
+                                                Layout.preferredHeight: implicitHeight
                                                 renderType: Text.NativeRendering
 
                                                 TapHandler {
@@ -2193,6 +2209,9 @@ ApplicationWindow {
 
                                             // <li>
                                             Text {
+                                                id: li5
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                 text: "About"
                                                 textFormat: Text.PlainText
                                                 color: "#c9cee0"
@@ -2205,7 +2224,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.fillHeight: true
+                                                Layout.fillHeight: false
                                                 renderType: Text.NativeRendering
 
                                                 TapHandler {
@@ -2219,6 +2238,9 @@ ApplicationWindow {
 
                                             // <li>
                                             Text {
+                                                id: li6
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                 text: "Careers"
                                                 textFormat: Text.PlainText
                                                 color: "#c9cee0"
@@ -2231,7 +2253,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.fillHeight: true
+                                                Layout.fillHeight: false
+                                                Layout.topMargin: -li5.eldurCarry
                                                 renderType: Text.NativeRendering
 
                                                 TapHandler {
@@ -2245,6 +2268,9 @@ ApplicationWindow {
 
                                             // <li>
                                             Text {
+                                                id: li7
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                 text: "Blog"
                                                 textFormat: Text.PlainText
                                                 color: "#c9cee0"
@@ -2257,7 +2283,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.fillHeight: true
+                                                Layout.fillHeight: false
+                                                Layout.topMargin: -li6.eldurCarry
                                                 renderType: Text.NativeRendering
 
                                                 TapHandler {
@@ -2271,6 +2298,9 @@ ApplicationWindow {
 
                                             // <li>
                                             Text {
+                                                id: li8
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                 text: "Press"
                                                 textFormat: Text.PlainText
                                                 color: "#c9cee0"
@@ -2283,7 +2313,9 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.fillHeight: true
+                                                Layout.fillHeight: false
+                                                Layout.topMargin: -li7.eldurCarry
+                                                Layout.preferredHeight: implicitHeight
                                                 renderType: Text.NativeRendering
 
                                                 TapHandler {
@@ -2344,6 +2376,9 @@ ApplicationWindow {
 
                                             // <li>
                                             Text {
+                                                id: li9
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                 text: "Docs"
                                                 textFormat: Text.PlainText
                                                 color: "#c9cee0"
@@ -2356,7 +2391,7 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.fillHeight: true
+                                                Layout.fillHeight: false
                                                 renderType: Text.NativeRendering
 
                                                 TapHandler {
@@ -2370,6 +2405,9 @@ ApplicationWindow {
 
                                             // <li>
                                             Text {
+                                                id: li10
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                 text: "Guides"
                                                 textFormat: Text.PlainText
                                                 color: "#c9cee0"
@@ -2382,7 +2420,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.fillHeight: true
+                                                Layout.fillHeight: false
+                                                Layout.topMargin: -li9.eldurCarry
                                                 renderType: Text.NativeRendering
 
                                                 TapHandler {
@@ -2396,6 +2435,9 @@ ApplicationWindow {
 
                                             // <li>
                                             Text {
+                                                id: li11
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+
                                                 text: "Status"
                                                 textFormat: Text.PlainText
                                                 color: "#c9cee0"
@@ -2408,7 +2450,8 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.fillHeight: true
+                                                Layout.fillHeight: false
+                                                Layout.topMargin: -li10.eldurCarry
                                                 renderType: Text.NativeRendering
 
                                                 TapHandler {
@@ -2422,6 +2465,9 @@ ApplicationWindow {
 
                                             // <li>
                                             Text {
+                                                id: li12
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                 text: "Community"
                                                 textFormat: Text.PlainText
                                                 color: "#c9cee0"
@@ -2434,7 +2480,9 @@ ApplicationWindow {
                                                 }
                                                 wrapMode: Text.WordWrap
                                                 Layout.fillWidth: true
-                                                Layout.fillHeight: true
+                                                Layout.fillHeight: false
+                                                Layout.topMargin: -li11.eldurCarry
+                                                Layout.preferredHeight: implicitHeight
                                                 renderType: Text.NativeRendering
 
                                                 TapHandler {

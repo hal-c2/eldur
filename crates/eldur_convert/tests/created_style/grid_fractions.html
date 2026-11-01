@@ -1,0 +1,21 @@
+<!doctype html><html><head><style>body{margin:0;font:14px/19.6px sans-serif}
+.g{display:grid;gap:14px;width:200px}
+.f{display:flex;flex-direction:column}
+.i{margin-top:5px}
+.i{height:41px;background:#ccc}
+</style></head><body>
+<div class="g" id="g">
+<div class="f" id="f1"><div class="l">a</div><div class="i"></div></div>
+<div class="f" id="f2"><div class="l">a</div><div class="i"></div></div>
+<div class="f" id="f3"><div class="l">a</div><div class="i"></div></div>
+<div class="f" id="f4"><div class="l">a</div><div class="i"></div></div>
+<div class="f" id="f5"><div class="l">a</div><div class="i"></div></div>
+<div class="f" id="f6"><div class="l">a</div><div class="i"></div></div>
+<div class="f" id="f7"><div class="l">a</div><div class="i"></div></div>
+<div class="f" id="f8"><div class="l">a</div><div class="i"></div></div>
+</div>
+<div id="after" class="i"></div>
+<script>
+var ids=["f2","f4","f6","f8","after"];
+console.log("CS 0 "+ids.map(function(i){return i+":"+Math.round(document.getElementById(i).getBoundingClientRect().top)}).join(" "));
+</script></body></html>

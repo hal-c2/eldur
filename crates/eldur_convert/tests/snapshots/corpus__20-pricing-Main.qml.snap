@@ -405,7 +405,7 @@ ApplicationWindow {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                            Layout.fillHeight: true
+                                            Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
@@ -457,7 +457,7 @@ ApplicationWindow {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                            Layout.fillHeight: true
+                                            Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
@@ -509,7 +509,7 @@ ApplicationWindow {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                            Layout.fillHeight: true
+                                            Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
@@ -561,7 +561,7 @@ ApplicationWindow {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                            Layout.fillHeight: true
+                                            Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
@@ -810,7 +810,7 @@ ApplicationWindow {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                            Layout.fillHeight: true
+                                            Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
@@ -860,7 +860,7 @@ ApplicationWindow {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                            Layout.fillHeight: true
+                                            Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
@@ -910,7 +910,7 @@ ApplicationWindow {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                            Layout.fillHeight: true
+                                            Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
@@ -960,7 +960,7 @@ ApplicationWindow {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                            Layout.fillHeight: true
+                                            Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
@@ -1010,7 +1010,7 @@ ApplicationWindow {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                            Layout.fillHeight: true
+                                            Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
@@ -1270,7 +1270,7 @@ ApplicationWindow {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                            Layout.fillHeight: true
+                                            Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
@@ -1322,7 +1322,7 @@ ApplicationWindow {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                            Layout.fillHeight: true
+                                            Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
@@ -1374,7 +1374,7 @@ ApplicationWindow {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                            Layout.fillHeight: true
+                                            Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
@@ -1426,7 +1426,7 @@ ApplicationWindow {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                            Layout.fillHeight: true
+                                            Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">
@@ -1478,7 +1478,7 @@ ApplicationWindow {
                                             spacing: 0
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                            Layout.fillHeight: true
+                                            Layout.fillHeight: false
                                             Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                             // <span class="check">

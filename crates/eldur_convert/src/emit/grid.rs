@@ -1064,6 +1064,23 @@ impl Emitter<'_, '_> {
             f.set("Layout.fillHeight", true);
             grid.push_child(f);
         }
+        // One column of content-high rows is a column: each row is as high as
+        // its one item, so stretching it means nothing and the sub-pixel
+        // positions can be kept as in a block column.
+        if placement.cols == 1
+            && !explicit
+            && !carrier_row
+            && !definite_height
+            && style.grid_template_rows.is_empty()
+            && style.grid_auto_rows.is_empty()
+        {
+            for obj in grid.children_mut() {
+                if matches!(obj.get("Layout.fillHeight"), Some(Value::Bool(true))) {
+                    obj.set("Layout.fillHeight", false);
+                }
+            }
+            self.carry(&mut grid);
+        }
         grid
     }
 

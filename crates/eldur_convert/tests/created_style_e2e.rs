@@ -259,3 +259,8 @@ fn created_rows() {
 fn flex_no_grow() {
     page("flex_no_grow");
 }
+
+#[test]
+fn grid_fractions() {
+    page("grid_fractions");
+}
