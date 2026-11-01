@@ -402,6 +402,7 @@ pub fn rewrite(
 use std::collections::BTreeSet;
 
 mod analyze;
+mod computed;
 mod edit;
 mod lower;
 mod parse;

@@ -1,0 +1,29 @@
+<!doctype html><html><head><style>
+body{margin:0}
+.b{position:absolute;left:10px;width:120px;height:26px;box-sizing:border-box;margin:0}
+#fl{position:absolute;left:600px;top:10px;width:50px;height:30px;background:#eee}
+#a{top:10px}#hold{position:absolute;left:10px;top:50px;width:120px;height:26px}#z{top:250px}
+.n{display:block;width:120px;height:26px;box-sizing:border-box;margin:0}
+.t1{top:90px}.t2{top:130px}.t3{top:170px}.t4{top:210px}
+</style></head><body>
+<input class="b" id="a">
+<div id="hold"></div>
+<input class="b" id="z">
+<div id="fl"></div>
+<script>
+const L=[];const log=s=>L.push(s);
+const g=i=>document.getElementById(i);
+for(const t of ["focus","blur","input","change","keydown","keyup","beforeinput","click"]){
+ document.addEventListener(t,e=>{if(e.target.id==="fl")return;log(t+":"+(e.target.id||e.target.tagName)+(e.key?"="+e.key:"")+(e.inputType?"/"+e.inputType:""))},true);
+}
+const nested=document.createElement("input");nested.id="nested";nested.className="n";g("hold").appendChild(nested);
+const mid=document.createElement("input");mid.id="mid";mid.className="b t1";document.body.insertBefore(mid,g("z"));
+const ma=document.createElement("textarea");ma.id="ma";ma.className="b t2";document.body.insertBefore(ma,g("z"));
+const ck=document.createElement("input");ck.type="checkbox";ck.id="ck";ck.className="b t3";document.body.insertBefore(ck,g("z"));
+const bt=document.createElement("button");bt.id="bt";bt.textContent="b";bt.className="b t4";document.body.insertBefore(bt,g("z"));
+const fl=g("fl");fl.addEventListener("mousedown",e=>e.preventDefault());
+let step=0;
+fl.addEventListener("click",()=>{const l=L.join(" ");L.length=0;const a=document.activeElement;
+console.log("H "+(step++)+" "+l);
+console.log("H   = a="+g("a").value+" nested="+nested.value+" mid="+mid.value+" ma="+JSON.stringify(ma.value)+" ck="+ck.checked+" z="+g("z").value+" active="+(a.id||a.tagName))});
+</script></body></html>

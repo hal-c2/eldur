@@ -51,6 +51,9 @@ const FONT: &str = "Helvetica: Qt's fontconfig match has line height 23 where Ch
 const FONTFOLLOW: &str = "follows from the Helvetica line height and width difference";
 const HANGING: &str = "a span wrapped across lines measures the space hanging at its first line's end; \
                        the scan over the Text's links cannot tell that space from the word before it";
+const SCRIPTPOSITION: &str = "style.position = \"absolute\" from a script leaves an element in the layout that holds it, \
+                              since a template has one form; the runtime says so, and a class does work (input_real_made)";
+const AREALINE: &str = "a TextArea has no line height to set: `font: 13px/16px` keeps Qt's taller line, so three lines overflow what Chromium fits";
 const NEVER_SCRIPT: &str =
     "a script in the body makes no item, so its source is not in the body's textContent";
 
@@ -122,6 +125,21 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("lines_created", "* #ms[*] width:", SPANSCAN),
     ("lines_created", "* #ms[*] height:", SPANSCAN),
     ("created_lines", "* #reset[*] x:", BUTTONWIDTH),
+    (
+        "input_real_more",
+        "*eldur: style.position = *",
+        SCRIPTPOSITION,
+    ),
+    (
+        "input_real_widgets",
+        "report 6 (enter2) log:*scrollH=true*",
+        AREALINE,
+    ),
+    (
+        "input_real_widgets",
+        "report 7 (three) log:*scrollH=true*",
+        AREALINE,
+    ),
 ];
 
 const TEST: &str = r##"
@@ -723,6 +741,26 @@ fn input_timing() {
 #[test]
 fn input_real() {
     page("input_real");
+}
+
+#[test]
+fn input_real_more() {
+    page("input_real_more");
+}
+
+#[test]
+fn input_real_more_closed() {
+    page("input_real_more_closed");
+}
+
+#[test]
+fn input_real_made() {
+    page("input_real_made");
+}
+
+#[test]
+fn input_real_widgets() {
+    page("input_real_widgets");
 }
 
 #[test]

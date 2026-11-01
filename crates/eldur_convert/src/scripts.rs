@@ -235,6 +235,11 @@ pub(crate) fn collect(
         analysis.runtime_dom = true;
         analysis.static_tables = true;
     }
+    // A listener anywhere hears a textarea's keys and focus: its TextArea has to
+    // be what holds the name, not a ScrollView around it, which keys never reach.
+    if analysis.hears_unnamed_events || !analysis.heard_events.is_empty() {
+        wanted.extend(text_areas(doc));
+    }
     let gains = Gains::of(doc, &analysis, &matches, &wanted);
     Scripts {
         inputs,
@@ -860,6 +865,34 @@ fn wire_by_path(
         start.insert(0, format!("Eldur.init({});", crate::emit::units::ROOT_ID));
     }
     start
+}
+
+/// A template's control has the key path a written one gets from `wire`.
+pub(crate) fn hook_template_keys(obj: &mut Object, scripts: &Scripts) {
+    for (event, name) in [("keydown", "Keys.onPressed"), ("keyup", "Keys.onReleased")] {
+        if !scripts.analysis.may_hear(event) {
+            continue;
+        }
+        let mut ids = Vec::new();
+        control_ids(obj, &mut ids);
+        for id in ids {
+            if let Some(control) = find_mut(obj, &id) {
+                add_handler(
+                    control,
+                    name,
+                    &["event"],
+                    vec![format!(
+                        "event.accepted = !Eldur.fire({id}, {event:?}, event);"
+                    )],
+                );
+            }
+        }
+    }
+}
+
+pub(crate) fn text_areas(doc: &Document) -> impl Iterator<Item = NodeId> + '_ {
+    doc.descendants(doc.root())
+        .filter(|&n| doc.element(n).is_some_and(|e| e.local_name() == "textarea"))
 }
 
 fn control_ids(obj: &Object, out: &mut Vec<String>) {

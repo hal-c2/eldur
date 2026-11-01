@@ -294,13 +294,6 @@ ApplicationWindow {
                         objectName: "filter"
                         width: 212
                         renderType: Text.NativeRendering
-
-                        Keys.onPressed: (event) => {
-                            event.accepted = !Eldur.fire(filter, "keydown", event);
-                        }
-                        Keys.onReleased: (event) => {
-                            event.accepted = !Eldur.fire(filter, "keyup", event);
-                        }
                     }
                 }
 
@@ -1739,13 +1732,6 @@ ApplicationWindow {
                             objectName: "prev"
                             width: Math.min(implicitWidth, Math.max(pagerFlow.width - 4, Math.ceil(Math.max(...prev.text.split(/\s+/).map(w => prevWords.advanceWidth(w))) * 1.0256385) + leftPadding + rightPadding))
 
-                            Keys.onPressed: (event) => {
-                                event.accepted = !Eldur.fire(prev, "keydown", event);
-                            }
-                            Keys.onReleased: (event) => {
-                                event.accepted = !Eldur.fire(prev, "keyup", event);
-                            }
-
                             FontMetrics {
                                 id: prevWords
                                 font: prev.font
@@ -1805,13 +1791,6 @@ ApplicationWindow {
                             implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
                             objectName: "next"
                             width: Math.min(implicitWidth, Math.max(pagerFlow.width - 4, Math.ceil(Math.max(...next.text.split(/\s+/).map(w => nextWords.advanceWidth(w))) * 1.0256385) + leftPadding + rightPadding))
-
-                            Keys.onPressed: (event) => {
-                                event.accepted = !Eldur.fire(next, "keydown", event);
-                            }
-                            Keys.onReleased: (event) => {
-                                event.accepted = !Eldur.fire(next, "keyup", event);
-                            }
 
                             FontMetrics {
                                 id: nextWords

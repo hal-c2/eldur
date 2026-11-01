@@ -2287,6 +2287,37 @@ fn an_event_named_at_run_time_hooks_the_controls() {
     assert!(qml.contains("fireSubmit"), "{qml}");
 }
 
+/// The keys of a textarea no script names are the page's as much as any other's:
+/// inside a `ScrollView` the focus lands on the view and they go nowhere.
+#[test]
+fn a_textarea_reached_only_through_a_helper_takes_the_keys_itself() {
+    let html = r#"<textarea id="ta"></textarea><script>
+        const g = (i) => document.getElementById(i);
+        document.addEventListener("keydown", function () { g("ta"); });
+    </script>"#;
+    let out = convert_str(html, &Options::default());
+    let qml = out.main_qml().expect("Main.qml");
+    assert!(!qml.contains("ScrollView"), "{qml}");
+    let area = qml.find("TextArea {").expect("a TextArea");
+    assert!(qml[area..].contains("Keys.onPressed"), "{qml}");
+    assert!(qml[area..].contains("Eldur.scrollArea(ta)"), "{qml}");
+}
+
+/// A control a script makes becomes its template's: without the hook there, what
+/// it is typed into is heard by nobody, and Tab is Qt's own.
+#[test]
+fn a_template_control_tells_the_page_of_its_keys() {
+    let html = r#"<div id="a"></div><script>
+        document.addEventListener("keydown", function () {});
+        document.getElementById("a").appendChild(document.createElement("input"));
+    </script>"#;
+    let out = convert_str(html, &Options::default());
+    let qml = out.main_qml().expect("Main.qml");
+    let template = qml.find("eldurT_input_0\n").expect("a template");
+    assert!(qml[template..].contains("Keys.onPressed"), "{qml}");
+    assert!(!qml[template..].contains("Keys.onReleased"), "{qml}");
+}
+
 fn warnings(html: &str) -> Vec<String> {
     convert_str(html, &Options::default())
         .diagnostics

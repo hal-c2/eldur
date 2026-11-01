@@ -139,7 +139,7 @@ ApplicationWindow {
 
                             TapHandler {
                                 onTapped: (eventPoint, button) => {
-                                    if (name.enabled) Eldur.afterTap(eventPoint, function () { name.forceActiveFocus(); });
+                                    if (name.enabled) Eldur.afterTap(eventPoint, function () { Eldur.labelled(name); });
                                 }
                             }
                         }
@@ -186,12 +186,6 @@ ApplicationWindow {
 
                                 onAccepted: {
                                     Eldur.fire(signup, "submit", null);
-                                }
-                                Keys.onPressed: (event) => {
-                                    event.accepted = !Eldur.fire(name, "keydown", event);
-                                }
-                                Keys.onReleased: (event) => {
-                                    event.accepted = !Eldur.fire(name, "keyup", event);
                                 }
                             }
                         }
@@ -254,7 +248,7 @@ ApplicationWindow {
 
                             TapHandler {
                                 onTapped: (eventPoint, button) => {
-                                    if (email.enabled) Eldur.afterTap(eventPoint, function () { email.forceActiveFocus(); });
+                                    if (email.enabled) Eldur.afterTap(eventPoint, function () { Eldur.labelled(email); });
                                 }
                             }
                         }
@@ -302,12 +296,6 @@ ApplicationWindow {
 
                                 onAccepted: {
                                     Eldur.fire(signup, "submit", null);
-                                }
-                                Keys.onPressed: (event) => {
-                                    event.accepted = !Eldur.fire(email, "keydown", event);
-                                }
-                                Keys.onReleased: (event) => {
-                                    event.accepted = !Eldur.fire(email, "keyup", event);
                                 }
                             }
                         }
@@ -370,7 +358,7 @@ ApplicationWindow {
 
                             TapHandler {
                                 onTapped: (eventPoint, button) => {
-                                    if (pass.enabled) Eldur.afterTap(eventPoint, function () { pass.forceActiveFocus(); });
+                                    if (pass.enabled) Eldur.afterTap(eventPoint, function () { Eldur.labelled(pass); });
                                 }
                             }
                         }
@@ -418,12 +406,6 @@ ApplicationWindow {
 
                                 onAccepted: {
                                     Eldur.fire(signup, "submit", null);
-                                }
-                                Keys.onPressed: (event) => {
-                                    event.accepted = !Eldur.fire(pass, "keydown", event);
-                                }
-                                Keys.onReleased: (event) => {
-                                    event.accepted = !Eldur.fire(pass, "keyup", event);
                                 }
                             }
                         }
@@ -546,13 +528,6 @@ ApplicationWindow {
                                     width: implicitWidth
                                     x: 4
                                     y: 3
-
-                                    Keys.onPressed: (event) => {
-                                        event.accepted = !Eldur.fire(terms, "keydown", event);
-                                    }
-                                    Keys.onReleased: (event) => {
-                                        event.accepted = !Eldur.fire(terms, "keyup", event);
-                                    }
                                 }
                             }
 
@@ -569,7 +544,7 @@ ApplicationWindow {
 
                                 TapHandler {
                                     onTapped: (eventPoint, button) => {
-                                        if (terms.enabled) Eldur.afterTap(eventPoint, function () { terms.click(); });
+                                        if (terms.enabled) Eldur.afterTap(eventPoint, function () { Eldur.labelled(terms); });
                                     }
                                 }
                             }
@@ -645,12 +620,6 @@ ApplicationWindow {
 
                             onClicked: {
                                 Eldur.fire(signup, "submit", null);
-                            }
-                            Keys.onPressed: (event) => {
-                                event.accepted = !Eldur.fire(go, "keydown", event);
-                            }
-                            Keys.onReleased: (event) => {
-                                event.accepted = !Eldur.fire(go, "keyup", event);
                             }
 
                             FontMetrics {

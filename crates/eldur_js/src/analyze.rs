@@ -128,6 +128,10 @@ pub(crate) fn analyze(scripts: &[ScriptInput]) -> Analysis {
             visitor.analysis.hears_unnamed_events = true;
             visitor.analysis.listens_unresolved = true;
         }
+        // `el["on" + x] = f` can be any listener; no name reads, none is ruled out.
+        if crate::computed::may_hear_unnamed(&parsed.program, scoping) {
+            analysis.hears_unnamed_events = true;
+        }
     }
 
     analysis.created = dynamic.finish();
@@ -1234,7 +1238,6 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
     }
 
     fn visit_computed_member_expression(&mut self, it: &ComputedMemberExpression<'a>) {
-        // `el["on" + x] = f` can be any listener; no name reads, none is ruled out.
         match &it.expression {
             Expression::StringLiteral(name) => {
                 let name = name.value.as_str();
@@ -1245,8 +1248,8 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
                     self.analysis.heard_events.insert(event.to_owned());
                 }
             }
-            Expression::NumericLiteral(_) => {}
-            _ => self.analysis.hears_unnamed_events = true,
+            // The rest is `computed`'s: it depends on where the member stands.
+            _ => {}
         }
         walk::walk_computed_member_expression(self, it);
     }

@@ -100,6 +100,7 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     let reachable = if runtime_dom {
         let mut all = wanted.clone();
         all.extend(crate::boxes::hidden_elements(&doc, &styles));
+        all.extend(crate::scripts::text_areas(&doc));
         all
     } else {
         HashSet::new()

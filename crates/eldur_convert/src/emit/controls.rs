@@ -407,7 +407,9 @@ impl Emitter<'_, '_> {
         };
         // The label's own click comes first, and can keep the control's away.
         let body = if self.by_path {
-            format!("if ({id}.enabled) Eldur.afterTap(eventPoint, function () {{ {action} }});")
+            format!(
+                "if ({id}.enabled) Eldur.afterTap(eventPoint, function () {{ Eldur.labelled({id}); }});"
+            )
         } else {
             format!("if ({id}.enabled) {{ {action} }}")
         };
@@ -726,16 +728,14 @@ impl Emitter<'_, '_> {
             );
         }
         if self.wanted.contains(&node) {
-            // Scripts address the object that is laid out, so this one
-            // cannot sit in a ScrollView.
+            // Scripts address the object that is laid out, so this one cannot
+            // sit in a ScrollView: the runtime scrolls its text under the clip.
             obj.set("clip", true);
-            self.diags.info(
-                "html",
-                line,
-                format!(
-                    "{} is used by a script: it clips rather than scrolls",
-                    describe(self.doc, node)
-                ),
+            crate::scripts::add_handler(
+                &mut obj,
+                "Component.onCompleted",
+                &[],
+                vec![format!("Eldur.scrollArea({id});")],
             );
             let (w, h) = self.text_area_size(node, style, line);
             obj.set("implicitWidth", number(w));

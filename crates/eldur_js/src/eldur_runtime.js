@@ -3435,6 +3435,10 @@ function _detachNode(raw) {
                 var was = _in.focused;
                 _in.focused = null;
                 _inFocusEvents(was, null, "blur", "focusout");
+                // The page's keys are the body's now, and Qt would hold them nowhere.
+                if (_in.pageKeys) {
+                    _in.pageKeys.forceActiveFocus();
+                }
                 break;
             }
         }
@@ -4569,8 +4573,15 @@ function setStyle(item, prop, value) {
         _inlineOpacity(raw, m);
     } else if (name === "position") {
         // A template holds the box's form, and layouts place what is in them.
+        // Later: the item a template swaps it for is the one the page keeps.
         if (str === "absolute" || str === "fixed") {
-            console.warn("eldur: style.position = \"" + str + "\" from a script is not applied; use a class");
+            var styled = wrap(raw);
+            Qt.callLater(function() {
+                var now = _unwrap(styled);
+                if (now && now.parent && !_rawHasNoFlowParent(now)) {
+                    console.warn("eldur: style.position = \"" + str + "\" from a script is not applied; use a class");
+                }
+            });
         }
     } else if (name === "left" || name === "top" || name === "right" || name === "bottom") {
         _setOffset(raw, name, str);
@@ -4581,12 +4592,14 @@ function setStyle(item, prop, value) {
         }
     } else if (name === "color") {
         _inlineColor(raw, Boolean(m.styles.color));
-    } else if (_gActive() && _gStaticBase !== null) {
+    } else if (_gActive() && _gStaticBase !== null && !_startsEvents(raw) && _gLiveTemplates.indexOf(raw) === -1) {
         // The next pass adopts it: only the box form has all of a box's answers.
     } else if (name === "width") {
         _inlinePx(raw, raw, "width", str);
+        _inlineInLayout(raw);
     } else if (name === "height") {
         _inlinePx(raw, raw, "height", str);
+        _inlineInLayout(raw);
     } else if (name === "backgroundColor" || name === "background") {
         if (raw.background && raw.background.color !== undefined) {
             _inlinePaint(raw, raw.background, "color", str);
@@ -4605,6 +4618,22 @@ function setStyle(item, prop, value) {
     } else if (name === "borderWidth" && raw.border !== undefined) {
         _inlinePx(raw, raw, "border.width", str);
     }
+}
+
+// A layout writes `width` and `height` itself and reads only what it is told
+// through `Layout`; the cascade's passes do not paint a template's control.
+function _inlineInLayout(raw) {
+    if (!raw.parent || !_gIsLayout(raw.parent)) {
+        return;
+    }
+    var m = _meta(raw);
+    var boxed = m.styles.boxSizing === "border-box";
+    var across = parseFloat(m.styles.width);
+    var down = parseFloat(m.styles.height);
+    var wide = (raw.leftPadding || 0) + (raw.rightPadding || 0);
+    var tall = (raw.topPadding || 0) + (raw.bottomPadding || 0);
+    _gMarginTool().size(raw, isNaN(across) ? -1 : across + (boxed ? 0 : wide),
+        isNaN(down) ? -1 : down + (boxed ? 0 : tall));
 }
 
 function _inlinePaint(raw, target, prop, str) {
@@ -5347,6 +5376,52 @@ function _borderOf(raw, side) {
 }
 
 // An inline box has no client area.
+// A script addresses the TextArea itself, so no ScrollView can hold it: with it
+// clipped, its top padding moves the text as a scroller would.
+function scrollArea(raw) {
+    var m = _meta(raw);
+    if (m.areaTop !== undefined) {
+        return;
+    }
+    m.areaTop = raw.topPadding;
+    m.areaScroll = 0;
+    raw.clip = true;
+    var keep = function() { _areaScrollTo(raw, m.areaScroll); };
+    raw.contentSizeChanged.connect(keep);
+    raw.heightChanged.connect(keep);
+    raw.cursorRectangleChanged.connect(function() {
+        if (!raw.activeFocus) {
+            return;
+        }
+        var caret = raw.cursorRectangle;
+        var top = caret.y - m.areaTop;
+        var bottom = caret.y + caret.height + raw.bottomPadding - raw.height;
+        if (top < 0) {
+            _areaScrollTo(raw, m.areaScroll + top);
+        } else if (bottom > 0) {
+            _areaScrollTo(raw, m.areaScroll + bottom);
+        }
+    });
+    var wheel = Qt.createQmlObject("import QtQuick; WheelHandler { target: null; acceptedDevices: PointerDevice.AllDevices }", raw, "eldur_area_wheel");
+    wheel.wheel.connect(function(ev) {
+        var was = m.areaScroll;
+        _areaScrollTo(raw, was - (ev.pixelDelta.y || ev.angleDelta.y));
+        // At its end a wheel goes on to the page.
+        ev.accepted = m.areaScroll !== was;
+    });
+}
+
+function _areaScrollHeight(raw) {
+    return Math.ceil(raw.contentHeight + _meta(raw).areaTop + raw.bottomPadding);
+}
+
+function _areaScrollTo(raw, to) {
+    var m = _meta(raw);
+    var most = Math.max(0, _areaScrollHeight(raw) - raw.height);
+    m.areaScroll = Math.max(0, Math.min(to, most));
+    raw.topPadding = m.areaTop - m.areaScroll;
+}
+
 function _clientSize(item, axis) {
     _layoutForRead();
     var raw = _gCurrent(_unwrap(item));
@@ -6050,7 +6125,11 @@ function _connectSignalOnce(raw, type) {
         if (typeof raw.textChanged === "function") {
             // TextArea has no "edited by the user" signal.
             raw.textChanged.connect(function() {
-                if (raw.activeFocus) {
+                if (_in) {
+                    if (_in.typing) {
+                        _inTyped(raw);
+                    }
+                } else if (raw.activeFocus) {
                     _dispatchDynamic(raw, "input", null);
                 }
             });
@@ -7048,7 +7127,7 @@ function _genericElementSource(tag, inputType) {
         return _inputSource(inputType || "text");
     }
     if (tag === "textarea") {
-        return _NATIVE_IMPORTS + "TextArea { " + _NATIVE_TEXT + "color: \"black\"; background: Rectangle { color: \"white\"; border.color: \"#767676\" } }";
+        return _NATIVE_IMPORTS + "TextArea { " + _NATIVE_TEXT + _KEY_SIGNALS + "color: \"black\"; background: Rectangle { color: \"white\"; border.color: \"#767676\" } }";
     }
     if (tag === "select") {
         return _NATIVE_IMPORTS + "ComboBox { id: control; " + _KEY_SIGNALS
@@ -7538,6 +7617,12 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
     for (ei = 0; ei < evNames.length; ++ei) {
         _connectSignalOnce(next, evNames[ei]);
     }
+    // What was attached to the old object went with it.
+    if (m.areaTop !== undefined) {
+        m.areaTop = undefined;
+        scrollArea(next);
+    }
+    _connectControls(next);
 
     return next;
 }
@@ -8343,6 +8428,9 @@ function wrap(rawItem) {
             if (unset && label && rawItem.text === label) {
                 return "";
             }
+            if (m.numberText !== undefined) {
+                return _inNumberValid(m.numberText) ? m.numberText : "";
+            }
             // A SpinBox has no empty state. Zero nobody wrote stands for one.
             if (unset && rawItem.value === 0 && typeof rawItem.editable === "boolean") {
                 return "";
@@ -8674,6 +8762,9 @@ function wrap(rawItem) {
         get clientHeight() { return _clientSize(rawItem, "height"); },
         get scrollTop() {
             _layoutForRead();
+            if (m.areaTop !== undefined) {
+                return m.areaScroll;
+            }
             var scroller = _scrollerOf(rawItem);
             if (scroller) {
                 return scroller.contentY;
@@ -8684,6 +8775,10 @@ function wrap(rawItem) {
             return m.scrollTop || 0;
         },
         set scrollTop(v) {
+            if (m.areaTop !== undefined) {
+                _areaScrollTo(rawItem, Number(v) || 0);
+                return;
+            }
             _applyScrollOffset("y", v);
         },
         get scrollLeft() {
@@ -8707,6 +8802,9 @@ function wrap(rawItem) {
         },
         get scrollHeight() {
             _layoutForRead();
+            if (m.areaTop !== undefined) {
+                return Math.max(_areaScrollHeight(rawItem), _clientSize(rawItem, "height"));
+            }
             return Math.max(_computeScrollDimension("y"), rawItem.eldurTag === "html" || rawItem === _root ? _root.height : 0);
         },
         get isConnected() {
@@ -10658,7 +10756,8 @@ function _vClick(v) {
 // A control takes the press for itself, so no handler above it hears: the
 // event goes up from here. Its toggle has happened; `preventDefault` undoes it.
 function _clickedControl(raw) {
-    _clickedControlWith(raw, event("click", wrap(raw), null));
+    var counted = _meta(raw).clickDetail;
+    _clickedControlWith(raw, event("click", wrap(raw), counted ? { detail: counted } : null));
 }
 
 function _toggleEvents(raw) {
@@ -11271,6 +11370,24 @@ function afterClick(follow) {
 }
 
 // What the converter emitted for a label's tap.
+// A label's control gets a click of its own, counted as the press that made it.
+function labelled(item) {
+    var raw = _unwrap(item);
+    if (typeof raw.click === "function") {
+        _meta(raw).clickDetail = 1;
+        raw.click();
+        delete _meta(raw).clickDetail;
+        return;
+    }
+    raw.forceActiveFocus();
+    if (_in) {
+        var ev = event("click", wrap(raw), { detail: 1 });
+        ev.target = wrap(raw);
+        ev.bubbles = true;
+        _dispatchDynamic(raw, "click", ev);
+    }
+}
+
 function afterTap(eventPoint, run) {
     if (_in && _in.pressed) {
         _in.defaults.push(run);
@@ -11332,20 +11449,18 @@ function _inWatchRadio(raw) {
 // listens. Whichever hears a key first answers for all of them, with one
 // sequence of events and one default action, and says whether Qt may go on.
 // ---------------------------------------------------------------------------
-var _IN_KEY_HEAR = "import QtQuick; QtObject { property Item who; property var hear; "
-    + "property Connections c: Connections { target: who ? who.Keys : null; "
-    + "function onPressed(event) { hear(event, true); } "
-    + "function onReleased(event) { hear(event, false); } } }";
-
+// `Keys` can't be reached from a script: a written control has the converter's
+// handler, which comes to `fire`, and a made one has its own signals, for here.
 function _inKeysOn(item) {
     var m = _meta(item);
-    if (m.inKeys) {
+    if (m.inKeys === item) {
         return;
     }
-    m.inKeys = true;
-    var listen = Qt.createQmlObject(_IN_KEY_HEAR, _in.overlay, "eldur-keys");
-    listen.hear = _inKeyed;
-    listen.who = item;
+    m.inKeys = item;
+    if (typeof item.eldurKeyDown === "function") {
+        item.eldurKeyDown.connect(function(qtEv) { _inKeyed(qtEv, true); });
+        item.eldurKeyUp.connect(function(qtEv) { _inKeyed(qtEv, false); });
+    }
 }
 
 // What can take focus and what starts control events, wherever it came from.
@@ -11359,7 +11474,10 @@ function _inWireControls(from) {
         }
         if (typeof item.keyStep === "function") {
             // The scroller moves on keys in its own handler: ask first.
+            // The walk starts at the root: the first is the page's own.
+            _in.pageKeys = _in.pageKeys || item;
             item.keyGate = _inKeyGate;
+            item.keyUpGate = _inKeyUpGate;
             _meta(item.scroller).keysInput = item;
             if (item.overlaidOn) {
                 _meta(item.overlaidOn).keysInput = item;
@@ -11372,15 +11490,131 @@ function _inWireControls(from) {
                     _inWatchRadio(item);
                 }
             }
-            if (typeof item.textEdited === "function") {
+            if (_inIsField(item)) {
                 _connectSignalOnce(item, "input");
             }
             if (typeof item.activeFocusChanged === "function" && typeof item.cursorPosition === "number") {
                 _meta(item).changeBase = String(item.text);
+                // Qt leaves a written value's caret at its end, a browser before it.
+                if (!_meta(item).caretPlaced) {
+                    _meta(item).caretPlaced = true;
+                    item.cursorPosition = 0;
+                }
+            }
+            if (typeof item.valueModified === "function") {
+                _inWireNumber(item);
             }
         }
         return false;
     });
+}
+
+// A number field holds what was typed, valid or not; `value` follows when it can.
+// Its editor takes keys before the SpinBox would hear them.
+function _inWireNumber(raw) {
+    var m = _meta(raw);
+    var editor = raw.contentItem;
+    if (m.numberEditor === editor || !editor || typeof editor.cursorPosition !== "number") {
+        return;
+    }
+    m.numberEditor = editor;
+    var hear = Qt.createQmlObject("import QtQuick; Connections { property Item who; target: who ? who.Keys : null; "
+        + "signal down(var event); signal up(var event); "
+        + "function onPressed(event) { down(event); } function onReleased(event) { up(event); } }", raw, "eldur_number_keys");
+    hear.who = editor;
+    hear.down.connect(function(qtEv) { _inKeyed(qtEv, true); });
+    hear.up.connect(function(qtEv) { _inKeyed(qtEv, false); });
+    // Qt would commit its own reading of the text at focus out.
+    raw.valueFromText = function(text) {
+        return _inNumberValid(text) ? Math.round(Number(text)) : raw.value;
+    };
+    raw.valueChanged.connect(function() {
+        if (m.numberText !== undefined && !m.numberEditing) {
+            delete m.numberText;
+            editor.text = Qt.binding(function() { return raw.displayText; });
+        }
+    });
+}
+
+function _inNumberValid(text) {
+    return /^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(text);
+}
+
+function _inNumberKey(raw, key, text, writes) {
+    var m = _meta(raw);
+    var editor = raw.contentItem;
+    if (key === Qt.Key_Up || key === Qt.Key_Down) {
+        if (key === Qt.Key_Up ? raw.value < raw.to : raw.value > raw.from) {
+            return _inInputEvent("beforeinput", raw, "insertText", null).defaultPrevented;
+        }
+        return false;
+    }
+    var at = editor.cursorPosition;
+    var was = String(editor.text);
+    var from = Math.min(editor.selectionStart, editor.selectionEnd);
+    var to = Math.max(editor.selectionStart, editor.selectionEnd);
+    var type = null;
+    var data = null;
+    if (writes) {
+        // A number field takes what a number can be written with, and nothing else.
+        // It is asked first all the same.
+        if (!/^[0-9eE+\-.]$/.test(text)) {
+            _inInputEvent("beforeinput", raw, "insertText", text);
+            return true;
+        }
+        type = "insertText";
+        data = text;
+    } else if (key === Qt.Key_Backspace && (at > 0 || from !== to)) {
+        type = "deleteContentBackward";
+        from = from !== to ? from : at - 1;
+    } else if (key === Qt.Key_Delete && (at < was.length || from !== to)) {
+        type = "deleteContentForward";
+        to = from !== to ? to : at + 1;
+    }
+    if (!type) {
+        return false;
+    }
+    if (_inInputEvent("beforeinput", raw, type, data).defaultPrevented) {
+        return true;
+    }
+    var now = was.slice(0, from) + (data || "") + was.slice(to);
+    m.numberEditing = true;
+    m.numberText = now;
+    editor.text = now;
+    editor.cursorPosition = from + (data || "").length;
+    if (_inNumberValid(now)) {
+        raw.value = Math.round(Number(now));
+    }
+    m.numberEditing = false;
+    m.numberDirty = true;
+    _inInputEvent("input", raw, type, data);
+    return true;
+}
+
+// A range moves by a step, a tenth of itself for a page, and to its ends, and
+// a key's move is both events at once.
+function _inRangeKey(raw, key) {
+    var step = raw.stepSize > 0 ? raw.stepSize : 1;
+    var page = Math.max(step, (raw.to - raw.from) / 10);
+    var moves = {};
+    moves[Qt.Key_Right] = raw.value + step;
+    moves[Qt.Key_Up] = raw.value + step;
+    moves[Qt.Key_Left] = raw.value - step;
+    moves[Qt.Key_Down] = raw.value - step;
+    moves[Qt.Key_PageUp] = raw.value + page;
+    moves[Qt.Key_PageDown] = raw.value - page;
+    moves[Qt.Key_Home] = raw.from;
+    moves[Qt.Key_End] = raw.to;
+    if (moves[key] === undefined) {
+        return false;
+    }
+    var next = Math.max(raw.from, Math.min(raw.to, moves[key]));
+    if (next !== raw.value) {
+        raw.value = next;
+        _dispatchDynamic(raw, "input", null);
+        _dispatchDynamic(raw, "change", null);
+    }
+    return true;
 }
 
 function _inHasTabIndex(item) {
@@ -11390,6 +11624,10 @@ function _inHasTabIndex(item) {
 function _inKeyGate(qtEv) {
     _inKeyed(qtEv, true);
     return !qtEv.accepted;
+}
+
+function _inKeyUpGate(qtEv) {
+    _inKeyed(qtEv, false);
 }
 
 function _inIsField(raw) {
@@ -11512,6 +11750,12 @@ function _inKeyDown(qtEv) {
         _inKeyClick(raw);
         return true;
     }
+    if (typeof raw.valueModified === "function" && raw.contentItem) {
+        return _inNumberKey(raw, key, text, writes);
+    }
+    if (typeof raw.moved === "function" && typeof raw.stepSize === "number") {
+        return _inRangeKey(raw, key);
+    }
     if (_inIsRadio(raw)) {
         var step = key === Qt.Key_Right || key === Qt.Key_Down ? 1 : key === Qt.Key_Left || key === Qt.Key_Up ? -1 : 0;
         if (step !== 0) {
@@ -11545,9 +11789,6 @@ function _inFieldKey(raw, key, text, enter, writes) {
         _inImplicitSubmit(raw);
         return true;
     }
-    if (readOnly) {
-        return false;
-    }
     var hasSelection = raw.selectionStart !== raw.selectionEnd;
     var what = null;
     if (enter) {
@@ -11562,8 +11803,15 @@ function _inFieldKey(raw, key, text, enter, writes) {
     if (!what) {
         return false;
     }
+    // Readonly takes nothing, and only typing is still asked about first.
+    if (readOnly && what.type !== "insertText") {
+        return false;
+    }
     if (_inInputEvent("beforeinput", raw, what.type, what.data).defaultPrevented) {
         return true;
+    }
+    if (readOnly) {
+        return false;
     }
     _in.typing = what;
     return false;
@@ -11834,6 +12082,9 @@ function _inFocusChanged() {
     if (was) {
         if (_inIsField(was)) {
             _flushChange(was);
+        } else if (_meta(was).numberDirty) {
+            _meta(was).numberDirty = false;
+            _dispatchDynamic(was, "change", null);
         }
         var heard = function() { _inFocusEvents(was, now, "blur", "focusout"); };
         // A script's change to what stays shown holds nothing back: focus moves in one go.
@@ -14055,6 +14306,9 @@ var document = {
         }
         if (tag === "input") {
             _meta(created).lastGenericInputSource = qmlSrc;
+        }
+        if (tag === "textarea") {
+            scrollArea(created);
         }
         _connectControls(created);
         if (created && created.parent !== undefined) {

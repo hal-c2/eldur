@@ -1466,3 +1466,43 @@ fn computed_access_to_an_unknown_name_may_hear_anything() {
         "var e = document.body; e[\"title\"] = f; var a = [1]; a[0] = 2;"
     ));
 }
+
+#[test]
+fn a_computed_read_hears_nothing_unless_its_value_can_go_on_to_be_called() {
+    let hears = |source: &str| analyze(&[classic("a.js", source)]).may_hear("keydown");
+    // What a read gives is only looked at, or the key can name no method.
+    for quiet in [
+        "var a = [1]; var i = 0; var x = a[i] + 1;",
+        "var a = []; for (var i = 0; i < a.length; i++) { if (a[i].id > 3) { a[i].id = 4; } }",
+        "var a = []; for (var i = 0; i < a.length; i++) { show(a[i]); }",
+        "function f(all, to) { all[to].focus(); all[to].classList.toggle(\"x\"); }",
+        "function f(el, k) { const item = el[k]; console.log(item.name); }",
+        "function f(c, k) { c[k] = 0; c[k] = \"s\"; c[k] = [1]; }",
+        // Every value of a table the page wrote is already seen by the analysis.
+        "var rules = { a: function(v) { return v; } }; function f(id, v) { return rules[id](v); }",
+    ] {
+        assert!(!hears(quiet), "{quiet}");
+    }
+    for heard in [
+        "function f(el, x, g) { el[x](\"keydown\", g); }",
+        "function f(el, x, g) { el[x] = g; }",
+        "function f(el, x, g) { const add = el[x]; add.call(el, \"keydown\", g); }",
+        "function f(el, x, g) { const add = el[x]; add(\"keydown\", g); }",
+        "function f(el, x, g) { let add; add = el[x]; add(\"keydown\", g); }",
+        "function f(el, x, g) { const add = el[x]; const b = add; b(\"keydown\", g); }",
+        "function f(el, x, g) { el[x].call(el, \"keydown\", g); }",
+        "function f(el, x, g) { (g || el[x])(\"keydown\"); }",
+        "function f(el, x, g) { g(el[x]); }",
+        "function f(el, x, g) { const add = el[x]; g(add); }",
+        "function f(el, x) { return el[x]; }",
+        "var pick = (el, x) => el[x];",
+        "function f(el, x, o) { o.add = el[x]; }",
+        "function f(el, x) { return [el[x]]; }",
+        "function f(el, x) { return { add: el[x] }; }",
+        // A table reassigned from elsewhere is no longer only what the page wrote.
+        "var rules = {}; rules = window.other; function f(id, v) { rules[id](v); }",
+        "var i = 0; i = name(); function f(el, g) { el[i](\"keydown\", g); }",
+    ] {
+        assert!(hears(heard), "{heard}");
+    }
+}

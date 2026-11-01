@@ -150,7 +150,7 @@ ApplicationWindow {
 
                                     TapHandler {
                                         onTapped: (eventPoint, button) => {
-                                            if (user.enabled) Eldur.afterTap(eventPoint, function () { user.forceActiveFocus(); });
+                                            if (user.enabled) Eldur.afterTap(eventPoint, function () { Eldur.labelled(user); });
                                         }
                                     }
                                 }
@@ -246,7 +246,7 @@ ApplicationWindow {
 
                                     TapHandler {
                                         onTapped: (eventPoint, button) => {
-                                            if (mail.enabled) Eldur.afterTap(eventPoint, function () { mail.forceActiveFocus(); });
+                                            if (mail.enabled) Eldur.afterTap(eventPoint, function () { Eldur.labelled(mail); });
                                         }
                                     }
                                 }
@@ -343,7 +343,7 @@ ApplicationWindow {
 
                                     TapHandler {
                                         onTapped: (eventPoint, button) => {
-                                            if (pass.enabled) Eldur.afterTap(eventPoint, function () { pass.forceActiveFocus(); });
+                                            if (pass.enabled) Eldur.afterTap(eventPoint, function () { Eldur.labelled(pass); });
                                         }
                                     }
                                 }
@@ -483,7 +483,7 @@ ApplicationWindow {
 
                                     TapHandler {
                                         onTapped: (eventPoint, button) => {
-                                            if (terms.enabled) Eldur.afterTap(eventPoint, function () { terms.click(); });
+                                            if (terms.enabled) Eldur.afterTap(eventPoint, function () { Eldur.labelled(terms); });
                                         }
                                     }
                                 }

@@ -1,0 +1,43 @@
+<!doctype html><html><head><style>
+body{margin:0}
+.b{position:absolute;left:10px;width:120px;height:30px;box-sizing:border-box;margin:0}
+#fl{position:absolute;left:600px;top:10px;width:50px;height:30px;background:#eee}
+#t1{top:10px}#t2{top:50px}#s1{top:90px}#ta{top:130px;height:60px}
+#g1{top:200px;width:20px;height:20px}#g2{top:230px;width:20px;height:20px}
+#fs{position:absolute;left:200px;top:10px;width:200px;height:100px;margin:0;padding:0;border:0}
+#fi{position:absolute;left:0;top:0;width:100px;height:30px;box-sizing:border-box;margin:0}
+#outer{position:absolute;left:200px;top:150px;width:150px;height:60px;background:#cde}
+#inner{position:absolute;left:20px;top:10px;width:60px;height:30px;background:#ecd}
+#d{position:absolute;left:200px;top:250px;width:200px}
+#tabi{position:absolute;left:10px;top:300px;width:60px;height:30px;background:#dfd}
+#lnk{position:absolute;left:10px;top:340px}
+#ro{top:380px}
+#cr{position:absolute;left:10px;top:420px;width:100px;height:30px}
+</style></head><body>
+<input class="b" id="t1" value="abc"><input class="b" id="t2" maxlength="3">
+<select class="b" id="s1"><option>a</option><option>b</option><option>c</option></select>
+<textarea class="b" id="ta"></textarea>
+<input class="b" id="g1" type="checkbox" indeterminate><input class="b" id="g2" type="radio" name="q">
+<fieldset id="fs" disabled><input id="fi"></fieldset>
+<div id="outer"><div id="inner"></div></div>
+<details id="d"><summary id="su">Sum</summary><p id="dp">body</p></details>
+<div id="tabi" tabindex="0"></div><a id="lnk" href="#x">link</a>
+<input class="b" id="ro" readonly value="ro"><div id="cr"></div>
+<div id="fl"></div>
+<script>
+const L=[];const log=s=>L.push(s);
+for(const t of ["mousedown","mouseup","click","focus","blur","input","change","keydown","beforeinput","toggle"]){
+ document.addEventListener(t,e=>{if(e.target.id==="fl")return;log(t+":"+(e.target.id||e.target.tagName)+(e.key?"="+e.key:"")+(e.inputType?"/"+e.inputType:""))},true);
+}
+document.getElementById("outer").addEventListener("click",e=>{log("outer@"+e.eventPhase+" "+e.target.id+" "+e.currentTarget.id+" off="+e.offsetX+","+e.offsetY)});
+document.getElementById("inner").addEventListener("click",e=>{if(window.sp){e.stopPropagation();log("stopped")}window.sp=!window.sp});
+document.getElementById("t2").addEventListener("beforeinput",e=>{if(e.data==="q")e.preventDefault()});
+const c=document.createElement("input");c.id="made";c.style.cssText="position:absolute;left:0;top:0;width:100px;height:30px;box-sizing:border-box;margin:0";document.getElementById("cr").appendChild(c);
+c.addEventListener("input",e=>log("madeinput="+e.target.value));
+const fl=document.getElementById("fl");fl.addEventListener("mousedown",e=>e.preventDefault());
+let step=0;
+const g=i=>document.getElementById(i);
+fl.addEventListener("click",()=>{const l=L.join(" ");L.length=0;const a=document.activeElement;
+console.log("H "+(step++)+" "+l);
+console.log("H   = t1="+g("t1").value+" t2="+g("t2").value+" s="+g("s1").value+" ta="+JSON.stringify(g("ta").value)+" g1="+g("g1").checked+" g2="+g("g2").checked+" d="+g("d").open+" made="+c.value+" ro="+g("ro").value+" active="+(a.id||a.tagName))});
+</script></body></html>

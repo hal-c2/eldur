@@ -14,6 +14,8 @@ Item {
     property Item overlaidOn: null
     // The runtime's say on a key first: a listener's `preventDefault` stops the move.
     property var keyGate: null
+    // A key let go over no control is still the page's.
+    property var keyUpGate: null
 
     function moveTo(x, y) {
         const nextX = Math.max(0, Math.min(x, Math.max(0, scroller.contentWidth - scroller.width)));
@@ -70,6 +72,9 @@ Item {
         function onPressed(event) {
             if (input.keyGate && !input.keyGate(event)) return;
             event.accepted = input.scroller.interactive && input.keyStep(event.key);
+        }
+        function onReleased(event) {
+            if (input.keyUpGate) input.keyUpGate(event);
         }
     }
 

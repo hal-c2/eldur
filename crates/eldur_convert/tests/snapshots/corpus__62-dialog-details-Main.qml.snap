@@ -499,7 +499,7 @@ ApplicationWindow {
 
                                 TapHandler {
                                     onTapped: (eventPoint, button) => {
-                                        if (text.enabled) Eldur.afterTap(eventPoint, function () { text.forceActiveFocus(); });
+                                        if (text.enabled) Eldur.afterTap(eventPoint, function () { Eldur.labelled(text); });
                                     }
                                 }
                             }

@@ -1,0 +1,24 @@
+<!doctype html><html><head><style>
+body{margin:0}
+.b{position:absolute;left:10px;width:120px;height:30px;box-sizing:border-box;margin:0}
+#fl{position:absolute;left:600px;top:10px;width:50px;height:30px;background:#eee}
+#t1{top:10px}#ta{top:50px;height:60px}#un{top:120px;height:60px}#ro{top:190px}#rota{top:230px;height:60px}
+</style></head><body>
+<input class="b" id="t1" value="abc">
+<textarea class="b" id="ta"></textarea>
+<textarea class="b" id="un"></textarea>
+<input class="b" id="ro" readonly value="ro">
+<textarea class="b" id="rota" readonly>r</textarea>
+<div id="fl"></div>
+<script>
+const L=[];const log=s=>L.push(s);
+for(const t of ["focus","blur","input","change","keydown","keyup","beforeinput"]){
+ document.addEventListener(t,e=>{log(t+":"+(e.target.id||e.target.tagName)+(e.key?"="+e.key:"")+(e.inputType?"/"+e.inputType:""))},true);
+}
+const fl=document.getElementById("fl");fl.addEventListener("mousedown",e=>e.preventDefault());
+const ta=document.getElementById("ta"),t1=document.getElementById("t1"),ro=document.getElementById("ro");
+let step=0;
+fl.addEventListener("click",()=>{const l=L.join(" ");L.length=0;const a=document.activeElement;
+console.log("H "+(step++)+" "+l);
+console.log("H   = t1="+t1.value+" ta="+JSON.stringify(ta.value)+" ro="+ro.value+" active="+(a.id||a.tagName))});
+</script></body></html>

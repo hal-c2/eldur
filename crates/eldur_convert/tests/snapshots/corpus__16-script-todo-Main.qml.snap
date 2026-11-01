@@ -214,9 +214,6 @@ ApplicationWindow {
                                     Keys.onPressed: (event) => {
                                         event.accepted = !Eldur.fire(todoInput, "keydown", event);
                                     }
-                                    Keys.onReleased: (event) => {
-                                        event.accepted = !Eldur.fire(todoInput, "keyup", event);
-                                    }
                                 }
 
                                 // <button id="add-btn" class="btn">
@@ -258,9 +255,6 @@ ApplicationWindow {
 
                                     Keys.onPressed: (event) => {
                                         event.accepted = !Eldur.fire(addBtn, "keydown", event);
-                                    }
-                                    Keys.onReleased: (event) => {
-                                        event.accepted = !Eldur.fire(addBtn, "keyup", event);
                                     }
                                 }
                             }
@@ -443,6 +437,10 @@ ApplicationWindow {
             Layout.minimumWidth: 18
             Layout.preferredHeight: 18
             Layout.alignment: Qt.AlignVCenter
+
+            Keys.onPressed: (event) => {
+                event.accepted = !Eldur.fire(inputControl, "keydown", event);
+            }
         }
     }
 
@@ -509,6 +507,10 @@ ApplicationWindow {
             Layout.maximumWidth: Math.ceil(implicitWidth)
             Layout.alignment: Qt.AlignVCenter
             hoverEnabled: true
+
+            Keys.onPressed: (event) => {
+                event.accepted = !Eldur.fire(buttonControl, "keydown", event);
+            }
         }
     }
 
@@ -552,6 +554,10 @@ ApplicationWindow {
             Layout.topMargin: 3
             Layout.bottomMargin: 3
             width: parent ? Math.min(implicitWidth, parent.width) : implicitWidth
+
+            Keys.onPressed: (event) => {
+                event.accepted = !Eldur.fire(inputControl3, "keydown", event);
+            }
         }
     }
 
@@ -612,6 +618,10 @@ ApplicationWindow {
             }
             width: parent ? Math.min(implicitWidth, parent.width) : implicitWidth
             hoverEnabled: true
+
+            Keys.onPressed: (event) => {
+                event.accepted = !Eldur.fire(buttonControl3, "keydown", event);
+            }
         }
     }
 }
