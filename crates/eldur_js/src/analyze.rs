@@ -119,8 +119,15 @@ pub(crate) fn analyze(scripts: &[ScriptInput]) -> Analysis {
             this_is_element: vec![matches!(input.kind, ScriptKind::HandlerAttribute { .. })],
             pending_method: false,
             class_reads_ok: HashSet::new(),
+            listener_calls: 0,
+            listener_mentions: 0,
         };
         visitor.visit_program(&parsed.program);
+        // Held or bound rather than called: no telling what it goes on to hear.
+        if visitor.listener_mentions > visitor.listener_calls {
+            visitor.analysis.hears_unnamed_events = true;
+            visitor.analysis.listens_unresolved = true;
+        }
     }
 
     analysis.created = dynamic.finish();
@@ -298,6 +305,8 @@ pub(crate) fn collect_unresolvable_module_diagnostics(
 }
 
 struct AnalysisVisitor<'a, 'b> {
+    listener_calls: usize,
+    listener_mentions: usize,
     scoping: &'a Scoping,
     bindings: &'b ScriptQueryBindings<'a>,
     analysis: &'b mut Analysis,
@@ -352,6 +361,9 @@ impl AnalysisVisitor<'_, '_> {
                 self.analysis.mutates_dom = true;
             }
 
+            if let Some(ev) = known_dom_event_from_on_prop(prop) {
+                self.analysis.heard_events.insert(ev.to_string());
+            }
             if let Some(query) = self.bindings.resolve_expr_for_analysis(&member.object) {
                 if let Some(ev) = known_dom_event_from_on_prop(prop) {
                     self.record_listened(query, ev);
@@ -995,6 +1007,25 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
             site.path = self.path.clone();
         }
         if let Expression::StaticMemberExpression(member) = unwrap_parens(&it.callee) {
+            let method = member.property.name.as_str();
+            if method == "addEventListener" {
+                self.listener_calls += 1;
+                match it
+                    .arguments
+                    .first()
+                    .and_then(|a| a.as_expression())
+                    .and_then(extract_string_literal)
+                {
+                    Some(ev) => {
+                        self.analysis.heard_events.insert(ev.to_string());
+                    }
+                    None => self.analysis.hears_unnamed_events = true,
+                }
+            }
+            if method == "getSelection" {
+                self.analysis.reads_text_selection = true;
+            }
+
             if member.property.name == "createElement"
                 && it
                     .arguments
@@ -1204,6 +1235,9 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
 
     fn visit_static_member_expression(&mut self, it: &StaticMemberExpression<'a>) {
         let prop = it.property.name.as_str();
+        if prop == "addEventListener" {
+            self.listener_mentions += 1;
+        }
         self.analysis.touches_inline_style |= matches!(prop, "style" | "hidden");
         if prop.strip_prefix("on").is_some_and(is_motion_event) {
             self.analysis.open_elements = true;

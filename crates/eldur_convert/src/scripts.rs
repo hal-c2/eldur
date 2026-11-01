@@ -47,6 +47,69 @@ impl Scripts {
     }
 }
 
+fn note_inline_listeners(doc: &Document, analysis: &mut Analysis) {
+    for node in doc.descendants(doc.root()) {
+        let Some(element) = doc.element(node) else {
+            continue;
+        };
+        for attr in &element.attrs {
+            if let Some(event) = attr.name.local.strip_prefix("on") {
+                analysis.heard_events.insert(event.to_owned());
+            }
+        }
+    }
+}
+
+/// What a page asks of the browser with no Qt Quick counterpart here. Said once
+/// a page, and said plainly: the element itself goes on working as far as it can.
+fn warn_of_what_has_no_counterpart(doc: &Document, analysis: &Analysis, diags: &mut Diagnostics) {
+    const DRAG: [&str; 7] = [
+        "drag",
+        "dragend",
+        "dragenter",
+        "dragleave",
+        "dragover",
+        "dragstart",
+        "drop",
+    ];
+    const SELECTION: [&str; 2] = ["selectstart", "selectionchange"];
+    let hears = |events: &[&str]| events.iter().any(|e| analysis.heard_events.contains(*e));
+    let with_attr = |name: &str, off: &str| {
+        doc.descendants(doc.root()).find(|&node| {
+            doc.element(node)
+                .and_then(|e| e.attr(name))
+                .is_some_and(|value| !value.eq_ignore_ascii_case(off))
+        })
+    };
+    let draggable = with_attr("draggable", "false");
+    if draggable.is_some() || hears(&DRAG) {
+        diags.warning(
+            "js",
+            draggable.and_then(|node| node_line(doc, node)),
+            "HTML drag and drop has no counterpart here: no drag starts and no drag event fires; \
+             pointer events do work"
+                .to_owned(),
+        );
+    }
+    if let Some(node) = with_attr("contenteditable", "false") {
+        diags.warning(
+            "html",
+            node_line(doc, node),
+            "contenteditable is not converted: the element shows its content and cannot be edited"
+                .to_owned(),
+        );
+    }
+    if analysis.reads_text_selection || hears(&SELECTION) {
+        diags.warning(
+            "js",
+            None,
+            "a script reads the text selection, which the converted page does not have outside \
+             of its fields"
+                .to_owned(),
+        );
+    }
+}
+
 /// Collects `<script>`s and `on*` attributes in document order and runs
 /// the analysis.
 pub(crate) fn collect(
@@ -119,6 +182,8 @@ pub(crate) fn collect(
     }
 
     let mut analysis = eldur_js::analyze(&inputs);
+    note_inline_listeners(doc, &mut analysis);
+    warn_of_what_has_no_counterpart(doc, &analysis, diags);
     let mut matches = HashMap::new();
     let mut wanted: HashSet<NodeId> = keys.values().copied().collect();
     for query in &analysis.queries {
@@ -725,9 +790,8 @@ fn wire_by_path(
             keys.insert((id.clone(), event));
         }
     }
-    let page = &js.page_js;
     // A form with no listener of its own starts the path of its submit too.
-    if page.contains("submit") {
+    if scripts.analysis.may_hear("submit") {
         let heard: BTreeSet<NodeId> = js
             .bindings
             .iter()
@@ -749,8 +813,8 @@ fn wire_by_path(
         }
     }
     // A control with no listener of its own starts the key's path too.
-    for (event, quoted) in [("keydown", "keydown"), ("keyup", "keyup")] {
-        if page.contains(quoted) {
+    for event in ["keydown", "keyup"] {
+        if scripts.analysis.may_hear(event) {
             let mut ids = Vec::new();
             control_ids(root, &mut ids);
             keys.extend(ids.into_iter().map(|id| (id, event)));

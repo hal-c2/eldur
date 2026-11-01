@@ -107,6 +107,9 @@ fn tracks_listeners_and_property_writes_across_variables_functions_and_loops() {
         reads_computed_style: _,
         touches_inline_style: _,
         adopts_for_inline: _,
+        heard_events: _,
+        hears_unnamed_events: _,
+        reads_text_selection: _,
     } = analyze(&[s1, s2]);
     // Nothing here can add, remove or rename an element, but
     // `setAttribute("class", …)` can take any class off one.
