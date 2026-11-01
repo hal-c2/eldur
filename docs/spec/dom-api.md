@@ -64,7 +64,7 @@ Mapping depends on the `TargetKind` of the resolved `QmlTarget`:
 | `el.value = v` | `Eldur.wrap(<id>).value = v` | `Eldur.wrap(<id>).value = v` | `<id>.text = String(v)` | `Eldur.wrap(<id>).value = v` | `Eldur.selectByValue(<id>, v)` | `<id>.value = Number(v)` |
 | `el.checked` | N/A | N/A | N/A | `<id>.checked` | N/A | N/A |
 | `el.disabled` | `!<id>.enabled` | `!<id>.enabled` | `!<id>.enabled` | `!<id>.enabled` | `!<id>.enabled` | `!<id>.enabled` |
-| `el.hidden` | `!<id>.visible` | `!<id>.visible` | `!<id>.visible` | `!<id>.visible` | `!<id>.visible` | `!<id>.visible` |
+| `el.hidden` | `Eldur.wrap(<id>).hidden` | `Eldur.wrap(<id>).hidden` | `Eldur.wrap(<id>).hidden` | `Eldur.wrap(<id>).hidden` | `Eldur.wrap(<id>).hidden` | `Eldur.wrap(<id>).hidden` |
 | `el.placeholder` | N/A | N/A | `<id>.placeholderText` | N/A | N/A | N/A |
 | `el.readOnly` | N/A | N/A | `<id>.readOnly` | N/A | N/A | N/A |
 | `el.selectedIndex` | N/A | N/A | N/A | N/A | `<id>.currentIndex` | N/A |
@@ -116,6 +116,8 @@ Mapping depends on the `TargetKind` of the resolved `QmlTarget`:
 ---
 
 ## 4. Inline Style (`el.style.<prop>`), `style.cssText`, and `getComputedStyle`
+
+On a page with cascade rules a script's `el.style.<prop>` holds over the class bindings until it is cleared. `style.display` goes through `Eldur.setStyle`, not `visible`, and a write that a static property cannot show adopts the element to the runtime path (`touches_inline_style`, `adopts_for_inline`). `el.hidden` reads and writes the attribute: revealing an element with inline `display:none` leaves it hidden, as in Chromium.
 
 ### 4.1 Static Property Lowering (when `el` is a resolved `QmlTarget`)
 
@@ -442,6 +444,15 @@ adopted to the box form (`_gStaticChanges`, `_gAdopt`), as is a static empty
 container filled with inline-level children (`_gFillsLine`).
 
 **Known gaps.**
+
+- A hidden `<td>` keeps its column.
+- A grid with unequal tracks, spans, placeholders or a carrier row still gives a hidden item its cell.
+- A created or static input switched to `display:block` on a line of text does not break the line.
+- Hiding the focused element moves `activeElement` to `body` at once; Chromium keeps it until the next update.
+- A flat `Text` with a script-made tall span gets padding, not per-line room: wrapped lines are approximate.
+- A static fixed-size item moved into a grid takes no track position.
+- On a page without a cascade `getBoundingClientRect` of a `Text` counts its baseline translate, about 1 px low.
+- A created row in a collapsed table reports a top half a border off; columns of a static collapsed table do not share created borders.
 - A closed page's template keeps the converter's picture, except its margins:
   after a script changes the tree, the runtime works out each changed column's
   gaps, collapse through parents included, and holds each by a binding that keeps

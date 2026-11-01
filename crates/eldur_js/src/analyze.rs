@@ -139,7 +139,7 @@ pub(crate) fn analyze(scripts: &[ScriptInput]) -> Analysis {
         .filter(|q| lookups.is_live(q))
         .cloned()
         .collect();
-    analysis.runtime_dom |= !analysis.live_queries.is_empty();
+    analysis.runtime_dom |= !analysis.live_queries.is_empty() || analysis.adopts_for_inline;
     analysis.reads_attributes |= analysis.queries.iter().any(|q| match q {
         DomQuery::ById(_) => false,
         DomQuery::Selector(s) | DomQuery::SelectorAll(s) => s.contains('['),
@@ -345,6 +345,7 @@ impl AnalysisVisitor<'_, '_> {
         static_member: Option<&StaticMemberExpression<'_>>,
         computed_member: Option<&ComputedMemberExpression<'_>>,
     ) {
+        self.note_inline_write(static_member, computed_member);
         if let Some(member) = static_member {
             let prop = member.property.name.as_str();
             if prop == "innerHTML" || prop == "outerHTML" {
@@ -399,6 +400,25 @@ impl AnalysisVisitor<'_, '_> {
 }
 
 impl AnalysisVisitor<'_, '_> {
+    /// What only a generic box can answer to opens the page.
+    fn note_inline_write(
+        &mut self,
+        static_member: Option<&StaticMemberExpression<'_>>,
+        computed_member: Option<&ComputedMemberExpression<'_>>,
+    ) {
+        let opens = if let Some(member) = static_member {
+            is_style_object(&member.object) && !inline_holds_in_place(member.property.name.as_str())
+        } else if let Some(comp) = computed_member {
+            is_style_object(&comp.object)
+                && !extract_string_literal(&comp.expression)
+                    .is_some_and(|prop| inline_holds_in_place(&prop))
+        } else {
+            false
+        };
+        self.analysis.open_elements |= opens;
+        self.analysis.adopts_for_inline |= opens;
+    }
+
     fn pos(&self, span: Span) -> Pos {
         Pos {
             path: self.path.clone(),
@@ -786,6 +806,26 @@ impl AnalysisVisitor<'_, '_> {
             return;
         }
 
+        if matches!(method, "setProperty" | "removeProperty")
+            && is_style_object(&member.object)
+            && !literal_arg(0).is_some_and(|prop| inline_holds_in_place(&prop))
+        {
+            self.analysis.open_elements = true;
+            self.analysis.adopts_for_inline = true;
+        }
+        if matches!(
+            method,
+            "setAttribute" | "removeAttribute" | "toggleAttribute"
+        ) {
+            let attr = literal_arg(0).map(|a| a.to_ascii_lowercase());
+            self.analysis.touches_inline_style |= attr
+                .as_deref()
+                .is_none_or(|a| matches!(a, "style" | "hidden"));
+            let opens = attr.as_deref().is_none_or(|a| a == "style");
+            self.analysis.open_elements |= opens;
+            self.analysis.adopts_for_inline |= opens;
+        }
+
         let dom_receiver = !is_non_dom_collection_receiver(&member.object, self.scoping);
         match method {
             "setAttribute" | "removeAttribute" | "getAttribute" | "hasAttribute"
@@ -1150,6 +1190,7 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
 
     fn visit_static_member_expression(&mut self, it: &StaticMemberExpression<'a>) {
         let prop = it.property.name.as_str();
+        self.analysis.touches_inline_style |= matches!(prop, "style" | "hidden");
         if prop == "content" {
             // What a `<template>` holds is made at run time, from the rules.
             self.analysis.reads_template_content = true;
@@ -1170,6 +1211,33 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
         }
         walk::walk_static_member_expression(self, it);
     }
+}
+
+fn is_style_object(expr: &Expression<'_>) -> bool {
+    matches!(unwrap_parens(expr), Expression::StaticMemberExpression(m) if m.property.name == "style")
+}
+
+/// An inline property the page's item can take as it is, in either spelling.
+/// The others change a box's size or need a paint the item may not have.
+fn inline_holds_in_place(prop: &str) -> bool {
+    prop.starts_with("--")
+        || matches!(
+            prop,
+            "display"
+                | "visibility"
+                | "opacity"
+                | "color"
+                | "zIndex"
+                | "z-index"
+                | "left"
+                | "top"
+                | "right"
+                | "bottom"
+                | "position"
+                | "cursor"
+                | "pointerEvents"
+                | "pointer-events"
+        )
 }
 
 fn is_non_dom_collection_receiver(expr: &Expression<'_>, scoping: &Scoping) -> bool {

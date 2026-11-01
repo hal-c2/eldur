@@ -62,6 +62,15 @@ pub(crate) struct Target {
 }
 
 pub(crate) struct Emitter<'a, 'd> {
+    /// What a percentage height of the current block is of, as a percentage of
+    /// the viewport: `html`'s containing block is the viewport, and `height:
+    /// 100%` passes that on as far as it goes.
+    percent_of_vh: Option<f32>,
+    /// A percentage height of the current block is of its layout's height: it
+    /// is stretched to a definite height, which only the run time knows.
+    percent_of_parent: bool,
+    /// Those items add up to the parent's height or more, with a sibling.
+    percent_fills: bool,
     doc: &'a Document,
     styles: &'a StyleMap,
     options: &'a Options,
@@ -106,6 +115,9 @@ pub(crate) struct Emitter<'a, 'd> {
     /// laid out, when it is definite: their percentage heights resolve
     /// against it (CSS 2.2 §10.5).
     percent_height_base: Option<f32>,
+    /// Whether the column being filled has a width its items cannot change,
+    /// so one of them may be told to overflow it.
+    column_fills: bool,
     /// `position: fixed` boxes, placed over the window outside the
     /// `Flickable` so they do not scroll.
     fixed: Vec<(Option<String>, Object)>,
@@ -128,6 +140,8 @@ pub(crate) struct Emitter<'a, 'd> {
     /// The runtime resolves some element from the page's rules, and reads what
     /// each element's markup says about itself.
     pub open_elements: bool,
+    /// A script writes inline styles or `hidden`, so any item can leave its layout.
+    pub hides_items: bool,
     /// The page holds the rule table: the runtime computes styles of its own.
     pub cascade_rules: bool,
     /// The boxes a script may put block children in.
@@ -146,6 +160,11 @@ pub(crate) struct Emitter<'a, 'd> {
     /// Each element's outermost object carries a marker comment naming its
     /// node, so [`dynamic`] can tell whose properties differ.
     markers: bool,
+    /// Who gives the next independent item its height ([`Given`]); its parent
+    /// says just before emitting it.
+    child_given: Given,
+    /// The same for the box being emitted.
+    own_given: Given,
     /// Set for the templates' probe document: a template's ids are its
     /// own, so it cannot read a sibling's carry (`carry`).
     no_carry: bool,
@@ -205,6 +224,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             nested_z: None,
             above_flow: None,
             percent_height_base: None,
+            column_fills: true,
             fixed: Vec::new(),
             backdrop: None,
             fragments: BTreeMap::new(),
@@ -214,6 +234,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             images: BTreeMap::new(),
             runtime_dom: false,
             open_elements: false,
+            hides_items: false,
             cascade_rules: false,
             gains: HashSet::new(),
             live_tables: HashSet::new(),
@@ -222,6 +243,11 @@ impl<'a, 'd> Emitter<'a, 'd> {
             by_path: false,
             script_attrs: false,
             markers: false,
+            percent_of_vh: Some(100.0),
+            percent_of_parent: false,
+            percent_fills: false,
+            child_given: Given::Stretched,
+            own_given: Given::Content,
             no_carry: false,
             excess: HashMap::new(),
             sticky: HashSet::new(),
@@ -414,9 +440,16 @@ impl<'a, 'd> Emitter<'a, 'd> {
         inherited: TextDecorationLine,
         independent: bool,
     ) -> Emitted {
+        let given = if independent {
+            std::mem::replace(&mut self.child_given, Given::Stretched)
+        } else {
+            Given::Content
+        };
+        let outer_given = std::mem::replace(&mut self.own_given, given);
         let outer = std::mem::replace(&mut self.line_align, b.style.text_align);
         let e = self.block_box_in_lines(b, inherited, independent);
         self.line_align = outer;
+        self.own_given = outer_given;
         e
     }
 
@@ -516,6 +549,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 .replace(lists::ContainingBlock::of(b.node, style))
         });
         let outer_above_flow = self.above_flow.take();
+        let outer_fills = std::mem::replace(&mut self.column_fills, false);
         let outer_hideable = self.hideable_ancestor;
         self.hideable_ancestor = if outer_abs.is_some() {
             false
@@ -577,14 +611,66 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     _ => None,
                 };
                 let outer = std::mem::replace(&mut self.percent_height_base, base);
-                let column = self.column(&in_flow, decoration, top_open, bottom_open);
+                let vh = match &style.height {
+                    Size::Length(eldur_css::Length::Linear(l))
+                        if l.px == 0.0 && l.vw == 0.0 && l.vh == 0.0 =>
+                    {
+                        self.percent_of_vh.map(|v| v * l.percent / 100.0)
+                    }
+                    Size::Length(eldur_css::Length::Linear(l))
+                        if l.px == 0.0 && l.vw == 0.0 && l.percent == 0.0 =>
+                    {
+                        Some(l.vh)
+                    }
+                    _ => None,
+                };
+                let outer_vh = std::mem::replace(&mut self.percent_of_vh, vh);
+                let of_parent = self.own_given == Given::Definite
+                    && matches!(style.height, Size::Auto)
+                    && !deco.needed();
+                let outer_of_parent = std::mem::replace(&mut self.percent_of_parent, of_parent);
+                let percents: f32 = in_flow
+                    .iter()
+                    .map(|k| match &k.style.height {
+                        Size::Length(eldur_css::Length::Linear(l)) => l.percent,
+                        _ => 0.0,
+                    })
+                    .sum();
+                let fills = of_parent && in_flow.len() > 1 && percents >= 100.0;
+                let outer_fills_percent = std::mem::replace(&mut self.percent_fills, fills);
+                self.column_fills = b.kind == BoxKind::Block
+                    && style.display == eldur_css::Display::Block
+                    && style.float == eldur_css::Float::None
+                    && !matches!(
+                        style.position,
+                        eldur_css::Position::Absolute | eldur_css::Position::Fixed
+                    )
+                    && match &style.width {
+                        Size::Auto => outer_fills,
+                        Size::Length(l) => l.as_px().is_some(),
+                        _ => false,
+                    };
+                let mut column = self.column(&in_flow, decoration, top_open, bottom_open);
+                self.column_fills = false;
                 self.percent_height_base = outer;
+                self.percent_of_vh = outer_vh;
+                self.percent_of_parent = outer_of_parent;
+                self.percent_fills = outer_fills_percent;
+                if of_parent
+                    && !fills
+                    && let Some(obj) = &mut column.obj
+                {
+                    // What is left of its height stays below its items.
+                    obj.push_child(Object::new("Item").prop("Layout.fillHeight", true));
+                }
                 escaped_top = column.escaped_top;
                 escaped_bottom = column.escaped_bottom;
                 only_slots = column.only_slots;
                 column.obj.map(|o| (o, "Content"))
             }
-            Content::Inline(items) if inline::has_atomic(items) => {
+            Content::Inline(items)
+                if inline::has_atomic(items) || inline::needs_lines_for_leading(style, items) =>
+            {
                 Some((self.inline_flow(b, decoration, items, line), "Content"))
             }
             Content::Inline(items) => {
@@ -605,6 +691,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             }
             Content::Empty => None,
         };
+        self.column_fills = outer_fills;
         self.backdrop = outer_backdrop;
         self.hideable_ancestor = outer_hideable;
         let overlays = match outer_abs {
@@ -1115,6 +1202,18 @@ fn hint(doc: &Document, b: &LayoutBox<'_>) -> String {
         .and_then(|e| e.classes().next().map(str::to_owned))
         .or_else(|| element.map(|e| e.local_name().to_owned()))
         .unwrap_or_else(|| "block".to_owned())
+}
+
+/// Who gives a box its height, past what its own CSS says.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Given {
+    /// Nobody: it is as high as its content.
+    Content,
+    /// A parent stretches it, to a height its content can still raise (an
+    /// auto-high flex row, say).
+    Stretched,
+    /// A parent stretches it to a height its content has no say in.
+    Definite,
 }
 
 /// Where along one axis a lone item sits in its flex or grid container.

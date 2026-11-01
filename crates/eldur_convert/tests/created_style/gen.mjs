@@ -56,8 +56,11 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
         const bg = getComputedStyle(at).backgroundColor;
         if (bg !== "rgba(0, 0, 0, 0)") color = bg;
       }
+      // An element's own opacity or visibility, over the white page.
+      const own = getComputedStyle(e);
+      const alpha = own.visibility === "hidden" ? 0 : Number(own.opacity);
       const hex = (color || "rgb(255, 255, 255)").match(/\d+/g).slice(0, 3)
-        .map((v) => Number(v).toString(16).padStart(2, "0")).join("");
+        .map((v) => Math.round(Number(v) * alpha + 255 * (1 - alpha)).toString(16).padStart(2, "0")).join("");
       return { id: e.id, x: r.left + dx, y: r.top + dy, color: "#" + hex };
     }));
   out[file.slice(0, -5)] = { log, clicks, probes };

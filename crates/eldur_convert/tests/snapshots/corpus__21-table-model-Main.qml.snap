@@ -26,7 +26,7 @@ ApplicationWindow {
         for (let i = 0; i < cells.length; ++i) {
             const cell = cells[i]
             const slot = cell.tableSlot
-            if (!slot)
+            if (!slot || cell.visible === false)
                 continue
             if (slot[3] > 1) {
                 spanning.push(cell)
@@ -1019,6 +1019,7 @@ ApplicationWindow {
                     Layout.fillWidth: false
                     Layout.preferredWidth: 480
                     Layout.maximumWidth: Number.POSITIVE_INFINITY
+                    Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
                     Layout.topMargin: 8
 
                     Item {

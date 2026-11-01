@@ -420,6 +420,7 @@ ApplicationWindow {
                         border.color: "#dde1ea"
                         objectName: "list"
                         Layout.preferredWidth: 422
+                        Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
                         Layout.topMargin: 20 - tabs.eldurCarry
                         Layout.preferredHeight: implicitHeight - item3.eldurCarry
 
@@ -611,6 +612,7 @@ ApplicationWindow {
                         implicitHeight: statusText.implicitHeight + 20
                         objectName: "status"
                         Layout.preferredWidth: 448
+                        Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
                         Layout.topMargin: 20 - list.eldurCarry
                         Layout.bottomMargin: panel.cls_d_none ? ((panel.visible ? 0 : 20)) : 0
                         Layout.preferredHeight: implicitHeight
@@ -648,6 +650,7 @@ ApplicationWindow {
                         objectName: "panel"
                         visible: !panel.cls_d_none
                         Layout.preferredWidth: 448
+                        Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
                         Layout.topMargin: 20 - status.eldurCarry
                         Layout.preferredHeight: implicitHeight
 

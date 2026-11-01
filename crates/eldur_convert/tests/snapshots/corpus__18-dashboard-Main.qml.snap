@@ -27,7 +27,7 @@ ApplicationWindow {
         for (let i = 0; i < cells.length; ++i) {
             const cell = cells[i]
             const slot = cell.tableSlot
-            if (!slot)
+            if (!slot || cell.visible === false)
                 continue
             if (slot[3] > 1) {
                 spanning.push(cell)
@@ -977,7 +977,7 @@ ApplicationWindow {
                                         rowSpacing: 20
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.fillHeight: true
+                                        Layout.fillHeight: false
                                         Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                         // <article class="card">
@@ -1284,7 +1284,7 @@ ApplicationWindow {
                                         rowSpacing: 0
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                        Layout.fillHeight: true
+                                        Layout.fillHeight: false
                                         Layout.maximumHeight: Number.POSITIVE_INFINITY
 
                                         // <div class="card">
@@ -2098,6 +2098,9 @@ ApplicationWindow {
 
                                     // <section class="card">
                                     Rectangle {
+                                        id: card
+                                        property real eldurCarry: Math.ceil(Layout.topMargin - (table.eldurCarry)) - Layout.topMargin + table.eldurCarry + 0.000001
+
                                         color: "#ffffff"
                                         radius: 12
                                         implicitWidth: cardContent7.implicitWidth + 46
@@ -2105,7 +2108,8 @@ ApplicationWindow {
                                         border.width: 1
                                         border.color: "#e5e7eb"
                                         Layout.fillWidth: true
-                                        Layout.fillHeight: true
+                                        Layout.fillHeight: false
+                                        Layout.preferredHeight: implicitHeight - table.eldurCarry
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                         ColumnLayout {
@@ -2136,6 +2140,9 @@ ApplicationWindow {
 
                                             // <table>
                                             Item {
+                                                id: table
+                                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                                                 implicitWidth: tableGrid.maxContentWidth
                                                 implicitHeight: tableGrid.implicitHeight
                                                 Layout.minimumWidth: tableGrid.minContentWidth
@@ -3499,6 +3506,10 @@ ApplicationWindow {
                                         }
                                     }
                                 }
+                            }
+
+                            Item {
+                                Layout.fillHeight: true
                             }
                         }
                     }

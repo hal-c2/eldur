@@ -175,7 +175,7 @@ function syncForm() {
     loadBar.value = Number(String(volSlider.value));
     avatarImg.source = "icon.png";
     !(saveBtn.enabled = false);
-    !(saveBtn.visible = true);
+    Eldur.wrap(saveBtn).hidden = false;
     const isOff = ((!saveBtn.enabled)).toString();
     nameInput.forceActiveFocus();
     notesArea.focus = false;
@@ -223,6 +223,7 @@ const chips = document.querySelectorAll(".chip");
     insta::assert_snapshot!(out.page_js, @r###"
 .import "eldur_runtime.js" as Eldur
 
+let panel;
 let col;
 let disp;
 let expanded;
@@ -230,12 +231,13 @@ let chips;
 
 function __eldur_init(rootItem) {
     Eldur.init(rootItem || (typeof root !== "undefined" ? root : null));
-    ((__v) => (Eldur.setStyle(panel, "display", __v), __v))("none");
-    ((__v) => (Eldur.setStyle(panel, "display", __v), __v))("flex");
-    ((__v) => (Eldur.setStyle(panel, "color", __v), __v))("#ff0000");
-    ((__v) => (Eldur.setStyle(panel, "backgroundColor", __v), __v))("navy");
-    col = Eldur.getStyle(panel, "color");
-    disp = Eldur.getStyle(panel, "display");
+    panel = Eldur.document.getElementById("panel");
+    panel.style.display = "none";
+    panel.style.display = "flex";
+    panel.style.color = "#ff0000";
+    panel.style["backgroundColor"] = "navy";
+    col = panel.style.color;
+    disp = panel.style.display;
     Eldur.classList(panel).add("open");
     Eldur.classList(panel).toggle("active");
     Eldur.dataset(panel).tabId = "settings";
@@ -243,7 +245,7 @@ function __eldur_init(rootItem) {
     Eldur.setAttribute(panel, "aria-expanded", "true");
     expanded = Eldur.getAttribute(panel, "aria-expanded");
     ((__v) => (Eldur.setInnerHTML(panel, __v), __v))("<b>Hello</b>");
-    chips = Eldur.staticNodeList([chip0, chip1]);
+    chips = Eldur.document.querySelectorAll(".chip");
 }
 "###);
 }
@@ -1228,9 +1230,9 @@ function captureAssigned(rhs, pickNode) {
 
     const a = (Eldur.getTitle() || ((__v) => (Eldur.setTitle(__v), __v))("default"));
     const b = (((__v) => (Eldur.setTitle(__v), __v))(Eldur.getTitle() + (rhs())));
-    const c = (!saveBtn.visible && !(saveBtn.visible = true));
+    const c = (Eldur.wrap(saveBtn).hidden && (Eldur.wrap(saveBtn).hidden = false));
     const d = (roleCombo.currentValue || ((__v) => (roleCombo.currentIndex = roleCombo.indexOfValue(__v), __v))(rhs()));
-    const e = (((__v) => (cardBox.visible = __v !== "none", __v))("none"));
+    const e = (((__v) => (Eldur.setStyle(cardBox, "display", __v), __v))("none"));
     const f = (((__o, __v) => (Eldur.setText(__o, __v), __v))(pickNode(0), rhs()));
     const g = (((__o) => ((__v) => (Eldur.setText(__o, __v), __v))(Eldur.getText(__o) + (rhs())))(pickNode(1)));
     const h = (((__o) => Eldur.getInnerHTML(__o) || ((__v) => (Eldur.setInnerHTML(__o, __v), __v))(rhs()))(pickNode(2)));

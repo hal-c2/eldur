@@ -1,0 +1,7 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/18px sans-serif;height:100%;display:grid}
+.a{background:#f88}
+</style></head><body id="b"><div class="a" id="x">a</div><div class="a" id="y">b</div>
+<script>
+function rect(i){var b=document.getElementById(i).getBoundingClientRect();return i+":"+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)+","+Math.round(b.height)}
+console.log("CS "+["b","x","y"].map(rect).join(" "));
+</script></body></html>

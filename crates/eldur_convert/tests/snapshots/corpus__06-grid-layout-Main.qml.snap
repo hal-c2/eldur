@@ -44,6 +44,7 @@ ApplicationWindow {
                     implicitWidth: bodyContent.implicitWidth
                     implicitHeight: bodyContent.implicitHeight
                     Layout.fillWidth: true
+                    Layout.preferredHeight: root.height
 
                     ColumnLayout {
                         id: bodyContent
@@ -785,6 +786,7 @@ ApplicationWindow {
                                                         property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                                                         spacing: 8
+                                                        Layout.fillHeight: false
                                                         Layout.fillWidth: true
                                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
                                                         Layout.topMargin: -tileLabel2.eldurCarry

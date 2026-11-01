@@ -1,0 +1,39 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/18px sans-serif}
+.row{display:flex;height:120px}
+.row>.g{width:100px}
+.g{display:grid}
+.a{background:#f88}
+.h{height:40px;background:#8f8}
+.fr{grid-template-rows:1fr 1fr}
+.outer{display:grid;height:100px;grid-template-columns:100px 100px 100px 100px}
+.fixed{height:100px;width:100px}
+.minh{min-height:100px;width:100px}
+.gap{gap:10px}
+</style></head><body>
+<div class="row" id="r1">
+<div class="g" id="g1"><div class="a" id="a1">a</div><div class="a" id="a2">b</div></div>
+<div class="g fr" id="g2"><div class="a" id="b1">a</div><div class="h" id="b2">b</div></div>
+<div class="g gap" id="g3" style="align-content:start"><div class="a" id="c1">a</div><div class="a" id="c2">b</div></div>
+<div class="g" id="g4"><div class="a" id="d1">a</div><div class="h" id="d2">b</div></div>
+<div class="g gap" id="g5"><div class="a" id="e1">a</div><div class="a" id="e2">b</div></div>
+<div class="g" id="g6" style="align-self:start"><div class="a" id="f1">a</div><div class="a" id="f2">b</div></div>
+</div>
+<div style="display:flex" id="r2"><div style="height:80px;width:50px" id="tall"></div>
+<div class="g" id="g7" style="width:100px"><div class="a" id="h1">a</div><div class="a" id="h2">b</div></div></div>
+<div class="outer" id="o1">
+<div class="g" id="g8"><div class="a" id="i1">a</div><div class="a" id="i2">b</div></div>
+<div class="g" id="g9" style="align-self:start"><div class="a" id="j1">a</div><div class="a" id="j2">b</div></div>
+<div class="g fr" id="g10"><div class="a" id="k1">a</div><div class="a" id="k2">b</div></div>
+</div>
+<div class="g fixed" id="g11"><div class="a" id="l1">a</div><div class="a" id="l2">b</div></div>
+<div class="g minh" id="g12"><div class="a" id="m1">a</div><div class="a" id="m2">b</div></div>
+<div class="g fixed fr" id="g13"><div class="a" id="n1">a</div><div class="h" id="n2">b</div></div>
+<div class="g" id="plain" style="width:100px"><div class="a" id="p1">a</div><div class="a" id="p2">b</div></div>
+<div id="after">z</div>
+<script>
+function rect(i){var b=document.getElementById(i).getBoundingClientRect();return i+":"+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)+","+Math.round(b.height)}
+function log(ids){console.log("CS "+ids.map(rect).join(" "))}
+log(["g1","a1","a2"]);log(["g2","b1","b2"]);log(["g3","c1","c2"]);log(["g4","d1","d2"]);log(["g5","e1","e2"]);log(["g6","f1","f2"]);
+log(["r2","g7","h1","h2"]);log(["g8","i1","i2"]);log(["g9","j1","j2"]);log(["g10","k1","k2"]);
+log(["g11","l1","l2"]);log(["g12","m1","m2"]);log(["g13","n1","n2"]);log(["plain","p1","p2","after"]);
+</script></body></html>

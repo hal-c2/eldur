@@ -1,0 +1,36 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}
+#gr{display:grid;grid-template-columns:100px 100px;gap:4px}
+#gr3{display:grid;grid-template-columns:50px 50px 50px;column-gap:2px}
+#gf{display:grid;grid-template-columns:1fr 1fr;gap:4px;width:300px}
+#fl{display:flex;gap:8px}#fc{display:flex;flex-direction:column;gap:6px;width:200px}
+#fo{display:flex;gap:4px}#fo>div{width:30px}
+.off{display:none}
+td{padding:1px}
+table{border-spacing:2px}
+</style></head><body>
+<div id="gr"><div id="g1">1</div><div id="g2" style="display:none">2</div><div id="g3">3</div><div id="g4" class="off">4</div><div id="g5">5</div></div>
+<div id="gr3"><div id="h1" class="off">1</div><div id="h2">2</div><div id="h3">3</div><div id="h4">4</div></div>
+<div id="gf"><div id="k1">1</div><div id="k2" class="off">2</div><div id="k3">3</div></div>
+<div id="fl"><div id="f1" class="off">a</div><div id="f2">b</div><div id="f3" style="display:none">c</div><div id="f4">d</div></div>
+<div id="fc"><div id="c1" class="off">a</div><div id="c2">b</div><div id="c3" hidden>c</div><div id="c4">d</div></div>
+<div id="fo"><div id="o1" style="order:2">a</div><div id="o2" class="off" style="order:1">b</div><div id="o3" style="order:0">c</div></div>
+<table id="t"><tr id="r1"><td id="d1">a</td><td id="d3">c</td></tr><tr id="r2" class="off"><td id="d4">d</td></tr><tr id="r3"><td id="d5">e</td><td id="d6">f</td></tr></table>
+<div id="end">end</div>
+<script>
+var q=function(s){return document.getElementById(s)};
+var ids=["gr","g1","g3","g5","gr3","h2","h3","h4","gf","k1","k3","fl","f2","f4","fc","c2","c4","fo","o1","o3","t","d1","d3","d5","d6","end"];
+function d(t){console.log("CS "+t+" "+ids.map(function(i){var b=q(i).getBoundingClientRect();return i+":"+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)+","+Math.round(b.height)}).join(" "))}
+d("0");
+q("g2").style.display="block";ids.push("g2");d("g2");
+q("g4").classList.remove("off");ids.push("g4");d("g4");
+q("g1").style.display="none";d("g1off");
+q("g1").style.display="";d("g1on");
+q("h1").classList.remove("off");ids.push("h1");d("h1");
+q("k2").classList.remove("off");ids.push("k2");d("k2");
+q("f1").classList.remove("off");ids.push("f1");d("f1");
+q("f3").style.display="";ids.push("f3");d("f3");
+q("c1").classList.remove("off");ids.push("c1");d("c1");
+q("c3").hidden=false;ids.push("c3");d("c3");
+q("o2").classList.remove("off");ids.push("o2");d("o2");
+q("r2").classList.remove("off");ids.push("r2");d("r2");
+</script></body></html>

@@ -642,16 +642,22 @@ ApplicationWindow {
                                 }
 
                                 Item {
+                                    id: item
+                                    property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                     Layout.fillWidth: true
                                 }
                             }
 
                             // <div class="stock">
                             ColumnLayout {
+                                id: stock2
+                                property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + blockFlow.eldurCarry + 0.000001
+
                                 spacing: 0
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                Layout.topMargin: 16
+                                Layout.topMargin: 16 - item.eldurCarry
 
                                 // <label>
                                 Text {
@@ -744,7 +750,7 @@ ApplicationWindow {
                                 }
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 20 - blockFlow.eldurCarry
+                                Layout.topMargin: 20 - stock2.eldurCarry
                                 renderType: Text.NativeRendering
                             }
 

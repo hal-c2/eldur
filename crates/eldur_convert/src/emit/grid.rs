@@ -18,9 +18,10 @@ use eldur_css::{
 };
 use eldur_qml::{Member, Object, Value};
 
-use super::Emitter;
+use super::flex::{Pack, pack, spacer_slots};
 use super::flow::{has_height, is_layout, is_viewport_relative, size_value};
 use super::units::{fmt_number, length_expr, number, round};
+use super::{Emitter, Given};
 use crate::boxes::{LayoutBox, describe, node_line};
 
 /// One axis of an item's position before auto-placement: a 0-based start
@@ -375,6 +376,8 @@ struct AxisPlan {
     tracks: Vec<TrackSize>,
     gap: f32,
     horizontal: bool,
+    /// `align-content: normal` or `stretch`: `auto` tracks take free space.
+    stretch: bool,
 }
 
 /// Most equal sub-columns an axis of unequal `fr` tracks is split into.
@@ -461,6 +464,7 @@ impl AxisPlan {
             tracks,
             gap,
             horizontal,
+            stretch: true,
         }
     }
 
@@ -474,6 +478,10 @@ impl AxisPlan {
             })
             .collect();
         frs.windows(2).any(|w| w[0] != w[1])
+    }
+
+    fn is_fr(&self, track: usize) -> bool {
+        matches!(self.tracks.get(track), Some(TrackSize::Fr { .. }))
     }
 
     fn has_fr(&self) -> bool {
@@ -540,7 +548,9 @@ impl AxisPlan {
             return match track {
                 TrackSize::Fixed(v) => pinned(v.clone()),
                 TrackSize::Fr { min, .. } => fill(true, *min, None),
-                TrackSize::Auto { min } if !self.has_fr() => fill(false, *min, None),
+                TrackSize::Auto { min } if !self.has_fr() && self.stretch => {
+                    fill(false, *min, None)
+                }
                 TrackSize::Auto { min: Some(m) } => {
                     vec![(format!("Layout.minimum{dim}"), number(*m))]
                 }
@@ -563,6 +573,37 @@ impl AxisPlan {
         }
         let any_fr = tracks.iter().any(|t| matches!(t, TrackSize::Fr { .. }));
         fill(any_fr, None, None)
+    }
+}
+
+/// Makes room for free space between rows: `slots[i]` empty rows go before
+/// row `i`, each sharing it equally. Every child has its `Layout.row`.
+fn spread_rows(grid: &mut Object, slots: &[u32]) {
+    let moved = |row: usize| row + slots[..=row.min(slots.len() - 1)].iter().sum::<u32>() as usize;
+    for kid in grid.children_mut() {
+        let Some(Value::Number(row)) = kid.get("Layout.row").cloned() else {
+            continue;
+        };
+        let row = row as usize;
+        if let Some(Value::Number(span)) = kid.get("Layout.rowSpan").cloned() {
+            let last = row + span as usize - 1;
+            kid.set(
+                "Layout.rowSpan",
+                Value::Number((moved(last) - moved(row) + 1) as f64),
+            );
+        }
+        kid.set("Layout.row", Value::Number(moved(row) as f64));
+    }
+    for (i, n) in slots.iter().enumerate() {
+        let before = i + slots[..i].iter().sum::<u32>() as usize;
+        for k in 0..*n as usize {
+            grid.push_child(
+                Object::new("Item")
+                    .prop("Layout.row", Value::Number((before + k) as f64))
+                    .prop("Layout.column", Value::Number(0.0))
+                    .prop("Layout.fillHeight", true),
+            );
+        }
     }
 }
 
@@ -862,12 +903,22 @@ impl Emitter<'_, '_> {
             }
             None => col_tracks,
         };
-        let definite_height = has_height(style);
+        let given = self.own_given;
+        // A percentage of an auto height is auto (CSS 2 §10.5).
+        let definite_height = match &style.height {
+            Size::Length(l) if !is_viewport_relative(l) && l.as_px().is_none() => {
+                self.percent_resolves()
+                    || matches!(&style.min_height, Size::Length(m) if m.as_px() != Some(0.0))
+            }
+            _ => has_height(style),
+        };
+        let definite = definite_height || given == Given::Definite;
+        let tall = definite || given == Given::Stretched;
         let row_tracks = tracks_for(
             &style.grid_template_rows,
             &style.grid_auto_rows,
             placement.rows,
-            definite_height.then_some("parent.height"),
+            definite.then_some("parent.height"),
         );
         if approx {
             self.diags.info(
@@ -882,9 +933,18 @@ impl Emitter<'_, '_> {
         }
         let column_gap = if gap_split.is_some() { 0.0 } else { column_gap };
         let cols = AxisPlan::new(col_tracks, column_gap, true, true);
-        let rows = AxisPlan::new(row_tracks, row_gap, definite_height, false);
-        let unequal_stretch = cols.unequal_fr() || rows.unequal_fr();
-        if unequal_stretch {
+        let mut rows = AxisPlan::new(row_tracks, row_gap, definite, false);
+        rows.stretch = matches!(
+            style.align_content,
+            Align::Normal | Align::Auto | Align::Stretch
+        );
+        // Free space `align-content` hands out; `fr` tracks leave none.
+        let packed = (tall && !rows.stretch && !rows.has_fr() && placement.rows > 0)
+            .then(|| pack(style.align_content, false));
+        let row_slots = packed
+            .filter(|p| *p != Pack::Start)
+            .map(|p| spacer_slots(p, placement.rows, false));
+        if cols.unequal_fr() {
             self.diags.info(
                 "qml",
                 line,
@@ -897,7 +957,9 @@ impl Emitter<'_, '_> {
         }
 
         let filler_col = !cols.absorbs();
-        let filler_row = definite_height && !rows.absorbs() && placement.rows > 0;
+        let filler_row = placement.rows > 0
+            && tall
+            && (packed == Some(Pack::Start) || (rows.stretch && !rows.absorbs()));
         // Tracks no item occupies alone get a placeholder in a free cell,
         // or in a zero-height carrier row after the last one.
         let mut occupied = HashSet::new();
@@ -945,8 +1007,9 @@ impl Emitter<'_, '_> {
         }
         // Qt puts row spacing before the carrier row too, so the row gap
         // becomes the top margin of what starts in a later row.
-        let gap_margins = carrier_row && row_gap > 0.0;
-        let explicit = !trivial || !placeholders.is_empty() || filler_col || filler_row;
+        let gap_margins = (carrier_row || row_slots.is_some()) && row_gap > 0.0;
+        let explicit =
+            !trivial || !placeholders.is_empty() || filler_col || filler_row || row_slots.is_some();
 
         let mut grid = Object::new("GridLayout");
         grid.set(
@@ -958,9 +1021,38 @@ impl Emitter<'_, '_> {
             "rowSpacing",
             number(if gap_margins { 0.0 } else { row_gap }),
         );
+        // Only a plain run of same-sized cells can follow its items out of the
+        // layout: spans and other tracks would change more than the cell.
+        let flows = explicit
+            && row_slots.is_none()
+            && placeholders.is_empty()
+            && !gap_margins
+            && gap_split.is_none()
+            && (1..placement.cols).all(|c| cols.props(c, 1, true) == cols.props(0, 1, true))
+            && placement.items.iter().enumerate().all(|(i, p)| {
+                p.row_span == 1 && p.col_span == 1 && p.row * placement.cols + p.col == i
+            });
+        let mut cell_follows = false;
         for (child, p) in items.iter().zip(&placement.items) {
+            let stretches = self_alignment(style.align_items, child.style.align_self, false)
+                .is_none()
+                && !matches!(&child.style.height, Size::Length(l) if !matches!(l, Length::Linear(p) if p.percent != 0.0));
+            let single_content_row = placement.cols == 1
+                && !tall
+                && style.grid_template_rows.is_empty()
+                && style.grid_auto_rows.is_empty();
+            let pinned_track =
+                p.row_span == 1 && matches!(rows.tracks.get(p.row), Some(TrackSize::Fixed(_)));
+            self.child_given = if !stretches || single_content_row {
+                Given::Content
+            } else if definite || pinned_track {
+                Given::Definite
+            } else {
+                Given::Stretched
+            };
             let mut obj = self.item(child, decoration).obj;
             self.grid_item(&mut obj, child, style, p, &cols, &rows, explicit);
+            cell_follows |= flows && (self.hides_items || obj.get("visible").is_some());
             if gap_margins && p.row > 0 {
                 add_margin(&mut obj, "Layout.topMargin", row_gap);
             }
@@ -978,6 +1070,41 @@ impl Emitter<'_, '_> {
                 grid.members.push(Member::Comment(describe(self.doc, node)));
             }
             grid.push_child(obj);
+        }
+        if cell_follows {
+            let across = placement.cols;
+            for obj in grid.members.iter_mut().filter_map(|m| match m {
+                Member::Child(o) => Some(o),
+                _ => None,
+            }) {
+                obj.set(
+                    "Layout.row",
+                    Value::expr(format!(
+                        "parent && parent.eldurCell ? Math.floor(parent.eldurCell(this) / {across}) : 0"
+                    )),
+                );
+                obj.set(
+                    "Layout.column",
+                    Value::expr(format!(
+                        "parent && parent.eldurCell ? parent.eldurCell(this) % {across} : 0"
+                    )),
+                );
+            }
+            grid.members.push(Member::Function {
+                name: "eldurCell".to_owned(),
+                params: vec!["item".to_owned()],
+                body: [
+                    "// `display: none` takes no cell (CSS Grid 2 §8).",
+                    "let cell = 0",
+                    "for (const kid of children) {",
+                    "    if (kid === item) break",
+                    "    if (kid.visible) ++cell",
+                    "}",
+                    "return cell",
+                ]
+                .map(str::to_owned)
+                .to_vec(),
+            });
         }
         for (r, c, size_col, size_row) in placeholders {
             let mut ph = Object::new("Item");
@@ -1002,6 +1129,35 @@ impl Emitter<'_, '_> {
             }
             grid.push_child(ph);
         }
+        // Qt caps a row at what its items can take, past an `fr` share.
+        let capped_fr = grid.children().zip(&placement.items).any(|(kid, p)| {
+            rows.is_fr(p.row)
+                && matches!(kid.get("Layout.maximumHeight"), Some(Value::Number(_) | Value::Expr(_)))
+                && !matches!(kid.get("Layout.maximumHeight"), Some(Value::Expr(e)) if e == "Number.POSITIVE_INFINITY")
+        });
+        if ((rows.stretch && tall && !rows.has_fr())
+            || (definite && (rows.unequal_fr() || capped_fr)))
+            && !cell_follows
+            && !carrier_row
+            && !self.row_carriers(
+                &mut grid,
+                &placement,
+                &rows,
+                definite,
+                column_gap,
+                gap_split.is_some(),
+            )
+            && rows.unequal_fr()
+        {
+            self.diags.info(
+                "qml",
+                line,
+                format!(
+                    "unequal `fr` rows on {} are laid out as equal",
+                    self.what(b)
+                ),
+            );
+        }
         let last_row = placement.rows + usize::from(carrier_row);
         if filler_col {
             let mut f = Object::new("Item");
@@ -1017,7 +1173,204 @@ impl Emitter<'_, '_> {
             f.set("Layout.fillHeight", true);
             grid.push_child(f);
         }
+        if let Some(slots) = &row_slots {
+            spread_rows(&mut grid, slots);
+        }
+        // One column of content-high rows is a column: each row is as high as
+        // its one item, so stretching it means nothing and the sub-pixel
+        // positions can be kept as in a block column. Only when nothing gives
+        // the grid more height than that.
+        if placement.cols == 1
+            && !explicit
+            && !carrier_row
+            && !tall
+            && style.grid_template_rows.is_empty()
+            && style.grid_auto_rows.is_empty()
+        {
+            for obj in grid.children_mut() {
+                if matches!(obj.get("Layout.fillHeight"), Some(Value::Bool(true))) {
+                    obj.set("Layout.fillHeight", false);
+                }
+            }
+            self.carry(&mut grid);
+        }
         grid
+    }
+
+    /// Qt shares a grid's free height by the rows' preferred heights, and a row
+    /// nothing fills takes none; CSS gives each `auto` track an equal part
+    /// (CSS Grid 2 §12.8). A zero-wide item in a last column makes each row
+    /// take part. When the grid's height comes from outside it, the item says
+    /// its row's height outright, as the height cannot depend on it, and so
+    /// unequal `fr` rows take their shares. Otherwise Qt's sharing stands, which
+    /// is CSS's only for rows of equal heights. Whether it could do this.
+    fn row_carriers(
+        &mut self,
+        grid: &mut Object,
+        placement: &Placement,
+        rows: &AxisPlan,
+        definite: bool,
+        column_gap: f32,
+        split: bool,
+    ) -> bool {
+        let auto_rows: Vec<usize> = (0..placement.rows)
+            .filter(|r| matches!(rows.tracks.get(*r), Some(TrackSize::Auto { .. })))
+            .collect();
+        let frs = rows.has_fr();
+        if (auto_rows.len() < 2 && !frs)
+            || self.no_carry
+            || self.hides_items
+            || split
+            || (placement.cols > 1 && column_gap > 0.0)
+            || placement.items.iter().any(|p| p.row_span > 1)
+            || !rows.tracks.iter().all(|t| {
+                matches!(
+                    t,
+                    TrackSize::Auto { .. }
+                        | TrackSize::Fr { .. }
+                        | TrackSize::Fixed(Value::Number(_))
+                )
+            })
+        {
+            return false;
+        }
+        let kids: Vec<&mut Object> = grid.children_mut().take(placement.items.len()).collect();
+        let any_fixed = kids.iter().zip(&placement.items).any(|(k, p)| {
+            auto_rows.contains(&p.row)
+                && !matches!(k.get("Layout.fillHeight"), Some(Value::Bool(true)))
+        });
+        if kids.iter().any(|k| k.get("visible").is_some()) || (!definite && !any_fixed) {
+            return false;
+        }
+        let mut terms: Vec<Vec<String>> = vec![Vec::new(); placement.rows];
+        for (kid, p) in kids.into_iter().zip(&placement.items) {
+            // The new column would otherwise take part in auto-placement.
+            kid.set("Layout.row", Value::Number(p.row as f64));
+            kid.set("Layout.column", Value::Number(p.col as f64));
+            let margin = |name: &str| match kid.get(name) {
+                Some(Value::Number(n)) => *n,
+                _ => 0.0,
+            };
+            let margins = margin("Layout.topMargin") + margin("Layout.bottomMargin");
+            let own = match kid.get("Layout.preferredHeight") {
+                Some(Value::Number(n)) => Some(*n),
+                _ => None,
+            };
+            let height = match own {
+                Some(n) => fmt_number(n + margins),
+                None => {
+                    let id = self.item_id(kid);
+                    if margins == 0.0 {
+                        format!("{id}.implicitHeight")
+                    } else {
+                        format!("{id}.implicitHeight + {}", fmt_number(margins))
+                    }
+                }
+            };
+            terms[p.row].push(height);
+        }
+        let col = grid.get("columns").and_then(|c| match c {
+            Value::Number(n) => Some(*n),
+            _ => None,
+        });
+        let col = col.unwrap_or(1.0);
+        grid.set("columns", Value::Number(col + 1.0));
+        if placement.cols == 1 {
+            grid.set("columnSpacing", Value::Number(0.0));
+        }
+        let mut bases = Vec::new();
+        for (r, track) in rows.tracks.iter().enumerate() {
+            let fr = match track {
+                TrackSize::Fr { fr, .. } => Some(*fr),
+                _ => None,
+            };
+            if let Some(fr) = fr {
+                let mut carrier = Object::new("Item");
+                carrier.set("Layout.row", Value::Number(r as f64));
+                carrier.set("Layout.column", Value::Number(col));
+                carrier.set(
+                    "Layout.preferredHeight",
+                    Value::expr(format!(
+                        "Math.round(parent.eldurFree * {})",
+                        fmt_number(f64::from(fr))
+                    )),
+                );
+                grid.push_child(carrier);
+                continue;
+            }
+            if !auto_rows.contains(&r) {
+                continue;
+            }
+            let min = match track {
+                TrackSize::Auto { min: Some(m) } => fmt_number(f64::from(*m)),
+                _ => "0".to_owned(),
+            };
+            let base = format!("Math.max({min}, {})", terms[r].join(", "));
+            let mut carrier = Object::new("Item");
+            carrier.id = Some(self.ids.claim("gridRow"));
+            carrier.members.push(Member::PropertyDecl {
+                ty: "real".to_owned(),
+                name: "eldurBase".to_owned(),
+                value: Some(Value::expr(base)),
+                readonly: false,
+                required: false,
+            });
+            carrier.set("Layout.row", Value::Number(r as f64));
+            carrier.set("Layout.column", Value::Number(col));
+            if frs {
+                carrier.set("Layout.preferredHeight", Value::expr("eldurBase"));
+            } else if definite {
+                carrier.set(
+                    "Layout.preferredHeight",
+                    Value::expr("eldurBase + parent.eldurFree"),
+                );
+            } else {
+                carrier.set("Layout.fillHeight", true);
+                carrier.set("Layout.preferredHeight", Value::expr("eldurBase"));
+            }
+            bases.push(format!("{}.eldurBase", carrier.id.clone().expect("set")));
+            grid.push_child(carrier);
+        }
+        if definite {
+            let fixed: f64 = rows
+                .tracks
+                .iter()
+                .filter_map(|t| match t {
+                    TrackSize::Fixed(Value::Number(n)) => Some(*n),
+                    _ => None,
+                })
+                .sum();
+            let gaps = f64::from(rows.gap) * placement.rows.saturating_sub(1) as f64;
+            let taken = fmt_number(fixed + gaps);
+            let shares: f64 = rows
+                .tracks
+                .iter()
+                .filter_map(|t| match t {
+                    TrackSize::Fr { fr, .. } => Some(f64::from(*fr)),
+                    _ => None,
+                })
+                .sum();
+            let shares = if frs { shares } else { bases.len() as f64 };
+            let bases: String = bases.iter().map(|b| format!(" - {b}")).collect();
+            let free = format!(
+                "Math.max(0, (height - {taken}{bases}) / {})",
+                fmt_number(shares)
+            );
+            // Qt rounds each row up; a row a hair over the height would raise it.
+            let free = if frs {
+                free
+            } else {
+                format!("Math.floor({free})")
+            };
+            grid.members.push(Member::PropertyDecl {
+                ty: "real".to_owned(),
+                name: "eldurFree".to_owned(),
+                value: Some(Value::expr(free)),
+                readonly: false,
+                required: false,
+            });
+        }
+        true
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1051,6 +1404,21 @@ impl Emitter<'_, '_> {
         let layout_item = is_layout(&obj.type_name);
         let h_align = self_alignment(container.justify_items, style.justify_self, true);
         let v_align = self_alignment(container.align_items, style.align_self, false);
+        // A column is as wide as what it holds: an item narrower than its fixed track
+        // keeps the rest of it open, or the next column would start at its edge.
+        if p.col_span == 1
+            && h_align.is_none()
+            && let Some(TrackSize::Fixed(Value::Number(track))) = cols.tracks.get(p.col)
+            && let Size::Length(l) = &style.width
+            && let Some(width) = l.as_px()
+            && f64::from(width + extra_w) < *track
+        {
+            add_margin(
+                obj,
+                "Layout.rightMargin",
+                (*track - f64::from(width + extra_w)) as f32,
+            );
+        }
         let mut flags = Vec::new();
         let mut ignored_alignment = false;
         for (plan, start, span, align, size, horizontal, extra) in [
@@ -1088,12 +1456,30 @@ impl Emitter<'_, '_> {
                 _ => None,
             };
             let props = plan.props(start, span, layout_item);
+            let in_fr = !horizontal && span == 1 && plan.is_fr(start);
             match (own, align) {
+                // Its size is no part of what the track is given: all `fr`
+                // rows are at 0, and it only stops short of filling.
+                (Some(v), align) if in_fr => {
+                    obj.set("Layout.preferredHeight", Value::Number(0.0));
+                    obj.set("Layout.fillHeight", true);
+                    obj.set("Layout.maximumHeight", v);
+                    flags.push(align.unwrap_or("Qt.AlignTop"));
+                }
+                (None, Some(a)) if in_fr => {
+                    obj.set("Layout.preferredHeight", Value::Number(0.0));
+                    obj.set("Layout.fillHeight", true);
+                    obj.set("Layout.maximumHeight", Value::expr("implicitHeight"));
+                    flags.push(a);
+                }
                 // A sized item keeps its size in its area.
                 (Some(v), align) => {
                     obj.set(&format!("Layout.preferred{dim}"), v);
-                    if let Some(a) = align {
-                        flags.push(a);
+                    match align {
+                        Some(a) => flags.push(a),
+                        // Stretching gives way to a set height, at the start.
+                        None if !horizontal => flags.push("Qt.AlignTop"),
+                        None => {}
                     }
                     // Layouts fill by default, past their preferred size.
                     if layout_item {
@@ -1115,6 +1501,9 @@ impl Emitter<'_, '_> {
                     flags.push("Qt.AlignTop");
                 }
                 (None, None) => {
+                    if !horizontal && layout_item && props.is_empty() {
+                        obj.set("Layout.fillHeight", false);
+                    }
                     for (k, v) in props {
                         obj.set(&k, v);
                     }

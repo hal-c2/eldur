@@ -507,9 +507,10 @@ ApplicationWindow {
                             // <div class="hero-actions">
                             RowLayout {
                                 id: heroActions
-                                property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+                                property real eldurCarry: (Layout.topMargin < 0 ? Math.round(Layout.topMargin) : Math.ceil(Layout.topMargin)) - Layout.topMargin + item.eldurCarry + 0.000001
 
                                 spacing: 0
+                                Layout.fillHeight: false
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
@@ -629,6 +630,9 @@ ApplicationWindow {
                                 }
 
                                 Item {
+                                    id: item
+                                    property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                     Layout.fillWidth: true
                                 }
                             }

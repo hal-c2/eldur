@@ -1,0 +1,105 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.b{width:100px;background:#ccc;border:1px solid #000;margin:1px 0}
+.on0{width:50px}
+.on1{height:30px}
+.on2{margin-top:10px}
+.on3{margin-left:10px}
+.on4{padding:6px}
+.on5{padding-left:6px}
+.on6{border-width:6px}
+.on7{min-width:220px}
+.on8{max-width:50px}
+.on9{line-height:40px}
+.on10{font-size:32px}
+</style></head><body><div id="e0" class="b">x</div><div id="e1" class="b">x</div><div id="e2" class="b">x</div><div id="e3" class="b">x</div><div id="e4" class="b">x</div><div id="e5" class="b">x</div><div id="e6" class="b">x</div><div id="e7" class="b">x</div><div id="e8" class="b">x</div><div id="e9" class="b">x</div><div id="e10" class="b">x</div><div id="end">end</div>
+<script>
+var end=document.getElementById("end");
+function r(t,el){var b=el.getBoundingClientRect();console.log("CS "+t+" "+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)+","+Math.round(b.height)+" end="+Math.round(end.getBoundingClientRect().top))}
+r("width 0",document.getElementById("e0"));
+document.getElementById("e0").style.width="60px";r("width 1inline",document.getElementById("e0"));
+document.getElementById("e0").classList.add("on0");r("width 2both",document.getElementById("e0"));
+document.getElementById("e0").style.width="";r("width 3class",document.getElementById("e0"));
+document.getElementById("e0").classList.remove("on0");r("width 4base",document.getElementById("e0"));
+document.getElementById("e0").style.width="60px";document.getElementById("e0").style.width="";r("width 5clear",document.getElementById("e0"));
+document.getElementById("e0").classList.add("on0");r("width 6class",document.getElementById("e0"));
+document.getElementById("e0").classList.remove("on0");r("width 7base",document.getElementById("e0"));
+r("height 0",document.getElementById("e1"));
+document.getElementById("e1").style.height="40px";r("height 1inline",document.getElementById("e1"));
+document.getElementById("e1").classList.add("on1");r("height 2both",document.getElementById("e1"));
+document.getElementById("e1").style.height="";r("height 3class",document.getElementById("e1"));
+document.getElementById("e1").classList.remove("on1");r("height 4base",document.getElementById("e1"));
+document.getElementById("e1").style.height="40px";document.getElementById("e1").style.height="";r("height 5clear",document.getElementById("e1"));
+document.getElementById("e1").classList.add("on1");r("height 6class",document.getElementById("e1"));
+document.getElementById("e1").classList.remove("on1");r("height 7base",document.getElementById("e1"));
+r("marginTop 0",document.getElementById("e2"));
+document.getElementById("e2").style.marginTop="7px";r("marginTop 1inline",document.getElementById("e2"));
+document.getElementById("e2").classList.add("on2");r("marginTop 2both",document.getElementById("e2"));
+document.getElementById("e2").style.marginTop="";r("marginTop 3class",document.getElementById("e2"));
+document.getElementById("e2").classList.remove("on2");r("marginTop 4base",document.getElementById("e2"));
+document.getElementById("e2").style.marginTop="7px";document.getElementById("e2").style.marginTop="";r("marginTop 5clear",document.getElementById("e2"));
+document.getElementById("e2").classList.add("on2");r("marginTop 6class",document.getElementById("e2"));
+document.getElementById("e2").classList.remove("on2");r("marginTop 7base",document.getElementById("e2"));
+r("marginLeft 0",document.getElementById("e3"));
+document.getElementById("e3").style.marginLeft="7px";r("marginLeft 1inline",document.getElementById("e3"));
+document.getElementById("e3").classList.add("on3");r("marginLeft 2both",document.getElementById("e3"));
+document.getElementById("e3").style.marginLeft="";r("marginLeft 3class",document.getElementById("e3"));
+document.getElementById("e3").classList.remove("on3");r("marginLeft 4base",document.getElementById("e3"));
+document.getElementById("e3").style.marginLeft="7px";document.getElementById("e3").style.marginLeft="";r("marginLeft 5clear",document.getElementById("e3"));
+document.getElementById("e3").classList.add("on3");r("marginLeft 6class",document.getElementById("e3"));
+document.getElementById("e3").classList.remove("on3");r("marginLeft 7base",document.getElementById("e3"));
+r("padding 0",document.getElementById("e4"));
+document.getElementById("e4").style.padding="3px";r("padding 1inline",document.getElementById("e4"));
+document.getElementById("e4").classList.add("on4");r("padding 2both",document.getElementById("e4"));
+document.getElementById("e4").style.padding="";r("padding 3class",document.getElementById("e4"));
+document.getElementById("e4").classList.remove("on4");r("padding 4base",document.getElementById("e4"));
+document.getElementById("e4").style.padding="3px";document.getElementById("e4").style.padding="";r("padding 5clear",document.getElementById("e4"));
+document.getElementById("e4").classList.add("on4");r("padding 6class",document.getElementById("e4"));
+document.getElementById("e4").classList.remove("on4");r("padding 7base",document.getElementById("e4"));
+r("paddingLeft 0",document.getElementById("e5"));
+document.getElementById("e5").style.paddingLeft="3px";r("paddingLeft 1inline",document.getElementById("e5"));
+document.getElementById("e5").classList.add("on5");r("paddingLeft 2both",document.getElementById("e5"));
+document.getElementById("e5").style.paddingLeft="";r("paddingLeft 3class",document.getElementById("e5"));
+document.getElementById("e5").classList.remove("on5");r("paddingLeft 4base",document.getElementById("e5"));
+document.getElementById("e5").style.paddingLeft="3px";document.getElementById("e5").style.paddingLeft="";r("paddingLeft 5clear",document.getElementById("e5"));
+document.getElementById("e5").classList.add("on5");r("paddingLeft 6class",document.getElementById("e5"));
+document.getElementById("e5").classList.remove("on5");r("paddingLeft 7base",document.getElementById("e5"));
+r("borderWidth 0",document.getElementById("e6"));
+document.getElementById("e6").style.borderWidth="3px";r("borderWidth 1inline",document.getElementById("e6"));
+document.getElementById("e6").classList.add("on6");r("borderWidth 2both",document.getElementById("e6"));
+document.getElementById("e6").style.borderWidth="";r("borderWidth 3class",document.getElementById("e6"));
+document.getElementById("e6").classList.remove("on6");r("borderWidth 4base",document.getElementById("e6"));
+document.getElementById("e6").style.borderWidth="3px";document.getElementById("e6").style.borderWidth="";r("borderWidth 5clear",document.getElementById("e6"));
+document.getElementById("e6").classList.add("on6");r("borderWidth 6class",document.getElementById("e6"));
+document.getElementById("e6").classList.remove("on6");r("borderWidth 7base",document.getElementById("e6"));
+r("minWidth 0",document.getElementById("e7"));
+document.getElementById("e7").style.minWidth="200px";r("minWidth 1inline",document.getElementById("e7"));
+document.getElementById("e7").classList.add("on7");r("minWidth 2both",document.getElementById("e7"));
+document.getElementById("e7").style.minWidth="";r("minWidth 3class",document.getElementById("e7"));
+document.getElementById("e7").classList.remove("on7");r("minWidth 4base",document.getElementById("e7"));
+document.getElementById("e7").style.minWidth="200px";document.getElementById("e7").style.minWidth="";r("minWidth 5clear",document.getElementById("e7"));
+document.getElementById("e7").classList.add("on7");r("minWidth 6class",document.getElementById("e7"));
+document.getElementById("e7").classList.remove("on7");r("minWidth 7base",document.getElementById("e7"));
+r("maxWidth 0",document.getElementById("e8"));
+document.getElementById("e8").style.maxWidth="60px";r("maxWidth 1inline",document.getElementById("e8"));
+document.getElementById("e8").classList.add("on8");r("maxWidth 2both",document.getElementById("e8"));
+document.getElementById("e8").style.maxWidth="";r("maxWidth 3class",document.getElementById("e8"));
+document.getElementById("e8").classList.remove("on8");r("maxWidth 4base",document.getElementById("e8"));
+document.getElementById("e8").style.maxWidth="60px";document.getElementById("e8").style.maxWidth="";r("maxWidth 5clear",document.getElementById("e8"));
+document.getElementById("e8").classList.add("on8");r("maxWidth 6class",document.getElementById("e8"));
+document.getElementById("e8").classList.remove("on8");r("maxWidth 7base",document.getElementById("e8"));
+r("lineHeight 0",document.getElementById("e9"));
+document.getElementById("e9").style.lineHeight="30px";r("lineHeight 1inline",document.getElementById("e9"));
+document.getElementById("e9").classList.add("on9");r("lineHeight 2both",document.getElementById("e9"));
+document.getElementById("e9").style.lineHeight="";r("lineHeight 3class",document.getElementById("e9"));
+document.getElementById("e9").classList.remove("on9");r("lineHeight 4base",document.getElementById("e9"));
+document.getElementById("e9").style.lineHeight="30px";document.getElementById("e9").style.lineHeight="";r("lineHeight 5clear",document.getElementById("e9"));
+document.getElementById("e9").classList.add("on9");r("lineHeight 6class",document.getElementById("e9"));
+document.getElementById("e9").classList.remove("on9");r("lineHeight 7base",document.getElementById("e9"));
+r("fontSize 0",document.getElementById("e10"));
+document.getElementById("e10").style.fontSize="24px";r("fontSize 1inline",document.getElementById("e10"));
+document.getElementById("e10").classList.add("on10");r("fontSize 2both",document.getElementById("e10"));
+document.getElementById("e10").style.fontSize="";r("fontSize 3class",document.getElementById("e10"));
+document.getElementById("e10").classList.remove("on10");r("fontSize 4base",document.getElementById("e10"));
+document.getElementById("e10").style.fontSize="24px";document.getElementById("e10").style.fontSize="";r("fontSize 5clear",document.getElementById("e10"));
+document.getElementById("e10").classList.add("on10");r("fontSize 6class",document.getElementById("e10"));
+document.getElementById("e10").classList.remove("on10");r("fontSize 7base",document.getElementById("e10"));
+</script></body></html>

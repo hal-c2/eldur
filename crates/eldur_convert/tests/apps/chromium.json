@@ -23671,7 +23671,8 @@
   {
    "name": "load",
    "log": [
-    "text \"Before em after\" \"Run new bold and it tail\" \"Text then  more and more words to wrap Press this span \""
+    "text \"Before em after\" \"Run new bold and it tail\" \"Text then  more and more words to wrap Press this span \"",
+    "rects ws:2 ms:2 rs:3"
    ],
    "state": {
     "#s0": [

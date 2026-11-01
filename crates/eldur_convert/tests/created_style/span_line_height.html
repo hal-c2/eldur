@@ -1,0 +1,21 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.big{line-height:40px}.sm{line-height:5px}
+</style></head><body>
+<p id="a" style="margin:0">one <span id="as" style="line-height:40px">two</span> three</p>
+<p id="b" style="margin:0">one <span id="bs" class="big">two</span> three</p>
+<p id="c" style="margin:0">one <span id="cs" class="sm">two</span> three</p>
+<p id="d" style="margin:0;line-height:normal">one <span id="ds" style="line-height:40px">two</span> three</p>
+<p id="e" style="margin:0">one <b id="es" style="line-height:30px"><i style="line-height:50px">deep</i></b> <button id="eb">k</button></p>
+<p id="f" style="margin:0">one <span id="fs" style="display:inline-block;line-height:30px">box</span> two</p>
+<p id="s" style="margin:0">static</p>
+<div id="end">end</div>
+<script>
+var q=function(s){return document.getElementById(s)};
+var ids=["a","b","c","d","e","f","s","end"];
+function d(t){console.log("CS "+t+" "+ids.map(function(i){var b=q(i).getBoundingClientRect();return i+":"+Math.round(b.top)+","+Math.round(b.height)}).join(" "))}
+d("0");
+var m=document.createElement("span");m.textContent=" made";m.style.lineHeight="44px";q("s").appendChild(m);d("made");
+var n=document.createElement("span");n.textContent=" big";n.className="big";q("a").appendChild(n);d("made2");
+m.style.lineHeight="";d("made3");
+q("bs").classList.remove("big");d("cls");
+q("cs").style.lineHeight="60px";d("inl");
+</script></body></html>

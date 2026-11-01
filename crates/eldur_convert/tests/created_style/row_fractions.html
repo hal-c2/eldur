@@ -1,0 +1,33 @@
+<!doctype html><html><head><style>body{margin:0;font:15px/22.6px sans-serif}
+.r{display:flex;justify-content:space-between;padding:10px 0;background:#eee;width:300px}
+.p{display:flex;justify-content:space-between;padding:10px 0;width:300px}
+.n{display:flex;justify-content:space-between;width:300px}
+.u{height:10px;background:#ccc}
+</style></head><body>
+<div class="r" id="r1"><span>a</span><span>b</span></div>
+<div class="r" id="r2"><span>a</span><span>b</span></div>
+<div class="r" id="r3"><span>a</span><span>b</span></div>
+<div class="r" id="r4"><span>a</span><span>b</span></div>
+<div class="p" id="p1"><span>a</span><span id="c1">b</span></div>
+<div class="p" id="p2"><span>a</span><span id="c2">b</span></div>
+<div class="p" id="p3"><span>a</span><span id="c3">b</span></div>
+<div class="p" id="p4"><span>a</span><span id="c4">b</span></div>
+<div class="p" id="p5"><span>a</span><span id="c5">b</span></div>
+<div class="p" id="p6"><span>a</span><span id="c6">b</span></div>
+<div class="n" id="n1"><span>a</span><span id="m1">b</span></div>
+<div class="n" id="n2"><span>a</span><span id="m2">b</span></div>
+<div class="n" id="n3"><span>a</span><span id="m3">b</span></div>
+<div class="n" id="n4"><span>a</span><span id="m4">b</span></div>
+<div class="n" id="n5"><span>a</span><span id="m5">b</span></div>
+<div class="n" id="n6"><span>a</span><span id="m6">b</span></div>
+<div class="n" id="n7"><span>a</span><span id="m7">b</span></div>
+<div class="n" id="n8"><span>a</span><span id="m8">b</span></div>
+<div class="n" id="n9"><span>a</span><span id="m9">b</span></div>
+<div class="n" id="n10"><span>a</span><span id="m10">b</span></div>
+<div class="n" id="n11"><span>a</span><span id="m11">b</span></div>
+<div class="n" id="n12"><span>a</span><span id="m12">b</span></div>
+<div class="u" id="after"></div>
+<script>
+var ids=["r2","r3","r4","p1","c1","p2","c2","p3","c3","p4","c4","p5","c5","p6","c6","n1","m1","n2","m2","n3","m3","n4","m4","n5","m5","n6","m6","n7","m7","n8","m8","n9","m9","n10","m10","n11","m11","n12","m12","after"];
+console.log("CS 0 "+ids.map(function(i){return i+":"+Math.round(document.getElementById(i).getBoundingClientRect().top)}).join(" "));
+</script></body></html>

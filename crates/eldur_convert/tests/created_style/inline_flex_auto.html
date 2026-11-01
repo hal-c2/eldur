@@ -1,0 +1,19 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}
+header{text-align:center}
+.t{display:inline-flex;gap:4px;margin:36px auto 56px;padding:4px;border:1px solid #888;background:#fff}
+.b{height:40px;padding:0 22px;border:0}
+.s{margin-left:6px;padding:2px 8px;background:#dcfce7;font-size:12px}
+.u{display:inline-flex;margin:10px auto}
+.l{display:inline-flex;margin:0 auto;background:#eee}
+</style></head><body>
+<header id="h"><h1 id="t" style="margin:0">Title</h1><p id="p" style="margin:0">Line</p>
+<div class="t" id="g"><button class="b" id="b1">Monthly</button><button class="b" id="b2">Yearly <span class="s">Save 20%</span></button></div>
+</header>
+<div id="after">x</div>
+<div id="d2"><div class="u" id="u"><span id="u1">a</span></div></div>
+<div id="d3" style="text-align:right"><div class="l" id="l"><span id="l1">a</span></div></div>
+<div id="end">z</div>
+<script>
+function rect(i){var b=document.getElementById(i).getBoundingClientRect();return i+":"+(i=="g"||i=="b1"?"":Math.round(b.left)+","+Math.round(b.width)+",")+Math.round(b.top)+","+Math.round(b.height)}
+["h","g","b1","after","d2","u","d3","l","end"].forEach(function(i){console.log("CS "+rect(i))});
+</script></body></html>

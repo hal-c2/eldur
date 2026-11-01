@@ -37,7 +37,7 @@ ApplicationWindow {
         for (let i = 0; i < cells.length; ++i) {
             const cell = cells[i]
             const slot = cell.tableSlot
-            if (!slot)
+            if (!slot || cell.visible === false)
                 continue
             if (slot[3] > 1) {
                 spanning.push(cell)
@@ -666,6 +666,7 @@ ApplicationWindow {
                 anchors.leftMargin: 11
                 anchors.rightMargin: 10
                 renderType: Text.NativeRendering
+                horizontalAlignment: td.cls_num ? Text.AlignRight : Text.AlignLeft
             }
         }
     }
@@ -707,6 +708,7 @@ ApplicationWindow {
                 anchors.rightMargin: 11
                 anchors.topMargin: 7
                 renderType: Text.NativeRendering
+                horizontalAlignment: td2.cls_num ? Text.AlignRight : Text.AlignLeft
             }
         }
     }

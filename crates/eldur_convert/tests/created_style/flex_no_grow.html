@@ -1,0 +1,12 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}
+.s{display:flex;flex-direction:column;height:300px;width:200px}
+.m{display:flex;flex-direction:column}
+.g{flex:1;display:flex;flex-direction:column}
+.b{height:20px;background:#ccc}
+</style></head><body>
+<div class="s" id="side"><nav class="m" id="menu"><div class="b" id="a">a</div><div class="b" id="c">c</div></nav><div class="b" id="after">w</div></div>
+<div class="s" id="side2"><nav class="m" id="m2"><div class="b" id="d">d</div></nav><div class="g" id="grow"><div class="b" id="e">e</div></div><div class="b" id="end">z</div></div>
+<script>
+var ids=["menu","after","m2","grow","e","end"];
+console.log("CS 0 "+ids.map(function(i){var b=document.getElementById(i).getBoundingClientRect();return i+":"+Math.round(b.top)+","+Math.round(b.height)}).join(" "));
+</script></body></html>

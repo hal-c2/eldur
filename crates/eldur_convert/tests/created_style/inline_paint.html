@@ -1,0 +1,88 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.b{height:20px;width:100px;background:#00ff00;margin:0 0 2px}.big{color:#00ff00;width:60px;height:20px;font-size:40px;line-height:20px;overflow:hidden;background:#fff}
+.on-bg{background:#0000ff}
+.on-bgs{background:#0000ff}
+.on-op{opacity:0.25}
+.on-vis{visibility:visible}
+.on-col{color:#0000ff}
+</style></head><body>
+<div id="bga" class="b" data-probe="50,10"></div>
+<div id="bgb" class="b" data-probe="50,10"></div>
+<div id="bgc" class="b" data-probe="50,10"></div>
+<div id="bgd" class="b" data-probe="50,10"></div>
+<div id="bge" class="b" data-probe="50,10"></div>
+<div id="bgf" class="b" data-probe="50,10"></div>
+<div id="bgsa" class="b" data-probe="50,10"></div>
+<div id="bgsb" class="b" data-probe="50,10"></div>
+<div id="bgsc" class="b" data-probe="50,10"></div>
+<div id="bgsd" class="b" data-probe="50,10"></div>
+<div id="bgse" class="b" data-probe="50,10"></div>
+<div id="bgsf" class="b" data-probe="50,10"></div>
+<div id="opa" class="b" data-probe="50,10"></div>
+<div id="opb" class="b" data-probe="50,10"></div>
+<div id="opc" class="b" data-probe="50,10"></div>
+<div id="opd" class="b" data-probe="50,10"></div>
+<div id="ope" class="b" data-probe="50,10"></div>
+<div id="opf" class="b" data-probe="50,10"></div>
+<div id="visa" class="b" data-probe="50,10"></div>
+<div id="visb" class="b" data-probe="50,10"></div>
+<div id="visc" class="b" data-probe="50,10"></div>
+<div id="visd" class="b" data-probe="50,10"></div>
+<div id="vise" class="b" data-probe="50,10"></div>
+<div id="visf" class="b" data-probe="50,10"></div>
+<div id="cola" class="b">t</div><div id="cha" class="b"><p id="chpa" style="margin:0">t</p></div>
+<div id="colb" class="b">t</div><div id="chb" class="b"><p id="chpb" style="margin:0">t</p></div>
+<div id="colc" class="b">t</div><div id="chc" class="b"><p id="chpc" style="margin:0">t</p></div>
+<div id="cold" class="b">t</div><div id="chd" class="b"><p id="chpd" style="margin:0">t</p></div>
+<div id="cole" class="b">t</div><div id="che" class="b"><p id="chpe" style="margin:0">t</p></div>
+<div id="colf" class="b">t</div><div id="chf" class="b"><p id="chpf" style="margin:0">t</p></div>
+<script>
+var q=function(s){return document.getElementById(s)};
+q("bga").style.backgroundColor="#ff0000";
+q("bgb").style.backgroundColor="#ff0000";q("bgb").classList.add("on-bg");
+q("bgc").style.backgroundColor="#ff0000";q("bgc").classList.add("on-bg");q("bgc").style.backgroundColor="";
+q("bgd").classList.add("on-bg");q("bgd").style.backgroundColor="#ff0000";q("bgd").classList.remove("on-bg");q("bgd").style.backgroundColor="";
+q("bge").style.backgroundColor="#ff0000";q("bge").style.backgroundColor="";q("bge").classList.add("on-bg");
+q("bgf").style.backgroundColor="#ff0000";q("bgf").style.backgroundColor="";q("bgf").classList.add("on-bg");q("bgf").classList.remove("on-bg");
+q("bgsa").style.background="#ff0000";
+q("bgsb").style.background="#ff0000";q("bgsb").classList.add("on-bgs");
+q("bgsc").style.background="#ff0000";q("bgsc").classList.add("on-bgs");q("bgsc").style.background="";
+q("bgsd").classList.add("on-bgs");q("bgsd").style.background="#ff0000";q("bgsd").classList.remove("on-bgs");q("bgsd").style.background="";
+q("bgse").style.background="#ff0000";q("bgse").style.background="";q("bgse").classList.add("on-bgs");
+q("bgsf").style.background="#ff0000";q("bgsf").style.background="";q("bgsf").classList.add("on-bgs");q("bgsf").classList.remove("on-bgs");
+q("opa").style.opacity="0.5";
+q("opb").style.opacity="0.5";q("opb").classList.add("on-op");
+q("opc").style.opacity="0.5";q("opc").classList.add("on-op");q("opc").style.opacity="";
+q("opd").classList.add("on-op");q("opd").style.opacity="0.5";q("opd").classList.remove("on-op");q("opd").style.opacity="";
+q("ope").style.opacity="0.5";q("ope").style.opacity="";q("ope").classList.add("on-op");
+q("opf").style.opacity="0.5";q("opf").style.opacity="";q("opf").classList.add("on-op");q("opf").classList.remove("on-op");
+q("visa").style.visibility="hidden";
+q("visb").style.visibility="hidden";q("visb").classList.add("on-vis");
+q("visc").style.visibility="hidden";q("visc").classList.add("on-vis");q("visc").style.visibility="";
+q("visd").classList.add("on-vis");q("visd").style.visibility="hidden";q("visd").classList.remove("on-vis");q("visd").style.visibility="";
+q("vise").style.visibility="hidden";q("vise").style.visibility="";q("vise").classList.add("on-vis");
+q("visf").style.visibility="hidden";q("visf").style.visibility="";q("visf").classList.add("on-vis");q("visf").classList.remove("on-vis");
+q("cola").style.color="#ff0000";
+console.log("CS cola "+getComputedStyle(q("cola")).color);
+q("cha").style.color="#ff0000";
+console.log("CS cha "+getComputedStyle(q("cha")).color);
+q("colb").style.color="#ff0000";q("colb").classList.add("on-col");
+console.log("CS colb "+getComputedStyle(q("colb")).color);
+q("chb").style.color="#ff0000";q("chb").classList.add("on-col");
+console.log("CS chb "+getComputedStyle(q("chb")).color);
+q("colc").style.color="#ff0000";q("colc").classList.add("on-col");q("colc").style.color="";
+console.log("CS colc "+getComputedStyle(q("colc")).color);
+q("chc").style.color="#ff0000";q("chc").classList.add("on-col");q("chc").style.color="";
+console.log("CS chc "+getComputedStyle(q("chc")).color);
+q("cold").classList.add("on-col");q("cold").style.color="#ff0000";q("cold").classList.remove("on-col");q("cold").style.color="";
+console.log("CS cold "+getComputedStyle(q("cold")).color);
+q("chd").classList.add("on-col");q("chd").style.color="#ff0000";q("chd").classList.remove("on-col");q("chd").style.color="";
+console.log("CS chd "+getComputedStyle(q("chd")).color);
+q("cole").style.color="#ff0000";q("cole").style.color="";q("cole").classList.add("on-col");
+console.log("CS cole "+getComputedStyle(q("cole")).color);
+q("che").style.color="#ff0000";q("che").style.color="";q("che").classList.add("on-col");
+console.log("CS che "+getComputedStyle(q("che")).color);
+q("colf").style.color="#ff0000";q("colf").style.color="";q("colf").classList.add("on-col");q("colf").classList.remove("on-col");
+console.log("CS colf "+getComputedStyle(q("colf")).color);
+q("chf").style.color="#ff0000";q("chf").style.color="";q("chf").classList.add("on-col");q("chf").classList.remove("on-col");
+console.log("CS chf "+getComputedStyle(q("chf")).color);
+</script></body></html>

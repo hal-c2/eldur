@@ -44,6 +44,7 @@ ApplicationWindow {
                     implicitWidth: bodyContent.implicitWidth
                     implicitHeight: bodyContent.implicitHeight
                     Layout.fillWidth: true
+                    Layout.preferredHeight: root.height
 
                     ColumnLayout {
                         id: bodyContent
@@ -122,6 +123,7 @@ ApplicationWindow {
                                         // <nav class="menu">
                                         ColumnLayout {
                                             spacing: 0
+                                            Layout.fillHeight: false
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
 
@@ -388,6 +390,7 @@ ApplicationWindow {
                                         // <nav class="menu">
                                         ColumnLayout {
                                             spacing: 0
+                                            Layout.fillHeight: false
                                             Layout.fillWidth: true
                                             Layout.maximumWidth: Number.POSITIVE_INFINITY
                                             Layout.topMargin: 6 - menuLabel.eldurCarry
@@ -546,10 +549,14 @@ ApplicationWindow {
 
                                         // <header class="main-header">
                                         Rectangle {
+                                            id: mainHeader
+                                            property real eldurCarry: Math.ceil(Layout.topMargin - (searchFlow.eldurCarry)) - Layout.topMargin + searchFlow.eldurCarry + 0.000001
+
                                             color: "#ffffff"
                                             implicitWidth: mainHeaderContent.implicitWidth + 56
                                             implicitHeight: mainHeaderContent.implicitHeight + 41
                                             Layout.fillWidth: true
+                                            Layout.preferredHeight: implicitHeight - searchFlow.eldurCarry
 
                                             Rectangle {
                                                 anchors.left: parent.left
@@ -598,6 +605,8 @@ ApplicationWindow {
                                                 // <form class="search">
                                                 EldurLines {
                                                     id: searchFlow
+                                                    property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                     color: "#1c2331"
                                                     font.family: "sans-serif"
                                                     font.pixelSize: 15
@@ -638,9 +647,13 @@ ApplicationWindow {
 
                                         // <div class="content">
                                         Item {
+                                            id: content
+                                            property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + panel.eldurCarry + 0.000001
+
                                             implicitWidth: contentContent.implicitWidth + 56
                                             implicitHeight: contentContent.implicitHeight + 48
                                             Layout.fillWidth: true
+                                            Layout.topMargin: -mainHeader.eldurCarry
 
                                             ColumnLayout {
                                                 id: contentContent
@@ -664,6 +677,7 @@ ApplicationWindow {
                                                     columnSpacing: 16
                                                     rowSpacing: 16
                                                     uniformCellWidths: true
+                                                    Layout.fillHeight: false
                                                     Layout.fillWidth: true
                                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
 
@@ -862,6 +876,9 @@ ApplicationWindow {
 
                                                 // <section class="panel">
                                                 Rectangle {
+                                                    id: panel
+                                                    property real eldurCarry: Math.ceil(Layout.topMargin - (row2.eldurCarry)) - Layout.topMargin + row2.eldurCarry + 0.000001
+
                                                     color: "#ffffff"
                                                     radius: 8
                                                     implicitWidth: panelContent.implicitWidth + 38
@@ -870,6 +887,7 @@ ApplicationWindow {
                                                     border.color: "#e1e5ee"
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: 20
+                                                    Layout.preferredHeight: implicitHeight - row2.eldurCarry
                                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                                     ColumnLayout {
@@ -942,6 +960,9 @@ ApplicationWindow {
 
                                                                 // <span class="pill">
                                                                 Rectangle {
+                                                                    id: pill
+                                                                    property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                                     color: "#e3f1e6"
                                                                     radius: 999
                                                                     implicitWidth: pillText.implicitWidth + 20
@@ -978,10 +999,15 @@ ApplicationWindow {
 
                                                         // <div class="row">
                                                         Rectangle {
+                                                            id: row
+                                                            property real eldurCarry: Math.ceil(Layout.topMargin - (pill2.eldurCarry)) - Layout.topMargin + pill2.eldurCarry + 0.000001
+
                                                             color: "#00000000"
                                                             implicitWidth: rowContent2.implicitWidth
                                                             implicitHeight: rowContent2.implicitHeight + 21
                                                             Layout.fillWidth: true
+                                                            Layout.topMargin: -pill.eldurCarry
+                                                            Layout.preferredHeight: implicitHeight - pill2.eldurCarry
 
                                                             Rectangle {
                                                                 anchors.left: parent.left
@@ -1026,6 +1052,9 @@ ApplicationWindow {
 
                                                                 // <span class="pill is-warn">
                                                                 Rectangle {
+                                                                    id: pill2
+                                                                    property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                                     color: "#fdf0dc"
                                                                     radius: 999
                                                                     implicitWidth: pillText2.implicitWidth + 20
@@ -1062,10 +1091,15 @@ ApplicationWindow {
 
                                                         // <div class="row">
                                                         Rectangle {
+                                                            id: row2
+                                                            property real eldurCarry: Math.ceil(Layout.topMargin - (pill3.eldurCarry)) - Layout.topMargin + pill3.eldurCarry + 0.000001
+
                                                             color: "#00000000"
                                                             implicitWidth: rowContent3.implicitWidth
                                                             implicitHeight: rowContent3.implicitHeight + 21
                                                             Layout.fillWidth: true
+                                                            Layout.topMargin: -row.eldurCarry
+                                                            Layout.preferredHeight: implicitHeight - pill3.eldurCarry
 
                                                             Rectangle {
                                                                 anchors.left: parent.left
@@ -1110,6 +1144,9 @@ ApplicationWindow {
 
                                                                 // <span class="pill">
                                                                 Rectangle {
+                                                                    id: pill3
+                                                                    property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                                     color: "#e3f1e6"
                                                                     radius: 999
                                                                     implicitWidth: pillText3.implicitWidth + 20
@@ -1162,6 +1199,8 @@ ApplicationWindow {
                                             implicitWidth: footerContent.implicitWidth + 56
                                             implicitHeight: footerContent.implicitHeight + 29
                                             Layout.fillWidth: true
+                                            Layout.topMargin: -content.eldurCarry
+                                            Layout.preferredHeight: implicitHeight - a.eldurCarry
 
                                             Rectangle {
                                                 anchors.left: parent.left
@@ -1208,6 +1247,9 @@ ApplicationWindow {
 
                                                 // <a>
                                                 Text {
+                                                    id: a
+                                                    property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
+
                                                     text: "Help centre"
                                                     textFormat: Text.PlainText
                                                     color: "#0b5cad"

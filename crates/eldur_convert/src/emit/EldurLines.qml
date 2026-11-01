@@ -68,6 +68,10 @@ Item {
     // A run keeps its font's natural height to be placed, so what its own
     // `line-height` asks of the line is told here. Null is `normal`.
     function setRunLineHeight(item, pixels) {
+        // Its text may not have changed, and nothing else would lay the line out.
+        if (_ownLeading.get(item) !== (pixels === null ? undefined : pixels)) {
+            schedule();
+        }
         if (pixels === null) {
             _ownLeading.delete(item);
         } else {
@@ -85,6 +89,12 @@ Item {
         return run.place.some(function(p) {
             return x >= p.x && x < p.x + p.width && y >= p.y && y < p.y + p.height;
         });
+    }
+
+    // Where a run's lines are, in its own coordinates.
+    function runLines(item) {
+        const run = _runs.get(item);
+        return run && run.place ? run.place : [];
     }
 
     function _isText(item) {
@@ -390,11 +400,17 @@ Item {
             const late = [];
             // Text of the block's font is the strut already; only a larger span adds.
             for (const t of l.texts) {
-                const own = _ownLeading.get(t.item);
+                // Told by the runtime, or what the converter saw in the page.
+                const told = _ownLeading.get(t.item);
+                const own = told !== undefined ? told : t.item.eldurOwnLine;
                 if (own !== undefined) {
-                    const half = (own - t.height) / 2;
-                    above = Math.max(above, t.ascent + Math.floor(half));
-                    below = Math.max(below, t.height - t.ascent + Math.ceil(half));
+                    // Rounded as the strut's are, or a span of the block's own font
+                    // comes out a pixel off the line it is on.
+                    const ascent = round(t.ascent);
+                    const descent = round(t.height - t.ascent);
+                    const half = (own - ascent - descent) / 2;
+                    above = Math.max(above, ascent + Math.floor(half));
+                    below = Math.max(below, descent + Math.ceil(half));
                 } else if (lineHeight === 0 && t.height > strutAbove + strutBelow + 1) {
                     above = Math.max(above, t.ascent);
                     below = Math.max(below, t.height - t.ascent);

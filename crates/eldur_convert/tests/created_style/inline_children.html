@@ -1,0 +1,24 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}
+#fl{display:flex;gap:4px}#gr{display:grid;grid-template-columns:100px 100px;gap:4px}.w{width:40px}.c{background:#ddd}
+</style></head><body>
+<div id="cont" class="c"><p id="c1" style="margin:0">one</p><p id="c2" style="margin:4px 0 0">two <b>bold</b> end</p></div>
+<div id="fl"><div id="f1" class="c">a</div><div id="f2" class="c">b</div><div id="f3" class="c">c</div></div>
+<div id="gr"><div id="g1" class="c">a</div><div id="g2" class="c"><span>b</span></div></div>
+<div id="wrap"><div id="fill" class="c" style="width:10%;height:6px"></div></div>
+<div id="end">end</div>
+<script>
+var q=function(s){return document.getElementById(s)};
+var ids=["cont","c1","c2","fl","f1","f2","f3","gr","g1","g2","wrap","fill","end"];
+function d(t){console.log("CS "+t+" "+ids.map(function(i){var b=q(i).getBoundingClientRect();return i+":"+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)+","+Math.round(b.height)}).join(" "))}
+d("0");
+q("cont").style.padding="10px";d("pad");
+q("cont").style.padding="";d("unpad");
+q("f2").style.width="80px";d("fw");
+q("f2").classList.add("w");d("fw2");
+q("f2").style.width="";d("fw3");
+q("f2").classList.remove("w");d("fw4");
+q("g2").style.marginLeft="10px";d("gm");
+q("g2").style.marginLeft="";d("gm2");
+q("fill").style.width="50%";d("pct");
+q("fill").style.height="10px";d("h");
+</script></body></html>

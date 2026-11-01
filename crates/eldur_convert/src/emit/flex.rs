@@ -22,9 +22,9 @@ use eldur_css::{
 };
 use eldur_qml::{Member, Object, Value};
 
-use super::Emitter;
 use super::flow::{is_layout, is_viewport_relative, size_value};
 use super::units::{fmt_number, length_expr, number, px_part, round};
+use super::{Emitter, Given};
 use crate::boxes::{BoxKind, LayoutBox, describe, node_line};
 
 /// The stretch factor of growing items against spacers of factor 1: the
@@ -187,6 +187,7 @@ impl Emitter<'_, '_> {
         line: Option<u32>,
     ) -> Object {
         let style = &*b.style;
+        let given = self.own_given;
         let row = matches!(
             style.flex_direction,
             FlexDirection::Row | FlexDirection::RowReverse
@@ -296,13 +297,52 @@ impl Emitter<'_, '_> {
             }
             item
         };
+        let mut may_lead = self.hides_items;
+        let mut lead_follows = false;
+        let mut spacers_at = Vec::new();
         for (i, child) in items.iter().enumerate() {
             for _ in 0..slots[i] {
                 layout.push_child(spacer());
+                spacers_at.push(layout.members.len() - 1);
             }
+            let own_definite = super::flow::has_height(style) || given == Given::Definite;
+            self.child_given = if row {
+                let (m_start, m_end) = (&child.style.margin.top, &child.style.margin.bottom);
+                let stretches = cross(style.align_items, child.style.align_self, m_start, m_end)
+                    == Cross::Stretch;
+                match (stretches, own_definite) {
+                    (true, true) => Given::Definite,
+                    (true, false) => Given::Stretched,
+                    (false, _) => Given::Content,
+                }
+            } else if child.style.flex_grow > 0.0 && own_definite {
+                Given::Definite
+            } else {
+                Given::Content
+            };
             let mut obj = self.item(child, decoration).obj;
             let lead_gap = if spacers && i > 0 { gap } else { 0.0 };
             self.flex_item(&mut obj, child, style, axis, unequal_grow, lead_gap);
+            // The gap is between items in the layout: `display: none` is not one.
+            if lead_gap != 0.0 && may_lead {
+                lead_follows = true;
+                let name = axis.lead_margin();
+                let (with, without) = match obj.get(name) {
+                    Some(Value::Number(v)) => (fmt_number(*v), fmt_number(*v - round(gap))),
+                    Some(v) => (
+                        value_text(v),
+                        format!("{} - {}", value_text(v), fmt_number(round(gap))),
+                    ),
+                    None => (fmt_number(round(gap)), "0".to_owned()),
+                };
+                obj.set(
+                    name,
+                    Value::expr(format!(
+                        "parent && parent.eldurLeads ? (parent.eldurLeads(this) ? {with} : {without}) : {without}"
+                    )),
+                );
+            }
+            may_lead |= obj.get("visible").is_some();
             if capped && child.style.flex_grow > 0.0 {
                 obj.set(stretch, CAPPED_STRETCH);
             }
@@ -317,8 +357,37 @@ impl Emitter<'_, '_> {
         }
         for _ in 0..slots[n] {
             layout.push_child(spacer());
+            spacers_at.push(layout.members.len() - 1);
         }
-        if !row {
+        if lead_follows {
+            for at in spacers_at {
+                if let Member::Child(item) = &mut layout.members[at] {
+                    item.members.push(Member::PropertyDecl {
+                        ty: "bool".to_owned(),
+                        name: "eldurSpacer".to_owned(),
+                        value: Some(Value::Bool(true)),
+                        readonly: true,
+                        required: false,
+                    });
+                }
+            }
+            layout.members.push(Member::Function {
+                name: "eldurLeads".to_owned(),
+                params: vec!["item".to_owned()],
+                body: [
+                    "for (const kid of children) {",
+                    "    if (kid === item) return false",
+                    "    if (kid.visible && !kid.eldurSpacer) return true",
+                    "}",
+                    "return false",
+                ]
+                .map(str::to_owned)
+                .to_vec(),
+            });
+        }
+        if row {
+            self.row_excess(&mut layout);
+        } else {
             self.carry(&mut layout);
         }
         layout
@@ -505,6 +574,10 @@ impl Emitter<'_, '_> {
             };
             obj.set(&format!("Layout.maximum{main}"), Value::expr(cap));
         } else {
+            // A Qt layout fills by default; `flex-grow: 0` takes no spare room.
+            if layout_item {
+                obj.set(&format!("Layout.fill{main}"), false);
+            }
             if let Some(v) = &basis {
                 obj.set(&format!("Layout.preferred{main}"), v.clone());
                 if style.flex_shrink == 0.0 {
@@ -534,13 +607,20 @@ impl Emitter<'_, '_> {
             // Stretching block flow would spread its children apart; a CSS
             // block's stay at the top and only its unpainted end moves.
             (Cross::Stretch, None)
-                if row && obj.type_name == "ColumnLayout" && b.kind == BoxKind::Block =>
+                if row
+                    && obj.type_name == "ColumnLayout"
+                    && b.kind == BoxKind::Block
+                    && !super::flow::holds_percent_height(b) =>
             {
                 obj.set("Layout.fillHeight", false);
                 obj.set("Layout.alignment", Value::expr("Qt.AlignTop"));
             }
             (Cross::Stretch, None) => {
                 obj.set(&format!("Layout.fill{cross_name}"), true);
+                // Its percentage children can overflow it, not raise the row.
+                if row && b.kind == BoxKind::Block && super::flow::holds_percent_height(b) {
+                    obj.set("Layout.minimumHeight", Value::Number(0.0));
+                }
                 match max_cross {
                     Some(v) => {
                         obj.set(&format!("Layout.maximum{cross_name}"), v);

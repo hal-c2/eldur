@@ -169,6 +169,12 @@ pub struct Analysis {
     pub reads_template_content: bool,
     /// Some script asks `getComputedStyle`, which is answered from the cascade.
     pub reads_computed_style: bool,
+    /// Some script reaches an inline style or `hidden`: clearing either leaves
+    /// what the rules say, so the runtime needs them.
+    pub touches_inline_style: bool,
+    /// Some script writes an inline property only a generic box answers to, so
+    /// the item an id names may be replaced: its queries stay live.
+    pub adopts_for_inline: bool,
     /// Some script reaches a static table's structure: what its rows and
     /// sections paint follows from the rules at run time.
     pub static_tables: bool,
@@ -181,6 +187,7 @@ impl Analysis {
     pub fn needs_cascade(&self) -> bool {
         self.open_elements
             || self.reads_computed_style
+            || self.touches_inline_style
             || self.static_tables
             || !self.created.is_empty()
     }

@@ -319,7 +319,7 @@ const cells = Array.from(grid.children).concat(grid.eldurCreatedCells || [])
 for (let i = 0; i < cells.length; ++i) {
     const cell = cells[i]
     const slot = cell.tableSlot
-    if (!slot)
+    if (!slot || cell.visible === false)
         continue
     if (slot[3] > 1) {
         spanning.push(cell)
@@ -1038,7 +1038,18 @@ impl<'a> Emitter<'a, '_> {
                     .iter()
                     .all(|c| matches!(tag(c), Some("td" | "th")))
         };
-        b.node.is_some_and(|n| self.live_tables.contains(&n))
+        // A row that can leave the layout needs an item of its own to say so.
+        let row_hides = |row: &LayoutBox<'_>| {
+            self.hides_items || row.node.is_some_and(|n| self.collapsed.contains(&n))
+        };
+        let hides = boxes(b).iter().any(|part| match tag(part) {
+            Some("thead" | "tbody" | "tfoot") => {
+                row_hides(part) || boxes(part).iter().any(row_hides)
+            }
+            _ => row_hides(part),
+        });
+        b.node
+            .is_some_and(|n| hides || self.live_tables.contains(&n))
             && tag(b) == Some("table")
             && boxes(b).iter().all(|part| match tag(part) {
                 Some("thead" | "tbody" | "tfoot") => boxes(part).iter().all(row_fits),

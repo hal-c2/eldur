@@ -39,6 +39,39 @@ pub(crate) fn has_atomic(items: &[Inline<'_>]) -> bool {
     })
 }
 
+/// Whether a span's own `line-height` makes a line taller than the block's
+/// strut does. One `Text` has one line height, so such a span takes a run of
+/// its own for `EldurLines` to measure. Under `normal` on both sides Qt's own
+/// line grows with the font and is left to it, and an inherited `line-height`
+/// on another font is what `rich_shift` measures the `Text` for.
+fn raises_line(block: &ComputedStyle, span: &ComputedStyle) -> bool {
+    if span.line_height == block.line_height {
+        return false;
+    }
+    let reach = |st: &ComputedStyle| {
+        let ascent = text_baseline(st);
+        (ascent, line_height(st) - ascent)
+    };
+    let (block_up, block_down) = reach(block);
+    let (span_up, span_down) = reach(span);
+    block_up.max(span_up) + block_down.max(span_down) > line_height(block) + 0.5
+}
+
+fn holds_tall_span(block: &ComputedStyle, items: &[Inline<'_>]) -> bool {
+    items.iter().any(|item| match item {
+        Inline::Span(span) => {
+            raises_line(block, span.style) || holds_tall_span(block, &span.children)
+        }
+        Inline::Text(_) | Inline::Atomic(_) | Inline::LineBreak => false,
+    })
+}
+
+/// Whether `items` must be placed by `EldurLines` for a span's `line-height`.
+/// A span that is the whole line is already the `Text`'s own (`whole_span`).
+pub(crate) fn needs_lines_for_leading(block: &ComputedStyle, items: &[Inline<'_>]) -> bool {
+    holds_tall_span(block, items) && super::text::whole_span(block, items).is_none()
+}
+
 fn has_words(items: &[Inline<'_>]) -> bool {
     items.iter().any(|item| match item {
         Inline::Text(_) | Inline::LineBreak => true,
@@ -87,6 +120,7 @@ enum Piece<'b, 'a> {
 }
 
 fn pieces<'b, 'a>(
+    block: &ComputedStyle,
     items: &'b [Inline<'a>],
     chain: &mut Vec<&'b Span<'a>>,
     run: &mut Vec<Inline<'a>>,
@@ -99,14 +133,28 @@ fn pieces<'b, 'a>(
                 let owner = chain.iter().rev().find_map(|span| span.node);
                 out.push(Piece::Atomic(b, owner));
             }
-            Inline::Span(span) if has_atomic(&span.children) => {
+            Inline::Span(span)
+                if has_atomic(&span.children) || holds_tall_span(block, &span.children) =>
+            {
+                let tall = raises_line(block, span.style);
+                if tall {
+                    end_run(run, out);
+                }
                 chain.push(span);
                 // With only boxes in it, no run would give the element a node.
                 if span.node.is_some() && !has_words(&span.children) {
                     push_in_chain(run, Inline::Text(String::new()), chain);
                 }
-                pieces(&span.children, chain, run, out);
+                pieces(block, &span.children, chain, run, out);
                 chain.pop();
+                if tall {
+                    end_run(run, out);
+                }
+            }
+            Inline::Span(span) if raises_line(block, span.style) => {
+                end_run(run, out);
+                push_in_chain(run, item.clone(), chain);
+                end_run(run, out);
             }
             other => push_in_chain(run, other.clone(), chain),
         }
@@ -225,6 +273,20 @@ fn drop_own_leading(text: &mut Object) {
     });
 }
 
+/// What a run's own `line-height` asks of its line, for `EldurLines`.
+fn declare_own_line(text: &mut Object, pixels: f32) {
+    text.members.insert(
+        0,
+        Member::PropertyDecl {
+            ty: "real".to_owned(),
+            name: "eldurOwnLine".to_owned(),
+            value: Some(number(pixels)),
+            readonly: true,
+            required: false,
+        },
+    );
+}
+
 fn string_property(obj: &mut Object, name: &str, value: &str) {
     obj.members.insert(
         0,
@@ -280,7 +342,7 @@ impl Emitter<'_, '_> {
             .claim(&format!("{} flow", super::hint(self.doc, b)));
         let mut list = Vec::new();
         let mut run = Vec::new();
-        pieces(items, &mut Vec::new(), &mut run, &mut list);
+        pieces(style, items, &mut Vec::new(), &mut run, &mut list);
         end_run(&mut run, &mut list);
 
         let mut flow = Object::new("EldurLines").with_id(flow_id.clone());
@@ -324,6 +386,14 @@ impl Emitter<'_, '_> {
                     drop_own_leading(&mut text);
                     let mut spans = Vec::new();
                     each_span(&items, &mut spans);
+                    let own_line = spans
+                        .iter()
+                        .filter(|span| raises_line(style, span.style))
+                        .map(|span| line_height(span.style))
+                        .fold(0.0_f32, f32::max);
+                    if own_line > 0.0 {
+                        declare_own_line(&mut text, own_line);
+                    }
                     // A label cut by its control still takes a press on its words.
                     for span in spans {
                         if !span.node.is_some_and(|n| self.has_tapped_label(n)) {
@@ -361,6 +431,12 @@ impl Emitter<'_, '_> {
                     let part = self.atomic(a, decoration, &flow_id);
                     runs |= part.own;
                     let mut obj = part.obj;
+                    // A `Text` is placed as a run: the line measures it on its
+                    // natural height.
+                    if obj.type_name == "Text" && raises_line(style, &a.style) {
+                        drop_own_leading(&mut obj);
+                        declare_own_line(&mut obj, line_height(&a.style));
+                    }
                     let kind = baseline_kind(a);
                     if let Some(kind) = kind {
                         string_property(&mut obj, "eldurBaseline", kind);
@@ -471,6 +547,11 @@ impl Emitter<'_, '_> {
                         obj.set(name, number(m));
                     }
                 }
+            }
+            if let Size::Length(l) = &style.width
+                && let Some(w) = l.as_px()
+            {
+                obj.set("implicitWidth", number(w + extra_w));
             }
             obj.set("width", Value::expr(OWN_WIDTH));
             return Part {

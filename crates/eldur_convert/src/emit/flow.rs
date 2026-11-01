@@ -655,6 +655,7 @@ impl Emitter<'_, '_> {
         // implicit width: an item fills up to its percentage instead. A
         // Layout's own width does not depend on its column's.
         let fill_percent = super::image::is_percent_width(style) && !is_layout(&obj.type_name);
+        let mut overflow_column = false;
         match &style.width {
             Size::Length(w) if fill_percent => {
                 obj.set("Layout.fillWidth", true);
@@ -670,6 +671,7 @@ impl Emitter<'_, '_> {
                 if let Some(a) = alignment {
                     obj.set("Layout.alignment", Value::expr(a));
                 }
+                overflow_column = self.column_fills && alignment.is_none() && w.as_px().is_some();
             }
             _ if shrink => {
                 if let Some(a) = alignment {
@@ -712,6 +714,21 @@ impl Emitter<'_, '_> {
                 obj.set(name, length_value_nonneg(l));
             }
         }
+        // A Layout's column is at least as wide as an item that does not fill,
+        // so an item wider than the column would widen its siblings. In CSS it
+        // overflows them. The margin asks the column for nothing, and the item
+        // stays at its preferred width in whatever cell it gets. It cannot follow
+        // the column's width: a column once widened would stay as wide.
+        if overflow_column
+            && obj.get("Layout.leftMargin").is_none()
+            && obj.get("Layout.rightMargin").is_none()
+        {
+            // A script can move it to a row or a grid, where the cell is its own.
+            obj.set(
+                "Layout.rightMargin",
+                Value::expr("parent instanceof ColumnLayout ? -Layout.preferredWidth : 0"),
+            );
+        }
         // A filling item is no wider than its cell, but a percentage of the
         // content box overflows by the padding and border, as in CSS; it
         // overflows on the right, so an item placed right keeps its edge.
@@ -735,6 +752,39 @@ impl Emitter<'_, '_> {
                 obj.set(
                     "Layout.preferredHeight",
                     number(l.px + l.percent / 100.0 * base + extra_h),
+                );
+            }
+            Size::Length(Length::Linear(l))
+                if self.percent_of_parent && l.px == 0.0 && l.vw == 0.0 && l.vh == 0.0 =>
+            {
+                // A full-height item with a sibling overflows its column, which Qt's
+                // layouts answer with a recursive rearrange: it takes what the sibling
+                // leaves.
+                if self.percent_fills {
+                    obj.set("Layout.preferredHeight", 0.0);
+                    obj.set("Layout.fillHeight", true);
+                } else {
+                    let h = format!(
+                        "parent.height * {}",
+                        fmt_number(f64::from(l.percent) / 100.0)
+                    );
+                    obj.set("Layout.preferredHeight", Value::expr(h.clone()));
+                    obj.set("Layout.minimumHeight", Value::expr(h));
+                }
+            }
+            Size::Length(Length::Linear(l))
+                if let Some(vh) = self.percent_of_vh
+                    && l.vw == 0.0
+                    && l.vh == 0.0 =>
+            {
+                let of_viewport = eldur_css::LengthPercentage {
+                    vh: vh * l.percent / 100.0,
+                    percent: 0.0,
+                    ..*l
+                };
+                obj.set(
+                    "Layout.preferredHeight",
+                    size_value(&Length::Linear(of_viewport), extra_h),
                 );
             }
             Size::Length(_) => {
@@ -821,6 +871,21 @@ fn float_run(boxes: &[LayoutBox<'_>]) -> usize {
         return 0;
     };
     boxes.iter().take_while(|b| side(b) == Some(first)).count()
+}
+
+impl Emitter<'_, '_> {
+    /// Whether a percentage height on a child of the current block means
+    /// anything.
+    pub(super) fn percent_resolves(&self) -> bool {
+        self.percent_height_base.is_some() || self.percent_of_vh.is_some()
+    }
+}
+
+/// A stretched block fills after all if a child's percentage height needs that.
+pub(crate) fn holds_percent_height(b: &LayoutBox<'_>) -> bool {
+    matches!(&b.content, crate::boxes::Content::Blocks(kids) if kids.iter().any(|k| {
+        matches!(&k.style.height, Size::Length(Length::Linear(l)) if l.percent != 0.0)
+    }))
 }
 
 pub(crate) fn has_height(style: &ComputedStyle) -> bool {

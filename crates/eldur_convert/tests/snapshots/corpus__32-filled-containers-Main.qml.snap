@@ -686,6 +686,7 @@ ApplicationWindow {
             Layout.minimumWidth: 90
             Layout.maximumWidth: 90
             Layout.preferredHeight: 24
+            Layout.alignment: Qt.AlignTop
 
             Text {
                 id: cellText
@@ -722,6 +723,7 @@ ApplicationWindow {
             implicitWidth: tag2Text.implicitWidth
             implicitHeight: tag2Text.implicitHeight
             Layout.preferredWidth: 60
+            Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
             Layout.preferredHeight: 28
 
             Text {
