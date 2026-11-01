@@ -1,0 +1,13 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}.r{display:flex}.b{width:50px;height:20px;background:#ccc}</style></head><body>
+<div class="b" id="m1">a</div>
+<div class="b" id="m2">b</div>
+<div class="b" id="m3">c</div>
+<div class="b" id="m4">d</div>
+<div class="r" id="row"><div class="b" id="k">k</div></div>
+<script>
+var q=function(s){return document.getElementById(s)};
+var ids=["k","m1","m2","m3"];
+function d(t){console.log("CS "+t+" "+ids.map(function(i){var b=q(i).getBoundingClientRect();return i+":"+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)}).join(" "))}
+d("0");
+q("row").appendChild(q("m1"));q("row").appendChild(q("m2"));d("row");
+</script></body></html>

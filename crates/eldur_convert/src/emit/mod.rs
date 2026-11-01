@@ -106,6 +106,9 @@ pub(crate) struct Emitter<'a, 'd> {
     /// laid out, when it is definite: their percentage heights resolve
     /// against it (CSS 2.2 §10.5).
     percent_height_base: Option<f32>,
+    /// Whether the column being filled has a width its items cannot change,
+    /// so one of them may be told to overflow it.
+    column_fills: bool,
     /// `position: fixed` boxes, placed over the window outside the
     /// `Flickable` so they do not scroll.
     fixed: Vec<(Option<String>, Object)>,
@@ -207,6 +210,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             nested_z: None,
             above_flow: None,
             percent_height_base: None,
+            column_fills: true,
             fixed: Vec::new(),
             backdrop: None,
             fragments: BTreeMap::new(),
@@ -519,6 +523,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 .replace(lists::ContainingBlock::of(b.node, style))
         });
         let outer_above_flow = self.above_flow.take();
+        let outer_fills = std::mem::replace(&mut self.column_fills, false);
         let outer_hideable = self.hideable_ancestor;
         self.hideable_ancestor = if outer_abs.is_some() {
             false
@@ -580,7 +585,20 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     _ => None,
                 };
                 let outer = std::mem::replace(&mut self.percent_height_base, base);
+                self.column_fills = b.kind == BoxKind::Block
+                    && style.display == eldur_css::Display::Block
+                    && style.float == eldur_css::Float::None
+                    && !matches!(
+                        style.position,
+                        eldur_css::Position::Absolute | eldur_css::Position::Fixed
+                    )
+                    && match &style.width {
+                        Size::Auto => outer_fills,
+                        Size::Length(l) => l.as_px().is_some(),
+                        _ => false,
+                    };
                 let column = self.column(&in_flow, decoration, top_open, bottom_open);
+                self.column_fills = false;
                 self.percent_height_base = outer;
                 escaped_top = column.escaped_top;
                 escaped_bottom = column.escaped_bottom;
@@ -610,6 +628,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             }
             Content::Empty => None,
         };
+        self.column_fills = outer_fills;
         self.backdrop = outer_backdrop;
         self.hideable_ancestor = outer_hideable;
         let overlays = match outer_abs {

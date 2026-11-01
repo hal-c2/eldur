@@ -364,6 +364,7 @@ ApplicationWindow {
                         y: 6
                     }
                     Layout.preferredWidth: 216
+                    Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
                     Layout.topMargin: 40
 
                     Text {

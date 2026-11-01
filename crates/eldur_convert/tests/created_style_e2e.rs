@@ -244,3 +244,8 @@ fn hidden_reads() {
 fn span_line_height() {
     page("span_line_height");
 }
+
+#[test]
+fn moved_fixed() {
+    page("moved_fixed");
+}

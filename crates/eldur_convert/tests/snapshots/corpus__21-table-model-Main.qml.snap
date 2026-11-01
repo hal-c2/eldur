@@ -1019,6 +1019,7 @@ ApplicationWindow {
                     Layout.fillWidth: false
                     Layout.preferredWidth: 480
                     Layout.maximumWidth: Number.POSITIVE_INFINITY
+                    Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
                     Layout.topMargin: 8
 
                     Item {

@@ -178,6 +178,7 @@ ApplicationWindow {
                     border.width: 1
                     border.color: "#cbd5e1"
                     Layout.preferredWidth: 346
+                    Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
                     Layout.topMargin: 24 - mixed.eldurCarry
                     Layout.preferredHeight: implicitHeight
                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0

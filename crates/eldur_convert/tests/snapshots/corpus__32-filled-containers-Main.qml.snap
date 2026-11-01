@@ -722,6 +722,7 @@ ApplicationWindow {
             implicitWidth: tag2Text.implicitWidth
             implicitHeight: tag2Text.implicitHeight
             Layout.preferredWidth: 60
+            Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
             Layout.preferredHeight: 28
 
             Text {

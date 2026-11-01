@@ -655,6 +655,7 @@ impl Emitter<'_, '_> {
         // implicit width: an item fills up to its percentage instead. A
         // Layout's own width does not depend on its column's.
         let fill_percent = super::image::is_percent_width(style) && !is_layout(&obj.type_name);
+        let mut overflow_column = false;
         match &style.width {
             Size::Length(w) if fill_percent => {
                 obj.set("Layout.fillWidth", true);
@@ -670,6 +671,7 @@ impl Emitter<'_, '_> {
                 if let Some(a) = alignment {
                     obj.set("Layout.alignment", Value::expr(a));
                 }
+                overflow_column = self.column_fills && alignment.is_none() && w.as_px().is_some();
             }
             _ if shrink => {
                 if let Some(a) = alignment {
@@ -711,6 +713,21 @@ impl Emitter<'_, '_> {
             {
                 obj.set(name, length_value_nonneg(l));
             }
+        }
+        // A Layout's column is at least as wide as an item that does not fill,
+        // so an item wider than the column would widen its siblings. In CSS it
+        // overflows them. The margin asks the column for nothing, and the item
+        // stays at its preferred width in whatever cell it gets. It cannot follow
+        // the column's width: a column once widened would stay as wide.
+        if overflow_column
+            && obj.get("Layout.leftMargin").is_none()
+            && obj.get("Layout.rightMargin").is_none()
+        {
+            // A script can move it to a row or a grid, where the cell is its own.
+            obj.set(
+                "Layout.rightMargin",
+                Value::expr("parent instanceof ColumnLayout ? -Layout.preferredWidth : 0"),
+            );
         }
         // A filling item is no wider than its cell, but a percentage of the
         // content box overflows by the padding and border, as in CSS; it

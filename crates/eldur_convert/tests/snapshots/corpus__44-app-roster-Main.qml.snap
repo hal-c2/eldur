@@ -304,6 +304,7 @@ ApplicationWindow {
                     objectName: "staff"
                     Layout.preferredWidth: 640
                     Layout.maximumWidth: Number.POSITIVE_INFINITY
+                    Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
                     Layout.topMargin: 10 - toolsFlow.eldurCarry
 
                     Item {
