@@ -600,6 +600,10 @@ ApplicationWindow {
                         color: "#3b82f6"
                         implicitWidth: 0
                         implicitHeight: 0
+                        layer.enabled: true
+                        layer.effect: EldurFilter {
+                            blurDeviation: 4
+                        }
                         z: 1
                         Layout.row: 1
                         Layout.column: 4
@@ -616,6 +620,11 @@ ApplicationWindow {
                         color: "#3b82f6"
                         implicitWidth: 0
                         implicitHeight: 0
+                        layer.enabled: true
+                        layer.effect: EldurFilter {
+                            colorMatrix: Qt.matrix4x4(1.5, 0, 0, 0, 0, 1.5, 0, 0, 0, 0, 1.5, 0, 0, 0, 0, 1)
+                            colorOffset: Qt.vector4d(0, 0, 0, 0)
+                        }
                         z: 1
                         Layout.row: 1
                         Layout.column: 5
@@ -632,6 +641,11 @@ ApplicationWindow {
                         color: "#3b82f6"
                         implicitWidth: 0
                         implicitHeight: 0
+                        layer.enabled: true
+                        layer.effect: EldurFilter {
+                            colorMatrix: Qt.matrix4x4(0.5, 0, 0, 0, 0, 0.5, 0, 0, 0, 0, 0.5, 0, 0, 0, 0, 1)
+                            colorOffset: Qt.vector4d(0, 0, 0, 0)
+                        }
                         z: 1
                         Layout.row: 2
                         Layout.column: 0
@@ -648,6 +662,11 @@ ApplicationWindow {
                         color: "#3b82f6"
                         implicitWidth: 0
                         implicitHeight: 0
+                        layer.enabled: true
+                        layer.effect: EldurFilter {
+                            colorMatrix: Qt.matrix4x4(2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1)
+                            colorOffset: Qt.vector4d(-0.5, -0.5, -0.5, 0)
+                        }
                         z: 1
                         Layout.row: 2
                         Layout.column: 1
@@ -664,6 +683,11 @@ ApplicationWindow {
                         color: "#3b82f6"
                         implicitWidth: 0
                         implicitHeight: 0
+                        layer.enabled: true
+                        layer.effect: EldurFilter {
+                            colorMatrix: Qt.matrix4x4(0.2126, 0.7152, 0.0722, 0, 0.2126, 0.7152, 0.0722, 0, 0.2126, 0.7152, 0.0722, 0, 0, 0, 0, 1)
+                            colorOffset: Qt.vector4d(0, 0, 0, 0)
+                        }
                         z: 1
                         Layout.row: 2
                         Layout.column: 2
@@ -680,6 +704,11 @@ ApplicationWindow {
                         color: "#3b82f6"
                         implicitWidth: 0
                         implicitHeight: 0
+                        layer.enabled: true
+                        layer.effect: EldurFilter {
+                            colorMatrix: Qt.matrix4x4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0.4)
+                            colorOffset: Qt.vector4d(0, 0, 0, 0)
+                        }
                         z: 1
                         Layout.row: 2
                         Layout.column: 3
@@ -696,6 +725,14 @@ ApplicationWindow {
                         color: "#3b82f6"
                         implicitWidth: 0
                         implicitHeight: 0
+                        layer.enabled: true
+                        layer.effect: EldurFilter {
+                            hasDrop: true
+                            dropX: 4
+                            dropY: 4
+                            dropDeviation: 6
+                            dropColor: "#000000"
+                        }
                         z: 1
                         Layout.row: 2
                         Layout.column: 4
@@ -712,6 +749,11 @@ ApplicationWindow {
                         color: "#3b82f6"
                         implicitWidth: 0
                         implicitHeight: 0
+                        layer.enabled: true
+                        layer.effect: EldurFilter {
+                            colorMatrix: Qt.matrix4x4(0.393, 0.769, 0.189, 0, 0.349, 0.686, 0.168, 0, 0.272, 0.534, 0.131, 0, 0, 0, 0, 1)
+                            colorOffset: Qt.vector4d(0, 0, 0, 0)
+                        }
                         z: 1
                         Layout.row: 2
                         Layout.column: 5
@@ -728,6 +770,11 @@ ApplicationWindow {
                         color: "#3b82f6"
                         implicitWidth: 0
                         implicitHeight: 0
+                        layer.enabled: true
+                        layer.effect: EldurFilter {
+                            colorMatrix: Qt.matrix4x4(0.00000000000000005551115123125783, 0, 1, 0, 0.356, 0.855, -0.21099999999999997, 0, -0.5740000000000001, 1.43, 0.14400000000000004, 0, 0, 0, 0, 1)
+                            colorOffset: Qt.vector4d(0, 0, 0, 0)
+                        }
                         z: 1
                         Layout.row: 3
                         Layout.column: 0
@@ -744,6 +791,11 @@ ApplicationWindow {
                         color: "#3b82f6"
                         implicitWidth: 0
                         implicitHeight: 0
+                        layer.enabled: true
+                        layer.effect: EldurFilter {
+                            colorMatrix: Qt.matrix4x4(-1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1)
+                            colorOffset: Qt.vector4d(1, 1, 1, 0)
+                        }
                         z: 1
                         Layout.row: 3
                         Layout.column: 1
@@ -760,6 +812,11 @@ ApplicationWindow {
                         color: "#3b82f6"
                         implicitWidth: 0
                         implicitHeight: 0
+                        layer.enabled: true
+                        layer.effect: EldurFilter {
+                            colorMatrix: Qt.matrix4x4(2.5740000000000003, -1.4300000000000002, -0.14399999999999996, 0, -0.42600000000000005, 1.5699999999999998, -0.14399999999999996, 0, -0.42600000000000005, -1.4300000000000002, 2.8560000000000003, 0, 0, 0, 0, 1)
+                            colorOffset: Qt.vector4d(0, 0, 0, 0)
+                        }
                         z: 1
                         Layout.row: 3
                         Layout.column: 2
@@ -776,6 +833,11 @@ ApplicationWindow {
                         color: "#3b82f6"
                         implicitWidth: 0
                         implicitHeight: 0
+                        layer.enabled: true
+                        layer.effect: EldurFilter {
+                            colorMatrix: Qt.matrix4x4(0.17008, 0.57216, 0.057760000000000006, 0, 0.17008, 0.57216, 0.057760000000000006, 0, 0.17008, 0.57216, 0.057760000000000006, 0, 0, 0, 0, 1)
+                            colorOffset: Qt.vector4d(0, 0, 0, 0)
+                        }
                         z: 1
                         Layout.row: 3
                         Layout.column: 3
@@ -793,6 +855,7 @@ ApplicationWindow {
                         implicitWidth: oGroupContent.implicitWidth
                         implicitHeight: oGroupContent.implicitHeight
                         opacity: 0.5
+                        layer.enabled: true
                         Layout.row: 3
                         Layout.column: 4
                         Layout.preferredWidth: 150
@@ -830,6 +893,7 @@ ApplicationWindow {
                         implicitWidth: 0
                         implicitHeight: 0
                         opacity: 0.6
+                        layer.enabled: true
                         z: 1
                         Layout.row: 3
                         Layout.column: 5
@@ -978,8 +1042,8 @@ ApplicationWindow {
                     // <div id="t-hard" class="ts">
                     Item {
                         id: tHard
-                        implicitWidth: tHardText.implicitWidth
-                        implicitHeight: tHardText.implicitHeight
+                        implicitWidth: shadowedText.implicitWidth
+                        implicitHeight: shadowedText.implicitHeight
                         Layout.row: 4
                         Layout.column: 2
                         Layout.preferredWidth: 150
@@ -989,7 +1053,7 @@ ApplicationWindow {
                         Layout.alignment: Qt.AlignTop
 
                         Text {
-                            id: tHardText
+                            id: shadowedText
                             text: "Shadow"
                             textFormat: Text.PlainText
                             color: "#111111"
@@ -1005,14 +1069,21 @@ ApplicationWindow {
                             anchors.right: parent.right
                             anchors.top: parent.top
                             renderType: Text.NativeRendering
+
+                            EldurTextShadow {
+                                source: shadowedText
+                                x: 2
+                                y: 2
+                                color: "#dc2626"
+                            }
                         }
                     }
 
                     // <div id="t-blur" class="ts">
                     Item {
                         id: tBlur
-                        implicitWidth: tBlurText.implicitWidth
-                        implicitHeight: tBlurText.implicitHeight
+                        implicitWidth: shadowedText2.implicitWidth
+                        implicitHeight: shadowedText2.implicitHeight
                         Layout.row: 4
                         Layout.column: 3
                         Layout.preferredWidth: 150
@@ -1022,7 +1093,7 @@ ApplicationWindow {
                         Layout.alignment: Qt.AlignTop
 
                         Text {
-                            id: tBlurText
+                            id: shadowedText2
                             text: "Shadow"
                             textFormat: Text.PlainText
                             color: "#111111"
@@ -1038,14 +1109,22 @@ ApplicationWindow {
                             anchors.right: parent.right
                             anchors.top: parent.top
                             renderType: Text.NativeRendering
+
+                            EldurTextShadow {
+                                source: shadowedText2
+                                x: 0
+                                y: 0
+                                color: "#2563eb"
+                                blurDeviation: 3
+                            }
                         }
                     }
 
                     // <div id="t-multi" class="ts">
                     Item {
                         id: tMulti
-                        implicitWidth: tMultiText.implicitWidth
-                        implicitHeight: tMultiText.implicitHeight
+                        implicitWidth: shadowedText3.implicitWidth
+                        implicitHeight: shadowedText3.implicitHeight
                         Layout.row: 4
                         Layout.column: 4
                         Layout.preferredWidth: 150
@@ -1055,7 +1134,7 @@ ApplicationWindow {
                         Layout.alignment: Qt.AlignTop
 
                         Text {
-                            id: tMultiText
+                            id: shadowedText3
                             text: "Shadow"
                             textFormat: Text.PlainText
                             color: "#111111"
@@ -1071,14 +1150,28 @@ ApplicationWindow {
                             anchors.right: parent.right
                             anchors.top: parent.top
                             renderType: Text.NativeRendering
+
+                            EldurTextShadow {
+                                source: shadowedText3
+                                x: -1
+                                y: -1
+                                color: "#dc2626"
+                            }
+
+                            EldurTextShadow {
+                                source: shadowedText3
+                                x: 1
+                                y: 1
+                                color: "#16a34a"
+                            }
                         }
                     }
 
                     // <div id="t-em" class="ts">
                     Item {
                         id: tEm
-                        implicitWidth: tEmText.implicitWidth
-                        implicitHeight: tEmText.implicitHeight
+                        implicitWidth: shadowedText4.implicitWidth
+                        implicitHeight: shadowedText4.implicitHeight
                         Layout.row: 4
                         Layout.column: 5
                         Layout.preferredWidth: 150
@@ -1088,7 +1181,7 @@ ApplicationWindow {
                         Layout.alignment: Qt.AlignTop
 
                         Text {
-                            id: tEmText
+                            id: shadowedText4
                             text: "Shadow"
                             textFormat: Text.PlainText
                             color: "#111111"
@@ -1104,6 +1197,14 @@ ApplicationWindow {
                             anchors.right: parent.right
                             anchors.top: parent.top
                             renderType: Text.NativeRendering
+
+                            EldurTextShadow {
+                                source: shadowedText4
+                                x: 2.4
+                                y: 2.4
+                                color: "#000000"
+                                blurDeviation: 1.2
+                            }
                         }
                     }
 

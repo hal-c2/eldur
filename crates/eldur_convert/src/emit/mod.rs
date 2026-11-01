@@ -17,6 +17,9 @@ mod image;
 mod inline;
 pub(crate) use background::ELDUR_BACKGROUND_LAYER_QML;
 pub(crate) use decoration::ELDUR_ROUND_CLIP_QML;
+pub(crate) const ELDUR_FILTER_QML: &str = include_str!("EldurFilter.qml");
+pub(crate) const ELDUR_FILTER_QSB: &[u8] = include_bytes!("eldur_filter.frag.qsb");
+pub(crate) const ELDUR_TEXT_SHADOW_QML: &str = include_str!("EldurTextShadow.qml");
 pub(crate) use inline::{ELDUR_INLINE_BOX_QML, ELDUR_LINES_QML, has_atomic, needs_lines_for_boxes};
 mod inline_model;
 mod links;
@@ -47,7 +50,7 @@ use crate::diag::Diagnostics;
 use crate::{Options, RootKind};
 use flow::{Emitted, MarginSet, has_height};
 use ids::Ids;
-use units::{ROOT_ID, color, number};
+use units::{ROOT_ID, color, fmt_number, number};
 
 const FLICKABLE_ID: &str = "flickable";
 const PAGE_ID: &str = "page";
@@ -1099,8 +1102,84 @@ impl<'a, 'd> Emitter<'a, 'd> {
         }
         if opacity < 1.0 {
             obj.set("opacity", number(opacity));
+            // QML multiplies the opacity into each thing drawn, so overlaps
+            // would show through; CSS fades the group as one picture.
+            if paints_count(obj) > 1 {
+                obj.set("layer.enabled", true);
+            }
         }
+        self.filter(obj, style);
     }
+
+    /// `filter` as the effect of a layer.
+    fn filter(&mut self, obj: &mut Object, style: &ComputedStyle) {
+        let Some(text) = &style.filter else { return };
+        let what = hint_text(text);
+        let Some(filter) = crate::filter::parse(text, style.font_size, &self.options.viewport)
+        else {
+            self.diags.warning(
+                "css",
+                None,
+                format!("`filter: {what}` is not drawn: a `url()` reference has no conversion"),
+            );
+            return;
+        };
+        if obj.get("layer.effect").is_some() {
+            self.diags.warning(
+                "css",
+                None,
+                format!("`filter: {what}` is not drawn: the box already clips to rounded corners"),
+            );
+            return;
+        }
+        let mut effect = Object::new("EldurFilter");
+        if filter.recolours() {
+            let m = filter.matrix;
+            let cells: Vec<String> = m.iter().flatten().map(|v| fmt_number(*v)).collect();
+            effect.set(
+                "colorMatrix",
+                Value::expr(format!("Qt.matrix4x4({})", cells.join(", "))),
+            );
+            let o: Vec<String> = filter.offset.iter().map(|v| fmt_number(*v)).collect();
+            effect.set(
+                "colorOffset",
+                Value::expr(format!("Qt.vector4d({})", o.join(", "))),
+            );
+        }
+        if filter.blur > 0.0 {
+            effect.set("blurDeviation", Value::Number(filter.blur));
+        }
+        if let Some(d) = filter.drop {
+            effect.set("hasDrop", true);
+            effect.set("dropX", Value::Number(d.x));
+            effect.set("dropY", Value::Number(d.y));
+            effect.set("dropDeviation", Value::Number(d.deviation));
+            effect.set("dropColor", units::color(d.color));
+        }
+        obj.set("layer.enabled", true);
+        obj.set("layer.effect", Value::Object(Box::new(effect)));
+    }
+}
+
+/// How many things this object and what it holds draw, as far as two: a group
+/// of one needs no layer to fade.
+fn paints_count(obj: &Object) -> usize {
+    let own = matches!(
+        obj.type_name.as_str(),
+        "Rectangle" | "Text" | "Image" | "Shape" | "EldurLines" | "EldurBackgroundLayer"
+    );
+    let mut count = usize::from(own);
+    for child in obj.children() {
+        if count > 1 {
+            break;
+        }
+        count += paints_count(child);
+    }
+    count
+}
+
+fn hint_text(text: &str) -> String {
+    text.chars().take(60).collect()
 }
 
 /// An item the size of the initial containing block: the viewport's, at the

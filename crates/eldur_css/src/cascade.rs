@@ -110,6 +110,7 @@ const PROBED_CSS_PROPERTIES: &[&str] = &[
     "background-clip",
     "background-attachment",
     "object-fit",
+    "text-shadow",
     "object-position",
     "box-shadow",
     "opacity",

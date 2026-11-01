@@ -291,7 +291,7 @@ fn shadows_json(shadows: &[Shadow]) -> Json {
             let opaque = Rgba { a: 255, ..s.color };
             json!({
                 "x": s.offset_x, "y": s.offset_y, "spread": s.spread, "inset": s.inset,
-                "c": qml_color(opaque), "bands": bands,
+                "c": qml_color(opaque), "bands": bands, "blur": s.blur, "a": alpha,
             })
         })
         .collect();
@@ -349,12 +349,93 @@ fn entry(
     viewport: &Viewport,
     files: &BTreeMap<String, String>,
 ) -> Option<Json> {
+    if property == "filter" {
+        return filter_json(text, viewport);
+    }
+    if property == "box-shadow"
+        && let Some(hundreds) = em_as_hundreds(text)
+    {
+        let PaintValue::Shadows(list) =
+            eldur_css::parse_paint_value(property, &hundreds, viewport)?
+        else {
+            return None;
+        };
+        let mut value = shadows_json(&list);
+        value["em"] = json!(true);
+        return Some(value);
+    }
     let size = (viewport.width, viewport.height);
     match eldur_css::parse_paint_value(property, text, viewport)? {
         PaintValue::Images(layers) => Some(images_json(&layers, text, size, files)),
         PaintValue::Shadows(list) => Some(shadows_json(&list)),
         PaintValue::Transform(fns) => Some(transform_json(&fns, size)),
     }
+}
+
+/// A shadow written all in `em` has the same shape at every font size, and a rule
+/// is shared by boxes of many: it is kept at 100px to the `em` and scaled where it
+/// lands. With `px` lengths too it would not scale, and is left to warn.
+fn em_as_hundreds(text: &str) -> Option<String> {
+    let mut any = false;
+    let mut out = String::new();
+    for token in text.split_whitespace() {
+        if token.ends_with("px")
+            && token
+                .trim_end_matches("px")
+                .parse::<f64>()
+                .is_ok_and(|v| v != 0.0)
+        {
+            return None;
+        }
+        match token.strip_suffix("em").and_then(|n| n.parse::<f64>().ok()) {
+            Some(n) => {
+                any = true;
+                out.push_str(&format!("{}px ", n * 100.0));
+            }
+            None => {
+                out.push_str(token);
+                out.push(' ');
+            }
+        }
+    }
+    any.then_some(out)
+}
+
+/// The members of an `EldurFilter`, as QML. `em` in a rule's filter is against
+/// the default font size: the value is shared by whatever box it reaches.
+fn filter_json(text: &str, viewport: &Viewport) -> Option<Json> {
+    let filter = crate::filter::parse(text, 16.0, viewport)?;
+    let mut source = String::new();
+    let numbers = |values: &mut dyn Iterator<Item = &f64>| {
+        values
+            .map(|v| format!("{v}"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    if filter.recolours() {
+        source.push_str(&format!(
+            "colorMatrix: Qt.matrix4x4({}); colorOffset: Qt.vector4d({}); ",
+            numbers(&mut filter.matrix.iter().flatten()),
+            numbers(&mut filter.offset.iter()),
+        ));
+    }
+    if filter.blur > 0.0 {
+        source.push_str(&format!("blurDeviation: {}; ", filter.blur));
+    }
+    if let Some(d) = filter.drop {
+        let c = d.color;
+        source.push_str(&format!(
+            "hasDrop: true; dropX: {}; dropY: {}; dropDeviation: {}; dropColor: Qt.rgba({}, {}, {}, {}); ",
+            d.x,
+            d.y,
+            d.deviation,
+            f32::from(c.r) / 255.0,
+            f32::from(c.g) / 255.0,
+            f32::from(c.b) / 255.0,
+            f32::from(c.a) / 255.0,
+        ));
+    }
+    Some(serde_json::json!({ "source": source }))
 }
 
 /// Every background `url()` the page's rules can give at run time: a script may
@@ -419,7 +500,7 @@ pub(crate) fn paint_values_decl(
         for (name, value, _) in &rule.declarations {
             if !matches!(
                 name.as_str(),
-                "background" | "background-image" | "box-shadow" | "transform"
+                "background" | "background-image" | "box-shadow" | "transform" | "filter"
             ) {
                 continue;
             }

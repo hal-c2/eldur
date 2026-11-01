@@ -2042,3 +2042,39 @@ fn a_page_without_a_script_emits_nothing_for_hidden_elements() {
     assert!(main.contains("shown"));
     assert!(!main.contains("secret"), "{main}");
 }
+
+#[test]
+fn a_filter_is_one_effect_on_the_box_and_what_it_holds() {
+    let (qml, _) = convert(&page(
+        ".b { filter: grayscale(1) blur(4px); }",
+        r#"<div class="b"><p>x</p></div>"#,
+    ));
+    assert!(qml.contains("layer.enabled: true"), "{qml}");
+    assert!(qml.contains("EldurFilter"), "{qml}");
+    assert!(qml.contains("colorMatrix"), "{qml}");
+    assert!(qml.contains("blurDeviation: 4"), "{qml}");
+}
+
+#[test]
+fn opacity_takes_a_layer_only_with_more_than_one_thing_to_fade() {
+    let (group, _) = convert(&page(
+        ".b { opacity: .5; background: red; }",
+        r#"<div class="b"><p>x</p></div>"#,
+    ));
+    assert!(group.contains("layer.enabled: true"), "{group}");
+    let (alone, _) = convert(&page(
+        ".b { opacity: .5; background: red; width: 9px; height: 9px; }",
+        r#"<div class="b"></div>"#,
+    ));
+    assert!(!alone.contains("layer.enabled"), "{alone}");
+}
+
+#[test]
+fn text_shadow_is_a_copy_of_the_text_behind_it() {
+    let (qml, _) = convert(&page(
+        ".b { text-shadow: 1px 2px 4px red; }",
+        r#"<p class="b">x</p>"#,
+    ));
+    assert!(qml.contains("EldurTextShadow"), "{qml}");
+    assert!(qml.contains("blurDeviation: 2"), "{qml}");
+}

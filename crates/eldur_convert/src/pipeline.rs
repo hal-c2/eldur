@@ -336,6 +336,26 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
             contents: crate::emit::ELDUR_ROUND_CLIP_QML.as_bytes().to_vec(),
         });
     }
+    if main.contains("EldurFilter {")
+        || files
+            .iter()
+            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
+    {
+        files.push(OutputFile {
+            path: PathBuf::from("EldurFilter.qml"),
+            contents: crate::emit::ELDUR_FILTER_QML.as_bytes().to_vec(),
+        });
+        files.push(OutputFile {
+            path: PathBuf::from("eldur_filter.frag.qsb"),
+            contents: crate::emit::ELDUR_FILTER_QSB.to_vec(),
+        });
+    }
+    if main.contains("EldurTextShadow {") {
+        files.push(OutputFile {
+            path: PathBuf::from("EldurTextShadow.qml"),
+            contents: crate::emit::ELDUR_TEXT_SHADOW_QML.as_bytes().to_vec(),
+        });
+    }
     if main.contains("EldurInlineBox {") {
         files.push(OutputFile {
             path: PathBuf::from("EldurInlineBox.qml"),

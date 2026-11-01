@@ -3289,6 +3289,10 @@ function _rawKids(raw, withText) {
         if (child.eldurSlot !== undefined) {
             continue;
         }
+        // A layer's source and effect are made beside the item it belongs to.
+        if (child.sourceItem !== undefined || child.fragmentShader !== undefined || child.blurMax !== undefined) {
+            continue;
+        }
         if (_isAnonLines(child)) {
             var inLines = _rawKids(child, withText);
             for (var al = 0; al < inLines.length; ++al) {
@@ -11353,7 +11357,7 @@ var _G_INITIAL = {
     "filter": "none", "animation-name": "none", "transition-property": "all", "transition-duration": "0s",
     "transition-delay": "0s", "transition-timing-function": "ease", "background-size": "auto",
     "background-position-x": "0%", "background-position-y": "0%", "background-repeat": "repeat",
-    "object-fit": "fill", "object-position": "50% 50%", "background-origin": "padding-box", "background-clip": "border-box", "background-attachment": "scroll"
+    "text-shadow": "none", "object-fit": "fill", "object-position": "50% 50%", "background-origin": "padding-box", "background-clip": "border-box", "background-attachment": "scroll"
 };
 // The controls whose box the UA sheet in the rule table describes: padding and
 // border are the control's insets.
@@ -12852,6 +12856,25 @@ function _gPaintEdges(raw, s, e, shown) {
 
 // --- What the converter parsed for a box's paint ----------------------------
 
+// A shadow in `em` is held at 100px to the `em`: see `em_as_hundreds`.
+function _gShadowsAt(prop, text, fontSize) {
+    var held = _gPaintValue(prop, text);
+    if (!held || !held.em) {
+        return held;
+    }
+    var k = fontSize / 100;
+    return {
+        css: held.css.replace(/-?[\d.]+px/g, function(px) { return parseFloat(px) * k + "px"; }),
+        list: held.list.map(function(one) {
+            return {
+                x: one.x * k, y: one.y * k, spread: one.spread * k, blur: one.blur * k,
+                inset: one.inset, c: one.c, a: one.a,
+                bands: one.bands.map(function(band) { return [band[0] * k, band[1]]; })
+            };
+        })
+    };
+}
+
 function _gPaintValue(prop, text) {
     if (_gPaintTable === null) {
         var written = _root ? _root.eldurPaintValues : undefined;
@@ -13061,6 +13084,18 @@ function _gBandColor(c, alpha) {
 
 // A hole has to stay clear for a box with no background of its own, and an odd
 // count of edges only says that where the shadow holds the whole box.
+// A box with a fill to hide what is under it takes the blur the static page has.
+// The formula is the one in `emit/decoration.rs`, fitted there to Chromium's.
+function _gOuterBlur(shadow, radii) {
+    var corners = radii[0] === radii[1] && radii[1] === radii[2] && radii[2] === radii[3]
+        ? "radius: " + radii[0] + "; "
+        : "topLeftRadius: " + radii[0] + "; topRightRadius: " + radii[1]
+            + "; bottomRightRadius: " + radii[2] + "; bottomLeftRadius: " + radii[3] + "; ";
+    return "RectangularShadow { anchors.fill: parent; offset: Qt.vector2d(" + shadow.x + ", " + shadow.y + "); "
+        + "blur: " + (shadow.blur > 0 ? 1.2 * shadow.blur + 2 : 0) + "; spread: " + shadow.spread + "; "
+        + "color: \"" + _gBandColor(shadow.c, shadow.a) + "\"; " + corners + "} ";
+}
+
 function _gOuterRing(shadow, band, w, h, radii) {
     var g = shadow.spread + band[0];
     var x = shadow.x - g;
@@ -13118,7 +13153,7 @@ function _gInsetRing(shadow, band, w, h, radii) {
 }
 
 function _gShapeSource(attrs, paths) {
-    return "import QtQuick; import QtQuick.Shapes; import QtQuick.Layouts; Shape { property Item eldurSlot: null; " + attrs + paths + "}";
+    return "import QtQuick; import QtQuick.Effects; import QtQuick.Shapes; import QtQuick.Layouts; Shape { property Item eldurSlot: null; " + attrs + paths + "}";
 }
 
 function _gReplaceShape(raw, slot, signature, source, host, place, url) {
@@ -13191,11 +13226,13 @@ function _gPaintDecor(raw, s, e, radius) {
     var at = "x: " + e.bl + "; y: " + e.bt + "; width: " + Math.max(pw, 0) + "; height: " + Math.max(ph, 0) + "; ";
     var shadowText = s["box-shadow"];
     var outer = "";
+    var outerBlurs = "";
+    var outerSteps = "";
     var insets = "";
     if (shadowText !== "none") {
-        var shadows = _gPaintValue("box-shadow", shadowText);
+        var shadows = _gShadowsAt("box-shadow", shadowText, s.fontSize);
         if (!shadows) {
-            _gWarn(raw, "box-shadow", "`" + shadowText + "` is not painted: the converter never saw this value");
+            _gWarn(raw, "box-shadow", "`" + shadowText + "` is not painted: the converter never saw this value, or it mixes `em` with `px`");
         } else {
             var opaque = _gQtColor(s["background-color"]).a === 1 || imageText !== "none";
             for (var i = shadows.list.length - 1; i >= 0; --i) {
@@ -13203,9 +13240,14 @@ function _gPaintDecor(raw, s, e, radius) {
                 for (var b = 0; b < shadow.bands.length; ++b) {
                     if (shadow.inset) {
                         insets += _gInsetRing(shadow, shadow.bands[b], pw, ph, inner);
+                    } else if (opaque) {
+                        outerSteps += _gOuterRing(shadow, shadow.bands[b], w, h, outerRadii);
                     } else {
                         outer += _gOuterRing(shadow, shadow.bands[b], w, h, outerRadii);
                     }
+                }
+                if (!shadow.inset && opaque) {
+                    outerBlurs += _gOuterBlur(shadow, outerRadii);
                 }
                 var round = outerRadii.some(function(r) { return r > 0; });
                 if (!shadow.inset && round && !opaque && (shadow.x !== 0 || shadow.y !== 0)) {
@@ -13247,37 +13289,57 @@ function _gPaintDecor(raw, s, e, radius) {
                 + bottomColour + placed.join("") + over + "}",
             raw, function() {}, Qt.resolvedUrl("eldur_paint"));
     }
+    // The software scene graph draws no `RectangularShadow`, and steps are what it can.
+    if (outerBlurs !== "") {
+        outer += "Item { anchors.fill: parent; visible: GraphicsInfo.api !== GraphicsInfo.Software; " + outerBlurs + "} "
+            + "Shape { anchors.fill: parent; visible: GraphicsInfo.api === GraphicsInfo.Software; " + outerSteps + "} ";
+    }
     _gPaintOuterShadow(raw, outer, w, h);
     _gPaintMatrix(raw, s, w, h);
-    if (s.filter !== "none") {
-        _gWarn(raw, "filter", "`" + s.filter + "` is not painted on a created box");
+    if (s["text-shadow"] !== "none" && s["text-shadow"] !== undefined) {
+        _gWarn(raw, "text-shadow", "the text of a box a script made or restyled has no shadow");
     }
     if (s["animation-name"] !== "none") {
         _gWarn(raw, "animation-name", "`" + s["animation-name"] + "` does not run on a created box");
     }
     if (!_gPaintPicture(raw, s, w, h)) {
-        _gPaintRoundClip(raw, outerRadii,
+        _gPaintLayer(raw, s, outerRadii,
             raw.clip && _rawElementChildren(raw).length > 0 && outerRadii.some(function(r) { return r > 0; }));
     }
 }
 
-// QML's `clip` is square, so a box that clips to rounded corners is a layer
-// with a mask. The effect holds its radii as written, so new radii make a new
-// one.
-function _gPaintRoundClip(raw, radii, wanted) {
+// The layer a box needs. QML's `clip` is square, so a clip to rounded corners is
+// a mask; a filter is the same kind of effect; a fading group is the layer alone.
+// An effect holds its values as written, so new values make a new one.
+function _gPaintLayer(raw, s, radii, clips) {
     var m = _meta(raw);
-    var signature = wanted ? radii.join(" ") : "";
-    if (m.gRoundClip === signature || (m.gRoundClip === undefined && !wanted)) {
-        return;
+    var source = "";
+    if (s.filter !== "none" && s.filter !== undefined) {
+        var filter = _gPaintValue("filter", s.filter);
+        if (!filter) {
+            _gWarn(raw, "filter", "`" + s.filter + "` is not painted: it has a `url()`, or the converter never saw this value");
+        } else {
+            source = "EldurFilter { " + filter.source + " }";
+            if (clips) {
+                _gWarn(raw, "filter", "the box clips to square corners under a filter: one layer holds one effect");
+            }
+        }
     }
-    m.gRoundClip = signature;
-    if (wanted) {
-        raw.layer.effect = Qt.createQmlObject("import QtQuick; import \".\"; QtObject { property Component effect: EldurRoundClip { "
-            + "topLeftRadius: " + radii[0] + "; topRightRadius: " + radii[1]
-            + "; bottomRightRadius: " + radii[2] + "; bottomLeftRadius: " + radii[3] + " } }",
-            raw, Qt.resolvedUrl("eldur_paint")).effect;
+    if (source === "" && clips) {
+        source = "EldurRoundClip { topLeftRadius: " + radii[0] + "; topRightRadius: " + radii[1]
+            + "; bottomRightRadius: " + radii[2] + "; bottomLeftRadius: " + radii[3] + " }";
     }
-    raw.layer.enabled = wanted;
+    if (m.gLayerEffect !== source) {
+        if (source !== "" || m.gLayerEffect !== undefined) {
+            raw.layer.effect = source === "" ? null : Qt.createQmlObject(
+                "import QtQuick; import \".\"; QtObject { property Component effect: " + source + " }",
+                raw, Qt.resolvedUrl("eldur_paint")).effect;
+        }
+        m.gLayerEffect = source;
+    }
+    // QML fades each thing drawn; CSS fades the box and what it holds as one.
+    var fades = _gNumber(s.opacity) < 1 && _rawElementChildren(raw).length > 0;
+    _gSet(raw.layer, "enabled", source !== "" || fades);
 }
 
 // A page's `<img>` is an `Image` in an item that keeps the CSS size; a created
@@ -13301,7 +13363,7 @@ function _gPaintPicture(raw, s, w, h) {
         return false;
     }
     var radii = _gCorners(raw, s);
-    _gPaintRoundClip(raw, radii, radii.some(function(r) { return r > 0; }));
+    _gPaintLayer(raw, s, radii, radii.some(function(r) { return r > 0; }));
     var fit = s["object-fit"];
     var file = picture.sourceSize;
     // The enums' values: a library script cannot see the QML type `Image`.
@@ -13351,7 +13413,7 @@ function _gPaintOuterShadow(raw, paths, w, h) {
         // A layout moves its children, so the shape sits in an item of no size
         // it can move as it likes, and follows the box from there.
         source = raw.clip && raw.parent
-            ? "import QtQuick; import QtQuick.Shapes; import QtQuick.Layouts; Item { property Item eldurSlot: null; "
+            ? "import QtQuick; import QtQuick.Effects; import QtQuick.Shapes; import QtQuick.Layouts; Item { property Item eldurSlot: null; "
                 + "property Item box: null; property alias shape: drawn; Layout.maximumWidth: 0; Layout.maximumHeight: 0; "
                 + "z: box ? box.z : 0; opacity: box ? box.opacity : 1; visible: box ? box.visible : false; "
                 + "Shape { id: drawn; x: box ? box.x - parent.x : 0; y: box ? box.y - parent.y : 0; width: " + w + "; height: " + h + "; " + paths + "} }"
@@ -14854,7 +14916,7 @@ function _gComputed(raw, prop) {
         return line === "" ? "none" : line;
     }
     if (name === "background-image" || name === "box-shadow") {
-        var parsed = s[name] === "none" ? null : _gPaintValue(name, s[name]);
+        var parsed = s[name] === "none" ? null : _gShadowsAt(name, s[name], s.fontSize);
         return parsed ? parsed.css : String(s[name]);
     }
     if (name === "transform") {

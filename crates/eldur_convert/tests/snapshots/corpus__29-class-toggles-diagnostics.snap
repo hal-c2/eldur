@@ -2,4 +2,6 @@
 source: crates/eldur_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-
+info[css]: index.html:130: `layer.enabled` of <div id="item1" class="item"> changes under a class or state but has no QML form here; it keeps the document's value
+info[css]: index.html:131: `layer.enabled` of <div id="item2" class="item"> changes under a class or state but has no QML form here; it keeps the document's value
+info[css]: index.html:132: `layer.enabled` of <div id="item3" class="item"> changes under a class or state but has no QML form here; it keeps the document's value

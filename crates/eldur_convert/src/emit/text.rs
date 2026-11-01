@@ -317,8 +317,24 @@ impl Emitter<'_, '_> {
                 .info("css", line, "`text-indent` is not converted".to_owned());
         }
         if !style.text_shadow.is_empty() {
-            self.diags
-                .info("css", line, "`text-shadow` is not converted".to_owned());
+            let id = match &text.id {
+                Some(id) => id.clone(),
+                None => self.ids.claim("shadowed text"),
+            };
+            text.id = Some(id.clone());
+            // The first in CSS is on top, and later siblings draw above.
+            for s in style.text_shadow.iter().rev() {
+                let mut copy = Object::new("EldurTextShadow");
+                copy.set("source", Value::expr(id.clone()));
+                copy.set("x", Value::Number(f64::from(s.offset_x)));
+                copy.set("y", Value::Number(f64::from(s.offset_y)));
+                copy.set("color", color(s.color));
+                if s.blur > 0.0 {
+                    // A shadow's blur radius is twice the deviation.
+                    copy.set("blurDeviation", Value::Number(f64::from(s.blur) / 2.0));
+                }
+                text.push_child(copy);
+            }
         }
     }
 

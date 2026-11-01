@@ -344,7 +344,7 @@ class PaintRegionTests(unittest.TestCase):
     """Each paint feature's own pixels against Chromium's (`regions.py`): a layout
     test cannot see paint, nor a page's score one wrong box."""
 
-    CASES = ["45-inline-boxes", "46-backgrounds", "47-clip", "51-runtime-backgrounds"]
+    CASES = ["45-inline-boxes", "46-backgrounds", "47-clip", "48-shadows-filters", "51-runtime-backgrounds", "52-runtime-effects"]
 
     def test_regions_hold(self) -> None:
         corpus = Path(visual_run.__file__).resolve().parents[2] / "tests" / "corpus"
