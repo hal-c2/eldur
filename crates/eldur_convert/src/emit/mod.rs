@@ -340,6 +340,23 @@ impl<'a, 'd> Emitter<'a, 'd> {
             "ScrollBar.vertical",
             Value::Object(Box::new(Object::new("ScrollBar"))),
         );
+        // The viewport takes it from the root element, never the body (CSSOM View §4).
+        if tree
+            .and_then(|html| html.node)
+            .and_then(|n| self.styles.style(n))
+            .is_some_and(|s| s.scroll_smooth)
+        {
+            flickable.members.insert(
+                0,
+                eldur_qml::Member::PropertyDecl {
+                    ty: "bool".to_owned(),
+                    name: "eldurSmooth".to_owned(),
+                    value: Some(Value::Bool(true)),
+                    readonly: false,
+                    required: false,
+                },
+            );
+        }
         let mut scroll_input = Object::new("EldurScrollInput");
         scroll_input.set("scroller", Value::expr(FLICKABLE_ID));
         scroll_input.id = Some(format!("{FLICKABLE_ID}Input"));

@@ -1962,6 +1962,10 @@ function _appendTarget(raw) {
     if (_gIsBox(raw)) {
         return raw;
     }
+    // What a scroller holds moves with it, so children belong in its content.
+    if (raw.eldurScroller) {
+        return _childContainer(raw);
+    }
     if (_meta(raw).tableGrid) {
         return _meta(raw).tableGrid;
     }
@@ -3283,6 +3287,7 @@ function _intoViewOffset(align, now, before, size, port) {
 function _scrollIntoView(raw, arg) {
     var block = "start";
     var inline = "nearest";
+    var asked = arg && typeof arg === "object" ? arg.behavior : undefined;
     if (arg === false) {
         block = "end";
     } else if (arg && typeof arg === "object") {
@@ -3300,14 +3305,19 @@ function _scrollIntoView(raw, arg) {
         var port = scroller.mapToItem(null, 0, 0);
         var y = _intoViewOffset(block, scroller.contentY, r.top - port.y, r.height, scroller.height);
         var x = _intoViewOffset(inline, scroller.contentX, r.left - port.x, r.width, scroller.width);
-        scroller.contentY = Math.max(0, Math.min(y, Math.max(0, scroller.contentHeight - scroller.height)));
-        scroller.contentX = Math.max(0, Math.min(x, Math.max(0, scroller.contentWidth - scroller.width)));
+        _moveScroller(scroller,
+            Math.max(0, Math.min(x, Math.max(0, scroller.contentWidth - scroller.width))),
+            Math.max(0, Math.min(y, Math.max(0, scroller.contentHeight - scroller.height))),
+            asked);
     }
     var page = _findRootScroller();
     if (page) {
         var rect = getBoundingClientRect(raw);
-        scrollTo(_intoViewOffset(inline, page.contentX, rect.left, rect.width, page.width),
-            _intoViewOffset(block, page.contentY, rect.top, rect.height, page.height));
+        scrollTo({
+            left: _intoViewOffset(inline, page.contentX, rect.left, rect.width, page.width),
+            top: _intoViewOffset(block, page.contentY, rect.top, rect.height, page.height),
+            behavior: asked
+        });
     }
 }
 
@@ -7391,6 +7401,12 @@ function wrap(rawItem) {
         return maxDim;
     }
 
+    function _scrollWithOptions(options, write) {
+        _scrollAsked = options && options.behavior;
+        write();
+        _scrollAsked = undefined;
+    }
+
     function _applyScrollOffset(axis, rawVal) {
         var isY = axis === "y";
         var n = Number(rawVal) || 0;
@@ -7399,7 +7415,7 @@ function wrap(rawItem) {
         if (own) {
             var far = isY ? own.contentHeight - own.height : own.contentWidth - own.width;
             n = Math.max(0, Math.min(n, Math.max(0, far)));
-            own[isY ? "contentY" : "contentX"] = n;
+            _moveScroller(own, isY ? own.contentX : n, isY ? n : own.contentY, _scrollAsked);
             return;
         }
         var scrollDim = _computeScrollDimension(axis);
@@ -8168,8 +8184,23 @@ function wrap(rawItem) {
         },
         scrollTo: function(xOrOpts, y) {
             if (xOrOpts && typeof xOrOpts === "object") {
-                if (typeof xOrOpts.left === "number") { this.scrollLeft = xOrOpts.left; }
-                if (typeof xOrOpts.top === "number") { this.scrollTop = xOrOpts.top; }
+                var self = this;
+                _scrollWithOptions(xOrOpts, function() {
+                    // Both axes at once: the first write must not lose to the second.
+                    var own = _scrollerOf(rawItem);
+                    if (own) {
+                        _layoutForRead();
+                        var left = typeof xOrOpts.left === "number" ? xOrOpts.left : own.contentX;
+                        var top = typeof xOrOpts.top === "number" ? xOrOpts.top : own.contentY;
+                        _moveScroller(own,
+                            Math.max(0, Math.min(left, Math.max(0, own.contentWidth - own.width))),
+                            Math.max(0, Math.min(top, Math.max(0, own.contentHeight - own.height))),
+                            _scrollAsked);
+                        return;
+                    }
+                    if (typeof xOrOpts.left === "number") { self.scrollLeft = xOrOpts.left; }
+                    if (typeof xOrOpts.top === "number") { self.scrollTop = xOrOpts.top; }
+                });
             } else {
                 if (typeof xOrOpts === "number") { this.scrollLeft = xOrOpts; }
                 if (typeof y === "number") { this.scrollTop = y; }
@@ -8177,8 +8208,10 @@ function wrap(rawItem) {
         },
         scrollBy: function(xOrOpts, y) {
             if (xOrOpts && typeof xOrOpts === "object") {
+                _scrollAsked = xOrOpts.behavior;
                 if (typeof xOrOpts.left === "number") { this.scrollLeft = this.scrollLeft + xOrOpts.left; }
                 if (typeof xOrOpts.top === "number") { this.scrollTop = this.scrollTop + xOrOpts.top; }
+                _scrollAsked = undefined;
             } else {
                 if (typeof xOrOpts === "number") { this.scrollLeft = this.scrollLeft + xOrOpts; }
                 if (typeof y === "number") { this.scrollTop = this.scrollTop + y; }
@@ -11232,6 +11265,43 @@ function _scrollerMaxExtent(scroller, axis) {
     return (viewDim > 0 && contentDim > viewDim) ? Math.max(0, contentDim - viewDim) : 0;
 }
 
+// The behaviour a script asks for, then the scroller's `scroll-behavior`.
+function _scrollsSmoothly(scroller, asked) {
+    if (asked === "smooth") return true;
+    if (asked === "instant") return false;
+    if (scroller.eldurSmooth === true) return true;
+    var box = scroller.parent;
+    return !!box && _gIsBox(box) && _gStyle(box)["scroll-behavior"] === "smooth";
+}
+
+// A smooth scroll has not moved yet when the script reads it back. Qt's own curve
+// and length: CSSOM View leaves both to the user agent.
+function _moveScroller(scroller, x, y, asked) {
+    var m = _meta(scroller);
+    if (m.smooth) {
+        m.smooth.stop();
+    }
+    if (!_scrollsSmoothly(scroller, asked)) {
+        scroller.contentX = x;
+        scroller.contentY = y;
+        return;
+    }
+    if (!m.smooth) {
+        m.smooth = Qt.createQmlObject(
+            "import QtQuick; ParallelAnimation {"
+            + " property var scroller: null; property real toX; property real toY;"
+            + " NumberAnimation { target: scroller; property: 'contentX'; to: toX;"
+            + " duration: 300; easing.type: Easing.InOutQuad }"
+            + " NumberAnimation { target: scroller; property: 'contentY'; to: toY;"
+            + " duration: 300; easing.type: Easing.InOutQuad } }",
+            _qobjectParent(scroller), "eldur_smooth_scroll");
+        m.smooth.scroller = scroller;
+    }
+    m.smooth.toX = x;
+    m.smooth.toY = y;
+    m.smooth.start();
+}
+
 function scrollTo(xOrOpts, y) {
     var scroller = _findRootScroller();
     if (!scroller) {
@@ -11252,8 +11322,7 @@ function scrollTo(xOrOpts, y) {
     var maxY = _scrollerMaxExtent(scroller, "y");
     var clampedX = Math.max(0, Math.min(nextX, maxX));
     var clampedY = Math.max(0, Math.min(nextY, maxY));
-    scroller.contentX = clampedX;
-    scroller.contentY = clampedY;
+    _moveScroller(scroller, clampedX, clampedY, xOrOpts && xOrOpts.behavior);
     if ((clampedX !== curX || clampedY !== curY) && _root) {
         _queueScrollEvent(_root);
     }
@@ -11277,6 +11346,7 @@ function scrollBy(xOrOpts, y) {
     }
 }
 
+var _scrollAsked;
 var scroll = scrollTo;
 
 // Paint order backwards: later siblings and higher z first, children over
@@ -15341,10 +15411,13 @@ function _aScanTree(raw, rendered) {
 
 // Run after each style pass: starts and stops what the styles now ask for.
 function _aScan() {
-    if (!_gActive() || _aBusy || _root.eldurNoMotion === true) {
+    if (!_gActive() || _aBusy) {
         return;
     }
     _aScanned = true;
+    if (_root.eldurNoMotion === true) {
+        return;
+    }
     if (!_aHasRules() && !_aInlineMoves && _aAll.length === 0) {
         return;
     }

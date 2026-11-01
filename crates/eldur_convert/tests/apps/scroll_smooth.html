@@ -1,0 +1,32 @@
+<!DOCTYPE html><html><head><title>Smooth</title><style>
+html{scroll-behavior:smooth}
+body{margin:0;font:16px/20px sans-serif}
+.box{height:100px;overflow:auto;background:#eee}
+.smooth{scroll-behavior:smooth}
+.inner{height:600px;background:#cde}
+#target{height:20px;background:#c33;margin-top:1200px}
+#spacer{height:2000px}
+</style></head><body>
+<button id="css">css</button><button id="opt">opt</button><button id="inst">inst</button><button id="win">win</button><button id="into">into</button><button id="top">top</button><button id="made">made</button>
+<div class="box smooth" id="a"><div class="inner"></div></div>
+<div class="box" id="b"><div class="inner"></div></div>
+<div id="target"></div><div id="spacer"></div>
+<script>
+const a = document.getElementById("a"), b = document.getElementById("b");
+const say = (w) => console.log(w, a.scrollTop, b.scrollTop, window.scrollY);
+document.getElementById("css").onclick = () => { a.scrollTop = 200; say("css"); };
+document.getElementById("opt").onclick = () => { b.scrollTo({ top: 150, behavior: "smooth" }); say("opt"); };
+document.getElementById("inst").onclick = () => { a.scrollTo({ top: 0, behavior: "instant" }); say("inst"); };
+document.getElementById("win").onclick = () => { window.scrollTo(0, 300); say("win"); };
+document.getElementById("into").onclick = () => { document.getElementById("target").scrollIntoView({ behavior: "smooth" }); say("into"); };
+document.getElementById("top").onclick = () => { window.scrollTo({ top: 0, behavior: "instant" }); say("top"); };
+document.getElementById("made").onclick = () => {
+  const c = document.createElement("div");
+  c.className = "box smooth"; c.id = "c";
+  const k = document.createElement("div"); k.className = "inner"; c.appendChild(k);
+  document.body.insertBefore(c, a);
+  c.scrollTop = 120;
+  console.log("made", c.scrollTop);
+  setTimeout(() => console.log("made later", c.scrollTop), 900);
+};
+</script></body></html>

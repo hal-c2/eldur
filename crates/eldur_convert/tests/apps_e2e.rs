@@ -534,6 +534,11 @@ fn scroll_created() {
 }
 
 #[test]
+fn scroll_smooth() {
+    page("scroll_smooth");
+}
+
+#[test]
 fn motion_static() {
     page("motion_static");
 }

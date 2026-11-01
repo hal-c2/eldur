@@ -8,6 +8,7 @@ Flickable {
     id: scroller
 
     // Whether an axis's overflow can be scrolled by the user.
+    property bool eldurSmooth: false
     property bool scrollsX: true
     property bool scrollsY: true
     // Whether the user can scroll at all, or only scripts can.

@@ -239,6 +239,19 @@ pub(crate) fn parse_direction(cvs: &[ComponentValue]) -> Result<Direction, Strin
     }
 }
 
+pub(crate) fn parse_scroll_behavior(cvs: &[ComponentValue]) -> Result<bool, String> {
+    let mut cur = Cursor::new(cvs);
+    let id = cur
+        .eat_ident()
+        .ok_or_else(|| "expected scroll-behavior keyword".to_owned())?;
+    cur.expect_eof()?;
+    match id.to_ascii_lowercase().as_str() {
+        "smooth" => Ok(true),
+        "auto" => Ok(false),
+        other => Err(format!("unknown scroll-behavior `{other}`")),
+    }
+}
+
 pub(crate) fn parse_visibility(cvs: &[ComponentValue]) -> Result<Visibility, String> {
     let mut cur = Cursor::new(cvs);
     let id = cur

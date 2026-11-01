@@ -274,6 +274,9 @@ impl Emitter<'_, '_> {
         let [top, right, bottom, left] = sides(style).map(border_width);
         let id = self.ids.claim(&format!("{} scroller", deco.hint));
         let mut scroller = Object::new("EldurScroller");
+        if style.scroll_smooth {
+            scroller.set("eldurSmooth", true);
+        }
         scroller.id = Some(id.clone());
         scroller.set("x", number(left));
         scroller.set("y", number(top));
