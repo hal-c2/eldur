@@ -20111,9 +20111,19 @@ var _G_IN_PLACE = /^(display|visibility|opacity|color|zIndex|left|top|right|bott
 // What a script wrote that the item as converted cannot answer to.
 function _gBoxInline(raw) {
     var styles = _meta(raw).styles;
-    var held = _vBlockModels(raw).length > 0;
+    // Asked of every element at each settle, and most have written nothing.
+    var held = null;
     return Object.keys(styles).filter(function(k) {
-        return !_G_IN_PLACE.test(k) && k.indexOf("-") === -1 && !(held && _V_BLOCK_FONT.test(k));
+        if (_G_IN_PLACE.test(k) || k.indexOf("-") !== -1) {
+            return false;
+        }
+        if (!_V_BLOCK_FONT.test(k)) {
+            return true;
+        }
+        if (held === null) {
+            held = _vBlockModels(raw).length > 0;
+        }
+        return !held;
     }).sort().map(function(k) { return k + ":" + styles[k]; }).join(";");
 }
 
