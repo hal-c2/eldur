@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sign up</title>
+<style>
+body { margin: 0; font-family: Arial, sans-serif; background: #f4f5f7; color: #1c2230; }
+main { width: 420px; margin: 40px auto; padding: 24px; background: #fff; border: 1px solid #d5d9e0; border-radius: 8px; }
+h1 { margin: 0 0 16px; font-size: 24px; }
+.field { margin-bottom: 14px; }
+label { display: block; margin-bottom: 4px; font-weight: bold; font-size: 14px; }
+input[type=text], input[type=email], input[type=password] { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid #9aa3b2; font-size: 14px; }
+input.bad { border-color: #c0392b; background: #fdecea; }
+input.good { border-color: #1e8449; }
+.hint { min-height: 18px; font-size: 13px; color: #c0392b; }
+.check label { display: inline; font-weight: normal; }
+button { padding: 8px 16px; font-size: 14px; }
+#send { background: #1f6feb; color: #fff; border: 0; }
+#send:disabled { background: #9aa3b2; }
+#done { margin-top: 12px; font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+<h1>Create an account</h1>
+<form id="form" action="#sent" novalidate>
+<div class="field"><label for="user">Name</label><input id="user" name="user" type="text" required minlength="3"><div class="hint" id="user-hint"></div></div>
+<div class="field"><label for="mail">Email</label><input id="mail" name="mail" type="email" required><div class="hint" id="mail-hint"></div></div>
+<div class="field"><label for="pass">Password</label><input id="pass" name="pass" type="password" required minlength="6"><div class="hint" id="pass-hint"></div></div>
+<div class="field check"><input id="terms" name="terms" type="checkbox"><label for="terms">I accept the terms</label></div>
+<button id="send" type="submit" disabled>Sign up</button>
+<button id="clear" type="reset">Clear</button>
+</form>
+<div id="done"></div>
+</main>
+<script>
+var form = document.getElementById("form");
+var send = document.getElementById("send");
+var done = document.getElementById("done");
+var fields = ["user", "mail", "pass"].map(function (id) { return document.getElementById(id); });
+function hintOf(field) { return document.getElementById(field.id + "-hint"); }
+function refresh() { send.disabled = !(form.checkValidity() && form.elements.terms.checked); }
+fields.forEach(function (field) {
+  field.addEventListener("input", function () {
+    var ok = field.validity.valid;
+    field.className = ok ? "good" : "bad";
+    hintOf(field).textContent = ok ? "" : field.validity.valueMissing ? "Required" : field.validity.tooShort ? "Too short" : "Not valid";
+    console.log("input " + field.id + " " + field.value.length + " " + ok);
+    refresh();
+  });
+  field.addEventListener("change", function () { console.log("change " + field.id); });
+  field.addEventListener("blur", function () { console.log("blur " + field.id); });
+});
+form.elements.terms.addEventListener("change", function () { console.log("terms " + form.elements.terms.checked); refresh(); });
+form.addEventListener("submit", function (e) {
+  e.preventDefault();
+  var data = new FormData(form);
+  done.textContent = "Welcome, " + data.get("user") + "!";
+  console.log("submit " + new URLSearchParams(data).toString());
+});
+form.addEventListener("reset", function () {
+  console.log("reset");
+  fields.forEach(function (field) { field.className = ""; hintOf(field).textContent = ""; });
+  done.textContent = "";
+  setTimeout(refresh, 0);
+});
+</script>
+</body>
+</html>

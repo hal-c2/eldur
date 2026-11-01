@@ -1008,13 +1008,16 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 );
             }
             crate::metadata::tag(&mut e.obj, self.doc, node);
+            self.block_link(&mut e.obj, node);
             if b.style.pointer_events == eldur_css::PointerEvents::None {
                 crate::metadata::declare_no_hit(&mut e.obj);
             }
             crate::metadata::declare_whitespace(&mut e.obj, self.doc, node, &self.live_tables);
             // A hidden box's `style` attribute may be what hides it.
+            // Where a listener can be handed any element, a script can read any element's `style`.
             if self.open_elements
                 || self.cascade_rules
+                || self.by_path
                 || b.style.visibility == eldur_css::Visibility::Collapse
             {
                 crate::metadata::declare_style(&mut e.obj, self.doc, node);

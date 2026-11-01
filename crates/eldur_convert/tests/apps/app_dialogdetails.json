@@ -1,0 +1,15 @@
+{"steps":[
+ {"name":"close one","click":"#s1","settle":50},
+ {"name":"open two","click":"#s2","settle":50},
+ {"name":"open three","click":"#s3","settle":50},
+ {"name":"ask","click":"#ask"},
+ {"name":"tab in","key":"Tab"},
+ {"name":"cancel by button","click":"#cancel","settle":50},
+ {"name":"ask 2","click":"#ask"},
+ {"name":"save refused","click":"#save","settle":50},
+ {"name":"write","type":["#text","hello"]},
+ {"name":"save","click":"#save","settle":50},
+ {"name":"ask 3","click":"#ask"},
+ {"name":"escape","key":"Escape","settle":50}
+],
+"watch":[{"sel":"#one"},{"sel":"#two"},{"sel":"#three"},{"sel":"#note"},{"sel":"#answer"},{"sel":"#ask"}]}

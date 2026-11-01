@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Keyboard list</title>
+<style>
+body { margin: 0; padding: 32px; font-family: Arial, sans-serif; background: #fff; color: #222; }
+h1 { font-size: 22px; margin: 0 0 12px; }
+ul { list-style: none; margin: 0; padding: 0; width: 320px; border: 1px solid #bbb; }
+li { padding: 8px 12px; border-bottom: 1px solid #eee; }
+li:last-child { border-bottom: 0; }
+li:focus { background: #dbe9ff; outline: 2px solid #1f6feb; }
+li.picked { font-weight: bold; color: #0b5; }
+#state { margin-top: 12px; height: 20px; }
+#search { margin-bottom: 12px; width: 300px; padding: 4px; }
+</style>
+</head>
+<body>
+<h1>Tasks</h1>
+<input id="search" placeholder="Press Down to enter the list">
+<ul id="list" role="listbox">
+<li id="i0" tabindex="0">Write the report</li>
+<li id="i1" tabindex="-1">Book the room</li>
+<li id="i2" tabindex="-1">Call the printer</li>
+<li id="i3" tabindex="-1">Water the plants</li>
+</ul>
+<div id="state">Nothing picked</div>
+<button id="after">After the list</button>
+<script>
+var list = document.getElementById("list");
+var state = document.getElementById("state");
+var search = document.getElementById("search");
+function items() { return Array.prototype.slice.call(list.children); }
+function move(to) {
+  var all = items();
+  all.forEach(function (li, i) { li.tabIndex = i === to ? 0 : -1; });
+  all[to].focus();
+}
+list.addEventListener("keydown", function (e) {
+  var all = items();
+  var at = all.indexOf(document.activeElement);
+  console.log("key " + e.key + " " + e.target.id + " " + at + " " + e.shiftKey);
+  if (e.key === "ArrowDown") { move(Math.min(at + 1, all.length - 1)); e.preventDefault(); }
+  else if (e.key === "ArrowUp") { move(Math.max(at - 1, 0)); e.preventDefault(); }
+  else if (e.key === "Home") { move(0); e.preventDefault(); }
+  else if (e.key === "End") { move(all.length - 1); e.preventDefault(); }
+  else if (e.key === "Enter" || e.key === " ") {
+    all[at].classList.toggle("picked");
+    state.textContent = all.filter(function (li) { return li.classList.contains("picked"); }).length + " picked";
+    e.preventDefault();
+  } else if (e.key === "Escape") {
+    search.focus();
+  } else if (e.key === "Delete" && all.length > 1) {
+    list.removeChild(all[at]);
+    move(Math.min(at, all.length - 2));
+  }
+});
+list.addEventListener("focusin", function (e) { console.log("in " + e.target.id + " from " + (e.relatedTarget ? e.relatedTarget.id : "none")); });
+list.addEventListener("focusout", function (e) { console.log("out " + e.target.id + " to " + (e.relatedTarget ? e.relatedTarget.id : "none")); });
+search.addEventListener("keydown", function (e) {
+  if (e.key === "ArrowDown") { items()[0].focus(); e.preventDefault(); }
+});
+list.addEventListener("click", function (e) {
+  if (e.target.tagName === "LI") { move(items().indexOf(e.target)); }
+});
+</script>
+</body>
+</html>

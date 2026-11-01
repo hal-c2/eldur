@@ -1041,6 +1041,4408 @@
    }
   }
  ],
+ "app_dialogdetails": [
+  {
+   "name": "load",
+   "log": [
+    "toggle one true"
+   ],
+   "state": {
+    "#one": [
+     {
+      "box": [
+       24,
+       62,
+       506,
+       62
+      ],
+      "shown": true,
+      "text": "What is this?A page with folding parts."
+     }
+    ],
+    "#two": [
+     {
+      "box": [
+       24,
+       132,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "Who is it for?People with questions."
+     }
+    ],
+    "#three": [
+     {
+      "box": [
+       24,
+       176,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "Can I leave?Whenever you want."
+     }
+    ],
+    "#note": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "A note Your note Cancel Save"
+     }
+    ],
+    "#answer": [
+     {
+      "box": [
+       24,
+       253,
+       1232,
+       18
+      ],
+      "shown": true,
+      "text": "No note yet"
+     }
+    ],
+    "#ask": [
+     {
+      "box": [
+       24,
+       220,
+       93.08,
+       21
+      ],
+      "shown": true,
+      "text": "Leave a note"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "close one",
+   "log": [
+    "toggle one false"
+   ],
+   "state": {
+    "#one": [
+     {
+      "box": [
+       24,
+       62,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "What is this?A page with folding parts."
+     }
+    ],
+    "#two": [
+     {
+      "box": [
+       24,
+       106,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "Who is it for?People with questions."
+     }
+    ],
+    "#three": [
+     {
+      "box": [
+       24,
+       150,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "Can I leave?Whenever you want."
+     }
+    ],
+    "#note": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "A note Your note Cancel Save"
+     }
+    ],
+    "#answer": [
+     {
+      "box": [
+       24,
+       227,
+       1232,
+       18
+      ],
+      "shown": true,
+      "text": "No note yet"
+     }
+    ],
+    "#ask": [
+     {
+      "box": [
+       24,
+       194,
+       93.08,
+       21
+      ],
+      "shown": true,
+      "text": "Leave a note"
+     }
+    ],
+    "(focus)": "s1"
+   }
+  },
+  {
+   "name": "open two",
+   "log": [
+    "toggle two true"
+   ],
+   "state": {
+    "#one": [
+     {
+      "box": [
+       24,
+       62,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "What is this?A page with folding parts."
+     }
+    ],
+    "#two": [
+     {
+      "box": [
+       24,
+       106,
+       506,
+       62
+      ],
+      "shown": true,
+      "text": "Who is it for?People with questions."
+     }
+    ],
+    "#three": [
+     {
+      "box": [
+       24,
+       176,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "Can I leave?Whenever you want."
+     }
+    ],
+    "#note": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "A note Your note Cancel Save"
+     }
+    ],
+    "#answer": [
+     {
+      "box": [
+       24,
+       253,
+       1232,
+       18
+      ],
+      "shown": true,
+      "text": "No note yet"
+     }
+    ],
+    "#ask": [
+     {
+      "box": [
+       24,
+       220,
+       93.08,
+       21
+      ],
+      "shown": true,
+      "text": "Leave a note"
+     }
+    ],
+    "(focus)": "s2"
+   }
+  },
+  {
+   "name": "open three",
+   "log": [
+    "toggle three true",
+    "toggle two false"
+   ],
+   "state": {
+    "#one": [
+     {
+      "box": [
+       24,
+       62,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "What is this?A page with folding parts."
+     }
+    ],
+    "#two": [
+     {
+      "box": [
+       24,
+       106,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "Who is it for?People with questions."
+     }
+    ],
+    "#three": [
+     {
+      "box": [
+       24,
+       150,
+       506,
+       62
+      ],
+      "shown": true,
+      "text": "Can I leave?Whenever you want."
+     }
+    ],
+    "#note": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "A note Your note Cancel Save"
+     }
+    ],
+    "#answer": [
+     {
+      "box": [
+       24,
+       253,
+       1232,
+       18
+      ],
+      "shown": true,
+      "text": "No note yet"
+     }
+    ],
+    "#ask": [
+     {
+      "box": [
+       24,
+       220,
+       93.08,
+       21
+      ],
+      "shown": true,
+      "text": "Leave a note"
+     }
+    ],
+    "(focus)": "s3"
+   }
+  },
+  {
+   "name": "ask",
+   "log": [
+    "open text"
+   ],
+   "state": {
+    "#one": [
+     {
+      "box": [
+       24,
+       62,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "What is this?A page with folding parts."
+     }
+    ],
+    "#two": [
+     {
+      "box": [
+       24,
+       106,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "Who is it for?People with questions."
+     }
+    ],
+    "#three": [
+     {
+      "box": [
+       24,
+       150,
+       506,
+       62
+      ],
+      "shown": true,
+      "text": "Can I leave?Whenever you want."
+     }
+    ],
+    "#note": [
+     {
+      "box": [
+       472,
+       340.5,
+       336,
+       119
+      ],
+      "shown": true,
+      "text": "A note Your note Cancel Save"
+     }
+    ],
+    "#answer": [
+     {
+      "box": [
+       24,
+       253,
+       1232,
+       18
+      ],
+      "shown": true,
+      "text": "No note yet"
+     }
+    ],
+    "#ask": [
+     {
+      "box": [
+       24,
+       220,
+       93.08,
+       21
+      ],
+      "shown": true,
+      "text": "Leave a note"
+     }
+    ],
+    "(focus)": "text"
+   }
+  },
+  {
+   "name": "tab in",
+   "log": [],
+   "state": {
+    "#one": [
+     {
+      "box": [
+       24,
+       62,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "What is this?A page with folding parts."
+     }
+    ],
+    "#two": [
+     {
+      "box": [
+       24,
+       106,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "Who is it for?People with questions."
+     }
+    ],
+    "#three": [
+     {
+      "box": [
+       24,
+       150,
+       506,
+       62
+      ],
+      "shown": true,
+      "text": "Can I leave?Whenever you want."
+     }
+    ],
+    "#note": [
+     {
+      "box": [
+       472,
+       340.5,
+       336,
+       119
+      ],
+      "shown": true,
+      "text": "A note Your note Cancel Save"
+     }
+    ],
+    "#answer": [
+     {
+      "box": [
+       24,
+       253,
+       1232,
+       18
+      ],
+      "shown": true,
+      "text": "No note yet"
+     }
+    ],
+    "#ask": [
+     {
+      "box": [
+       24,
+       220,
+       93.08,
+       21
+      ],
+      "shown": true,
+      "text": "Leave a note"
+     }
+    ],
+    "(focus)": "cancel"
+   }
+  },
+  {
+   "name": "cancel by button",
+   "log": [
+    "close cancelled ask"
+   ],
+   "state": {
+    "#one": [
+     {
+      "box": [
+       24,
+       62,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "What is this?A page with folding parts."
+     }
+    ],
+    "#two": [
+     {
+      "box": [
+       24,
+       106,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "Who is it for?People with questions."
+     }
+    ],
+    "#three": [
+     {
+      "box": [
+       24,
+       150,
+       506,
+       62
+      ],
+      "shown": true,
+      "text": "Can I leave?Whenever you want."
+     }
+    ],
+    "#note": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "A note Your note Cancel Save"
+     }
+    ],
+    "#answer": [
+     {
+      "box": [
+       24,
+       253,
+       1232,
+       18
+      ],
+      "shown": true,
+      "text": "No note: cancelled"
+     }
+    ],
+    "#ask": [
+     {
+      "box": [
+       24,
+       220,
+       93.08,
+       21
+      ],
+      "shown": true,
+      "text": "Leave a note"
+     }
+    ],
+    "(focus)": "ask"
+   }
+  },
+  {
+   "name": "ask 2",
+   "log": [
+    "open text"
+   ],
+   "state": {
+    "#one": [
+     {
+      "box": [
+       24,
+       62,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "What is this?A page with folding parts."
+     }
+    ],
+    "#two": [
+     {
+      "box": [
+       24,
+       106,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "Who is it for?People with questions."
+     }
+    ],
+    "#three": [
+     {
+      "box": [
+       24,
+       150,
+       506,
+       62
+      ],
+      "shown": true,
+      "text": "Can I leave?Whenever you want."
+     }
+    ],
+    "#note": [
+     {
+      "box": [
+       472,
+       340.5,
+       336,
+       119
+      ],
+      "shown": true,
+      "text": "A note Your note Cancel Save"
+     }
+    ],
+    "#answer": [
+     {
+      "box": [
+       24,
+       253,
+       1232,
+       18
+      ],
+      "shown": true,
+      "text": "No note: cancelled"
+     }
+    ],
+    "#ask": [
+     {
+      "box": [
+       24,
+       220,
+       93.08,
+       21
+      ],
+      "shown": true,
+      "text": "Leave a note"
+     }
+    ],
+    "(focus)": "text"
+   }
+  },
+  {
+   "name": "save refused",
+   "log": [],
+   "state": {
+    "#one": [
+     {
+      "box": [
+       24,
+       62,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "What is this?A page with folding parts."
+     }
+    ],
+    "#two": [
+     {
+      "box": [
+       24,
+       106,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "Who is it for?People with questions."
+     }
+    ],
+    "#three": [
+     {
+      "box": [
+       24,
+       150,
+       506,
+       62
+      ],
+      "shown": true,
+      "text": "Can I leave?Whenever you want."
+     }
+    ],
+    "#note": [
+     {
+      "box": [
+       472,
+       340.5,
+       336,
+       119
+      ],
+      "shown": true,
+      "text": "A note Your note Cancel Save"
+     }
+    ],
+    "#answer": [
+     {
+      "box": [
+       24,
+       253,
+       1232,
+       18
+      ],
+      "shown": true,
+      "text": "No note: cancelled"
+     }
+    ],
+    "#ask": [
+     {
+      "box": [
+       24,
+       220,
+       93.08,
+       21
+      ],
+      "shown": true,
+      "text": "Leave a note"
+     }
+    ],
+    "(focus)": "text"
+   }
+  },
+  {
+   "name": "write",
+   "log": [],
+   "state": {
+    "#one": [
+     {
+      "box": [
+       24,
+       62,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "What is this?A page with folding parts."
+     }
+    ],
+    "#two": [
+     {
+      "box": [
+       24,
+       106,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "Who is it for?People with questions."
+     }
+    ],
+    "#three": [
+     {
+      "box": [
+       24,
+       150,
+       506,
+       62
+      ],
+      "shown": true,
+      "text": "Can I leave?Whenever you want."
+     }
+    ],
+    "#note": [
+     {
+      "box": [
+       472,
+       340.5,
+       336,
+       119
+      ],
+      "shown": true,
+      "text": "A note Your note Cancel Save"
+     }
+    ],
+    "#answer": [
+     {
+      "box": [
+       24,
+       253,
+       1232,
+       18
+      ],
+      "shown": true,
+      "text": "No note: cancelled"
+     }
+    ],
+    "#ask": [
+     {
+      "box": [
+       24,
+       220,
+       93.08,
+       21
+      ],
+      "shown": true,
+      "text": "Leave a note"
+     }
+    ],
+    "(focus)": "text"
+   }
+  },
+  {
+   "name": "save",
+   "log": [
+    "close saved ask"
+   ],
+   "state": {
+    "#one": [
+     {
+      "box": [
+       24,
+       62,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "What is this?A page with folding parts."
+     }
+    ],
+    "#two": [
+     {
+      "box": [
+       24,
+       106,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "Who is it for?People with questions."
+     }
+    ],
+    "#three": [
+     {
+      "box": [
+       24,
+       150,
+       506,
+       62
+      ],
+      "shown": true,
+      "text": "Can I leave?Whenever you want."
+     }
+    ],
+    "#note": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "A note Your note Cancel Save"
+     }
+    ],
+    "#answer": [
+     {
+      "box": [
+       24,
+       253,
+       1232,
+       18
+      ],
+      "shown": true,
+      "text": "Note: hello"
+     }
+    ],
+    "#ask": [
+     {
+      "box": [
+       24,
+       220,
+       93.08,
+       21
+      ],
+      "shown": true,
+      "text": "Leave a note"
+     }
+    ],
+    "(focus)": "ask"
+   }
+  },
+  {
+   "name": "ask 3",
+   "log": [
+    "open text"
+   ],
+   "state": {
+    "#one": [
+     {
+      "box": [
+       24,
+       62,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "What is this?A page with folding parts."
+     }
+    ],
+    "#two": [
+     {
+      "box": [
+       24,
+       106,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "Who is it for?People with questions."
+     }
+    ],
+    "#three": [
+     {
+      "box": [
+       24,
+       150,
+       506,
+       62
+      ],
+      "shown": true,
+      "text": "Can I leave?Whenever you want."
+     }
+    ],
+    "#note": [
+     {
+      "box": [
+       472,
+       340.5,
+       336,
+       119
+      ],
+      "shown": true,
+      "text": "A note Your note Cancel Save"
+     }
+    ],
+    "#answer": [
+     {
+      "box": [
+       24,
+       253,
+       1232,
+       18
+      ],
+      "shown": true,
+      "text": "Note: hello"
+     }
+    ],
+    "#ask": [
+     {
+      "box": [
+       24,
+       220,
+       93.08,
+       21
+      ],
+      "shown": true,
+      "text": "Leave a note"
+     }
+    ],
+    "(focus)": "text"
+   }
+  },
+  {
+   "name": "escape",
+   "log": [
+    "cancel",
+    "close  ask"
+   ],
+   "state": {
+    "#one": [
+     {
+      "box": [
+       24,
+       62,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "What is this?A page with folding parts."
+     }
+    ],
+    "#two": [
+     {
+      "box": [
+       24,
+       106,
+       506,
+       36
+      ],
+      "shown": true,
+      "text": "Who is it for?People with questions."
+     }
+    ],
+    "#three": [
+     {
+      "box": [
+       24,
+       150,
+       506,
+       62
+      ],
+      "shown": true,
+      "text": "Can I leave?Whenever you want."
+     }
+    ],
+    "#note": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "A note Your note Cancel Save"
+     }
+    ],
+    "#answer": [
+     {
+      "box": [
+       24,
+       253,
+       1232,
+       18
+      ],
+      "shown": true,
+      "text": "No note:"
+     }
+    ],
+    "#ask": [
+     {
+      "box": [
+       24,
+       220,
+       93.08,
+       21
+      ],
+      "shown": true,
+      "text": "Leave a note"
+     }
+    ],
+    "(focus)": "ask"
+   }
+  }
+ ],
+ "app_dragsort": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    ".row": [
+     {
+      "box": [
+       32,
+       70,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Plan"
+     },
+     {
+      "box": [
+       32,
+       120,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Build"
+     },
+     {
+      "box": [
+       32,
+       170,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Test"
+     },
+     {
+      "box": [
+       32,
+       220,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Ship"
+     }
+    ],
+    "#order": [
+     {
+      "box": [
+       32,
+       286,
+       1216,
+       18
+      ],
+      "shown": true,
+      "text": "Plan, Build, Test, Ship"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "to first",
+   "log": [],
+   "state": {
+    ".row": [
+     {
+      "box": [
+       32,
+       70,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Plan"
+     },
+     {
+      "box": [
+       32,
+       120,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Build"
+     },
+     {
+      "box": [
+       32,
+       170,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Test"
+     },
+     {
+      "box": [
+       32,
+       220,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Ship"
+     }
+    ],
+    "#order": [
+     {
+      "box": [
+       32,
+       286,
+       1216,
+       18
+      ],
+      "shown": true,
+      "text": "Plan, Build, Test, Ship"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "press",
+   "log": [
+    "down r1 125"
+   ],
+   "state": {
+    ".row": [
+     {
+      "box": [
+       32,
+       70,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Plan"
+     },
+     {
+      "box": [
+       32,
+       120,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Build"
+     },
+     {
+      "box": [
+       32,
+       170,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Test"
+     },
+     {
+      "box": [
+       32,
+       220,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Ship"
+     }
+    ],
+    "#order": [
+     {
+      "box": [
+       32,
+       286,
+       1216,
+       18
+      ],
+      "shown": true,
+      "text": "Plan, Build, Test, Ship"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "drag a little",
+   "log": [],
+   "state": {
+    ".row": [
+     {
+      "box": [
+       32,
+       70,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Plan"
+     },
+     {
+      "box": [
+       32,
+       140,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Build"
+     },
+     {
+      "box": [
+       32,
+       170,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Test"
+     },
+     {
+      "box": [
+       32,
+       220,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Ship"
+     }
+    ],
+    "#order": [
+     {
+      "box": [
+       32,
+       286,
+       1216,
+       18
+      ],
+      "shown": true,
+      "text": "Plan, Build, Test, Ship"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "past second",
+   "log": [
+    "order r0,r2,r1,r3"
+   ],
+   "state": {
+    ".row": [
+     {
+      "box": [
+       32,
+       70,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Plan"
+     },
+     {
+      "box": [
+       32,
+       175,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Build"
+     },
+     {
+      "box": [
+       32,
+       120,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Test"
+     },
+     {
+      "box": [
+       32,
+       220,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Ship"
+     }
+    ],
+    "#order": [
+     {
+      "box": [
+       32,
+       286,
+       1216,
+       18
+      ],
+      "shown": true,
+      "text": "Plan, Build, Test, Ship"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "past third",
+   "log": [
+    "order r0,r2,r3,r1"
+   ],
+   "state": {
+    ".row": [
+     {
+      "box": [
+       32,
+       70,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Plan"
+     },
+     {
+      "box": [
+       32,
+       225,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Build"
+     },
+     {
+      "box": [
+       32,
+       120,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Test"
+     },
+     {
+      "box": [
+       32,
+       170,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Ship"
+     }
+    ],
+    "#order": [
+     {
+      "box": [
+       32,
+       286,
+       1216,
+       18
+      ],
+      "shown": true,
+      "text": "Plan, Build, Test, Ship"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "outside",
+   "log": [],
+   "state": {
+    ".row": [
+     {
+      "box": [
+       32,
+       70,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Plan"
+     },
+     {
+      "box": [
+       32,
+       295,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Build"
+     },
+     {
+      "box": [
+       32,
+       120,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Test"
+     },
+     {
+      "box": [
+       32,
+       170,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Ship"
+     }
+    ],
+    "#order": [
+     {
+      "box": [
+       32,
+       286,
+       1216,
+       18
+      ],
+      "shown": true,
+      "text": "Plan, Build, Test, Ship"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "drop",
+   "log": [
+    "up r1 r1",
+    "click r1"
+   ],
+   "state": {
+    ".row": [
+     {
+      "box": [
+       32,
+       70,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Plan"
+     },
+     {
+      "box": [
+       32,
+       220,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Build"
+     },
+     {
+      "box": [
+       32,
+       120,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Test"
+     },
+     {
+      "box": [
+       32,
+       170,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Ship"
+     }
+    ],
+    "#order": [
+     {
+      "box": [
+       32,
+       286,
+       1216,
+       18
+      ],
+      "shown": true,
+      "text": "Plan, Test, Ship, Build"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "click only",
+   "log": [
+    "down r3 192",
+    "up r3 r3",
+    "click r3"
+   ],
+   "state": {
+    ".row": [
+     {
+      "box": [
+       32,
+       70,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Plan"
+     },
+     {
+      "box": [
+       32,
+       220,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Build"
+     },
+     {
+      "box": [
+       32,
+       120,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Test"
+     },
+     {
+      "box": [
+       32,
+       170,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Ship"
+     }
+    ],
+    "#order": [
+     {
+      "box": [
+       32,
+       286,
+       1216,
+       18
+      ],
+      "shown": true,
+      "text": "Plan, Test, Ship, Build"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "to last",
+   "log": [],
+   "state": {
+    ".row": [
+     {
+      "box": [
+       32,
+       70,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Plan"
+     },
+     {
+      "box": [
+       32,
+       220,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Build"
+     },
+     {
+      "box": [
+       32,
+       120,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Test"
+     },
+     {
+      "box": [
+       32,
+       170,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Ship"
+     }
+    ],
+    "#order": [
+     {
+      "box": [
+       32,
+       286,
+       1216,
+       18
+      ],
+      "shown": true,
+      "text": "Plan, Test, Ship, Build"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "press 2",
+   "log": [
+    "down r1 240"
+   ],
+   "state": {
+    ".row": [
+     {
+      "box": [
+       32,
+       70,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Plan"
+     },
+     {
+      "box": [
+       32,
+       220,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Build"
+     },
+     {
+      "box": [
+       32,
+       120,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Test"
+     },
+     {
+      "box": [
+       32,
+       170,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Ship"
+     }
+    ],
+    "#order": [
+     {
+      "box": [
+       32,
+       286,
+       1216,
+       18
+      ],
+      "shown": true,
+      "text": "Plan, Test, Ship, Build"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "up the list",
+   "log": [
+    "order r0,r1,r2,r3"
+   ],
+   "state": {
+    ".row": [
+     {
+      "box": [
+       32,
+       70,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Plan"
+     },
+     {
+      "box": [
+       32,
+       100,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Build"
+     },
+     {
+      "box": [
+       32,
+       170,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Test"
+     },
+     {
+      "box": [
+       32,
+       220,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Ship"
+     }
+    ],
+    "#order": [
+     {
+      "box": [
+       32,
+       286,
+       1216,
+       18
+      ],
+      "shown": true,
+      "text": "Plan, Test, Ship, Build"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "drop 2",
+   "log": [
+    "up r1 r1",
+    "click r1"
+   ],
+   "state": {
+    ".row": [
+     {
+      "box": [
+       32,
+       70,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Plan"
+     },
+     {
+      "box": [
+       32,
+       120,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Build"
+     },
+     {
+      "box": [
+       32,
+       170,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Test"
+     },
+     {
+      "box": [
+       32,
+       220,
+       300,
+       44
+      ],
+      "shown": true,
+      "text": "Ship"
+     }
+    ],
+    "#order": [
+     {
+      "box": [
+       32,
+       286,
+       1216,
+       18
+      ],
+      "shown": true,
+      "text": "Plan, Build, Test, Ship"
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
+ "app_keylist": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "li": [
+     {
+      "box": [
+       33,
+       110,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Write the report"
+     },
+     {
+      "box": [
+       33,
+       145,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Book the room"
+     },
+     {
+      "box": [
+       33,
+       180,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Call the printer"
+     },
+     {
+      "box": [
+       33,
+       215,
+       320,
+       34
+      ],
+      "shown": true,
+      "text": "Water the plants"
+     }
+    ],
+    "#state": [
+     {
+      "box": [
+       32,
+       262,
+       1216,
+       20
+      ],
+      "shown": true,
+      "text": "Nothing picked"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       32,
+       282,
+       86.38,
+       21
+      ],
+      "shown": true,
+      "text": "After the list"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "to search",
+   "log": [],
+   "state": {
+    "li": [
+     {
+      "box": [
+       33,
+       110,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Write the report"
+     },
+     {
+      "box": [
+       33,
+       145,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Book the room"
+     },
+     {
+      "box": [
+       33,
+       180,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Call the printer"
+     },
+     {
+      "box": [
+       33,
+       215,
+       320,
+       34
+      ],
+      "shown": true,
+      "text": "Water the plants"
+     }
+    ],
+    "#state": [
+     {
+      "box": [
+       32,
+       262,
+       1216,
+       20
+      ],
+      "shown": true,
+      "text": "Nothing picked"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       32,
+       282,
+       86.38,
+       21
+      ],
+      "shown": true,
+      "text": "After the list"
+     }
+    ],
+    "(focus)": "search"
+   }
+  },
+  {
+   "name": "into list",
+   "log": [
+    "in i0 from search"
+   ],
+   "state": {
+    "li": [
+     {
+      "box": [
+       33,
+       110,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Write the report"
+     },
+     {
+      "box": [
+       33,
+       145,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Book the room"
+     },
+     {
+      "box": [
+       33,
+       180,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Call the printer"
+     },
+     {
+      "box": [
+       33,
+       215,
+       320,
+       34
+      ],
+      "shown": true,
+      "text": "Water the plants"
+     }
+    ],
+    "#state": [
+     {
+      "box": [
+       32,
+       262,
+       1216,
+       20
+      ],
+      "shown": true,
+      "text": "Nothing picked"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       32,
+       282,
+       86.38,
+       21
+      ],
+      "shown": true,
+      "text": "After the list"
+     }
+    ],
+    "(focus)": "i0"
+   }
+  },
+  {
+   "name": "down",
+   "log": [
+    "key ArrowDown i0 0 false",
+    "out i0 to i1",
+    "in i1 from i0"
+   ],
+   "state": {
+    "li": [
+     {
+      "box": [
+       33,
+       110,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Write the report"
+     },
+     {
+      "box": [
+       33,
+       145,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Book the room"
+     },
+     {
+      "box": [
+       33,
+       180,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Call the printer"
+     },
+     {
+      "box": [
+       33,
+       215,
+       320,
+       34
+      ],
+      "shown": true,
+      "text": "Water the plants"
+     }
+    ],
+    "#state": [
+     {
+      "box": [
+       32,
+       262,
+       1216,
+       20
+      ],
+      "shown": true,
+      "text": "Nothing picked"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       32,
+       282,
+       86.38,
+       21
+      ],
+      "shown": true,
+      "text": "After the list"
+     }
+    ],
+    "(focus)": "i1"
+   }
+  },
+  {
+   "name": "down 2",
+   "log": [
+    "key ArrowDown i1 1 false",
+    "out i1 to i2",
+    "in i2 from i1"
+   ],
+   "state": {
+    "li": [
+     {
+      "box": [
+       33,
+       110,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Write the report"
+     },
+     {
+      "box": [
+       33,
+       145,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Book the room"
+     },
+     {
+      "box": [
+       33,
+       180,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Call the printer"
+     },
+     {
+      "box": [
+       33,
+       215,
+       320,
+       34
+      ],
+      "shown": true,
+      "text": "Water the plants"
+     }
+    ],
+    "#state": [
+     {
+      "box": [
+       32,
+       262,
+       1216,
+       20
+      ],
+      "shown": true,
+      "text": "Nothing picked"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       32,
+       282,
+       86.38,
+       21
+      ],
+      "shown": true,
+      "text": "After the list"
+     }
+    ],
+    "(focus)": "i2"
+   }
+  },
+  {
+   "name": "up",
+   "log": [
+    "key ArrowUp i2 2 false",
+    "out i2 to i1",
+    "in i1 from i2"
+   ],
+   "state": {
+    "li": [
+     {
+      "box": [
+       33,
+       110,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Write the report"
+     },
+     {
+      "box": [
+       33,
+       145,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Book the room"
+     },
+     {
+      "box": [
+       33,
+       180,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Call the printer"
+     },
+     {
+      "box": [
+       33,
+       215,
+       320,
+       34
+      ],
+      "shown": true,
+      "text": "Water the plants"
+     }
+    ],
+    "#state": [
+     {
+      "box": [
+       32,
+       262,
+       1216,
+       20
+      ],
+      "shown": true,
+      "text": "Nothing picked"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       32,
+       282,
+       86.38,
+       21
+      ],
+      "shown": true,
+      "text": "After the list"
+     }
+    ],
+    "(focus)": "i1"
+   }
+  },
+  {
+   "name": "pick",
+   "log": [
+    "key Enter i1 1 false"
+   ],
+   "state": {
+    "li": [
+     {
+      "box": [
+       33,
+       110,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Write the report"
+     },
+     {
+      "box": [
+       33,
+       145,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Book the room"
+     },
+     {
+      "box": [
+       33,
+       180,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Call the printer"
+     },
+     {
+      "box": [
+       33,
+       215,
+       320,
+       34
+      ],
+      "shown": true,
+      "text": "Water the plants"
+     }
+    ],
+    "#state": [
+     {
+      "box": [
+       32,
+       262,
+       1216,
+       20
+      ],
+      "shown": true,
+      "text": "1 picked"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       32,
+       282,
+       86.38,
+       21
+      ],
+      "shown": true,
+      "text": "After the list"
+     }
+    ],
+    "(focus)": "i1"
+   }
+  },
+  {
+   "name": "end",
+   "log": [
+    "key End i1 1 false",
+    "out i1 to i3",
+    "in i3 from i1"
+   ],
+   "state": {
+    "li": [
+     {
+      "box": [
+       33,
+       110,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Write the report"
+     },
+     {
+      "box": [
+       33,
+       145,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Book the room"
+     },
+     {
+      "box": [
+       33,
+       180,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Call the printer"
+     },
+     {
+      "box": [
+       33,
+       215,
+       320,
+       34
+      ],
+      "shown": true,
+      "text": "Water the plants"
+     }
+    ],
+    "#state": [
+     {
+      "box": [
+       32,
+       262,
+       1216,
+       20
+      ],
+      "shown": true,
+      "text": "1 picked"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       32,
+       282,
+       86.38,
+       21
+      ],
+      "shown": true,
+      "text": "After the list"
+     }
+    ],
+    "(focus)": "i3"
+   }
+  },
+  {
+   "name": "pick space",
+   "log": [
+    "key   i3 3 false"
+   ],
+   "state": {
+    "li": [
+     {
+      "box": [
+       33,
+       110,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Write the report"
+     },
+     {
+      "box": [
+       33,
+       145,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Book the room"
+     },
+     {
+      "box": [
+       33,
+       180,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Call the printer"
+     },
+     {
+      "box": [
+       33,
+       215,
+       320,
+       34
+      ],
+      "shown": true,
+      "text": "Water the plants"
+     }
+    ],
+    "#state": [
+     {
+      "box": [
+       32,
+       262,
+       1216,
+       20
+      ],
+      "shown": true,
+      "text": "2 picked"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       32,
+       282,
+       86.38,
+       21
+      ],
+      "shown": true,
+      "text": "After the list"
+     }
+    ],
+    "(focus)": "i3"
+   }
+  },
+  {
+   "name": "home",
+   "log": [
+    "key Home i3 3 false",
+    "out i3 to i0",
+    "in i0 from i3"
+   ],
+   "state": {
+    "li": [
+     {
+      "box": [
+       33,
+       110,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Write the report"
+     },
+     {
+      "box": [
+       33,
+       145,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Book the room"
+     },
+     {
+      "box": [
+       33,
+       180,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Call the printer"
+     },
+     {
+      "box": [
+       33,
+       215,
+       320,
+       34
+      ],
+      "shown": true,
+      "text": "Water the plants"
+     }
+    ],
+    "#state": [
+     {
+      "box": [
+       32,
+       262,
+       1216,
+       20
+      ],
+      "shown": true,
+      "text": "2 picked"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       32,
+       282,
+       86.38,
+       21
+      ],
+      "shown": true,
+      "text": "After the list"
+     }
+    ],
+    "(focus)": "i0"
+   }
+  },
+  {
+   "name": "delete",
+   "log": [
+    "key Delete i0 0 false",
+    "out i0 to none",
+    "in i1 from none"
+   ],
+   "state": {
+    "li": [
+     {
+      "box": [
+       33,
+       110,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Book the room"
+     },
+     {
+      "box": [
+       33,
+       145,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Call the printer"
+     },
+     {
+      "box": [
+       33,
+       180,
+       320,
+       34
+      ],
+      "shown": true,
+      "text": "Water the plants"
+     }
+    ],
+    "#state": [
+     {
+      "box": [
+       32,
+       227,
+       1216,
+       20
+      ],
+      "shown": true,
+      "text": "2 picked"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       32,
+       247,
+       86.38,
+       21
+      ],
+      "shown": true,
+      "text": "After the list"
+     }
+    ],
+    "(focus)": "i1"
+   }
+  },
+  {
+   "name": "click row",
+   "log": [
+    "out i1 to i3",
+    "in i3 from i1"
+   ],
+   "state": {
+    "li": [
+     {
+      "box": [
+       33,
+       110,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Book the room"
+     },
+     {
+      "box": [
+       33,
+       145,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Call the printer"
+     },
+     {
+      "box": [
+       33,
+       180,
+       320,
+       34
+      ],
+      "shown": true,
+      "text": "Water the plants"
+     }
+    ],
+    "#state": [
+     {
+      "box": [
+       32,
+       227,
+       1216,
+       20
+      ],
+      "shown": true,
+      "text": "2 picked"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       32,
+       247,
+       86.38,
+       21
+      ],
+      "shown": true,
+      "text": "After the list"
+     }
+    ],
+    "(focus)": "i3"
+   }
+  },
+  {
+   "name": "tab out",
+   "log": [
+    "key Tab i3 2 false",
+    "out i3 to after"
+   ],
+   "state": {
+    "li": [
+     {
+      "box": [
+       33,
+       110,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Book the room"
+     },
+     {
+      "box": [
+       33,
+       145,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Call the printer"
+     },
+     {
+      "box": [
+       33,
+       180,
+       320,
+       34
+      ],
+      "shown": true,
+      "text": "Water the plants"
+     }
+    ],
+    "#state": [
+     {
+      "box": [
+       32,
+       227,
+       1216,
+       20
+      ],
+      "shown": true,
+      "text": "2 picked"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       32,
+       247,
+       86.38,
+       21
+      ],
+      "shown": true,
+      "text": "After the list"
+     }
+    ],
+    "(focus)": "after"
+   }
+  },
+  {
+   "name": "back in",
+   "log": [
+    "in i3 from after"
+   ],
+   "state": {
+    "li": [
+     {
+      "box": [
+       33,
+       110,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Book the room"
+     },
+     {
+      "box": [
+       33,
+       145,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Call the printer"
+     },
+     {
+      "box": [
+       33,
+       180,
+       320,
+       34
+      ],
+      "shown": true,
+      "text": "Water the plants"
+     }
+    ],
+    "#state": [
+     {
+      "box": [
+       32,
+       227,
+       1216,
+       20
+      ],
+      "shown": true,
+      "text": "2 picked"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       32,
+       247,
+       86.38,
+       21
+      ],
+      "shown": true,
+      "text": "After the list"
+     }
+    ],
+    "(focus)": "i3"
+   }
+  },
+  {
+   "name": "escape",
+   "log": [
+    "key Escape i3 2 false",
+    "out i3 to search"
+   ],
+   "state": {
+    "li": [
+     {
+      "box": [
+       33,
+       110,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Book the room"
+     },
+     {
+      "box": [
+       33,
+       145,
+       320,
+       35
+      ],
+      "shown": true,
+      "text": "Call the printer"
+     },
+     {
+      "box": [
+       33,
+       180,
+       320,
+       34
+      ],
+      "shown": true,
+      "text": "Water the plants"
+     }
+    ],
+    "#state": [
+     {
+      "box": [
+       32,
+       227,
+       1216,
+       20
+      ],
+      "shown": true,
+      "text": "2 picked"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       32,
+       247,
+       86.38,
+       21
+      ],
+      "shown": true,
+      "text": "After the list"
+     }
+    ],
+    "(focus)": "search"
+   }
+  }
+ ],
+ "app_signup": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#user": [
+     {
+      "box": [
+       430,
+       129,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#mail": [
+     {
+      "box": [
+       430,
+       211,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#pass": [
+     {
+      "box": [
+       430,
+       293,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#terms": [
+     {
+      "box": [
+       434,
+       358,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       430,
+       391,
+       79.48,
+       32
+      ],
+      "shown": true,
+      "text": "Sign up"
+     }
+    ],
+    "#done": [
+     {
+      "box": [
+       430,
+       437,
+       420,
+       0
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    ".hint": [
+     {
+      "box": [
+       430,
+       159,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     },
+     {
+      "box": [
+       430,
+       241,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     },
+     {
+      "box": [
+       430,
+       323,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "name short",
+   "log": [
+    "input user 1 false",
+    "input user 2 false"
+   ],
+   "state": {
+    "#user": [
+     {
+      "box": [
+       430,
+       129,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "Al"
+     }
+    ],
+    "#mail": [
+     {
+      "box": [
+       430,
+       211,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#pass": [
+     {
+      "box": [
+       430,
+       293,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#terms": [
+     {
+      "box": [
+       434,
+       358,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       430,
+       391,
+       79.48,
+       32
+      ],
+      "shown": true,
+      "text": "Sign up"
+     }
+    ],
+    "#done": [
+     {
+      "box": [
+       430,
+       437,
+       420,
+       0
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    ".hint": [
+     {
+      "box": [
+       430,
+       159,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": "Too short"
+     },
+     {
+      "box": [
+       430,
+       241,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     },
+     {
+      "box": [
+       430,
+       323,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "user"
+   }
+  },
+  {
+   "name": "tab to mail",
+   "log": [
+    "change user",
+    "blur user"
+   ],
+   "state": {
+    "#user": [
+     {
+      "box": [
+       430,
+       129,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "Al"
+     }
+    ],
+    "#mail": [
+     {
+      "box": [
+       430,
+       211,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#pass": [
+     {
+      "box": [
+       430,
+       293,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#terms": [
+     {
+      "box": [
+       434,
+       358,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       430,
+       391,
+       79.48,
+       32
+      ],
+      "shown": true,
+      "text": "Sign up"
+     }
+    ],
+    "#done": [
+     {
+      "box": [
+       430,
+       437,
+       420,
+       0
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    ".hint": [
+     {
+      "box": [
+       430,
+       159,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": "Too short"
+     },
+     {
+      "box": [
+       430,
+       241,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     },
+     {
+      "box": [
+       430,
+       323,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "mail"
+   }
+  },
+  {
+   "name": "bad mail",
+   "log": [
+    "input mail 1 false",
+    "input mail 2 false",
+    "input mail 3 false",
+    "input mail 4 false"
+   ],
+   "state": {
+    "#user": [
+     {
+      "box": [
+       430,
+       129,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "Al"
+     }
+    ],
+    "#mail": [
+     {
+      "box": [
+       430,
+       211,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "nope"
+     }
+    ],
+    "#pass": [
+     {
+      "box": [
+       430,
+       293,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#terms": [
+     {
+      "box": [
+       434,
+       358,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       430,
+       391,
+       79.48,
+       32
+      ],
+      "shown": true,
+      "text": "Sign up"
+     }
+    ],
+    "#done": [
+     {
+      "box": [
+       430,
+       437,
+       420,
+       0
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    ".hint": [
+     {
+      "box": [
+       430,
+       159,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": "Too short"
+     },
+     {
+      "box": [
+       430,
+       241,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": "Not valid"
+     },
+     {
+      "box": [
+       430,
+       323,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "mail"
+   }
+  },
+  {
+   "name": "more name",
+   "log": [
+    "change mail",
+    "blur mail",
+    "input user 3 true",
+    "input user 4 true",
+    "input user 5 true"
+   ],
+   "state": {
+    "#user": [
+     {
+      "box": [
+       430,
+       129,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "Alice"
+     }
+    ],
+    "#mail": [
+     {
+      "box": [
+       430,
+       211,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "nope"
+     }
+    ],
+    "#pass": [
+     {
+      "box": [
+       430,
+       293,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#terms": [
+     {
+      "box": [
+       434,
+       358,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       430,
+       391,
+       79.48,
+       32
+      ],
+      "shown": true,
+      "text": "Sign up"
+     }
+    ],
+    "#done": [
+     {
+      "box": [
+       430,
+       437,
+       420,
+       0
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    ".hint": [
+     {
+      "box": [
+       430,
+       159,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     },
+     {
+      "box": [
+       430,
+       241,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": "Not valid"
+     },
+     {
+      "box": [
+       430,
+       323,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "user"
+   }
+  },
+  {
+   "name": "mail good",
+   "log": [
+    "change user",
+    "blur user",
+    "input mail 5 false",
+    "input mail 6 true",
+    "input mail 7 true",
+    "input mail 8 true",
+    "input mail 9 true",
+    "input mail 10 true",
+    "input mail 11 true",
+    "input mail 12 true",
+    "input mail 13 false",
+    "input mail 14 true",
+    "input mail 15 true",
+    "input mail 16 true"
+   ],
+   "state": {
+    "#user": [
+     {
+      "box": [
+       430,
+       129,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "Alice"
+     }
+    ],
+    "#mail": [
+     {
+      "box": [
+       430,
+       211,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "nope@example.com"
+     }
+    ],
+    "#pass": [
+     {
+      "box": [
+       430,
+       293,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#terms": [
+     {
+      "box": [
+       434,
+       358,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       430,
+       391,
+       79.48,
+       32
+      ],
+      "shown": true,
+      "text": "Sign up"
+     }
+    ],
+    "#done": [
+     {
+      "box": [
+       430,
+       437,
+       420,
+       0
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    ".hint": [
+     {
+      "box": [
+       430,
+       159,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     },
+     {
+      "box": [
+       430,
+       241,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     },
+     {
+      "box": [
+       430,
+       323,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "mail"
+   }
+  },
+  {
+   "name": "pass",
+   "log": [
+    "change mail",
+    "blur mail",
+    "input pass 1 false",
+    "input pass 2 false",
+    "input pass 3 false",
+    "input pass 4 false",
+    "input pass 5 false",
+    "input pass 6 true",
+    "input pass 7 true"
+   ],
+   "state": {
+    "#user": [
+     {
+      "box": [
+       430,
+       129,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "Alice"
+     }
+    ],
+    "#mail": [
+     {
+      "box": [
+       430,
+       211,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "nope@example.com"
+     }
+    ],
+    "#pass": [
+     {
+      "box": [
+       430,
+       293,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "secret1"
+     }
+    ],
+    "#terms": [
+     {
+      "box": [
+       434,
+       358,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       430,
+       391,
+       79.48,
+       32
+      ],
+      "shown": true,
+      "text": "Sign up"
+     }
+    ],
+    "#done": [
+     {
+      "box": [
+       430,
+       437,
+       420,
+       0
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    ".hint": [
+     {
+      "box": [
+       430,
+       159,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     },
+     {
+      "box": [
+       430,
+       241,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     },
+     {
+      "box": [
+       430,
+       323,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "pass"
+   }
+  },
+  {
+   "name": "terms label",
+   "log": [
+    "change pass",
+    "blur pass",
+    "terms true"
+   ],
+   "state": {
+    "#user": [
+     {
+      "box": [
+       430,
+       129,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "Alice"
+     }
+    ],
+    "#mail": [
+     {
+      "box": [
+       430,
+       211,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "nope@example.com"
+     }
+    ],
+    "#pass": [
+     {
+      "box": [
+       430,
+       293,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "secret1"
+     }
+    ],
+    "#terms": [
+     {
+      "box": [
+       434,
+       358,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       430,
+       391,
+       79.48,
+       32
+      ],
+      "shown": true,
+      "text": "Sign up"
+     }
+    ],
+    "#done": [
+     {
+      "box": [
+       430,
+       437,
+       420,
+       0
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    ".hint": [
+     {
+      "box": [
+       430,
+       159,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     },
+     {
+      "box": [
+       430,
+       241,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     },
+     {
+      "box": [
+       430,
+       323,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "terms"
+   }
+  },
+  {
+   "name": "sign up",
+   "log": [
+    "submit user=Alice&mail=nope%40example.com&pass=secret1&terms=on"
+   ],
+   "state": {
+    "#user": [
+     {
+      "box": [
+       430,
+       129,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "Alice"
+     }
+    ],
+    "#mail": [
+     {
+      "box": [
+       430,
+       211,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "nope@example.com"
+     }
+    ],
+    "#pass": [
+     {
+      "box": [
+       430,
+       293,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": "secret1"
+     }
+    ],
+    "#terms": [
+     {
+      "box": [
+       434,
+       358,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       430,
+       391,
+       79.48,
+       32
+      ],
+      "shown": true,
+      "text": "Sign up"
+     }
+    ],
+    "#done": [
+     {
+      "box": [
+       430,
+       437,
+       420,
+       16
+      ],
+      "shown": true,
+      "text": "Welcome, Alice!"
+     }
+    ],
+    ".hint": [
+     {
+      "box": [
+       430,
+       159,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     },
+     {
+      "box": [
+       430,
+       241,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     },
+     {
+      "box": [
+       430,
+       323,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "send"
+   }
+  },
+  {
+   "name": "clear",
+   "log": [
+    "reset"
+   ],
+   "state": {
+    "#user": [
+     {
+      "box": [
+       430,
+       129,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#mail": [
+     {
+      "box": [
+       430,
+       211,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#pass": [
+     {
+      "box": [
+       430,
+       293,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#terms": [
+     {
+      "box": [
+       434,
+       358,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       430,
+       391,
+       79.48,
+       32
+      ],
+      "shown": true,
+      "text": "Sign up"
+     }
+    ],
+    "#done": [
+     {
+      "box": [
+       430,
+       437,
+       420,
+       0
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    ".hint": [
+     {
+      "box": [
+       430,
+       159,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     },
+     {
+      "box": [
+       430,
+       241,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     },
+     {
+      "box": [
+       430,
+       323,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "clear"
+   }
+  },
+  {
+   "name": "terms box",
+   "log": [
+    "terms true"
+   ],
+   "state": {
+    "#user": [
+     {
+      "box": [
+       430,
+       129,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#mail": [
+     {
+      "box": [
+       430,
+       211,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#pass": [
+     {
+      "box": [
+       430,
+       293,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#terms": [
+     {
+      "box": [
+       434,
+       358,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": true
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       430,
+       391,
+       79.48,
+       32
+      ],
+      "shown": true,
+      "text": "Sign up"
+     }
+    ],
+    "#done": [
+     {
+      "box": [
+       430,
+       437,
+       420,
+       0
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    ".hint": [
+     {
+      "box": [
+       430,
+       159,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     },
+     {
+      "box": [
+       430,
+       241,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     },
+     {
+      "box": [
+       430,
+       323,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "terms"
+   }
+  },
+  {
+   "name": "terms box off",
+   "log": [
+    "terms false"
+   ],
+   "state": {
+    "#user": [
+     {
+      "box": [
+       430,
+       129,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#mail": [
+     {
+      "box": [
+       430,
+       211,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#pass": [
+     {
+      "box": [
+       430,
+       293,
+       420,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#terms": [
+     {
+      "box": [
+       434,
+       358,
+       13,
+       13
+      ],
+      "shown": true,
+      "text": "",
+      "value": "on",
+      "checked": false
+     }
+    ],
+    "#send": [
+     {
+      "box": [
+       430,
+       391,
+       79.48,
+       32
+      ],
+      "shown": true,
+      "text": "Sign up"
+     }
+    ],
+    "#done": [
+     {
+      "box": [
+       430,
+       437,
+       420,
+       0
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    ".hint": [
+     {
+      "box": [
+       430,
+       159,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     },
+     {
+      "box": [
+       430,
+       241,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     },
+     {
+      "box": [
+       430,
+       323,
+       420,
+       18
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "terms"
+   }
+  }
+ ],
  "cards": [
   {
    "name": "load",
@@ -29905,6 +34307,399 @@
    }
   }
  ],
+ "input_links": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1606,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "#frag": [
+     {
+      "box": [
+       12,
+       36,
+       200,
+       24
+      ],
+      "shown": true,
+      "text": "to the end"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "kept link",
+   "log": [
+    "click keep keep 2 1 false true ",
+    "click keep document 3 1 true true "
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1606,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "#frag": [
+     {
+      "box": [
+       12,
+       36,
+       200,
+       24
+      ],
+      "shown": true,
+      "text": "to the end"
+     }
+    ],
+    "(focus)": "keep"
+   }
+  },
+  {
+   "name": "frag by mouse",
+   "log": [
+    "click frag frag 2 1 false true ",
+    "click frag document 3 1 false true "
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       774,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "#frag": [
+     {
+      "box": [
+       12,
+       -796,
+       200,
+       24
+      ],
+      "shown": true,
+      "text": "to the end"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "tab after frag",
+   "log": [],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1606,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "#frag": [
+     {
+      "box": [
+       12,
+       36,
+       200,
+       24
+      ],
+      "shown": true,
+      "text": "to the end"
+     }
+    ],
+    "(focus)": "keep"
+   }
+  },
+  {
+   "name": "back up",
+   "log": [
+    "click keep keep 2 1 false true #end",
+    "click keep document 3 1 true true #end"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1606,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "#frag": [
+     {
+      "box": [
+       12,
+       36,
+       200,
+       24
+      ],
+      "shown": true,
+      "text": "to the end"
+     }
+    ],
+    "(focus)": "keep"
+   }
+  },
+  {
+   "name": "capture stops",
+   "log": [
+    "click sc stopcap 1 1 false true #end"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1606,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "#frag": [
+     {
+      "box": [
+       12,
+       36,
+       200,
+       24
+      ],
+      "shown": true,
+      "text": "to the end"
+     }
+    ],
+    "(focus)": "sc"
+   }
+  },
+  {
+   "name": "bubble stops",
+   "log": [
+    "click sb sb 2 1 false true #end"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1606,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "#frag": [
+     {
+      "box": [
+       12,
+       36,
+       200,
+       24
+      ],
+      "shown": true,
+      "text": "to the end"
+     }
+    ],
+    "(focus)": "sb"
+   }
+  },
+  {
+   "name": "tab back",
+   "log": [],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1606,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "#frag": [
+     {
+      "box": [
+       12,
+       36,
+       200,
+       24
+      ],
+      "shown": true,
+      "text": "to the end"
+     }
+    ],
+    "(focus)": "sc"
+   }
+  },
+  {
+   "name": "tab back 2",
+   "log": [],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1606,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "#frag": [
+     {
+      "box": [
+       12,
+       36,
+       200,
+       24
+      ],
+      "shown": true,
+      "text": "to the end"
+     }
+    ],
+    "(focus)": "frag"
+   }
+  },
+  {
+   "name": "enter on kept",
+   "log": [
+    "click frag frag 2 0 false true #end",
+    "click frag document 3 0 false true #end"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       774,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "#frag": [
+     {
+      "box": [
+       12,
+       -796,
+       200,
+       24
+      ],
+      "shown": true,
+      "text": "to the end"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "tab to frag",
+   "log": [],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1606,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "#frag": [
+     {
+      "box": [
+       12,
+       36,
+       200,
+       24
+      ],
+      "shown": true,
+      "text": "to the end"
+     }
+    ],
+    "(focus)": "keep"
+   }
+  },
+  {
+   "name": "enter on frag",
+   "log": [
+    "click keep keep 2 0 false true #end",
+    "click keep document 3 0 true true #end"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1606,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "#frag": [
+     {
+      "box": [
+       12,
+       36,
+       200,
+       24
+      ],
+      "shown": true,
+      "text": "to the end"
+     }
+    ],
+    "(focus)": "keep"
+   }
+  }
+ ],
  "input_pointer": [
   {
    "name": "load",
@@ -32496,6 +37291,7396 @@
      }
     ],
     "(focus)": "c"
+   }
+  }
+ ],
+ "input_states_closed": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "hover",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(255, 0, 0)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "off",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "over active",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "press active",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(0, 255, 0)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": "a"
+   }
+  },
+  {
+   "name": "out while held",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(0, 255, 0)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": "a"
+   }
+  },
+  {
+   "name": "back while held",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(0, 255, 0)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": "a"
+   }
+  },
+  {
+   "name": "release active",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": "a"
+   }
+  },
+  {
+   "name": "field by mouse",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 255)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": "f"
+   }
+  },
+  {
+   "name": "button by mouse",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": "v"
+   }
+  },
+  {
+   "name": "field by mouse 2",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 255, 255)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": "vi"
+   }
+  },
+  {
+   "name": "back to button by key",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(255, 255, 0)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": "v"
+   }
+  },
+  {
+   "name": "button by mouse 2",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(255, 255, 0)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": "v"
+   }
+  },
+  {
+   "name": "key after mouse",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 255, 255)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": "vi"
+   }
+  },
+  {
+   "name": "within by mouse",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(255, 0, 255)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": "wb"
+   }
+  },
+  {
+   "name": "check",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(128, 0, 0)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": "c"
+   }
+  },
+  {
+   "name": "uncheck",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": "c"
+   }
+  },
+  {
+   "name": "fill invalid",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "x",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": "i"
+   }
+  },
+  {
+   "name": "fill placeholder",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "x",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "x",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": "p"
+   }
+  },
+  {
+   "name": "empty placeholder",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "x",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": "p"
+   }
+  },
+  {
+   "name": "tabindex by mouse",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "x",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(64, 64, 64)"
+     }
+    ],
+    "(focus)": "t"
+   }
+  },
+  {
+   "name": "off tabindex",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(255, 0, 0)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "x",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
+ "input_states_open": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "hover",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(255, 0, 0)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "off",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "over active",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "press active",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(0, 255, 0)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": "a"
+   }
+  },
+  {
+   "name": "out while held",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(0, 255, 0)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": "a"
+   }
+  },
+  {
+   "name": "back while held",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(0, 255, 0)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": "a"
+   }
+  },
+  {
+   "name": "release active",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": "a"
+   }
+  },
+  {
+   "name": "field by mouse",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 255)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": "f"
+   }
+  },
+  {
+   "name": "button by mouse",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": "v"
+   }
+  },
+  {
+   "name": "field by mouse 2",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 255, 255)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": "vi"
+   }
+  },
+  {
+   "name": "back to button by key",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(255, 255, 0)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": "v"
+   }
+  },
+  {
+   "name": "button by mouse 2",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(255, 255, 0)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": "v"
+   }
+  },
+  {
+   "name": "key after mouse",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 255, 255)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": "vi"
+   }
+  },
+  {
+   "name": "within by mouse",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(255, 0, 255)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": "wb"
+   }
+  },
+  {
+   "name": "check",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(128, 0, 0)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": "c"
+   }
+  },
+  {
+   "name": "uncheck",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": "c"
+   }
+  },
+  {
+   "name": "fill invalid",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "x",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": "i"
+   }
+  },
+  {
+   "name": "fill placeholder",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "x",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "x",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": "p"
+   }
+  },
+  {
+   "name": "empty placeholder",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "x",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": "p"
+   }
+  },
+  {
+   "name": "tabindex by mouse",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "x",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(64, 64, 64)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": "t"
+   }
+  },
+  {
+   "name": "off tabindex",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(255, 0, 0)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "x",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(64, 0, 0)"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "made",
+   "log": [],
+   "state": {
+    ".b": [
+     {
+      "box": [
+       12,
+       8,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       40,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       72,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       104,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       136,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       168,
+       208,
+       36
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       20,
+       176,
+       100,
+       10
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       232,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       264,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 128, 0)"
+     },
+     {
+      "box": [
+       12,
+       296,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(0, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       328,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "x",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       360,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "",
+      "paint": "rgb(128, 0, 128)"
+     },
+     {
+      "box": [
+       12,
+       392,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(200, 200, 200)"
+     },
+     {
+      "box": [
+       12,
+       424,
+       160,
+       28
+      ],
+      "shown": true,
+      "text": "",
+      "value": "x",
+      "paint": "rgb(200, 200, 200)"
+     }
+    ],
+    "(focus)": "mr"
    }
   }
  ],

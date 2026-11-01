@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dialog and details</title>
+<style>
+body { margin: 0; padding: 24px; font-family: Arial, sans-serif; color: #223; }
+h1 { font-size: 22px; margin: 0 0 12px; }
+details { width: 480px; border: 1px solid #ccd; padding: 8px 12px; margin-bottom: 8px; }
+summary { cursor: pointer; font-weight: bold; }
+details p { margin: 8px 0 0; }
+dialog { width: 300px; border: 2px solid #446; border-radius: 6px; padding: 16px; }
+dialog::backdrop { background: rgba(10, 10, 40, 0.4); }
+dialog h2 { margin: 0 0 8px; font-size: 18px; }
+#answer { margin-top: 12px; }
+menu { margin: 12px 0 0; padding: 0; }
+</style>
+</head>
+<body>
+<h1>Help</h1>
+<details id="one" open><summary id="s1">What is this?</summary><p>A page with folding parts.</p></details>
+<details id="two" name="pair"><summary id="s2">Who is it for?</summary><p>People with questions.</p></details>
+<details id="three" name="pair"><summary id="s3">Can I leave?</summary><p>Whenever you want.</p></details>
+<button id="ask">Leave a note</button>
+<div id="answer">No note yet</div>
+<dialog id="note">
+<h2>A note</h2>
+<form method="dialog" id="noteform">
+<label for="text">Your note</label>
+<input id="text" name="text" required>
+<menu><button id="cancel" type="button">Cancel</button> <button id="save" value="saved">Save</button></menu>
+</form>
+</dialog>
+<script>
+var note = document.getElementById("note");
+var answer = document.getElementById("answer");
+document.getElementById("ask").addEventListener("click", function () {
+  note.showModal();
+  console.log("open " + document.activeElement.id);
+});
+document.getElementById("cancel").addEventListener("click", function () { note.close("cancelled"); });
+note.addEventListener("cancel", function () { console.log("cancel"); });
+note.addEventListener("close", function () {
+  console.log("close " + note.returnValue + " " + document.activeElement.id);
+  answer.textContent = note.returnValue === "saved" ? "Note: " + document.getElementById("text").value : "No note: " + note.returnValue;
+});
+document.querySelectorAll("details").forEach(function (d) {
+  d.addEventListener("toggle", function () { console.log("toggle " + d.id + " " + d.open); });
+});
+</script>
+</body>
+</html>

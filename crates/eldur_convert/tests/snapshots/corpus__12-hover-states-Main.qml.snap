@@ -205,8 +205,8 @@ ApplicationWindow {
                                     verticalAlignment: Text.AlignVCenter
                                 }
                                 transform: Scale {
-                                    xScale: buttonControl.pressed ? 0.97 : 1
-                                    yScale: buttonControl.pressed ? 0.97 : 1
+                                    xScale: buttonControlPress.active || buttonControl.pressed ? 0.97 : 1
+                                    yScale: buttonControlPress.active || buttonControl.pressed ? 0.97 : 1
                                     origin.x: buttonControl.width * 0.5
                                     origin.y: buttonControl.height * 0.5
 
@@ -227,6 +227,10 @@ ApplicationWindow {
                                 }
                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
                                 hoverEnabled: true
+
+                                PointHandler {
+                                    id: buttonControlPress
+                                }
                             }
 
                             // <button class="btn btn--secondary">
@@ -274,8 +278,8 @@ ApplicationWindow {
                                     verticalAlignment: Text.AlignVCenter
                                 }
                                 transform: Scale {
-                                    xScale: buttonControl2.pressed ? 0.97 : 1
-                                    yScale: buttonControl2.pressed ? 0.97 : 1
+                                    xScale: buttonControl2Press.active || buttonControl2.pressed ? 0.97 : 1
+                                    yScale: buttonControl2Press.active || buttonControl2.pressed ? 0.97 : 1
                                     origin.x: buttonControl2.width * 0.5
                                     origin.y: buttonControl2.height * 0.5
 
@@ -296,6 +300,10 @@ ApplicationWindow {
                                 }
                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
                                 hoverEnabled: true
+
+                                PointHandler {
+                                    id: buttonControl2Press
+                                }
                             }
 
                             // <button class="btn btn--ghost">
@@ -343,8 +351,8 @@ ApplicationWindow {
                                     verticalAlignment: Text.AlignVCenter
                                 }
                                 transform: Scale {
-                                    xScale: buttonControl3.pressed ? 0.97 : 1
-                                    yScale: buttonControl3.pressed ? 0.97 : 1
+                                    xScale: buttonControl3Press.active || buttonControl3.pressed ? 0.97 : 1
+                                    yScale: buttonControl3Press.active || buttonControl3.pressed ? 0.97 : 1
                                     origin.x: buttonControl3.width * 0.5
                                     origin.y: buttonControl3.height * 0.5
 
@@ -365,6 +373,10 @@ ApplicationWindow {
                                 }
                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
                                 hoverEnabled: true
+
+                                PointHandler {
+                                    id: buttonControl3Press
+                                }
                             }
 
                             // <button class="btn btn--primary">

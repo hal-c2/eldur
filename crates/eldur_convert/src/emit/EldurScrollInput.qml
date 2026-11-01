@@ -43,19 +43,21 @@ Item {
         return true;
     }
 
-    // A click on a scroller inside belongs to that one, and one on a control
-    // leaves the focus the control took.
+    // A click on a scroller inside belongs to that one, and one on what has or
+    // takes focus keeps it; a click on anything else takes it off what had it.
     function holdsInner(point) {
         const held = input.Window.activeFocusItem;
-        for (let at = held; at && held !== input && !(held instanceof EldurScrollInput); at = at.parent) {
-            if (at === scroller) return true;
+        if (held && held !== input && !(held instanceof EldurScrollInput)) {
+            const there = scroller.mapToItem(held, point.x, point.y);
+            if (held.contains(there)) return true;
         }
         let at = scroller.contentItem;
         let p = scroller.mapToItem(at, point.x, point.y);
         for (;;) {
             const kid = at.childAt(p.x, p.y);
             if (!kid) return false;
-            if (kid instanceof Flickable) return true;
+            if (kid instanceof Flickable || kid.activeFocusOnTab === true) return true;
+            if (kid.focusPolicy !== undefined && (kid.focusPolicy & Qt.ClickFocus)) return true;
             p = at.mapToItem(kid, p.x, p.y);
             at = kid;
         }

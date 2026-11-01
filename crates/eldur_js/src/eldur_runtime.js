@@ -325,6 +325,10 @@ function init(rootItem, baseUrl, documentUrl) {
     if (docUrl !== "") {
         _updateLocationFromHref(docUrl, false);
     }
+    // The layer belongs to the page it was made on, and may have gone with it.
+    if (_in && _in.page !== _root) {
+        _in = null;
+    }
     _vModels = [];
     _vRules = null;
     _gCascadeRules = null;
@@ -368,6 +372,12 @@ function _setUpDetails(raw) {
     var kids = _rawElementChildren(raw);
     var summary = kids.filter(function(k) { return _nodeTag(k) === "summary"; })[0];
     _detailsShow(raw, raw.eldurOpen === true);
+    // Open from the start is a toggle too, once the page's scripts have run.
+    if (raw.eldurOpen === true) {
+        Qt.callLater(function() {
+            dispatchEvent(wrap(raw), new Event("toggle"));
+        });
+    }
     if (summary) {
         wrap(summary).addEventListener("click", function(ev) {
             // Last on its element, and the page's listeners further up have yet to
@@ -782,8 +792,14 @@ function _scrollToFragment(hash) {
     var active = document.activeElement;
     if (active && active !== document.body && typeof active.blur === "function") {
         active.blur();
+        // Nothing near the link keeps the keys: Qt would hand Tab on from there.
+        (_root.contentItem || _root).forceActiveFocus();
     }
     if (found) {
+        // The next Tab goes on from here, though nothing here has the focus.
+        if (_in) {
+            _in.tabFrom = _unwrap(found);
+        }
         _scrollIntoView(_unwrap(found), { block: "start" });
     } else if (page) {
         scrollTo(page.contentX, 0);
@@ -3210,6 +3226,17 @@ function _polishDown(item) {
 // Takes a node out of the DOM. Never destroys it: a script may hold it and put
 // it back, as with a modal, and bindings of the page may read it by id.
 function _detachNode(raw) {
+    // A browser says so as it goes; Qt only moves the focus, when it gets there.
+    if (_in && _in.focused) {
+        for (var at = _in.focused; at; at = _gParent(at)) {
+            if (at === raw) {
+                var was = _in.focused;
+                _in.focused = null;
+                _inFocusEvents(was, null, "blur", "focusout");
+                break;
+            }
+        }
+    }
     if (!raw.__eldurInline) {
         _wsLeave(raw);
     }
@@ -4499,6 +4526,18 @@ function getStyle(item, prop) {
         return m.styles[camel];
     }
     var raw = _unwrap(item);
+    // What the page's own style="" attribute said, as el.style reports it
+    // until a script writes over it.
+    if (raw && typeof raw.eldurStyle === "string" && raw.eldurStyle !== "") {
+        var wanted = camel.indexOf("--") === 0 ? camel : _camelToKebab(camel);
+        var decls = raw.eldurStyle.split(";");
+        for (var d = decls.length - 1; d >= 0; --d) {
+            var colon = decls[d].indexOf(":");
+            if (colon > 0 && decls[d].slice(0, colon).trim().toLowerCase() === wanted) {
+                return decls[d].slice(colon + 1).trim();
+            }
+        }
+    }
     if (camel === "display" && raw && typeof raw.visible === "boolean") {
         return raw.visible ? "" : "none";
     }
@@ -4917,6 +4956,17 @@ function focus(item) {
     } else if (typeof raw.focus === "boolean") {
         raw.focus = true;
     }
+    // Before its window shows Qt gives no focus to hear of, and a script at load
+    // hears of it all the same. The window's own change then finds it told.
+    if (_in && !raw.activeFocus && !_inWindowActive() && _in.focused !== raw) {
+        var before = _in.focused;
+        _in.focused = raw;
+        if (before) {
+            _inFocusEvents(before, raw, "blur", "focusout");
+        }
+        _inFocusEvents(raw, before, "focus", "focusin");
+        return;
+    }
     var nowFocus = Boolean(raw.activeFocus || raw.focus);
     if (!hadFocus && !nowFocus) {
         if (prev && prev !== raw) {
@@ -4943,6 +4993,11 @@ function blur(item) {
     var hadFocus = Boolean(raw.activeFocus || raw.focus);
     if (typeof raw.focus === "boolean") {
         raw.focus = false;
+    }
+    if (_in && _in.focused === raw && !_inWindowActive()) {
+        _in.focused = null;
+        _inFocusEvents(raw, null, "blur", "focusout");
+        return;
     }
     var nowFocus = Boolean(raw.activeFocus || raw.focus);
     if (wasActive && (!hadFocus || nowFocus)) {
@@ -5673,6 +5728,15 @@ function _connectSignalOnce(raw, type) {
     }
     // The layer's one key and focus path hears these for everything.
     if (_in && _IN_LAYERED[type] === true) {
+        // A control the runtime made also has signals of its own for its keys.
+        var ownKey = type === "keydown" ? raw.eldurKeyDown : type === "keyup" ? raw.eldurKeyUp : null;
+        if (typeof ownKey === "function") {
+            ownKey.connect(function(qtEv) {
+                if (!raw.activeFocus) {
+                    _dispatchDynamic(raw, type, qtEv);
+                }
+            });
+        }
         m.connected[type] = true;
         return true;
     }
@@ -7920,7 +7984,24 @@ function wrap(rawItem) {
             Qt.callLater(function() {
                 dispatchEvent(wrap(rawItem), new Event("toggle"));
             });
+            // Of those that share a name only one stays open.
+            var group = getAttribute(rawItem, "name");
+            if (next && group) {
+                _elementsUnder(_root, function(node) {
+                    return !node.__eldurInline && node !== rawItem && _nodeTag(node) === "details"
+                        && getAttribute(node, "name") === group && _meta(node).detailsOpen === true;
+                }, false).forEach(function(node) { wrap(node).open = false; });
+            }
         },
+        // What takes a stop by itself says 0, what does not -1, until a page says otherwise.
+        get tabIndex() {
+            var written = parseInt(getAttribute(rawItem, "tabindex"), 10);
+            if (!isNaN(written)) {
+                return written;
+            }
+            return typeof rawItem.clicked === "function" || _inIsField(rawItem) || _inIsLink(rawItem) ? 0 : -1;
+        },
+        set tabIndex(v) { setAttribute(rawItem, "tabindex", String(parseInt(v, 10) || 0)); },
         get innerHTML() { return getInnerHTML(rawItem); },
         set innerHTML(v) { setInnerHTML(rawItem, v); },
         get nodeType() {
@@ -10431,7 +10512,7 @@ function _inInstallFor(raw, type) {
 
 function _inInstall() {
     _in = {
-        overlay: null, held: 0, last: null, pressed: false, hoverP: null, hoverM: null,
+        page: _root, overlay: null, held: 0, last: null, pressed: false, hoverP: null, hoverM: null,
         downTarget: {}, noMouse: false, count: 0, countButton: -1, countAt: null, countTime: 0,
         capture: null, captureNext: null, defaults: [], scrolled: null, restoreFocus: null,
         restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusShift: false,
@@ -10459,7 +10540,7 @@ function _inInstall() {
         }
     });
     overlay.wheeled.connect(_inWheel);
-    var probe = Qt.createQmlObject("import QtQuick; Item { readonly property Item held: Window.activeFocusItem }",
+    var probe = Qt.createQmlObject("import QtQuick; Item { readonly property Item held: Window.activeFocusItem; readonly property bool active: Window.active }",
         home, "eldur_input_focus");
     _in.focusProbe = probe;
     probe.heldChanged.connect(_inFocusChanged);
@@ -11302,9 +11383,14 @@ function _labelControl(label) {
 
 function _inFollow(raw) {
     var href = String(getAttribute(raw, "href"));
-    if (href.charAt(0) === "#" && typeof _root.scrollToFragment === "function") {
-        _root.scrollToFragment(href);
-    } else if (href.charAt(0) !== "#") {
+    if (href.charAt(0) === "#") {
+        // A link to where the address already says still goes there.
+        if (location.hash === href) {
+            _scrollToFragment(href);
+        } else {
+            location.hash = href;
+        }
+    } else {
         Qt.openUrlExternally(href);
     }
 }
@@ -11368,13 +11454,34 @@ function _inTabStops() {
     return positive.map(function(p) { return p.node; }).concat(natural);
 }
 
+function _inWindowActive() {
+    return Boolean(_in.focusProbe && _in.focusProbe.active);
+}
+
+// From what has focus but is no stop (`tabindex="-1"`): the next stop by its place in the tree.
+function _inTabFrom(stops, back) {
+    var from = _in.tabFrom || _in.focused;
+    _in.tabFrom = null;
+    if (!from) {
+        return back ? stops.length - 1 : 0;
+    }
+    var order = _elementsUnder(_root, function(node) { return !node.__eldurInline; }, false);
+    var here = order.indexOf(from);
+    for (var i = 0; i < stops.length; ++i) {
+        if (order.indexOf(stops[i]) > here) {
+            return back ? (i - 1 + stops.length) % stops.length : i;
+        }
+    }
+    return back ? stops.length - 1 : 0;
+}
+
 function _inTabStep(back) {
     var stops = _inTabStops();
     if (stops.length === 0) {
         return;
     }
-    var at = stops.indexOf(_in.focused);
-    var next = at < 0 ? (back ? stops.length - 1 : 0) : (at + (back ? -1 : 1) + stops.length) % stops.length;
+    var at = _in.tabFrom ? -1 : stops.indexOf(_in.focused);
+    var next = at < 0 ? _inTabFrom(stops, back) : (at + (back ? -1 : 1) + stops.length) % stops.length;
     var raw = stops[next];
     focus(raw);
     // A field reached by Tab starts all selected, so typing replaces it.
@@ -11422,6 +11529,10 @@ function _inFocusChanged() {
         return;
     }
     _in.focused = now;
+    // Focus somewhere is where the next Tab starts, whatever a fragment said before.
+    if (now && _nodeTag(now) !== "body") {
+        _in.tabFrom = null;
+    }
     if (now && _inIsField(now)) {
         _meta(now).changeBase = String(now.text);
     }
@@ -11433,7 +11544,13 @@ function _inFocusChanged() {
         if (_inIsField(was)) {
             _flushChange(was);
         }
-        whenBlurred(was, "blur", function() { _inFocusEvents(was, now, "blur", "focusout"); });
+        var heard = function() { _inFocusEvents(was, now, "blur", "focusout"); };
+        // A script's change to what stays shown holds nothing back: focus moves in one go.
+        if (was.__eldurInline || (was.visible && was.enabled)) {
+            heard();
+        } else {
+            whenBlurred(was, "blur", heard);
+        }
     }
     _in.focusShift = false;
     _activeElement = now;
@@ -11925,6 +12042,8 @@ function _dialogPlace(raw, modal) {
     // Out of the flow for good: Qt's layouts have no such thing, so out of the layout.
     if (!m.topFrom) {
         m.topFrom = _logicalParent(raw);
+        // `fit-content` came out as the width of what holds it; a written width stays.
+        m.topFits = raw.width >= raw.parent.width;
         _dialogs.moved++;
         raw.parent = win;
     }
@@ -11935,7 +12054,9 @@ function _dialogPlace(raw, modal) {
     raw.anchors.top = undefined;
     raw.anchors.bottom = undefined;
     var place = function() {
-        raw.width = raw.implicitWidth;
+        if (m.topFits) {
+            raw.width = raw.implicitWidth;
+        }
         raw.height = raw.implicitHeight;
         raw.x = Math.max(0, (win.width - raw.width) / 2);
         var top = parseFloat(window.getComputedStyle(wrap(raw)).top);
@@ -17661,7 +17782,7 @@ function _aAnimationsOf(raw) {
 
 // --- :hover and the like ----------------------------------------------------
 
-var _G_STATE_WORD = /:(hover|focus-within|focus-visible|focus|active|checked)\b/g;
+var _G_STATE_WORD = /:(hover|focus-within|focus-visible|focus|active|checked|placeholder-shown|valid|invalid)\b/g;
 var _gStateRules = null;
 
 // Each compound that names a state, without it: what has to be watched.
@@ -17726,9 +17847,40 @@ function _gWatch(raw, kind) {
         if (raw.checkedChanged) {
             raw.checkedChanged.connect(changed);
         }
+    } else if (kind === "placeholder-shown" || kind === "valid" || kind === "invalid") {
+        if (raw.textChanged) {
+            raw.textChanged.connect(changed);
+        }
+        if (raw.checkedChanged) {
+            raw.checkedChanged.connect(changed);
+        }
     } else if (raw.activeFocusChanged) {
         raw.activeFocusChanged.connect(changed);
     }
+}
+
+// A template was probed for its element's classes: the attributes that make a
+// control invalid come only with the markup, so these states are read here.
+function _gPaintFormStates() {
+    var rules = _gLoadStateRules().filter(function(rule) {
+        return rule.kinds.some(function(kind) { return /^(placeholder-shown|valid|invalid)$/.test(kind); });
+    });
+    if (rules.length === 0) {
+        return;
+    }
+    _gLiveTemplates.forEach(function(raw) {
+        if (!raw || !raw.background || !_isConnected(raw)
+            || !rules.some(function(rule) { return _matchesList(raw, rule.list); })) {
+            return;
+        }
+        var s = _gStyle(raw);
+        if (s.won["background-color"] && raw.background.color !== undefined) {
+            raw.background.color = _gQtColor(s["background-color"]);
+        }
+        if (s.won.color && raw.color !== undefined) {
+            raw.color = _gQtColor(s.color);
+        }
+    });
 }
 
 function _gWatchStates() {
@@ -18538,6 +18690,7 @@ function _gSettle() {
     }
     _gPrune();
     _gWatchStates();
+    _gPaintFormStates();
     _tableRepaintAll();
     _aScan();
     _gReposition();

@@ -40,6 +40,7 @@ const DIALOGTEXT: &str =
     "the page logs a fractional text width: Qt's glyphs make 71.77, Chromium's 71.81";
 const MADEINLINE: &str = "controls from innerHTML stack as blocks: a created box is laid out by itself, without a line to share";
 const NOBUBBLE: &str = "Qt has no validation bubble: the message goes to the log, on purpose";
+const H1LINE: &str = "the 22px heading line is 25px here and 26px in Chromium (font metrics, not in this work), so the centre of a row is a pixel higher and clientY says so";
 const COMPACT: &str = "a right-aligned row: its buttons are whole pixels wider (see BUTTONWIDTH), which would start this one 2px left; not confirmed";
 const BUTTONWIDTH: &str = "a button's width is whole pixels (`Math.ceil` in emit/controls.rs): \
                            five on a line add up to 2.2px against Chromium's fractions";
@@ -68,6 +69,12 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("input_script", "* #mc[*] x:", MADEINLINE),
     ("input_script", "* #mc[*] y:", MADEINLINE),
     ("input_dialog", "* #stay[*] y:", CLOSEDDETAILS),
+    (
+        "app_dialogdetails",
+        "*eldur: text: Please fill out this field.*",
+        NOBUBBLE,
+    ),
+    ("app_dragsort", "*click only log:*", H1LINE),
     ("input_dialog", "plain show log:", DIALOGTEXT),
     (
         "input_bubble",
@@ -175,7 +182,7 @@ TestCase {
         if (s.up) { held &= ~buttonOf[s.up]; mouseRelease(page, at.x, at.y, buttonOf[s.up], mods) }
         if (s.hold) { mods |= modOf[s.hold]; keyPress(keyOf[s.hold], mods) }
         if (s.unhold) { keyRelease(keyOf[s.unhold], mods); mods &= ~modOf[s.unhold] }
-        if (s.hover) { const p = center(s.hover); mouseMove(page, p.x, p.y) }
+        if (s.hover) { const p = center(s.hover); moveTo(p.x, p.y) }
         if (s.type) {
             const p = center(s.type[0])
             mouseMove(page, p.x, p.y)
@@ -642,6 +649,41 @@ fn input_forms() {
 #[test]
 fn input_bubble() {
     page("input_bubble");
+}
+
+#[test]
+fn app_signup() {
+    page("app_signup");
+}
+
+#[test]
+fn app_keylist() {
+    page("app_keylist");
+}
+
+#[test]
+fn app_dialogdetails() {
+    page("app_dialogdetails");
+}
+
+#[test]
+fn app_dragsort() {
+    page("app_dragsort");
+}
+
+#[test]
+fn input_states_open() {
+    page("input_states_open");
+}
+
+#[test]
+fn input_states_closed() {
+    page("input_states_closed");
+}
+
+#[test]
+fn input_links() {
+    page("input_links");
 }
 
 #[test]

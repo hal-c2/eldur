@@ -425,7 +425,10 @@ fn export_name(state: PseudoState) -> Option<&'static str> {
         PseudoState::FocusWithin => "eldurFocusWithin",
         PseudoState::Checked => "eldurChecked",
         PseudoState::Disabled => "eldurDisabled",
-        PseudoState::Visited => return None,
+        PseudoState::Visited
+        | PseudoState::PlaceholderShown
+        | PseudoState::Valid
+        | PseudoState::Invalid => return None,
     })
 }
 

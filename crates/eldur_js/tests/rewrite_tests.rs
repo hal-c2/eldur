@@ -2664,3 +2664,48 @@ fn a_sort_goes_through_the_runtime_as_the_engines_is_not_stable() {
     // Short-circuits on the object, which a plain call would not.
     assert!(js.contains("maybe?.sort()"), "{js}");
 }
+
+/// A QML id written into a script means whatever the script's own name of that
+/// spelling means there, so an element sharing a name with a page variable or
+/// parameter has to be looked up.
+#[test]
+fn a_page_name_spelled_like_an_id_does_not_stand_for_the_element() {
+    let resolver = FakeResolver::default()
+        .with_id("order", 1, "order", TargetKind::Text)
+        .with_id("total", 2, "total", TargetKind::Text)
+        .with_id("plain", 3, "plain", TargetKind::Text);
+    let scripts = [classic(
+        "page.js",
+        "var order = [1, 2];\n\
+         var plain = document.getElementById('plain');\n\
+         function show(total) {\n\
+           document.getElementById('order').title = order.join();\n\
+           document.getElementById('total').title = total;\n\
+           plain.title = 'x';\n\
+         }\n",
+    )];
+    let out = run_rewrite_resolved(&scripts, &resolver);
+    assert!(
+        out.page_js.contains("getElementById(\"order\")")
+            || out.page_js.contains("getElementById('order')"),
+        "{}",
+        out.page_js
+    );
+    assert!(
+        out.page_js.contains("getElementById(\"total\")")
+            || out.page_js.contains("getElementById('total')"),
+        "{}",
+        out.page_js
+    );
+    // Bound to its own element, the name still is the element.
+    assert!(
+        !out.page_js.contains("getElementById(\"plain\")"),
+        "{}",
+        out.page_js
+    );
+    assert!(
+        !out.page_js.contains("getElementById('plain')"),
+        "{}",
+        out.page_js
+    );
+}

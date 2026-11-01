@@ -275,6 +275,35 @@ impl Gains {
     }
 }
 
+/// What a person does that no signal of a QML item says, or says in the wrong
+/// order: only the runtime's input layer can tell these, and it reaches the
+/// listeners by path.
+fn heard_at_the_layer(event: &str) -> bool {
+    event.starts_with("pointer")
+        || event.starts_with("mouse")
+        || event.starts_with("drag")
+        || matches!(
+            event,
+            "auxclick"
+                | "beforeinput"
+                | "beforetoggle"
+                | "cancel"
+                | "close"
+                | "contextmenu"
+                | "dblclick"
+                | "focusin"
+                | "focusout"
+                | "gotpointercapture"
+                | "invalid"
+                | "keypress"
+                | "lostpointercapture"
+                | "reset"
+                | "select"
+                | "toggle"
+                | "wheel"
+        )
+}
+
 /// A listener on an element with elements inside hears events that started on
 /// them; `submit` starts at the form that has the listener. A listener no query
 /// names may be anywhere. A page with neither keeps its handlers in QML.
@@ -287,6 +316,10 @@ fn can_hear_another_element(
     let nests = |node: &NodeId| doc.element_children(*node).next().is_some();
     let delegates = |event: &str| event != "submit" && eldur_js::bubbles(event);
     analysis.listens_unresolved
+        || analysis
+            .listened
+            .iter()
+            .any(|(_, event)| heard_at_the_layer(event))
         || analysis.listened.iter().any(|(query, event)| {
             delegates(event) && matches.get(query).is_some_and(|f| f.iter().any(nests))
         })

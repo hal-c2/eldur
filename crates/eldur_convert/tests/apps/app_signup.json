@@ -1,0 +1,14 @@
+{"steps":[
+ {"name":"name short","type":["#user","Al"]},
+ {"name":"tab to mail","key":"Tab"},
+ {"name":"bad mail","type":["#mail","nope"]},
+ {"name":"more name","type":["#user","ice"]},
+ {"name":"mail good","type":["#mail","@example.com"]},
+ {"name":"pass","type":["#pass","secret1"]},
+ {"name":"terms label","click":"label[for=terms]"},
+ {"name":"sign up","click":"#send"},
+ {"name":"clear","click":"#clear","settle":50},
+ {"name":"terms box","click":"#terms"},
+ {"name":"terms box off","click":"#terms"}
+],
+"watch":[{"sel":"#user"},{"sel":"#mail"},{"sel":"#pass"},{"sel":"#terms"},{"sel":"#send"},{"sel":"#done"},{"sel":".hint"}]}

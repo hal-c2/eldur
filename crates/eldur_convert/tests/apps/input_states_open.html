@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head><style>
+body { margin: 8px; }
+.b { display: block; width: 160px; height: 28px; margin: 4px; padding: 0; border: 0; outline: none; background: rgb(200, 200, 200); }
+#h:hover { background: rgb(255, 0, 0); }
+#a:active { background: rgb(0, 255, 0); }
+#f:focus { background: rgb(0, 0, 255); }
+#v:focus-visible { background: rgb(255, 255, 0); }
+#vi:focus-visible { background: rgb(0, 255, 255); }
+#w:focus-within { background: rgb(255, 0, 255); }
+#c:checked + #cs { background: rgb(128, 0, 0); }
+#d:disabled { background: rgb(0, 128, 0); }
+#r:required { background: rgb(0, 0, 128); }
+#i:invalid { background: rgb(128, 128, 0); }
+#p:placeholder-shown { background: rgb(128, 0, 128); }
+#t:focus { background: rgb(64, 64, 64); }
+#mr:invalid { background: rgb(64, 0, 0); }
+#w { padding: 4px; width: 200px; }
+</style></head>
+<body>
+<div id="h" class="b"></div>
+<button id="a" class="b"></button>
+<input id="f" class="b">
+<button id="v" class="b"></button>
+<input id="vi" class="b">
+<div id="w" class="b"><button id="wb" class="b" style="width:100px;height:10px"></button></div>
+<input id="c" type="checkbox">
+<div id="cs" class="b"></div>
+<input id="d" class="b" disabled>
+<input id="r" class="b" required>
+<input id="i" class="b" required>
+<input id="p" class="b" placeholder="hint">
+<div id="t" class="b" tabindex="0"></div>
+<div id="made"></div>
+<script>var tag = "div"; var made = document.createElement(tag); made.className = "made"; document.body.appendChild(made); document.getElementById("made").innerHTML = '<input id="mr" class="b" required>';</script>
+</body>
+</html>

@@ -134,6 +134,21 @@ pub enum PseudoState {
     Checked,
     Disabled,
     Visited,
+    PlaceholderShown,
+    Valid,
+    Invalid,
+}
+
+impl PseudoState {
+    /// What the document itself says until something changes it, as against a
+    /// state nothing is in when a page loads.
+    #[must_use]
+    pub fn starts_from_the_document(self) -> bool {
+        matches!(
+            self,
+            Self::Checked | Self::Disabled | Self::PlaceholderShown | Self::Valid | Self::Invalid
+        )
+    }
 }
 
 /// The styles of `node`'s subtree when `node` is in `state`, as far as they
@@ -420,6 +435,12 @@ pub fn conditional_styles(
     conditions: &[Condition],
 ) -> ConditionalStyles {
     conditional::conditional_styles(doc, sheets, viewport, conditions)
+}
+
+/// Whether `node` is in `state` as the document stands, before anyone touches it.
+#[must_use]
+pub fn state_in_document(doc: &Document, node: NodeId, state: PseudoState) -> bool {
+    selectors::state_in_document(doc, node, state)
 }
 
 /// Classes some selector in `sheets` names.

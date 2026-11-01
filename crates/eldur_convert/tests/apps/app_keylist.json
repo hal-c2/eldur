@@ -1,0 +1,17 @@
+{"steps":[
+ {"name":"to search","click":"#search"},
+ {"name":"into list","key":"ArrowDown"},
+ {"name":"down","key":"ArrowDown"},
+ {"name":"down 2","key":"ArrowDown"},
+ {"name":"up","key":"ArrowUp"},
+ {"name":"pick","key":"Enter"},
+ {"name":"end","key":"End"},
+ {"name":"pick space","key":" "},
+ {"name":"home","key":"Home"},
+ {"name":"delete","key":"Delete"},
+ {"name":"click row","click":"#i3"},
+ {"name":"tab out","key":"Tab"},
+ {"name":"back in","key":"Shift+Tab"},
+ {"name":"escape","key":"Escape"}
+],
+"watch":[{"sel":"li"},{"sel":"#state"},{"sel":"#after"}]}

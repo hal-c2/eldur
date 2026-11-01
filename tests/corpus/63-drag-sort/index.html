@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Drag to sort</title>
+<style>
+html, body { margin: 0; }
+body { padding: 32px; font-family: Arial, sans-serif; user-select: none; color: #222; }
+h1 { font-size: 22px; margin: 0 0 12px; }
+#list { position: relative; width: 300px; height: 200px; }
+.row { position: absolute; left: 0; width: 300px; height: 44px; line-height: 44px; box-sizing: border-box; padding: 0 12px; background: #eef2f8; border: 1px solid #c3cbd9; touch-action: none; }
+.row.lift { background: #cfe0ff; z-index: 2; }
+#order { margin-top: 16px; }
+</style>
+</head>
+<body>
+<h1>Order the steps</h1>
+<div id="list">
+<div class="row" id="r0" style="top: 0px">Plan</div>
+<div class="row" id="r1" style="top: 50px">Build</div>
+<div class="row" id="r2" style="top: 100px">Test</div>
+<div class="row" id="r3" style="top: 150px">Ship</div>
+</div>
+<div id="order">Plan, Build, Test, Ship</div>
+<script>
+var list = document.getElementById("list");
+var order = ["r0", "r1", "r2", "r3"];
+var drag = null;
+function place() {
+  order.forEach(function (id, i) {
+    var row = document.getElementById(id);
+    if (!drag || drag.row !== row) { row.style.top = i * 50 + "px"; }
+  });
+}
+list.addEventListener("pointerdown", function (e) {
+  var row = e.target.closest(".row");
+  if (!row) { return; }
+  drag = { row: row, y: e.clientY, top: parseInt(row.style.top, 10) };
+  row.setPointerCapture(e.pointerId);
+  row.classList.add("lift");
+  console.log("down " + row.id + " " + e.clientY);
+});
+list.addEventListener("pointermove", function (e) {
+  if (!drag) { return; }
+  var top = drag.top + e.clientY - drag.y;
+  drag.row.style.top = top + "px";
+  var to = Math.max(0, Math.min(3, Math.round(top / 50)));
+  var from = order.indexOf(drag.row.id);
+  if (to !== from) {
+    order.splice(from, 1);
+    order.splice(to, 0, drag.row.id);
+    place();
+    console.log("order " + order.join(","));
+  }
+});
+list.addEventListener("pointerup", function (e) {
+  if (!drag) { return; }
+  var row = drag.row;
+  drag = null;
+  row.classList.remove("lift");
+  place();
+  document.getElementById("order").textContent = order.map(function (id) { return document.getElementById(id).textContent; }).join(", ");
+  console.log("up " + row.id + " " + e.target.id);
+});
+list.addEventListener("click", function (e) { console.log("click " + e.target.id); });
+</script>
+</body>
+</html>
