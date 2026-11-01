@@ -192,7 +192,7 @@ Snapping a rounded box's position instead (`Translate` or margins) needs its sce
 
 **Known limits**
 - A rounded box whole in a fractional parent looks whole to its own binding and stays soft on its edges.
-- `font_extents` is a stopgap: it knows Liberation Sans, Liberation Serif and JetBrains Mono (`monospace`) by the names that resolve to them here, and gives anything else Liberation Sans's numbers, so such glyphs can land a row off. It is one function, so it can be replaced when font metrics are decided, also for `line-height: normal`.
+- Faces whose real files are not on the measuring machine (§1.3) have no measured row: Qt's reported metrics stand in, scaled, so such glyphs can land a row off.
 - Text a row off Chromium through layout costs more with native glyphs than with soft ones: 11-positioning, 15-script-counter, 16-script-todo and 29-class-toggles score 0.7–1.7 below distance fields, and in each the worst band matches Chromium best shifted down 1 px.
 - A paragraph's lines without its tallest run land a row low (r9): Qt's descent is per line and the `Translate` per paragraph.
 - A monospace run the size of the body (r3) comes out a row above `floor(lh − descent)`; no formula from the reported metrics fits every measured pair, so it stays off. `lh` also stays the block's where Chromium's line box grows for a tall run (r4, r8): the row is right, the paragraph's height is not.
@@ -200,11 +200,66 @@ Snapping a rounded box's position instead (`Translate` or margins) needs its sce
 - A page whose table is already off through a non-carried flex or grid parent can lose a little: 18-dashboard −0.74, where the old half pixel partly cancelled its 2 px offset.
 - Flex rows and grid cells round heights their own way (§1.1, not carried).
 
+### 1.3 Fonts and `line-height: normal`
+
+Converting never reads the machine's fonts, so the output and its cache key are the same everywhere; the running page decides, from the font Qt actually loaded (`eldur_fonts.js`, one table, also read by the converter).
+
+**Family.** Qt gives a CSS name to fontconfig as written, and fontconfig's answer differs from what Chromium shows: here Helvetica is Nimbus Sans in Qt and Liberation Sans in Chromium. So `font.family` is `EldurFonts.family("<css stack>")`: each CSS name maps to a fixed ordered list, and the first one installed wins. A machine with none of them keeps Qt's own fallback. A name the table does not know is tried as written, as Chromium does; an unavailable one is skipped.
+
+| CSS name | Reaches here (`CSS.getPlatformFontsForNode`) | Then |
+|---|---|---|
+| none given, Georgia alone, `cursive`, `fantasy`, `math`, `fangsong`, `emoji`, `ui-*` | Liberation Serif | Tinos, Noto Serif, DejaVu Serif |
+| Helvetica, Arial, `-apple-system`, BlinkMacSystemFont, `system-ui`, `sans-serif` | Liberation Sans | Arimo, then the name itself or Noto Sans, DejaVu Sans |
+| Times, Times New Roman, `serif` | Liberation Serif | Tinos, then the name itself or Noto Serif, DejaVu Serif |
+| Courier, Courier New | Liberation Mono | Cousine, then the name itself |
+| `monospace` | JetBrainsMono Nerd Font | Liberation Mono, Cousine, Noto Sans Mono, DejaVu Sans Mono |
+
+`monospace` is this machine's fontconfig choice, not a browser's; it is kept so measurements here compare like with like. Measured with `tests/fonts/gen.mjs`, stacks included; `tests/fonts_e2e.rs` holds the running QML to the recorded `chromium.json`.
+
+**The rule, measured (Chromium, 760 size/weight/family pairs).** With the face's hhea ascent, descent and line gap in em and the CSS size `s` (fractional, as Chromium keeps it):
+
+```
+A = round(ascent * s)    D = round(descent * s)    L = round(gap * s)
+normal line      = A + D + L
+inline box       = A + D
+baseline, normal = A + floor(L / 2)                    from the line's top
+baseline, own lh = A + floor((lh - A - D) / 2 + 1e-4)  lh in 1/64 px
+```
+
+**Why a table.** QML reports the OS/2 win metrics with no gap; hhea is not reachable from it. So a face's hhea numbers are measured and kept per face, and per style where they differ. A face not in the table uses Qt's `FontMetrics` through the same rounding, without a gap. There is no other per-font correction.
+
+| Face | Ascent | Descent | Gap |
+|---|---|---|---|
+| Liberation Sans | 0.905273 | 0.211914 | 0.032715 |
+| Liberation Serif | 0.891113 | 0.216309 | 0.042480 |
+| Liberation Mono | 0.832520 | 0.300293 | 0 |
+| Nimbus Sans (italic, bold italic 0.9 / 0.25) | 0.729 | 0.271 | 0.2 |
+| Nimbus Roman (bold 0.676 / 0.324, bold italic 0.699 / 0.301) | 0.683 | 0.317 | 0.2 |
+| Nimbus Mono PS | 0.603 | 0.397 | 0.2 |
+| Nimbus Sans Narrow | 0.718 | 0.282 | 0.2 |
+| Noto Sans, Noto Serif, Noto Sans Mono | 1.069 | 0.293 | 0 |
+| JetBrainsMono Nerd Font | 1.02 | 0.3 | 0 |
+
+Arial, Times New Roman, Arimo, Tinos, Cousine and DejaVu are not installed where this was measured (Arimo is an alias reaching Liberation Sans), so they have no row.
+
+**Why Nimbus Sans at 16 px is 19 in one and 22 in the other.** Chromium: `round(11.66) + round(4.34) + round(3.2)` = 12 + 4 + 3 = 19, box 16, baseline 13. Qt's natural height uses the win metrics, 17.19 + 4.78 = 21.97, so 22. The same split explains Liberation Sans at 24 px: Chromium's 22 + 5 + 1 = 28, Qt's 26.8 → 27, without the gap, which is the 1 px on an `h1`.
+
+**In the output.** Every `Text` has a fixed line: `lineHeightMode: Text.FixedHeight`, `lineHeight` the CSS value or `EldurFonts.normalLine(font)`. Qt draws glyphs at a fixed line's top, so `Translate` moves them by `EldurFonts.shift(...)`, Chromium's baseline less Qt's rounded ascent. `Text.AlignVCenter` and `AlignBottom` centre by the font's natural height, not the line's, so a placed text adds its own remainder to the same `Translate`. A `RowLayout` lines up Qt baselines, so baseline-aligned items take one shift, the largest font's. `EldurFonts.slack` keeps an implicit height from falling short when the line is under the font's.
+
+The converter's own numbers (`emit/fonts.rs`, `extents`, `normal_line`) decide layout choices only; what the page lays out comes from the bindings. Controls' `implicitHeight`s are such numbers and match Chromium in the table's faces.
+
+**Not done:**
+- `Text.RichText` keeps Qt's natural height for `normal`, with a literal shift.
+- A literal `shift` argument does not follow a script's font change on a `Text` the runtime does not repaint. The runtime repaints those it sets (`script_font`).
+- Grids do not give baseline-aligned items one shift; flex rows do.
+- Width, same face: Qt is narrower by at most 0.16 px per 26 characters (12 px: 151.98 vs 152.09; 16 px: 202.63 vs 202.78; 96 px: equal). `renderType` and `PreferNoHinting` do not change it, `PreferFullHinting` is worse. No setting reaches it.
+- Qt rounds a fractional size to a whole pixel, so a 13.33 px control's text is 13 px, widened by `text_scale`'s 13.33 / 13.
+
 ## 2. Inline formatting context
 
 **Decision:** one `Text` per inline formatting context, with `textFormat: Text.StyledText`. When the content holds an atomic box (a replaced element, a control, `inline-block`, `inline-flex`) it is laid out by `EldurLines`: see below.
 
-**Lines with boxes.** `EldurLines.qml` is one line layouter for static and script pages, written beside `Main.qml` when the page uses it or has a runtime. Its children are the content in order. Text is cut only at boxes: each run between two boxes stays one `Text`, shaped whole, so no ligature or kerning is lost at a word boundary, and `lineLaidOut` places that `Text`'s lines. The tradeoff is that a scriptless page with such a line now has JavaScript functions in QML, though not `eldur_runtime.js`. Heights follow CSS 2.2 §10.8 with Chromium's rounding: the strut is `round(ascent) + floor(leading / 2)` above and `round(descent) + ceil(leading / 2)` below, and `normal` is `round(size * 1.15)`. A box's baseline is its text's (rounded ascent), the bottom border edge for a check box, radio or slider, the bottom margin edge for a textarea or a box with no line. A line with nothing on it has no strut. The layouter runs a frame after a width change, because a table reads implicit sizes while working out that width; a script's read settles it first.
+**Lines with boxes.** `EldurLines.qml` is one line layouter for static and script pages, written beside `Main.qml` when the page uses it or has a runtime. Its children are the content in order. Text is cut only at boxes: each run between two boxes stays one `Text`, shaped whole, so no ligature or kerning is lost at a word boundary, and `lineLaidOut` places that `Text`'s lines. The tradeoff is that a scriptless page with such a line now has JavaScript functions in QML, though not `eldur_runtime.js`. Heights follow CSS 2.2 §10.8 with Chromium's rounding: the strut is `round(ascent) + floor(leading / 2)` above and `round(descent) + ceil(leading / 2)` below, and `normal` is the rule in §1.3 (`EldurLines` reads it from `EldurFonts`). A box's baseline is its text's (rounded ascent), the bottom border edge for a check box, radio or slider, the bottom margin edge for a textarea or a box with no line. A line with nothing on it has no strut. The layouter runs a frame after a width change, because a table reads implicit sizes while working out that width; a script's read settles it first.
 
 A justified line with boxes shares what it has left across its spaces, those between items and those in its text: a Text's one line by word spacing, the lines of a longer Text by Qt's own justification. **Not done:** the last line of a longer Text keeps its words' spacing when a box follows it on a justified line; the box itself is still placed as CSS says.
 

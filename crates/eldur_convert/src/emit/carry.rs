@@ -607,6 +607,9 @@ fn implicit_height(obj: &Object, excess: &HashMap<usize, Excess>) -> Height {
             matches!(obj.get("lineHeightMode"), Some(Value::Expr(m)) if m == "Text.FixedHeight");
         return match obj.get("lineHeight") {
             Some(Value::Number(l)) if fixed && l.fract() == 0.0 => Height::Whole,
+            Some(Value::Expr(l)) if fixed && l.starts_with(super::fonts::NORMAL_LINE) => {
+                Height::Whole
+            }
             _ => Height::Text,
         };
     }

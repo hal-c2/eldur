@@ -13,6 +13,7 @@ eldur_qml.workspace = true
 thiserror.workspace = true
 imagesize.workspace = true
 url.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 
 [dev-dependencies]

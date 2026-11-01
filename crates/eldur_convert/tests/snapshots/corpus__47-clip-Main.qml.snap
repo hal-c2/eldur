@@ -9,6 +9,7 @@ import QtQuick.Controls.Basic
 import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Shapes
+import "eldur_fonts.js" as EldurFonts
 
 ApplicationWindow {
     id: root

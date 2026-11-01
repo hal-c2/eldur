@@ -9,6 +9,7 @@ import QtQuick.Controls.Basic
 import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Shapes
+import "eldur_fonts.js" as EldurFonts
 
 ApplicationWindow {
     id: root
@@ -57,15 +58,18 @@ ApplicationWindow {
 
                     // <h1 class="page-title">
                     Text {
-                        id: pageTitle
-                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
-
                         text: "Backgrounds and borders"
                         textFormat: Text.PlainText
                         color: "#222222"
-                        font.family: "sans-serif"
+                        font.family: EldurFonts.family("sans-serif")
                         font.pixelSize: 26
                         font.weight: 700
+                        lineHeight: EldurFonts.normalLine(font)
+                        lineHeightMode: Text.FixedHeight
+                        transform: Translate {
+                            y: EldurFonts.shift("sans-serif", 26, 700, false, 0)
+                        }
+                        bottomPadding: EldurFonts.slack(font, lineHeight)
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
                         renderType: Text.NativeRendering
@@ -73,32 +77,32 @@ ApplicationWindow {
 
                     // <p class="page-lead">
                     Text {
-                        id: pageLead
-                        property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
-
                         text: "Eight boxes covering radius, border styles, shadows, gradients, outlines and translucency."
                         textFormat: Text.PlainText
                         color: "#666666"
-                        font.family: "sans-serif"
+                        font.family: EldurFonts.family("sans-serif")
                         font.pixelSize: 15
+                        lineHeight: EldurFonts.normalLine(font)
+                        lineHeightMode: Text.FixedHeight
+                        transform: Translate {
+                            y: EldurFonts.shift("sans-serif", 15, 400, false, 0)
+                        }
+                        bottomPadding: EldurFonts.slack(font, lineHeight)
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
-                        Layout.topMargin: 6 - pageTitle.eldurCarry
+                        Layout.topMargin: 6
                         renderType: Text.NativeRendering
                     }
 
                     // <div class="gallery">
                     GridLayout {
-                        id: gallery
-                        property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
-
                         columns: 4
                         columnSpacing: 24
                         rowSpacing: 28
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignHCenter
                         Layout.maximumWidth: 1120
-                        Layout.topMargin: 28 - pageLead.eldurCarry
+                        Layout.topMargin: 28
 
                         // <div class="cell">
                         ColumnLayout {
@@ -154,15 +158,20 @@ ApplicationWindow {
                                 text: "1. Rounded corners, angle gradient"
                                 textFormat: Text.PlainText
                                 color: "#555555"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 13
+                                lineHeight: EldurFonts.normalLine(font)
+                                lineHeightMode: Text.FixedHeight
+                                transform: Translate {
+                                    y: EldurFonts.shift("sans-serif", 13, 400, false, 0)
+                                }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 12
-                                Layout.preferredHeight: implicitHeight
                                 renderType: Text.NativeRendering
                             }
 
@@ -208,15 +217,20 @@ ApplicationWindow {
                                 text: "2. Per-corner radius, dashed border"
                                 textFormat: Text.PlainText
                                 color: "#555555"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 13
+                                lineHeight: EldurFonts.normalLine(font)
+                                lineHeightMode: Text.FixedHeight
+                                transform: Translate {
+                                    y: EldurFonts.shift("sans-serif", 13, 400, false, 0)
+                                }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 12
-                                Layout.preferredHeight: implicitHeight
                                 renderType: Text.NativeRendering
                             }
 
@@ -259,15 +273,20 @@ ApplicationWindow {
                                 text: "3. Circle, dotted border"
                                 textFormat: Text.PlainText
                                 color: "#555555"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 13
+                                lineHeight: EldurFonts.normalLine(font)
+                                lineHeightMode: Text.FixedHeight
+                                transform: Translate {
+                                    y: EldurFonts.shift("sans-serif", 13, 400, false, 0)
+                                }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 12
-                                Layout.preferredHeight: implicitHeight
                                 renderType: Text.NativeRendering
                             }
 
@@ -308,15 +327,20 @@ ApplicationWindow {
                                 text: "4. Double border, colour per side"
                                 textFormat: Text.PlainText
                                 color: "#555555"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 13
+                                lineHeight: EldurFonts.normalLine(font)
+                                lineHeightMode: Text.FixedHeight
+                                transform: Translate {
+                                    y: EldurFonts.shift("sans-serif", 13, 400, false, 0)
+                                }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 12
-                                Layout.preferredHeight: implicitHeight
                                 renderType: Text.NativeRendering
                             }
 
@@ -550,15 +574,20 @@ ApplicationWindow {
                                 text: "5. Multiple outer and inset shadows"
                                 textFormat: Text.PlainText
                                 color: "#555555"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 13
+                                lineHeight: EldurFonts.normalLine(font)
+                                lineHeightMode: Text.FixedHeight
+                                transform: Translate {
+                                    y: EldurFonts.shift("sans-serif", 13, 400, false, 0)
+                                }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 12
-                                Layout.preferredHeight: implicitHeight
                                 renderType: Text.NativeRendering
                             }
 
@@ -621,15 +650,20 @@ ApplicationWindow {
                                 text: "6. Linear gradient to right"
                                 textFormat: Text.PlainText
                                 color: "#555555"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 13
+                                lineHeight: EldurFonts.normalLine(font)
+                                lineHeightMode: Text.FixedHeight
+                                transform: Translate {
+                                    y: EldurFonts.shift("sans-serif", 13, 400, false, 0)
+                                }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 12
-                                Layout.preferredHeight: implicitHeight
                                 renderType: Text.NativeRendering
                             }
 
@@ -712,15 +746,20 @@ ApplicationWindow {
                                 text: "7. Radial gradient, outline offset"
                                 textFormat: Text.PlainText
                                 color: "#555555"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 13
+                                lineHeight: EldurFonts.normalLine(font)
+                                lineHeightMode: Text.FixedHeight
+                                transform: Translate {
+                                    y: EldurFonts.shift("sans-serif", 13, 400, false, 0)
+                                }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 12
-                                Layout.preferredHeight: implicitHeight
                                 renderType: Text.NativeRendering
                             }
 
@@ -818,15 +857,20 @@ ApplicationWindow {
                                 text: "8. Translucent RGBA over stripes"
                                 textFormat: Text.PlainText
                                 color: "#555555"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 13
+                                lineHeight: EldurFonts.normalLine(font)
+                                lineHeightMode: Text.FixedHeight
+                                transform: Translate {
+                                    y: EldurFonts.shift("sans-serif", 13, 400, false, 0)
+                                }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 12
-                                Layout.preferredHeight: implicitHeight
                                 renderType: Text.NativeRendering
                             }
 

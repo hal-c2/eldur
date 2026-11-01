@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
@@ -262,9 +263,15 @@ ApplicationWindow {
                             text: "Shop"
                             textFormat: Text.PlainText
                             color: "#000000"
-                            font.family: "Helvetica"
+                            font.family: EldurFonts.family("Helvetica, Arial, sans-serif")
                             font.pixelSize: 20
                             font.weight: 700
+                            lineHeight: EldurFonts.normalLine(font)
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("Helvetica, Arial, sans-serif", 20, 700, false, 0)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             Layout.maximumWidth: Math.ceil(implicitWidth)
@@ -284,9 +291,15 @@ ApplicationWindow {
                             text: "Cart: 0 items, $0.00"
                             textFormat: Text.PlainText
                             color: "#000000"
-                            font.family: "Helvetica"
+                            font.family: EldurFonts.family("Helvetica, Arial, sans-serif")
                             font.pixelSize: 16
                             font.weight: 700
+                            lineHeight: EldurFonts.normalLine(font)
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("Helvetica, Arial, sans-serif", 16, 700, false, 0)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             objectName: "cart"
                             Layout.fillWidth: true

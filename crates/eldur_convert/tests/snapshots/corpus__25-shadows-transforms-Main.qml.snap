@@ -9,6 +9,7 @@ import QtQuick.Controls.Basic
 import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Shapes
+import "eldur_fonts.js" as EldurFonts
 
 ApplicationWindow {
     id: root
@@ -81,13 +82,14 @@ ApplicationWindow {
                             text: "Soft shadow"
                             textFormat: Text.PlainText
                             color: "#1b2231"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 16
                             lineHeight: 24
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 3
+                                y: EldurFonts.shift("Liberation Sans, sans-serif", 16, 400, false, 24)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
                             anchors.right: parent.right
@@ -137,13 +139,14 @@ ApplicationWindow {
                             text: "Ring and lift"
                             textFormat: Text.PlainText
                             color: "#1b2231"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 16
                             lineHeight: 24
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 3
+                                y: EldurFonts.shift("Liberation Sans, sans-serif", 16, 400, false, 24)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
                             anchors.right: parent.right
@@ -237,13 +240,14 @@ ApplicationWindow {
                             text: "Inset shadow"
                             textFormat: Text.PlainText
                             color: "#1b2231"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 16
                             lineHeight: 24
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 3
+                                y: EldurFonts.shift("Liberation Sans, sans-serif", 16, 400, false, 24)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
                             anchors.right: parent.right
@@ -322,13 +326,14 @@ ApplicationWindow {
                             text: "Centred"
                             textFormat: Text.PlainText
                             color: "#ffffff"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 16
                             lineHeight: 40
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 11
+                                y: EldurFonts.shift("Liberation Sans, sans-serif", 16, 400, false, 40)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             horizontalAlignment: Text.AlignHCenter
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
@@ -382,13 +387,14 @@ ApplicationWindow {
                         text: "Moved by a translate"
                         textFormat: Text.PlainText
                         color: "#1b2231"
-                        font.family: "Liberation Sans"
+                        font.family: EldurFonts.family("Liberation Sans, sans-serif")
                         font.pixelSize: 16
                         lineHeight: 24
                         lineHeightMode: Text.FixedHeight
                         transform: Translate {
-                            y: 3
+                            y: EldurFonts.shift("Liberation Sans, sans-serif", 16, 400, false, 24)
                         }
+                        bottomPadding: EldurFonts.slack(font, lineHeight)
                         wrapMode: Text.WordWrap
                         anchors.left: parent.left
                         anchors.right: parent.right

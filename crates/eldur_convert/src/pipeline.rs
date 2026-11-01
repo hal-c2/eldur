@@ -300,6 +300,13 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         });
     }
 
+    // The font module: every font in the page goes through it.
+    qml.import(Import::path("eldur_fonts.js", Some("EldurFonts")));
+    files.push(OutputFile {
+        path: PathBuf::from("eldur_fonts.js"),
+        contents: eldur_js::FONTS_JS.as_bytes().to_vec(),
+    });
+
     // 7: Main.qml.
     let name = std::path::Path::new(&input.url)
         .file_name()

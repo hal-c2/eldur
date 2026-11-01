@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 
 ApplicationWindow {
     id: root
@@ -61,7 +62,7 @@ ApplicationWindow {
                     EldurLines {
                         id: pFlow
                         color: "#111111"
-                        font.family: "sans-serif"
+                        font.family: EldurFonts.family("sans-serif")
                         font.pixelSize: 16
                         lineHeight: 24
                         anchors.left: parent.left
@@ -72,7 +73,7 @@ ApplicationWindow {
                             text: "Yearly plan "
                             textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
@@ -87,14 +88,14 @@ ApplicationWindow {
                             text: "Save 20%"
                             textFormat: Text.PlainText
                             color: "#166534"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 12
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
 
                             EldurInlineBox {
                                 fragments: inlineRun.eldurFragments
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 12
                                 fill: "#dcfce7"
                                 radii: [999, 999, 999, 999]
@@ -109,7 +110,7 @@ ApplicationWindow {
                             text: " today."
                             textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
@@ -132,7 +133,7 @@ ApplicationWindow {
                     EldurLines {
                         id: pFlow2
                         color: "#111111"
-                        font.family: "sans-serif"
+                        font.family: EldurFonts.family("sans-serif")
                         font.pixelSize: 16
                         lineHeight: 24
                         anchors.left: parent.left
@@ -143,7 +144,7 @@ ApplicationWindow {
                             text: "Call "
                             textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
@@ -158,14 +159,14 @@ ApplicationWindow {
                             text: "render()"
                             textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: "monospace"
+                            font.family: EldurFonts.family("monospace")
                             font.pixelSize: 14
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
 
                             EldurInlineBox {
                                 fragments: inlineRun2.eldurFragments
-                                font.family: "monospace"
+                                font.family: EldurFonts.family("monospace")
                                 font.pixelSize: 14
                                 fill: "#e2e8f0"
                                 radii: [4, 4, 4, 4]
@@ -180,7 +181,7 @@ ApplicationWindow {
                             text: " and then "
                             textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
@@ -195,14 +196,14 @@ ApplicationWindow {
                             text: "flush()"
                             textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: "monospace"
+                            font.family: EldurFonts.family("monospace")
                             font.pixelSize: 14
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
 
                             EldurInlineBox {
                                 fragments: inlineRun3.eldurFragments
-                                font.family: "monospace"
+                                font.family: EldurFonts.family("monospace")
                                 font.pixelSize: 14
                                 fill: "#e2e8f0"
                                 radii: [4, 4, 4, 4]
@@ -217,7 +218,7 @@ ApplicationWindow {
                             text: " once."
                             textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
@@ -240,7 +241,7 @@ ApplicationWindow {
                     EldurLines {
                         id: pFlow3
                         color: "#111111"
-                        font.family: "sans-serif"
+                        font.family: EldurFonts.family("sans-serif")
                         font.pixelSize: 16
                         lineHeight: 24
                         anchors.left: parent.left
@@ -251,7 +252,7 @@ ApplicationWindow {
                             text: "Before "
                             textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
@@ -266,14 +267,14 @@ ApplicationWindow {
                             text: "bordered"
                             textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
 
                             EldurInlineBox {
                                 fragments: inlineRun4.eldurFragments
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 16
                                 borderWidths: [2, 2, 2, 2]
                                 borderColors: ["#b91c1c", "#b91c1c", "#b91c1c", "#b91c1c"]
@@ -286,7 +287,7 @@ ApplicationWindow {
                             text: " after."
                             textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
@@ -302,7 +303,7 @@ ApplicationWindow {
                     text: "<div style=\"line-height:24px\">Plain <span style=\"background-color:#fde68a\">marked text</span> plain.</div>"
                     textFormat: Text.RichText
                     color: "#111111"
-                    font.family: "sans-serif"
+                    font.family: EldurFonts.family("sans-serif")
                     font.pixelSize: 16
                     wrapMode: Text.WordWrap
                     transform: Translate {
@@ -329,7 +330,7 @@ ApplicationWindow {
                     EldurLines {
                         id: pFlow4
                         color: "#111111"
-                        font.family: "sans-serif"
+                        font.family: EldurFonts.family("sans-serif")
                         font.pixelSize: 16
                         lineHeight: 24
                         anchors.left: parent.left
@@ -340,7 +341,7 @@ ApplicationWindow {
                             text: "Side "
                             textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
@@ -355,14 +356,14 @@ ApplicationWindow {
                             text: "uneven edges"
                             textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
 
                             EldurInlineBox {
                                 fragments: inlineRun5.eldurFragments
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 16
                                 fill: "#f5f3ff"
                                 borderWidths: [0, 0, 2, 4]
@@ -378,7 +379,7 @@ ApplicationWindow {
                             text: " side."
                             textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
@@ -401,7 +402,7 @@ ApplicationWindow {
                     EldurLines {
                         id: pFlow5
                         color: "#111111"
-                        font.family: "sans-serif"
+                        font.family: EldurFonts.family("sans-serif")
                         font.pixelSize: 16
                         lineHeight: 24
                         anchors.left: parent.left
@@ -412,7 +413,7 @@ ApplicationWindow {
                             text: "This sentence runs on "
                             textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
@@ -427,14 +428,14 @@ ApplicationWindow {
                             text: "with a highlighted stretch of words that is long enough to break across two lines of the paragraph"
                             textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
 
                             EldurInlineBox {
                                 fragments: inlineRun6.eldurFragments
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 16
                                 fill: "#bfdbfe"
                                 radii: [6, 6, 6, 6]
@@ -449,7 +450,7 @@ ApplicationWindow {
                             text: " and ends."
                             textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
@@ -465,7 +466,7 @@ ApplicationWindow {
                     text: "<div style=\"line-height:24px\">Square <span style=\"background-color:#fecaca\"><span style=\"letter-spacing:8px\">&#8288;</span>padded<span style=\"letter-spacing:8px\">&#8288;</span></span> corners.</div>"
                     textFormat: Text.RichText
                     color: "#111111"
-                    font.family: "sans-serif"
+                    font.family: EldurFonts.family("sans-serif")
                     font.pixelSize: 16
                     wrapMode: Text.WordWrap
                     transform: Translate {
@@ -484,7 +485,7 @@ ApplicationWindow {
 
                     text: "Yearly Save 20%"
                     palette.buttonText: "#64748b"
-                    font.family: "sans-serif"
+                    font.family: EldurFonts.family("sans-serif")
                     font.pixelSize: 15
                     font.weight: 600
                     background: Rectangle {
@@ -504,7 +505,7 @@ ApplicationWindow {
                         EldurLines {
                             id: btnFlow
                             color: "#64748b"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 15
                             font.weight: 600
                             textAlign: Text.AlignHCenter
@@ -515,7 +516,7 @@ ApplicationWindow {
                                 text: "Yearly "
                                 textFormat: Text.PlainText
                                 color: bSpan.palette.buttonText
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 15
                                 font.weight: 600
                                 wrapMode: Text.WordWrap
@@ -531,7 +532,7 @@ ApplicationWindow {
                                 text: "Save 20%"
                                 textFormat: Text.PlainText
                                 color: "#166534"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 12
                                 font.weight: 600
                                 wrapMode: Text.WordWrap
@@ -539,7 +540,7 @@ ApplicationWindow {
 
                                 EldurInlineBox {
                                     fragments: inlineRun7.eldurFragments
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 12
                                     font.weight: 600
                                     fill: "#dcfce7"
@@ -563,7 +564,7 @@ ApplicationWindow {
 
                     text: "With chip"
                     palette.buttonText: "#64748b"
-                    font.family: "sans-serif"
+                    font.family: EldurFonts.family("sans-serif")
                     font.pixelSize: 15
                     font.weight: 600
                     background: Rectangle {
@@ -583,7 +584,7 @@ ApplicationWindow {
                         EldurLines {
                             id: btnFlow2
                             color: "#64748b"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 15
                             font.weight: 600
                             textAlign: Text.AlignHCenter
@@ -605,7 +606,7 @@ ApplicationWindow {
                                 text: " With chip"
                                 textFormat: Text.PlainText
                                 color: bChip.palette.buttonText
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 15
                                 font.weight: 600
                                 wrapMode: Text.WordWrap

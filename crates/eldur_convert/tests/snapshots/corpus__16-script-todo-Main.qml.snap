@@ -8,6 +8,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Effects
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
@@ -132,9 +133,15 @@ ApplicationWindow {
                                     text: "Today"
                                     textFormat: Text.PlainText
                                     color: "#3a4256"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 24
                                     font.weight: 700
+                                    lineHeight: EldurFonts.normalLine(font)
+                                    lineHeightMode: Text.FixedHeight
+                                    transform: Translate {
+                                        y: EldurFonts.shift("sans-serif", 24, 700, false, 0)
+                                    }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
@@ -156,8 +163,14 @@ ApplicationWindow {
                                     text: "0 items left"
                                     textFormat: Text.PlainText
                                     color: "#6b7280"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 14
+                                    lineHeight: EldurFonts.normalLine(font)
+                                    lineHeightMode: Text.FixedHeight
+                                    transform: Translate {
+                                        y: EldurFonts.shift("sans-serif", 24, 700, false, 0)
+                                    }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     objectName: "counter"
                                     Layout.fillWidth: true
@@ -187,7 +200,7 @@ ApplicationWindow {
                                     property string eldurWs: "\n    "
 
                                     color: "#1f2430"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial")
                                     font.pixelSize: 16
                                     verticalAlignment: TextInput.AlignVCenter
                                     background: Rectangle {
@@ -226,7 +239,7 @@ ApplicationWindow {
 
                                     text: "Add"
                                     palette.buttonText: "#ffffff"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial")
                                     font.pixelSize: 16
                                     font.weight: 600
                                     background: Rectangle {
@@ -289,8 +302,14 @@ ApplicationWindow {
                                     text: ""
                                     textFormat: Text.PlainText
                                     color: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 16
+                                    lineHeight: EldurFonts.normalLine(font)
+                                    lineHeightMode: Text.FixedHeight
+                                    transform: Translate {
+                                        y: EldurFonts.shift("sans-serif", 16, 400, false, 0)
+                                    }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -316,13 +335,19 @@ ApplicationWindow {
                                 property string eldurTag: "p"
                                 property string eldurClasses: "empty"
                                 property string eldurWs: "\n  "
-                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : todoList.eldurCarry
+                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : todoList.eldurCarry
 
                                 text: "Nothing here yet."
                                 textFormat: Text.PlainText
                                 color: "#6b7280"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 15
+                                lineHeight: EldurFonts.normalLine(font)
+                                lineHeightMode: Text.FixedHeight
+                                transform: Translate {
+                                    y: EldurFonts.shift("sans-serif", 15, 400, false, 0)
+                                }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 objectName: "empty"
@@ -343,13 +368,18 @@ ApplicationWindow {
                                 text: "Saved in this browser."
                                 textFormat: Text.PlainText
                                 color: "#9aa3b5"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 12
+                                lineHeight: EldurFonts.normalLine(font)
+                                lineHeightMode: Text.FixedHeight
+                                transform: Translate {
+                                    y: EldurFonts.shift("sans-serif", 12, 400, false, 0)
+                                }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.topMargin: 24 - empty.eldurCarry
-                                Layout.preferredHeight: implicitHeight
                                 renderType: Text.NativeRendering
                             }
                         }
@@ -458,8 +488,14 @@ ApplicationWindow {
             text: ""
             textFormat: Text.PlainText
             color: (eldurUp1 ? eldurUp1.cls_done : false) ? "#9aa3b5" : "#1f2430"
-            font.family: "sans-serif"
+            font.family: EldurFonts.family("sans-serif")
             font.pixelSize: 16
+            lineHeight: EldurFonts.normalLine(font)
+            lineHeightMode: Text.FixedHeight
+            transform: Translate {
+                y: EldurFonts.shift("sans-serif", 16, 400, false, 0)
+            }
+            bottomPadding: EldurFonts.slack(font, lineHeight)
             wrapMode: Text.WrapAtWordBoundaryOrAnywhere
             Layout.fillWidth: true
             Layout.preferredWidth: 0
@@ -481,7 +517,7 @@ ApplicationWindow {
 
             text: ""
             palette.buttonText: "#b42318"
-            font.family: "Arial"
+            font.family: EldurFonts.family("Arial")
             font.pixelSize: 13
             background: Rectangle {
                 color: buttonControl.hovered ? "#fde2e2" : "#fff5f5"
@@ -574,8 +610,14 @@ ApplicationWindow {
             text: ""
             textFormat: Text.PlainText
             color: "#1f2430"
-            font.family: "sans-serif"
+            font.family: EldurFonts.family("sans-serif")
             font.pixelSize: 16
+            lineHeight: EldurFonts.normalLine(font)
+            lineHeightMode: Text.FixedHeight
+            transform: Translate {
+                y: EldurFonts.shift("sans-serif", 16, 400, false, 0)
+            }
+            bottomPadding: EldurFonts.slack(font, lineHeight)
             wrapMode: Text.WrapAtWordBoundaryOrAnywhere
             width: parent ? Math.min(implicitWidth, parent.width) : implicitWidth
             renderType: Text.NativeRendering
@@ -594,7 +636,7 @@ ApplicationWindow {
 
             text: ""
             palette.buttonText: "#b42318"
-            font.family: "Arial"
+            font.family: EldurFonts.family("Arial")
             font.pixelSize: 13
             background: Rectangle {
                 color: buttonControl3.hovered ? "#fde2e2" : "#fff5f5"

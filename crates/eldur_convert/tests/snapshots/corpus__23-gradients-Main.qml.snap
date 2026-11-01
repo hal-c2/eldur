@@ -8,6 +8,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import QtQuick.Shapes
+import "eldur_fonts.js" as EldurFonts
 
 ApplicationWindow {
     id: root
@@ -99,14 +100,15 @@ ApplicationWindow {
                             text: "Default: to bottom"
                             textFormat: Text.PlainText
                             color: "#ffffff"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 14
                             font.weight: 700
                             lineHeight: 20
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2
+                                y: EldurFonts.shift("Liberation Sans, sans-serif", 14, 700, false, 20)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
                             anchors.right: parent.right
@@ -160,14 +162,15 @@ ApplicationWindow {
                             text: "to right"
                             textFormat: Text.PlainText
                             color: "#ffffff"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 14
                             font.weight: 700
                             lineHeight: 20
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2
+                                y: EldurFonts.shift("Liberation Sans, sans-serif", 14, 700, false, 20)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
                             anchors.right: parent.right
@@ -227,14 +230,15 @@ ApplicationWindow {
                             text: "135deg, rounded"
                             textFormat: Text.PlainText
                             color: "#ffffff"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 14
                             font.weight: 700
                             lineHeight: 20
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2
+                                y: EldurFonts.shift("Liberation Sans, sans-serif", 14, 700, false, 20)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
                             anchors.right: parent.right
@@ -292,14 +296,15 @@ ApplicationWindow {
                             text: "160deg, uneven radii"
                             textFormat: Text.PlainText
                             color: "#ffffff"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 14
                             font.weight: 700
                             lineHeight: 20
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2
+                                y: EldurFonts.shift("Liberation Sans, sans-serif", 14, 700, false, 20)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
                             anchors.right: parent.right
@@ -363,14 +368,15 @@ ApplicationWindow {
                             text: "Hard stops"
                             textFormat: Text.PlainText
                             color: "#1b2231"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 14
                             font.weight: 700
                             lineHeight: 20
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2
+                                y: EldurFonts.shift("Liberation Sans, sans-serif", 14, 700, false, 20)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
                             anchors.right: parent.right
@@ -424,14 +430,15 @@ ApplicationWindow {
                             text: "Pixel stops"
                             textFormat: Text.PlainText
                             color: "#ffffff"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 14
                             font.weight: 700
                             lineHeight: 20
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2
+                                y: EldurFonts.shift("Liberation Sans, sans-serif", 14, 700, false, 20)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
                             anchors.right: parent.right
@@ -491,14 +498,15 @@ ApplicationWindow {
                             text: "Circle at 30% 30%"
                             textFormat: Text.PlainText
                             color: "#1b2231"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 14
                             font.weight: 700
                             lineHeight: 20
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2
+                                y: EldurFonts.shift("Liberation Sans, sans-serif", 14, 700, false, 20)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
                             anchors.right: parent.right
@@ -554,14 +562,15 @@ ApplicationWindow {
                             text: "Ellipse"
                             textFormat: Text.PlainText
                             color: "#1b2231"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 14
                             font.weight: 700
                             lineHeight: 20
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2
+                                y: EldurFonts.shift("Liberation Sans, sans-serif", 14, 700, false, 20)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
                             anchors.right: parent.right
@@ -626,14 +635,15 @@ ApplicationWindow {
                             text: "Repeating stripes"
                             textFormat: Text.PlainText
                             color: "#ffffff"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 14
                             font.weight: 700
                             lineHeight: 20
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2
+                                y: EldurFonts.shift("Liberation Sans, sans-serif", 14, 700, false, 20)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
                             anchors.right: parent.right
@@ -723,14 +733,15 @@ ApplicationWindow {
                             text: "Two layers"
                             textFormat: Text.PlainText
                             color: "#ffffff"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 14
                             font.weight: 700
                             lineHeight: 20
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2
+                                y: EldurFonts.shift("Liberation Sans, sans-serif", 14, 700, false, 20)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
                             anchors.right: parent.right
@@ -807,14 +818,15 @@ ApplicationWindow {
                             text: "Bordered"
                             textFormat: Text.PlainText
                             color: "#ffffff"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 14
                             font.weight: 700
                             lineHeight: 20
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2
+                                y: EldurFonts.shift("Liberation Sans, sans-serif", 14, 700, false, 20)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
                             anchors.right: parent.right
@@ -888,14 +900,15 @@ ApplicationWindow {
                             text: "White text on a gradient"
                             textFormat: Text.PlainText
                             color: "#ffffff"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 28
                             font.weight: 700
                             lineHeight: 36
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2
+                                y: EldurFonts.shift("Liberation Sans, sans-serif", 28, 700, false, 36)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             renderType: Text.NativeRendering
@@ -906,13 +919,14 @@ ApplicationWindow {
                             text: "The hero section's background is a three-stop gradient."
                             textFormat: Text.PlainText
                             color: "#ffffff"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 14
                             lineHeight: 20
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2
+                                y: EldurFonts.shift("Liberation Sans, sans-serif", 14, 400, false, 20)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             Layout.topMargin: 8

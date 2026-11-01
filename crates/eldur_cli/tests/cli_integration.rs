@@ -782,3 +782,55 @@ fn binary_help_and_argument_errors() {
         );
     }
 }
+
+/// A conversion reads no machine fonts: what fontconfig answers changes nothing.
+#[test]
+fn output_does_not_depend_on_the_machines_fonts() {
+    let dir = TempDir::new("fontconfig");
+    let page = dir.path.join("page.html");
+    fs::write(
+        &page,
+        "<!DOCTYPE html><style>h1{font-family:Helvetica,Arial}p{font:14px Georgia,serif}\
+         code{font-family:monospace}button{font:13px system-ui}</style>\
+         <h1>Title</h1><p>Some <code>code</code> and <b>bold</b>.</p><button>Go</button>",
+    )
+    .expect("write page");
+    // No fonts at all, against what the machine has.
+    let config = dir.path.join("fonts.conf");
+    fs::write(
+        &config,
+        "<?xml version=\"1.0\"?><!DOCTYPE fontconfig SYSTEM \"fonts.dtd\"><fontconfig>\
+         <dir>/nonexistent</dir><cachedir>/nonexistent</cachedir></fontconfig>",
+    )
+    .expect("write config");
+    let run = |out: &Path, fontconfig: Option<&Path>| {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_eldur"));
+        command
+            .args(["convert", "-q"])
+            .arg(&page)
+            .arg("-o")
+            .arg(out);
+        if let Some(file) = fontconfig {
+            command.env("FONTCONFIG_FILE", file);
+        }
+        let status = command.status().expect("run eldur");
+        assert!(status.success());
+    };
+    let (usual, none) = (dir.path.join("usual"), dir.path.join("none"));
+    run(&usual, None);
+    run(&none, Some(&config));
+    let names: Vec<_> = fs::read_dir(&usual)
+        .expect("output")
+        .map(|e| e.expect("entry").file_name())
+        .collect();
+    assert!(!names.is_empty());
+    for name in names {
+        let (a, b) = (usual.join(&name), none.join(&name));
+        if a.is_file() {
+            assert!(
+                fs::read(&a).expect("read") == fs::read(&b).expect("read"),
+                "{name:?} differs"
+            );
+        }
+    }
+}

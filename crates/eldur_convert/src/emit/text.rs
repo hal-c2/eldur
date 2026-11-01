@@ -20,15 +20,6 @@ use super::Emitter;
 use super::units::{color, number, round};
 use crate::boxes::{Inline, Span, describe, node_line};
 
-/// Ascent + descent of the common fallback fonts (Liberation, DejaVu) as a
-/// fraction of the font size; used to centre glyphs in the line box.
-pub(super) const CONTENT_AREA: f32 = 1.15;
-
-/// Below this line height (as a fraction of the font size) a fallback
-/// font's own height may exceed the line: Liberation and DejaVu are
-/// 1.13–1.17 in Qt, so this leaves a margin for other families.
-const TIGHT_LINE: f32 = 1.25;
-
 /// What StyledText needs to know about the enclosing inline box.
 #[derive(Clone)]
 struct State {
@@ -132,8 +123,12 @@ impl Emitter<'_, '_> {
             // A `lineHeight` on the Text replaces the block's in RichText.
             text.members.retain(|m| {
                 !matches!(m, Member::Property { name, .. }
-                    if name == "lineHeight" || name == "lineHeightMode")
+                    if name == "lineHeight" || name == "lineHeightMode" || name == "bottomPadding")
             });
+            if line_height(style).is_none() {
+                text.members
+                    .retain(|m| !matches!(m, Member::Property { name, .. } if name == "transform"));
+            }
             // RichText puts a fixed line's leading above the glyphs, where
             // `lineHeight` puts it below; both round to a whole row, so a
             // whole shift lands them on Chromium's (layout.md §1.2).
@@ -150,23 +145,25 @@ impl Emitter<'_, '_> {
             }
         }
         if raise != 0.0 && !markup.html {
-            let shift = match text.get("transform") {
+            let base = match text.get("transform") {
                 Some(Value::Object(t)) => match t.get("y") {
-                    Some(Value::Number(y)) => *y as f32,
-                    _ => 0.0,
+                    Some(Value::Expr(y)) => format!("{y} + "),
+                    _ => String::new(),
                 },
-                _ => 0.0,
+                _ => String::new(),
             };
             text.members
                 .retain(|m| !matches!(m, Member::Property { name, .. } if name == "transform"));
-            if shift + raise != 0.0 {
-                text.set(
-                    "transform",
-                    Value::Object(Box::new(
-                        Object::new("Translate").prop("y", round(shift + raise)),
+            text.set(
+                "transform",
+                Value::Object(Box::new(Object::new("Translate").prop(
+                    "y",
+                    Value::expr(format!(
+                        "{base}{}",
+                        super::units::fmt_number(f64::from(raise))
                     )),
-                );
-            }
+                ))),
+            );
         }
         if let Some(&link) = markup.link_colors.first() {
             // RichText colours each link itself.
@@ -271,10 +268,7 @@ impl Emitter<'_, '_> {
         line: Option<u32>,
     ) {
         text.set("color", color(style.color));
-        text.set(
-            "font.family",
-            Value::string(font_family(&style.font_family)),
-        );
+        text.set("font.family", super::fonts::family_value(style));
         // `font.pixelSize` is an int in Qt.
         text.set(
             "font.pixelSize",
@@ -312,50 +306,31 @@ impl Emitter<'_, '_> {
         if decoration.overline {
             text.set("font.overline", true);
         }
-        if let Some(lh) = line_height(style) {
-            text.set("lineHeight", number(lh));
-            text.set("lineHeightMode", Value::expr("Text.FixedHeight"));
-            // CSS centres the glyphs in the line box (half-leading); a fixed
-            // QML line puts them at its top. Both round the glyphs' baseline
-            // to a whole pixel, so a whole shift lands them on Chromium's
-            // row wherever the line is.
-            let shift = whole_baseline(style, lh) - qt_ascent(style);
-            if shift != 0.0 {
-                text.set(
-                    "transform",
-                    Value::Object(Box::new(Object::new("Translate").prop("y", round(shift)))),
-                );
-            }
-            // Qt gives the last fixed-height line the font's own height when
-            // that is taller, where CSS keeps every line box `line-height`
-            // tall. The font's height is only known at run time, so a
-            // `FontMetrics` of the same font measures it; a binding on
-            // `contentHeight` instead would loop through the layout's width.
-            if lh < TIGHT_LINE * style.font_size {
-                let mut metrics = Object::new("FontMetrics");
-                for name in [
-                    "font.family",
-                    "font.pixelSize",
-                    "font.weight",
-                    "font.italic",
-                ] {
-                    if let Some(value) = text.get(name) {
-                        metrics.set(name, value.clone());
-                    }
-                }
-                text.members.push(Member::PropertyDecl {
-                    ty: "FontMetrics".to_owned(),
-                    name: "metrics".to_owned(),
-                    value: Some(Value::Object(Box::new(metrics))),
-                    readonly: true,
-                    required: false,
-                });
-                text.set(
-                    "bottomPadding",
-                    Value::expr("Math.min(0, lineHeight - Math.ceil(metrics.height))"),
-                );
-            }
-        }
+        // Every line is fixed: Qt's own would drop the font's line gap and use
+        // other metrics than Chromium (layout.md §1.3).
+        let lh = line_height(style);
+        match lh {
+            Some(lh) => text.set("lineHeight", number(lh)),
+            None => text.set("lineHeight", super::fonts::normal_line_value(style)),
+        };
+        text.set("lineHeightMode", Value::expr("Text.FixedHeight"));
+        // CSS centres the glyphs in the line box (half-leading); a fixed QML
+        // line puts them at its top. Both round the glyphs' baseline to a whole
+        // pixel, so a whole shift lands them on Chromium's row wherever the
+        // line is.
+        text.set(
+            "transform",
+            Value::Object(Box::new(
+                Object::new("Translate")
+                    .prop("y", Value::expr(super::fonts::shift_expr(style, lh))),
+            )),
+        );
+        // Which font's height that is, is only known at run time. A binding on
+        // `contentHeight` instead would loop through the layout's width.
+        text.set(
+            "bottomPadding",
+            Value::expr("EldurFonts.slack(font, lineHeight)"),
+        );
         if let Some(a) = text_align(style) {
             text.set("horizontalAlignment", Value::expr(a));
         }
@@ -554,7 +529,10 @@ impl Emitter<'_, '_> {
         }
         let family = font_family(&style.font_family);
         if m.html && family != parent.family {
-            css.push(format!("font-family:'{}'", family.replace(['\'', '"'], "")));
+            css.push(format!(
+                "font-family:{}",
+                super::fonts::css_families(&style.font_family)
+            ));
             state.family = family;
         } else if family != parent.family {
             self.diags.info(
@@ -805,26 +783,13 @@ pub(super) fn whole_span(
     Some((style, up - whole_baseline(s, line)))
 }
 
-/// Ascent and descent, as fractions of the size, of the font `family`
-/// resolves to. A stopgap, and the one place that knows: it is right only
-/// where fontconfig resolves these names to Liberation Serif, Liberation Sans
-/// and, for `monospace`, JetBrains Mono, as on the machine it was measured on
-/// (layout.md §1.2). Any other font gets Liberation Sans's numbers, and its
-/// glyphs can land a row off. How to obtain real metrics, also for
-/// `line-height: normal`, is undecided; replace this function then.
-pub(super) fn font_extents(family: &str) -> (f32, f32) {
-    match family {
-        "serif" | "Times" | "Times New Roman" | "Georgia" | "Liberation Serif" => (0.891, 0.216),
-        "monospace" => (1.02, 0.3),
-        _ => (0.905, 0.212),
-    }
-}
-
 /// Letter spacing that gives a monospace run at a fractional size the advance
 /// it has in a browser, drawn at the whole `font.pixelSize` Qt has. Only a
 /// monospace font's advance is a known share of its size.
 fn whole_size_advance(style: &ComputedStyle) -> f32 {
-    if font_family(&style.font_family) != "monospace" {
+    if !["jetbrainsmono nerd font", "liberation mono"]
+        .contains(&font_family(&style.font_family).as_str())
+    {
         return 0.0;
     }
     let advance = 0.6 * (style.font_size - style.font_size.round());
@@ -836,19 +801,10 @@ fn whole_size_advance(style: &ComputedStyle) -> f32 {
 /// half-leading, so the offset is whole and the glyphs' row is the line's
 /// top rounded half up (`tools/visual/paint`, layout.md §1.2).
 pub(super) fn whole_baseline(style: &ComputedStyle, line: f32) -> f32 {
-    let (a, d) = font_extents(&font_family(&style.font_family));
-    let ascent = (a * style.font_size).round();
-    let descent = (d * style.font_size).round();
+    let (ascent, descent, _) = super::fonts::extents(style);
     // In Chromium's 1/64 px units, so that 19.2 - 17 is not just under 2.2.
     let line = (line * 64.0).round() / 64.0;
     ascent + ((line - ascent - descent) / 2.0 + 1e-4).floor()
-}
-
-/// Where a fixed-height Qt line puts the baseline: its font's ascent at the
-/// whole `font.pixelSize`, rounded.
-fn qt_ascent(style: &ComputedStyle) -> f32 {
-    let (a, _) = font_extents(&font_family(&style.font_family));
-    (a * style.font_size.round().max(1.0)).round()
 }
 
 /// Chromium's baseline less Qt's, for the RichText line holding every run in
@@ -866,10 +822,10 @@ fn rich_shift(style: &ComputedStyle, items: &[Inline<'_>], lh: f32) -> f32 {
         .fold(whole_baseline(style, lh), f32::max);
     let (mut ascent, mut descent) = (0.0_f32, 0.0_f32);
     for s in &runs {
-        let (a, d) = font_extents(&font_family(&s.font_family));
-        let size = s.font_size.round().max(1.0);
-        ascent = ascent.max(a * size);
-        descent = descent.max(d * size);
+        // Qt's size is whole.
+        let (a, d) = super::fonts::qt_extents(s, s.font_size.round().max(1.0));
+        ascent = ascent.max(a);
+        descent = descent.max(d);
     }
     // In Qt's 1/64 px units.
     let lh = (lh * 64.0).floor() / 64.0;
@@ -966,21 +922,9 @@ fn escape_attr(s: &str) -> String {
         .replace('>', "&gt;")
 }
 
-/// QML's `font` has one family, not a fallback list: the first family that
-/// is not an engine-specific alias, with the CSS `ui-*`/`system-ui`
-/// aliases mapped to the generic families fontconfig knows.
+/// What two runs' fonts are compared by: the face the stack is expected to reach.
 pub(crate) fn font_family(families: &[String]) -> String {
-    for family in families {
-        let generic = match family.as_str() {
-            "-apple-system" | "BlinkMacSystemFont" => continue,
-            "system-ui" | "ui-sans-serif" | "ui-rounded" => "sans-serif",
-            "ui-serif" => "serif",
-            "ui-monospace" => "monospace",
-            other => other,
-        };
-        return generic.to_owned();
-    }
-    "serif".to_owned()
+    super::fonts::expected_face(families)
 }
 
 /// `text-align` as a Qt flag; `None` for the left edge, Qt's default.

@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 
 ApplicationWindow {
     id: root
@@ -96,14 +97,15 @@ ApplicationWindow {
                             text: "Placed against the page"
                             textFormat: Text.PlainText
                             color: "#1f2937"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 28
                             font.weight: 700
                             lineHeight: 36
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2
+                                y: EldurFonts.shift("sans-serif", 28, 700, false, 36)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             renderType: Text.NativeRendering
@@ -114,13 +116,14 @@ ApplicationWindow {
                             text: "None of the coloured boxes has a positioned ancestor, so each is placed against the initial containing block: the viewport's size, at the page's origin, scrolling with the page."
                             textFormat: Text.PlainText
                             color: "#1f2937"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             lineHeight: 24
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 3
+                                y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             Layout.topMargin: 12
@@ -142,13 +145,14 @@ ApplicationWindow {
                                 text: "The blue note stays where this paragraph starts, on top of it, and takes no room. The orange dot was an inline box in this sentence and does not split it."
                                 textFormat: Text.PlainText
                                 color: "#1f2937"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 16
                                 lineHeight: 24
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 3
+                                    y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 renderType: Text.NativeRendering
@@ -245,13 +249,14 @@ ApplicationWindow {
                                     text: "The red box far below is as deep as this text, and it makes the page scroll."
                                     textFormat: Text.PlainText
                                     color: "#1f2937"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 16
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3
+                                        y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     renderType: Text.NativeRendering

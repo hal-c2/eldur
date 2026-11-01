@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
@@ -296,14 +297,15 @@ ApplicationWindow {
                             text: "Journal"
                             textFormat: Text.PlainText
                             color: "#1a202c"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 20
                             font.weight: 700
                             lineHeight: 30
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 4
+                                y: EldurFonts.shift("Arial, sans-serif", 20, 700, false, 30)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             Layout.maximumWidth: Math.ceil(implicitWidth)
@@ -323,7 +325,7 @@ ApplicationWindow {
                             property string eldurWsEnd: "\n  "
 
                             color: "#1a202c"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 16
                             lineHeight: 24
                             Layout.fillWidth: true
@@ -338,7 +340,7 @@ ApplicationWindow {
 
                                 text: "Compact"
                                 palette.buttonText: "#1a202c"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial")
                                 font.pixelSize: 13
                                 background: Rectangle {
                                     color: "#f7fafc"
@@ -379,7 +381,7 @@ ApplicationWindow {
                                 text: " "
                                 textFormat: Text.PlainText
                                 color: "#1a202c"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial, sans-serif")
                                 font.pixelSize: 16
                                 wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
@@ -393,7 +395,7 @@ ApplicationWindow {
 
                                 text: "Dark mode"
                                 palette.buttonText: "#1a202c"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial")
                                 font.pixelSize: 13
                                 background: Rectangle {
                                     color: "#f7fafc"
@@ -472,14 +474,15 @@ ApplicationWindow {
                             text: "Today"
                             textFormat: Text.PlainText
                             color: "#1a202c"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 18
                             font.weight: 700
                             lineHeight: 27
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 3
+                                y: EldurFonts.shift("Arial, sans-serif", 18, 700, false, 27)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             renderType: Text.NativeRendering
@@ -488,19 +491,20 @@ ApplicationWindow {
                         // <p>
                         Text {
                             property string eldurTag: "p"
-                            readonly property string eldurInline: "{\"bare\":false,\"hoisted\":false,\"html\":false,\"k\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(26, 32, 44)\",\"display\":\"block\",\"family\":\"Arial\",\"italic\":false,\"size\":16.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"Nothing much happened. \"},{\"attrs\":[[\"href\",\"#more\"],[\"id\",\"more\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(43, 108, 176)\",\"display\":\"inline\",\"family\":\"Arial\",\"italic\":false,\"size\":16.0,\"strike\":false,\"underline\":true,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"Read more\"}],\"tag\":\"a\"},{\"text\":\" if you must.\"}],\"lh\":24.0,\"pre\":false,\"strike\":false,\"underline\":false}"
+                            readonly property string eldurInline: "{\"bare\":false,\"hoisted\":false,\"html\":false,\"k\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(26, 32, 44)\",\"display\":\"block\",\"family\":\"Arial, sans-serif\",\"italic\":false,\"size\":16.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"Nothing much happened. \"},{\"attrs\":[[\"href\",\"#more\"],[\"id\",\"more\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(43, 108, 176)\",\"display\":\"inline\",\"family\":\"Arial, sans-serif\",\"italic\":false,\"size\":16.0,\"strike\":false,\"underline\":true,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"Read more\"}],\"tag\":\"a\"},{\"text\":\" if you must.\"}],\"lh\":24.0,\"pre\":false,\"strike\":false,\"underline\":false}"
                             property string eldurWs: "\n  "
 
                             text: "Nothing much happened. <a href=\"#more\">Read more</a> if you must."
                             textFormat: Text.StyledText
                             color: "#1a202c"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 16
                             lineHeight: 24
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 3
+                                y: EldurFonts.shift("Arial, sans-serif", 16, 400, false, 24)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             linkColor: "#2b6cb0"
                             Layout.fillWidth: true

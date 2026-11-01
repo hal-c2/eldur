@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
@@ -72,17 +73,21 @@ ApplicationWindow {
 
                     // <h1>
                     Text {
-                        id: h1
                         property string eldurTag: "h1"
                         property string eldurWs: "\n"
-                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                         text: "Tasks"
                         textFormat: Text.PlainText
                         color: "#222222"
-                        font.family: "Arial"
+                        font.family: EldurFonts.family("Arial, sans-serif")
                         font.pixelSize: 22
                         font.weight: 700
+                        lineHeight: EldurFonts.normalLine(font)
+                        lineHeightMode: Text.FixedHeight
+                        transform: Translate {
+                            y: EldurFonts.shift("Arial, sans-serif", 22, 700, false, 0)
+                        }
+                        bottomPadding: EldurFonts.slack(font, lineHeight)
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
                         renderType: Text.NativeRendering
@@ -93,10 +98,10 @@ ApplicationWindow {
                         property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                         color: "#222222"
-                        font.family: "Arial"
+                        font.family: EldurFonts.family("Arial, sans-serif")
                         font.pixelSize: 16
                         Layout.fillWidth: true
-                        Layout.topMargin: 12 - h1.eldurCarry
+                        Layout.topMargin: 12
                         Layout.preferredHeight: implicitHeight
 
                         // <input id="search">
@@ -112,7 +117,7 @@ ApplicationWindow {
                                 property string eldurWs: "\n"
 
                                 color: "#000000"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial")
                                 font.pixelSize: 13
                                 verticalAlignment: TextInput.AlignVCenter
                                 background: Rectangle {
@@ -150,7 +155,7 @@ ApplicationWindow {
                         property string eldurTag: "ul"
                         property string eldurWs: "\n"
                         property string eldurWsEnd: "\n"
-                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin - (i3.eldurCarry)) - Layout.topMargin + i3.eldurCarry + 0.000001) : blockFlow.eldurCarry
+                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : blockFlow.eldurCarry
 
                         color: "#00000000"
                         implicitWidth: listContent.implicitWidth + 2
@@ -161,7 +166,6 @@ ApplicationWindow {
                         Layout.preferredWidth: 322
                         Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
                         Layout.topMargin: -blockFlow.eldurCarry
-                        Layout.preferredHeight: implicitHeight - i3.eldurCarry
 
                         Keys.onPressed: (event) => {
                             event.accepted = !Eldur.fire(list, "keydown", event);
@@ -186,14 +190,12 @@ ApplicationWindow {
                                 property int eldurCount: 4
                                 property bool cls_picked: false
                                 property string eldurWs: "\n"
-                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                                 color: i0.activeFocus ? "#dbe9ff" : "#00000000"
                                 implicitWidth: i0Text.implicitWidth + 24
                                 implicitHeight: i0.eldurIndex === i0.eldurCount ? (i0Text.implicitHeight + 16) : (i0Text.implicitHeight + 17)
                                 objectName: "i0"
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: implicitHeight
                                 activeFocusOnTab: true
 
                                 Rectangle {
@@ -209,8 +211,14 @@ ApplicationWindow {
                                     text: "Write the report"
                                     textFormat: Text.PlainText
                                     color: i0.cls_picked ? "#00bb55" : "#222222"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial, sans-serif")
                                     font.pixelSize: 16
+                                    lineHeight: EldurFonts.normalLine(font)
+                                    lineHeightMode: Text.FixedHeight
+                                    transform: Translate {
+                                        y: i0.cls_picked ? EldurFonts.shift("Arial, sans-serif", 16, 700, false, 0) : EldurFonts.shift("Arial, sans-serif", 16, 400, false, 0)
+                                    }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -236,15 +244,12 @@ ApplicationWindow {
                                 property int eldurCount: 4
                                 property bool cls_picked: false
                                 property string eldurWs: "\n"
-                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : i0.eldurCarry
 
                                 color: i1.activeFocus ? "#dbe9ff" : "#00000000"
                                 implicitWidth: i1Text.implicitWidth + 24
                                 implicitHeight: i1.eldurIndex === i1.eldurCount ? (i1Text.implicitHeight + 16) : (i1Text.implicitHeight + 17)
                                 objectName: "i1"
                                 Layout.fillWidth: true
-                                Layout.topMargin: -i0.eldurCarry
-                                Layout.preferredHeight: implicitHeight
                                 activeFocusOnTab: true
 
                                 Rectangle {
@@ -260,8 +265,14 @@ ApplicationWindow {
                                     text: "Book the room"
                                     textFormat: Text.PlainText
                                     color: i1.cls_picked ? "#00bb55" : "#222222"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial, sans-serif")
                                     font.pixelSize: 16
+                                    lineHeight: EldurFonts.normalLine(font)
+                                    lineHeightMode: Text.FixedHeight
+                                    transform: Translate {
+                                        y: i1.cls_picked ? EldurFonts.shift("Arial, sans-serif", 16, 700, false, 0) : EldurFonts.shift("Arial, sans-serif", 16, 400, false, 0)
+                                    }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -287,15 +298,12 @@ ApplicationWindow {
                                 property int eldurCount: 4
                                 property bool cls_picked: false
                                 property string eldurWs: "\n"
-                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : i1.eldurCarry
 
                                 color: i2.activeFocus ? "#dbe9ff" : "#00000000"
                                 implicitWidth: i2Text.implicitWidth + 24
                                 implicitHeight: i2.eldurIndex === i2.eldurCount ? (i2Text.implicitHeight + 16) : (i2Text.implicitHeight + 17)
                                 objectName: "i2"
                                 Layout.fillWidth: true
-                                Layout.topMargin: -i1.eldurCarry
-                                Layout.preferredHeight: implicitHeight
                                 activeFocusOnTab: true
 
                                 Rectangle {
@@ -311,8 +319,14 @@ ApplicationWindow {
                                     text: "Call the printer"
                                     textFormat: Text.PlainText
                                     color: i2.cls_picked ? "#00bb55" : "#222222"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial, sans-serif")
                                     font.pixelSize: 16
+                                    lineHeight: EldurFonts.normalLine(font)
+                                    lineHeightMode: Text.FixedHeight
+                                    transform: Translate {
+                                        y: i2.cls_picked ? EldurFonts.shift("Arial, sans-serif", 16, 700, false, 0) : EldurFonts.shift("Arial, sans-serif", 16, 400, false, 0)
+                                    }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -338,15 +352,12 @@ ApplicationWindow {
                                 property int eldurCount: 4
                                 property bool cls_picked: false
                                 property string eldurWs: "\n"
-                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : i2.eldurCarry
 
                                 color: i3.activeFocus ? "#dbe9ff" : "#00000000"
                                 implicitWidth: i3Text.implicitWidth + 24
                                 implicitHeight: i3.eldurIndex === i3.eldurCount ? (i3Text.implicitHeight + 16) : (i3Text.implicitHeight + 17)
                                 objectName: "i3"
                                 Layout.fillWidth: true
-                                Layout.topMargin: -i2.eldurCarry
-                                Layout.preferredHeight: implicitHeight
                                 activeFocusOnTab: true
 
                                 Rectangle {
@@ -362,8 +373,14 @@ ApplicationWindow {
                                     text: "Water the plants"
                                     textFormat: Text.PlainText
                                     color: i3.cls_picked ? "#00bb55" : "#222222"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial, sans-serif")
                                     font.pixelSize: 16
+                                    lineHeight: EldurFonts.normalLine(font)
+                                    lineHeightMode: Text.FixedHeight
+                                    transform: Translate {
+                                        y: i3.cls_picked ? EldurFonts.shift("Arial, sans-serif", 16, 700, false, 0) : EldurFonts.shift("Arial, sans-serif", 16, 400, false, 0)
+                                    }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -401,8 +418,14 @@ ApplicationWindow {
                             text: "Nothing picked"
                             textFormat: Text.PlainText
                             color: "#222222"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 16
+                            lineHeight: EldurFonts.normalLine(font)
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("Arial, sans-serif", 16, 400, false, 0)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
                             anchors.right: parent.right
@@ -416,7 +439,7 @@ ApplicationWindow {
                         property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                         color: "#222222"
-                        font.family: "Arial"
+                        font.family: EldurFonts.family("Arial, sans-serif")
                         font.pixelSize: 16
                         Layout.fillWidth: true
                         Layout.topMargin: -state.eldurCarry
@@ -430,7 +453,7 @@ ApplicationWindow {
 
                             text: "After the list"
                             palette.buttonText: "#000000"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial")
                             font.pixelSize: 13
                             background: Rectangle {
                                 color: "#efefef"

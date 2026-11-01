@@ -8,6 +8,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import QtQuick.Shapes
+import "eldur_fonts.js" as EldurFonts
 
 ApplicationWindow {
     id: root
@@ -92,7 +93,7 @@ ApplicationWindow {
                         text: "Field Notes"
                         textFormat: Text.PlainText
                         color: "#2e2a26"
-                        font.family: "sans-serif"
+                        font.family: EldurFonts.family("sans-serif")
                         font.pixelSize: 22
                         font.weight: 700
                         font.letterSpacing: 4.4
@@ -100,8 +101,9 @@ ApplicationWindow {
                         lineHeight: 35.2
                         lineHeightMode: Text.FixedHeight
                         transform: Translate {
-                            y: 5
+                            y: EldurFonts.shift("sans-serif", 22, 700, false, 35.2)
                         }
+                        bottomPadding: EldurFonts.slack(font, lineHeight)
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.WordWrap
                         anchors.left: parent.left
@@ -145,25 +147,20 @@ ApplicationWindow {
                         // <h1>
                         Text {
                             id: h1
-                            readonly property FontMetrics metrics: FontMetrics {
-                                font.family: "serif"
-                                font.pixelSize: 38
-                                font.weight: 700
-                            }
                             property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
 
                             text: "A winter at the harbour"
                             textFormat: Text.PlainText
                             color: "#2e2a26"
-                            font.family: "serif"
+                            font.family: EldurFonts.family("serif")
                             font.pixelSize: 38
                             font.weight: 700
                             lineHeight: 45.6
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 1
+                                y: EldurFonts.shift("serif", 38, 700, false, 45.6)
                             }
-                            bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             renderType: Text.NativeRendering
@@ -177,13 +174,14 @@ ApplicationWindow {
                             text: "By Sólveig Ragnarsdóttir · 14 February 2026 · 6 min read"
                             textFormat: Text.PlainText
                             color: "#8a7f70"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 14
                             lineHeight: 22.4
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 3
+                                y: EldurFonts.shift("sans-serif", 14, 400, false, 22.4)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             Layout.topMargin: 6 - h1.eldurCarry
@@ -215,13 +213,14 @@ ApplicationWindow {
                                     text: "When the ferries stop running in November, the harbour becomes a different town. The cafés close their terraces, the fishing boats come in early, and the few of us who stay learn each other's routines. I went there to write a book and ended up keeping a diary of the weather instead."
                                     textFormat: Text.PlainText
                                     color: "#2e2a26"
-                                    font.family: "serif"
+                                    font.family: EldurFonts.family("serif")
                                     font.pixelSize: 18
                                     lineHeight: 28.8
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 4
+                                        y: EldurFonts.shift("serif", 18, 400, false, 28.8)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     renderType: Text.NativeRendering
@@ -251,13 +250,14 @@ ApplicationWindow {
                                     text: "The mornings are dark until ten. I would walk to the end of the breakwater with a thermos and watch the light come up behind the hills, first grey, then a thin band of orange that never quite made it to yellow. Most days the wind decided everything: whether the boats went out, whether the shop got its delivery, whether anyone bothered to talk."
                                     textFormat: Text.PlainText
                                     color: "#2e2a26"
-                                    font.family: "serif"
+                                    font.family: EldurFonts.family("serif")
                                     font.pixelSize: 18
                                     lineHeight: 28.8
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 4
+                                        y: EldurFonts.shift("serif", 18, 400, false, 28.8)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.topMargin: 18 - intro.eldurCarry
@@ -286,13 +286,14 @@ ApplicationWindow {
                                     text: "By January I knew which gulls belonged to which roof."
                                     textFormat: Text.PlainText
                                     color: "#2e2a26"
-                                    font.family: "serif"
+                                    font.family: EldurFonts.family("serif")
                                     font.pixelSize: 18
                                     lineHeight: 28.8
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 4
+                                        y: EldurFonts.shift("serif", 18, 400, false, 28.8)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.topMargin: 18 - p.eldurCarry
@@ -407,7 +408,7 @@ ApplicationWindow {
                                     text: "In this post"
                                     textFormat: Text.PlainText
                                     color: "#2e2a26"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 15
                                     font.weight: 700
                                     font.letterSpacing: 1.2
@@ -415,8 +416,9 @@ ApplicationWindow {
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3
+                                        y: EldurFonts.shift("sans-serif", 15, 700, false, 24)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     renderType: Text.NativeRendering
@@ -442,13 +444,14 @@ ApplicationWindow {
                                             text: "<b><font color=\"#c9533b\">1. </font></b>The dark months"
                                             textFormat: Text.StyledText
                                             color: "#2e2a26"
-                                            font.family: "serif"
+                                            font.family: EldurFonts.family("serif")
                                             font.pixelSize: 18
                                             lineHeight: 28.8
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 4
+                                                y: EldurFonts.shift("serif", 18, 400, false, 28.8)
                                             }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
                                             renderType: Text.NativeRendering
@@ -480,13 +483,14 @@ ApplicationWindow {
                                                     text: "<b><font color=\"#c9533b\">1.a </font></b>Weather as a calendar"
                                                     textFormat: Text.StyledText
                                                     color: "#2e2a26"
-                                                    font.family: "serif"
+                                                    font.family: EldurFonts.family("serif")
                                                     font.pixelSize: 18
                                                     lineHeight: 28.8
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 4
+                                                        y: EldurFonts.shift("serif", 18, 400, false, 28.8)
                                                     }
+                                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     renderType: Text.NativeRendering
@@ -500,13 +504,14 @@ ApplicationWindow {
                                                     text: "<b><font color=\"#c9533b\">1.b </font></b>The last ferry"
                                                     textFormat: Text.StyledText
                                                     color: "#2e2a26"
-                                                    font.family: "serif"
+                                                    font.family: EldurFonts.family("serif")
                                                     font.pixelSize: 18
                                                     lineHeight: 28.8
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: 4
+                                                        y: EldurFonts.shift("serif", 18, 400, false, 28.8)
                                                     }
+                                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                                     wrapMode: Text.WordWrap
                                                     Layout.fillWidth: true
                                                     Layout.topMargin: -li.eldurCarry
@@ -525,13 +530,14 @@ ApplicationWindow {
                                         text: "<b><font color=\"#c9533b\">2. </font></b>Learning the town"
                                         textFormat: Text.StyledText
                                         color: "#2e2a26"
-                                        font.family: "serif"
+                                        font.family: EldurFonts.family("serif")
                                         font.pixelSize: 18
                                         lineHeight: 28.8
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 4
+                                            y: EldurFonts.shift("serif", 18, 400, false, 28.8)
                                         }
+                                        bottomPadding: EldurFonts.slack(font, lineHeight)
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
                                         Layout.topMargin: -ol.eldurCarry
@@ -546,13 +552,14 @@ ApplicationWindow {
                                         text: "<b><font color=\"#c9533b\">3. </font></b>What I wrote instead"
                                         textFormat: Text.StyledText
                                         color: "#2e2a26"
-                                        font.family: "serif"
+                                        font.family: EldurFonts.family("serif")
                                         font.pixelSize: 18
                                         lineHeight: 28.8
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 4
+                                            y: EldurFonts.shift("serif", 18, 400, false, 28.8)
                                         }
+                                        bottomPadding: EldurFonts.slack(font, lineHeight)
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
                                         Layout.topMargin: -li3.eldurCarry
@@ -588,14 +595,15 @@ ApplicationWindow {
                                 text: "Nobody here asks what you do. They ask whether you have enough firewood."
                                 textFormat: Text.PlainText
                                 color: "#5b5248"
-                                font.family: "serif"
+                                font.family: EldurFonts.family("serif")
                                 font.pixelSize: 21
                                 font.italic: true
                                 lineHeight: 33.6
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 4
+                                    y: EldurFonts.shift("serif", 21, 400, true, 33.6)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 anchors.left: parent.left
                                 anchors.right: parent.right
@@ -614,13 +622,14 @@ ApplicationWindow {
                             text: "That question turned out to be the most useful thing anyone told me all winter. It is a question about planning, about honesty, and about whether you have thought further ahead than tomorrow."
                             textFormat: Text.PlainText
                             color: "#2e2a26"
-                            font.family: "serif"
+                            font.family: EldurFonts.family("serif")
                             font.pixelSize: 18
                             lineHeight: 28.8
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 4
+                                y: EldurFonts.shift("serif", 18, 400, false, 28.8)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             Layout.topMargin: 24 - blockquote.eldurCarry
@@ -661,13 +670,14 @@ ApplicationWindow {
                                 text: "Hours of daylight each month, January to June."
                                 textFormat: Text.PlainText
                                 color: "#8a7f70"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 14
                                 lineHeight: 22.4
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 3
+                                    y: EldurFonts.shift("sans-serif", 14, 400, false, 22.4)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
@@ -682,13 +692,14 @@ ApplicationWindow {
                             text: "In March the first ferry came back. I watched it round the point and felt, for the first time, a little sorry."
                             textFormat: Text.PlainText
                             color: "#2e2a26"
-                            font.family: "serif"
+                            font.family: EldurFonts.family("serif")
                             font.pixelSize: 18
                             lineHeight: 28.8
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 4
+                                y: EldurFonts.shift("serif", 18, 400, false, 28.8)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             Layout.topMargin: 24 - figure.eldurCarry

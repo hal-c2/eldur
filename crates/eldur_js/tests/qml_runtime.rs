@@ -6,8 +6,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use eldur_js::{
-    DomQuery, DomResolver, ElementKey, JsOutput, QmlTarget, RUNTIME_JS, ScriptInput, ScriptKind,
-    TargetKind, analyze, rewrite,
+    DomQuery, DomResolver, ElementKey, FONTS_JS, JsOutput, QmlTarget, RUNTIME_JS, ScriptInput,
+    ScriptKind, TargetKind, analyze, rewrite,
 };
 
 #[derive(Default)]
@@ -177,6 +177,8 @@ document.getElementById("label").textContent = greeting;
     let out = rewrite(&scripts, &analysis, &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
 
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+
     let runtime_path = dir.write_file("eldur_runtime.js", RUNTIME_JS);
     let page_path = dir.write_file("page.js", &out.page_js);
     let main_qml = dir.write_file(
@@ -339,6 +341,8 @@ window.addEventListener("load", () => {
     let out = rewrite(&inputs, &analysis, &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
     assert_eq!(out.init_function.as_deref(), Some("__eldur_init"));
+
+    dir.write_file("eldur_fonts.js", FONTS_JS);
 
     dir.write_file("eldur_runtime.js", RUNTIME_JS);
     dir.write_file("page.js", &out.page_js);
@@ -513,6 +517,8 @@ finishChecks();
     let out = rewrite(&scripts, &analysis, &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
 
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+
     let runtime_path = dir.write_file("eldur_runtime.js", RUNTIME_JS);
     let page_path = dir.write_file("page.js", &out.page_js);
     let main_qml = dir.write_file(
@@ -628,6 +634,8 @@ function unregisterAndDispatch() {
     assert_eq!(out.bindings[0].function, "__eldur_on_click_boxItem_0");
     assert_eq!(out.init_function.as_deref(), Some("__eldur_init"));
 
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+
     dir.write_file("eldur_runtime.js", RUNTIME_JS);
     dir.write_file("page.js", &out.page_js);
     let main_qml = dir.write_file(
@@ -700,6 +708,8 @@ function getState() { return state; }
     let out = rewrite(&scripts, &analysis, &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
     assert_eq!(out.init_function.as_deref(), Some("__eldur_init"));
+
+    dir.write_file("eldur_fonts.js", FONTS_JS);
 
     dir.write_file("eldur_runtime.js", RUNTIME_JS);
     dir.write_file("page.js", &out.page_js);
@@ -839,6 +849,8 @@ function runChecks() {
     let analysis = analyze_resolved(&scripts);
     let out = rewrite(&scripts, &analysis, &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+
+    dir.write_file("eldur_fonts.js", FONTS_JS);
 
     let runtime_path = dir.write_file("eldur_runtime.js", RUNTIME_JS);
     let page_path = dir.write_file("page.js", &out.page_js);
@@ -1022,6 +1034,8 @@ function runExprChecks() {
     let out = rewrite(&scripts, &analysis, &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
 
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+
     let runtime_path = dir.write_file("eldur_runtime.js", RUNTIME_JS);
     let page_path = dir.write_file("page.js", &out.page_js);
     let main_qml = dir.write_file(
@@ -1147,6 +1161,8 @@ out.textContent = summary;
     let out = rewrite(&scripts, &analysis, &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
     assert_eq!(out.init_function.as_deref(), Some("__eldur_init"));
+
+    dir.write_file("eldur_fonts.js", FONTS_JS);
 
     let runtime_path = dir.write_file("eldur_runtime.js", RUNTIME_JS);
     let page_path = dir.write_file("page.js", &out.page_js);
@@ -1344,6 +1360,8 @@ document.getElementById("out").textContent = summary;
     let out = rewrite(&scripts, &analysis, &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
 
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+
     let runtime_path = dir.write_file("eldur_runtime.js", RUNTIME_JS);
     let page_path = dir.write_file("page.js", &out.page_js);
     let main_qml = dir.write_file(
@@ -1444,6 +1462,8 @@ document.getElementById("out").textContent = summary();
     let analysis = analyze(&scripts);
     let out = rewrite(&scripts, &analysis, &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+
+    dir.write_file("eldur_fonts.js", FONTS_JS);
 
     let runtime_path = dir.write_file("eldur_runtime.js", RUNTIME_JS);
     let page_path = dir.write_file("page.js", &out.page_js);
@@ -1550,6 +1570,8 @@ document.getElementById("out").textContent = readAll();
     let analysis = analyze(&scripts);
     let out = rewrite(&scripts, &analysis, &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+
+    dir.write_file("eldur_fonts.js", FONTS_JS);
 
     let runtime_path = dir.write_file("eldur_runtime.js", RUNTIME_JS);
     let page_path = dir.write_file("page.js", &out.page_js);
@@ -1700,6 +1722,8 @@ function checkDuplicateOnceUpgradeIgnored() {
     assert_eq!(out.bindings.len(), 2);
     assert_eq!(out.bindings[0].function, "__eldur_on_click_btnItem_0");
     assert_eq!(out.bindings[1].function, "__eldur_on_click_dupItem_1");
+
+    dir.write_file("eldur_fonts.js", FONTS_JS);
 
     let runtime_path = dir.write_file("eldur_runtime.js", RUNTIME_JS);
     let page_path = dir.write_file("page.js", &out.page_js);
@@ -1871,6 +1895,8 @@ export function verifyMod() {
     let out = rewrite(&scripts, &analysis, &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
 
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+
     let runtime_path = dir.write_file("eldur_runtime.js", RUNTIME_JS);
     let page_path = dir.write_file("page.js", &out.page_js);
     let main_qml = dir.write_file(
@@ -1968,6 +1994,8 @@ console.log("ELDUR_OK_MOD_BLOCK_VAR", count, renamedSkipped, ns.count, typeof ns
     let out = rewrite(&scripts, &analysis, &resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
 
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+
     let runtime_path = dir.write_file("eldur_runtime.js", RUNTIME_JS);
     let page_path = dir.write_file("page.js", &out.page_js);
     let main_qml = dir.write_file(
@@ -2035,6 +2063,7 @@ fn run_page_allowing_unsupported(
         "{:?}",
         out.diagnostics
     );
+    dir.write_file("eldur_fonts.js", FONTS_JS);
     dir.write_file("eldur_runtime.js", RUNTIME_JS);
     dir.write_file("page.js", &out.page_js);
     let main_qml = dir.write_file(
@@ -2058,6 +2087,7 @@ fn run_page(resolver: &FakeResolver, script: &str, main: &str) -> (String, JsOut
     let analysis = analyze(&scripts);
     let out = rewrite(&scripts, &analysis, resolver);
     assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    dir.write_file("eldur_fonts.js", FONTS_JS);
     dir.write_file("eldur_runtime.js", RUNTIME_JS);
     dir.write_file("page.js", &out.page_js);
     let main_qml = dir.write_file(

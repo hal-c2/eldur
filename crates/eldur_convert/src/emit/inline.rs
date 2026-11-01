@@ -16,7 +16,6 @@ use eldur_qml::{Member, Object, Value};
 use super::Emitter;
 use super::controls::{line_box, normal_line, text_scale};
 use super::decoration::{border_width, is_visible};
-use super::text::CONTENT_AREA;
 use super::units::{fmt_number, number, round};
 use crate::boxes::{BoxKind, Inline, LayoutBox, Span, node_line};
 
@@ -24,10 +23,6 @@ use crate::boxes::{BoxKind, Inline, LayoutBox, Span, node_line};
 pub(crate) const ELDUR_LINES_QML: &str = include_str!("EldurLines.qml");
 /// What an inline element paints of its own box, beside it when used.
 pub(crate) const ELDUR_INLINE_BOX_QML: &str = include_str!("EldurInlineBox.qml");
-
-/// Ascent of the common fallback fonts as a fraction of the font size
-/// (Liberation Sans: 0.905).
-pub(super) const ASCENT: f32 = 0.905;
 
 /// The width of a created inline element or text run in a `Flow`: its
 /// natural width, no wider than the line.
@@ -312,7 +307,7 @@ fn end_run<'a>(run: &mut Vec<Inline<'a>>, out: &mut Vec<Piece<'_, 'a>>) {
 /// The line height of `style` in px.
 pub(super) fn line_height(style: &ComputedStyle) -> f32 {
     match style.line_height {
-        LineHeight::Normal => CONTENT_AREA * style.font_size,
+        LineHeight::Normal => super::fonts::normal_line(style),
         LineHeight::Number(n) => n * style.font_size,
         LineHeight::Px(px) => px,
     }
@@ -321,7 +316,7 @@ pub(super) fn line_height(style: &ComputedStyle) -> f32 {
 /// The baseline of a line of `style`'s text, from the top of the line box:
 /// the glyphs are centred in it (half-leading).
 pub(super) fn text_baseline(style: &ComputedStyle) -> f32 {
-    (line_height(style) - CONTENT_AREA * style.font_size) / 2.0 + ASCENT * style.font_size
+    super::text::whole_baseline(style, line_height(style))
 }
 
 /// The first box of an atomic inline a line places.
@@ -347,7 +342,8 @@ fn baseline_kind(a: &LayoutBox<'_>) -> Option<&'static str> {
 fn drop_own_leading(text: &mut Object) {
     text.members.retain(|m| {
         !matches!(m, Member::Property { name, .. }
-            if name == "lineHeight" || name == "lineHeightMode" || name == "transform")
+            if name == "lineHeight" || name == "lineHeightMode" || name == "transform"
+                || name == "bottomPadding")
     });
 }
 
@@ -435,6 +431,9 @@ impl Emitter<'_, '_> {
         }
         if let Some(lh) = super::text::line_height(style) {
             flow.set("lineHeight", number(lh));
+        }
+        if let Some(size) = super::fonts::css_size(style) {
+            flow.set("cssSize", Value::Number(size));
         }
         match style.text_align {
             TextAlign::Center => {

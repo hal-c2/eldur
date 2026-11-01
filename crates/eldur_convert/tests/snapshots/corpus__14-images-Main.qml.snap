@@ -9,6 +9,7 @@ import QtQuick.Controls.Basic
 import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Shapes
+import "eldur_fonts.js" as EldurFonts
 
 ApplicationWindow {
     id: root
@@ -100,13 +101,14 @@ ApplicationWindow {
                                 text: "Journal"
                                 textFormat: Text.PlainText
                                 color: aHover.hovered ? "#1d4ed8" : "#3a4256"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 15
                                 lineHeight: 23.25
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 3
+                                    y: EldurFonts.shift("sans-serif", 15, 400, false, 23.25)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
@@ -125,13 +127,14 @@ ApplicationWindow {
                                 text: "Gallery"
                                 textFormat: Text.PlainText
                                 color: a2Hover.hovered ? "#1d4ed8" : "#3a4256"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 15
                                 lineHeight: 23.25
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 3
+                                    y: EldurFonts.shift("sans-serif", 15, 400, false, 23.25)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
@@ -151,13 +154,14 @@ ApplicationWindow {
                                 text: "About"
                                 textFormat: Text.PlainText
                                 color: a3Hover.hovered ? "#1d4ed8" : "#3a4256"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 15
                                 lineHeight: 23.25
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 3
+                                    y: EldurFonts.shift("sans-serif", 15, 400, false, 23.25)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
@@ -225,25 +229,20 @@ ApplicationWindow {
                             // <h1>
                             Text {
                                 id: h1
-                                readonly property FontMetrics metrics: FontMetrics {
-                                    font.family: "sans-serif"
-                                    font.pixelSize: 28
-                                    font.weight: 700
-                                }
                                 property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
 
                                 text: "Morning on the lake"
                                 textFormat: Text.PlainText
                                 color: "#ffffff"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 28
                                 font.weight: 700
                                 lineHeight: 33.6
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 1
+                                    y: EldurFonts.shift("sans-serif", 28, 700, false, 33.6)
                                 }
-                                bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 renderType: Text.NativeRendering
@@ -254,13 +253,14 @@ ApplicationWindow {
                                 text: "Photographed before the first light reached the shore."
                                 textFormat: Text.PlainText
                                 color: "#ffffff"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 15
                                 lineHeight: 23.25
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 3
+                                    y: EldurFonts.shift("sans-serif", 15, 400, false, 23.25)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 opacity: 0.9
                                 Layout.fillWidth: true
@@ -363,14 +363,15 @@ ApplicationWindow {
                                     text: "Maren Holt"
                                     textFormat: Text.PlainText
                                     color: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 18
                                     font.weight: 700
                                     lineHeight: 27.9
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3
+                                        y: EldurFonts.shift("sans-serif", 18, 700, false, 27.9)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     renderType: Text.NativeRendering
@@ -381,13 +382,14 @@ ApplicationWindow {
                                     text: "Landscape photographer and writer based in the north. Shoots mostly on film."
                                     textFormat: Text.PlainText
                                     color: "#5c6578"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 14
                                     lineHeight: 21.7
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2
+                                        y: EldurFonts.shift("sans-serif", 14, 400, false, 21.7)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.topMargin: 4 - authorName.eldurCarry
@@ -469,14 +471,15 @@ ApplicationWindow {
                                         text: "Figure 1. The lake surface, 6:12 a.m."
                                         textFormat: Text.PlainText
                                         color: "#5c6578"
-                                        font.family: "sans-serif"
+                                        font.family: EldurFonts.family("sans-serif")
                                         font.pixelSize: 14
                                         font.italic: true
                                         lineHeight: 21.7
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 2
+                                            y: EldurFonts.shift("sans-serif", 14, 400, true, 21.7)
                                         }
+                                        bottomPadding: EldurFonts.slack(font, lineHeight)
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
                                         Layout.topMargin: 10
@@ -504,14 +507,15 @@ ApplicationWindow {
                                     text: "Working before dawn"
                                     textFormat: Text.PlainText
                                     color: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 22
                                     font.weight: 700
                                     lineHeight: 34.1
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 4
+                                        y: EldurFonts.shift("sans-serif", 22, 700, false, 34.1)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     renderType: Text.NativeRendering
@@ -525,13 +529,14 @@ ApplicationWindow {
                                     text: "The best light arrives in the few minutes before the sun clears the ridge. Planning the walk in the dark is most of the work."
                                     textFormat: Text.PlainText
                                     color: "#3a4256"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 16
                                     lineHeight: 24.8
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3
+                                        y: EldurFonts.shift("sans-serif", 16, 400, false, 24.8)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.topMargin: 12 - h2.eldurCarry
@@ -543,13 +548,14 @@ ApplicationWindow {
                                     text: "Each frame here was exposed for four seconds on a tripod, with the shutter released by a cable."
                                     textFormat: Text.PlainText
                                     color: "#3a4256"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 16
                                     lineHeight: 24.8
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3
+                                        y: EldurFonts.shift("sans-serif", 16, 400, false, 24.8)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.topMargin: 12 - p.eldurCarry
@@ -612,13 +618,14 @@ ApplicationWindow {
                             text: "Thumbnail shown at its natural 400 by 250 size."
                             textFormat: Text.PlainText
                             color: "#6b7280"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 13
                             lineHeight: 20.15
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 2
+                                y: EldurFonts.shift("sans-serif", 13, 400, false, 20.15)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             Layout.topMargin: 8
@@ -652,13 +659,14 @@ ApplicationWindow {
                         text: "Northwind Journal · Images are shown for demonstration purposes"
                         textFormat: Text.PlainText
                         color: "#6b7280"
-                        font.family: "sans-serif"
+                        font.family: EldurFonts.family("sans-serif")
                         font.pixelSize: 13
                         lineHeight: 20.15
                         lineHeightMode: Text.FixedHeight
                         transform: Translate {
-                            y: 2
+                            y: EldurFonts.shift("sans-serif", 13, 400, false, 20.15)
                         }
+                        bottomPadding: EldurFonts.slack(font, lineHeight)
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.WordWrap
                         anchors.left: parent.left

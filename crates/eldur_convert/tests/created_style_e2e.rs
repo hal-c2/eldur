@@ -285,6 +285,16 @@ fn inline_box() {
 
 /// Inline box properties on containers and on flex and grid items.
 #[test]
+fn script_font() {
+    page("script_font");
+}
+
+#[test]
+fn script_font_bare() {
+    page("script_font_bare");
+}
+
+#[test]
 fn inline_children() {
     page("inline_children");
 }

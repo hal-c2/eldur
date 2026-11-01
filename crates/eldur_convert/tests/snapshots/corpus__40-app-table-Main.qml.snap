@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
@@ -238,14 +239,15 @@ ApplicationWindow {
                     text: "People"
                     textFormat: Text.PlainText
                     color: "#000000"
-                    font.family: "Arial"
+                    font.family: EldurFonts.family("Arial, sans-serif")
                     font.pixelSize: 28
                     font.weight: 700
                     lineHeight: 39.2
                     lineHeightMode: Text.FixedHeight
                     transform: Translate {
-                        y: 4
+                        y: EldurFonts.shift("Arial, sans-serif", 28, 700, false, 39.2)
                     }
+                    bottomPadding: EldurFonts.slack(font, lineHeight)
                     wrapMode: Text.WordWrap
                     Layout.fillWidth: true
                     renderType: Text.NativeRendering
@@ -256,7 +258,7 @@ ApplicationWindow {
                     property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                     color: "#000000"
-                    font.family: "Arial"
+                    font.family: EldurFonts.family("Arial, sans-serif")
                     font.pixelSize: 14
                     lineHeight: 19.6
                     Layout.fillWidth: true
@@ -276,7 +278,7 @@ ApplicationWindow {
                             property string eldurWs: "\n"
 
                             color: "#000000"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial")
                             font.pixelSize: 13
                             verticalAlignment: TextInput.AlignVCenter
                             background: Rectangle {
@@ -339,7 +341,7 @@ ApplicationWindow {
 
                         FontMetrics {
                             id: tableFont
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 14
                             font.weight: 700
                         }
@@ -416,14 +418,15 @@ ApplicationWindow {
                                         text: "Name"
                                         textFormat: Text.PlainText
                                         color: "#000000"
-                                        font.family: "Arial"
+                                        font.family: EldurFonts.family("Arial, sans-serif")
                                         font.pixelSize: 14
                                         font.weight: 700
                                         lineHeight: 19.6
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 1
+                                            y: EldurFonts.shift("Arial, sans-serif", 14, 700, false, 19.6)
                                         }
+                                        bottomPadding: EldurFonts.slack(font, lineHeight)
                                         wrapMode: Text.WordWrap
                                         anchors.left: parent.left
                                         anchors.right: parent.right
@@ -478,14 +481,15 @@ ApplicationWindow {
                                         text: "City"
                                         textFormat: Text.PlainText
                                         color: "#000000"
-                                        font.family: "Arial"
+                                        font.family: EldurFonts.family("Arial, sans-serif")
                                         font.pixelSize: 14
                                         font.weight: 700
                                         lineHeight: 19.6
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 1
+                                            y: EldurFonts.shift("Arial, sans-serif", 14, 700, false, 19.6)
                                         }
+                                        bottomPadding: EldurFonts.slack(font, lineHeight)
                                         wrapMode: Text.WordWrap
                                         anchors.left: parent.left
                                         anchors.right: parent.right
@@ -518,14 +522,15 @@ ApplicationWindow {
                                         text: "Age"
                                         textFormat: Text.PlainText
                                         color: "#000000"
-                                        font.family: "Arial"
+                                        font.family: EldurFonts.family("Arial, sans-serif")
                                         font.pixelSize: 14
                                         font.weight: 700
                                         lineHeight: 19.6
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 1
+                                            y: EldurFonts.shift("Arial, sans-serif", 14, 700, false, 19.6)
                                         }
+                                        bottomPadding: EldurFonts.slack(font, lineHeight)
                                         wrapMode: Text.WordWrap
                                         anchors.left: parent.left
                                         anchors.right: parent.right
@@ -568,13 +573,14 @@ ApplicationWindow {
                     text: ""
                     textFormat: Text.PlainText
                     color: "#555555"
-                    font.family: "Arial"
+                    font.family: EldurFonts.family("Arial, sans-serif")
                     font.pixelSize: 14
                     lineHeight: 19.6
                     lineHeightMode: Text.FixedHeight
                     transform: Translate {
-                        y: 1
+                        y: EldurFonts.shift("Arial, sans-serif", 14, 400, false, 19.6)
                     }
+                    bottomPadding: EldurFonts.slack(font, lineHeight)
                     wrapMode: Text.WordWrap
                     objectName: "summary"
                     Layout.preferredHeight: text === "" ? 0 : -1
@@ -658,13 +664,14 @@ ApplicationWindow {
                 text: ""
                 textFormat: Text.PlainText
                 color: "#000000"
-                font.family: "Arial"
+                font.family: EldurFonts.family("Arial, sans-serif")
                 font.pixelSize: 14
                 lineHeight: 19.6
                 lineHeightMode: Text.FixedHeight
                 transform: Translate {
-                    y: 1
+                    y: EldurFonts.shift("Arial, sans-serif", 14, 400, false, 19.6)
                 }
+                bottomPadding: EldurFonts.slack(font, lineHeight)
                 wrapMode: Text.WordWrap
                 anchors.left: parent.left
                 anchors.right: parent.right
@@ -700,13 +707,14 @@ ApplicationWindow {
                 text: ""
                 textFormat: Text.PlainText
                 color: "#000000"
-                font.family: "Arial"
+                font.family: EldurFonts.family("Arial, sans-serif")
                 font.pixelSize: 14
                 lineHeight: 19.6
                 lineHeightMode: Text.FixedHeight
                 transform: Translate {
-                    y: 1
+                    y: EldurFonts.shift("Arial, sans-serif", 14, 400, false, 19.6)
                 }
+                bottomPadding: EldurFonts.slack(font, lineHeight)
                 wrapMode: Text.WordWrap
                 anchors.left: parent.left
                 anchors.right: parent.right

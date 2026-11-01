@@ -1,5 +1,6 @@
 .pragma library
 .import QtQuick.LocalStorage 2.0 as QmlLocalStorage
+.import "eldur_fonts.js" as EldurFonts
 
 // Eldur JavaScript runtime shim (eldur_runtime.js)
 //
@@ -6767,6 +6768,19 @@ function _newLines(owner) {
     return lines;
 }
 
+// Every static line is fixed, `normal` too (eldur_fonts.js): a `line-height` of
+// its own is one that is not `normal`'s.
+function _hasOwnLine(text) {
+    return text.lineHeightMode === 1 // Text.FixedHeight; a library script has no `Text`
+        && text.lineHeight !== EldurFonts.normalLine(text.font);
+}
+
+function _naturalLine(text) {
+    text.lineHeightMode = 0; // Text.ProportionalHeight
+    text.lineHeight = 1;
+    text.bottomPadding = 0;
+}
+
 function _dressLineText(lines, node) {
     if (!_isTextNode(node) || typeof node.text !== "string") {
         return;
@@ -6794,12 +6808,11 @@ function _textStartsLine(raw, column, lines) {
     text.parent = lines;
     lines.font = text.font;
     lines.color = text.color;
-    if (text.lineHeightMode === 1) {
+    if (_hasOwnLine(text)) {
         lines.lineHeight = text.lineHeight;
     }
     // The line places it now, on its natural height.
-    text.lineHeightMode = 0; // Text.ProportionalHeight
-    text.lineHeight = 1;
+    _naturalLine(text);
     text.transform = [];
     column.y = top;
     raw.implicitHeight = Qt.binding(function() { return extra + column.implicitHeight; });
@@ -6897,7 +6910,7 @@ function _anonTextBecomesLines(owner, column, text, next) {
     var lines = _newLines(owner);
     lines.font = text.font;
     lines.color = text.color;
-    if (text.lineHeightMode === 1) {
+    if (_hasOwnLine(text)) {
         lines.lineHeight = text.lineHeight;
     }
     var runs = _takeRuns(text, _vModelOf(text));
@@ -6924,7 +6937,7 @@ function _lineSplitsModel(raw, ref) {
     var lines = _newLines(raw);
     lines.font = text.font;
     lines.color = text.color;
-    if (text.lineHeightMode === 1) {
+    if (_hasOwnLine(text)) {
         lines.lineHeight = text.lineHeight;
     }
     var runs = _takeRuns(text, model);
@@ -9846,7 +9859,7 @@ function _vLiveBase(text) {
         underline: Boolean(f.underline),
         strike: Boolean(f.strikeout),
         size: typeof f.pixelSize === "number" && f.pixelSize > 0 ? f.pixelSize : 16,
-        family: typeof f.family === "string" ? f.family : "",
+        family: typeof f.family === "string" && f.family !== "" ? EldurFonts.family(f.family) : "",
         bg: "rgba(0, 0, 0, 0)",
         display: "block",
         visible: true
@@ -9949,7 +9962,7 @@ function _vApply(out, prop, value, pc) {
             out.size = low === "smaller" ? pc.size / 1.2 : low === "larger" ? pc.size * 1.2 : out.size;
         }
     } else if (prop === "font-family") {
-        out.family = v.split(",")[0].trim().replace(/^["']|["']$/g, "");
+        out.family = EldurFonts.family(v);
     } else if (prop === "display") {
         out.display = low;
     } else if (prop === "visibility") {
@@ -10313,7 +10326,7 @@ function _vRaiseLine(model) {
     }
     var fixed = text.lineHeightMode === 1; // Text.FixedHeight; a library script has no `Text`
     var line = fixed ? text.lineHeight
-        : model.lh !== undefined ? model.lh : Math.round(model.k.size * 1.15);
+        : model.lh !== undefined ? model.lh : EldurFonts.normalLine(text.font, model.k.size);
     var room = Math.max(0, tallest - line);
     if (room > 0 || model.raised) {
         text.topPadding = Math.floor(room / 2);
@@ -10344,10 +10357,12 @@ function _vRender(model) {
     }
     var st = _vMarkup(model, false);
     var markup = st.out;
-    if (model.html && model.lh !== undefined) {
-        markup = "<div style=\"line-height:" + model.lh + "px\">" + markup + "</div>";
-        text.lineHeightMode = 0; // Text.ProportionalHeight; a library script has no `Text`
-        text.lineHeight = 1;
+    if (model.html) {
+        // RichText has its line in the markup.
+        if (model.lh !== undefined) {
+            markup = "<div style=\"line-height:" + model.lh + "px\">" + markup + "</div>";
+        }
+        _naturalLine(text);
     }
     text.textFormat = model.html ? 1 : 4;
     if (st.linkColor !== null) {
@@ -15194,8 +15209,7 @@ function _gFontOf(s) {
 }
 
 function _gFamily(list) {
-    var first = String(list || "").split(",")[0].trim().replace(/^["']|["']$/g, "");
-    return first;
+    return EldurFonts.family(list);
 }
 
 function _gLineHeight(s) {
@@ -15610,7 +15624,7 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
     if (text && text.text !== "") {
         _gPaintText(text, s, innerW, raw);
         text.x = x;
-        text.y = y + _gLineShift(s);
+        text.y = y + _gLineShift(text, s);
         y += text.height;
         first = false;
     } else if (text) {
@@ -15678,15 +15692,10 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
 }
 
 // A browser centres the glyphs in a line on a whole-pixel baseline; a fixed QML
-// line puts them at its top (`whole_baseline` in the converter's text.rs).
-function _gLineShift(s) {
+// line puts them at its top (eldur_fonts.js).
+function _gLineShift(text, s) {
     var line = _gLineHeight(s);
-    if (line === null) {
-        return 0;
-    }
-    var metrics = _gMetrics(s);
-    var ascent = Math.round(metrics.ascent);
-    return Math.floor((line - ascent - Math.round(metrics.descent)) / 2);
+    return EldurFonts.shift(text.font.family, s.fontSize, text.font.weight, text.font.italic, line === null ? 0 : line);
 }
 
 function _gHide(kid) {
@@ -16027,14 +16036,10 @@ function _gPaintText(text, s, innerW, owner) {
     text.font = _gFontOf(s);
     text.color = _gQtColor(s["color"]);
     _gPaintTextLines(text, owner, s);
-    var line = _gLineHeight(s);
-    if (line !== null) {
-        _gSet(text, "lineHeightMode", 1);
-        _gSet(text, "lineHeight", line);
-    } else {
-        _gSet(text, "lineHeightMode", 0);
-        _gSet(text, "lineHeight", 1);
-    }
+    var own = _gLineHeight(s);
+    var line = own !== null ? own : EldurFonts.normalLine(text.font, s.fontSize);
+    _gSet(text, "lineHeightMode", 1);
+    _gSet(text, "lineHeight", line);
     var align = s["text-align"];
     _gSet(text, "horizontalAlignment", align === "center" ? 4 : align === "right" || align === "end" ? 2 : align === "justify" ? 8 : 1);
     _gSet(text, "width", innerW);
@@ -16043,7 +16048,7 @@ function _gPaintText(text, s, innerW, owner) {
         text.forceLayout();
     }
     // Qt gives a fixed line the font's height when that is taller; CSS doesn't.
-    _gSet(text, "height", text.text === "" ? 0 : line !== null ? line * text.lineCount : text.implicitHeight);
+    _gSet(text, "height", text.text === "" ? 0 : line * text.lineCount);
 }
 
 function _gPaintBox(raw, s, e) {
@@ -18587,7 +18592,8 @@ function _gPaintControl(raw, s, e) {
 // The converter's `CONTROL_FONTS`: what `size` and `cols` count in this family.
 function _gControlFont(s) {
     var table = _root && _root.eldurControlFonts ? JSON.parse(_root.eldurControlFonts) : [];
-    var family = _gFamily(s["font-family"]);
+    // As the page spells it: Chromium sizes a control by the name as well as the face.
+    var family = String(s["font-family"] || "").split(",")[0].trim().replace(/^["']|["']$/g, "");
     for (var i = 0; i < table.length; ++i) {
         if (table[i].names.length === 0 || table[i].names.indexOf(family) !== -1) {
             return (s.fontSize < 14.5 ? table[i].small : table[i].large);

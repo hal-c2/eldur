@@ -41,14 +41,13 @@ const DIALOGTEXT: &str =
 const MADEINLINE: &str = "controls from innerHTML stack as blocks: a created box is laid out by itself, without a line to share";
 const BUTTONKIDS: &str = "a Button shows only the text of what it holds: an element inside is no item, so the button is the target";
 const NOBUBBLE: &str = "Qt has no validation bubble: the message goes to the log, on purpose";
-const H1LINE: &str = "the 22px heading line is 25px here and 26px in Chromium (font metrics, not in this work), so the centre of a row is a pixel higher and clientY says so";
 const COMPACT: &str = "a right-aligned row: its buttons are whole pixels wider (see BUTTONWIDTH), which would start this one 2px left; not confirmed";
 const BUTTONWIDTH: &str = "a button's width is whole pixels (`Math.ceil` in emit/controls.rs): \
                            five on a line add up to 2.2px against Chromium's fractions";
 const SPANSCAN: &str = "a wrapped span's box comes from scanning its Text in half-font steps, so its height lands on a step: 56 for Chromium's 53";
 const CONTROLROW: &str = "with the form between them hidden, the heading's bottom margin of 21.44 looks lost, leaving only #done's 16; not confirmed";
-const FONT: &str = "Helvetica: Qt's fontconfig match has line height 23 where Chromium's has 18";
-const FONTFOLLOW: &str = "follows from the Helvetica line height and width difference";
+const CREATED_STRETCH: &str =
+    "a grid a script filled leaves its items at their own height, not the row's";
 const HANGING: &str = "a span wrapped across lines measures the space hanging at its first line's end; \
                        the scan over the Text's links cannot tell that space from the word before it";
 const SCRIPTPOSITION: &str = "style.position = \"absolute\" from a script leaves an element in the layout that holds it, \
@@ -95,7 +94,6 @@ const KNOWN: &[(&str, &str, &str)] = &[
         "*eldur: text: Please fill out this field.*",
         NOBUBBLE,
     ),
-    ("app_dragsort", "*click only log:*", H1LINE),
     ("input_dialog", "plain show log:", DIALOGTEXT),
     (
         "input_bubble",
@@ -103,21 +101,10 @@ const KNOWN: &[(&str, &str, &str)] = &[
         NOBUBBLE,
     ),
     ("theme", "* #compact[*] x:", COMPACT),
-    ("cards", "* #cart[*] height:", FONT),
-    ("cards", "* .buy[*] y:", FONTFOLLOW),
-    ("cards", "* .card[*] y:", FONTFOLLOW),
-    ("cards", "* .card[*] height:", FONTFOLLOW),
-    ("cards", "* h3[*] y:", FONTFOLLOW),
-    ("cards", "* h3[*] height:", FONT),
-    ("cards", "* .desc[*] y:", FONTFOLLOW),
-    ("cards", "* .desc[*] height:", FONTFOLLOW),
-    ("cards", "* .price[*] y:", FONTFOLLOW),
-    ("cards", "* .price[*] height:", FONT),
-    ("cards", "* #cart[*] x:", FONT),
-    ("cards", "* #cart[*] width:", FONT),
     ("theme", "* body[*] text:", NEVER_SCRIPT),
     ("form", "* #done[*] y:", CONTROLROW),
     ("hidden_lines", "* #s4[*] width:", HANGING),
+    ("cards", "* .card[*] height:", CREATED_STRETCH),
     ("lines_closed", "* #sp[*] height:", SPANSCAN),
     ("lines_open", "* #sp[*] height:", SPANSCAN),
     ("lines_created", "* #ws[*] width:", SPANSCAN),

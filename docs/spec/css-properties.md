@@ -138,7 +138,7 @@ CSS grid line numbers start at 1; `Layout.row` and `Layout.column` start at 0.
 | font-variant-numeric, font-feature-settings | tabular-nums, etc. | `Text.font.features: ({ "tnum": 1 })` (OpenType tag → value) | — | Approx | |
 | font-stretch, font-variation-settings | keywords, %, axis values | `Text.font.variableAxes: ({ "wdth": 75 })` | % → `wdth` axis value | Approx | Only variable fonts that have the axis. `font` has no `stretch` property |
 | line-height: unitless, px, em, % | number, length | `Text.lineHeight` with `lineHeightMode: Text.FixedHeight` | unitless/em × font size; % × font size; px ×1 | Approx | `Text.ProportionalHeight` multiplies the font's natural line height (about 1.15–1.2 × size), not the font size, so it does not match unitless CSS values. CSS centres the glyphs in the line box (half-leading); QML does not |
-| line-height: normal | — | Default (`lineHeight: 1`, proportional) | — | Full | |
+| line-height: normal | — | `lineHeight: EldurFonts.normalLine(font)`, `Text.FixedHeight` | Chromium's rounding of the face's metrics, layout.md §1.3 | Full | `Text.RichText` keeps Qt's natural height |
 | letter-spacing | px, em | `Text.font.letterSpacing` | px ×1; em × font size | Full | |
 | word-spacing | px, em | `Text.font.wordSpacing` | px ×1; em × font size | Full | |
 | text-align: left, right, center | — | `Text.horizontalAlignment` | — | Full | Needs a `Text` wider than its text, so give it the container width |

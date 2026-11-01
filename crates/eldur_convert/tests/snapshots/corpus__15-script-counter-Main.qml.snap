@@ -8,6 +8,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Effects
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
@@ -117,17 +118,21 @@ ApplicationWindow {
 
                             // <h1>
                             Text {
-                                id: h1
                                 property string eldurTag: "h1"
                                 property string eldurWs: "\n  "
-                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                                 text: "Counter"
                                 textFormat: Text.PlainText
                                 color: "#3a4256"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 22
                                 font.weight: 700
+                                lineHeight: EldurFonts.normalLine(font)
+                                lineHeightMode: Text.FixedHeight
+                                transform: Translate {
+                                    y: EldurFonts.shift("sans-serif", 22, 700, false, 0)
+                                }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
@@ -141,47 +146,39 @@ ApplicationWindow {
                                 property string eldurTag: "div"
                                 property string eldurClasses: "display"
                                 property bool cls_negative: false
-                                readonly property FontMetrics metrics: FontMetrics {
-                                    font.family: "sans-serif"
-                                    font.pixelSize: 96
-                                    font.weight: 800
-                                }
                                 property string eldurWs: "\n\n  "
-                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h1.eldurCarry
 
                                 text: "0"
                                 textFormat: Text.PlainText
                                 color: count.cls_negative ? "#d62828" : "#1d4ed8"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 96
                                 font.weight: 800
                                 lineHeight: 96
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: -6
+                                    y: EldurFonts.shift("sans-serif", 96, 800, false, 96)
                                 }
-                                bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 objectName: "count"
                                 Layout.fillWidth: true
-                                Layout.topMargin: 24 - h1.eldurCarry
+                                Layout.topMargin: 24
                                 renderType: Text.NativeRendering
                             }
 
                             // <div class="controls">
                             RowLayout {
-                                id: controls
                                 property string eldurTag: "div"
                                 property string eldurClasses: "controls"
                                 property string eldurWs: "\n\n  "
                                 property string eldurWsEnd: "\n  "
-                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : count.eldurCarry
 
                                 spacing: 0
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Number.POSITIVE_INFINITY
-                                Layout.topMargin: 24 - count.eldurCarry
+                                Layout.topMargin: 24
 
                                 function eldurLeads(item) {
                                     for (const kid of children) {
@@ -207,7 +204,7 @@ ApplicationWindow {
 
                                     text: "−"
                                     palette.buttonText: "#1f2430"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial")
                                     font.pixelSize: 18
                                     font.weight: 600
                                     background: Rectangle {
@@ -252,7 +249,7 @@ ApplicationWindow {
 
                                     text: "+"
                                     palette.buttonText: "#ffffff"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial")
                                     font.pixelSize: 18
                                     font.weight: 600
                                     background: Rectangle {
@@ -298,7 +295,7 @@ ApplicationWindow {
 
                                     text: "Reset"
                                     palette.buttonText: "#5c6578"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial")
                                     font.pixelSize: 16
                                     font.weight: 500
                                     background: Rectangle {
@@ -343,22 +340,26 @@ ApplicationWindow {
 
                             // <label class="field">
                             Text {
-                                id: field
                                 property var eldurAttrs: ({ "for": "mirror-input" })
                                 property string eldurTag: "label"
                                 property string eldurClasses: "field"
                                 property string eldurWs: "\n\n  "
-                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : controls.eldurCarry
 
                                 text: "Live text"
                                 textFormat: Text.PlainText
                                 color: "#3a4256"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 14
                                 font.weight: 600
+                                lineHeight: EldurFonts.normalLine(font)
+                                lineHeightMode: Text.FixedHeight
+                                transform: Translate {
+                                    y: EldurFonts.shift("sans-serif", 14, 600, false, 0)
+                                }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
-                                Layout.topMargin: 32 - controls.eldurCarry
+                                Layout.topMargin: 32
                                 renderType: Text.NativeRendering
 
                                 TapHandler {
@@ -375,10 +376,9 @@ ApplicationWindow {
                                 property string eldurTag: "input"
                                 property string eldurClasses: "text-input"
                                 property string eldurWs: "\n  "
-                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 40) - Layout.topMargin - 40 + 0.000001) : field.eldurCarry
 
                                 color: "#1f2430"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial")
                                 font.pixelSize: 16
                                 verticalAlignment: TextInput.AlignVCenter
                                 background: Rectangle {
@@ -399,7 +399,7 @@ ApplicationWindow {
                                 Accessible.name: "Live text"
                                 objectName: "mirror-input"
                                 Layout.fillWidth: true
-                                Layout.topMargin: 8 - field.eldurCarry
+                                Layout.topMargin: 8
                                 renderType: Text.NativeRendering
 
                                 onTextEdited: {
@@ -421,7 +421,7 @@ ApplicationWindow {
                                 objectName: "mirror-output"
                                 Layout.fillWidth: true
                                 Layout.minimumHeight: 24
-                                Layout.topMargin: 12 - mirrorInput.eldurCarry
+                                Layout.topMargin: 12
                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                 Text {
@@ -429,8 +429,14 @@ ApplicationWindow {
                                     text: "Start typing to see it here."
                                     textFormat: Text.PlainText
                                     color: "#3a4256"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 16
+                                    lineHeight: EldurFonts.normalLine(font)
+                                    lineHeightMode: Text.FixedHeight
+                                    transform: Translate {
+                                        y: EldurFonts.shift("sans-serif", 16, 400, false, 0)
+                                    }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WrapAtWordBoundaryOrAnywhere
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -515,8 +521,14 @@ ApplicationWindow {
                                     text: "Show details"
                                     textFormat: Text.PlainText
                                     color: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 15
+                                    lineHeight: EldurFonts.normalLine(font)
+                                    lineHeightMode: Text.FixedHeight
+                                    transform: Translate {
+                                        y: EldurFonts.shift("sans-serif", 15, 400, false, 0)
+                                    }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
@@ -587,14 +599,15 @@ ApplicationWindow {
                                         text: "About this widget"
                                         textFormat: Text.PlainText
                                         color: "#3a4256"
-                                        font.family: "sans-serif"
+                                        font.family: EldurFonts.family("sans-serif")
                                         font.pixelSize: 15
                                         font.weight: 700
                                         lineHeight: 24
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 3
+                                            y: EldurFonts.shift("sans-serif", 15, 700, false, 24)
                                         }
+                                        bottomPadding: EldurFonts.slack(font, lineHeight)
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
                                         renderType: Text.NativeRendering
@@ -610,13 +623,14 @@ ApplicationWindow {
                                         text: "The counter goes negative below zero and turns red. Text typed above is mirrored as you type."
                                         textFormat: Text.PlainText
                                         color: "#3a4256"
-                                        font.family: "sans-serif"
+                                        font.family: EldurFonts.family("sans-serif")
                                         font.pixelSize: 14
                                         lineHeight: 22.4
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 3
+                                            y: EldurFonts.shift("sans-serif", 14, 400, false, 22.4)
                                         }
+                                        bottomPadding: EldurFonts.slack(font, lineHeight)
                                         wrapMode: Text.WordWrap
                                         Layout.fillWidth: true
                                         Layout.topMargin: 8

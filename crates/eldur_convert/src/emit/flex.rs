@@ -386,6 +386,7 @@ impl Emitter<'_, '_> {
             });
         }
         if row {
+            one_baseline_shift(&mut layout);
             self.row_excess(&mut layout);
         } else {
             self.carry(&mut layout);
@@ -963,4 +964,29 @@ pub(super) fn holds_control_row(obj: &Object) -> bool {
                 "Button" | "TextField" | "TextArea" | "ComboBox" | "CheckBox" | "RadioButton"
             ))
         })
+}
+
+/// RowLayout has already lined up Qt's baselines, so each Text moving by its
+/// own shift would part them. The row's baseline is its largest font's, in
+/// Chromium as in Qt, so that one's shift moves them all.
+fn one_baseline_shift(layout: &mut Object) {
+    let on_baseline = |o: &Object| {
+        matches!(o.get("Layout.alignment"), Some(Value::Expr(e)) if e == "Qt.AlignBaseline")
+            && o.get("transform").is_some()
+    };
+    let size = |o: &Object| match o.get("font.pixelSize") {
+        Some(Value::Number(n)) => *n,
+        _ => 0.0,
+    };
+    let Some(shift) = layout
+        .children()
+        .filter(|o| on_baseline(o))
+        .max_by(|a, b| size(a).total_cmp(&size(b)))
+        .and_then(|o| o.get("transform").cloned())
+    else {
+        return;
+    };
+    for item in layout.children_mut().filter(|o| on_baseline(o)) {
+        item.set("transform", shift.clone());
+    }
 }

@@ -32,7 +32,7 @@ fn computed(style: &ComputedStyle) -> Json {
         "underline": style.text_decoration_line.underline,
         "strike": style.text_decoration_line.line_through,
         "size": style.font_size,
-        "family": super::text::font_family(&style.font_family),
+        "family": style.font_family.join(", "),
         "bg": rgb(style.background_color),
         "display": match style.display {
             Display::None => "none",

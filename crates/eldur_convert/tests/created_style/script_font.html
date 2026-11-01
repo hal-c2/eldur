@@ -1,0 +1,20 @@
+<!doctype html><html><head><style>body{margin:0;font-family:Helvetica,Arial,sans-serif}.l{line-height:30px}</style></head><body>
+<div id="a">Hx normal</div>
+<div id="b" class="l">Hx class line</div>
+<div id="c" style="line-height:30px">Hx inline line</div>
+<div id="n" style="font-family:'Nimbus Sans'">Hx nimbus</div>
+<div id="f">Hx family</div>
+<div id="end">end</div>
+<script>
+var q=function(s){return document.getElementById(s)};
+var ids=["a","b","c","n","f","end"];
+function d(t){console.log("CS "+t+" "+ids.map(function(i){var b=q(i).getBoundingClientRect();return i+":"+Math.round(b.top)+","+Math.round(b.height)}).join(" "))}
+d("0");
+q("a").style.fontSize="32px";d("a");
+q("b").style.fontSize="24px";d("b");
+q("c").style.fontSize="24px";d("c");
+q("n").style.fontSize="20px";d("n");
+q("f").style.fontFamily="'Nimbus Sans'";d("f");
+q("f").style.fontFamily="serif";q("f").style.fontSize="20px";d("f2");
+q("a").style.fontSize="";q("b").style.fontSize="";d("back");
+</script></body></html>
