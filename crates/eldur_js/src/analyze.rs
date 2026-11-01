@@ -1005,6 +1005,20 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
             {
                 self.analysis.open_elements = true;
             }
+            // An animation object answers from the live style of its element,
+            // and what starts or ends one is told by the same clock.
+            let moves = matches!(member.property.name.as_str(), "getAnimations" | "animate")
+                || (member.property.name == "addEventListener"
+                    && it
+                        .arguments
+                        .first()
+                        .and_then(|a| a.as_expression())
+                        .and_then(extract_string_literal)
+                        .is_some_and(|t| is_motion_event(&t)));
+            if moves {
+                self.analysis.open_elements = true;
+                self.analysis.runtime_dom = true;
+            }
             self.inspect_lookup_call(it, member);
             self.inspect_dynamic_call(it, member);
         }
@@ -1191,6 +1205,10 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
     fn visit_static_member_expression(&mut self, it: &StaticMemberExpression<'a>) {
         let prop = it.property.name.as_str();
         self.analysis.touches_inline_style |= matches!(prop, "style" | "hidden");
+        if prop.strip_prefix("on").is_some_and(is_motion_event) {
+            self.analysis.open_elements = true;
+            self.analysis.runtime_dom = true;
+        }
         if prop == "content" {
             // What a `<template>` holds is made at run time, from the rules.
             self.analysis.reads_template_content = true;
@@ -2041,5 +2059,20 @@ fn is_runtime_document_property(name: &str) -> bool {
             | "fullscreenElement"
             | "pointerLockElement"
             | "pictureInPictureElement"
+    )
+}
+
+/// The events of CSS transitions and animations.
+pub(crate) fn is_motion_event(name: &str) -> bool {
+    matches!(
+        name,
+        "transitionrun"
+            | "transitionstart"
+            | "transitionend"
+            | "transitioncancel"
+            | "animationstart"
+            | "animationiteration"
+            | "animationend"
+            | "animationcancel"
     )
 }

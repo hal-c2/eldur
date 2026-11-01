@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head><title>timers and frames</title></head>
+<body>
+<p id="out">waiting</p>
+<script>
+// What runs before what, on the clock's say: each log line is the whole order, so a
+// slow machine that fires two timers late still has to fire them in turn.
+const log = [];
+setTimeout(() => log.push("t0"), 0);
+Promise.resolve().then(() => log.push("micro"));
+setTimeout(() => {
+  log.push("t0b");
+  Promise.resolve().then(() => log.push("micro-in-t0b"));
+  setTimeout(() => log.push("nested"), 0);
+}, 0);
+setTimeout(() => log.push("t0c"), 0);
+const iv = setInterval(() => {
+  log.push("iv");
+  if (log.filter((x) => x === "iv").length === 3) clearInterval(iv);
+}, 40);
+setTimeout(() => log.push("t100"), 100);
+setTimeout(() => log.push("t20"), 20);
+const gone = setTimeout(() => log.push("cleared"), 10);
+clearTimeout(gone);
+
+const stamps = [];
+requestAnimationFrame((t) => {
+  stamps.push(t);
+  requestAnimationFrame((u) => {
+    console.log("frames", typeof t, u > t, t <= performance.now(), t >= 0);
+  });
+});
+requestAnimationFrame((t) => console.log("one stamp a frame", t === stamps[0]));
+const dropped = requestAnimationFrame(() => console.log("cancelled frame ran"));
+cancelAnimationFrame(dropped);
+
+setTimeout(() => {
+  console.log("order", log.join(" "));
+  document.getElementById("out").textContent = "done";
+}, 400);
+</script>
+</body>
+</html>

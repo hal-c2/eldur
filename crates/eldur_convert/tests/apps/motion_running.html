@@ -1,0 +1,21 @@
+<!DOCTYPE html><html><head><title>Running</title><style>
+body{margin:0;font:16px/20px sans-serif}
+@keyframes grow{from{height:20px}to{height:60px}}
+@keyframes fade{from{opacity:0}to{opacity:.4}}
+@keyframes tint{from{background-color:rgb(255,0,0)}to{background-color:rgb(0,0,255)}}
+@keyframes three{0%{width:100px}50%{width:300px}100%{width:150px}}
+#ends{height:20px;background:#080;animation:grow 100ms linear}
+#keeps{height:20px;background:#088;animation:grow 100ms linear forwards}
+#keepsRev{height:20px;background:#088;animation:grow 100ms linear reverse forwards}
+#twice{height:20px;background:#088;animation:grow 50ms linear 3 alternate forwards}
+#fades{height:20px;background:#000;animation:fade 100ms linear forwards}
+#tints{height:20px;animation:tint 100ms linear forwards}
+#stairs{height:20px;background:#088;animation:three 100ms steps(2,end) forwards}
+#late{height:20px;background:#800;animation:grow 50ms linear 100s}
+#lateFill{height:20px;background:#800;animation:grow 50ms linear 100s backwards}
+#forever{height:20px;background:#808;animation:fade 100ms linear infinite paused}
+</style></head><body>
+<div id="ends"></div><div id="keeps"></div><div id="keepsRev"></div><div id="twice"></div>
+<div id="fades"></div><div id="tints"></div><div id="stairs"></div>
+<div id="late"></div><div id="lateFill"></div><div id="forever"></div><div id="below" style="height:10px"></div>
+<script>console.log("running");</script></body></html>

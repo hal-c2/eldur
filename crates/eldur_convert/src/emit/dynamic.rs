@@ -18,8 +18,8 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use eldur_css::{
-    ComputedStyle, Condition, ConditionalStyles, Display, Easing, LengthPercentage, PseudoState,
-    Rgba, Shadow, Structural, StyleMap, Stylesheet, TransformFn,
+    ComputedStyle, Condition, ConditionalStyles, Display, LengthPercentage, PseudoState, Rgba,
+    Shadow, Structural, StyleMap, Stylesheet, TransformFn,
 };
 use eldur_dom::{Document, NodeId};
 use eldur_js::ElementRef;
@@ -1280,6 +1280,9 @@ impl Dynamic<'_, '_> {
 
     /// A `Behavior` for `prop` when its owner's style transitions it.
     fn behavior(&self, change: &Change, prop: &str, gate: bool) -> Option<Member> {
+        if !self.cx.options.animations {
+            return None;
+        }
         let owner = change.owner?;
         let longhands = css_of(&change.ty, prop)?;
         let kind = change
@@ -1322,22 +1325,23 @@ impl Dynamic<'_, '_> {
                 Value::Number(f64::from(transition.duration_ms.round()))
             },
         );
-        match transition.easing {
-            Easing::CubicBezier(x1, y1, x2, y2) => {
-                anim.set("easing.type", Value::expr("Easing.BezierSpline"));
-                let n = |v: f32| fmt_number((f64::from(v) * 1000.0).round() / 1000.0);
-                anim.set(
-                    "easing.bezierCurve",
-                    Value::expr(format!(
-                        "[{}, {}, {}, {}, 1, 1]",
-                        n(x1),
-                        n(y1),
-                        n(x2),
-                        n(y2)
-                    )),
-                );
-            }
-            Easing::Linear | Easing::Steps(..) => {}
+        super::keyframes::set_easing(&mut anim, transition.easing, false);
+        // A negative delay would start part way through, which QML cannot.
+        if transition.delay_ms > 0.0 {
+            let delay = fmt_number(f64::from(transition.delay_ms.round()));
+            let mut pause = Object::new("PauseAnimation");
+            pause.set(
+                "duration",
+                if gate {
+                    Value::expr(format!("{ROOT_ID}.eldurAnimate ? {delay} : 0"))
+                } else {
+                    Value::Number(f64::from(transition.delay_ms.round()))
+                },
+            );
+            let mut seq = Object::new("SequentialAnimation");
+            seq.push_child(pause);
+            seq.push_child(anim);
+            anim = seq;
         }
         Some(Member::Behavior {
             property: prop.to_owned(),

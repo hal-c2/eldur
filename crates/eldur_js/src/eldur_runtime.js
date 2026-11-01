@@ -344,6 +344,11 @@ function init(rootItem, baseUrl, documentUrl) {
         _gSnapshotClosedHidden();
     }
     _startTime = Date.now();
+    // A page's first style is what its transitions go from and its animations
+    // start with: the first frame, or a script's first read if that is sooner.
+    if (_gActive()) {
+        _aWake();
+    }
     if (_root) {
         _connectControls(_root);
         _walkItems(_root, function(item) {
@@ -609,7 +614,73 @@ function _qobjectParent() {
 // ---------------------------------------------------------------------------
 
 var _nextTimerId = 1;
-var _timers = {};
+var _timers = [];
+var _timerSeq = 0;
+var _timerWake = null;
+var _timerTurnQueued = false;
+
+// A QML Timer fires on the animation clock's tick, and those due on one tick in the
+// order they were made, whatever they were set for; so one wake-up, and a queue that
+// knows when each is due.
+function _wakeForTimers() {
+    if (!_timerWake) {
+        _timerWake = Qt.createQmlObject(
+            "import QtQuick; Timer { running: false }",
+            _qobjectParent(),
+            "eldur_timer"
+        );
+        _timerWake.triggered.connect(_timerTurn);
+    }
+    _timerWake.stop();
+    if (_timers.length === 0 || _timerTurnQueued) {
+        return;
+    }
+    _timerWake.interval = Math.max(0, Math.ceil(_timers[0].due - Date.now()));
+    _timerWake.start();
+}
+
+// One callback a turn of the event loop: the engine posts a promise's reactions as
+// events, so they run after this turn and before the next callback, as a microtask
+// checkpoint would have them. Reactions that queue further reactions can still lose
+// the race, since nothing here can see or drain the engine's queue.
+function _timerTurn() {
+    _timerTurnQueued = true;
+    Qt.callLater(_timerRunOne);
+}
+
+function _timerRunOne() {
+    _timerTurnQueued = false;
+    var t = _timers[0];
+    if (!t || t.due > Date.now()) {
+        _wakeForTimers();
+        return;
+    }
+    _timers.shift();
+    if (t.repeat) {
+        // Late intervals keep their beat against other timers, without a burst to catch up.
+        t.due = Math.max(t.due + t.ms, Date.now());
+        t.seq = _timerSeq++;
+        _timerInsert(t);
+    }
+    try {
+        t.callback.apply(null, t.args);
+    } finally {
+        if (_timers.length > 0 && _timers[0].due <= Date.now()) {
+            _timerTurn();
+        } else {
+            _wakeForTimers();
+        }
+    }
+}
+
+function _timerInsert(t) {
+    var at = _timers.length;
+    while (at > 0 && (_timers[at - 1].due > t.due
+        || (_timers[at - 1].due === t.due && _timers[at - 1].seq > t.seq))) {
+        --at;
+    }
+    _timers.splice(at, 0, t);
+}
 
 function _scheduleTimer(callback, delay, repeat, extraArgs) {
     if (typeof callback !== "function") {
@@ -617,25 +688,11 @@ function _scheduleTimer(callback, delay, repeat, extraArgs) {
     }
     var id = _nextTimerId++;
     var ms = Math.max(0, Number(delay) || 0);
-    var timer = Qt.createQmlObject(
-        "import QtQuick; Timer { running: false }",
-        _qobjectParent(),
-        "eldur_timer_" + id
-    );
-    timer.interval = ms;
-    timer.repeat = Boolean(repeat);
-    _timers[id] = timer;
-    timer.triggered.connect(function() {
-        if (!_timers[id]) {
-            return;
-        }
-        if (!repeat) {
-            delete _timers[id];
-            timer.destroy();
-        }
-        callback.apply(null, extraArgs);
+    _timerInsert({
+        id: id, ms: ms, due: Date.now() + ms, seq: _timerSeq++,
+        repeat: Boolean(repeat), callback: callback, args: extraArgs
     });
-    timer.start();
+    _wakeForTimers();
     return id;
 }
 
@@ -650,13 +707,12 @@ function setInterval(callback, delay) {
 }
 
 function clearTimeout(id) {
-    var timer = _timers[id];
-    if (!timer) {
-        return;
+    for (var i = 0; i < _timers.length; ++i) {
+        if (_timers[i].id === id) {
+            _timers.splice(i, 1);
+            return;
+        }
     }
-    delete _timers[id];
-    timer.running = false;
-    timer.destroy();
 }
 
 function clearInterval(id) {
@@ -677,6 +733,12 @@ function _ensureRafAnim() {
         "eldur_raf"
     );
     _rafAnim.triggered.connect(function() {
+        // HTML's update the rendering: scroll steps run before the frame's callbacks.
+        var moved = _scrollEvents.slice();
+        _scrollEvents.length = 0;
+        for (var at = 0; at < moved.length; ++at) {
+            _dispatchDynamic(moved[at], "scroll", null);
+        }
         var batch = _rafQueue.slice();
         _rafQueue.length = 0;
         if (_rafQueue.length === 0) {
@@ -691,6 +753,53 @@ function _ensureRafAnim() {
         }
     });
     return _rafAnim;
+}
+
+// HTML's "scroll to the fragment", for a hash a script sets.
+function _scrollToFragment(hash) {
+    var name = hash.slice(1);
+    var decoded = name;
+    try {
+        decoded = decodeURIComponent(name);
+    } catch (e) {
+        decoded = null;
+    }
+    var found = document.getElementById(name) || (decoded !== null ? document.getElementById(decoded) : null);
+    var page = _findRootScroller();
+    if (!found && name !== "" && String(decoded).toLowerCase() !== "top") {
+        return;
+    }
+    var active = document.activeElement;
+    if (active && active !== document.body && typeof active.blur === "function") {
+        active.blur();
+    }
+    if (found) {
+        _scrollIntoView(_unwrap(found), { block: "start" });
+    } else if (page) {
+        scrollTo(page.contentX, 0);
+    }
+}
+
+// A link took the page to `link`: the address moved without the scroll a script's would need.
+function fragmentFollowed(link) {
+    if (_locState.hash === link) {
+        return;
+    }
+    _locState.hash = link;
+    if (_locState.href) {
+        _locState.href = _locState.href.split("#")[0] + link;
+    }
+    _dispatchDynamic(_root, "hashchange", null);
+}
+
+var _scrollEvents = [];
+
+// A box scrolled any number of times in a frame has one event, on the next.
+function _queueScrollEvent(raw) {
+    if (_scrollEvents.indexOf(raw) === -1) {
+        _scrollEvents.push(raw);
+    }
+    _ensureRafAnim().running = true;
 }
 
 function requestAnimationFrame(callback) {
@@ -1332,6 +1441,7 @@ var location = {
             _locState.href = baseHref + normalized;
         }
         if (changed && _root) {
+            _scrollToFragment(normalized);
             _dispatchDynamic(_root, "hashchange", null);
         }
     },
@@ -1902,6 +2012,10 @@ function dataset(item) {
 function _appendTarget(raw) {
     if (_gIsBox(raw)) {
         return raw;
+    }
+    // What a scroller holds moves with it, so children belong in its content.
+    if (raw.eldurScroller) {
+        return _childContainer(raw);
     }
     if (_meta(raw).tableGrid) {
         return _meta(raw).tableGrid;
@@ -3046,6 +3160,7 @@ function _settleLayouts() {
 // after an insert already counts it. The settle above works upwards, so the
 // widths the top hands back down are polished afterwards.
 function _layoutForRead() {
+    _aRead();
     if (_layoutDirty.length === 0) {
         // Lines lay out once when complete, which may be after a page's script.
         if (!_linesLaidOut) {
@@ -3199,11 +3314,113 @@ function _findTextChild(raw) {
     return null;
 }
 
+// Where a scroller's offset puts `start..start + size` of its content for an
+// `align` of CSSOM View's: `start`, `end`, `center`, `nearest`.
+function _intoViewOffset(align, now, before, size, port) {
+    if (align === "start") {
+        return now + before;
+    }
+    if (align === "end") {
+        return now + before + size - port;
+    }
+    if (align === "center") {
+        return now + before - (port - size) / 2;
+    }
+    var after = before + size - port;
+    if ((before < 0 && after > 0) || (before >= 0 && after <= 0)) {
+        return now;
+    }
+    return Math.abs(before) < Math.abs(after) ? now + before : now + after;
+}
+
+// Every scroller around the element, nearest first, and the page last: moving
+// one changes where the element is for the next.
+function _scrollIntoView(raw, arg) {
+    var block = "start";
+    var inline = "nearest";
+    var asked = arg && typeof arg === "object" ? arg.behavior : undefined;
+    if (arg === false) {
+        block = "end";
+    } else if (arg && typeof arg === "object") {
+        block = typeof arg.block === "string" ? arg.block : block;
+        inline = typeof arg.inline === "string" ? arg.inline : inline;
+    }
+    _layoutForRead();
+    for (var at = _logicalParent(raw); at && at !== _root; at = _logicalParent(at)) {
+        var scroller = _ownScroller(at);
+        if (!scroller) {
+            _scrollClippedIntoView(at, raw, block);
+            continue;
+        }
+        var r = getBoundingClientRect(raw);
+        var port = scroller.mapToItem(null, 0, 0);
+        var y = _intoViewOffset(block, scroller.contentY, r.top - port.y, r.height, scroller.height);
+        var x = _intoViewOffset(inline, scroller.contentX, r.left - port.x, r.width, scroller.width);
+        _moveScroller(scroller,
+            Math.max(0, Math.min(x, Math.max(0, scroller.contentWidth - scroller.width))),
+            Math.max(0, Math.min(y, Math.max(0, scroller.contentHeight - scroller.height))),
+            asked);
+    }
+    var page = _findRootScroller();
+    if (page) {
+        var rect = getBoundingClientRect(raw);
+        scrollTo({
+            left: _intoViewOffset(inline, page.contentX, rect.left, rect.width, page.width),
+            top: _intoViewOffset(block, page.contentY, rect.top, rect.height, page.height),
+            behavior: asked
+        });
+    }
+}
+
+// A converted `overflow: hidden` box has no scroller: only scripts move it.
+function _scrollClippedIntoView(box, raw, block) {
+    if (box.clip !== true) {
+        return;
+    }
+    var el = wrap(box);
+    if (el.scrollHeight <= el.clientHeight) {
+        return;
+    }
+    var r = getBoundingClientRect(raw);
+    var port = box.mapToItem(null, 0, 0);
+    el.scrollTop = _intoViewOffset(block, el.scrollTop, r.top - port.y, r.height, box.height);
+}
+
+// The Flickable that scrolls a box's content: its own, or the page's when the
+// box is the root element's.
+function _listenToScroll(raw, moves) {
+    if (moves && typeof moves.contentYChanged === "function") {
+        moves.contentYChanged.connect(function() { _queueScrollEvent(raw); });
+        moves.contentXChanged.connect(function() { _queueScrollEvent(raw); });
+    }
+}
+
+function _scrollerOf(raw) {
+    if (!raw) {
+        return null;
+    }
+    if (raw === _root || raw.eldurTag === "html") {
+        return _findRootScroller();
+    }
+    return _ownScroller(raw);
+}
+
+function _ownScroller(raw) {
+    if (!raw) {
+        return null;
+    }
+    if (raw.eldurScroller) {
+        return raw.eldurScroller;
+    }
+    return _meta(raw).gScroller || null;
+}
+
 function _childContainer(raw) {
     if (!raw) {
         return null;
     }
-    var base = (typeof raw.contentHeight === "number" && raw.contentItem) ? raw.contentItem : raw;
+    var base = (typeof raw.contentHeight === "number" && raw.contentItem) ? raw.contentItem
+        : raw.eldurScroller ? raw.eldurScroller.contentItem : raw;
     var m = _meta(raw);
     if (m.tableGrid) {
         return m.tableGrid;
@@ -3294,6 +3511,9 @@ function _rawKids(raw, withText) {
         // An out-of-flow box is its slot's child in the DOM, wherever it is
         // painted.
         if (child.eldurSlot !== undefined) {
+            continue;
+        }
+        if (child.eldurChrome) {
             continue;
         }
         // A layer's source and effect are made beside the item it belongs to.
@@ -4285,7 +4505,7 @@ function getComputedStyle(item) {
             raw = _gCurrent(raw);
             var settled = _gComputed(raw, p);
             if (settled !== null) {
-                return settled;
+                return _gInFlight(raw, p, settled);
             }
         }
         var explicit = getStyle(raw, p);
@@ -4585,7 +4805,9 @@ function _holdFocus() {
     }
     _focusLooked = true;
     Qt.callLater(_focusSettle);
-    _focusHeld = _focusIn(_root);
+    var held = _focusIn(_root);
+    // A scroller's key input isn't an element the page can focus.
+    _focusHeld = held && typeof held.keyStep === "function" ? null : held;
 }
 
 function _focusIn(item) {
@@ -4738,6 +4960,16 @@ function _hiddenByAttribute(raw) {
     return false;
 }
 
+// A scale or a turn the page's own QML declares, which no script's style records.
+function _turnedInMarkup(raw) {
+    var list = raw.transform;
+    if (!list || !list.length) return false;
+    for (var i = 0; i < list.length; i++) {
+        if ("xScale" in list[i] || "angle" in list[i] || "matrix" in list[i]) return true;
+    }
+    return false;
+}
+
 function getBoundingClientRect(item) {
     _layoutForRead();
     var raw = _gCurrent(_unwrap(item));
@@ -4776,7 +5008,7 @@ function getBoundingClientRect(item) {
             h = fontBox;
         }
         // A transform moves what a box's rect reports: the corners' bounds.
-        if (_meta(raw).gMatrix) {
+        if (_meta(raw).gMatrix || _turnedInMarkup(raw)) {
             var corners = [pt, raw.mapToItem(null, w, 0), raw.mapToItem(null, 0, h), raw.mapToItem(null, w, h)];
             var xs = corners.map(function(c) { return c.x; });
             var ys = corners.map(function(c) { return c.y; });
@@ -4786,6 +5018,11 @@ function getBoundingClientRect(item) {
             h = Math.max.apply(null, ys) - y;
         }
     }
+    // A column's millionth-of-a-pixel carries are not positions.
+    x = _cleanPx(x);
+    y = _cleanPx(y);
+    w = _cleanPx(w);
+    h = _cleanPx(h);
     return {
         x: x,
         y: y,
@@ -4796,6 +5033,10 @@ function getBoundingClientRect(item) {
         right: x + w,
         bottom: y + h
     };
+}
+
+function _cleanPx(value) {
+    return Math.round(value * 10000) / 10000;
 }
 
 // CSSOM View 7: whole pixels; a box that isn't rendered has none.
@@ -4824,6 +5065,10 @@ function _borderOf(raw, side) {
 function _clientSize(item, axis) {
     _layoutForRead();
     var raw = _gCurrent(_unwrap(item));
+    // The root element's client area is the viewport.
+    if (raw && (raw === _root || raw.eldurTag === "html") && _findRootScroller()) {
+        return Math.round(_findRootScroller()[axis]);
+    }
     if (!raw || raw.__eldurInline || raw.visible === false || typeof raw[axis] !== "number"
         || _meta(raw).gShownInline) {
         return 0;
@@ -5524,12 +5769,7 @@ function _connectSignalOnce(raw, type) {
         m.connected[type] = true;
         return true;
     } else if (type === "scroll") {
-        if (typeof raw.contentYChanged === "function") {
-            raw.contentYChanged.connect(function() { _dispatchDynamic(raw, "scroll", null); });
-        }
-        if (typeof raw.contentXChanged === "function") {
-            raw.contentXChanged.connect(function() { _dispatchDynamic(raw, "scroll", null); });
-        }
+        _listenToScroll(raw, raw === _root ? _findRootScroller() : _scrollerOf(raw) || raw);
         m.connected[type] = true;
         return true;
     } else if (type === "resize" && typeof raw.widthChanged === "function") {
@@ -6758,6 +6998,7 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
     m.raw = next;
     if (_gActive()) {
         _gReplaced.set(oldRaw, next);
+        _aSwapped(oldRaw, next);
         var liveAt = _gLive.indexOf(oldRaw);
         if (liveAt !== -1) {
             _gLive.splice(liveAt, 1);
@@ -6976,7 +7217,13 @@ function _resamples(item) {
         return true;
     }
     for (var i = 0; item.transform && i < item.transform.length; ++i) {
-        if (item.transform[i].x === undefined) {
+        var step = item.transform[i];
+        if (step.matrix !== undefined) {
+            var a = step.matrix;
+            if (a.m11 !== 1 || a.m12 !== 0 || a.m21 !== 0 || a.m22 !== 1) {
+                return true;
+            }
+        } else if (step.x === undefined) {
             return true;
         }
     }
@@ -6984,11 +7231,24 @@ function _resamples(item) {
 }
 
 // Text.QtRendering and Text.NativeRendering; a library script has no `Text`.
+// What a transform turns needs its edges smoothed as well: an axis-aligned box
+// keeps the crisp ones the unturned page is compared on.
 function _fitGlyphs(item, turned) {
     turned = turned || _resamples(item);
     var wanted = turned ? 0 : 1;
     if (typeof item.renderType === "number" && item.renderType !== wanted) {
         item.renderType = wanted;
+    }
+    if (turned && item.antialiasing === false) {
+        item.antialiasing = true;
+        _meta(item).gSmoothed = true;
+    } else if (!turned && item.antialiasing === true && _meta(item).gSmoothed) {
+        // Only what was turned on here: a rounded Rectangle has it by default.
+        item.antialiasing = false;
+    }
+    // Shape.CurveRenderer; a shape not turned keeps the renderer it was made with.
+    if (turned && typeof item.preferredRendererType === "number") {
+        item.preferredRendererType = 4;
     }
     for (var i = 0; i < item.children.length; ++i) {
         _fitGlyphs(item.children[i], turned);
@@ -7155,6 +7415,10 @@ function wrap(rawItem) {
         var contentProp = isY ? "contentHeight" : "contentWidth";
         var sizeProp = isY ? "height" : "width";
         var implicitProp = isY ? "implicitHeight" : "implicitWidth";
+        var scroller = _scrollerOf(rawItem);
+        if (scroller) {
+            return Math.round(scroller[contentProp]);
+        }
         if (typeof rawItem[contentProp] === "number" && rawItem[contentProp] > 0) {
             return rawItem[contentProp];
         }
@@ -7188,9 +7452,23 @@ function wrap(rawItem) {
         return maxDim;
     }
 
+    function _scrollWithOptions(options, write) {
+        _scrollAsked = options && options.behavior;
+        write();
+        _scrollAsked = undefined;
+    }
+
     function _applyScrollOffset(axis, rawVal) {
         var isY = axis === "y";
         var n = Number(rawVal) || 0;
+        _layoutForRead();
+        var own = _scrollerOf(rawItem);
+        if (own) {
+            var far = isY ? own.contentHeight - own.height : own.contentWidth - own.width;
+            n = Math.max(0, Math.min(n, Math.max(0, far)));
+            _moveScroller(own, isY ? own.contentX : n, isY ? n : own.contentY, _scrollAsked);
+            return;
+        }
         var scrollDim = _computeScrollDimension(axis);
         var clientDim = isY
             ? (typeof rawItem.height === "number" ? rawItem.height : 0)
@@ -7256,7 +7534,7 @@ function wrap(rawItem) {
             }
         }
         if (n !== prev) {
-            _dispatchDynamic(rawItem, "scroll", null);
+            _queueScrollEvent(rawItem);
         }
     }
     m.raw = rawItem;
@@ -7824,6 +8102,11 @@ function wrap(rawItem) {
         get clientWidth() { return _clientSize(rawItem, "width"); },
         get clientHeight() { return _clientSize(rawItem, "height"); },
         get scrollTop() {
+            _layoutForRead();
+            var scroller = _scrollerOf(rawItem);
+            if (scroller) {
+                return scroller.contentY;
+            }
             if (typeof rawItem.contentY === "number") {
                 return rawItem.contentY;
             }
@@ -7833,6 +8116,11 @@ function wrap(rawItem) {
             _applyScrollOffset("y", v);
         },
         get scrollLeft() {
+            _layoutForRead();
+            var scroller = _scrollerOf(rawItem);
+            if (scroller) {
+                return scroller.contentX;
+            }
             if (typeof rawItem.contentX === "number") {
                 return rawItem.contentX;
             }
@@ -7947,8 +8235,23 @@ function wrap(rawItem) {
         },
         scrollTo: function(xOrOpts, y) {
             if (xOrOpts && typeof xOrOpts === "object") {
-                if (typeof xOrOpts.left === "number") { this.scrollLeft = xOrOpts.left; }
-                if (typeof xOrOpts.top === "number") { this.scrollTop = xOrOpts.top; }
+                var self = this;
+                _scrollWithOptions(xOrOpts, function() {
+                    // Both axes at once: the first write must not lose to the second.
+                    var own = _scrollerOf(rawItem);
+                    if (own) {
+                        _layoutForRead();
+                        var left = typeof xOrOpts.left === "number" ? xOrOpts.left : own.contentX;
+                        var top = typeof xOrOpts.top === "number" ? xOrOpts.top : own.contentY;
+                        _moveScroller(own,
+                            Math.max(0, Math.min(left, Math.max(0, own.contentWidth - own.width))),
+                            Math.max(0, Math.min(top, Math.max(0, own.contentHeight - own.height))),
+                            _scrollAsked);
+                        return;
+                    }
+                    if (typeof xOrOpts.left === "number") { self.scrollLeft = xOrOpts.left; }
+                    if (typeof xOrOpts.top === "number") { self.scrollTop = xOrOpts.top; }
+                });
             } else {
                 if (typeof xOrOpts === "number") { this.scrollLeft = xOrOpts; }
                 if (typeof y === "number") { this.scrollTop = y; }
@@ -7956,61 +8259,20 @@ function wrap(rawItem) {
         },
         scrollBy: function(xOrOpts, y) {
             if (xOrOpts && typeof xOrOpts === "object") {
+                _scrollAsked = xOrOpts.behavior;
                 if (typeof xOrOpts.left === "number") { this.scrollLeft = this.scrollLeft + xOrOpts.left; }
                 if (typeof xOrOpts.top === "number") { this.scrollTop = this.scrollTop + xOrOpts.top; }
+                _scrollAsked = undefined;
             } else {
                 if (typeof xOrOpts === "number") { this.scrollLeft = this.scrollLeft + xOrOpts; }
                 if (typeof y === "number") { this.scrollTop = this.scrollTop + y; }
             }
         },
         scrollIntoView: function(arg) {
-            var scroller = _findRootScroller();
-            if (!scroller) {
-                return;
-            }
-            var rect = getBoundingClientRect(rawItem);
-            var curX = window.scrollX;
-            var curY = window.scrollY;
-            var vw = (typeof scroller.width === "number" && scroller.width > 0) ? scroller.width : window.innerWidth;
-            var vh = (typeof scroller.height === "number" && scroller.height > 0) ? scroller.height : window.innerHeight;
-            var block = "start";
-            var inline = "nearest";
-            if (arg === false) {
-                block = "end";
-            } else if (arg && typeof arg === "object") {
-                if (typeof arg.block === "string") { block = arg.block; }
-                if (typeof arg.inline === "string") { inline = arg.inline; }
-            }
-            var nextX = curX;
-            if (inline === "start") {
-                nextX = curX + rect.left;
-            } else if (inline === "end") {
-                nextX = curX + rect.right - vw;
-            } else if (inline === "center") {
-                nextX = curX + rect.left - (vw - rect.width) / 2;
-            } else {
-                if (rect.left < 0) {
-                    nextX = curX + rect.left;
-                } else if (vw > 0 && rect.right > vw) {
-                    nextX = curX + rect.right - vw;
-                }
-            }
-            var nextY = curY;
-            if (block === "end") {
-                nextY = curY + rect.bottom - vh;
-            } else if (block === "center") {
-                nextY = curY + rect.top - (vh - rect.height) / 2;
-            } else if (block === "nearest") {
-                if (rect.top < 0) {
-                    nextY = curY + rect.top;
-                } else if (vh > 0 && rect.bottom > vh) {
-                    nextY = curY + rect.bottom - vh;
-                }
-            } else {
-                nextY = curY + rect.top;
-            }
-            scrollTo(nextX, nextY);
+            _scrollIntoView(rawItem, arg);
         },
+        getAnimations: function() { return _aAnimationsOf(rawItem); },
+        animate: function(frames, options) { return _aAnimate(rawItem, frames, options); },
         getBoundingClientRect: function() { return getBoundingClientRect(rawItem); },
         matches: function(sel) {
             return _matchesSelectorComplex(rawItem, String(sel));
@@ -11054,6 +11316,43 @@ function _scrollerMaxExtent(scroller, axis) {
     return (viewDim > 0 && contentDim > viewDim) ? Math.max(0, contentDim - viewDim) : 0;
 }
 
+// The behaviour a script asks for, then the scroller's `scroll-behavior`.
+function _scrollsSmoothly(scroller, asked) {
+    if (asked === "smooth") return true;
+    if (asked === "instant") return false;
+    if (scroller.eldurSmooth === true) return true;
+    var box = scroller.parent;
+    return !!box && _gIsBox(box) && _gStyle(box)["scroll-behavior"] === "smooth";
+}
+
+// A smooth scroll has not moved yet when the script reads it back. Qt's own curve
+// and length: CSSOM View leaves both to the user agent.
+function _moveScroller(scroller, x, y, asked) {
+    var m = _meta(scroller);
+    if (m.smooth) {
+        m.smooth.stop();
+    }
+    if (!_scrollsSmoothly(scroller, asked)) {
+        scroller.contentX = x;
+        scroller.contentY = y;
+        return;
+    }
+    if (!m.smooth) {
+        m.smooth = Qt.createQmlObject(
+            "import QtQuick; ParallelAnimation {"
+            + " property var scroller: null; property real toX; property real toY;"
+            + " NumberAnimation { target: scroller; property: 'contentX'; to: toX;"
+            + " duration: 300; easing.type: Easing.InOutQuad }"
+            + " NumberAnimation { target: scroller; property: 'contentY'; to: toY;"
+            + " duration: 300; easing.type: Easing.InOutQuad } }",
+            _qobjectParent(scroller), "eldur_smooth_scroll");
+        m.smooth.scroller = scroller;
+    }
+    m.smooth.toX = x;
+    m.smooth.toY = y;
+    m.smooth.start();
+}
+
 function scrollTo(xOrOpts, y) {
     var scroller = _findRootScroller();
     if (!scroller) {
@@ -11074,10 +11373,9 @@ function scrollTo(xOrOpts, y) {
     var maxY = _scrollerMaxExtent(scroller, "y");
     var clampedX = Math.max(0, Math.min(nextX, maxX));
     var clampedY = Math.max(0, Math.min(nextY, maxY));
-    scroller.contentX = clampedX;
-    scroller.contentY = clampedY;
+    _moveScroller(scroller, clampedX, clampedY, xOrOpts && xOrOpts.behavior);
     if ((clampedX !== curX || clampedY !== curY) && _root) {
-        _dispatchDynamic(_root, "scroll", null);
+        _queueScrollEvent(_root);
     }
 }
 
@@ -11099,9 +11397,53 @@ function scrollBy(xOrOpts, y) {
     }
 }
 
+var _scrollAsked;
 var scroll = scrollTo;
 
+// Paint order backwards: later siblings and higher z first, children over
+// their box, and nothing outside a box that clips.
+function _hitAt(item, x, y) {
+    if (!item || item.visible === false || typeof item.mapFromItem !== "function") {
+        return null;
+    }
+    var local = item.mapFromItem(null, x, y);
+    var inside = local.x >= 0 && local.y >= 0 && local.x < item.width && local.y < item.height;
+    if (item.clip && !inside) {
+        return null;
+    }
+    var kids = [];
+    for (var i = 0; i < item.children.length; ++i) {
+        kids.push({ item: item.children[i], at: i });
+    }
+    kids.sort(function(a, b) { return (b.item.z - a.item.z) || (b.at - a.at); });
+    for (var k = 0; k < kids.length; ++k) {
+        var hit = _hitAt(kids[k].item, x, y);
+        if (hit) {
+            return hit;
+        }
+    }
+    return inside && _gIsElement(item) ? item : null;
+}
+
+function _hitFrom(x, y) {
+    if (!_root) {
+        return null;
+    }
+    return _hitAt(_root.contentItem || _root, x, y);
+}
+
 var document = {
+    get scrollingElement() { return document.documentElement; },
+    elementFromPoint: function(x, y) {
+        _layoutForRead();
+        var w = _root ? _root.width : 0;
+        var h = _root ? _root.height : 0;
+        if (!(x >= 0 && y >= 0 && x < w && y < h)) {
+            return null;
+        }
+        var hit = _hitFrom(x, y);
+        return hit ? wrap(hit) : document.documentElement;
+    },
     get title() { return getTitle(); },
     set title(v) { setTitle(v); },
     get baseURI() { return _getDocumentBaseUrl(); },
@@ -11137,6 +11479,11 @@ var document = {
         var focused = null;
         if (_root) {
             _walkItems(_root, function(node) {
+                // A scroller's key input holding the focus is the page with none of its own.
+                if ((node.activeFocus || node.focus) && typeof node.keyStep === "function") {
+                    focused = null;
+                    return true;
+                }
                 if (node !== _root && (node.activeFocus || node.focus) && !_focusGone(node)) {
                     focused = node;
                 }
@@ -11150,6 +11497,7 @@ var document = {
         if (_activeElement && typeof _activeElement.focus !== "boolean") {
             return wrap(_activeElement);
         }
+
         return this.body;
     },
     getElementById: function(id) {
@@ -11361,7 +11709,9 @@ var _G_INITIAL = {
     "border-top-right-radius": "0px", "border-bottom-right-radius": "0px", "border-bottom-left-radius": "0px",
     "overflow-x": "visible", "overflow-y": "visible", "grid-template-columns": "none",
     "background-image": "none", "box-shadow": "none", "transform": "none", "transform-origin": "50% 50%",
-    "filter": "none", "animation-name": "none", "transition-property": "all", "transition-duration": "0s",
+    "filter": "none", "animation-name": "none", "animation-duration": "0s", "animation-delay": "0s",
+    "animation-timing-function": "ease", "animation-iteration-count": "1", "animation-direction": "normal",
+    "animation-fill-mode": "none", "animation-play-state": "running", "transition-property": "all", "transition-duration": "0s",
     "transition-delay": "0s", "transition-timing-function": "ease", "background-size": "auto",
     "background-position-x": "0%", "background-position-y": "0%", "background-repeat": "repeat",
     "text-shadow": "none", "outline-style": "none", "outline-width": "medium",
@@ -11416,16 +11766,10 @@ function _gIsBox(raw) {
 // inline node. `eldurFlowForm` boxes wait in a slot: see `_leaveFlow`.
 function _gBoxSource(tag, outOfFlow) {
     return "import QtQuick; import QtQuick.Layouts; Rectangle { color: \"transparent\"; "
-        + "property bool eldurCreatedBox: true; "
+        + "property bool eldurCreatedBox: true; property var eldurScrollPort: null; "
         + (outOfFlow ? "property Item eldurSlot: null; property var eldurBlock: \"parent\"; " : "")
         + "property real eldurMt: 0; property real eldurMr: 0; property real eldurMb: 0; property real eldurMl: 0; "
         + "property real eldurPw: -1; property bool eldurFill: false; property int eldurAlign: 0; "
-        + "property int eldurColorMs: 0; property int eldurColorWait: 0; property int eldurColorEase: 0; "
-        + "property int eldurFadeMs: 0; property int eldurFadeWait: 0; property int eldurFadeEase: 0; "
-        + "Behavior on color { enabled: eldurColorMs + eldurColorWait > 0; SequentialAnimation { "
-        + "PauseAnimation { duration: eldurColorWait } ColorAnimation { duration: eldurColorMs; easing.type: eldurColorEase } } } "
-        + "Behavior on opacity { enabled: eldurFadeMs + eldurFadeWait > 0; SequentialAnimation { "
-        + "PauseAnimation { duration: eldurFadeWait } NumberAnimation { duration: eldurFadeMs; easing.type: eldurFadeEase } } } "
         + "property real eldurGapT: 0; property real eldurGapL: 0; property real eldurTrack: -1; "
         // A box narrower than its grid track keeps the track's width in its
         // margin, as the converter's own grid items do: the track has no other size.
@@ -11642,9 +11986,18 @@ function _gSides(parts) {
 // Only a shorthand whose value held `var()` reaches the runtime whole: the
 // converter expanded the others.
 function _gExpand(prop, value) {
+    if (prop === "transition") {
+        return _aExpandTransition(value);
+    }
+    if (prop === "animation") {
+        return _aExpandAnimation(value);
+    }
     var names = ["top", "right", "bottom", "left"];
     var out = [];
     var parts = _gSplitValue(value);
+    if (prop === "overflow") {
+        return [["overflow-x", parts[0]], ["overflow-y", parts[1] || parts[0]]];
+    }
     if (prop === "margin" || prop === "padding") {
         var sides = _gSides(parts);
         for (var i = 0; i < 4; ++i) {
@@ -11661,6 +12014,17 @@ function _gExpand(prop, value) {
         for (var r = 0; r < 4; ++r) {
             out.push(["border-" + cornerNames[r] + "-radius", corners[r]]);
         }
+    } else if (prop === "text-decoration") {
+        var lines = parts.filter(function(w) { return /^(none|underline|overline|line-through|blink)$/i.test(w); });
+        var drawn = parts.filter(function(w) { return /^(solid|double|dotted|dashed|wavy)$/i.test(w); });
+        var tints = parts.filter(function(w) {
+            return lines.indexOf(w) === -1 && drawn.indexOf(w) === -1 && !/^(auto|from-font|[0-9.]+[a-z%]*)$/i.test(w);
+        });
+        if (parts.length === 1 && /^(inherit|initial|unset|revert|revert-layer)$/i.test(parts[0])) {
+            lines = drawn = tints = [parts[0]];
+        }
+        out.push(["text-decoration-line", lines.join(" ") || "none"], ["text-decoration-style", drawn[0] || "solid"],
+            ["text-decoration-color", tints[0] || "currentcolor"]);
     } else if (prop === "gap") {
         out.push(["row-gap", parts[0]], ["column-gap", parts[1] !== undefined ? parts[1] : parts[0]]);
     } else if (prop === "background") {
@@ -11871,6 +12235,14 @@ function _gStyle(raw) {
         if (inline[n][0].indexOf("--") !== 0) {
             _gOfferDecl(won, inline[n][0], inline[n][1], (inline[n][2] ? 3.5 : 2) * _V_ORIGIN_BAND, vars);
         }
+    }
+    if (won["transition-duration"] || won["animation-name"]) {
+        _aInlineMoves = true;
+    }
+    if (m.gOverlay) {
+        Object.keys(m.gOverlay).forEach(function(prop) {
+            won[prop] = { value: m.gOverlay[prop], weight: Infinity };
+        });
     }
     var tag = _nodeTag(raw);
     var s = { vars: vars, tag: tag, won: won };
@@ -12268,7 +12640,7 @@ function _gPlaceLeaf(raw, s, e, used, fixedH, margins, frameH) {
     _gPaintPicture(raw, s, used, fixedH === null ? raw.height : fixedH);
     // A created inline element with only text is a `Text` itself.
     if (_meta(raw).createdTag && _isPlainTextItem(raw)) {
-        _gPaintText(raw, s, used);
+        _gPaintText(raw, s, used, raw);
     }
     var height = fixedH;
     if (height === null) {
@@ -12449,13 +12821,13 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
     var collapseBottom = autoH && e.pb === 0 && e.bb === 0 && s["overflow-y"] === "visible" && s.display !== "inline-block" && s.display !== "flow-root";
     var text = _gTextOf(raw);
     if (text && text.text !== "") {
-        _gPaintText(text, s, innerW);
+        _gPaintText(text, s, innerW, raw);
         text.x = x;
         text.y = y + _gLineShift(s);
         y += text.height;
         first = false;
     } else if (text) {
-        _gPaintText(text, s, innerW);
+        _gPaintText(text, s, innerW, raw);
         text.x = x;
         text.y = y;
     }
@@ -12805,9 +13177,69 @@ function _gSet(item, prop, value) {
     }
 }
 
-function _gPaintText(text, s, innerW) {
+// The lines a text shows, its own box's and those its ancestors draw through
+// it, nearest first. They stop at what CSS Text Decoration 3 §2.1 says they
+// don't propagate into.
+function _gDecorLines(owner) {
+    var out = [];
+    for (var at = owner; at; at = _gParent(at)) {
+        var s = _gStyle(at);
+        var won = s.won["text-decoration-line"];
+        var words = won ? String(won.value).toLowerCase() : "none";
+        if (/underline|overline|line-through/.test(words)) {
+            var style = s.won["text-decoration-style"] ? String(s.won["text-decoration-style"].value).toLowerCase() : "solid";
+            var tint = s.won["text-decoration-color"] ? String(s.won["text-decoration-color"].value) : "currentcolor";
+            out.push({ underline: words.indexOf("underline") !== -1, overline: words.indexOf("overline") !== -1,
+                through: words.indexOf("line-through") !== -1, style: style,
+                color: String(_gQtColor(tint.toLowerCase() === "currentcolor" ? s["color"] : tint)) });
+        }
+        if (/^inline-/.test(s.display) || s.position === "absolute" || s.position === "fixed" || (s.won["float"] && s.won["float"].value !== "none")) {
+            break;
+        }
+    }
+    return out;
+}
+
+// A solid line in the text's colour is the font's; any other is drawn by what
+// the converter draws the same with, one for each box that asks.
+function _gPaintTextLines(text, owner, s) {
+    var font = text.font;
+    var own = String(_gQtColor(s["color"]));
+    var lines = _gDecorLines(owner);
+    var drawn = [];
+    for (var i = 0; i < lines.length; ++i) {
+        var l = lines[i];
+        if (l.style === "solid" && l.color === own) {
+            font.underline = font.underline || l.underline;
+            font.overline = font.overline || l.overline;
+            font.strikeout = font.strikeout || l.through;
+        } else {
+            drawn.push(l);
+        }
+    }
+    text.font = font;
+    var m = _meta(text);
+    var signature = JSON.stringify(drawn);
+    if (m.gLinesSig === signature || (m.gLinesSig === undefined && drawn.length === 0)) {
+        return;
+    }
+    m.gLinesSig = signature;
+    (m.gLines || []).forEach(function(item) { item.destroy(); });
+    m.gLines = drawn.map(function(l) {
+        var item = Qt.createQmlObject("import QtQuick; import \".\"; EldurTextLines {}", text, Qt.resolvedUrl("eldur_paint"));
+        item.underline = l.underline;
+        item.overline = l.overline;
+        item.lineThrough = l.through;
+        item.lineStyle = l.style;
+        item.lineColor = l.color;
+        return item;
+    });
+}
+
+function _gPaintText(text, s, innerW, owner) {
     text.font = _gFontOf(s);
     text.color = _gQtColor(s["color"]);
+    _gPaintTextLines(text, owner, s);
     var line = _gLineHeight(s);
     if (line !== null) {
         _gSet(text, "lineHeightMode", 1);
@@ -12829,10 +13261,6 @@ function _gPaintText(text, s, innerW) {
 
 function _gPaintBox(raw, s, e) {
     var painted = _meta(raw).gPainted === true;
-    // The first paint is where the box starts, not a change to animate.
-    if (painted) {
-        _gPaintTimings(raw, s);
-    }
     var radius = _gPx(s["border-top-left-radius"], raw.width, s.fontSize, s.rootSize) || 0;
     _gSet(raw, "radius", radius);
     _gSet(raw, "opacity", s.visibility === "hidden" ? 0 : _gNumber(s.opacity));
@@ -12853,7 +13281,6 @@ function _gPaintBox(raw, s, e) {
     _gPaintDecor(raw, s, e, radius);
     if (!painted) {
         _meta(raw).gPainted = true;
-        _gPaintTimings(raw, s);
     }
 }
 
@@ -12958,7 +13385,9 @@ function _gPaintValue(prop, text) {
         var written = _root ? _root.eldurPaintValues : undefined;
         _gPaintTable = typeof written === "string" && written !== "" ? JSON.parse(written) : {};
     }
-    return _gPaintTable[prop + ":" + String(text).replace(/\s+/g, "")];
+    var held = _gPaintTable[prop + ":" + String(text).replace(/\s+/g, "")];
+    // No table holds the values between two others.
+    return held === undefined && _aAll.length + _aMoved.length > 0 ? _aPaintBetween(prop, text) : held;
 }
 
 function _gDescribe(raw) {
@@ -13164,6 +13593,8 @@ function _gBandColor(c, alpha) {
 // count of edges only says that where the shadow holds the whole box.
 // A box with a fill to hide what is under it takes the blur the static page has.
 // The formula is the one in `emit/decoration.rs`, fitted there to Chromium's.
+var _G_RING_BLUR = 64 / 3;
+
 function _gOuterBlur(shadow, radii) {
     var corners = radii[0] === radii[1] && radii[1] === radii[2] && radii[2] === radii[3]
         ? "radius: " + radii[0] + "; "
@@ -13324,7 +13755,10 @@ function _gPaintDecor(raw, s, e, radius) {
                         outer += _gOuterRing(shadow, shadow.bands[b], w, h, outerRadii);
                     }
                 }
-                if (!shadow.inset && opaque) {
+                // One ring a pixel follows Chromium's Gaussian, as Qt's blur with its
+                // longer tail cannot; a blur too wide for that (`OUTER_RINGS` in
+                // `emit/shadow.rs`) would step, and takes Qt's.
+                if (!shadow.inset && opaque && shadow.blur > _G_RING_BLUR) {
                     outerBlurs += _gOuterBlur(shadow, outerRadii);
                 }
                 var round = outerRadii.some(function(r) { return r > 0; });
@@ -13368,17 +13802,17 @@ function _gPaintDecor(raw, s, e, radius) {
             raw, function() {}, Qt.resolvedUrl("eldur_paint"));
     }
     // The software scene graph draws no `RectangularShadow`, and steps are what it can.
+    // The software scene graph draws no `RectangularShadow`, and steps are what it can.
     if (outerBlurs !== "") {
         outer += "Item { anchors.fill: parent; visible: GraphicsInfo.api !== GraphicsInfo.Software; " + outerBlurs + "} "
             + "Shape { anchors.fill: parent; visible: GraphicsInfo.api === GraphicsInfo.Software; " + outerSteps + "} ";
+    } else {
+        outer += outerSteps;
     }
     _gPaintOuterShadow(raw, outer, w, h);
     _gPaintMatrix(raw, s, w, h);
     if (s["text-shadow"] !== "none" && s["text-shadow"] !== undefined) {
         _gWarn(raw, "text-shadow", "the text of a box a script made or restyled is drawn with no shadow; only text the page holds as written has one");
-    }
-    if (s["animation-name"] !== "none") {
-        _gWarn(raw, "animation-name", "`" + s["animation-name"] + "` does not run on a created box: it stays as its rules leave it");
     }
     if (!_gPaintPicture(raw, s, w, h)) {
         _gPaintLayer(raw, s, outerRadii,
@@ -13505,6 +13939,15 @@ function _gPaintOuterShadow(raw, paths, w, h) {
     _gSetTransforms(raw);
 }
 
+// A transform can come after the box is connected, and go again.
+function _gFitTurned(raw) {
+    var turned = false;
+    for (var up = raw.parent; up && !turned; up = up.parent) {
+        turned = _resamples(up);
+    }
+    _fitGlyphs(raw, turned);
+}
+
 function _gSetTransforms(raw) {
     var m = _meta(raw);
     var list = [];
@@ -13514,11 +13957,18 @@ function _gSetTransforms(raw) {
     if (m.gShift) {
         list.push(m.gShift);
     }
+    if (m.gSticky) {
+        list.push(m.gSticky);
+    }
+    if (m.gScrolled) {
+        list.push(m.gScrolled);
+    }
     raw.transform = list;
     // What stands in for the box moves with it.
     if (m.gOuter && m.gOuter.shape) {
         m.gOuter.shape.transform = list;
     }
+    _gFitTurned(raw);
 }
 
 function _gMultiply(a, b) {
@@ -13573,8 +14023,14 @@ function _gOrigin(s, w, h) {
 }
 
 function _gApplyMatrix(raw, v) {
-    _meta(raw).gMatrixNow = v;
-    _meta(raw).gMatrix.matrix = Qt.matrix4x4(v[0], v[2], 0, v[4], v[1], v[3], 0, v[5], 0, 0, 1, 0, 0, 0, 0, 1);
+    var m = _meta(raw);
+    var was = m.gMatrixNow;
+    m.gMatrixNow = v;
+    m.gMatrix.matrix = Qt.matrix4x4(v[0], v[2], 0, v[4], v[1], v[3], 0, v[5], 0, 0, 1, 0, 0, 0, 0, 1);
+    var plain = function(t) { return t[0] === 1 && t[1] === 0 && t[2] === 0 && t[3] === 1; };
+    if (was && plain(was) !== plain(v)) {
+        _gFitTurned(raw);
+    }
 }
 
 function _gMatrixFollowSize(raw) {
@@ -13613,35 +14069,7 @@ function _gPaintMatrix(raw, s, w, h) {
         return;
     }
     m.gMatrixGoal = about;
-    if (m.gTweenMs + m.gTweenWait > 0) {
-        _gTween(raw, now.slice(), about);
-    } else {
-        if (m.gTween) {
-            m.gTween.stop();
-        }
-        _gApplyMatrix(raw, about);
-    }
-}
-
-function _gTween(raw, from, to) {
-    var m = _meta(raw);
-    if (!m.gTween) {
-        m.gTween = Qt.createQmlObject("import QtQuick; Item { id: tween; property Item eldurSlot: null; property real t: 1; "
-            + "property int wait: 0; property int ms: 0; property int ease: 0; "
-            + "SequentialAnimation { id: run; PauseAnimation { duration: tween.wait } "
-            + "NumberAnimation { target: tween; property: \"t\"; from: 0; to: 1; duration: tween.ms; easing.type: tween.ease } } "
-            + "function go() { run.restart(); } function stop() { run.stop(); } }", raw, "eldur_tween");
-        m.gTween.tChanged.connect(function() {
-            var t = m.gTween.t;
-            _gApplyMatrix(raw, m.gTweenFrom.map(function(v, i) { return v + (m.gTweenTo[i] - v) * t; }));
-        });
-    }
-    m.gTweenFrom = from;
-    m.gTweenTo = to;
-    m.gTween.wait = m.gTweenWait;
-    m.gTween.ms = m.gTweenMs;
-    m.gTween.ease = m.gTweenEase;
-    m.gTween.go();
+    _gApplyMatrix(raw, about);
 }
 
 function _gSeconds(text) {
@@ -13649,47 +14077,1488 @@ function _gSeconds(text) {
     return isNaN(n) ? 0 : /ms\s*$/.test(text) ? n : n * 1000;
 }
 
-function _gPaintTimings(raw, s) {
-    var m = _meta(raw);
-    var names = String(s["transition-property"]).split(",");
-    var times = String(s["transition-duration"]).split(",");
-    var waits = String(s["transition-delay"]).split(",");
-    var curves = String(s["transition-timing-function"]).split(/,(?![^(]*\))/);
-    // Easing.Linear, .InQuad, .OutQuad, .InOutQuad: Qt's nearest to CSS's curves.
-    var easeOf = function(text) {
-        return { linear: 0, "ease-in": 1, "ease-out": 2 }[text.trim()] || (text.trim() === "linear" ? 0 : 3);
+// --- Things that move -------------------------------------------------------
+//
+// One clock for CSS animations, CSS transitions and `Element.animate`, on the
+// timing model of Web Animations. What an animation says at a moment goes into
+// the cascade as the winning declaration of its property (`m.gOverlay`), so
+// layout, painting, inheritance and `getComputedStyle` all follow without
+// knowing about it. A page's own box is adopted when something first moves it.
+
+var _aAll = [];
+var _aTicker = null;
+var _aEvents = [];
+var _aBusy = false;
+var _aDirty = false;
+var _aScanned = false;
+var _aNextId = 1;
+
+// Longhands a transition with `all` watches; what the cascade doesn't hold is skipped.
+var _A_PROPS = ["color", "background-color", "border-top-color", "border-right-color", "border-bottom-color",
+    "border-left-color", "border-top-width", "border-right-width", "border-bottom-width", "border-left-width",
+    "border-top-left-radius", "border-top-right-radius", "border-bottom-right-radius", "border-bottom-left-radius",
+    "opacity", "width", "height", "min-width", "min-height", "max-width", "max-height",
+    "margin-top", "margin-right", "margin-bottom", "margin-left", "padding-top", "padding-right", "padding-bottom",
+    "padding-left", "top", "right", "bottom", "left", "transform", "box-shadow", "font-size", "line-height",
+    "letter-spacing", "word-spacing", "outline-color", "outline-width", "outline-offset", "row-gap", "column-gap",
+    "flex-grow", "flex-shrink", "flex-basis", "visibility", "z-index"];
+
+var _A_COLORS = /^(color|background-color|border-(top|right|bottom|left)-color|outline-color)$/;
+// Layout rounds these to its 1/64 px units, and they are read back from layout.
+var _A_LAID_OUT = /^(width|height)$/;
+
+function _aShorthandOf(prop) {
+    var names = {
+        margin: ["margin-top", "margin-right", "margin-bottom", "margin-left"],
+        padding: ["padding-top", "padding-right", "padding-bottom", "padding-left"],
+        inset: ["top", "right", "bottom", "left"],
+        background: ["background-color"],
+        gap: ["row-gap", "column-gap"],
+        border: ["border-top-color", "border-right-color", "border-bottom-color", "border-left-color",
+            "border-top-width", "border-right-width", "border-bottom-width", "border-left-width"],
+        "border-color": ["border-top-color", "border-right-color", "border-bottom-color", "border-left-color"],
+        "border-width": ["border-top-width", "border-right-width", "border-bottom-width", "border-left-width"],
+        "border-radius": ["border-top-left-radius", "border-top-right-radius", "border-bottom-right-radius",
+            "border-bottom-left-radius"],
+        outline: ["outline-color", "outline-width"],
+        flex: ["flex-grow", "flex-shrink", "flex-basis"]
     };
-    var got = { color: [0, 0, 3], fade: [0, 0, 3], move: [0, 0, 3] };
-    for (var i = 0; i < names.length; ++i) {
-        var name = names[i].trim();
-        var ms = _gSeconds(times[i % times.length]);
-        var wait = _gSeconds(waits[i % waits.length]);
-        if (name === "none" || ms + wait <= 0) {
-            continue;
+    return names[prop] || [prop];
+}
+
+// Commas outside brackets: `cubic-bezier(...)` holds its own.
+function _aList(text) {
+    return String(text).split(/,(?![^(]*\))/).map(function(p) { return p.trim(); });
+}
+
+// `transition` and `animation` to their longhands, one list per longhand.
+function _aExpandTransition(value) {
+    var out = { property: [], duration: [], delay: [], timing: [] };
+    _aList(value).forEach(function(one) {
+        var property = "all";
+        var duration = "0s";
+        var delay = "0s";
+        var timing = "ease";
+        var times = 0;
+        _gSplitValue(one).forEach(function(word) {
+            if (/^[-+.\d]+m?s$/i.test(word)) {
+                if (times++ === 0) {
+                    duration = word;
+                } else {
+                    delay = word;
+                }
+            } else if (_aIsEasing(word)) {
+                timing = word;
+            } else {
+                property = word;
+            }
+        });
+        out.property.push(property);
+        out.duration.push(duration);
+        out.delay.push(delay);
+        out.timing.push(timing);
+    });
+    return [["transition-property", out.property.join(", ")], ["transition-duration", out.duration.join(", ")],
+        ["transition-delay", out.delay.join(", ")], ["transition-timing-function", out.timing.join(", ")]];
+}
+
+function _aIsEasing(word) {
+    return /^(linear|ease|ease-in|ease-out|ease-in-out|step-start|step-end)$/.test(word)
+        || /^(cubic-bezier|steps|linear)\(/.test(word);
+}
+
+function _aExpandAnimation(value) {
+    var keys = ["name", "duration", "timing", "delay", "count", "direction", "fill", "play"];
+    var out = {};
+    keys.forEach(function(k) { out[k] = []; });
+    _aList(value).forEach(function(one) {
+        var got = { name: "none", duration: "0s", timing: "ease", delay: "0s", count: "1", direction: "normal",
+            fill: "none", play: "running" };
+        var times = 0;
+        _gSplitValue(one).forEach(function(word) {
+            if (/^[-+.\d]+m?s$/i.test(word)) {
+                got[times++ === 0 ? "duration" : "delay"] = word;
+            } else if (_aIsEasing(word)) {
+                got.timing = word;
+            } else if (word === "infinite" || /^[.\d]+$/.test(word)) {
+                got.count = word;
+            } else if (/^(normal|reverse|alternate|alternate-reverse)$/.test(word)) {
+                got.direction = word;
+            } else if (/^(forwards|backwards|both)$/.test(word)) {
+                got.fill = word;
+            } else if (/^(running|paused)$/.test(word)) {
+                got.play = word;
+            } else if (word !== "none") {
+                got.name = word.replace(/^["']|["']$/g, "");
+            }
+        });
+        keys.forEach(function(k) { out[k].push(got[k]); });
+    });
+    return [["animation-name", out.name.join(", ")], ["animation-duration", out.duration.join(", ")],
+        ["animation-timing-function", out.timing.join(", ")], ["animation-delay", out.delay.join(", ")],
+        ["animation-iteration-count", out.count.join(", ")], ["animation-direction", out.direction.join(", ")],
+        ["animation-fill-mode", out.fill.join(", ")], ["animation-play-state", out.play.join(", ")]];
+}
+
+// --- Easing ---
+
+function _aBezier(x1, y1, x2, y2) {
+    var at = function(a, b, t) { return ((1 - 3 * b + 3 * a) * t + (3 * b - 6 * a)) * t * t + 3 * a * t; };
+    return function(x) {
+        if (x <= 0) {
+            return x1 > 0 ? y1 / x1 * x : y2 / x2 * x || 0;
         }
-        var timing = [ms, wait, easeOf(curves[i % curves.length])];
-        if (name === "all" || name === "background-color" || name === "background") {
-            got.color = timing;
+        if (x >= 1) {
+            return x2 < 1 ? 1 + (y2 - 1) / (x2 - 1) * (x - 1) : 1;
         }
-        if (name === "all" || name === "opacity") {
-            got.fade = timing;
+        var lo = 0;
+        var hi = 1;
+        var t = x;
+        for (var i = 0; i < 60; ++i) {
+            var found = at(x1, x2, t);
+            if (Math.abs(found - x) < 1e-10) {
+                break;
+            }
+            if (found < x) {
+                lo = t;
+            } else {
+                hi = t;
+            }
+            t = (lo + hi) / 2;
         }
-        if (name === "all" || name === "transform") {
-            got.move = timing;
+        return at(y1, y2, t);
+    };
+}
+
+// css-easing §2.3, with the before flag taken as unset: an effect in its delay
+// never reaches an easing here.
+function _aSteps(count, position) {
+    return function(x) {
+        var current = Math.floor(x * count);
+        if (position === "start" || position === "jump-start" || position === "both" || position === "jump-both") {
+            ++current;
         }
-        if (!/^(all|background-color|background|opacity|transform)$/.test(name)) {
-            _gWarn(raw, "transition", "`" + name + "` changes at once on a created box");
+        var jumps = count;
+        if (position === "jump-none") {
+            jumps = count - 1;
+        } else if (position === "jump-both") {
+            jumps = count + 1;
+        }
+        return x >= 0 && x <= 1 ? Math.min(current, jumps) / jumps : x < 0 ? 0 : 1;
+    };
+}
+
+// `linear(0, .5 20%, 1)`: css-easing §2.2, missing inputs spread evenly.
+function _aLinearPoints(text) {
+    var points = _aList(text).map(function(part) {
+        var words = part.trim().split(/\s+/);
+        var input = null;
+        for (var i = 1; i < words.length; ++i) {
+            input = parseFloat(words[i]) / 100;
+        }
+        return { out: parseFloat(words[0]), at: input };
+    });
+    if (points.length < 2) {
+        return function(x) { return x; };
+    }
+    if (points[0].at === null) {
+        points[0].at = 0;
+    }
+    if (points[points.length - 1].at === null) {
+        points[points.length - 1].at = 1;
+    }
+    var high = points[0].at;
+    points.forEach(function(p) {
+        if (p.at !== null) {
+            high = Math.max(high, p.at);
+            p.at = high;
+        }
+    });
+    for (var n = 1; n < points.length; ++n) {
+        if (points[n].at === null) {
+            var end = n;
+            while (points[end].at === null) {
+                ++end;
+            }
+            for (var k = n; k < end; ++k) {
+                points[k].at = points[n - 1].at + (points[end].at - points[n - 1].at) * (k - n + 1) / (end - n + 1);
+            }
         }
     }
-    _gSet(raw, "eldurColorMs", got.color[0]);
-    _gSet(raw, "eldurColorWait", got.color[1]);
-    _gSet(raw, "eldurColorEase", got.color[2]);
-    _gSet(raw, "eldurFadeMs", got.fade[0]);
-    _gSet(raw, "eldurFadeWait", got.fade[1]);
-    _gSet(raw, "eldurFadeEase", got.fade[2]);
-    m.gTweenMs = got.move[0];
-    m.gTweenWait = got.move[1];
-    m.gTweenEase = got.move[2];
+    return function(x) {
+        var i = 1;
+        while (i < points.length - 1 && points[i].at < x) {
+            ++i;
+        }
+        var a = points[i - 1];
+        var b = points[i];
+        return b.at === a.at ? b.out : a.out + (b.out - a.out) * (x - a.at) / (b.at - a.at);
+    };
+}
+
+function _aEasing(text) {
+    var word = String(text === undefined ? "linear" : text).trim().toLowerCase();
+    var named = { ease: [.25, .1, .25, 1], "ease-in": [.42, 0, 1, 1], "ease-out": [0, 0, .58, 1],
+        "ease-in-out": [.42, 0, .58, 1] }[word];
+    if (named) {
+        return _aBezier(named[0], named[1], named[2], named[3]);
+    }
+    if (word === "step-start") {
+        return _aSteps(1, "start");
+    }
+    if (word === "step-end") {
+        return _aSteps(1, "end");
+    }
+    var fn = /^([a-z-]+)\((.*)\)$/.exec(word);
+    if (fn && fn[1] === "cubic-bezier") {
+        var v = fn[2].split(",").map(parseFloat);
+        return _aBezier(v[0], v[1], v[2], v[3]);
+    }
+    if (fn && fn[1] === "steps") {
+        var parts = fn[2].split(",");
+        return _aSteps(parseInt(parts[0], 10), parts[1] ? parts[1].trim() : "end");
+    }
+    if (fn && fn[1] === "linear") {
+        return _aLinearPoints(fn[2]);
+    }
+    return function(x) { return x; };
+}
+
+// --- Values ---
+
+// Chromium computes in floats and writes six figures.
+function _aNumber(v) {
+    return parseFloat(Math.fround(v).toPrecision(6));
+}
+
+// What a property's value is once its relative units are gone, comparable as
+// text and in the one form the mixing below understands.
+function _aNormal(raw, s, prop, text) {
+    var value = String(text).trim();
+    if (_A_COLORS.test(prop)) {
+        return _gColor(value, s["color"]);
+    }
+    if (prop === "box-shadow" && value !== "none") {
+        var held = _gShadowsAt(prop, value, s.fontSize);
+        return held ? held.css : value;
+    }
+    if (prop === "transform" || prop === "box-shadow" || prop === "filter") {
+        return value;
+    }
+    if (prop === "visibility" || prop === "z-index" || prop === "opacity" || /^flex-(grow|shrink)$/.test(prop)) {
+        return value;
+    }
+    if (prop === "line-height" && /^[-+.\d]+$/.test(value)) {
+        return _aNumber(parseFloat(value) * s.fontSize) + "px";
+    }
+    var basis = raw.parent ? raw.parent.width : 0;
+    if (/%/.test(value) && /^(height|min-height|max-height|top|bottom|flex-basis)$/.test(prop)) {
+        return value;
+    }
+    var px = _gPx(value, basis, s.fontSize, s.rootSize);
+    return px === null ? value : _aNumber(px) + "px";
+}
+
+function _aCurrent(raw, s, prop) {
+    if (prop === "font-size") {
+        return s.fontSize + "px";
+    }
+    if (prop === "line-height") {
+        return s.linePx !== null && s.linePx !== undefined ? s.linePx + "px"
+            : s.lineFactor ? _aNumber(s.lineFactor * s.fontSize) + "px" : "normal";
+    }
+    var value = s[prop];
+    return value === undefined ? undefined : _aNormal(raw, s, prop, value);
+}
+
+function _aRgba(text) {
+    var m = /rgba?\(([^)]*)\)/.exec(text);
+    if (!m) {
+        return null;
+    }
+    var v = m[1].split(/[\s,/]+/).filter(function(p) { return p !== ""; }).map(parseFloat);
+    return [v[0], v[1], v[2], v.length > 3 ? v[3] : 1];
+}
+
+function _aMixColor(a, b, t) {
+    var from = _aRgba(a);
+    var to = _aRgba(b);
+    if (!from || !to) {
+        return t < .5 ? a : b;
+    }
+    // Colours mix premultiplied (css-color-4 §12).
+    var alpha = from[3] + (to[3] - from[3]) * t;
+    var channel = function(i) {
+        if (alpha <= 0) {
+            return 0;
+        }
+        var v = (from[i] * from[3] + (to[i] * to[3] - from[i] * from[3]) * t) / alpha;
+        return Math.max(0, Math.min(255, Math.round(v)));
+    };
+    var clamped = Math.max(0, Math.min(1, alpha));
+    return clamped >= 1 ? "rgb(" + channel(0) + ", " + channel(1) + ", " + channel(2) + ")"
+        : "rgba(" + channel(0) + ", " + channel(1) + ", " + channel(2) + ", " + _aNumber(clamped) + ")";
+}
+
+var _A_NUMBER = /[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?([a-z%]*)/gi;
+
+// Colours out of the way, so what is left of two values is numbers and words.
+function _aLiftColors(text, colors) {
+    return String(text).replace(/#[0-9a-f]{3,8}\b|(?:rgb|hsl)a?\([^)]*\)/gi, function(found) {
+        colors.push(_gColor(found, "rgb(0, 0, 0)"));
+        return "\u0001";
+    });
+}
+
+// Two values of one shape, number by number; a list of transform functions is
+// one when the functions are the same. `null`: they have no shape in common.
+function _aMixShapes(a, b, t) {
+    var colorsA = [];
+    var colorsB = [];
+    var textA = _aLiftColors(a, colorsA);
+    var textB = _aLiftColors(b, colorsB);
+    var numbersB = [];
+    var unitsB = [];
+    var shapeB = textB.replace(_A_NUMBER, function(n, unit) {
+        numbersB.push(parseFloat(n));
+        unitsB.push(unit);
+        return "\u0002";
+    });
+    var numbersA = [];
+    var unitsA = [];
+    var shapeA = textA.replace(_A_NUMBER, function(n, unit) {
+        numbersA.push(parseFloat(n));
+        unitsA.push(unit);
+        return "\u0002";
+    });
+    if (shapeA !== shapeB || numbersA.length !== numbersB.length || colorsA.length !== colorsB.length) {
+        return null;
+    }
+    for (var u = 0; u < unitsA.length; ++u) {
+        if (unitsA[u] !== unitsB[u] && numbersA[u] !== 0 && numbersB[u] !== 0) {
+            return null;
+        }
+    }
+    var at = 0;
+    var color = 0;
+    return shapeA.replace(/[\u0001\u0002]/g, function(mark) {
+        if (mark === "\u0001") {
+            var mixed = _aMixColor(colorsA[color], colorsB[color], t);
+            ++color;
+            return mixed;
+        }
+        var unit = unitsA[at] || unitsB[at];
+        var v = numbersA[at] + (numbersB[at] - numbersA[at]) * t;
+        ++at;
+        return _aNumber(v) + unit;
+    });
+}
+
+// `none` is the other list with nothing done: translate 0, scale 1, rotate 0.
+function _aNeutralTransform(list) {
+    return list.replace(/([a-zA-Z0-9]+)\(([^)]*)\)/g, function(all, fn, args) {
+        var one = /^scale/.test(fn) ? "1" : "0";
+        return fn + "(" + args.split(",").map(function() { return one; }).join(", ") + ")";
+    });
+}
+
+function _aInterpolable(prop, a, b) {
+    if (a === undefined || b === undefined) {
+        return false;
+    }
+    if (prop === "visibility") {
+        return true;
+    }
+    return _aMix(prop, a, b, .5, true) !== null;
+}
+
+// The value `t` of the way from `a` to `b`, by CSS's rules for the property.
+// With `strict`, `null` when the two don't interpolate; otherwise they flip at
+// the half, as keyframes of such values do.
+function _aMix(prop, a, b, t, strict) {
+    if (a === b) {
+        return a;
+    }
+    if (prop === "visibility") {
+        return t <= 0 ? a : t >= 1 ? b : (a === "visible" || b === "visible" ? "visible" : b);
+    }
+    if (_A_COLORS.test(prop)) {
+        return _aMixColor(a, b, t);
+    }
+    var from = a;
+    var to = b;
+    if (prop === "transform") {
+        from = a === "none" ? _aNeutralTransform(b) : a;
+        to = b === "none" ? _aNeutralTransform(a) : b;
+    } else if (prop === "filter") {
+        from = a === "none" ? _aNeutralTransform(b) : a;
+        to = b === "none" ? _aNeutralTransform(a) : b;
+    } else if (prop === "box-shadow") {
+        from = a === "none" ? String(b).replace(_A_NUMBER, function(n, unit) { return "0" + unit; }) : a;
+        to = b === "none" ? String(a).replace(_A_NUMBER, function(n, unit) { return "0" + unit; }) : b;
+    } else if (!/\d/.test(a) || !/\d/.test(b)) {
+        return strict ? null : t < .5 ? a : b;
+    }
+    var mixed = _aMixShapes(from, to, t);
+    if (mixed === null) {
+        return strict ? null : t < .5 ? a : b;
+    }
+    if (prop === "opacity") {
+        return String(Math.max(0, Math.min(1, parseFloat(mixed))));
+    }
+    if (_A_LAID_OUT.test(prop) && /^[-\d.]+px$/.test(mixed)) {
+        return Math.floor(parseFloat(mixed) * 64) / 64 + "px";
+    }
+    return mixed;
+}
+
+// What the converter would have parsed, for a value only a moment has: a mix
+// of two it did, so numbers in px, %, em and rgb colours.
+function _aPaintBetween(prop, text) {
+    if (prop === "transform") {
+        return _aTransformFns(text);
+    }
+    return prop === "box-shadow" ? _aShadowList(text) : undefined;
+}
+
+function _aAngle(text) {
+    var v = parseFloat(text);
+    var unit = /[a-z]+$/i.exec(text);
+    var per = { rad: 180 / Math.PI, turn: 360, grad: .9 }[unit ? unit[0] : "deg"] || 1;
+    return v * per * Math.PI / 180;
+}
+
+function _aTransformFns(text) {
+    var length = function(word) {
+        var v = parseFloat(word);
+        return /%$/.test(word) ? [0, v] : /r?em$/.test(word) ? [0, 0, v] : [v, 0];
+    };
+    var fns = [];
+    var found = /([a-zA-Z0-9]+)\(([^)]*)\)/g;
+    var one;
+    while ((one = found.exec(text)) !== null) {
+        var a = one[2].split(",").map(function(p) { return p.trim(); });
+        var n = a.map(parseFloat);
+        switch (one[1]) {
+        case "translate": fns.push({ t: [length(a[0]), length(a[1] || "0")] }); break;
+        case "translateX": fns.push({ t: [length(a[0]), [0, 0]] }); break;
+        case "translateY": fns.push({ t: [[0, 0], length(a[0])] }); break;
+        case "scale": fns.push({ m: [n[0], 0, 0, a.length > 1 ? n[1] : n[0], 0, 0] }); break;
+        case "scaleX": fns.push({ m: [n[0], 0, 0, 1, 0, 0] }); break;
+        case "scaleY": fns.push({ m: [1, 0, 0, n[0], 0, 0] }); break;
+        case "rotate": {
+            var r = _aAngle(a[0]);
+            fns.push({ m: [Math.cos(r), Math.sin(r), -Math.sin(r), Math.cos(r), 0, 0] });
+            break;
+        }
+        case "skew": fns.push({ m: [1, Math.tan(_aAngle(a[1] || "0")), Math.tan(_aAngle(a[0])), 1, 0, 0] }); break;
+        case "skewX": fns.push({ m: [1, 0, Math.tan(_aAngle(a[0])), 1, 0, 0] }); break;
+        case "skewY": fns.push({ m: [1, Math.tan(_aAngle(a[0])), 0, 1, 0, 0] }); break;
+        case "matrix": fns.push({ m: n }); break;
+        default: return undefined;
+        }
+    }
+    return fns.length > 0 ? { fns: fns } : undefined;
+}
+
+function _aPhi(x) {
+    var z = x / Math.SQRT2;
+    var t = 1 / (1 + .3275911 * Math.abs(z));
+    var poly = t * (.254829592 + t * (-.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
+    var erf = 1 - poly * Math.exp(-z * z);
+    return .5 * (1 + (z < 0 ? -erf : erf));
+}
+
+// The curve of `bands_over` in `emit/shadow.rs`.
+function _aBands(blur, alpha, inset) {
+    if (blur <= 0) {
+        return [[0, alpha]];
+    }
+    var reach = inset ? 2 : 3;
+    var sigma = blur / 2;
+    var span = 2 * reach * sigma;
+    var n = Math.max(1, Math.min(Math.ceil(span), inset ? 24 : 64));
+    var step = span / n;
+    var edge = function(k) { return -reach * sigma + k * step; };
+    var left = [];
+    for (var k = 0; k <= n; ++k) {
+        left.push(1 - alpha * (1 - _aPhi((edge(k) - step / 2) / sigma)));
+    }
+    left.push(1);
+    var out = [];
+    for (var b = 0; b <= n; ++b) {
+        var a = 1 - left[b] / left[b + 1];
+        if (a * 255 >= .5) {
+            out.push([edge(b), a]);
+        }
+    }
+    return out;
+}
+
+function _aShadowList(text) {
+    var list = [];
+    var css = [];
+    var parts = _aList(text);
+    for (var i = 0; i < parts.length; ++i) {
+        var colors = [];
+        var rest = _aLiftColors(parts[i], colors);
+        var inset = /\binset\b/.test(rest);
+        var n = rest.match(/[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/gi) || [];
+        var rgba = _aRgba(colors.length ? colors[0] : "rgb(0, 0, 0)");
+        if (n.length < 2 || !rgba) {
+            return undefined;
+        }
+        var v = n.map(parseFloat);
+        var blur = Math.max(v[2] || 0, 0);
+        var spread = v[3] || 0;
+        list.push({ x: v[0], y: v[1], spread: spread, inset: inset, blur: blur, a: rgba[3],
+            c: Qt.rgba(rgba[0] / 255, rgba[1] / 255, rgba[2] / 255, 1).toString(),
+            bands: _aBands(blur, rgba[3], inset) });
+        css.push((colors[0] || "rgb(0, 0, 0)") + " " + v[0] + "px " + v[1] + "px " + blur + "px " + spread + "px"
+            + (inset ? " inset" : ""));
+    }
+    return { list: list, css: css.join(", ") };
+}
+
+// --- The timing model ---
+
+// The document's timeline only moves between frames: a script sees one moment,
+// however long it runs. Waking from idle is a frame of its own.
+var _aClock = 0;
+
+function _aNow() {
+    return _aClock;
+}
+
+function EldurAnimation(raw, kind, frames, timing) {
+    this._raw = raw;
+    this._kind = kind;
+    this._frames = frames;
+    this._timing = timing;
+    this._order = _aNextId++;
+    this._rate = 1;
+    this._start = _aNow();
+    this._hold = null;
+    this._paused = false;
+    this._phase = "idle";
+    this._iteration = 0;
+    this._told = false;
+    this.id = "";
+    this.onfinish = null;
+    this.oncancel = null;
+    this.onremove = null;
+    var self = this;
+    this.effect = {
+        target: wrap(raw),
+        getTiming: function() {
+            return { duration: self._timing.duration, delay: self._timing.delay, endDelay: self._timing.endDelay,
+                iterations: self._timing.iterations, direction: self._timing.direction, fill: self._timing.fill,
+                easing: self._timing.easing, iterationStart: 0 };
+        },
+        getComputedTiming: function() {
+            var state = _aState(self);
+            var t = self.effect.getTiming();
+            t.activeDuration = state.activeDuration;
+            t.endTime = state.end;
+            t.localTime = self.currentTime;
+            t.progress = state.progress;
+            t.currentIteration = state.progress === null ? null : state.iteration;
+            return t;
+        },
+        getKeyframes: function() {
+            return self._frames.map(function(f) { return Object.assign({ offset: f.offset }, f.values); });
+        },
+        updateTiming: function(change) {
+            Object.assign(self._timing, _aTimingOf(change, self._timing));
+            _aDirty = true;
+        }
+    };
+    this.timeline = document.timeline;
+}
+
+Object.defineProperties(EldurAnimation.prototype, {
+    currentTime: {
+        get: function() {
+            if (this._hold !== null) {
+                return this._hold;
+            }
+            return this._start === null ? null : (_aNow() - this._start) * this._rate;
+        },
+        set: function(v) {
+            if (this._hold !== null || this._start === null) {
+                this._hold = v;
+            } else {
+                this._start = _aNow() - v / this._rate;
+            }
+            _aDirty = true;
+            _aWake();
+        }
+    },
+    startTime: {
+        get: function() { return this._start; },
+        set: function(v) {
+            this._start = v;
+            this._hold = null;
+            this._paused = false;
+            _aDirty = true;
+            _aWake();
+        }
+    },
+    playbackRate: {
+        get: function() { return this._rate; },
+        set: function(v) {
+            var now = this.currentTime;
+            this._rate = v;
+            if (now !== null && this._hold === null) {
+                this._start = _aNow() - now / v;
+            }
+            _aDirty = true;
+        }
+    },
+    playState: {
+        get: function() {
+            if (this._paused) {
+                return "paused";
+            }
+            var now = this.currentTime;
+            if (now === null) {
+                return "idle";
+            }
+            var end = _aState(this).end;
+            return (this._rate > 0 && now >= end) || (this._rate < 0 && now <= 0) ? "finished" : "running";
+        }
+    },
+    pending: { get: function() { return false; } },
+    replaceState: { get: function() { return "active"; } },
+    finished: { get: function() { return _aPromise(this, "_finished"); } },
+    ready: { get: function() { return Promise.resolve(this); } },
+    animationName: { get: function() { return this._kind === "css" ? this._name : undefined; } },
+    transitionProperty: { get: function() { return this._kind === "transition" ? this._prop : undefined; } }
+});
+
+EldurAnimation.prototype.pause = function() {
+    var now = this.currentTime;
+    this._hold = now === null ? 0 : now;
+    this._start = null;
+    this._paused = true;
+    this._heldByScript = true;
+    _aDirty = true;
+};
+
+EldurAnimation.prototype.play = function() {
+    var now = this.currentTime;
+    var end = _aState(this).end;
+    if (now === null || (this._rate > 0 && (now < 0 || now >= end)) || (this._rate < 0 && (now <= 0 || now > end))) {
+        now = this._rate > 0 ? 0 : end;
+    }
+    this._hold = null;
+    this._paused = false;
+    this._heldByScript = false;
+    this._start = _aNow() - now / this._rate;
+    this._told = false;
+    _aAdd(this);
+    _aDirty = true;
+    _aWake();
+};
+
+EldurAnimation.prototype.finish = function() {
+    var end = this._rate > 0 ? _aState(this).end : 0;
+    this._hold = end;
+    this._start = null;
+    this._paused = false;
+    _aDirty = true;
+    _aWake();
+    // Nothing waits a frame: a read straight after sees it done.
+    _aSample();
+};
+
+EldurAnimation.prototype.cancel = function() {
+    var at = _aState(this);
+    var was = this._phase;
+    this._hold = null;
+    this._start = null;
+    this._paused = false;
+    _aRemove(this);
+    if (this._kind !== "script") {
+        if (was !== "idle" && was !== "after") {
+            _aQueue(this, this._kind === "css" ? "animationcancel" : "transitioncancel", at.activeTime);
+        }
+    } else if (this.oncancel) {
+        _aEvents.push({ call: this.oncancel, on: this });
+    }
+    if (this._finished) {
+        this._finished.reject(new Error("AbortError"));
+        this._finished = null;
+    }
+    this._phase = "idle";
+    _aDirty = true;
+    _aWake();
+    _aSample();
+};
+
+EldurAnimation.prototype.reverse = function() {
+    var now = this.currentTime;
+    var end = _aState(this).end;
+    this._rate = -this._rate;
+    this.play();
+    this.currentTime = now === null ? (this._rate > 0 ? 0 : end) : now;
+};
+
+EldurAnimation.prototype.commitStyles = function() {};
+EldurAnimation.prototype.persist = function() {};
+EldurAnimation.prototype.addEventListener = function(type, fn) {
+    if (type === "finish") {
+        this.onfinish = fn;
+    } else if (type === "cancel") {
+        this.oncancel = fn;
+    }
+};
+EldurAnimation.prototype.removeEventListener = function() {};
+
+function _aPromise(animation, slot) {
+    if (!animation[slot]) {
+        var holder = {};
+        holder.promise = new Promise(function(resolve, reject) {
+            holder.resolve = resolve;
+            holder.reject = reject;
+        });
+        // An abandoned rejection isn't the page's to hear about.
+        holder.promise.catch(function() {});
+        animation[slot] = holder;
+    }
+    return animation[slot].promise;
+}
+
+// Web Animations §4.8: phases, active time, progress, for this moment.
+function _aState(a) {
+    var t = a._timing;
+    var active = t.duration * t.iterations;
+    var end = Math.max(0, t.delay + active + t.endDelay);
+    var out = { activeDuration: active, end: end, progress: null, iteration: 0, activeTime: 0, phase: "idle" };
+    var local = a.currentTime;
+    if (local === null) {
+        return out;
+    }
+    var beforeEdge = Math.min(t.delay, end);
+    var afterEdge = Math.min(t.delay + active, end);
+    var phase = local < beforeEdge || (a._rate < 0 && local === beforeEdge) ? "before"
+        : local > afterEdge || (a._rate >= 0 && local === afterEdge) ? "after" : "active";
+    out.phase = phase;
+    var activeTime = null;
+    if (phase === "active") {
+        activeTime = local - t.delay;
+    } else if (phase === "before" && (t.fill === "backwards" || t.fill === "both")) {
+        activeTime = Math.max(local - t.delay, 0);
+    } else if (phase === "after" && (t.fill === "forwards" || t.fill === "both")) {
+        activeTime = Math.max(Math.min(local - t.delay, active), 0);
+    }
+    out.activeTime = phase === "before" ? 0 : phase === "after" ? active : local - t.delay;
+    if (activeTime === null) {
+        return out;
+    }
+    var overall = t.duration === 0 ? (phase === "before" ? 0 : t.iterations)
+        : active === Infinity || activeTime < active ? activeTime / t.duration : t.iterations;
+    var simple = overall === Infinity ? 0 : overall % 1;
+    var iteration = Math.floor(overall);
+    if (simple === 0 && overall > 0 && (phase === "after" || activeTime === active)) {
+        simple = 1;
+        iteration = overall - 1;
+    }
+    out.iteration = iteration;
+    var forward = t.direction === "normal" || (t.direction === "alternate" && iteration % 2 === 0)
+        || (t.direction === "alternate-reverse" && iteration % 2 === 1);
+    var directed = forward ? simple : 1 - simple;
+    out.progress = t.ease(directed);
+    return out;
+}
+
+// An animation outlives the item its element happens to be.
+function _aSwapped(old, next) {
+    for (var i = 0; i < _aAll.length; ++i) {
+        if (_aAll[i]._raw === old) {
+            _aAll[i]._raw = next;
+        }
+    }
+    _aMoved = _aMoved.map(function(raw) { return raw === old ? next : raw; });
+}
+
+function _aAdd(a) {
+    if (_aAll.indexOf(a) < 0) {
+        _aAll.push(a);
+    }
+}
+
+function _aRemove(a) {
+    var at = _aAll.indexOf(a);
+    if (at >= 0) {
+        _aAll.splice(at, 1);
+    }
+    var m = _meta(a._raw);
+    if (a._kind === "transition" && m.gTrans && m.gTrans[a._prop] === a) {
+        delete m.gTrans[a._prop];
+    }
+}
+
+function _aQueue(a, type, ms) {
+    _aEvents.push({ animation: a, type: type, elapsed: ms / 1000 });
+}
+
+function _aFire(item) {
+    if (item.call) {
+        item.call.call(item.on, { type: item.type || "cancel", target: item.on, currentTime: item.on.currentTime });
+        return;
+    }
+    var a = item.animation;
+    var raw = a._raw;
+    if (!_isConnected(raw)) {
+        return;
+    }
+    var ev = event(item.type, wrap(raw), null);
+    ev.bubbles = true;
+    ev.elapsedTime = _aNumber(item.elapsed);
+    ev.pseudoElement = "";
+    if (a._kind === "css") {
+        ev.animationName = a._name;
+    } else {
+        ev.propertyName = a._prop;
+    }
+    _dispatchDynamic(raw, item.type, ev);
+}
+
+// css-animations-2 §4.2 and css-transitions-2 §6.1: which events a move from
+// one phase to another makes.
+function _aTellPhase(a, state) {
+    var was = a._phase;
+    var phase = state.phase;
+    var active = state.activeDuration;
+    var t = a._timing;
+    if (a._kind === "css") {
+        if (was === "idle" || was === "before") {
+            if (phase === "active") {
+                _aQueue(a, "animationstart", Math.max(-t.delay, 0));
+            } else if (phase === "after") {
+                _aQueue(a, "animationstart", Math.max(-t.delay, 0));
+                if (t.iterations > 1) {
+                    _aQueue(a, "animationiteration", (t.iterations - 1) * t.duration);
+                }
+                _aQueue(a, "animationend", active);
+            }
+        } else if (was === "active") {
+            if (phase === "after") {
+                // A slow frame shouldn't cost a page the iteration it stepped over.
+                if (a._iteration + 1 < t.iterations) {
+                    _aQueue(a, "animationiteration", (t.iterations - 1) * t.duration);
+                }
+                _aQueue(a, "animationend", active);
+            } else if (phase === "before") {
+                _aQueue(a, "animationend", 0);
+            } else if (state.iteration !== a._iteration) {
+                _aQueue(a, "animationiteration", state.iteration * t.duration);
+            }
+        } else if (was === "after" && phase !== "after") {
+            _aQueue(a, "animationstart", phase === "active" ? state.activeTime : active);
+        }
+    } else if (a._kind === "transition") {
+        if (was === "idle") {
+            _aQueue(a, "transitionrun", 0);
+            was = "before";
+        }
+        if (was === "before") {
+            if (phase === "active") {
+                _aQueue(a, "transitionstart", Math.max(-t.delay, 0));
+            } else if (phase === "after") {
+                _aQueue(a, "transitionstart", Math.max(-t.delay, 0));
+                _aQueue(a, "transitionend", active);
+            }
+        } else if (was === "active" && phase === "after") {
+            _aQueue(a, "transitionend", active);
+        } else if (was === "active" && phase === "before") {
+            _aQueue(a, "transitionend", 0);
+        }
+    }
+    a._phase = phase;
+    if (phase === "active") {
+        a._iteration = state.iteration;
+    }
+}
+
+// --- What a moment looks like ---
+
+function _aWake() {
+    if (!_aTicker || !_aTicker.running) {
+        _aClock = Date.now() - _startTime;
+    }
+    if (!_aTicker) {
+        _aTicker = Qt.createQmlObject("import QtQuick; FrameAnimation { running: false }", _qobjectParent(), "eldur_motion");
+        _aTicker.triggered.connect(_aFrame);
+    }
+    _aTicker.running = true;
+}
+
+function _aFrame() {
+    _aClock = Date.now() - _startTime;
+    if (_gDirty || !_aScanned) {
+        _gDirty = true;
+        _gSettle();
+    }
+    _aSample();
+    var events = _aEvents;
+    _aEvents = [];
+    for (var i = 0; i < events.length; ++i) {
+        _aFire(events[i]);
+    }
+    var moving = _aEvents.length > 0 || !_aScanned || _aAll.some(function(a) { return a._hold === null && a._start !== null; });
+    if (!moving) {
+        _aTicker.running = false;
+    }
+}
+
+// The frame a keyframe list shows at `progress` for one property. `frames` are
+// `{ offset, values, ease }`; a property with no frame at 0 or 1 starts or ends
+// at what the element is without the animation.
+function _aSampleProp(raw, s, prop, frames, progress) {
+    var own = frames.filter(function(f) { return f.values[prop] !== undefined; });
+    var underlying = _aCurrent(raw, s, prop);
+    var norm = function(f) { return _aNormal(raw, s, prop, f.values[prop]); };
+    var from = null;
+    var to = null;
+    for (var i = 0; i < own.length; ++i) {
+        if (own[i].offset <= progress) {
+            from = own[i];
+        }
+        if (own[i].offset >= progress && to === null) {
+            to = own[i];
+        }
+    }
+    // A progress below 0 or above 1 only comes from an easing that overshoots.
+    if (progress < 0 && own.length && own[0].offset === 0) {
+        from = own[0];
+    }
+    if (progress > 1 && own.length && own[own.length - 1].offset === 1) {
+        to = own[own.length - 1];
+    }
+    if (from !== null && to !== null && from === to) {
+        var next = own[own.indexOf(from) + 1];
+        if (next && from.offset < 1) {
+            to = next;
+        } else if (own.indexOf(from) > 0) {
+            from = own[own.indexOf(from) - 1];
+        } else {
+            return norm(from);
+        }
+    }
+    var fromValue = from ? norm(from) : underlying;
+    var toValue = to ? norm(to) : underlying;
+    var fromAt = from ? from.offset : 0;
+    var toAt = to ? to.offset : 1;
+    if (fromValue === undefined || toValue === undefined) {
+        return undefined;
+    }
+    var local = toAt === fromAt ? 0 : (progress - fromAt) / (toAt - fromAt);
+    var eased = from && from.ease ? from.ease(local) : local;
+    return _aMix(prop, fromValue, toValue, eased, false);
+}
+
+function _aPropsOf(frames) {
+    var seen = {};
+    frames.forEach(function(f) {
+        Object.keys(f.values).forEach(function(p) { seen[p] = true; });
+    });
+    return Object.keys(seen);
+}
+
+// An item's style without what is moving it: where its animations start from.
+function _aBase(raw) {
+    var m = _meta(raw);
+    if (m.gAfterGen === _gGen && m.gAfter) {
+        return m.gAfter;
+    }
+    var overlay = m.gOverlay;
+    var cached = m.gStyle;
+    var cachedGen = m.gStyleGen;
+    m.gOverlay = null;
+    m.gStyle = null;
+    var s = _gStyle(raw);
+    m.gOverlay = overlay;
+    m.gStyle = overlay ? null : cached;
+    m.gStyleGen = cachedGen;
+    m.gAfter = s;
+    m.gAfterGen = _gGen;
+    return s;
+}
+
+function _aSample() {
+    if (_aBusy || _gRunning) {
+        return;
+    }
+    _aBusy = true;
+    var byItem = new Map();
+    var done = [];
+    // Web Animations §5.4: transitions under CSS animations under scripts'.
+    var rank = { transition: 0, css: 1, script: 2 };
+    var order = _aAll.slice().sort(function(x, y) {
+        return rank[x._kind] - rank[y._kind] || x._order - y._order;
+    });
+    for (var i = 0; i < order.length; ++i) {
+        var a = order[i];
+        var raw = a._raw;
+        if (!raw || !_isConnected(raw)) {
+            continue;
+        }
+        var state = _aState(a);
+        _aTellPhase(a, state);
+        if (a.playState === "finished") {
+            if (!a._told) {
+                a._told = true;
+                if (a.onfinish) {
+                    _aEvents.push({ call: a.onfinish, on: a, type: "finish" });
+                }
+                if (a._finished) {
+                    a._finished.resolve(a);
+                    a._finished = null;
+                }
+            }
+            if (state.progress === null) {
+                done.push(a);
+            }
+        }
+        if (state.progress === null) {
+            continue;
+        }
+        var s = _aBase(raw);
+        var values = byItem.get(raw);
+        if (!values) {
+            values = {};
+            byItem.set(raw, values);
+        }
+        var props = _aPropsOf(a._frames);
+        for (var p = 0; p < props.length; ++p) {
+            var mixed = _aSampleProp(raw, s, props[p], a._frames, state.progress);
+            if (mixed !== undefined) {
+                values[props[p]] = mixed;
+            }
+        }
+    }
+    // What was on an item and is no longer: a finished effect, a cancelled one.
+    var changed = false;
+    _aMoved.forEach(function(raw) {
+        if (!byItem.has(raw)) {
+            byItem.set(raw, {});
+        }
+    });
+    _aMoved = [];
+    var adopted = [];
+    byItem.forEach(function(values, raw) {
+        var m = _meta(raw);
+        var text = JSON.stringify(values);
+        if ((m.gOverlayText || "{}") !== text) {
+            m.gOverlay = Object.keys(values).length > 0 ? values : null;
+            m.gOverlayText = text;
+            changed = true;
+            if (m.gOverlay && _gStaticBase !== null && !_gIsBox(raw) && !m.createdTag) {
+                adopted.push(raw);
+            }
+        }
+        if (m.gOverlay) {
+            _aMoved.push(raw);
+        }
+    });
+    for (var d = 0; d < done.length; ++d) {
+        _aRemove(done[d]);
+    }
+    if (changed) {
+        var wasRunning = _gRunning;
+        _gRunning = true;
+        for (var n = 0; n < adopted.length; ++n) {
+            _aAdopt(adopted[n]);
+        }
+        ++_gGen;
+        _gReposition();
+        _gRunning = wasRunning;
+        // Sizes a layout hands down arrive with its polish, and a read wants them.
+        _polishDown(_root);
+        _gAfterPolish();
+        _polishDown(_root);
+    }
+    _aDirty = false;
+    _aBusy = false;
+}
+
+var _aMoved = [];
+
+function _aAdopt(raw) {
+    var m = _meta(raw);
+    var overlay = m.gOverlay;
+    var next = _gAdopt(raw);
+    if (!next) {
+        _gWarn(raw, "animation", "this element keeps its look while it animates: it has no box to move");
+        return;
+    }
+    _gStaticBase = _gStaticBase.filter(function(entry) { return entry.raw !== raw; });
+    _meta(next).gOverlay = overlay;
+}
+
+// --- From the cascade ---
+
+function _aKeyframes() {
+    if (_aKeyframeRules !== null) {
+        return _aKeyframeRules;
+    }
+    _aKeyframeRules = {};
+    if (_root && typeof _root.eldurKeyframes === "string" && _root.eldurKeyframes !== "") {
+        _aKeyframeRules = JSON.parse(_root.eldurKeyframes);
+    }
+    return _aKeyframeRules;
+}
+var _aKeyframeRules = null;
+
+function _aFramesOf(name, fallback) {
+    var rule = _aKeyframes()[name];
+    if (!rule) {
+        return null;
+    }
+    return rule.map(function(frame) {
+        var values = {};
+        frame.d.forEach(function(decl) {
+            _gExpand(decl[0], decl[1]).forEach(function(l) { values[l[0]] = l[1]; });
+        });
+        return { offset: frame.o, values: values, ease: _aEasing(frame.e || fallback) };
+    }).sort(function(x, y) { return x.offset - y.offset; });
+}
+
+function _aTimingOf(options, base) {
+    var o = options || {};
+    var t = base ? Object.assign({}, base) : { duration: 0, delay: 0, endDelay: 0, iterations: 1, direction: "normal",
+        fill: "none", easing: "linear", ease: function(x) { return x; } };
+    if (typeof o === "number") {
+        t.duration = o;
+        return t;
+    }
+    if (o.duration !== undefined && o.duration !== "auto") {
+        t.duration = Number(o.duration);
+    }
+    if (o.delay !== undefined) {
+        t.delay = Number(o.delay);
+    }
+    if (o.endDelay !== undefined) {
+        t.endDelay = Number(o.endDelay);
+    }
+    if (o.iterations !== undefined) {
+        t.iterations = Number(o.iterations);
+    }
+    if (o.direction !== undefined) {
+        t.direction = o.direction;
+    }
+    if (o.fill !== undefined && o.fill !== "auto") {
+        t.fill = o.fill;
+    }
+    if (o.easing !== undefined) {
+        t.easing = o.easing;
+        t.ease = _aEasing(o.easing);
+    }
+    return t;
+}
+
+function _aEach(list, i) {
+    return list[i % list.length];
+}
+
+function _aSyncCss(raw, m, s, rendered) {
+    var names = rendered ? _aList(s["animation-name"]) : ["none"];
+    var running = m.gCss || {};
+    var next = {};
+    var lists = {};
+    ["animation-duration", "animation-timing-function", "animation-delay", "animation-iteration-count",
+        "animation-direction", "animation-fill-mode", "animation-play-state"].forEach(function(key) {
+        lists[key] = _aList(s[key]);
+    });
+    for (var i = 0; i < names.length; ++i) {
+        var name = names[i];
+        if (name === "none" || next[name]) {
+            continue;
+        }
+        var curve = _aEach(lists["animation-timing-function"], i);
+        var count = _aEach(lists["animation-iteration-count"], i);
+        var timing = {
+            duration: _gSeconds(_aEach(lists["animation-duration"], i)),
+            delay: _gSeconds(_aEach(lists["animation-delay"], i)),
+            endDelay: 0,
+            iterations: count === "infinite" ? Infinity : parseFloat(count),
+            direction: _aEach(lists["animation-direction"], i),
+            fill: _aEach(lists["animation-fill-mode"], i),
+            easing: curve,
+            ease: function(x) { return x; }
+        };
+        var paused = _aEach(lists["animation-play-state"], i) === "paused";
+        var known = running[name];
+        if (known) {
+            known._timing = timing;
+            if (!known._heldByScript) {
+                if (paused && !known._paused) {
+                    known.pause();
+                    known._heldByScript = false;
+                } else if (!paused && known._paused) {
+                    known.play();
+                }
+            }
+            next[name] = known;
+            continue;
+        }
+        var frames = _aFramesOf(name, curve);
+        if (!frames) {
+            continue;
+        }
+        var made = new EldurAnimation(raw, "css", frames, timing);
+        made._name = name;
+        if (paused) {
+            made._hold = 0;
+            made._start = null;
+            made._paused = true;
+        }
+        _aAdd(made);
+        next[name] = made;
+    }
+    Object.keys(running).forEach(function(name) {
+        if (!next[name]) {
+            running[name].cancel();
+            _aMoved.push(raw);
+        }
+    });
+    m.gCss = next;
+}
+
+function _aMatching(s) {
+    var names = _aList(s["transition-property"]);
+    var durations = _aList(s["transition-duration"]);
+    var delays = _aList(s["transition-delay"]);
+    var curves = _aList(s["transition-timing-function"]);
+    var out = {};
+    for (var i = 0; i < names.length; ++i) {
+        var timing = { duration: _gSeconds(_aEach(durations, i)), delay: _gSeconds(_aEach(delays, i)),
+            curve: _aEach(curves, i) };
+        if (names[i] === "none") {
+            continue;
+        }
+        if (names[i] === "all") {
+            for (var a = 0; a < _A_PROPS.length; ++a) {
+                out[_A_PROPS[a]] = timing;
+            }
+        } else {
+            _aShorthandOf(names[i]).forEach(function(p) { out[p] = timing; });
+        }
+    }
+    return out;
+}
+
+// css-transitions-1 §3: what a change of computed value starts.
+function _aSyncTransitions(raw, m, s, rendered) {
+    var active = m.gTrans || {};
+    var before = m.gBefore;
+    var after = {};
+    var matching = _aMatching(s);
+    var watched = Object.keys(matching);
+    var anyRunning = Object.keys(active).length > 0;
+    if (!anyRunning && watched.every(function(p) { return matching[p].duration + matching[p].delay <= 0; })) {
+        m.gBefore = null;
+        return;
+    }
+    for (var w = 0; w < _A_PROPS.length; ++w) {
+        var prop = _A_PROPS[w];
+        if (matching[prop] || active[prop]) {
+            after[prop] = _aCurrent(raw, s, prop);
+        }
+    }
+    m.gBefore = after;
+    Object.keys(active).forEach(function(prop) {
+        if (!rendered || !matching[prop]) {
+            active[prop].cancel();
+        }
+    });
+    m.gTrans = active;
+    if (!before || !rendered) {
+        return;
+    }
+    // Web Animations gives transitions of one change their names' order.
+    Object.keys(after).sort().forEach(function(prop) {
+        var want = after[prop];
+        var running = active[prop];
+        if (want === undefined || before[prop] === undefined || want === before[prop]) {
+            return;
+        }
+        if (running && running._to === want) {
+            return;
+        }
+        var timing = matching[prop];
+        var combined = timing ? Math.max(timing.duration, 0) + timing.delay : 0;
+        var startAt = before[prop];
+        var state = running ? _aState(running) : null;
+        if (running) {
+            startAt = _aSampleProp(raw, s, prop, running._frames, state.progress === null ? 0 : state.progress);
+        }
+        if (combined <= 0 || !_aInterpolable(prop, startAt, want)) {
+            if (running) {
+                running.cancel();
+            }
+            return;
+        }
+        var factor = 1;
+        var duration = timing.duration;
+        var delay = timing.delay;
+        var reversingFrom = startAt;
+        // §3: going back to where a running transition began takes as much
+        // of the time as has been come.
+        if (running && running._reversingFrom === want) {
+            var portion = state.progress === null ? 0 : state.progress;
+            factor = Math.max(Math.min(Math.abs(portion * running._factor + 1 - running._factor), 1), 0);
+            duration = timing.duration * factor;
+            delay = timing.delay < 0 ? timing.delay * factor : timing.delay;
+            reversingFrom = running._to;
+        }
+        if (running) {
+            running.cancel();
+        }
+        var frames = [{ offset: 0, values: {}, ease: _aEasing(timing.curve) }, { offset: 1, values: {}, ease: null }];
+        frames[0].values[prop] = startAt;
+        frames[1].values[prop] = want;
+        var made = new EldurAnimation(raw, "transition", frames, { duration: duration, delay: delay, endDelay: 0,
+            iterations: 1, direction: "normal", fill: "backwards", easing: timing.curve,
+            ease: function(x) { return x; } });
+        made._prop = prop;
+        made._to = want;
+        made._reversingFrom = reversingFrom;
+        made._factor = factor;
+        active[prop] = made;
+        _aAdd(made);
+    });
+}
+
+function _aHasRules() {
+    if (_aRulesMove !== null) {
+        return _aRulesMove;
+    }
+    _aRulesMove = _gRules().some(function(rule) {
+        return rule.decls.some(function(d) { return /^(transition|animation)/.test(d[0]); });
+    });
+    return _aRulesMove;
+}
+var _aRulesMove = null;
+// A script's own `el.style.transition`, which no rule shows.
+var _aInlineMoves = false;
+
+function _aScanTree(raw, rendered) {
+    if (!raw || raw.__eldurInline || typeof raw.visible !== "boolean") {
+        return;
+    }
+    var m = _meta(raw);
+    var s = _aBase(raw);
+    var here = rendered && s.display !== "none";
+    _aSyncCss(raw, m, s, here);
+    _aSyncTransitions(raw, m, s, here);
+    var kids = _rawElementChildren(raw);
+    for (var i = 0; i < kids.length; ++i) {
+        _aScanTree(kids[i], here);
+    }
+}
+
+// Run after each style pass: starts and stops what the styles now ask for.
+function _aScan() {
+    if (!_gActive() || _aBusy) {
+        return;
+    }
+    _aScanned = true;
+    if (_root.eldurNoMotion === true) {
+        return;
+    }
+    if (!_aHasRules() && !_aInlineMoves && _aAll.length === 0) {
+        return;
+    }
+    _aBusy = true;
+    var html = _taggedHtml();
+    if (html) {
+        _aScanTree(html, true);
+    }
+    _aBusy = false;
+    _aDirty = true;
+    if (_aAll.length > 0 || _aEvents.length > 0) {
+        _aWake();
+    }
+}
+
+// A read sees this moment: what scripts just wrote and how far things have come.
+function _aRead() {
+    if (!_gActive() || _aBusy || _gRunning) {
+        return;
+    }
+    if (_gDirty || !_aScanned) {
+        _gDirty = true;
+        _gSettle();
+    }
+    if (_aDirty || _aAll.some(function(a) { return a._hold === null && a._start !== null; })) {
+        _aSample();
+    }
+}
+
+function _aAnimate(raw, keyframes, options) {
+    var list = [];
+    if (Array.isArray(keyframes)) {
+        list = keyframes;
+    } else if (keyframes) {
+        var longest = 0;
+        Object.keys(keyframes).forEach(function(k) {
+            if (Array.isArray(keyframes[k])) {
+                longest = Math.max(longest, keyframes[k].length);
+            }
+        });
+        for (var i = 0; i < Math.max(longest, 1); ++i) {
+            var one = {};
+            Object.keys(keyframes).forEach(function(k) {
+                var values = keyframes[k];
+                if (!Array.isArray(values)) {
+                    if (longest === 0) {
+                        one[k] = values;
+                    }
+                } else if (values[i] !== undefined) {
+                    one[k] = values[i];
+                }
+            });
+            list.push(one);
+        }
+    }
+    var frames = list.map(function(k, i) {
+        var values = {};
+        Object.keys(k).forEach(function(key) {
+            if (key !== "offset" && key !== "easing" && key !== "composite") {
+                var name = key.indexOf("-") >= 0 ? key : _camelToKebab(key);
+                _gExpand(name, String(k[key])).forEach(function(l) { values[l[0]] = l[1]; });
+            }
+        });
+        var offset = typeof k.offset === "number" ? k.offset
+            : list.length === 1 ? 1 : i / (list.length - 1);
+        return { offset: offset, values: values, ease: k.easing ? _aEasing(k.easing) : null };
+    });
+    var animation = new EldurAnimation(raw, "script", frames, _aTimingOf(options));
+    if (options && options.id) {
+        animation.id = options.id;
+    }
+    _aAdd(animation);
+    _aDirty = true;
+    _aWake();
+    return animation;
+}
+
+function _aAnimationsOf(raw) {
+    _aRead();
+    var rank = { transition: 0, css: 1, script: 2 };
+    var own = _meta(raw);
+    return _aAll.filter(function(a) {
+        if (_meta(a._raw) !== own) {
+            return false;
+        }
+        // Current or in effect (Web Animations §4.7).
+        var state = _aState(a);
+        var finished = a._rate > 0 ? state.phase === "after" : state.phase === "before";
+        return state.progress !== null || !finished;
+    }).sort(function(x, y) { return rank[x._kind] - rank[y._kind] || x._order - y._order; });
 }
 
 // --- :hover and the like ----------------------------------------------------
@@ -13787,11 +15656,41 @@ function _gWatchStates() {
     });
 }
 
+function _gPlaceSticky(raw, s) {
+    var m = _meta(raw);
+    if (m.gShift) {
+        m.gShift.x = 0;
+        m.gShift.y = 0;
+    }
+    if (!m.gSticky) {
+        m.gSticky = Qt.createComponent(Qt.resolvedUrl("EldurSticky.qml")).createObject(raw, { target: raw });
+        _gSetTransforms(raw);
+    }
+    var width = raw.parent ? raw.parent.width : 0;
+    var height = raw.parent ? raw.parent.height : 0;
+    var inset = function(value, base) {
+        var px = _gPx(value, base, s.fontSize, s.rootSize);
+        return px === null ? undefined : px;
+    };
+    m.gSticky.stickTop = inset(s.top, height);
+    m.gSticky.stickRight = inset(s.right, width);
+    m.gSticky.stickBottom = inset(s.bottom, height);
+    m.gSticky.stickLeft = inset(s.left, width);
+}
+
 function _gPlaceRelative(raw, s) {
     var m = _meta(raw);
     var dx = 0;
     var dy = 0;
-    if (s.position === "relative" || s.position === "sticky") {
+    if (s.position === "sticky") {
+        _gPlaceSticky(raw, s);
+        return;
+    }
+    if (m.gSticky) {
+        m.gSticky = null;
+        _gSetTransforms(raw);
+    }
+    if (s.position === "relative") {
         var parentWidth = raw.parent ? raw.parent.width : 0;
         var left = _gPx(s.left, parentWidth, s.fontSize, s.rootSize);
         var right = _gPx(s.right, parentWidth, s.fontSize, s.rootSize);
@@ -14540,6 +16439,7 @@ function _gSettle() {
     _gPrune();
     _gWatchStates();
     _tableRepaintAll();
+    _aScan();
     _gReposition();
     _gRunning = false;
 }
@@ -14571,7 +16471,142 @@ function _gReposition() {
             _gPlaceOutOfFlow(raw);
         }
     }
+    _gSyncScrollers();
     return outs;
+}
+
+// A created box scrolls without its children changing parent, which layout and
+// the DOM both lean on: an empty Flickable beneath them holds the offset and
+// takes the input they leave, and a Translate carries each of them along.
+function _gSyncScrollers() {
+    for (var i = 0; i < _gLive.length; ++i) {
+        var raw = _gLive[i];
+        if (!_gIsBox(raw)) {
+            continue;
+        }
+        var s = _gStyle(raw);
+        var scrollsX = _gScrollable(s["overflow-x"]);
+        var scrollsY = _gScrollable(s["overflow-y"]);
+        var m = _meta(raw);
+        if ((!scrollsX && !scrollsY) || s.display === "none" || !_isConnected(raw)) {
+            if (m.gScroller) {
+                _gDropScroller(raw);
+            }
+            continue;
+        }
+        var e = _gEdges(raw, s, raw.parent ? raw.parent.width : 0);
+        var portW = Math.max(raw.width - e.bl - e.br, 0);
+        var portH = Math.max(raw.height - e.bt - e.bb, 0);
+        var content = _gScrollContent(raw);
+        var farX = 0;
+        var farY = 0;
+        for (var k = 0; k < content.length; ++k) {
+            var kid = content[k];
+            if (kid.visible) {
+                farX = Math.max(farX, kid.x + kid.width + (kid.eldurMr || 0));
+                farY = Math.max(farY, kid.y + kid.height + (kid.eldurMb || 0));
+            }
+        }
+        var wide = Math.max(portW, farX - e.bl + e.pr);
+        var tall = Math.max(portH, farY - e.bt + e.pb);
+        // Chromium's own overflow test rounds; a box that fits gains nothing.
+        if (!m.gScroller && Math.round(wide) <= Math.round(portW) && Math.round(tall) <= Math.round(portH)) {
+            continue;
+        }
+        var port = m.gScroller || _gMakeScroller(raw);
+        port.x = e.bl;
+        port.y = e.bt;
+        port.width = portW;
+        port.height = portH;
+        port.scrollsX = scrollsX;
+        port.scrollsY = scrollsY;
+        // `hidden` scrolls for scripts alone.
+        port.userScrolls = s["overflow-x"] !== "hidden" || s["overflow-y"] !== "hidden";
+        port.stickPadTop = e.pt;
+        port.stickPadRight = e.pr;
+        port.stickPadBottom = e.pb;
+        port.stickPadLeft = e.pl;
+        port.contentWidth = wide;
+        port.contentHeight = tall;
+        port.contentX = Math.max(0, Math.min(port.contentX, wide - portW));
+        port.contentY = Math.max(0, Math.min(port.contentY, tall - portH));
+        for (var c = 0; c < content.length; ++c) {
+            if (_meta(content[c]).gScrolled !== m.gScrollMove) {
+                _meta(content[c]).gScrolled = m.gScrollMove;
+                _gSetTransforms(content[c]);
+            }
+        }
+    }
+}
+
+function _gScrollable(overflow) {
+    return overflow === "auto" || overflow === "scroll" || overflow === "hidden";
+}
+
+// What scrolls: the box's children and text, not what paints the box itself.
+function _gScrollContent(raw) {
+    var out = [];
+    for (var i = 0; i < raw.children.length; ++i) {
+        var ch = raw.children[i];
+        if (ch.eldurCreatedBox === true || _isAnonLines(ch) || typeof ch.lineCount === "number"
+            || typeof ch.eldurTag === "string" || _meta(ch).createdTag) {
+            out.push(ch);
+        }
+    }
+    // Boxes positioned against this one or something in it paint in a gate above
+    // the page. One whose block is this box stays within what the box shows.
+    for (var j = 0; j < _gLive.length; ++j) {
+        var other = _gLive[j];
+        var gate = _meta(other).outOfFlowGate;
+        if (!gate || !_isConnected(other) || _gStyle(other).position !== "absolute") {
+            continue;
+        }
+        var block = _gContainingBlock(other, _gStyle(other));
+        if (_gNearestScrollBox(block) === raw) {
+            gate.clip = block === raw;
+            out.push(other);
+        }
+    }
+    return out;
+}
+
+function _gNearestScrollBox(raw) {
+    for (var at = raw; at && at !== _root; at = _logicalParent(at)) {
+        var s = _gStyle(at);
+        if (_gScrollable(s["overflow-x"]) || _gScrollable(s["overflow-y"])) {
+            return at;
+        }
+    }
+    return null;
+}
+
+function _gMakeScroller(raw) {
+    var m = _meta(raw);
+    var port = Qt.createComponent(Qt.resolvedUrl("EldurScroller.qml")).createObject(raw, { overlaidOn: raw, z: -1 });
+    m.gScroller = port;
+    m.gScrollMove = Qt.createQmlObject("import QtQuick; Translate {}", port, "eldur_scroll_move");
+    m.gScrollMove.x = Qt.binding(function() { return -port.contentX; });
+    m.gScrollMove.y = Qt.binding(function() { return -port.contentY; });
+    raw.eldurScrollPort = port;
+    if (m.connected && m.connected.scroll) {
+        _listenToScroll(raw, port);
+    }
+    return port;
+}
+
+function _gDropScroller(raw) {
+    var m = _meta(raw);
+    var content = _gScrollContent(raw);
+    for (var i = 0; i < content.length; ++i) {
+        if (_meta(content[i]).gScrolled) {
+            _meta(content[i]).gScrolled = null;
+            _gSetTransforms(content[i]);
+        }
+    }
+    raw.eldurScrollPort = null;
+    m.gScroller.destroy();
+    m.gScroller = null;
+    m.gScrollMove = null;
 }
 
 // Widths a layout hands down arrive only once it is polished.
@@ -14994,6 +17029,28 @@ function _gNumberText(n) {
     return String(Number(n.toPrecision(6)));
 }
 
+// A closed page's transitions are Behaviors, which the cascade knows nothing of:
+// the value on the way is on the item. On open pages `_aRead` has put it in the style.
+function _gInFlight(raw, prop, settled) {
+    if (_gActive()) {
+        return settled;
+    }
+    var name = _camelToKebab(prop);
+    var read = {
+        "opacity": function() { return String(raw.opacity); },
+        "width": function() { return raw.width + "px"; },
+        "height": function() { return raw.height + "px"; },
+        "background-color": function() {
+            return raw.color !== undefined && typeof raw.text !== "string" ? _vLiveColor(raw.color) : settled;
+        }
+    }[name];
+    if (!read || !/[1-9]/.test(_gComputed(raw, "transition-duration") + _gComputed(raw, "transition-delay"))) {
+        return settled;
+    }
+    var listed = String(_gComputed(raw, "transition-property")).split(/\s*,\s*/);
+    return listed.indexOf("all") >= 0 || listed.indexOf(name) >= 0 ? read() : settled;
+}
+
 function _gComputed(raw, prop) {
     if (raw.__eldurInline || typeof raw.visible !== "boolean") {
         return null;
@@ -15012,6 +17069,12 @@ function _gComputed(raw, prop) {
         if (s.display === "none" || s.display === "inline") {
             return s.display === "none" ? length(s[name]) : "auto";
         }
+        // Layouts round sizes up to whole pixels and carry the rest: an animation
+        // mid-way has the size it says, in the 1/64 units it was written in.
+        var moving = _meta(raw).gOverlay;
+        if (moving && /^[-\d.]+px$/.test(moving[name] || "")) {
+            return _aNumber(parseFloat(moving[name])) + "px";
+        }
         var frame = 0;
         if (s["box-sizing"] !== "border-box") {
             var edges = _gEdges(raw, s, parentWidth);
@@ -15028,6 +17091,13 @@ function _gComputed(raw, prop) {
             return w === "underline" || w === "line-through" || w === "overline";
         }).join(" ") : "";
         return line === "" ? "none" : line;
+    }
+    if (name === "text-decoration-style") {
+        return s.won[name] ? String(s.won[name].value) : "solid";
+    }
+    if (name === "text-decoration-color") {
+        var tint = s.won[name] ? String(s.won[name].value) : "currentcolor";
+        return _gColor(tint, s["color"]);
     }
     if (name === "background-image" || name === "box-shadow") {
         var parsed = s[name] === "none" ? null : _gShadowsAt(name, s[name], s.fontSize);

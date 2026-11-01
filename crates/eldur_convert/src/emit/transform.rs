@@ -8,7 +8,9 @@
 //! box's own size, so they refer to the item by id. Like CSS, a transform
 //! moves only the painting, not the layout.
 
-use eldur_css::{ComputedStyle, Length, LengthPercentage, TransformFn};
+use eldur_css::{
+    ComputedStyle, Display, Length, LengthAuto, LengthPercentage, Position, TransformFn,
+};
 use eldur_qml::{Object, Value};
 
 use super::Emitter;
@@ -138,6 +140,65 @@ impl Emitter<'_, '_> {
             list[0].set("objectName", "eldurCss");
         }
         values.extend(list.into_iter().map(|t| Value::Object(Box::new(t))));
+        let value = if values.len() == 1 {
+            values.pop().expect("one transform")
+        } else {
+            Value::List(values)
+        };
+        obj.set("transform", value);
+    }
+
+    /// `position: sticky`, last in the list: it moves the box as transformed.
+    pub(super) fn sticky_transform(&mut self, obj: &mut Object, style: &ComputedStyle, hint: &str) {
+        if style.position != Position::Sticky {
+            return;
+        }
+        let id = match &obj.id {
+            Some(id) => id.clone(),
+            None => {
+                let id = self.ids.claim(&format!("{hint} sticky"));
+                obj.id = Some(id.clone());
+                id
+            }
+        };
+        let mut sticky = Object::new("EldurSticky");
+        sticky.set("target", Value::expr(id));
+        if style.display == Display::TableCell {
+            sticky.set("cell", true);
+        }
+        let parent = |along: &str| format!("target.parent ? target.parent.{along} : 0");
+        for (name, inset, along) in [
+            ("stickTop", &style.top, "height"),
+            ("stickRight", &style.right, "width"),
+            ("stickBottom", &style.bottom, "height"),
+            ("stickLeft", &style.left, "width"),
+        ] {
+            if let LengthAuto::Length(l) = inset {
+                sticky.set(
+                    name,
+                    Value::expr(length_expr(l, &format!("({})", parent(along)))),
+                );
+            }
+        }
+        for (name, margin) in [
+            ("marginTop", &style.margin.top),
+            ("marginRight", &style.margin.right),
+            ("marginBottom", &style.margin.bottom),
+            ("marginLeft", &style.margin.left),
+        ] {
+            if let LengthAuto::Length(l) = margin
+                && let Some(px) = l.as_px()
+                && px != 0.0
+            {
+                sticky.set(name, number(px));
+            }
+        }
+        let mut values = match obj.get("transform") {
+            Some(Value::List(old)) => old.clone(),
+            Some(old) => vec![old.clone()],
+            None => Vec::new(),
+        };
+        values.push(Value::Object(Box::new(sticky)));
         let value = if values.len() == 1 {
             values.pop().expect("one transform")
         } else {

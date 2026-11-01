@@ -1,0 +1,18 @@
+[
+{
+"selector": "#s-head",
+"pad": 8
+},
+{
+"selector": "#s-th",
+"pad": 8
+},
+{
+"selector": "#s-aside",
+"pad": 8
+},
+{
+"selector": "#s-main",
+"pad": 8
+}
+]

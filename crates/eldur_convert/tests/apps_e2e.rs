@@ -40,9 +40,14 @@ const HANGING: &str = "a span wrapped across lines measures the space hanging at
 const NEVER_SCRIPT: &str =
     "a script in the body makes no item, so its source is not in the body's textContent";
 
+const TEMPLATE_MARGIN: &str = "a template's margins are worked out where the converter tried it, \
+     as the last child of the body, so a created box's bottom margin collapsed away";
+
 /// `(page, what differs, why)`. `what` starts a difference's name, as printed by a
 /// failing test, `<step> <selector>[<row>] <field>:`; `*` stands for any text.
 const KNOWN: &[(&str, &str, &str)] = &[
+    ("created_empty_body", "load log:", TEMPLATE_MARGIN),
+    ("created_empty_body", "load #two[*] y:", TEMPLATE_MARGIN),
     ("theme", "* #compact[*] x:", COMPACT),
     ("cards", "* #cart[*] height:", FONT),
     ("cards", "* .buy[*] y:", FONTFOLLOW),
@@ -107,7 +112,8 @@ TestCase {
     }
     function press(name) {
         const keys = { Enter: Qt.Key_Return, Escape: Qt.Key_Escape, Tab: Qt.Key_Tab, End: Qt.Key_End,
-            ArrowDown: Qt.Key_Down, ArrowUp: Qt.Key_Up, Backspace: Qt.Key_Backspace }
+            ArrowDown: Qt.Key_Down, ArrowUp: Qt.Key_Up, Backspace: Qt.Key_Backspace,
+            Home: Qt.Key_Home, PageDown: Qt.Key_PageDown, PageUp: Qt.Key_PageUp, Space: Qt.Key_Space }
         keyClick(keys[name])
     }
     function act(s) {
@@ -122,6 +128,19 @@ TestCase {
             for (const c of s.type[1]) keyClick(c)
         }
         if (s.key) press(s.key)
+        if (s.wheel) {
+            const p = s.wheel[0] === "page" ? { x: 1200, y: 400 } : center(s.wheel[0])
+            mouseMove(page, p.x, p.y)
+            // A notch is 120 and moves a scroller 60px.
+            mouseWheel(page, p.x, p.y, -2 * s.wheel[1], -2 * s.wheel[2])
+            wait(400)
+        }
+        if (s.drag) {
+            const p = center(s.drag[0])
+            mouseDrag(page, p.x, p.y, s.drag[1], s.drag[2])
+            wait(400)
+        }
+        if (s.settle) wait(Math.max(100, s.settle))
         if (s.viewport) { page.width = s.viewport[0]; page.height = s.viewport[1] }
     }
 
@@ -320,6 +339,10 @@ fn page(name: &str) {
     let (steps, trouble) = parse(&text);
     let mut all = differences(&steps, chromium[name].as_array().expect("recorded"));
     all.extend(trouble);
+    // Read mid-flight on two real clocks, its load state has nothing to agree on.
+    if name == "motion_running" {
+        all.retain(|d| !d.starts_with("load "));
+    }
     // `ELDUR_APPS_ALL=1` prints every difference, the known ones too.
     if std::env::var_os("ELDUR_APPS_ALL").is_some() {
         eprintln!("{name}:\n  {}", all.join("\n  "));
@@ -493,4 +516,113 @@ fn lines_open() {
 #[test]
 fn lines_created() {
     page("lines_created");
+}
+
+#[test]
+fn scroll_box() {
+    page("scroll_box");
+}
+
+#[test]
+fn scroll_page() {
+    page("scroll_page");
+}
+
+#[test]
+fn motion_keyframes() {
+    page("motion_keyframes");
+}
+
+#[test]
+fn motion_transitions() {
+    page("motion_transitions");
+}
+
+#[test]
+fn scroll_created() {
+    page("scroll_created");
+}
+
+#[test]
+fn timers_order() {
+    page("timers_order");
+}
+
+#[test]
+fn scroll_keys() {
+    page("scroll_keys");
+}
+
+#[test]
+fn created_empty_body() {
+    page("created_empty_body");
+}
+
+#[test]
+fn motion_closed() {
+    page("motion_closed");
+}
+
+#[test]
+fn scroll_smooth() {
+    page("scroll_smooth");
+}
+
+#[test]
+fn motion_static() {
+    page("motion_static");
+}
+
+#[test]
+fn motion_running() {
+    page("motion_running");
+}
+
+#[test]
+fn scroll_more() {
+    page("scroll_more");
+}
+
+/// A mouse drag scrolls here, as a touch does, and in Chromium it selects text; so
+/// there is no recording to compare with, only that it moved and said so.
+#[test]
+fn drags_move_scrollers() {
+    let html = r#"<!DOCTYPE html><html><head><style>
+.port { height: 200px; width: 400px; overflow: auto; }
+.tall { height: 900px; background: #cde; }
+</style></head><body>
+<div class="port" id="still"><div class="tall"></div></div>
+<script>
+const port = document.createElement("div");
+port.className = "port";
+port.id = "made";
+const tall = document.createElement("div");
+tall.className = "tall";
+port.appendChild(tall);
+document.body.appendChild(port);
+const still = document.getElementById("still");
+for (const e of [still, port])
+  e.addEventListener("scroll", () => console.log("scrolled", e.id, e.scrollTop));
+</script></body></html>"#;
+    let spec = r##"{"steps":[{"name":"still","drag":["#still",0,-150]},{"name":"made","drag":["#made",0,-150]}],"watch":[]}"##;
+    let snapshot = std::fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/apps/snapshot.js"),
+    )
+    .expect("snapshot.js");
+    let (steps, trouble) = parse(&run("drag", html, spec, &snapshot));
+    assert!(trouble.is_empty(), "{trouble:?}");
+    for (step, id) in steps[1..].iter().zip(["still", "made"]) {
+        let last = step["log"]
+            .as_array()
+            .and_then(|l| l.last())
+            .and_then(Value::as_str)
+            .unwrap_or_else(|| panic!("no scroll event from {id}: {step}"));
+        let (who, top) = last["scrolled ".len()..]
+            .split_once(' ')
+            .expect("two words");
+        let top: f64 = top.parse().expect("a number");
+        assert_eq!(who, id);
+        // An instant drag lets go at speed, and flicks on towards the end, at 700.
+        assert!((100.0..=700.0).contains(&top), "{id} at {top}");
+    }
 }

@@ -1,0 +1,2 @@
+{"steps":[{"name":"write","click":"#btn"},{"name":"clamp","click":"#btn"},{"name":"to and by","click":"#btn"},{"name":"into view","click":"#btn"},{"name":"hit","click":"#btn"},{"name":"wheel to the end","wheel":["#box",0,5000]},{"name":"wheel back","wheel":["#box",0,-5000]},{"name":"wheel wide","wheel":["#wide",5000,0]}],
+ "watch":[{"sel":"#box"},{"sel":"#half"},{"sel":"#lines"},{"sel":".row"},{"sel":"#pin"},{"sel":"#fix"},{"sel":"#wide"},{"sel":"#wideKid"},{"sel":"#plain"},{"sel":"#btn"}]}

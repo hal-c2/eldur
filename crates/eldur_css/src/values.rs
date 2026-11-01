@@ -876,6 +876,8 @@ pub struct ComputedStyle {
     pub background_layers: Vec<BackgroundLayer>,
     pub box_shadow: Vec<Shadow>,
     pub opacity: f32,
+    /// `scroll-behavior: smooth`.
+    pub scroll_smooth: bool,
     pub overflow_x: Overflow,
     pub overflow_y: Overflow,
     /// The individual `translate`/`rotate`/`scale` properties. They are
@@ -1022,6 +1024,7 @@ impl Default for ComputedStyle {
             background_layers: Vec::new(),
             box_shadow: Vec::new(),
             opacity: 1.0,
+            scroll_smooth: false,
             overflow_x: Overflow::Visible,
             overflow_y: Overflow::Visible,
             translate: None,

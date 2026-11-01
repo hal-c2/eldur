@@ -210,7 +210,7 @@ CSS grid line numbers start at 1; `Layout.row` and `Layout.column` start at 0.
 
 ## Animation
 
-Generated animation uses only QtQuick types (`Behavior`, `Transition`, `SequentialAnimation`, `ParallelAnimation`, `PropertyAnimation` family, `PauseAnimation`, `PropertyAction`).
+What is done and what is not: `animations.md`; this table is the original mapping. Generated animation uses only QtQuick types (`Behavior`, `Transition`, `SequentialAnimation`, `ParallelAnimation`, `PropertyAnimation` family, `PauseAnimation`, `PropertyAction`).
 
 | Property | Values handled | QML target | Unit conversion | Support | Notes |
 |---|---|---|---|---|---|

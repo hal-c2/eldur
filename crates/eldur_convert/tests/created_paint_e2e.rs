@@ -196,12 +196,16 @@ document.getElementById('wf').style.transform='translateX(1px) perspective(9px)'
 </script></body></html>"#;
     let empty = serde_json::json!({"pixels": [], "steps": []});
     let text = run("warns", html, &empty);
-    for (element, property) in [
-        ("#wf", "filter"),
-        ("#wa", "animation"),
-        ("#wt", "transition"),
-        ("#wf", "transform"),
-    ] {
+    // These run now, on a created box as on any other.
+    for (element, property) in [("#wa", "animation"), ("#wt", "transition")] {
+        assert!(
+            !text
+                .lines()
+                .any(|l| l.contains(element) && l.contains(property) && l.contains("eldur: ")),
+            "{element} still warns about {property}:\n{text}"
+        );
+    }
+    for (element, property) in [("#wf", "filter"), ("#wf", "transform")] {
         assert!(
             text.lines()
                 .any(|l| l.contains(element) && l.contains(property) && l.contains("eldur: ")),

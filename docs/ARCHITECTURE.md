@@ -122,8 +122,8 @@ the containing block's wrapper (outside its layout), or with no positioned or
 transformed ancestor of the initial containing block's item in the Flickable,
 placed with `x`/`y`/`width` bindings or anchors from `top/right/bottom/left`;
 `fixed` → child of the window's content item, outside the Flickable, unless a
-transformed ancestor holds it; `sticky` →
-treated as relative (diagnostic). `z-index` → `z`.
+transformed ancestor holds it; `sticky` → `EldurSticky`, a `Translate` held
+against the nearest scrollport within its containing block. `z-index` → `z`.
 
 **Replaced elements.** `img` → `Image` (`fillMode` from `object-fit`,
 intrinsic size read from the file header, `asynchronous: true`);
@@ -149,7 +149,9 @@ and each changed property becomes a conditional binding
 (`color: btnHover.hovered ? "#0056b3" : "#007bff"`).
 
 **Transitions → `Behavior`**, `@keyframes` → `SequentialAnimation` of
-`PropertyAnimation`s with `loops`.
+`PropertyAnimation`s with `loops`, on closed pages; open pages use the runtime's
+engine instead. See
+`spec/animations.md`, also for scrolling and timers.
 
 **Scripts.** `page.js` holds every classic script; statically resolvable DOM
 access becomes direct id access; event handlers become QML signal

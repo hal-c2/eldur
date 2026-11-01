@@ -9,7 +9,7 @@ This specification defines the subset of Browser DOM, Event, and Web APIs suppor
 JavaScript in HTML documents is transformed into two QML-compatible artifacts:
 1. **`page.js`**: A `.pragma library` (or QML-imported script) containing the rewritten user code, top-level declarations, generated event handler functions (`__eldur_on_<event>_<id>`), and an initialization entry point (`__eldur_init(rootItem)`).
 2. **`eldur_runtime.js` (`Eldur`)**: A `.pragma library` runtime helper providing:
-   - Timer polyfills (`setTimeout`, `setInterval`, `requestAnimationFrame`) backed by dynamically instantiated `QtQuick.Timer` objects.
+   - Timer polyfills (`setTimeout`, `setInterval`, `requestAnimationFrame`) backed by one `QtQuick.Timer` and a queue by due time, and a `FrameAnimation` (`animations.md`).
    - `localStorage` (backed by `QtQuick.LocalStorage` SQLite with in-memory fallback) and `sessionStorage` (in-memory `Map`).
    - `fetch()` polyfill backed by QML's built-in `XMLHttpRequest`.
    - Dynamic DOM tree walk, CSS selector matching (`tag`, `#id`, `.class1.class2`, `[attr]`, `[attr=val]`, `[attr^=val]`, `[attr$=val]`, `[attr*=val]`, `[attr~=val]`, `[attr|=val]`, descendant `A B`, child `A > B`, and comma-separated selector lists), `classList`, `dataset`, `style`, `getComputedStyle`, dynamic `addEventListener` / `removeEventListener` / `dispatchEvent`, `EventTarget`, typed `Event` constructors, and `Element` wrapper (`Eldur.wrap(item)`).

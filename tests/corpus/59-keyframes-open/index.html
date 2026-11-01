@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Motion with a script</title>
+<style>
+body { margin: 0; padding: 16px; font: 16px/24px sans-serif; background: #fafafa; color: #222; }
+@keyframes rise { from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: none } }
+.item { padding: 8px; margin-bottom: 8px; background: #dde; animation: rise 300ms ease-out both; }
+.item.done { background: #ded; transition: background-color 200ms; }
+</style></head><body>
+<div id="list"></div>
+<script>
+for (const name of ["First", "Second", "Third"]) {
+  const d = document.createElement("div");
+  d.className = "item";
+  d.id = "m-" + name.toLowerCase();
+  d.textContent = name;
+  d.addEventListener("click", () => d.classList.toggle("done"));
+  document.querySelector("#list").appendChild(d);
+}
+</script>
+</body></html>

@@ -1,0 +1,4 @@
+{
+  "watch": [{ "sel": "#out" }],
+  "steps": [{ "name": "later", "settle": 800 }]
+}

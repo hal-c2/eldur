@@ -125,14 +125,6 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     let mut extra_imports = emission.imports;
     let mut gated = emission.gated;
 
-    if options.animations && !styles.keyframes.is_empty() {
-        diags.info(
-            "css",
-            None,
-            "CSS animations are not converted yet".to_owned(),
-        );
-    }
-
     let mut qml = eldur_qml::Document::default();
     let mut files = images.files;
 
@@ -258,6 +250,11 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
                     .collect();
                 decls.push(metadata::literal_classes_decl(&literal));
                 decls.push(metadata::open_elements_decl());
+                if !options.animations {
+                    decls.push(metadata::no_motion_decl());
+                } else if !styles.keyframes.is_empty() {
+                    decls.push(metadata::keyframes_decl(&styles.keyframes));
+                }
                 decls.push(metadata::control_fonts_decl());
             } else if inline_rules {
                 decls.push(metadata::inline_rules_decl(&eldur_css::inline_rules(
@@ -346,7 +343,36 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
             contents: crate::emit::ELDUR_ROUND_CLIP_QML.as_bytes().to_vec(),
         });
     }
-    if main.contains("EldurTextLines {") {
+    // The page's own scroller uses it as well as every box's.
+    files.push(OutputFile {
+        path: PathBuf::from("EldurScrollInput.qml"),
+        contents: crate::emit::ELDUR_SCROLL_INPUT_QML.as_bytes().to_vec(),
+    });
+    if main.contains("EldurSticky {")
+        || files
+            .iter()
+            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
+    {
+        files.push(OutputFile {
+            path: PathBuf::from("EldurSticky.qml"),
+            contents: crate::emit::ELDUR_STICKY_QML.as_bytes().to_vec(),
+        });
+    }
+    if main.contains("EldurScroller {")
+        || files
+            .iter()
+            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
+    {
+        files.push(OutputFile {
+            path: PathBuf::from("EldurScroller.qml"),
+            contents: crate::emit::ELDUR_SCROLLER_QML.as_bytes().to_vec(),
+        });
+    }
+    if main.contains("EldurTextLines {")
+        || files
+            .iter()
+            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
+    {
         files.push(OutputFile {
             path: PathBuf::from("EldurTextLines.qml"),
             contents: crate::emit::ELDUR_TEXT_LINES_QML.as_bytes().to_vec(),

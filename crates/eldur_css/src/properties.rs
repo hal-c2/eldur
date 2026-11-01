@@ -217,6 +217,7 @@ pub(crate) enum Longhand {
     BoxShadow,
     Opacity,
     Visibility,
+    ScrollBehavior,
     OverflowX,
     OverflowY,
     ObjectFit,
@@ -482,6 +483,7 @@ pub(crate) fn kind(name: &str) -> PropertyKind {
         "box-shadow" | "-webkit-box-shadow" => PropertyKind::Longhand(Longhand::BoxShadow),
         "opacity" => PropertyKind::Longhand(Longhand::Opacity),
         "visibility" => PropertyKind::Longhand(Longhand::Visibility),
+        "scroll-behavior" => PropertyKind::Longhand(Longhand::ScrollBehavior),
         "overflow-x" => PropertyKind::Longhand(Longhand::OverflowX),
         "overflow-y" => PropertyKind::Longhand(Longhand::OverflowY),
         "object-fit" => PropertyKind::Longhand(Longhand::ObjectFit),
@@ -1152,6 +1154,9 @@ pub(crate) fn compute(
         Longhand::Opacity => {
             style.opacity = parse_opacity(cvs)?;
         }
+        Longhand::ScrollBehavior => {
+            style.scroll_smooth = text::parse_scroll_behavior(cvs)?;
+        }
         Longhand::Visibility => {
             style.visibility = parse_visibility(cvs)?;
         }
@@ -1609,6 +1614,7 @@ pub(crate) fn copy(dst: &mut ComputedStyle, src: &ComputedStyle, l: Longhand) {
         Longhand::BoxShadow => dst.box_shadow.clone_from(&src.box_shadow),
         Longhand::Opacity => dst.opacity = src.opacity,
         Longhand::Visibility => dst.visibility = src.visibility,
+        Longhand::ScrollBehavior => dst.scroll_smooth = src.scroll_smooth,
         Longhand::OverflowX => dst.overflow_x = src.overflow_x,
         Longhand::OverflowY => dst.overflow_y = src.overflow_y,
         Longhand::ObjectFit => dst.object_fit = src.object_fit,

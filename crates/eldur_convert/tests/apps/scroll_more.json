@@ -1,0 +1,2 @@
+{"steps":[{"name":"wheelPad","wheel":["#pad",0,40]},{"name":"wheelTh","wheel":["#wrap",0,20]},{"name":"keyless","click":"#target"}],
+"watch":[{"sel":"#pad"},{"sel":"#padStick"},{"sel":"#th1"},{"sel":"#td1"},{"sel":"#sideBar"},{"sel":"#stickEnd"},{"sel":"#wideKid"},{"sel":"#target"},{"sel":"#cstick"}]}

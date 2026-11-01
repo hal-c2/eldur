@@ -1,0 +1,1 @@
+{"steps": [{"name": "css", "click": "#css", "settle": 1000}, {"name": "opt", "click": "#opt", "settle": 1000}, {"name": "inst", "click": "#inst", "settle": 100}, {"name": "made", "click": "#made", "settle": 1000}, {"name": "win", "click": "#win", "settle": 1000}, {"name": "top", "key": "Home", "settle": 1000}], "watch": [{"sel": "#a"}, {"sel": "#b"}, {"sel": "#target"}]}

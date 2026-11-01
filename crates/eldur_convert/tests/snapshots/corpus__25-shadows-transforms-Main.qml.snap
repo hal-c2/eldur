@@ -26,6 +26,13 @@ ApplicationWindow {
         ScrollBar.vertical: ScrollBar {}
         contentHeight: page.implicitHeight
 
+        EldurScrollInput {
+            id: flickableInput
+            scroller: flickable
+            keySource: flickable.parent
+            focus: true
+        }
+
         // <html>
         ColumnLayout {
             id: page
@@ -279,6 +286,7 @@ ApplicationWindow {
                         height: 60
                         x: 40
                         y: 40
+                        antialiasing: true
                     }
 
                     Rectangle {
@@ -293,6 +301,7 @@ ApplicationWindow {
                         height: 60
                         x: 240
                         y: 40
+                        antialiasing: true
                     }
 
                     Rectangle {
@@ -350,6 +359,7 @@ ApplicationWindow {
                         anchors.right: parent.right
                         anchors.rightMargin: 80
                         y: parent.height * 0.5
+                        antialiasing: true
                     }
                 }
 

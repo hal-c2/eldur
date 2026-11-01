@@ -72,6 +72,8 @@ fn box_property(longhand: Longhand) -> Option<&'static str> {
     use Longhand as L;
     Some(match longhand {
         L::LineHeight => "line-height",
+        L::TextDecorationStyle => "text-decoration-style",
+        L::TextDecorationColor => "text-decoration-color",
         L::TextAlign => "text-align",
         L::Opacity => "opacity",
         L::Position => "position",
@@ -135,6 +137,13 @@ fn box_property(longhand: Longhand) -> Option<&'static str> {
         L::Filter => "filter",
         L::TransitionProperty => "transition-property",
         L::AnimationName => "animation-name",
+        L::AnimationDuration => "animation-duration",
+        L::AnimationTimingFunction => "animation-timing-function",
+        L::AnimationDelay => "animation-delay",
+        L::AnimationIterationCount => "animation-iteration-count",
+        L::AnimationDirection => "animation-direction",
+        L::AnimationFillMode => "animation-fill-mode",
+        L::AnimationPlayState => "animation-play-state",
         L::TransformOrigin => "transform-origin",
         L::TransitionDuration => "transition-duration",
         L::TransitionTimingFunction => "transition-timing-function",

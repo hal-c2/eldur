@@ -156,7 +156,7 @@ def format_table(rows: list[dict[str, Any]]) -> str:
 
 def convert(page: Path, out: Path) -> None:
     subprocess.run(
-        ["cargo", "run", "-q", "-p", "eldur_cli", "--", "convert", "-q", str(page), "-o", str(out)],
+        ["cargo", "run", "-q", "-p", "eldur_cli", "--", "convert", "--no-animations", "-q", str(page), "-o", str(out)],
         cwd=REPO_ROOT,
         check=True,
         stderr=subprocess.DEVNULL,

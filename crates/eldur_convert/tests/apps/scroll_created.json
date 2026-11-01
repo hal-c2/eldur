@@ -1,0 +1,2 @@
+{"steps":[{"name":"s1","click":"#after"},{"name":"s2","click":"#after"},{"name":"wheel","wheel":["#port",0,120]}],
+ "watch":[{"sel":"#port"},{"sel":"#kid"},{"sel":"#late"},{"sel":"#after"}]}

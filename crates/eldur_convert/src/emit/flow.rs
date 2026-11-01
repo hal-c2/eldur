@@ -324,12 +324,11 @@ impl Emitter<'_, '_> {
             };
         };
         // A slot after the last item counts its static position from past
-        // the item's margins, so those go below the slot.
-        if let Some(tail) = layout
-            .members
-            .iter()
-            .rposition(|m| matches!(m, Member::Child(_)))
-        {
+        // the item's margins, so those go below the slot. A hidden slot isn't
+        // laid out: margins there would be lost.
+        if let Some(tail) = layout.members.iter().rposition(|m| {
+            matches!(m, Member::Child(o) if !matches!(o.get("visible"), Some(Value::Bool(false))))
+        }) {
             last = tail;
         }
         let escaped_bottom = if bottom_open {

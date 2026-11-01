@@ -1,0 +1,59 @@
+<!DOCTYPE html><html><head><title>Scrollers</title><style>
+body{margin:0;font:16px/20px sans-serif}
+#box{position:relative;width:300px;height:120px;overflow:auto;padding:10px;border:5px solid #333;background:#eef}
+#box .row{height:40px;margin-bottom:10px;background:#cde}
+#half{width:50%;height:30px;background:#fc9}
+#lines{margin:0}
+#lines b{display:inline-block;width:40px;height:16px;background:#9c9}
+#pin{position:absolute;top:150px;left:20px;width:60px;height:20px;background:#c9c}
+#fix{position:fixed;left:400px;top:10px;width:80px;height:30px;background:#9cf}
+#wide{overflow-x:auto;overflow-y:hidden;width:200px;height:60px;background:#ffe}
+#wide div{width:500px;height:30px;background:linear-gradient(90deg,#f00,#00f)}
+#plain{height:50px;background:#eee}
+#btn{display:block;margin:10px}
+</style></head><body>
+<div id="box"><div id="half">half</div><p id="lines">words <b></b> more words <b></b> then</p>
+<div class="row" id="r1">one</div><div class="row" id="r2">two</div><div class="row" id="r3">three</div><div class="row" id="r4">four</div><div id="pin">pin</div></div>
+<div id="wide"><div id="wideKid">wide</div></div><div id="plain">plain</div><div id="fix">fixed</div>
+<button id="btn">go</button>
+<script>
+var box = document.getElementById("box"), wide = document.getElementById("wide");
+var events = 0;
+box.addEventListener("scroll", function() { events++; console.log("scroll event " + box.scrollTop); });
+function dims(el) { return [el.scrollTop, el.scrollLeft, el.scrollHeight, el.scrollWidth, el.clientHeight, el.clientWidth].join(" "); }
+console.log("load box " + dims(box));
+console.log("load wide " + dims(wide));
+console.log("load plain " + dims(document.getElementById("plain")));
+var step = 0;
+document.getElementById("btn").addEventListener("click", function() {
+  step++;
+  if (step === 1) {
+    box.scrollTop = 40; box.scrollTop = 50;
+    console.log("written " + box.scrollTop + " events " + events);
+    console.log("rect " + document.getElementById("r1").getBoundingClientRect().top);
+  } else if (step === 2) {
+    box.scrollTop = 100000; console.log("clamped " + box.scrollTop);
+    box.scrollTop = -5; console.log("floor " + box.scrollTop);
+    wide.scrollLeft = 100000; console.log("wide " + wide.scrollLeft);
+    wide.scrollLeft = 30;
+  } else if (step === 3) {
+    box.scrollTo(0, 60); console.log("to " + box.scrollTop);
+    box.scrollBy(0, 15); console.log("by " + box.scrollTop);
+    box.scrollTo({ top: 5 }); console.log("to opts " + box.scrollTop);
+  } else if (step === 4) {
+    var r = document.getElementById("r3"); r.scrollIntoView();
+    console.log("start " + box.scrollTop);
+    r.scrollIntoView({ block: "end" }); console.log("end " + box.scrollTop);
+    r.scrollIntoView({ block: "center" }); console.log("center " + box.scrollTop);
+    box.scrollTop = 0; r.scrollIntoView({ block: "nearest" }); console.log("nearest " + box.scrollTop);
+  } else if (step === 5) {
+    box.scrollTop = 150;
+    var p = document.getElementById("pin").getBoundingClientRect();
+    console.log("pin " + p.top);
+    var hit = document.elementFromPoint(100, 60);
+    console.log("hit " + (hit && (hit.id || hit.tagName)));
+    var f = document.getElementById("fix").getBoundingClientRect();
+    console.log("fixed " + f.top);
+  }
+});
+</script></body></html>

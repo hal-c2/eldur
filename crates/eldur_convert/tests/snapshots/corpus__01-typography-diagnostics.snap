@@ -4,4 +4,3 @@ expression: "diagnostics.join(\"\\n\")"
 ---
 info[qml]: index.html:210: <sub>: `vertical-align` on inline text is not converted
 info[qml]: index.html:210: <sup>: `vertical-align` on inline text is not converted
-warning[css]: index.html:220: `overflow: auto/scroll` clips but does not scroll yet

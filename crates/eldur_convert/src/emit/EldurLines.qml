@@ -232,6 +232,16 @@ Item {
             return Math.round(item.baselineOffset);
         }
         const kids = Array.from(item.children).filter(k => k.visible);
+        // A flex row takes its first item's baseline, that item's bottom edge
+        // when it has no text (css-flexbox §8.5); a spacer here has no height.
+        if (item instanceof RowLayout) {
+            const first = kids.find(k => k.height > 0);
+            if (first) {
+                const inside = _baselineOf(first);
+                return first.y + (inside === null ? first.height : inside);
+            }
+            return null;
+        }
         if (kind !== "first") {
             kids.reverse();
         }
@@ -495,8 +505,10 @@ Item {
                 }
                 // A trailing space hangs at the line's end; before more it is in the box.
                 const followed = t.trail > 0 && l.boxes.concat(l.texts).some(function(o) { return o.x > t.x; });
-                t.run.place[t.number] = { x: t.x + shift - t.lead, y: baseline - t.ascent, height: t.height,
-                                          ascent: t.ascent,
+                // Qt draws a line on its own whole pixel, adding the ascent rounded to
+                // the row its Text starts on, so the row must come from the same sum.
+                t.run.place[t.number] = { x: t.x + shift - t.lead, y: baseline - round(t.ascent), height: t.height,
+                                          ascent: round(t.ascent),
                                           width: (t.spread || t.width) + t.lead + (followed ? t.trail : 0) };
                 if (t.spread) {
                     // Qt justifies every line of a Text but its last, whose

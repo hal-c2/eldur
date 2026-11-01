@@ -2,4 +2,4 @@
 source: crates/eldur_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-warning[css]: index.html:237: `overflow: auto/scroll` clips but does not scroll yet
+

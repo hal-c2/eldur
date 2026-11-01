@@ -55,6 +55,9 @@ pub(super) fn native_text(obj: &mut Object, turned: bool) {
     if !turned && TEXT_ITEMS.contains(&obj.type_name.as_str()) {
         obj.set("renderType", Value::expr("Text.NativeRendering"));
     }
+    if turned {
+        smooth_edges(obj);
+    }
     for m in &mut obj.members {
         match m {
             Member::Child(c) => native_text(c, turned),
@@ -74,10 +77,30 @@ fn native_value(value: &mut Value, turned: bool) {
 
 /// Whether the item's glyphs reach the screen other than pixel for pixel. The
 /// Translate that places a baseline moves them by whole pixels and does not.
+/// Qt leaves a square `Rectangle`'s edges and a `Shape`'s hard, which is right
+/// along the pixel grid and stairs anywhere else.
+fn smooth_edges(obj: &mut Object) {
+    match obj.type_name.as_str() {
+        // A rounded Rectangle has it by default.
+        "Rectangle"
+            if obj
+                .members
+                .iter()
+                .any(|m| matches!(m, Member::Property { name, .. } if name == "radius")) => {}
+        "Rectangle" | "Image" => {
+            obj.set("antialiasing", true);
+        }
+        "Shape" => {
+            obj.set("preferredRendererType", Value::expr("Shape.CurveRenderer"));
+        }
+        _ => {}
+    }
+}
+
 fn resamples(obj: &Object) -> bool {
     fn turning(value: &Value) -> bool {
         match value {
-            Value::Object(o) => o.type_name != "Translate",
+            Value::Object(o) => !["Translate", "EldurSticky"].contains(&o.type_name.as_str()),
             Value::List(items) => items.iter().any(turning),
             _ => true,
         }

@@ -19,12 +19,16 @@ const shots = process.argv.includes("--shots") ? process.argv[process.argv.index
 
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
 let log = [];
-page.on("console", (m) => log.push(m.text()));
-page.on("pageerror", (e) => {
-  throw new Error(`page threw: ${e.message}`);
-});
+async function openTab() {
+  const tab = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
+  tab.on("console", (m) => log.push(m.text()));
+  tab.on("pageerror", (e) => {
+    throw new Error(`page threw: ${e.message}`);
+  });
+  return tab;
+}
+let page = await openTab();
 const snapshot = fs.readFileSync(path.join(here, "snapshot.js"), "utf8");
 
 async function center(selector) {
@@ -52,6 +56,15 @@ async function act(step) {
     await page.keyboard.type(step.type[1]);
   }
   if (step.key) await page.keyboard.press(step.key);
+  if (step.wheel) {
+    const { x, y } = step.wheel[0] === "page" ? { x: 1200, y: 400 } : await center(step.wheel[0]);
+    await page.mouse.move(x, y);
+    await page.mouse.wheel(step.wheel[1], step.wheel[2]);
+    // Chromium answers a wheel on a later frame, and may ease to its end.
+    await page.waitForTimeout(400);
+  }
+  // Keys and fragment links ease to where they end up.
+  if (step.settle) await page.waitForTimeout(step.settle);
 }
 
 async function state(name, watch) {
@@ -61,14 +74,18 @@ async function state(name, watch) {
   if (watch.some((w) => w.paint)) {
     const shot = (await page.screenshot()).toString("base64");
     await page.evaluate(async (data) => {
-      const image = new Image();
-      image.src = "data:image/png;base64," + data;
-      await image.decode();
-      const c = document.createElement("canvas");
-      c.width = image.width;
-      c.height = image.height;
-      window.__shot = c.getContext("2d", { willReadFrequently: true });
+      // One canvas, and each bitmap released: a page's captures add up, and after
+      // twenty or so Chromium's GPU process dies of them.
+      const blob = await (await fetch("data:image/png;base64," + data)).blob();
+      const image = await createImageBitmap(blob);
+      if (!window.__shot) {
+        const c = document.createElement("canvas");
+        c.width = image.width;
+        c.height = image.height;
+        window.__shot = c.getContext("2d", { willReadFrequently: true });
+      }
       window.__shot.drawImage(image, 0, 0);
+      image.close();
     }, shot);
     canvas = "(x, y) => { const d = window.__shot.getImageData(x, y, 1, 1).data; return `rgb(${d[0]}, ${d[1]}, ${d[2]})`; }";
   }
@@ -85,10 +102,13 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
   const name = file.slice(0, -5);
   const spec = JSON.parse(fs.readFileSync(path.join(here, `${name}.json`), "utf8"));
   log = [];
-  await page.setViewportSize({ width: 1280, height: 800 });
+  // A tab that scrolled to its end can no longer take a screenshot on the next page.
+  await page.close();
+  page = await openTab();
   await page.mouse.move(1200, 790);
   await page.goto("file://" + path.join(here, file), { waitUntil: "load" });
-  const steps = [await state("load", spec.watch)];
+  // A page caught mid-flight at load has nothing to record there that a rerun would repeat.
+  const steps = [await state("load", spec.loadMoves ? [] : spec.watch)];
   for (const step of spec.steps) {
     await act(step);
     steps.push(await state(step.name, spec.watch));

@@ -24,6 +24,13 @@ ApplicationWindow {
         ScrollBar.vertical: ScrollBar {}
         contentHeight: page.implicitHeight
 
+        EldurScrollInput {
+            id: flickableInput
+            scroller: flickable
+            keySource: flickable.parent
+            focus: true
+        }
+
         // <html>
         ColumnLayout {
             id: page
@@ -807,6 +814,7 @@ ApplicationWindow {
                                 }
                                 Layout.preferredWidth: 80
                                 Layout.preferredHeight: 80
+                                antialiasing: true
                             }
                         }
                     }
@@ -843,6 +851,7 @@ ApplicationWindow {
                                 }
                                 Layout.preferredWidth: 80
                                 Layout.preferredHeight: 80
+                                antialiasing: true
                             }
                         }
                     }
@@ -926,6 +935,7 @@ ApplicationWindow {
                                 ]
                                 Layout.preferredWidth: 80
                                 Layout.preferredHeight: 80
+                                antialiasing: true
                             }
                         }
                     }
@@ -972,6 +982,7 @@ ApplicationWindow {
                                 ]
                                 Layout.preferredWidth: 80
                                 Layout.preferredHeight: 80
+                                antialiasing: true
                             }
                         }
                     }

@@ -1,0 +1,62 @@
+<!DOCTYPE html><html><head><title>Page scroll</title><style>
+body{margin:0;font:16px/20px sans-serif}
+nav{height:30px;background:#eee}
+.tall{height:700px;background:linear-gradient(#fff,#ccd)}
+#fix{position:fixed;left:900px;top:10px;width:80px;height:30px;background:#9cf}
+#abs{position:absolute;left:800px;top:900px;width:60px;height:30px;background:#c9c}
+#target{height:100px;background:#fc9}
+#far{margin-top:300px;display:block;width:200px;height:24px}
+#btn{position:fixed;left:900px;top:60px;width:60px;height:30px}
+#stick{position:sticky;top:5px;height:30px;background:#9c9}
+#stickWrap{height:200px;background:#ddf}
+#end{height:600px;background:#efe}
+</style></head><body>
+<nav><a id="jump" href="#target">go</a></nav>
+<div class="tall">tall</div>
+<div id="stickWrap"><div id="stick">sticky</div></div>
+<div id="target">target</div>
+<input id="far">
+<div id="abs">abs</div>
+<div id="fix">fixed</div>
+<button id="btn">go</button>
+<div id="end">end</div>
+<script>
+var de = document.documentElement, step = 0;
+var quiet = false;
+window.addEventListener("scroll", function() {
+  if (!quiet) { console.log("window scroll " + window.scrollY); }
+  // Past here the browser eases, and how many frames it takes is its own business.
+  quiet = step === 6;
+});
+function dims() { return [window.scrollY, window.pageYOffset, de.scrollTop, de.scrollHeight, de.clientHeight, window.innerHeight].join(" "); }
+console.log("load " + dims());
+console.log("same " + (document.scrollingElement === de));
+function topOf(id) { return document.getElementById(id).getBoundingClientRect().top; }
+document.getElementById("btn").addEventListener("click", function() {
+  step++;
+  if (step === 1) {
+    window.scrollTo(0, 300); console.log("to " + dims());
+    console.log("fix " + topOf("fix") + " abs " + topOf("abs") + " stick " + topOf("stick"));
+  } else if (step === 2) {
+    window.scrollBy(0, 100); console.log("by " + window.scrollY);
+    de.scrollTop = 750; console.log("top " + window.scrollY);
+    console.log("stick " + topOf("stick"));
+    document.scrollingElement.scrollTop = 800; console.log("scrolling " + window.scrollY);
+    console.log("stick " + topOf("stick") + " in " + topOf("stickWrap"));
+  } else if (step === 3) {
+    window.scrollTo({ top: 100000 }); console.log("end " + window.scrollY + " of " + de.scrollHeight);
+    window.scrollTo(0, -20); console.log("floor " + window.scrollY);
+  } else if (step === 4) {
+    location.hash = "#target"; console.log("hash " + window.scrollY + " " + location.hash);
+  } else if (step === 5) {
+    window.scrollTo(0, 0);
+    document.getElementById("far").focus(); console.log("focus " + window.scrollY + " " + topOf("far"));
+  } else if (step === 6) {
+    window.scrollTo(0, 0);
+    var hit = document.elementFromPoint(100, 15); console.log("hit top " + hit.tagName);
+    window.scrollTo(0, 750);
+    hit = document.elementFromPoint(100, 15); console.log("hit stuck " + hit.id);
+    hit = document.elementFromPoint(910, 20); console.log("hit fixed " + hit.id);
+  }
+});
+</script></body></html>

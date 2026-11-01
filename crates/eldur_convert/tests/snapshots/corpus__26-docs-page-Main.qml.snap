@@ -184,6 +184,13 @@ ApplicationWindow {
         ScrollBar.vertical: ScrollBar {}
         contentHeight: page.implicitHeight
 
+        EldurScrollInput {
+            id: flickableInput
+            scroller: flickable
+            keySource: flickable.parent
+            focus: true
+        }
+
         // <html>
         ColumnLayout {
             id: page
@@ -895,6 +902,7 @@ ApplicationWindow {
                                     color: "#24292f"
                                     font.family: "monospace"
                                     font.pixelSize: 14
+                                    font.letterSpacing: -0.24
                                     wrapMode: Text.WordWrap
                                     renderType: Text.NativeRendering
 
@@ -902,6 +910,7 @@ ApplicationWindow {
                                         fragments: inlineRun.eldurFragments
                                         font.family: "monospace"
                                         font.pixelSize: 14
+                                        font.letterSpacing: -0.24
                                         fill: "#eff1f3"
                                         radii: [4, 4, 4, 4]
                                         paddingTop: 2
@@ -932,6 +941,7 @@ ApplicationWindow {
                                     color: "#24292f"
                                     font.family: "monospace"
                                     font.pixelSize: 14
+                                    font.letterSpacing: -0.24
                                     wrapMode: Text.WordWrap
                                     renderType: Text.NativeRendering
 
@@ -939,6 +949,7 @@ ApplicationWindow {
                                         fragments: inlineRun2.eldurFragments
                                         font.family: "monospace"
                                         font.pixelSize: 14
+                                        font.letterSpacing: -0.24
                                         fill: "#eff1f3"
                                         radii: [4, 4, 4, 4]
                                         paddingTop: 2
@@ -969,6 +980,7 @@ ApplicationWindow {
                                     color: "#24292f"
                                     font.family: "monospace"
                                     font.pixelSize: 14
+                                    font.letterSpacing: -0.24
                                     wrapMode: Text.WordWrap
                                     renderType: Text.NativeRendering
 
@@ -976,6 +988,7 @@ ApplicationWindow {
                                         fragments: inlineRun3.eldurFragments
                                         font.family: "monospace"
                                         font.pixelSize: 14
+                                        font.letterSpacing: -0.24
                                         fill: "#eff1f3"
                                         radii: [4, 4, 4, 4]
                                         paddingTop: 2
@@ -1091,6 +1104,7 @@ ApplicationWindow {
                                                 color: "#24292f"
                                                 font.family: "monospace"
                                                 font.pixelSize: 14
+                                                font.letterSpacing: -0.24
                                                 wrapMode: Text.WordWrap
                                                 renderType: Text.NativeRendering
 
@@ -1098,6 +1112,7 @@ ApplicationWindow {
                                                     fragments: inlineRun4.eldurFragments
                                                     font.family: "monospace"
                                                     font.pixelSize: 14
+                                                    font.letterSpacing: -0.24
                                                     fill: "#eff1f3"
                                                     radii: [4, 4, 4, 4]
                                                     paddingTop: 2
@@ -1186,6 +1201,7 @@ ApplicationWindow {
                             // <pre>
                             Rectangle {
                                 id: pre
+                                property Item eldurScroller: preScroller
                                 property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                                 color: "#f6f8fa"
@@ -1200,23 +1216,34 @@ ApplicationWindow {
                                 Layout.preferredHeight: implicitHeight
                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
-                                Text {
-                                    id: preText
-                                    text: "[queue]\nurl = \"redis://localhost:6379/0\"\n\n[worker]\nconcurrency = 4\nmax_attempts = 5"
-                                    textFormat: Text.PlainText
-                                    color: "#24292f"
-                                    font.family: "monospace"
-                                    font.pixelSize: 13
-                                    lineHeight: 18.85
-                                    lineHeightMode: Text.FixedHeight
-                                    wrapMode: Text.NoWrap
-                                    anchors.left: parent.left
-                                    anchors.right: parent.right
-                                    anchors.top: parent.top
-                                    anchors.leftMargin: 17
-                                    anchors.rightMargin: 17
-                                    anchors.topMargin: 17
-                                    renderType: Text.NativeRendering
+                                EldurScroller {
+                                    id: preScroller
+                                    x: 1
+                                    y: 1
+                                    width: parent.width + -2
+                                    height: parent.height + -2
+                                    stickPadTop: 16
+                                    stickPadRight: 16
+                                    stickPadBottom: 16
+                                    stickPadLeft: 16
+                                    contentWidth: Math.max(width, preText.contentWidth + 32)
+                                    contentHeight: Math.max(height, preText.implicitHeight + 32)
+
+                                    Text {
+                                        id: preText
+                                        text: "[queue]\nurl = \"redis://localhost:6379/0\"\n\n[worker]\nconcurrency = 4\nmax_attempts = 5"
+                                        textFormat: Text.PlainText
+                                        color: "#24292f"
+                                        font.family: "monospace"
+                                        font.pixelSize: 13
+                                        lineHeight: 18.85
+                                        lineHeightMode: Text.FixedHeight
+                                        wrapMode: Text.NoWrap
+                                        x: 16
+                                        y: 16
+                                        width: preScroller.width + -32
+                                        renderType: Text.NativeRendering
+                                    }
                                 }
 
                                 Shape {
@@ -1545,6 +1572,7 @@ ApplicationWindow {
                                                 color: "#24292f"
                                                 font.family: "monospace"
                                                 font.pixelSize: 12
+                                                font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
                                                 renderType: Text.NativeRendering
 
@@ -1552,6 +1580,7 @@ ApplicationWindow {
                                                     fragments: inlineRun5.eldurFragments
                                                     font.family: "monospace"
                                                     font.pixelSize: 12
+                                                    font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
                                                     radii: [4, 4, 4, 4]
                                                     paddingTop: 2
@@ -1725,6 +1754,7 @@ ApplicationWindow {
                                                 color: "#24292f"
                                                 font.family: "monospace"
                                                 font.pixelSize: 12
+                                                font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
                                                 renderType: Text.NativeRendering
 
@@ -1732,6 +1762,7 @@ ApplicationWindow {
                                                     fragments: inlineRun6.eldurFragments
                                                     font.family: "monospace"
                                                     font.pixelSize: 12
+                                                    font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
                                                     radii: [4, 4, 4, 4]
                                                     paddingTop: 2
@@ -1795,6 +1826,7 @@ ApplicationWindow {
                                                 color: "#24292f"
                                                 font.family: "monospace"
                                                 font.pixelSize: 12
+                                                font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
                                                 renderType: Text.NativeRendering
 
@@ -1802,6 +1834,7 @@ ApplicationWindow {
                                                     fragments: inlineRun7.eldurFragments
                                                     font.family: "monospace"
                                                     font.pixelSize: 12
+                                                    font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
                                                     radii: [4, 4, 4, 4]
                                                     paddingTop: 2
@@ -1924,6 +1957,7 @@ ApplicationWindow {
                                                 color: "#24292f"
                                                 font.family: "monospace"
                                                 font.pixelSize: 12
+                                                font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
                                                 renderType: Text.NativeRendering
 
@@ -1931,6 +1965,7 @@ ApplicationWindow {
                                                     fragments: inlineRun8.eldurFragments
                                                     font.family: "monospace"
                                                     font.pixelSize: 12
+                                                    font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
                                                     radii: [4, 4, 4, 4]
                                                     paddingTop: 2
@@ -1994,6 +2029,7 @@ ApplicationWindow {
                                                 color: "#24292f"
                                                 font.family: "monospace"
                                                 font.pixelSize: 12
+                                                font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
                                                 renderType: Text.NativeRendering
 
@@ -2001,6 +2037,7 @@ ApplicationWindow {
                                                     fragments: inlineRun9.eldurFragments
                                                     font.family: "monospace"
                                                     font.pixelSize: 12
+                                                    font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
                                                     radii: [4, 4, 4, 4]
                                                     paddingTop: 2
@@ -2131,6 +2168,7 @@ ApplicationWindow {
                                                 color: "#24292f"
                                                 font.family: "monospace"
                                                 font.pixelSize: 12
+                                                font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
                                                 renderType: Text.NativeRendering
 
@@ -2138,6 +2176,7 @@ ApplicationWindow {
                                                     fragments: inlineRun10.eldurFragments
                                                     font.family: "monospace"
                                                     font.pixelSize: 12
+                                                    font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
                                                     radii: [4, 4, 4, 4]
                                                     paddingTop: 2
@@ -2209,6 +2248,7 @@ ApplicationWindow {
                                                 color: "#24292f"
                                                 font.family: "monospace"
                                                 font.pixelSize: 12
+                                                font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
                                                 renderType: Text.NativeRendering
 
@@ -2216,6 +2256,7 @@ ApplicationWindow {
                                                     fragments: inlineRun11.eldurFragments
                                                     font.family: "monospace"
                                                     font.pixelSize: 12
+                                                    font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
                                                     radii: [4, 4, 4, 4]
                                                     paddingTop: 2
@@ -2275,6 +2316,7 @@ ApplicationWindow {
                                                 color: "#24292f"
                                                 font.family: "monospace"
                                                 font.pixelSize: 12
+                                                font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
                                                 renderType: Text.NativeRendering
 
@@ -2282,6 +2324,7 @@ ApplicationWindow {
                                                     fragments: inlineRun12.eldurFragments
                                                     font.family: "monospace"
                                                     font.pixelSize: 12
+                                                    font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
                                                     radii: [4, 4, 4, 4]
                                                     paddingTop: 2
@@ -2312,6 +2355,7 @@ ApplicationWindow {
                                                 color: "#24292f"
                                                 font.family: "monospace"
                                                 font.pixelSize: 12
+                                                font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
                                                 renderType: Text.NativeRendering
 
@@ -2319,6 +2363,7 @@ ApplicationWindow {
                                                     fragments: inlineRun13.eldurFragments
                                                     font.family: "monospace"
                                                     font.pixelSize: 12
+                                                    font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
                                                     radii: [4, 4, 4, 4]
                                                     paddingTop: 2
@@ -2349,6 +2394,7 @@ ApplicationWindow {
                                                 color: "#24292f"
                                                 font.family: "monospace"
                                                 font.pixelSize: 12
+                                                font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
                                                 renderType: Text.NativeRendering
 
@@ -2356,6 +2402,7 @@ ApplicationWindow {
                                                     fragments: inlineRun14.eldurFragments
                                                     font.family: "monospace"
                                                     font.pixelSize: 12
+                                                    font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
                                                     radii: [4, 4, 4, 4]
                                                     paddingTop: 2
@@ -2386,6 +2433,7 @@ ApplicationWindow {
                                                 color: "#24292f"
                                                 font.family: "monospace"
                                                 font.pixelSize: 12
+                                                font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
                                                 renderType: Text.NativeRendering
 
@@ -2393,6 +2441,7 @@ ApplicationWindow {
                                                     fragments: inlineRun15.eldurFragments
                                                     font.family: "monospace"
                                                     font.pixelSize: 12
+                                                    font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
                                                     radii: [4, 4, 4, 4]
                                                     paddingTop: 2

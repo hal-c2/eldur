@@ -101,7 +101,7 @@ def render_case(case: Path, out: Path, env_backend: str = "gl") -> tuple[Path, P
     qml_png = out / "qml.png"
     visual_run.render_html(case / "index.html", html_png, width=1280, height=800)
     ok, err = visual_run.run_converter(
-        "cargo run -q -p eldur_cli -- convert", case / "index.html", out / "qml", timeout=600.0
+        "cargo run -q -p eldur_cli -- convert --no-animations", case / "index.html", out / "qml", timeout=600.0
     )
     if not ok:
         raise RuntimeError(err)

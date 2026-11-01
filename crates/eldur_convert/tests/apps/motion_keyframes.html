@@ -1,0 +1,88 @@
+<!DOCTYPE html><html><head><title>Keyframes</title><style>
+body{margin:0;font:16px/20px sans-serif}
+@keyframes slide{from{margin-left:0;width:100px;height:20px;opacity:.2;background-color:#000;transform:translateX(0)}to{margin-left:80px;width:200px;height:60px;opacity:1;background-color:#ff0000;transform:translateX(40px)}}
+@keyframes mid{0%{height:10px}50%{height:50px}100%{height:30px}}
+@keyframes eased{0%{height:0px;animation-timing-function:linear}50%{height:100px}100%{height:200px}}
+.box{height:20px;background:#ccc}
+#linear{animation:slide 10s linear -2.5s paused}
+#ease{animation:slide 10s ease -2.5s paused}
+#bez{animation:slide 10s cubic-bezier(.2,.8,.4,1) -2.5s paused}
+#stepE{animation:slide 10s steps(4,end) -3s paused}
+#stepS{animation:slide 10s steps(4,start) -3s paused}
+#three{animation:mid 10s linear -7.5s paused}
+#perkey{animation:eased 10s ease-in -2.5s paused}
+#alt{animation:mid 10s linear -12.5s 3 alternate paused}
+#rev{animation:mid 10s linear -2.5s reverse paused}
+#fwd{animation:mid 1s linear -5s forwards paused}
+#none{animation:mid 1s linear -5s paused}
+#back{animation:mid 10s linear 5s backwards paused}
+#wait{animation:mid 10s linear 5s paused}
+#after{height:10px;background:#9c9}
+#gone{display:none;animation:mid 10s linear -2.5s paused}
+#btn{display:block;margin:10px}
+#run{animation:mid 30ms linear 2 both;height:7px}
+</style></head><body>
+<div class="box" id="linear">a</div><div id="after">after</div>
+<div class="box" id="ease">b</div><div class="box" id="bez">c</div><div class="box" id="stepE">d</div><div class="box" id="stepS">e</div>
+<div class="box" id="three">f</div><div class="box" id="perkey">g</div><div class="box" id="alt">h</div><div class="box" id="rev">i</div>
+<div class="box" id="fwd">j</div><div class="box" id="none">k</div><div class="box" id="back">l</div><div class="box" id="wait">m</div>
+<div id="gone">n</div><div class="box" id="plain">p</div><div class="box" id="run" style="display:none">r</div>
+<button id="btn">go</button>
+<script>
+function $(i) { return document.getElementById(i); }
+function cs(i, p) { return getComputedStyle($(i)).getPropertyValue(p); }
+function all(i) { return ["margin-left","width","height","opacity","background-color"].map(function(p) { return cs(i, p); }).join(" "); }
+console.log("linear " + all("linear") + " " + cs("linear", "transform"));
+console.log("flow " + $("after").getBoundingClientRect().top + " " + $("linear").getBoundingClientRect().width);
+console.log("ease " + all("ease"));
+console.log("bez " + all("bez"));
+console.log("steps " + all("stepE") + " | " + all("stepS"));
+["three","perkey","alt","rev","fwd","none","back","wait"].forEach(function(i) { console.log(i + " " + cs(i, "height")); });
+console.log("names " + cs("linear", "animation-name") + " " + cs("alt", "animation-direction") + " " + cs("alt", "animation-iteration-count") + " " + cs("fwd", "animation-fill-mode") + " " + cs("linear", "animation-play-state") + " " + cs("linear", "animation-duration") + " " + cs("linear", "animation-delay"));
+function one(i) { var a = $(i).getAnimations(); return a.length + " " + (a[0] ? a[0].playState + " " + a[0].animationName + " " + a[0].currentTime : ""); }
+console.log("anims " + one("linear") + " | " + one("gone") + " | " + one("plain") + " | " + one("none"));
+var log = [];
+var r = $("run");
+["animationstart","animationiteration","animationend","animationcancel"].forEach(function(n) {
+  r.addEventListener(n, function(e) { log.push(n + " " + e.animationName + " " + e.elapsedTime); });
+});
+var step = 0;
+$("btn").addEventListener("click", function() {
+  step++;
+  var a = $("linear").getAnimations()[0];
+  if (step === 1) {
+    a.currentTime = 5000;
+    console.log("set " + cs("linear", "height") + " " + a.playState + " " + $("after").getBoundingClientRect().top);
+  } else if (step === 2) {
+    a.playbackRate = 1; a.finish();
+    console.log("finished " + a.playState + " " + cs("linear", "height") + " " + $("linear").getAnimations().length);
+  } else if (step === 3) {
+    $("gone").style.display = "block";
+    console.log("shown " + cs("gone", "height") + " " + one("gone"));
+    $("gone").style.display = "none";
+    console.log("hidden " + one("gone"));
+    $("three").style.animationPlayState = "running";
+    console.log("play " + $("three").getAnimations()[0].playState);
+    $("three").style.animation = "none";
+    console.log("off " + cs("three", "height") + " " + $("three").getAnimations().length);
+  } else if (step === 4) {
+    var anim = $("plain").animate([{ height: "20px", opacity: 0 }, { height: "120px", opacity: 1 }], { duration: 1000, delay: 100, fill: "both", easing: "linear" });
+    anim.pause(); anim.currentTime = 600;
+    console.log("animate " + cs("plain", "height") + " " + cs("plain", "opacity") + " " + anim.playState);
+    var t = anim.effect.getComputedTiming();
+    console.log("timing " + t.progress + " " + t.activeDuration + " " + t.endTime + " " + t.fill);
+    anim.cancel();
+    console.log("cancel " + cs("plain", "height") + " " + anim.playState + " " + $("plain").getAnimations().length);
+    var two = $("plain").animate({ height: ["40px", "60px"] }, 2000);
+    two.pause(); two.currentTime = 1000;
+    console.log("object form " + cs("plain", "height"));
+    two.cancel();
+  } else if (step === 5) {
+    r.style.display = "block";
+    console.log("run " + r.getAnimations().length);
+  } else if (step === 6) {
+    console.log("events " + log.join(","));
+    console.log("run end " + cs("run", "height") + " " + r.getBoundingClientRect().height);
+  }
+});
+</script></body></html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html><html><head><title>More of scrolling</title><style>
+body{margin:0;font:16px/20px sans-serif}
+#pad{height:100px;width:200px;overflow:auto;padding:10px;border:5px solid #333;background:#eee}
+#padStick{position:sticky;top:5px;height:20px;background:#0a0}
+#padFill{height:300px;background:#ccd}
+#wrap{height:100px;width:300px;overflow:auto}
+table{border-collapse:collapse;width:280px}
+th{position:sticky;top:0;background:#fc0;height:20px;padding:0}
+td{height:40px;padding:0}
+#side{height:100px;width:200px;overflow:auto;position:relative}
+#sideCol{height:400px}
+#sideBar{position:sticky;top:10px;height:50px;background:#09c}
+#block{height:120px;background:#ddd}
+#stickEnd{position:sticky;top:0;height:30px;background:#c0c}
+#wide{height:60px;width:200px;overflow-x:scroll;overflow-y:hidden}
+#wideKid{width:600px;height:40px;background:linear-gradient(#ccc,#ccc)}
+#hid{height:60px;width:200px;overflow:hidden}
+#hidKid{height:300px;background:#cdc}
+#target{height:30px;background:#f88}
+</style></head><body>
+<div id="pad"><div id="padHead">head</div><div id="padStick">s</div><div id="padFill"></div></div>
+<div id="wrap"><table><thead><tr><th id="th1">A</th><th>B</th></tr></thead><tbody>
+<tr><td id="td1">1</td><td>2</td></tr><tr><td>3</td><td>4</td></tr><tr><td id="td3">5</td><td>6</td></tr><tr><td>7</td><td>8</td></tr></tbody></table></div>
+<div id="side"><div id="sideCol"><div id="block"><div id="stickEnd">e</div></div><div id="sideBar">bar</div></div></div>
+<div id="wide"><div id="wideKid"></div></div>
+<div id="hid"><div id="hidKid"></div><div id="target">t</div></div>
+<script>
+function $(id) { return document.getElementById(id); }
+function top_(id) { return Math.round($(id).getBoundingClientRect().top); }
+function hit(x, y) { var e = document.elementFromPoint(x, y); return e ? e.id || e.tagName : "none"; }
+var pad = $("pad");
+console.log("pad " + pad.scrollHeight + " " + pad.clientHeight + " " + pad.clientWidth + " " + pad.offsetHeight);
+pad.scrollTop = 60;
+console.log("pad at " + pad.scrollTop + " " + top_("padHead") + " " + top_("padStick") + " " + top_("padFill"));
+pad.scrollTop = 9999;
+console.log("pad end " + pad.scrollTop + " " + top_("padStick"));
+var wrap = $("wrap");
+wrap.scrollTop = 50;
+console.log("th " + wrap.scrollTop + " " + top_("th1") + " " + top_("td1"));
+var side = $("side");
+side.scrollTop = 40;
+console.log("side " + top_("stickEnd") + " " + top_("sideBar"));
+side.scrollTop = 150;
+console.log("side far " + top_("stickEnd") + " " + top_("sideBar"));
+var wide = $("wide");
+wide.scrollLeft = 100;
+console.log("wide " + wide.scrollLeft + " " + wide.scrollWidth + " " + wide.clientWidth + " " + Math.round($("wideKid").getBoundingClientRect().left));
+var hid = $("hid");
+hid.scrollTop = 40;
+console.log("hid " + hid.scrollTop + " " + top_("hidKid"));
+$("target").scrollIntoView();
+console.log("into " + hid.scrollTop + " " + top_("target"));
+var r = pad.getBoundingClientRect();
+console.log("hit " + hit(r.left + 50, r.top + 40));
+pad.scrollTop = 0;
+console.log("hit top " + hit(r.left + 50, r.top + 20));
+console.log("hit border " + hit(r.left + 2, r.top + 2));
+// Made by script, the same as above.
+function make(id, css, parent) { var d = document.createElement("div"); d.id = id; d.style.cssText = css; (parent || document.body).appendChild(d); return d; }
+var cp = make("cpad", "height:100px;width:200px;overflow:auto;padding:10px;border:5px solid #333;");
+make("chead", "height:20px", cp);
+make("cstick", "position:sticky;top:5px;height:20px;background:#0a0", cp);
+make("cfill", "height:300px", cp);
+console.log("cpad " + cp.scrollHeight + " " + cp.clientHeight + " " + cp.clientWidth);
+cp.scrollTop = 60;
+console.log("cpad at " + cp.scrollTop + " " + top_("chead") + " " + top_("cstick") + " " + top_("cfill"));
+var cr = cp.getBoundingClientRect();
+console.log("chit " + hit(cr.left + 50, cr.top + 40));
+cp.scrollTop = 9999;
+console.log("cpad end " + cp.scrollTop + " " + top_("cstick"));
+</script></body></html>

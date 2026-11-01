@@ -1219,6 +1219,21 @@ fn text_asks_for_native_glyphs() {
 }
 
 #[test]
+fn text_in_a_sticky_box_stays_native() {
+    // A sticky box only moves: 17-landing-page's navbar came out lighter.
+    let (qml, _) = convert(&page(
+        ".t{position:sticky;top:0}",
+        "<div class=t><p>stuck</p></div>",
+    ));
+    assert_eq!(
+        render_type_of(&qml, "\"stuck\"").as_deref(),
+        Some(NATIVE),
+        "{qml}"
+    );
+    assert!(!qml.contains("antialiasing: true"), "{qml}");
+}
+
+#[test]
 fn text_under_a_scale_or_rotation_keeps_qts_default() {
     // Native glyphs resample badly: 20-pricing's featured card, 86.21 vs 85.84.
     for transform in ["scale(1.05)", "rotate(-8deg)", "matrix(1, 0.2, 0, 1, 0, 0)"] {
@@ -1668,6 +1683,51 @@ fn an_inset_spread_is_a_ring_of_its_width() {
     assert!(s.contains("x: 1") && s.contains("y: 1"), "{s}");
     assert!(s.contains(".width - 2") && s.contains(".height - 2"), "{s}");
     assert!(s.contains("radius: 5"), "{s}");
+}
+
+#[test]
+fn what_a_transform_turns_keeps_smooth_edges() {
+    let (qml, _) = convert(&page(
+        "",
+        "<div style=\"transform:rotate(2deg);background:#0f0;width:90px;height:90px\">\
+         <div style=\"background:#00f;width:40px;height:40px\"></div><p>x</p></div>\
+         <div id=\"plain\" style=\"transform:translateX(3px);background:#0f0;width:90px;height:90px\"></div>",
+    ));
+    let (turned, plain) = qml.split_once("<div id=\"plain\">").expect("plain");
+    assert_eq!(turned.matches("antialiasing: true").count(), 2, "{qml}");
+    assert!(
+        !turned.contains("renderType: Text.NativeRendering"),
+        "{qml}"
+    );
+    assert!(!plain.contains("antialiasing"), "{qml}");
+}
+
+#[test]
+fn an_outer_shadows_rings_follow_chromiums_curve() {
+    // Chromium's screenshot of `box-shadow: 0 0 6px #000` on a white page:
+    // the shadow's darkness in the rows below the box.
+    use super::shadow::outer_bands;
+    let rings = outer_bands(6.0, 1.0);
+    let darkness = |row: f32| {
+        let at = row + 0.5;
+        let left: f32 = rings
+            .iter()
+            .filter(|b| at < b.depth)
+            .map(|b| 1.0 - b.alpha)
+            .product();
+        255.0 * (1.0 - left)
+    };
+    for (row, chromium) in [112.0, 82.0, 54.0, 33.0, 18.0, 9.0, 4.0, 1.0]
+        .iter()
+        .enumerate()
+    {
+        let got = darkness(row as f32);
+        assert!(
+            // Skia's blur is three box blurs, a little off a true Gaussian.
+            (got - chromium).abs() <= 4.0,
+            "row {row}: {got} vs {chromium} in {rings:?}"
+        );
+    }
 }
 
 #[test]

@@ -1343,6 +1343,8 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                     | "matches"
                     | "contains"
                     | "scrollIntoView"
+                    | "getAnimations"
+                    | "animate"
                     | "scrollTo"
                     | "scrollBy"
                     | "click" => {
@@ -1416,6 +1418,8 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                         | "replaceChildren"
                         | "cloneNode"
                         | "scrollIntoView"
+                        | "getAnimations"
+                        | "animate"
                         | "appendChild"
                         | "removeChild"
                         | "insertBefore"

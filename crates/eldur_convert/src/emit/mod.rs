@@ -16,13 +16,17 @@ mod ids;
 mod image;
 mod inline;
 pub(crate) use background::ELDUR_BACKGROUND_LAYER_QML;
-pub(crate) use decoration::{ELDUR_BORDER_QML, ELDUR_ROUND_CLIP_QML};
+pub(crate) use decoration::{
+    ELDUR_BORDER_QML, ELDUR_ROUND_CLIP_QML, ELDUR_SCROLL_INPUT_QML, ELDUR_SCROLLER_QML,
+    ELDUR_STICKY_QML,
+};
 pub(crate) use text::ELDUR_TEXT_LINES_QML;
 pub(crate) const ELDUR_FILTER_QML: &str = include_str!("EldurFilter.qml");
 pub(crate) const ELDUR_FILTER_QSB: &[u8] = include_bytes!("eldur_filter.frag.qsb");
 pub(crate) const ELDUR_TEXT_SHADOW_QML: &str = include_str!("EldurTextShadow.qml");
 pub(crate) use inline::{ELDUR_INLINE_BOX_QML, ELDUR_LINES_QML, has_atomic, needs_lines_for_boxes};
 mod inline_model;
+mod keyframes;
 mod links;
 mod lists;
 mod paint;
@@ -94,6 +98,8 @@ pub(crate) struct Emitter<'a, 'd> {
     /// §2.11.2); it is not painted again.
     canvas_node: Option<NodeId>,
     root_node: Option<NodeId>,
+    /// The `overflow` the root element or the body hands to the viewport.
+    viewport_overflow: (Overflow, Overflow),
     /// The page has a table, so the root needs the table solver.
     has_table: bool,
     /// The box being emitted is an overlay of its containing block, so its
@@ -228,6 +234,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             tapped_labels: HashSet::new(),
             canvas_node: None,
             root_node: None,
+            viewport_overflow: (Overflow::Visible, Overflow::Visible),
             has_table: false,
             positioned_child: false,
             abs_block: lists::ContainingBlock::initial(),
@@ -333,6 +340,29 @@ impl<'a, 'd> Emitter<'a, 'd> {
             "ScrollBar.vertical",
             Value::Object(Box::new(Object::new("ScrollBar"))),
         );
+        // The viewport takes it from the root element, never the body (CSSOM View §4).
+        if tree
+            .and_then(|html| html.node)
+            .and_then(|n| self.styles.style(n))
+            .is_some_and(|s| s.scroll_smooth)
+        {
+            flickable.members.insert(
+                0,
+                eldur_qml::Member::PropertyDecl {
+                    ty: "bool".to_owned(),
+                    name: "eldurSmooth".to_owned(),
+                    value: Some(Value::Bool(true)),
+                    readonly: false,
+                    required: false,
+                },
+            );
+        }
+        let mut scroll_input = Object::new("EldurScrollInput");
+        scroll_input.set("scroller", Value::expr(FLICKABLE_ID));
+        scroll_input.id = Some(format!("{FLICKABLE_ID}Input"));
+        scroll_input.set("keySource", Value::expr(format!("{FLICKABLE_ID}.parent")));
+        scroll_input.set("focus", Value::Bool(true));
+        flickable.push_child(scroll_input);
         let mut content_height = "0".to_owned();
         if let Some(html) = tree {
             self.root_node = html.node;
@@ -348,6 +378,12 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 margin(&html.style.margin.left),
             );
             let emitted = self.block(html, TextDecorationLine::default());
+            // `hidden` on the viewport stops the user; scripts can still move it.
+            if self.viewport_overflow.1 == Overflow::Hidden
+                || self.viewport_overflow.1 == Overflow::Clip
+            {
+                flickable.set("interactive", false);
+            }
             let mut page = if emitted.collapse_through {
                 Object::new("Item")
             } else {
@@ -434,6 +470,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         self.finish_resets(&mut root);
         self.report_inline_labels();
         carry::strip_hints(&mut root);
+        keyframes::bind_layout_motion(&mut root);
         paint::snap_rounded_boxes(&mut root, false);
         paint::native_text(&mut root, false);
         root
@@ -531,6 +568,15 @@ impl<'a, 'd> Emitter<'a, 'd> {
         };
         let paint_background = b.node.is_none() || b.node != self.canvas_node;
         let mut deco = self.decoration(style, paint_background, line);
+        // CSS Overflow 3 §3.3: the root's overflow, or the body's when the root's
+        // is `visible`, is the viewport's and the box itself does not clip.
+        let root = b.node.is_some() && b.node == self.root_node;
+        let body = b.node.is_some() && b.node == self.doc.body();
+        if root || body && self.viewport_overflow == (Overflow::Visible, Overflow::Visible) {
+            self.viewport_overflow = (style.overflow_x, style.overflow_y);
+            deco.scroll = None;
+            deco.clips = false;
+        }
         deco.hint = hint(self.doc, b);
         if b.node.is_some_and(|n| self.sticky.contains(&n)) {
             deco.paints = true;
@@ -729,7 +775,13 @@ impl<'a, 'd> Emitter<'a, 'd> {
             inner = Some((self.text(style, decoration, &[], line), "Text"));
         }
 
-        if inner.is_none() && top_open && bottom_open && !wanted && overlays.is_empty() {
+        if inner.is_none()
+            && top_open
+            && bottom_open
+            && !wanted
+            && overlays.is_empty()
+            && !self.static_animation(style)
+        {
             let mut top = MarginSet::of(mt);
             // With no item, every child margin is in `escaped_top`.
             top.join(escaped_top);
@@ -930,12 +982,16 @@ impl<'a, 'd> Emitter<'a, 'd> {
 
     /// `e` with `b`'s `transform`, which every kind of box takes.
     fn transformed(&mut self, mut e: Emitted, b: &LayoutBox<'_>, line: Option<u32>) -> Emitted {
-        if !b.style.transform.is_empty() {
-            let what = b
-                .node
-                .map_or_else(|| "a generated box".to_owned(), |n| describe(self.doc, n));
+        let what = b
+            .node
+            .map_or_else(|| "a generated box".to_owned(), |n| describe(self.doc, n));
+        let moved = b.node.is_some_and(|node| {
+            self.keyframes(&mut e.obj, node, &b.style, &hint(self.doc, b), &what, line)
+        });
+        if !b.style.transform.is_empty() && !moved {
             self.transform(&mut e.obj, &b.style, &hint(self.doc, b), &what, line);
         }
+        self.sticky_transform(&mut e.obj, &b.style, &hint(self.doc, b));
         // Every element box ends here, with its outermost object.
         if self.runtime_dom
             && let Some(node) = b.node
@@ -1073,6 +1129,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         match style.position {
             Position::Static => {}
             Position::Relative if is_unmoved(style) => {}
+            Position::Sticky => {}
             Position::Absolute | Position::Fixed if positioned => {}
             Position::Absolute | Position::Fixed => self.diags.warning(
                 "css",

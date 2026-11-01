@@ -3258,6 +3258,41 @@
    }
   }
  ],
+ "created_empty_body": [
+  {
+   "name": "load",
+   "log": [
+    "rects 8 8 1264 54 16px"
+   ],
+   "state": {
+    "#one": [
+     {
+      "box": [
+       8,
+       8,
+       1264,
+       40
+      ],
+      "shown": true,
+      "text": "one"
+     }
+    ],
+    "#two": [
+     {
+      "box": [
+       8,
+       54,
+       1264,
+       40
+      ],
+      "shown": true,
+      "text": "two"
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
  "created_lines": [
   {
    "name": "load",
@@ -30389,6 +30424,892 @@
    }
   }
  ],
+ "motion_closed": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#box": [
+     {
+      "box": [
+       8,
+       29,
+       120,
+       60
+      ],
+      "shown": true,
+      "text": "",
+      "props": {
+       "opacity": "1"
+      }
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "before its delay",
+   "log": [],
+   "state": {
+    "#box": [
+     {
+      "box": [
+       8,
+       29,
+       120,
+       60
+      ],
+      "shown": true,
+      "text": "",
+      "props": {
+       "opacity": "1"
+      }
+     }
+    ],
+    "(focus)": "go"
+   }
+  },
+  {
+   "name": "after",
+   "log": [],
+   "state": {
+    "#box": [
+     {
+      "box": [
+       8,
+       29,
+       120,
+       60
+      ],
+      "shown": true,
+      "text": "",
+      "props": {
+       "opacity": "0.25"
+      }
+     }
+    ],
+    "(focus)": "go"
+   }
+  }
+ ],
+ "motion_keyframes": [
+  {
+   "name": "load",
+   "log": [
+    "linear 20px 125px 30px 0.4 rgb(64, 0, 0) matrix(1, 0, 0, 1, 10, 0)",
+    "flow 30 125",
+    "ease 32.6808px 140.844px 36.3281px 0.526809 rgb(104, 0, 0)",
+    "bez 53.9287px 167.406px 46.9531px 0.739287 rgb(172, 0, 0)",
+    "steps 20px 125px 30px 0.4 rgb(64, 0, 0) | 40px 150px 40px 0.6 rgb(128, 0, 0)",
+    "three 40px",
+    "perkey 50px",
+    "alt 40px",
+    "rev 40px",
+    "fwd 30px",
+    "none 20px",
+    "back 10px",
+    "wait 20px",
+    "names slide alternate 3 forwards paused 10s -2.5s",
+    "anims 1 paused slide 0 | 0  | 0  | 0 "
+   ],
+   "state": {
+    "#after": [
+     {
+      "box": [
+       0,
+       30,
+       1280,
+       10
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "#linear": [
+     {
+      "box": [
+       30,
+       0,
+       125,
+       30
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "s1",
+   "log": [
+    "set 50px paused 50"
+   ],
+   "state": {
+    "#after": [
+     {
+      "box": [
+       0,
+       50,
+       1280,
+       10
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "#linear": [
+     {
+      "box": [
+       90,
+       0,
+       175,
+       50
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "s2",
+   "log": [
+    "finished finished 20px 0"
+   ],
+   "state": {
+    "#after": [
+     {
+      "box": [
+       0,
+       20,
+       1280,
+       10
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "#linear": [
+     {
+      "box": [
+       0,
+       0,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "s3",
+   "log": [
+    "shown 30px 1 paused mid 0",
+    "hidden 0 ",
+    "play running",
+    "off 20px 0"
+   ],
+   "state": {
+    "#after": [
+     {
+      "box": [
+       0,
+       20,
+       1280,
+       10
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "#linear": [
+     {
+      "box": [
+       0,
+       0,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "s4",
+   "log": [
+    "animate 70px 0.5 paused",
+    "timing 0.5 1000 1100 both",
+    "cancel 20px idle 0",
+    "object form 50px"
+   ],
+   "state": {
+    "#after": [
+     {
+      "box": [
+       0,
+       20,
+       1280,
+       10
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "#linear": [
+     {
+      "box": [
+       0,
+       0,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "s5",
+   "log": [
+    "run 1"
+   ],
+   "state": {
+    "#after": [
+     {
+      "box": [
+       0,
+       20,
+       1280,
+       10
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "#linear": [
+     {
+      "box": [
+       0,
+       0,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "s6",
+   "log": [
+    "events animationstart mid 0,animationiteration mid 0.03,animationend mid 0.06",
+    "run end 30px 30"
+   ],
+   "state": {
+    "#after": [
+     {
+      "box": [
+       0,
+       20,
+       1280,
+       10
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "#linear": [
+     {
+      "box": [
+       0,
+       0,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  }
+ ],
+ "motion_running": [
+  {
+   "name": "load",
+   "log": [
+    "running"
+   ],
+   "state": {
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "finished",
+   "log": [],
+   "state": {
+    "#ends": [
+     {
+      "box": [
+       0,
+       0,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#keeps": [
+     {
+      "box": [
+       0,
+       20,
+       1280,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#keepsRev": [
+     {
+      "box": [
+       0,
+       80,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#twice": [
+     {
+      "box": [
+       0,
+       100,
+       1280,
+       60
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#fades": [
+     {
+      "box": [
+       0,
+       160,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(153, 153, 153)"
+     }
+    ],
+    "#tints": [
+     {
+      "box": [
+       0,
+       180,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(0, 0, 255)"
+     }
+    ],
+    "#stairs": [
+     {
+      "box": [
+       0,
+       200,
+       150,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#late": [
+     {
+      "box": [
+       0,
+       220,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#lateFill": [
+     {
+      "box": [
+       0,
+       240,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#forever": [
+     {
+      "box": [
+       0,
+       260,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#below": [
+     {
+      "box": [
+       0,
+       280,
+       1280,
+       10
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
+ "motion_static": [
+  {
+   "name": "load",
+   "log": [
+    "pinned"
+   ],
+   "state": {
+    "#fade": [
+     {
+      "box": [
+       0,
+       0,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "",
+      "paint": "rgb(153, 153, 153)"
+     }
+    ],
+    "#tint": [
+     {
+      "box": [
+       0,
+       20,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#ink": [
+     {
+      "box": [
+       0,
+       40,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "ink"
+     }
+    ],
+    "#grow": [
+     {
+      "box": [
+       0,
+       60,
+       1280,
+       70
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       0,
+       130,
+       1280,
+       10
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#wide": [
+     {
+      "box": [
+       0,
+       140,
+       200,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#move": [
+     {
+      "box": [
+       50,
+       160,
+       50,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#spin": [
+     {
+      "box": [
+       -12.5,
+       175,
+       75,
+       30
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#three": [
+     {
+      "box": [
+       0,
+       200,
+       1280,
+       80
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#alt": [
+     {
+      "box": [
+       0,
+       280,
+       1280,
+       70
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#rev": [
+     {
+      "box": [
+       0,
+       350,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#eased": [
+     {
+      "box": [
+       0,
+       450,
+       1280,
+       51.53
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#stepped": [
+     {
+      "box": [
+       0,
+       501.53,
+       1280,
+       70
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#before": [
+     {
+      "box": [
+       0,
+       571.53,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#beforeFill": [
+     {
+      "box": [
+       0,
+       591.53,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#doneFill": [
+     {
+      "box": [
+       0,
+       611.53,
+       1280,
+       120
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#done": [
+     {
+      "box": [
+       0,
+       731.53,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#ml": [
+     {
+      "box": [
+       50,
+       751.53,
+       1230,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#mt": [
+     {
+      "box": [
+       0,
+       791.53,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#slide": [
+     {
+      "box": [
+       50,
+       811.53,
+       50,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#half": [
+     {
+      "box": [
+       -30,
+       831.53,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
+ "motion_transitions": [
+  {
+   "name": "load",
+   "log": [
+    "start 20px 0"
+   ],
+   "state": {
+    "#after": [
+     {
+      "box": [
+       0,
+       20,
+       1280,
+       10
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "#a": [
+     {
+      "box": [
+       0,
+       0,
+       100,
+       20
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "s1",
+   "log": [
+    "count 5 height height+opacity ",
+    "a 30px 150px 0.875 10px rgb(64, 0, 0)",
+    "flow 30 150",
+    "only 40px 300px",
+    "list 50px 0.9375",
+    "ez 36.3281px",
+    "bz 46.9531px",
+    "st 40px",
+    "tf matrix(1, 0, 0, 1, 25, 0)",
+    "shadow rgb(128, 0, 0) 5px 10px 2px 0px",
+    "none 60px",
+    "rev before 30px",
+    "rev after 30px 2500 0 0"
+   ],
+   "state": {
+    "#after": [
+     {
+      "box": [
+       0,
+       30,
+       1280,
+       10
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "#a": [
+     {
+      "box": [
+       10,
+       0,
+       150,
+       30
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "s2",
+   "log": [
+    "kill 60px 0"
+   ],
+   "state": {
+    "#after": [
+     {
+      "box": [
+       0,
+       30,
+       1280,
+       10
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "#a": [
+     {
+      "box": [
+       10,
+       0,
+       150,
+       30
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "s3",
+   "log": [
+    "events short short transitionrun height 0,short transitionstart height 0,short transitionend height 0.1",
+    "events kill kill transitionrun height 0,kill transitionstart height 0,kill transitioncancel height 0",
+    "short end 60px 0"
+   ],
+   "state": {
+    "#after": [
+     {
+      "box": [
+       0,
+       30,
+       1280,
+       10
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "#a": [
+     {
+      "box": [
+       10,
+       0,
+       150,
+       30
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  }
+ ],
  "roster": [
   {
    "name": "load",
@@ -36690,6 +37611,3778 @@
      }
     ],
     "(focus)": ""
+   }
+  }
+ ],
+ "scroll_box": [
+  {
+   "name": "load",
+   "log": [
+    "load box 0 0 271 320 140 320",
+    "load wide 0 0 60 500 60 200",
+    "load plain 0 0 50 1280 50 1280"
+   ],
+   "state": {
+    "#box": [
+     {
+      "box": [
+       0,
+       0,
+       330,
+       150
+      ],
+      "shown": true,
+      "text": "halfwords more words then onetwothreefourpin"
+     }
+    ],
+    "#half": [
+     {
+      "box": [
+       15,
+       15,
+       150,
+       30
+      ],
+      "shown": true,
+      "text": "half"
+     }
+    ],
+    "#lines": [
+     {
+      "box": [
+       15,
+       45,
+       300,
+       21
+      ],
+      "shown": true,
+      "text": "words more words then"
+     }
+    ],
+    ".row": [
+     {
+      "box": [
+       15,
+       66,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "one"
+     },
+     {
+      "box": [
+       15,
+       116,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "two"
+     },
+     {
+      "box": [
+       15,
+       166,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "three"
+     },
+     {
+      "box": [
+       15,
+       216,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "four"
+     }
+    ],
+    "#pin": [
+     {
+      "box": [
+       25,
+       155,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": "pin"
+     }
+    ],
+    "#fix": [
+     {
+      "box": [
+       400,
+       10,
+       80,
+       30
+      ],
+      "shown": true,
+      "text": "fixed"
+     }
+    ],
+    "#wide": [
+     {
+      "box": [
+       0,
+       150,
+       200,
+       60
+      ],
+      "shown": true,
+      "text": "wide"
+     }
+    ],
+    "#wideKid": [
+     {
+      "box": [
+       0,
+       150,
+       500,
+       30
+      ],
+      "shown": true,
+      "text": "wide"
+     }
+    ],
+    "#plain": [
+     {
+      "box": [
+       0,
+       210,
+       1280,
+       50
+      ],
+      "shown": true,
+      "text": "plain"
+     }
+    ],
+    "#btn": [
+     {
+      "box": [
+       10,
+       270,
+       30.83,
+       21
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "write",
+   "log": [
+    "written 50 events 0",
+    "rect 16",
+    "scroll event 50"
+   ],
+   "state": {
+    "#box": [
+     {
+      "box": [
+       0,
+       0,
+       330,
+       150
+      ],
+      "shown": true,
+      "text": "halfwords more words then onetwothreefourpin"
+     }
+    ],
+    "#half": [
+     {
+      "box": [
+       15,
+       -35,
+       150,
+       30
+      ],
+      "shown": true,
+      "text": "half"
+     }
+    ],
+    "#lines": [
+     {
+      "box": [
+       15,
+       -5,
+       300,
+       21
+      ],
+      "shown": true,
+      "text": "words more words then"
+     }
+    ],
+    ".row": [
+     {
+      "box": [
+       15,
+       16,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "one"
+     },
+     {
+      "box": [
+       15,
+       66,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "two"
+     },
+     {
+      "box": [
+       15,
+       116,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "three"
+     },
+     {
+      "box": [
+       15,
+       166,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "four"
+     }
+    ],
+    "#pin": [
+     {
+      "box": [
+       25,
+       105,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": "pin"
+     }
+    ],
+    "#fix": [
+     {
+      "box": [
+       400,
+       10,
+       80,
+       30
+      ],
+      "shown": true,
+      "text": "fixed"
+     }
+    ],
+    "#wide": [
+     {
+      "box": [
+       0,
+       150,
+       200,
+       60
+      ],
+      "shown": true,
+      "text": "wide"
+     }
+    ],
+    "#wideKid": [
+     {
+      "box": [
+       0,
+       150,
+       500,
+       30
+      ],
+      "shown": true,
+      "text": "wide"
+     }
+    ],
+    "#plain": [
+     {
+      "box": [
+       0,
+       210,
+       1280,
+       50
+      ],
+      "shown": true,
+      "text": "plain"
+     }
+    ],
+    "#btn": [
+     {
+      "box": [
+       10,
+       270,
+       30.83,
+       21
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "clamp",
+   "log": [
+    "clamped 131",
+    "floor 0",
+    "wide 300",
+    "scroll event 0"
+   ],
+   "state": {
+    "#box": [
+     {
+      "box": [
+       0,
+       0,
+       330,
+       150
+      ],
+      "shown": true,
+      "text": "halfwords more words then onetwothreefourpin"
+     }
+    ],
+    "#half": [
+     {
+      "box": [
+       15,
+       15,
+       150,
+       30
+      ],
+      "shown": true,
+      "text": "half"
+     }
+    ],
+    "#lines": [
+     {
+      "box": [
+       15,
+       45,
+       300,
+       21
+      ],
+      "shown": true,
+      "text": "words more words then"
+     }
+    ],
+    ".row": [
+     {
+      "box": [
+       15,
+       66,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "one"
+     },
+     {
+      "box": [
+       15,
+       116,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "two"
+     },
+     {
+      "box": [
+       15,
+       166,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "three"
+     },
+     {
+      "box": [
+       15,
+       216,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "four"
+     }
+    ],
+    "#pin": [
+     {
+      "box": [
+       25,
+       155,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": "pin"
+     }
+    ],
+    "#fix": [
+     {
+      "box": [
+       400,
+       10,
+       80,
+       30
+      ],
+      "shown": true,
+      "text": "fixed"
+     }
+    ],
+    "#wide": [
+     {
+      "box": [
+       0,
+       150,
+       200,
+       60
+      ],
+      "shown": true,
+      "text": "wide"
+     }
+    ],
+    "#wideKid": [
+     {
+      "box": [
+       -30,
+       150,
+       500,
+       30
+      ],
+      "shown": true,
+      "text": "wide"
+     }
+    ],
+    "#plain": [
+     {
+      "box": [
+       0,
+       210,
+       1280,
+       50
+      ],
+      "shown": true,
+      "text": "plain"
+     }
+    ],
+    "#btn": [
+     {
+      "box": [
+       10,
+       270,
+       30.83,
+       21
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "to and by",
+   "log": [
+    "to 60",
+    "by 75",
+    "to opts 5",
+    "scroll event 5"
+   ],
+   "state": {
+    "#box": [
+     {
+      "box": [
+       0,
+       0,
+       330,
+       150
+      ],
+      "shown": true,
+      "text": "halfwords more words then onetwothreefourpin"
+     }
+    ],
+    "#half": [
+     {
+      "box": [
+       15,
+       10,
+       150,
+       30
+      ],
+      "shown": true,
+      "text": "half"
+     }
+    ],
+    "#lines": [
+     {
+      "box": [
+       15,
+       40,
+       300,
+       21
+      ],
+      "shown": true,
+      "text": "words more words then"
+     }
+    ],
+    ".row": [
+     {
+      "box": [
+       15,
+       61,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "one"
+     },
+     {
+      "box": [
+       15,
+       111,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "two"
+     },
+     {
+      "box": [
+       15,
+       161,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "three"
+     },
+     {
+      "box": [
+       15,
+       211,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "four"
+     }
+    ],
+    "#pin": [
+     {
+      "box": [
+       25,
+       150,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": "pin"
+     }
+    ],
+    "#fix": [
+     {
+      "box": [
+       400,
+       10,
+       80,
+       30
+      ],
+      "shown": true,
+      "text": "fixed"
+     }
+    ],
+    "#wide": [
+     {
+      "box": [
+       0,
+       150,
+       200,
+       60
+      ],
+      "shown": true,
+      "text": "wide"
+     }
+    ],
+    "#wideKid": [
+     {
+      "box": [
+       -30,
+       150,
+       500,
+       30
+      ],
+      "shown": true,
+      "text": "wide"
+     }
+    ],
+    "#plain": [
+     {
+      "box": [
+       0,
+       210,
+       1280,
+       50
+      ],
+      "shown": true,
+      "text": "plain"
+     }
+    ],
+    "#btn": [
+     {
+      "box": [
+       10,
+       270,
+       30.83,
+       21
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "into view",
+   "log": [
+    "start 131",
+    "end 61",
+    "center 111",
+    "nearest 61",
+    "scroll event 61"
+   ],
+   "state": {
+    "#box": [
+     {
+      "box": [
+       0,
+       0,
+       330,
+       150
+      ],
+      "shown": true,
+      "text": "halfwords more words then onetwothreefourpin"
+     }
+    ],
+    "#half": [
+     {
+      "box": [
+       15,
+       -46,
+       150,
+       30
+      ],
+      "shown": true,
+      "text": "half"
+     }
+    ],
+    "#lines": [
+     {
+      "box": [
+       15,
+       -16,
+       300,
+       21
+      ],
+      "shown": true,
+      "text": "words more words then"
+     }
+    ],
+    ".row": [
+     {
+      "box": [
+       15,
+       5,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "one"
+     },
+     {
+      "box": [
+       15,
+       55,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "two"
+     },
+     {
+      "box": [
+       15,
+       105,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "three"
+     },
+     {
+      "box": [
+       15,
+       155,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "four"
+     }
+    ],
+    "#pin": [
+     {
+      "box": [
+       25,
+       94,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": "pin"
+     }
+    ],
+    "#fix": [
+     {
+      "box": [
+       400,
+       10,
+       80,
+       30
+      ],
+      "shown": true,
+      "text": "fixed"
+     }
+    ],
+    "#wide": [
+     {
+      "box": [
+       0,
+       150,
+       200,
+       60
+      ],
+      "shown": true,
+      "text": "wide"
+     }
+    ],
+    "#wideKid": [
+     {
+      "box": [
+       -30,
+       150,
+       500,
+       30
+      ],
+      "shown": true,
+      "text": "wide"
+     }
+    ],
+    "#plain": [
+     {
+      "box": [
+       0,
+       210,
+       1280,
+       50
+      ],
+      "shown": true,
+      "text": "plain"
+     }
+    ],
+    "#btn": [
+     {
+      "box": [
+       10,
+       270,
+       30.83,
+       21
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "hit",
+   "log": [
+    "pin 24",
+    "hit r3",
+    "fixed 10",
+    "scroll event 131"
+   ],
+   "state": {
+    "#box": [
+     {
+      "box": [
+       0,
+       0,
+       330,
+       150
+      ],
+      "shown": true,
+      "text": "halfwords more words then onetwothreefourpin"
+     }
+    ],
+    "#half": [
+     {
+      "box": [
+       15,
+       -116,
+       150,
+       30
+      ],
+      "shown": true,
+      "text": "half"
+     }
+    ],
+    "#lines": [
+     {
+      "box": [
+       15,
+       -86,
+       300,
+       21
+      ],
+      "shown": true,
+      "text": "words more words then"
+     }
+    ],
+    ".row": [
+     {
+      "box": [
+       15,
+       -65,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "one"
+     },
+     {
+      "box": [
+       15,
+       -15,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "two"
+     },
+     {
+      "box": [
+       15,
+       35,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "three"
+     },
+     {
+      "box": [
+       15,
+       85,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "four"
+     }
+    ],
+    "#pin": [
+     {
+      "box": [
+       25,
+       24,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": "pin"
+     }
+    ],
+    "#fix": [
+     {
+      "box": [
+       400,
+       10,
+       80,
+       30
+      ],
+      "shown": true,
+      "text": "fixed"
+     }
+    ],
+    "#wide": [
+     {
+      "box": [
+       0,
+       150,
+       200,
+       60
+      ],
+      "shown": true,
+      "text": "wide"
+     }
+    ],
+    "#wideKid": [
+     {
+      "box": [
+       -30,
+       150,
+       500,
+       30
+      ],
+      "shown": true,
+      "text": "wide"
+     }
+    ],
+    "#plain": [
+     {
+      "box": [
+       0,
+       210,
+       1280,
+       50
+      ],
+      "shown": true,
+      "text": "plain"
+     }
+    ],
+    "#btn": [
+     {
+      "box": [
+       10,
+       270,
+       30.83,
+       21
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "wheel to the end",
+   "log": [],
+   "state": {
+    "#box": [
+     {
+      "box": [
+       0,
+       0,
+       330,
+       150
+      ],
+      "shown": true,
+      "text": "halfwords more words then onetwothreefourpin"
+     }
+    ],
+    "#half": [
+     {
+      "box": [
+       15,
+       -116,
+       150,
+       30
+      ],
+      "shown": true,
+      "text": "half"
+     }
+    ],
+    "#lines": [
+     {
+      "box": [
+       15,
+       -86,
+       300,
+       21
+      ],
+      "shown": true,
+      "text": "words more words then"
+     }
+    ],
+    ".row": [
+     {
+      "box": [
+       15,
+       -65,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "one"
+     },
+     {
+      "box": [
+       15,
+       -15,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "two"
+     },
+     {
+      "box": [
+       15,
+       35,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "three"
+     },
+     {
+      "box": [
+       15,
+       85,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "four"
+     }
+    ],
+    "#pin": [
+     {
+      "box": [
+       25,
+       24,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": "pin"
+     }
+    ],
+    "#fix": [
+     {
+      "box": [
+       400,
+       10,
+       80,
+       30
+      ],
+      "shown": true,
+      "text": "fixed"
+     }
+    ],
+    "#wide": [
+     {
+      "box": [
+       0,
+       150,
+       200,
+       60
+      ],
+      "shown": true,
+      "text": "wide"
+     }
+    ],
+    "#wideKid": [
+     {
+      "box": [
+       -30,
+       150,
+       500,
+       30
+      ],
+      "shown": true,
+      "text": "wide"
+     }
+    ],
+    "#plain": [
+     {
+      "box": [
+       0,
+       210,
+       1280,
+       50
+      ],
+      "shown": true,
+      "text": "plain"
+     }
+    ],
+    "#btn": [
+     {
+      "box": [
+       10,
+       270,
+       30.83,
+       21
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "wheel back",
+   "log": [
+    "scroll event 0"
+   ],
+   "state": {
+    "#box": [
+     {
+      "box": [
+       0,
+       0,
+       330,
+       150
+      ],
+      "shown": true,
+      "text": "halfwords more words then onetwothreefourpin"
+     }
+    ],
+    "#half": [
+     {
+      "box": [
+       15,
+       15,
+       150,
+       30
+      ],
+      "shown": true,
+      "text": "half"
+     }
+    ],
+    "#lines": [
+     {
+      "box": [
+       15,
+       45,
+       300,
+       21
+      ],
+      "shown": true,
+      "text": "words more words then"
+     }
+    ],
+    ".row": [
+     {
+      "box": [
+       15,
+       66,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "one"
+     },
+     {
+      "box": [
+       15,
+       116,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "two"
+     },
+     {
+      "box": [
+       15,
+       166,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "three"
+     },
+     {
+      "box": [
+       15,
+       216,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "four"
+     }
+    ],
+    "#pin": [
+     {
+      "box": [
+       25,
+       155,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": "pin"
+     }
+    ],
+    "#fix": [
+     {
+      "box": [
+       400,
+       10,
+       80,
+       30
+      ],
+      "shown": true,
+      "text": "fixed"
+     }
+    ],
+    "#wide": [
+     {
+      "box": [
+       0,
+       150,
+       200,
+       60
+      ],
+      "shown": true,
+      "text": "wide"
+     }
+    ],
+    "#wideKid": [
+     {
+      "box": [
+       -30,
+       150,
+       500,
+       30
+      ],
+      "shown": true,
+      "text": "wide"
+     }
+    ],
+    "#plain": [
+     {
+      "box": [
+       0,
+       210,
+       1280,
+       50
+      ],
+      "shown": true,
+      "text": "plain"
+     }
+    ],
+    "#btn": [
+     {
+      "box": [
+       10,
+       270,
+       30.83,
+       21
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "wheel wide",
+   "log": [],
+   "state": {
+    "#box": [
+     {
+      "box": [
+       0,
+       0,
+       330,
+       150
+      ],
+      "shown": true,
+      "text": "halfwords more words then onetwothreefourpin"
+     }
+    ],
+    "#half": [
+     {
+      "box": [
+       15,
+       15,
+       150,
+       30
+      ],
+      "shown": true,
+      "text": "half"
+     }
+    ],
+    "#lines": [
+     {
+      "box": [
+       15,
+       45,
+       300,
+       21
+      ],
+      "shown": true,
+      "text": "words more words then"
+     }
+    ],
+    ".row": [
+     {
+      "box": [
+       15,
+       66,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "one"
+     },
+     {
+      "box": [
+       15,
+       116,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "two"
+     },
+     {
+      "box": [
+       15,
+       166,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "three"
+     },
+     {
+      "box": [
+       15,
+       216,
+       300,
+       40
+      ],
+      "shown": true,
+      "text": "four"
+     }
+    ],
+    "#pin": [
+     {
+      "box": [
+       25,
+       155,
+       60,
+       20
+      ],
+      "shown": true,
+      "text": "pin"
+     }
+    ],
+    "#fix": [
+     {
+      "box": [
+       400,
+       10,
+       80,
+       30
+      ],
+      "shown": true,
+      "text": "fixed"
+     }
+    ],
+    "#wide": [
+     {
+      "box": [
+       0,
+       150,
+       200,
+       60
+      ],
+      "shown": true,
+      "text": "wide"
+     }
+    ],
+    "#wideKid": [
+     {
+      "box": [
+       -300,
+       150,
+       500,
+       30
+      ],
+      "shown": true,
+      "text": "wide"
+     }
+    ],
+    "#plain": [
+     {
+      "box": [
+       0,
+       210,
+       1280,
+       50
+      ],
+      "shown": true,
+      "text": "plain"
+     }
+    ],
+    "#btn": [
+     {
+      "box": [
+       10,
+       270,
+       30.83,
+       21
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  }
+ ],
+ "scroll_created": [
+  {
+   "name": "load",
+   "log": [
+    "made 400 100 0 0 400",
+    "set 50 -50 400",
+    "clamped 300",
+    "by 70 -70 400",
+    "late 400 100",
+    "abs 310 50 200 100",
+    "sticky 300 20 300 100",
+    "scrolled 70"
+   ],
+   "state": {
+    "#port": [
+     {
+      "box": [
+       0,
+       0,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#kid": [
+     {
+      "box": [
+       0,
+       -70,
+       200,
+       400
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#late": [
+     {
+      "box": [
+       0,
+       100,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       0,
+       400,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "s1",
+   "log": [
+    "events 1",
+    "opened 400 100 0",
+    "opened set 30 70 400"
+   ],
+   "state": {
+    "#port": [
+     {
+      "box": [
+       0,
+       0,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#kid": [
+     {
+      "box": [
+       0,
+       -70,
+       200,
+       400
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#late": [
+     {
+      "box": [
+       0,
+       100,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       0,
+       400,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "s2",
+   "log": [
+    "closed 0"
+   ],
+   "state": {
+    "#port": [
+     {
+      "box": [
+       0,
+       0,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#kid": [
+     {
+      "box": [
+       0,
+       -70,
+       200,
+       400
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#late": [
+     {
+      "box": [
+       0,
+       100,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       0,
+       400,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "wheel",
+   "log": [
+    "scrolled 190"
+   ],
+   "state": {
+    "#port": [
+     {
+      "box": [
+       0,
+       0,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#kid": [
+     {
+      "box": [
+       0,
+       -190,
+       200,
+       400
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#late": [
+     {
+      "box": [
+       0,
+       100,
+       200,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       0,
+       400,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
+ "scroll_keys": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       8,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       218,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "click still",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       8,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       218,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "down",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       -32,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       218,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "page down",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       -207,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       218,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "end",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       -692,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       218,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "home",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       8,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       218,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "click made",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       8,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       218,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "made down",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       8,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       178,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "made page down",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       8,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       3,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "made end",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       8,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       -482,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "made home",
+   "log": [],
+   "state": {
+    "#still-kid": [
+     {
+      "box": [
+       8,
+       8,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "written"
+     }
+    ],
+    "#made-kid": [
+     {
+      "box": [
+       8,
+       218,
+       400,
+       900
+      ],
+      "shown": true,
+      "text": "made"
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
+ "scroll_more": [
+  {
+   "name": "load",
+   "log": [
+    "pad 360 120 220 130",
+    "pad at 60 -45 20 -5",
+    "pad end 240 20",
+    "th 50 130 100",
+    "side 230 310",
+    "side far 170 240",
+    "wide 100 600 200 -100",
+    "hid 40 350",
+    "into 270 420",
+    "hit padFill",
+    "hit top padHead",
+    "hit border pad",
+    "cpad 360 120 220",
+    "cpad at 60 405 470 445",
+    "chit cfill",
+    "cpad end 240 470"
+   ],
+   "state": {
+    "#pad": [
+     {
+      "box": [
+       0,
+       0,
+       230,
+       130
+      ],
+      "shown": true,
+      "text": "heads"
+     }
+    ],
+    "#padStick": [
+     {
+      "box": [
+       15,
+       35,
+       200,
+       20
+      ],
+      "shown": true,
+      "text": "s"
+     }
+    ],
+    "#th1": [
+     {
+      "box": [
+       0,
+       130,
+       140,
+       20
+      ],
+      "shown": true,
+      "text": "A"
+     }
+    ],
+    "#td1": [
+     {
+      "box": [
+       0,
+       100,
+       140,
+       40
+      ],
+      "shown": true,
+      "text": "1"
+     }
+    ],
+    "#sideBar": [
+     {
+      "box": [
+       0,
+       240,
+       200,
+       50
+      ],
+      "shown": true,
+      "text": "bar"
+     }
+    ],
+    "#stickEnd": [
+     {
+      "box": [
+       0,
+       170,
+       200,
+       30
+      ],
+      "shown": true,
+      "text": "e"
+     }
+    ],
+    "#wideKid": [
+     {
+      "box": [
+       -100,
+       330,
+       600,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       420,
+       200,
+       30
+      ],
+      "shown": true,
+      "text": "t"
+     }
+    ],
+    "#cstick": [
+     {
+      "box": [
+       15,
+       470,
+       200,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "wheelPad",
+   "log": [],
+   "state": {
+    "#pad": [
+     {
+      "box": [
+       0,
+       0,
+       230,
+       130
+      ],
+      "shown": true,
+      "text": "heads"
+     }
+    ],
+    "#padStick": [
+     {
+      "box": [
+       15,
+       20,
+       200,
+       20
+      ],
+      "shown": true,
+      "text": "s"
+     }
+    ],
+    "#th1": [
+     {
+      "box": [
+       0,
+       130,
+       140,
+       20
+      ],
+      "shown": true,
+      "text": "A"
+     }
+    ],
+    "#td1": [
+     {
+      "box": [
+       0,
+       100,
+       140,
+       40
+      ],
+      "shown": true,
+      "text": "1"
+     }
+    ],
+    "#sideBar": [
+     {
+      "box": [
+       0,
+       240,
+       200,
+       50
+      ],
+      "shown": true,
+      "text": "bar"
+     }
+    ],
+    "#stickEnd": [
+     {
+      "box": [
+       0,
+       170,
+       200,
+       30
+      ],
+      "shown": true,
+      "text": "e"
+     }
+    ],
+    "#wideKid": [
+     {
+      "box": [
+       -100,
+       330,
+       600,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       420,
+       200,
+       30
+      ],
+      "shown": true,
+      "text": "t"
+     }
+    ],
+    "#cstick": [
+     {
+      "box": [
+       15,
+       470,
+       200,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "wheelTh",
+   "log": [],
+   "state": {
+    "#pad": [
+     {
+      "box": [
+       0,
+       0,
+       230,
+       130
+      ],
+      "shown": true,
+      "text": "heads"
+     }
+    ],
+    "#padStick": [
+     {
+      "box": [
+       15,
+       20,
+       200,
+       20
+      ],
+      "shown": true,
+      "text": "s"
+     }
+    ],
+    "#th1": [
+     {
+      "box": [
+       0,
+       130,
+       140,
+       20
+      ],
+      "shown": true,
+      "text": "A"
+     }
+    ],
+    "#td1": [
+     {
+      "box": [
+       0,
+       80,
+       140,
+       40
+      ],
+      "shown": true,
+      "text": "1"
+     }
+    ],
+    "#sideBar": [
+     {
+      "box": [
+       0,
+       240,
+       200,
+       50
+      ],
+      "shown": true,
+      "text": "bar"
+     }
+    ],
+    "#stickEnd": [
+     {
+      "box": [
+       0,
+       170,
+       200,
+       30
+      ],
+      "shown": true,
+      "text": "e"
+     }
+    ],
+    "#wideKid": [
+     {
+      "box": [
+       -100,
+       330,
+       600,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       420,
+       200,
+       30
+      ],
+      "shown": true,
+      "text": "t"
+     }
+    ],
+    "#cstick": [
+     {
+      "box": [
+       15,
+       470,
+       200,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "keyless",
+   "log": [],
+   "state": {
+    "#pad": [
+     {
+      "box": [
+       0,
+       0,
+       230,
+       130
+      ],
+      "shown": true,
+      "text": "heads"
+     }
+    ],
+    "#padStick": [
+     {
+      "box": [
+       15,
+       20,
+       200,
+       20
+      ],
+      "shown": true,
+      "text": "s"
+     }
+    ],
+    "#th1": [
+     {
+      "box": [
+       0,
+       130,
+       140,
+       20
+      ],
+      "shown": true,
+      "text": "A"
+     }
+    ],
+    "#td1": [
+     {
+      "box": [
+       0,
+       80,
+       140,
+       40
+      ],
+      "shown": true,
+      "text": "1"
+     }
+    ],
+    "#sideBar": [
+     {
+      "box": [
+       0,
+       240,
+       200,
+       50
+      ],
+      "shown": true,
+      "text": "bar"
+     }
+    ],
+    "#stickEnd": [
+     {
+      "box": [
+       0,
+       170,
+       200,
+       30
+      ],
+      "shown": true,
+      "text": "e"
+     }
+    ],
+    "#wideKid": [
+     {
+      "box": [
+       -100,
+       330,
+       600,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       420,
+       200,
+       30
+      ],
+      "shown": true,
+      "text": "t"
+     }
+    ],
+    "#cstick": [
+     {
+      "box": [
+       15,
+       470,
+       200,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
+ "scroll_page": [
+  {
+   "name": "load",
+   "log": [
+    "load 0 0 0 1960 800 800",
+    "same true"
+   ],
+   "state": {
+    "nav": [
+     {
+      "box": [
+       0,
+       0,
+       1280,
+       30
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "#stick": [
+     {
+      "box": [
+       0,
+       730,
+       1280,
+       30
+      ],
+      "shown": true,
+      "text": "sticky"
+     }
+    ],
+    "#stickWrap": [
+     {
+      "box": [
+       0,
+       730,
+       1280,
+       200
+      ],
+      "shown": true,
+      "text": "sticky"
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       930,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": "target"
+     }
+    ],
+    "#far": [
+     {
+      "box": [
+       0,
+       1330,
+       208,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#abs": [
+     {
+      "box": [
+       800,
+       900,
+       60,
+       30
+      ],
+      "shown": true,
+      "text": "abs"
+     }
+    ],
+    "#fix": [
+     {
+      "box": [
+       900,
+       10,
+       80,
+       30
+      ],
+      "shown": true,
+      "text": "fixed"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "to",
+   "log": [
+    "to 300 300 300 1960 800 800",
+    "fix 10 abs 600 stick 430",
+    "window scroll 300"
+   ],
+   "state": {
+    "nav": [
+     {
+      "box": [
+       0,
+       -300,
+       1280,
+       30
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "#stick": [
+     {
+      "box": [
+       0,
+       430,
+       1280,
+       30
+      ],
+      "shown": true,
+      "text": "sticky"
+     }
+    ],
+    "#stickWrap": [
+     {
+      "box": [
+       0,
+       430,
+       1280,
+       200
+      ],
+      "shown": true,
+      "text": "sticky"
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       630,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": "target"
+     }
+    ],
+    "#far": [
+     {
+      "box": [
+       0,
+       1030,
+       208,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#abs": [
+     {
+      "box": [
+       800,
+       600,
+       60,
+       30
+      ],
+      "shown": true,
+      "text": "abs"
+     }
+    ],
+    "#fix": [
+     {
+      "box": [
+       900,
+       10,
+       80,
+       30
+      ],
+      "shown": true,
+      "text": "fixed"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "by",
+   "log": [
+    "by 400",
+    "top 750",
+    "stick 5",
+    "scrolling 800",
+    "stick 5 in -70",
+    "window scroll 800"
+   ],
+   "state": {
+    "nav": [
+     {
+      "box": [
+       0,
+       -800,
+       1280,
+       30
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "#stick": [
+     {
+      "box": [
+       0,
+       5,
+       1280,
+       30
+      ],
+      "shown": true,
+      "text": "sticky"
+     }
+    ],
+    "#stickWrap": [
+     {
+      "box": [
+       0,
+       -70,
+       1280,
+       200
+      ],
+      "shown": true,
+      "text": "sticky"
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       130,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": "target"
+     }
+    ],
+    "#far": [
+     {
+      "box": [
+       0,
+       530,
+       208,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#abs": [
+     {
+      "box": [
+       800,
+       100,
+       60,
+       30
+      ],
+      "shown": true,
+      "text": "abs"
+     }
+    ],
+    "#fix": [
+     {
+      "box": [
+       900,
+       10,
+       80,
+       30
+      ],
+      "shown": true,
+      "text": "fixed"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "end",
+   "log": [
+    "end 1160 of 1960",
+    "floor 0",
+    "window scroll 0"
+   ],
+   "state": {
+    "nav": [
+     {
+      "box": [
+       0,
+       0,
+       1280,
+       30
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "#stick": [
+     {
+      "box": [
+       0,
+       730,
+       1280,
+       30
+      ],
+      "shown": true,
+      "text": "sticky"
+     }
+    ],
+    "#stickWrap": [
+     {
+      "box": [
+       0,
+       730,
+       1280,
+       200
+      ],
+      "shown": true,
+      "text": "sticky"
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       930,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": "target"
+     }
+    ],
+    "#far": [
+     {
+      "box": [
+       0,
+       1330,
+       208,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#abs": [
+     {
+      "box": [
+       800,
+       900,
+       60,
+       30
+      ],
+      "shown": true,
+      "text": "abs"
+     }
+    ],
+    "#fix": [
+     {
+      "box": [
+       900,
+       10,
+       80,
+       30
+      ],
+      "shown": true,
+      "text": "fixed"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "hash",
+   "log": [
+    "hash 930 #target",
+    "window scroll 930"
+   ],
+   "state": {
+    "nav": [
+     {
+      "box": [
+       0,
+       -930,
+       1280,
+       30
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "#stick": [
+     {
+      "box": [
+       0,
+       -30,
+       1280,
+       30
+      ],
+      "shown": true,
+      "text": "sticky"
+     }
+    ],
+    "#stickWrap": [
+     {
+      "box": [
+       0,
+       -200,
+       1280,
+       200
+      ],
+      "shown": true,
+      "text": "sticky"
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       0,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": "target"
+     }
+    ],
+    "#far": [
+     {
+      "box": [
+       0,
+       400,
+       208,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#abs": [
+     {
+      "box": [
+       800,
+       -30,
+       60,
+       30
+      ],
+      "shown": true,
+      "text": "abs"
+     }
+    ],
+    "#fix": [
+     {
+      "box": [
+       900,
+       10,
+       80,
+       30
+      ],
+      "shown": true,
+      "text": "fixed"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "focus",
+   "log": [
+    "focus 945 385",
+    "window scroll 945"
+   ],
+   "state": {
+    "nav": [
+     {
+      "box": [
+       0,
+       -945,
+       1280,
+       30
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "#stick": [
+     {
+      "box": [
+       0,
+       -45,
+       1280,
+       30
+      ],
+      "shown": true,
+      "text": "sticky"
+     }
+    ],
+    "#stickWrap": [
+     {
+      "box": [
+       0,
+       -215,
+       1280,
+       200
+      ],
+      "shown": true,
+      "text": "sticky"
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       -15,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": "target"
+     }
+    ],
+    "#far": [
+     {
+      "box": [
+       0,
+       385,
+       208,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#abs": [
+     {
+      "box": [
+       800,
+       -45,
+       60,
+       30
+      ],
+      "shown": true,
+      "text": "abs"
+     }
+    ],
+    "#fix": [
+     {
+      "box": [
+       900,
+       10,
+       80,
+       30
+      ],
+      "shown": true,
+      "text": "fixed"
+     }
+    ],
+    "(focus)": "far"
+   }
+  },
+  {
+   "name": "hit",
+   "log": [
+    "hit top NAV",
+    "hit stuck stick",
+    "hit fixed fix",
+    "window scroll 750"
+   ],
+   "state": {
+    "nav": [
+     {
+      "box": [
+       0,
+       -750,
+       1280,
+       30
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "#stick": [
+     {
+      "box": [
+       0,
+       5,
+       1280,
+       30
+      ],
+      "shown": true,
+      "text": "sticky"
+     }
+    ],
+    "#stickWrap": [
+     {
+      "box": [
+       0,
+       -20,
+       1280,
+       200
+      ],
+      "shown": true,
+      "text": "sticky"
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       180,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": "target"
+     }
+    ],
+    "#far": [
+     {
+      "box": [
+       0,
+       580,
+       208,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#abs": [
+     {
+      "box": [
+       800,
+       150,
+       60,
+       30
+      ],
+      "shown": true,
+      "text": "abs"
+     }
+    ],
+    "#fix": [
+     {
+      "box": [
+       900,
+       10,
+       80,
+       30
+      ],
+      "shown": true,
+      "text": "fixed"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "wheel",
+   "log": [],
+   "state": {
+    "nav": [
+     {
+      "box": [
+       0,
+       -1050,
+       1280,
+       30
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "#stick": [
+     {
+      "box": [
+       0,
+       -150,
+       1280,
+       30
+      ],
+      "shown": true,
+      "text": "sticky"
+     }
+    ],
+    "#stickWrap": [
+     {
+      "box": [
+       0,
+       -320,
+       1280,
+       200
+      ],
+      "shown": true,
+      "text": "sticky"
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       -120,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": "target"
+     }
+    ],
+    "#far": [
+     {
+      "box": [
+       0,
+       280,
+       208,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#abs": [
+     {
+      "box": [
+       800,
+       -150,
+       60,
+       30
+      ],
+      "shown": true,
+      "text": "abs"
+     }
+    ],
+    "#fix": [
+     {
+      "box": [
+       900,
+       10,
+       80,
+       30
+      ],
+      "shown": true,
+      "text": "fixed"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "keys",
+   "log": [],
+   "state": {
+    "nav": [
+     {
+      "box": [
+       0,
+       0,
+       1280,
+       30
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "#stick": [
+     {
+      "box": [
+       0,
+       730,
+       1280,
+       30
+      ],
+      "shown": true,
+      "text": "sticky"
+     }
+    ],
+    "#stickWrap": [
+     {
+      "box": [
+       0,
+       730,
+       1280,
+       200
+      ],
+      "shown": true,
+      "text": "sticky"
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       930,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": "target"
+     }
+    ],
+    "#far": [
+     {
+      "box": [
+       0,
+       1330,
+       208,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#abs": [
+     {
+      "box": [
+       800,
+       900,
+       60,
+       30
+      ],
+      "shown": true,
+      "text": "abs"
+     }
+    ],
+    "#fix": [
+     {
+      "box": [
+       900,
+       10,
+       80,
+       30
+      ],
+      "shown": true,
+      "text": "fixed"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "anchor",
+   "log": [],
+   "state": {
+    "nav": [
+     {
+      "box": [
+       0,
+       -930,
+       1280,
+       30
+      ],
+      "shown": true,
+      "text": "go"
+     }
+    ],
+    "#stick": [
+     {
+      "box": [
+       0,
+       -30,
+       1280,
+       30
+      ],
+      "shown": true,
+      "text": "sticky"
+     }
+    ],
+    "#stickWrap": [
+     {
+      "box": [
+       0,
+       -200,
+       1280,
+       200
+      ],
+      "shown": true,
+      "text": "sticky"
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       0,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": "target"
+     }
+    ],
+    "#far": [
+     {
+      "box": [
+       0,
+       400,
+       208,
+       30
+      ],
+      "shown": true,
+      "text": "",
+      "value": ""
+     }
+    ],
+    "#abs": [
+     {
+      "box": [
+       800,
+       -30,
+       60,
+       30
+      ],
+      "shown": true,
+      "text": "abs"
+     }
+    ],
+    "#fix": [
+     {
+      "box": [
+       900,
+       10,
+       80,
+       30
+      ],
+      "shown": true,
+      "text": "fixed"
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
+ "scroll_smooth": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       0,
+       21,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       0,
+       121,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       1421,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "css",
+   "log": [
+    "css 0 0 0"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       0,
+       21,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       0,
+       121,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       1421,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "css"
+   }
+  },
+  {
+   "name": "opt",
+   "log": [
+    "opt 200 0 0"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       0,
+       21,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       0,
+       121,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       1421,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "opt"
+   }
+  },
+  {
+   "name": "inst",
+   "log": [
+    "inst 0 150 0"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       0,
+       21,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       0,
+       121,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       1421,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "inst"
+   }
+  },
+  {
+   "name": "made",
+   "log": [
+    "made 0",
+    "made later 120"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       0,
+       121,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       0,
+       221,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       1521,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "made"
+   }
+  },
+  {
+   "name": "win",
+   "log": [
+    "win 0 150 0"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       0,
+       -179,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       0,
+       -79,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       1221,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "win"
+   }
+  },
+  {
+   "name": "top",
+   "log": [],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       0,
+       121,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#b": [
+     {
+      "box": [
+       0,
+       221,
+       1280,
+       100
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#target": [
+     {
+      "box": [
+       0,
+       1521,
+       1280,
+       20
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "win"
    }
   }
  ],
@@ -52024,6 +56717,51 @@
      }
     ],
     "(focus)": "compact"
+   }
+  }
+ ],
+ "timers_order": [
+  {
+   "name": "load",
+   "log": [
+    "one stamp a frame true",
+    "frames number true true true"
+   ],
+   "state": {
+    "#out": [
+     {
+      "box": [
+       8,
+       16,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "waiting"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "later",
+   "log": [
+    "order micro t0 t0b micro-in-t0b t0c nested t20 iv iv t100 iv"
+   ],
+   "state": {
+    "#out": [
+     {
+      "box": [
+       8,
+       16,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "done"
+     }
+    ],
+    "(focus)": ""
    }
   }
  ],

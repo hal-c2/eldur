@@ -25,6 +25,13 @@ ApplicationWindow {
         ScrollBar.vertical: ScrollBar {}
         contentHeight: page.implicitHeight
 
+        EldurScrollInput {
+            id: flickableInput
+            scroller: flickable
+            keySource: flickable.parent
+            focus: true
+        }
+
         // <html>
         ColumnLayout {
             id: page

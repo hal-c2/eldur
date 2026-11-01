@@ -1,0 +1,6 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[css]: index.html:20: `layer.enabled` of <a id="t-starting" class="starting"> changes under a class or state but has no QML form here; it keeps the document's value
+info[css]: index.html:21: `layer.enabled` of <a id="t-curve" class="curve"> changes under a class or state but has no QML form here; it keeps the document's value
