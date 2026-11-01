@@ -785,6 +785,7 @@ ApplicationWindow {
                                                         property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                                                         spacing: 8
+                                                        Layout.fillHeight: false
                                                         Layout.fillWidth: true
                                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
                                                         Layout.topMargin: -tileLabel2.eldurCarry

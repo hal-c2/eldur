@@ -556,6 +556,10 @@ impl Emitter<'_, '_> {
             };
             obj.set(&format!("Layout.maximum{main}"), Value::expr(cap));
         } else {
+            // A Qt layout fills by default; `flex-grow: 0` takes no spare room.
+            if layout_item {
+                obj.set(&format!("Layout.fill{main}"), false);
+            }
             if let Some(v) = &basis {
                 obj.set(&format!("Layout.preferred{main}"), v.clone());
                 if style.flex_shrink == 0.0 {

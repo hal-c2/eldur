@@ -339,6 +339,7 @@ ApplicationWindow {
                                     // <p class="price">
                                     RowLayout {
                                         spacing: 0
+                                        Layout.fillHeight: false
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
                                         Layout.topMargin: 24
@@ -394,6 +395,7 @@ ApplicationWindow {
                                         columns: 1
                                         columnSpacing: 12
                                         rowSpacing: 12
+                                        Layout.fillHeight: false
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
                                         Layout.topMargin: 28
@@ -744,6 +746,7 @@ ApplicationWindow {
                                     // <p class="price">
                                     RowLayout {
                                         spacing: 0
+                                        Layout.fillHeight: false
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
                                         Layout.topMargin: 24
@@ -797,6 +800,7 @@ ApplicationWindow {
                                         columns: 1
                                         columnSpacing: 12
                                         rowSpacing: 12
+                                        Layout.fillHeight: false
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
                                         Layout.topMargin: 28
@@ -1200,6 +1204,7 @@ ApplicationWindow {
                                     // <p class="price">
                                     RowLayout {
                                         spacing: 0
+                                        Layout.fillHeight: false
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
                                         Layout.topMargin: 24
@@ -1255,6 +1260,7 @@ ApplicationWindow {
                                         columns: 1
                                         columnSpacing: 12
                                         rowSpacing: 12
+                                        Layout.fillHeight: false
                                         Layout.fillWidth: true
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
                                         Layout.topMargin: 28

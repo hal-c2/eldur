@@ -61,6 +61,13 @@
   "clicks": [],
   "probes": []
  },
+ "flex_no_grow": {
+  "log": [
+   "CS 0 menu:0,40 after:40,20 m2:300,20 grow:320,260 e:320,20 end:580,20"
+  ],
+  "clicks": [],
+  "probes": []
+ },
  "helper": {
   "log": [
    "CS 0+40 44+60 104+40 148+60 208+10",

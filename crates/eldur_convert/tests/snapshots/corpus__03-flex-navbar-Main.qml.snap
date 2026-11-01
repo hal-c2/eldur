@@ -510,6 +510,7 @@ ApplicationWindow {
                                 property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                                 spacing: 0
+                                Layout.fillHeight: false
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                 Layout.alignment: Qt.AlignHCenter

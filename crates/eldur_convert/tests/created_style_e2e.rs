@@ -254,3 +254,8 @@ fn moved_fixed() {
 fn created_rows() {
     page("created_rows");
 }
+
+#[test]
+fn flex_no_grow() {
+    page("flex_no_grow");
+}
