@@ -1,0 +1,72 @@
+<!DOCTYPE html><html><head><title>Transitions</title><style>
+body{margin:0;font:16px/20px sans-serif}
+.t{height:20px;width:100px;background:#000;opacity:1;margin-left:0;transition:all 10s linear}
+.t.on{height:60px;width:300px;background:#ff0000;opacity:.5;margin-left:40px}
+#only{transition:height 10s linear,width 0s}
+#list{transition-property:height,opacity;transition-duration:10s,20s;transition-timing-function:linear;transition-delay:0s,5s}
+#ez{transition:height 10s ease}
+#bz{transition:height 10s cubic-bezier(.2,.8,.4,1)}
+#st{transition:height 10s steps(2,end)}
+#short{transition:height 100ms linear}
+#tf{transform:translateX(0);transition:transform 10s linear}
+#tf.on{transform:translateX(100px)}
+#shadow{box-shadow:0 0 0 #000;transition:box-shadow 10s linear}
+#shadow.on{box-shadow:10px 20px 4px #ff0000}
+#none{transition:none}
+#after{height:10px;background:#9c9}
+#btn{display:block;margin:10px}
+</style></head><body>
+<div class="t" id="a">a</div><div id="after">after</div>
+<div class="t" id="only">b</div><div class="t" id="list">c</div><div class="t" id="ez">d</div><div class="t" id="bz">e</div><div class="t" id="st">f</div>
+<div class="t" id="rev">g</div><div class="t" id="short">h</div><div class="t" id="tf">i</div><div class="t" id="shadow">j</div><div class="t" id="none">k</div><div class="t" id="kill">l</div>
+<button id="btn">go</button>
+<script>
+function $(i) { return document.getElementById(i); }
+function cs(i, p) { return getComputedStyle($(i)).getPropertyValue(p); }
+function at(i, ms) { $(i).getAnimations().forEach(function(a) { a.pause(); a.currentTime = ms; }); }
+function names(i) { return $(i).getAnimations().map(function(a) { return a.transitionProperty; }).join("+"); }
+var log = [];
+["transitionrun","transitionstart","transitionend","transitioncancel"].forEach(function(n) {
+  document.body.addEventListener(n, function(e) { log.push(e.target.id + " " + n + " " + e.propertyName + " " + e.elapsedTime); });
+});
+console.log("start " + cs("a", "height") + " " + $("a").getAnimations().length);
+var step = 0;
+$("btn").addEventListener("click", function() {
+  step++;
+  if (step === 1) {
+    ["a","only","list","ez","bz","st","rev","tf","shadow","none"].forEach(function(i) { $(i).classList.add("on"); });
+    getComputedStyle($("a")).height;
+    console.log("count " + $("a").getAnimations().length + " " + names("only") + " " + names("list") + " " + names("none"));
+    at("a", 2500);
+    console.log("a " + ["height","width","opacity","margin-left","background-color"].map(function(p) { return cs("a", p); }).join(" "));
+    console.log("flow " + $("after").getBoundingClientRect().top + " " + $("a").getBoundingClientRect().width);
+    at("only", 5000); console.log("only " + cs("only", "height") + " " + cs("only", "width"));
+    at("list", 7500); console.log("list " + cs("list", "height") + " " + cs("list", "opacity"));
+    at("ez", 2500); console.log("ez " + cs("ez", "height"));
+    at("bz", 2500); console.log("bz " + cs("bz", "height"));
+    at("st", 7500); console.log("st " + cs("st", "height"));
+    at("tf", 2500); console.log("tf " + cs("tf", "transform"));
+    at("shadow", 5000); console.log("shadow " + cs("shadow", "box-shadow"));
+    console.log("none " + cs("none", "height"));
+    at("rev", 2500);
+    console.log("rev before " + cs("rev", "height"));
+    $("rev").classList.remove("on");
+    var r = $("rev").getAnimations().filter(function(a) { return a.transitionProperty === "height"; })[0];
+    var t = r.effect.getComputedTiming();
+    console.log("rev after " + cs("rev", "height") + " " + t.duration + " " + t.delay + " " + r.currentTime);
+  } else if (step === 2) {
+    log.length = 0;
+    $("short").classList.add("on");
+    $("kill").classList.add("on");
+    getComputedStyle($("kill")).height;
+    $("kill").getAnimations().forEach(function(a) { a.cancel(); });
+    console.log("kill " + cs("kill", "height") + " " + $("kill").getAnimations().length);
+  } else if (step === 3) {
+    // Unrelated elements' events aren't in an order the spec promises.
+    var of = function(prefix) { return log.filter(function(l) { return l.indexOf(prefix) === 0; }).join(","); };
+    console.log("events short " + of("short transition"));
+    console.log("events kill " + log.filter(function(l) { return l.indexOf("kill transition") === 0 && l.indexOf(" height ") > 0; }).join(","));
+    console.log("short end " + cs("short", "height") + " " + $("short").getAnimations().length);
+  }
+});
+</script></body></html>

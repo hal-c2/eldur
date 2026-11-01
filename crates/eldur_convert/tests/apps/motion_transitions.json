@@ -1,0 +1,1 @@
+{"steps": [{"name": "s1", "click": "#btn"}, {"name": "s2", "click": "#btn", "settle": 800}, {"name": "s3", "click": "#btn"}], "watch": [{"sel": "#after"}, {"sel": "#a"}]}

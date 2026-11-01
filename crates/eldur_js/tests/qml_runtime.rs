@@ -3261,7 +3261,7 @@ Item {
 }"#,
     );
     assert!(
-        output.contains("ELDUR_OK_EL_SCROLL 160|220|60|100|35|55|25|100|120|5|30|2 -100 -120 -30"),
+        output.contains("ELDUR_OK_EL_SCROLL 160|220|60|100|35|55|25|100|120|0|30|2 -100 -120 -30"),
         "{output}"
     );
 }
@@ -3488,7 +3488,7 @@ Item {
 }"#,
     );
     assert!(
-        output.contains("ELDUR_OK_WIN_SCROLL 15,40|20,50,20,50|400,900|0,0|0,340|5 0 340"),
+        output.contains("ELDUR_OK_WIN_SCROLL 15,40|20,50,20,50|400,900|0,0|0,340|0 0 340"),
         "{output}"
     );
 }

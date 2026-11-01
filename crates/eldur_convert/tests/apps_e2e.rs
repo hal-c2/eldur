@@ -130,7 +130,7 @@ TestCase {
             mouseWheel(page, p.x, p.y, -2 * s.wheel[1], -2 * s.wheel[2])
             wait(400)
         }
-        if (s.settle) wait(100)
+        if (s.settle) wait(Math.max(100, s.settle))
         if (s.viewport) { page.width = s.viewport[0]; page.height = s.viewport[1] }
     }
 
@@ -512,4 +512,14 @@ fn scroll_box() {
 #[test]
 fn scroll_page() {
     page("scroll_page");
+}
+
+#[test]
+fn motion_keyframes() {
+    page("motion_keyframes");
+}
+
+#[test]
+fn motion_transitions() {
+    page("motion_transitions");
 }

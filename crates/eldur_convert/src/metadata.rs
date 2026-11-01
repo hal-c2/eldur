@@ -457,6 +457,42 @@ pub(crate) fn cascade_rules_decl(rules: &[eldur_css::RuntimeRule]) -> Member {
     )
 }
 
+/// `root.eldurKeyframes`: what each `@keyframes` says, for the runtime's clock.
+pub(crate) fn keyframes_decl(
+    keyframes: &std::collections::BTreeMap<String, Vec<eldur_css::Keyframe>>,
+) -> Member {
+    let rules: serde_json::Map<String, serde_json::Value> = keyframes
+        .iter()
+        .map(|(name, frames)| {
+            let frames = frames
+                .iter()
+                .map(|f| {
+                    serde_json::json!({
+                        "o": f.offset,
+                        "d": f.declarations,
+                        "e": f.easing.as_ref().map(easing_text),
+                    })
+                })
+                .collect();
+            (name.clone(), serde_json::Value::Array(frames))
+        })
+        .collect();
+    decl(
+        "string",
+        "eldurKeyframes",
+        Value::String(serde_json::Value::Object(rules).to_string()),
+    )
+}
+
+fn easing_text(easing: &eldur_css::Easing) -> String {
+    match easing {
+        eldur_css::Easing::CubicBezier(a, b, c, d) => format!("cubic-bezier({a}, {b}, {c}, {d})"),
+        eldur_css::Easing::Steps(n, true) => format!("steps({n}, start)"),
+        eldur_css::Easing::Steps(n, false) => format!("steps({n}, end)"),
+        eldur_css::Easing::Linear => "linear".to_owned(),
+    }
+}
+
 fn runtime_rules_json(rules: &[eldur_css::RuntimeRule]) -> String {
     let list: Vec<serde_json::Value> = rules
         .iter()
