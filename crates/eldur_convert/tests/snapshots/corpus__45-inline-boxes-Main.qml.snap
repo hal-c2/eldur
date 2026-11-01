@@ -411,23 +411,64 @@ ApplicationWindow {
                 }
 
                 // <p id="p-tall">
-                Text {
+                Item {
                     id: pTall
-                    property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
-                    text: "<div style=\"line-height:24px\">Square <span style=\"background-color:#fecaca\"><span style=\"letter-spacing:8px\">&#8288;</span>padded<span style=\"letter-spacing:8px\">&#8288;</span></span> corners.</div>"
-                    textFormat: Text.RichText
-                    color: "#111111"
-                    font.family: EldurFonts.family("sans-serif")
-                    font.pixelSize: 16
-                    wrapMode: Text.WordWrap
-                    transform: Translate {
-                        y: -3
-                    }
+                    implicitWidth: pFlow6.implicitWidth
+                    implicitHeight: pFlow6.implicitHeight
                     Layout.preferredWidth: 460
                     Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
                     Layout.topMargin: 12 - pLong.eldurCarry
-                    renderType: Text.NativeRendering
+                    Layout.preferredHeight: implicitHeight
+
+                    EldurLines {
+                        id: pFlow6
+                        color: "#111111"
+                        font.family: EldurFonts.family("sans-serif")
+                        font.pixelSize: 16
+                        lineHeight: 24
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+
+                        EldurRun {
+                            text: "Square "
+                            color: "#111111"
+                            font.family: "sans-serif"
+                            font.pixelSize: 16
+                        }
+
+                        EldurRun {
+                            id: inlineRun7
+                            readonly property real eldurMarginRight: 8
+                            readonly property real eldurMarginLeft: 8
+                            property var eldurFragments: []
+
+                            text: "padded"
+                            color: "#111111"
+                            font.family: "sans-serif"
+                            font.pixelSize: 16
+
+                            EldurInlineBox {
+                                fragments: inlineRun7.eldurFragments
+                                font.family: EldurFonts.family("sans-serif")
+                                font.pixelSize: 16
+                                fill: "#fecaca"
+                                paddingTop: 6
+                                paddingBottom: 6
+                                reachLeft: 8
+                                reachRight: 8
+                            }
+                        }
+
+                        EldurRun {
+                            text: " corners."
+                            color: "#111111"
+                            font.family: "sans-serif"
+                            font.pixelSize: 16
+                        }
+                    }
                 }
 
                 // <button id="b-span" class="btn">
@@ -476,7 +517,7 @@ ApplicationWindow {
                             }
 
                             Text {
-                                id: inlineRun7
+                                id: inlineRun8
                                 readonly property real eldurMarginRight: 8
                                 readonly property real eldurMarginLeft: 14
                                 property var eldurFragments: []
@@ -492,7 +533,7 @@ ApplicationWindow {
                                 renderType: Text.NativeRendering
 
                                 EldurInlineBox {
-                                    fragments: inlineRun7.eldurFragments
+                                    fragments: inlineRun8.eldurFragments
                                     font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 12
                                     font.weight: 600

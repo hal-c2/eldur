@@ -256,7 +256,7 @@ The converter's own numbers (`emit/fonts.rs`, `extents`, `normal_line`) decide l
 
 #### Inline runs: the line box, measured
 
-The rule below reproduces Chromium's table in `crates/eldur_convert/tests/inline_runs/chromium.json` (181 cases, recorded by its `gen.mjs`). All sizes are CSS px at the run's own font.
+The rule below reproduces Chromium's table in `crates/eldur_convert/tests/inline_runs/chromium.json` (196 cases, recorded by its `gen.mjs`). All sizes are CSS px at the run's own font.
 
 - **A run's font.** `A = round(ascent·s)`, `D = round(descent·s)`, `G = round(gap·s)`. An inline element's rect is `A + D` high, with its top `A` above the run's baseline: the font's, not the line's.
 - **Its line height.** `normal` is `A + D + G`. A number is `n ×` the run's own size, since the number is what inherits. A length, `%` or `em` is the parent's computed px. Floored to 1/64 px.
