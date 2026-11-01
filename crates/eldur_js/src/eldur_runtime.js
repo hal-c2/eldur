@@ -13577,6 +13577,16 @@ function _gApplyMatrix(raw, v) {
     _meta(raw).gMatrix.matrix = Qt.matrix4x4(v[0], v[2], 0, v[4], v[1], v[3], 0, v[5], 0, 0, 1, 0, 0, 0, 0, 1);
 }
 
+function _gMatrixFollowSize(raw) {
+    var s = _gStyle(raw);
+    var written = _gMatrixOf(raw, s, raw.width, raw.height, false);
+    var origin = _gOrigin(s, raw.width, raw.height);
+    var about = _gMultiply(_gMultiply([1, 0, 0, 1, origin[0], origin[1]], written || [1, 0, 0, 1, 0, 0]),
+        [1, 0, 0, 1, -origin[0], -origin[1]]);
+    _meta(raw).gMatrixGoal = about;
+    _gApplyMatrix(raw, about);
+}
+
 function _gPaintMatrix(raw, s, w, h) {
     var m = _meta(raw);
     var written = _gMatrixOf(raw, s, w, h, true);
@@ -13591,6 +13601,11 @@ function _gPaintMatrix(raw, s, w, h) {
         m.gMatrix = Qt.createQmlObject("import QtQuick; Matrix4x4 {}", raw, "eldur_matrix");
         _gApplyMatrix(raw, about);
         _gSetTransforms(raw);
+        // A layout can size the box after this, as a grid row stretches its
+        // items, and the origin and percentages are of the size it ends with.
+        var resized = function() { _gMatrixFollowSize(raw); };
+        raw.widthChanged.connect(resized);
+        raw.heightChanged.connect(resized);
         return;
     }
     var now = m.gMatrixNow;
@@ -14387,11 +14402,12 @@ function _gLayoutRoots() {
 function _gTrackWidth(raw) {
     var grid = raw.parent;
     var tracks = grid.eldurTracks;
-    if (!tracks || tracks.length === 0) {
-        return null;
-    }
     if (raw.eldurPw >= 0 && !raw.eldurFill) {
         return null;
+    }
+    // A converted grid has no list of tracks: the item took its own along.
+    if (!tracks || tracks.length === 0) {
+        return raw.eldurTrackLeft > 0 ? raw.eldurTrackLeft : null;
     }
     var column = _rawElementChildren(grid).indexOf(raw) % tracks.length;
     if (tracks[column] >= 0) {
