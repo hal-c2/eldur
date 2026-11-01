@@ -12,7 +12,7 @@ use eldur_qml::{Member, Value};
 use serde_json::{Value as Json, json};
 
 use crate::emit::background::fixup_stops;
-use crate::emit::shadow::bands;
+use crate::emit::shadow::{bands, outer_bands};
 use crate::emit::transform::flat;
 
 /// How many readings of one value's `var()`s are worth writing down.
@@ -285,10 +285,12 @@ fn shadows_json(shadows: &[Shadow]) -> Json {
         .map(|s| {
             // Alpha 1 here: each band's own is what is painted over what's below.
             let alpha = f32::from(s.color.a) / 255.0;
-            let bands: Vec<[f32; 2]> = bands(s.blur, alpha, 1.0, 24)
-                .iter()
-                .map(|b| [b.depth, b.alpha])
-                .collect();
+            let rings = if s.inset {
+                bands(s.blur, alpha, 1.0, 24)
+            } else {
+                outer_bands(s.blur, alpha)
+            };
+            let bands: Vec<[f32; 2]> = rings.iter().map(|b| [b.depth, b.alpha]).collect();
             let opaque = Rgba { a: 255, ..s.color };
             json!({
                 "x": s.offset_x, "y": s.offset_y, "spread": s.spread, "inset": s.inset,

@@ -72,6 +72,8 @@ fn box_property(longhand: Longhand) -> Option<&'static str> {
     use Longhand as L;
     Some(match longhand {
         L::LineHeight => "line-height",
+        L::TextDecorationStyle => "text-decoration-style",
+        L::TextDecorationColor => "text-decoration-color",
         L::TextAlign => "text-align",
         L::Opacity => "opacity",
         L::Position => "position",

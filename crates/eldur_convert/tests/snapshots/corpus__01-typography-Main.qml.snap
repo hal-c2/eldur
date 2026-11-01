@@ -296,6 +296,7 @@ ApplicationWindow {
                                 color: "#1d1f23"
                                 font.family: "monospace"
                                 font.pixelSize: 15
+                                font.letterSpacing: 0.18
                                 wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
 
@@ -303,6 +304,7 @@ ApplicationWindow {
                                     fragments: inlineRun.eldurFragments
                                     font.family: "monospace"
                                     font.pixelSize: 15
+                                    font.letterSpacing: 0.18
                                     fill: "#f1efe8"
                                     radii: [3, 3, 3, 3]
                                     paddingTop: 1.53
@@ -698,6 +700,7 @@ ApplicationWindow {
                                 color: "#1d1f23"
                                 font.family: "monospace"
                                 font.pixelSize: 15
+                                font.letterSpacing: 0.18
                                 wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
 
@@ -705,6 +708,7 @@ ApplicationWindow {
                                     fragments: inlineRun2.eldurFragments
                                     font.family: "monospace"
                                     font.pixelSize: 15
+                                    font.letterSpacing: 0.18
                                     fill: "#f1efe8"
                                     radii: [3, 3, 3, 3]
                                     paddingTop: 1.53
@@ -735,6 +739,7 @@ ApplicationWindow {
                                 color: "#1d1f23"
                                 font.family: "monospace"
                                 font.pixelSize: 15
+                                font.letterSpacing: 0.18
                                 wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
 
@@ -742,6 +747,7 @@ ApplicationWindow {
                                     fragments: inlineRun3.eldurFragments
                                     font.family: "monospace"
                                     font.pixelSize: 15
+                                    font.letterSpacing: 0.18
                                     fill: "#f1efe8"
                                     radii: [3, 3, 3, 3]
                                     paddingTop: 1.53

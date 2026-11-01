@@ -807,6 +807,7 @@ ApplicationWindow {
                                 }
                                 Layout.preferredWidth: 80
                                 Layout.preferredHeight: 80
+                                antialiasing: true
                             }
                         }
                     }
@@ -843,6 +844,7 @@ ApplicationWindow {
                                 }
                                 Layout.preferredWidth: 80
                                 Layout.preferredHeight: 80
+                                antialiasing: true
                             }
                         }
                     }
@@ -926,6 +928,7 @@ ApplicationWindow {
                                 ]
                                 Layout.preferredWidth: 80
                                 Layout.preferredHeight: 80
+                                antialiasing: true
                             }
                         }
                     }
@@ -972,6 +975,7 @@ ApplicationWindow {
                                 ]
                                 Layout.preferredWidth: 80
                                 Layout.preferredHeight: 80
+                                antialiasing: true
                             }
                         }
                     }

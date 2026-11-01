@@ -1671,6 +1671,51 @@ fn an_inset_spread_is_a_ring_of_its_width() {
 }
 
 #[test]
+fn what_a_transform_turns_keeps_smooth_edges() {
+    let (qml, _) = convert(&page(
+        "",
+        "<div style=\"transform:rotate(2deg);background:#0f0;width:90px;height:90px\">\
+         <div style=\"background:#00f;width:40px;height:40px\"></div><p>x</p></div>\
+         <div id=\"plain\" style=\"transform:translateX(3px);background:#0f0;width:90px;height:90px\"></div>",
+    ));
+    let (turned, plain) = qml.split_once("<div id=\"plain\">").expect("plain");
+    assert_eq!(turned.matches("antialiasing: true").count(), 2, "{qml}");
+    assert!(
+        !turned.contains("renderType: Text.NativeRendering"),
+        "{qml}"
+    );
+    assert!(!plain.contains("antialiasing"), "{qml}");
+}
+
+#[test]
+fn an_outer_shadows_rings_follow_chromiums_curve() {
+    // Chromium's screenshot of `box-shadow: 0 0 6px #000` on a white page:
+    // the shadow's darkness in the rows below the box.
+    use super::shadow::outer_bands;
+    let rings = outer_bands(6.0, 1.0);
+    let darkness = |row: f32| {
+        let at = row + 0.5;
+        let left: f32 = rings
+            .iter()
+            .filter(|b| at < b.depth)
+            .map(|b| 1.0 - b.alpha)
+            .product();
+        255.0 * (1.0 - left)
+    };
+    for (row, chromium) in [112.0, 82.0, 54.0, 33.0, 18.0, 9.0, 4.0, 1.0]
+        .iter()
+        .enumerate()
+    {
+        let got = darkness(row as f32);
+        assert!(
+            // Skia's blur is three box blurs, a little off a true Gaussian.
+            (got - chromium).abs() <= 4.0,
+            "row {row}: {got} vs {chromium} in {rings:?}"
+        );
+    }
+}
+
+#[test]
 fn a_blurred_inset_shadow_fades_in_bands() {
     // Chromium: `inset 0 0 20px #000` on a white box is, 0.5px in from the
     // edge, alpha 119/255, and 20px in, 4/255: 1 - Φ(d / 10). The bands

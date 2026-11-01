@@ -20,11 +20,14 @@ Canvas {
         requestPaint();
     }
 
-    // Lines may hang below a last row's box.
+    // Lines may hang below a last row's box, and an overline stands above a
+    // first row's when the line height is the font's or less.
+    readonly property int headroom: 8
+
     x: 0
-    y: 0
+    y: -headroom
     width: parent.width
-    height: parent.height + 8
+    height: parent.height + 8 + headroom
 
     onWidthChanged: requestPaint()
     onHeightChanged: requestPaint()
@@ -35,7 +38,7 @@ Canvas {
         font: lines.parent.font
         width: lines.parent.width
         wrapMode: lines.parent.wrapMode
-        textFormat: Text.PlainText
+        textFormat: lines.parent.textFormat
         onLineLaidOut: (line) => lines.place(line)
     }
 
@@ -86,7 +89,8 @@ Canvas {
 
     onPaint: {
         const ctx = getContext("2d");
-        ctx.clearRect(0, 0, width, height);
+        ctx.reset();
+        ctx.translate(0, headroom);
         const text = parent;
         const t = Math.max(1, Math.round(metrics.lineWidth));
         const rowHeight = text.lineHeightMode === Text.FixedHeight

@@ -6976,7 +6976,13 @@ function _resamples(item) {
         return true;
     }
     for (var i = 0; item.transform && i < item.transform.length; ++i) {
-        if (item.transform[i].x === undefined) {
+        var step = item.transform[i];
+        if (step.matrix !== undefined) {
+            var a = step.matrix;
+            if (a.m11 !== 1 || a.m12 !== 0 || a.m21 !== 0 || a.m22 !== 1) {
+                return true;
+            }
+        } else if (step.x === undefined) {
             return true;
         }
     }
@@ -6984,11 +6990,24 @@ function _resamples(item) {
 }
 
 // Text.QtRendering and Text.NativeRendering; a library script has no `Text`.
+// What a transform turns needs its edges smoothed as well: an axis-aligned box
+// keeps the crisp ones the unturned page is compared on.
 function _fitGlyphs(item, turned) {
     turned = turned || _resamples(item);
     var wanted = turned ? 0 : 1;
     if (typeof item.renderType === "number" && item.renderType !== wanted) {
         item.renderType = wanted;
+    }
+    if (turned && item.antialiasing === false) {
+        item.antialiasing = true;
+        _meta(item).gSmoothed = true;
+    } else if (!turned && item.antialiasing === true && _meta(item).gSmoothed) {
+        // Only what was turned on here: a rounded Rectangle has it by default.
+        item.antialiasing = false;
+    }
+    // Shape.CurveRenderer; a shape not turned keeps the renderer it was made with.
+    if (turned && typeof item.preferredRendererType === "number") {
+        item.preferredRendererType = 4;
     }
     for (var i = 0; i < item.children.length; ++i) {
         _fitGlyphs(item.children[i], turned);
@@ -11661,6 +11680,17 @@ function _gExpand(prop, value) {
         for (var r = 0; r < 4; ++r) {
             out.push(["border-" + cornerNames[r] + "-radius", corners[r]]);
         }
+    } else if (prop === "text-decoration") {
+        var lines = parts.filter(function(w) { return /^(none|underline|overline|line-through|blink)$/i.test(w); });
+        var drawn = parts.filter(function(w) { return /^(solid|double|dotted|dashed|wavy)$/i.test(w); });
+        var tints = parts.filter(function(w) {
+            return lines.indexOf(w) === -1 && drawn.indexOf(w) === -1 && !/^(auto|from-font|[0-9.]+[a-z%]*)$/i.test(w);
+        });
+        if (parts.length === 1 && /^(inherit|initial|unset|revert|revert-layer)$/i.test(parts[0])) {
+            lines = drawn = tints = [parts[0]];
+        }
+        out.push(["text-decoration-line", lines.join(" ") || "none"], ["text-decoration-style", drawn[0] || "solid"],
+            ["text-decoration-color", tints[0] || "currentcolor"]);
     } else if (prop === "gap") {
         out.push(["row-gap", parts[0]], ["column-gap", parts[1] !== undefined ? parts[1] : parts[0]]);
     } else if (prop === "background") {
@@ -12268,7 +12298,7 @@ function _gPlaceLeaf(raw, s, e, used, fixedH, margins, frameH) {
     _gPaintPicture(raw, s, used, fixedH === null ? raw.height : fixedH);
     // A created inline element with only text is a `Text` itself.
     if (_meta(raw).createdTag && _isPlainTextItem(raw)) {
-        _gPaintText(raw, s, used);
+        _gPaintText(raw, s, used, raw);
     }
     var height = fixedH;
     if (height === null) {
@@ -12449,13 +12479,13 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
     var collapseBottom = autoH && e.pb === 0 && e.bb === 0 && s["overflow-y"] === "visible" && s.display !== "inline-block" && s.display !== "flow-root";
     var text = _gTextOf(raw);
     if (text && text.text !== "") {
-        _gPaintText(text, s, innerW);
+        _gPaintText(text, s, innerW, raw);
         text.x = x;
         text.y = y + _gLineShift(s);
         y += text.height;
         first = false;
     } else if (text) {
-        _gPaintText(text, s, innerW);
+        _gPaintText(text, s, innerW, raw);
         text.x = x;
         text.y = y;
     }
@@ -12805,9 +12835,69 @@ function _gSet(item, prop, value) {
     }
 }
 
-function _gPaintText(text, s, innerW) {
+// The lines a text shows, its own box's and those its ancestors draw through
+// it, nearest first. They stop at what CSS Text Decoration 3 §2.1 says they
+// don't propagate into.
+function _gDecorLines(owner) {
+    var out = [];
+    for (var at = owner; at; at = _gParent(at)) {
+        var s = _gStyle(at);
+        var won = s.won["text-decoration-line"];
+        var words = won ? String(won.value).toLowerCase() : "none";
+        if (/underline|overline|line-through/.test(words)) {
+            var style = s.won["text-decoration-style"] ? String(s.won["text-decoration-style"].value).toLowerCase() : "solid";
+            var tint = s.won["text-decoration-color"] ? String(s.won["text-decoration-color"].value) : "currentcolor";
+            out.push({ underline: words.indexOf("underline") !== -1, overline: words.indexOf("overline") !== -1,
+                through: words.indexOf("line-through") !== -1, style: style,
+                color: String(_gQtColor(tint.toLowerCase() === "currentcolor" ? s["color"] : tint)) });
+        }
+        if (/^inline-/.test(s.display) || s.position === "absolute" || s.position === "fixed" || (s.won["float"] && s.won["float"].value !== "none")) {
+            break;
+        }
+    }
+    return out;
+}
+
+// A solid line in the text's colour is the font's; any other is drawn by what
+// the converter draws the same with, one for each box that asks.
+function _gPaintTextLines(text, owner, s) {
+    var font = text.font;
+    var own = String(_gQtColor(s["color"]));
+    var lines = _gDecorLines(owner);
+    var drawn = [];
+    for (var i = 0; i < lines.length; ++i) {
+        var l = lines[i];
+        if (l.style === "solid" && l.color === own) {
+            font.underline = font.underline || l.underline;
+            font.overline = font.overline || l.overline;
+            font.strikeout = font.strikeout || l.through;
+        } else {
+            drawn.push(l);
+        }
+    }
+    text.font = font;
+    var m = _meta(text);
+    var signature = JSON.stringify(drawn);
+    if (m.gLinesSig === signature || (m.gLinesSig === undefined && drawn.length === 0)) {
+        return;
+    }
+    m.gLinesSig = signature;
+    (m.gLines || []).forEach(function(item) { item.destroy(); });
+    m.gLines = drawn.map(function(l) {
+        var item = Qt.createQmlObject("import QtQuick; import \".\"; EldurTextLines {}", text, Qt.resolvedUrl("eldur_paint"));
+        item.underline = l.underline;
+        item.overline = l.overline;
+        item.lineThrough = l.through;
+        item.lineStyle = l.style;
+        item.lineColor = l.color;
+        return item;
+    });
+}
+
+function _gPaintText(text, s, innerW, owner) {
     text.font = _gFontOf(s);
     text.color = _gQtColor(s["color"]);
+    _gPaintTextLines(text, owner, s);
     var line = _gLineHeight(s);
     if (line !== null) {
         _gSet(text, "lineHeightMode", 1);
@@ -13164,6 +13254,8 @@ function _gBandColor(c, alpha) {
 // count of edges only says that where the shadow holds the whole box.
 // A box with a fill to hide what is under it takes the blur the static page has.
 // The formula is the one in `emit/decoration.rs`, fitted there to Chromium's.
+var _G_RING_BLUR = 64 / 3;
+
 function _gOuterBlur(shadow, radii) {
     var corners = radii[0] === radii[1] && radii[1] === radii[2] && radii[2] === radii[3]
         ? "radius: " + radii[0] + "; "
@@ -13324,7 +13416,10 @@ function _gPaintDecor(raw, s, e, radius) {
                         outer += _gOuterRing(shadow, shadow.bands[b], w, h, outerRadii);
                     }
                 }
-                if (!shadow.inset && opaque) {
+                // One ring a pixel follows Chromium's Gaussian, as Qt's blur with its
+                // longer tail cannot; a blur too wide for that (`OUTER_RINGS` in
+                // `emit/shadow.rs`) would step, and takes Qt's.
+                if (!shadow.inset && opaque && shadow.blur > _G_RING_BLUR) {
                     outerBlurs += _gOuterBlur(shadow, outerRadii);
                 }
                 var round = outerRadii.some(function(r) { return r > 0; });
@@ -13368,9 +13463,12 @@ function _gPaintDecor(raw, s, e, radius) {
             raw, function() {}, Qt.resolvedUrl("eldur_paint"));
     }
     // The software scene graph draws no `RectangularShadow`, and steps are what it can.
+    // The software scene graph draws no `RectangularShadow`, and steps are what it can.
     if (outerBlurs !== "") {
         outer += "Item { anchors.fill: parent; visible: GraphicsInfo.api !== GraphicsInfo.Software; " + outerBlurs + "} "
             + "Shape { anchors.fill: parent; visible: GraphicsInfo.api === GraphicsInfo.Software; " + outerSteps + "} ";
+    } else {
+        outer += outerSteps;
     }
     _gPaintOuterShadow(raw, outer, w, h);
     _gPaintMatrix(raw, s, w, h);
@@ -13505,6 +13603,15 @@ function _gPaintOuterShadow(raw, paths, w, h) {
     _gSetTransforms(raw);
 }
 
+// A transform can come after the box is connected, and go again.
+function _gFitTurned(raw) {
+    var turned = false;
+    for (var up = raw.parent; up && !turned; up = up.parent) {
+        turned = _resamples(up);
+    }
+    _fitGlyphs(raw, turned);
+}
+
 function _gSetTransforms(raw) {
     var m = _meta(raw);
     var list = [];
@@ -13519,6 +13626,7 @@ function _gSetTransforms(raw) {
     if (m.gOuter && m.gOuter.shape) {
         m.gOuter.shape.transform = list;
     }
+    _gFitTurned(raw);
 }
 
 function _gMultiply(a, b) {
@@ -13573,8 +13681,14 @@ function _gOrigin(s, w, h) {
 }
 
 function _gApplyMatrix(raw, v) {
-    _meta(raw).gMatrixNow = v;
-    _meta(raw).gMatrix.matrix = Qt.matrix4x4(v[0], v[2], 0, v[4], v[1], v[3], 0, v[5], 0, 0, 1, 0, 0, 0, 0, 1);
+    var m = _meta(raw);
+    var was = m.gMatrixNow;
+    m.gMatrixNow = v;
+    m.gMatrix.matrix = Qt.matrix4x4(v[0], v[2], 0, v[4], v[1], v[3], 0, v[5], 0, 0, 1, 0, 0, 0, 0, 1);
+    var plain = function(t) { return t[0] === 1 && t[1] === 0 && t[2] === 0 && t[3] === 1; };
+    if (was && plain(was) !== plain(v)) {
+        _gFitTurned(raw);
+    }
 }
 
 function _gMatrixFollowSize(raw) {
@@ -15028,6 +15142,13 @@ function _gComputed(raw, prop) {
             return w === "underline" || w === "line-through" || w === "overline";
         }).join(" ") : "";
         return line === "" ? "none" : line;
+    }
+    if (name === "text-decoration-style") {
+        return s.won[name] ? String(s.won[name].value) : "solid";
+    }
+    if (name === "text-decoration-color") {
+        var tint = s.won[name] ? String(s.won[name].value) : "currentcolor";
+        return _gColor(tint, s["color"]);
     }
     if (name === "background-image" || name === "box-shadow") {
         var parsed = s[name] === "none" ? null : _gShadowsAt(name, s[name], s.fontSize);

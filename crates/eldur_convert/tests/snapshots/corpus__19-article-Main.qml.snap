@@ -384,6 +384,7 @@ ApplicationWindow {
                                     color: "#1f1d1a"
                                     font.family: "monospace"
                                     font.pixelSize: 16
+                                    font.letterSpacing: 0.09
                                     wrapMode: Text.WordWrap
                                     renderType: Text.NativeRendering
 
@@ -391,6 +392,7 @@ ApplicationWindow {
                                         fragments: inlineRun.eldurFragments
                                         font.family: "monospace"
                                         font.pixelSize: 16
+                                        font.letterSpacing: 0.09
                                         fill: "#f0ebe0"
                                         radii: [4, 4, 4, 4]
                                         paddingTop: 1

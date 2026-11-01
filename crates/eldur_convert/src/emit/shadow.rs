@@ -32,15 +32,29 @@ pub(crate) fn inset_bands(blur: f32, alpha: f32) -> Vec<Band> {
 
 /// The same curve in bands about `width` px wide, at most `most` of them.
 pub(crate) fn bands(blur: f32, alpha: f32, width: f32, most: usize) -> Vec<Band> {
+    // ±2σ holds 95% of the fade.
+    bands_over(blur, alpha, 2.0, width, most)
+}
+
+/// An outer shadow's rings, one a pixel: ±3σ, because what stops at ±2σ ends
+/// on a visible edge against the page where an inset shadow's ends on the box.
+pub(crate) fn outer_bands(blur: f32, alpha: f32) -> Vec<Band> {
+    bands_over(blur, alpha, 3.0, 1.0, OUTER_RINGS)
+}
+
+/// Rings an outer shadow may have. Up to this, one pixel each, they follow
+/// Chromium's Gaussian; a wider blur steps, and is left to `RectangularShadow`.
+pub(crate) const OUTER_RINGS: usize = 64;
+
+fn bands_over(blur: f32, alpha: f32, reach: f32, width: f32, most: usize) -> Vec<Band> {
     if blur <= 0.0 {
         return vec![Band { depth: 0.0, alpha }];
     }
     let sigma = blur / 2.0;
-    // ±2σ holds 95% of the fade.
-    let span = 4.0 * sigma;
+    let span = 2.0 * reach * sigma;
     let n = ((span / width).ceil() as usize).clamp(1, most);
     let step = span / n as f32;
-    let edge = |k: usize| -2.0 * sigma + k as f32 * step;
+    let edge = |k: usize| -reach * sigma + k as f32 * step;
     let coverage = |d: f32| alpha * (1.0 - phi(d / sigma));
     // `left[k]`: what is left uncovered in band k (between edges k-1 and
     // k), at its middle. Rings k..=n cover band k, so ring k's alpha is

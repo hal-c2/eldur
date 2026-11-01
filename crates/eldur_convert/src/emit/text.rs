@@ -288,7 +288,8 @@ impl Emitter<'_, '_> {
         if style.font_style != FontStyle::Normal {
             text.set("font.italic", true);
         }
-        if let Some(spacing) = style.letter_spacing.filter(|s| *s != 0.0) {
+        let spacing = style.letter_spacing.unwrap_or(0.0) + whole_size_advance(style);
+        if spacing != 0.0 {
             text.set("font.letterSpacing", number(spacing));
         }
         if let Some(spacing) = style.word_spacing.filter(|s| *s != 0.0) {
@@ -819,6 +820,17 @@ pub(super) fn font_extents(family: &str) -> (f32, f32) {
         "monospace" => (1.02, 0.3),
         _ => (0.905, 0.212),
     }
+}
+
+/// Letter spacing that gives a monospace run at a fractional size the advance
+/// it has in a browser, drawn at the whole `font.pixelSize` Qt has. Only a
+/// monospace font's advance is a known share of its size.
+fn whole_size_advance(style: &ComputedStyle) -> f32 {
+    if font_family(&style.font_family) != "monospace" {
+        return 0.0;
+    }
+    let advance = 0.6 * (style.font_size - style.font_size.round());
+    (advance * 1000.0).round() / 1000.0
 }
 
 /// Chromium's baseline in a `line` px line box of `style`'s font, from the
