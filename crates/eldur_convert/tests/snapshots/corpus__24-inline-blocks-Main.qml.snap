@@ -75,14 +75,11 @@ ApplicationWindow {
                             anchors.right: parent.right
                             anchors.top: parent.top
 
-                            Text {
+                            EldurRun {
                                 text: "Release notes for "
-                                textFormat: Text.PlainText
                                 color: "#1b2231"
-                                font.family: EldurFonts.family("Liberation Sans, sans-serif")
+                                font.family: "Liberation Sans, sans-serif"
                                 font.pixelSize: 16
-                                wrapMode: Text.WordWrap
-                                renderType: Text.NativeRendering
                             }
 
                             // <span class="badge">
@@ -119,14 +116,11 @@ ApplicationWindow {
                                 }
                             }
 
-                            Text {
+                            EldurRun {
                                 text: " features and "
-                                textFormat: Text.PlainText
                                 color: "#1b2231"
-                                font.family: EldurFonts.family("Liberation Sans, sans-serif")
+                                font.family: "Liberation Sans, sans-serif"
                                 font.pixelSize: 16
-                                wrapMode: Text.WordWrap
-                                renderType: Text.NativeRendering
                             }
 
                             // <span class="badge">
@@ -163,14 +157,11 @@ ApplicationWindow {
                                 }
                             }
 
-                            Text {
+                            EldurRun {
                                 text: " previews, with a badge in the middle of a sentence that is long enough to wrap onto a second line in the page."
-                                textFormat: Text.PlainText
                                 color: "#1b2231"
-                                font.family: EldurFonts.family("Liberation Sans, sans-serif")
+                                font.family: "Liberation Sans, sans-serif"
                                 font.pixelSize: 16
-                                wrapMode: Text.WordWrap
-                                renderType: Text.NativeRendering
                             }
                         }
                     }
@@ -248,14 +239,11 @@ ApplicationWindow {
                             }
                         }
 
-                        Text {
+                        EldurRun {
                             text: " "
-                            textFormat: Text.PlainText
                             color: "#1b2231"
-                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
+                            font.family: "Liberation Sans, sans-serif"
                             font.pixelSize: 16
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
                         }
 
                         // <span class="tag">
@@ -300,14 +288,11 @@ ApplicationWindow {
                             }
                         }
 
-                        Text {
+                        EldurRun {
                             text: " "
-                            textFormat: Text.PlainText
                             color: "#1b2231"
-                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
+                            font.family: "Liberation Sans, sans-serif"
                             font.pixelSize: 16
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
                         }
 
                         // <span class="tag">
@@ -352,14 +337,11 @@ ApplicationWindow {
                             }
                         }
 
-                        Text {
+                        EldurRun {
                             text: " "
-                            textFormat: Text.PlainText
                             color: "#1b2231"
-                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
+                            font.family: "Liberation Sans, sans-serif"
                             font.pixelSize: 16
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
                         }
 
                         // <span class="tag">
@@ -404,14 +386,11 @@ ApplicationWindow {
                             }
                         }
 
-                        Text {
+                        EldurRun {
                             text: " "
-                            textFormat: Text.PlainText
                             color: "#1b2231"
-                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
+                            font.family: "Liberation Sans, sans-serif"
                             font.pixelSize: 16
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
                         }
 
                         // <span class="tag">
@@ -456,14 +435,11 @@ ApplicationWindow {
                             }
                         }
 
-                        Text {
+                        EldurRun {
                             text: " "
-                            textFormat: Text.PlainText
                             color: "#1b2231"
-                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
+                            font.family: "Liberation Sans, sans-serif"
                             font.pixelSize: 16
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
                         }
 
                         // <span class="tag">
@@ -571,14 +547,11 @@ ApplicationWindow {
                             }
                         }
 
-                        Text {
+                        EldurRun {
                             text: " "
-                            textFormat: Text.PlainText
                             color: "#1b2231"
-                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
+                            font.family: "Liberation Sans, sans-serif"
                             font.pixelSize: 16
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
                         }
 
                         // <a class="button ghost">
@@ -633,14 +606,11 @@ ApplicationWindow {
                     Layout.topMargin: 24 - centered.eldurCarry
                     Layout.preferredHeight: implicitHeight
 
-                    Text {
+                    EldurRun {
                         text: "Status: "
-                        textFormat: Text.PlainText
                         color: "#1b2231"
-                        font.family: EldurFonts.family("Liberation Sans, sans-serif")
+                        font.family: "Liberation Sans, sans-serif"
                         font.pixelSize: 16
-                        wrapMode: Text.WordWrap
-                        renderType: Text.NativeRendering
                     }
 
                     // <span class="chip">
@@ -706,14 +676,11 @@ ApplicationWindow {
                         }
                     }
 
-                    Text {
+                    EldurRun {
                         text: " since Monday."
-                        textFormat: Text.PlainText
                         color: "#1b2231"
-                        font.family: EldurFonts.family("Liberation Sans, sans-serif")
+                        font.family: "Liberation Sans, sans-serif"
                         font.pixelSize: 16
-                        wrapMode: Text.WordWrap
-                        renderType: Text.NativeRendering
                     }
                 }
 

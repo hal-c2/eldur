@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Runs a script changes</title>
+<style>
+  body { font: 16px Arial, sans-serif; margin: 20px; max-width: 640px; }
+  p { margin: 0 0 10px; }
+  .huge { font-size: 30px; }
+  .box { padding: 4px; background: #eef; }
+</style></head><body>
+<p id="a">A <span id="a1">first run</span> that a script makes larger.</p>
+<p id="b">A <span id="b1" class="huge">second run</span> that a script makes ordinary again.</p>
+<p id="c">A <span id="c1">third run</span> that a script names a class, in a sentence that is long enough to wrap around in the width this page has for it.</p>
+<p id="d">A <span id="d1" style="font-size:24px">fourth run</span> a script writes new words into.</p>
+<p id="e" class="box">Below all of those, with <b id="e1">its height</b> reported: <span id="out"></span></p>
+<script>
+  document.getElementById("a1").style.fontSize = "24px";
+  document.getElementById("b1").className = "";
+  document.getElementById("c1").className = "huge";
+  document.getElementById("d1").textContent = "fourth run with more words in it";
+  var found = document.querySelectorAll("[id]").length;
+  var r = document.getElementById("d1").getBoundingClientRect();
+  document.getElementById("out").textContent = found + " ids, run " + Math.round(r.height) + " tall";
+</script>
+</body></html>

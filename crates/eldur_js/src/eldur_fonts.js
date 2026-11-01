@@ -29,17 +29,17 @@ var TABLE = /*TABLE*/{
 },
 "default": ["Liberation Serif", "Tinos", "Noto Serif", "DejaVu Serif"],
 "faces": {
-  "liberation sans": {"regular": [0.905273, 0.211914, 0.032715]},
-  "liberation serif": {"regular": [0.891113, 0.216309, 0.042480]},
-  "liberation mono": {"regular": [0.832520, 0.300293, 0]},
-  "nimbus sans": {"regular": [0.729, 0.271, 0.2], "italic": [0.9, 0.25, 0.2], "bolditalic": [0.9, 0.25, 0.2]},
-  "nimbus roman": {"regular": [0.683, 0.317, 0.2], "bold": [0.676, 0.324, 0.2], "bolditalic": [0.699, 0.301, 0.2]},
-  "nimbus mono ps": {"regular": [0.603, 0.397, 0.2]},
-  "nimbus sans narrow": {"regular": [0.718, 0.282, 0.2]},
-  "noto sans": {"regular": [1.069, 0.293, 0]},
-  "noto serif": {"regular": [1.069, 0.293, 0]},
-  "noto sans mono": {"regular": [1.069, 0.293, 0]},
-  "jetbrainsmono nerd font": {"regular": [1.02, 0.3, 0]}
+  "liberation sans": {"x": 0.5283125, "regular": [0.905273, 0.211914, 0.032715]},
+  "liberation serif": {"x": 0.459, "regular": [0.891113, 0.216309, 0.042480]},
+  "liberation mono": {"x": 0.5283125, "regular": [0.832520, 0.300293, 0]},
+  "nimbus sans": {"x": 0.516, "xs": [0.516, 0.526, 0.516, 0.526], "regular": [0.729, 0.271, 0.2], "italic": [0.9, 0.25, 0.2], "bolditalic": [0.9, 0.25, 0.2]},
+  "nimbus roman": {"x": 0.45, "xs": [0.45, 0.459, 0.43, 0.449], "regular": [0.683, 0.317, 0.2], "bold": [0.676, 0.324, 0.2], "bolditalic": [0.699, 0.301, 0.2]},
+  "nimbus mono ps": {"x": 0.417, "xs": [0.417, 0.422, 0.417, 0.422], "regular": [0.603, 0.397, 0.2]},
+  "nimbus sans narrow": {"x": 0.524, "xs": [0.524, 0.532, 0.524, 0.532], "regular": [0.718, 0.282, 0.2]},
+  "noto sans": {"x": 0.536, "xs": [0.536, 0.546, 0.536, 0.546], "regular": [1.069, 0.293, 0]},
+  "noto serif": {"x": 0.536, "regular": [1.069, 0.293, 0]},
+  "noto sans mono": {"x": 0.536, "xs": [0.536, 0.546, 0.536, 0.546], "regular": [1.069, 0.293, 0]},
+  "jetbrainsmono nerd font": {"x": 0.55, "regular": [1.02, 0.3, 0]}
 }
 }/*TABLE*/;
 
@@ -171,4 +171,69 @@ function shift(stack, size, weight, italic, line) {
 // height up and the column carries that (layout.md §1.1).
 function slack(font, line) {
     return Math.min(0, Math.ceil(line) - Math.ceil(_qtFont(font.family, font.pixelSize, font.weight, font.italic).height));
+}
+
+// Chromium's boxes are in 1/64 px, and what it works out is cut down to them.
+function _unit(px) {
+    return Math.floor(px * 64 + 1e-3) / 64;
+}
+
+// Bold and slanted faces of some families have another x-height, which `middle`
+// sits on.
+function _xHeightOf(face, box) {
+    if (!face) {
+        return 0.5;
+    }
+    return face.xs ? face.xs[((box.weight || 400) >= 600 ? 1 : 0) + (box.italic ? 2 : 0)] : face.x;
+}
+
+// One inline box on its own baseline (layout.md §1.3). `box` has the CSS size and
+// stack; `line` absent is `normal`. Above and below take the half-leading, floored.
+function inlineBox(box) {
+    var name = family(box.family);
+    var size = box.size;
+    var e = _extents(name, Math.max(1, Math.round(size)), box.weight || 400, !!box.italic, size);
+    var line = box.line > 0 ? _unit(box.line) : e.ascent + e.descent + e.gap;
+    var above = e.ascent + Math.floor((line - e.ascent - e.descent) / 2 + 1e-4);
+    var face = TABLE.faces[name.toLowerCase()];
+    return { size: size, ascent: e.ascent, descent: e.descent, above: above, below: line - above,
+             xHeight: _xHeightOf(face, box) * size };
+}
+
+// How far below its parent's baseline `vertical-align` puts a box. Top and bottom
+// are not here: they align against the finished line.
+function _alignShift(level, own, parent) {
+    switch (level.align) {
+    case "sub": return _unit(parent.size / 5 + 1);
+    case "super": return -_unit(parent.size / 3 + 1);
+    case "middle": return Math.floor(-parent.xHeight / 2 * 64) / 64 + (own.above - own.below) / 2;
+    case "text-top": return own.above - parent.ascent;
+    case "text-bottom": return parent.descent - own.below;
+    }
+    if (level.percent) {
+        return -_unit((own.above + own.below) * level.percent / 100);
+    }
+    return level.shift ? -_unit(level.shift) : 0;
+}
+
+// Where a run's boxes reach about the baseline it hangs from, in order from the
+// block's strut: `boxes` extend the line (or their `group`, for one aligned against
+// the line), and `shift` is how far below that baseline the run's own text is.
+function placeRun(levels, strut) {
+    var parent = strut;
+    var shift = 0;
+    var group = null;
+    var boxes = [];
+    for (var i = 0; i < levels.length; ++i) {
+        var own = inlineBox(levels[i]);
+        if (levels[i].align === "top" || levels[i].align === "bottom") {
+            group = { align: levels[i].align, id: levels[i].group, above: 0, below: 0 };
+            shift = 0;
+        } else {
+            shift += _alignShift(levels[i], own, parent);
+        }
+        boxes.push({ above: own.above - shift, below: own.below + shift, group: group });
+        parent = own;
+    }
+    return { boxes: boxes, shift: shift, group: group, box: parent };
 }

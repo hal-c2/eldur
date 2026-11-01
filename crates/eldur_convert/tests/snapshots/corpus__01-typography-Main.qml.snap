@@ -134,7 +134,7 @@ ApplicationWindow {
 
                         // <p>
                         Text {
-                            id: p9
+                            id: p8
                             property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                             text: "A short essay on rhythm, measure and the <b>quiet</b> work that <b>good type</b> does when nobody is looking. Read it at your own pace; the <i>argument</i> is <i>deliberately</i> simple."
@@ -159,12 +159,12 @@ ApplicationWindow {
                     // <main>
                     ColumnLayout {
                         id: main
-                        property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + p10.eldurCarry + 0.000001
+                        property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + p9.eldurCarry + 0.000001
 
                         spacing: 0
                         Layout.fillWidth: true
                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                        Layout.topMargin: 42 - p9.eldurCarry
+                        Layout.topMargin: 42 - p8.eldurCarry
 
                         // <h2>
                         Rectangle {
@@ -295,30 +295,25 @@ ApplicationWindow {
                             Layout.topMargin: 11 - h3.eldurCarry
                             Layout.preferredHeight: implicitHeight
 
-                            Text {
+                            EldurRun {
                                 text: "A modular scale gives headings a consistent relationship to body text. Here the steps are expressed in "
-                                textFormat: Text.PlainText
                                 color: "#1d1f23"
-                                font.family: EldurFonts.family("serif")
+                                font.family: "serif"
                                 font.pixelSize: 17
-                                wrapMode: Text.WordWrap
-                                renderType: Text.NativeRendering
                             }
 
-                            Text {
+                            EldurRun {
                                 id: inlineRun
                                 readonly property real eldurMarginRight: 5.35
                                 readonly property real eldurMarginLeft: 5.35
                                 property var eldurFragments: []
+                                property string eldurRun: "[{\"size\":15.299999237060547,\"family\":\"monospace\",\"line\":24.479999542236328}]"
 
                                 text: "rem"
-                                textFormat: Text.PlainText
                                 color: "#1d1f23"
-                                font.family: EldurFonts.family("monospace")
+                                font.family: "monospace"
                                 font.pixelSize: 15
                                 font.letterSpacing: 0.18
-                                wrapMode: Text.WordWrap
-                                renderType: Text.NativeRendering
 
                                 EldurInlineBox {
                                     fragments: inlineRun.eldurFragments
@@ -334,14 +329,11 @@ ApplicationWindow {
                                 }
                             }
 
-                            Text {
+                            EldurRun {
                                 text: " so that they follow the user's preferred base size."
-                                textFormat: Text.PlainText
                                 color: "#1d1f23"
-                                font.family: EldurFonts.family("serif")
+                                font.family: "serif"
                                 font.pixelSize: 17
-                                wrapMode: Text.WordWrap
-                                renderType: Text.NativeRendering
                             }
                         }
 
@@ -524,22 +516,100 @@ ApplicationWindow {
                         }
 
                         // <p>
-                        Text {
-                            id: p7
-                            property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
+                        EldurLines {
+                            id: pFlow2
+                            property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
-                            text: "<div style=\"line-height:27.2px\">Emphasis should be used sparingly. <span style=\"background-color:#fff1a8\"><span style=\"letter-spacing:3.4px\">&#8288;</span>Highlighted passages<span style=\"letter-spacing:3.4px\">&#8288;</span></span> help a reader find their place during revision, but they are not a substitute for structure. Water is H<span style=\"font-size:13px\">2</span>O, and the area of a circle is πr<span style=\"font-size:13px\">2</span>. Footnotes are often set in <font color=\"#5b616e\"><span style=\"font-size:13px\">smaller type, typically around 13 pixels</span></font>, so that they do not compete with the main text.</div>"
-                            textFormat: Text.RichText
                             color: "#1d1f23"
                             font.family: EldurFonts.family("serif")
                             font.pixelSize: 17
-                            wrapMode: Text.WordWrap
-                            transform: Translate {
-                                y: -4
-                            }
+                            lineHeight: 27.2
                             Layout.fillWidth: true
                             Layout.topMargin: 14 - h2.eldurCarry
-                            renderType: Text.NativeRendering
+                            Layout.preferredHeight: implicitHeight
+
+                            EldurRun {
+                                text: "Emphasis should be used sparingly. "
+                                color: "#1d1f23"
+                                font.family: "serif"
+                                font.pixelSize: 17
+                            }
+
+                            EldurRun {
+                                id: inlineRun2
+                                readonly property real eldurMarginRight: 3.4
+                                readonly property real eldurMarginLeft: 3.4
+                                property var eldurFragments: []
+
+                                text: "Highlighted passages"
+                                color: "#1d1f23"
+                                font.family: "serif"
+                                font.pixelSize: 17
+
+                                EldurInlineBox {
+                                    fragments: inlineRun2.eldurFragments
+                                    font.family: EldurFonts.family("serif")
+                                    font.pixelSize: 17
+                                    fill: "#fff1a8"
+                                    reachLeft: 3.4
+                                    reachRight: 3.4
+                                }
+                            }
+
+                            EldurRun {
+                                text: " help a reader find their place during revision, but they are not a substitute for structure. Water is H"
+                                color: "#1d1f23"
+                                font.family: "serif"
+                                font.pixelSize: 17
+                            }
+
+                            EldurRun {
+                                property string eldurRun: "[{\"size\":12.75,\"family\":\"serif\",\"line\":0,\"align\":\"sub\"}]"
+
+                                text: "2"
+                                color: "#1d1f23"
+                                font.family: "serif"
+                                font.pixelSize: 13
+                            }
+
+                            EldurRun {
+                                text: "O, and the area of a circle is πr"
+                                color: "#1d1f23"
+                                font.family: "serif"
+                                font.pixelSize: 17
+                            }
+
+                            EldurRun {
+                                property string eldurRun: "[{\"size\":12.75,\"family\":\"serif\",\"line\":0,\"align\":\"super\"}]"
+
+                                text: "2"
+                                color: "#1d1f23"
+                                font.family: "serif"
+                                font.pixelSize: 13
+                            }
+
+                            EldurRun {
+                                text: ". Footnotes are often set in "
+                                color: "#1d1f23"
+                                font.family: "serif"
+                                font.pixelSize: 17
+                            }
+
+                            EldurRun {
+                                property string eldurRun: "[{\"size\":13,\"family\":\"serif\",\"line\":20.80000114440918}]"
+
+                                text: "smaller type, typically around 13 pixels"
+                                color: "#5b616e"
+                                font.family: "serif"
+                                font.pixelSize: 13
+                            }
+
+                            EldurRun {
+                                text: ", so that they do not compete with the main text."
+                                color: "#1d1f23"
+                                font.family: "serif"
+                                font.pixelSize: 17
+                            }
                         }
 
                         // <h2>
@@ -551,7 +621,7 @@ ApplicationWindow {
                             implicitWidth: h2Text3.implicitWidth
                             implicitHeight: h2Text3.implicitHeight + 5
                             Layout.fillWidth: true
-                            Layout.topMargin: 42 - p7.eldurCarry
+                            Layout.topMargin: 42 - pFlow2.eldurCarry
 
                             Rectangle {
                                 anchors.left: parent.left
@@ -702,7 +772,7 @@ ApplicationWindow {
 
                         // <p>
                         EldurLines {
-                            id: pFlow2
+                            id: pFlow3
                             property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                             color: "#1d1f23"
@@ -713,69 +783,25 @@ ApplicationWindow {
                             Layout.topMargin: 14 - h23.eldurCarry
                             Layout.preferredHeight: implicitHeight
 
-                            Text {
+                            EldurRun {
                                 text: "Inline identifiers such as "
-                                textFormat: Text.PlainText
                                 color: "#1d1f23"
-                                font.family: EldurFonts.family("serif")
+                                font.family: "serif"
                                 font.pixelSize: 17
-                                wrapMode: Text.WordWrap
-                                renderType: Text.NativeRendering
                             }
 
-                            Text {
-                                id: inlineRun2
-                                readonly property real eldurMarginRight: 5.35
-                                readonly property real eldurMarginLeft: 5.35
-                                property var eldurFragments: []
-
-                                text: "line-height"
-                                textFormat: Text.PlainText
-                                color: "#1d1f23"
-                                font.family: EldurFonts.family("monospace")
-                                font.pixelSize: 15
-                                font.letterSpacing: 0.18
-                                wrapMode: Text.WordWrap
-                                renderType: Text.NativeRendering
-
-                                EldurInlineBox {
-                                    fragments: inlineRun2.eldurFragments
-                                    font.family: EldurFonts.family("monospace")
-                                    font.pixelSize: 15
-                                    font.letterSpacing: 0.18
-                                    fill: "#f1efe8"
-                                    radii: [3, 3, 3, 3]
-                                    paddingTop: 1.53
-                                    paddingBottom: 1.53
-                                    reachLeft: 5.35
-                                    reachRight: 5.35
-                                }
-                            }
-
-                            Text {
-                                text: " or "
-                                textFormat: Text.PlainText
-                                color: "#1d1f23"
-                                font.family: EldurFonts.family("serif")
-                                font.pixelSize: 17
-                                wrapMode: Text.WordWrap
-                                renderType: Text.NativeRendering
-                            }
-
-                            Text {
+                            EldurRun {
                                 id: inlineRun3
                                 readonly property real eldurMarginRight: 5.35
                                 readonly property real eldurMarginLeft: 5.35
                                 property var eldurFragments: []
+                                property string eldurRun: "[{\"size\":15.299999237060547,\"family\":\"monospace\",\"line\":24.479999542236328}]"
 
-                                text: "max-width"
-                                textFormat: Text.PlainText
+                                text: "line-height"
                                 color: "#1d1f23"
-                                font.family: EldurFonts.family("monospace")
+                                font.family: "monospace"
                                 font.pixelSize: 15
                                 font.letterSpacing: 0.18
-                                wrapMode: Text.WordWrap
-                                renderType: Text.NativeRendering
 
                                 EldurInlineBox {
                                     fragments: inlineRun3.eldurFragments
@@ -791,14 +817,45 @@ ApplicationWindow {
                                 }
                             }
 
-                            Text {
-                                text: " sit on the baseline. Longer examples belong in a block:"
-                                textFormat: Text.PlainText
+                            EldurRun {
+                                text: " or "
                                 color: "#1d1f23"
-                                font.family: EldurFonts.family("serif")
+                                font.family: "serif"
                                 font.pixelSize: 17
-                                wrapMode: Text.WordWrap
-                                renderType: Text.NativeRendering
+                            }
+
+                            EldurRun {
+                                id: inlineRun4
+                                readonly property real eldurMarginRight: 5.35
+                                readonly property real eldurMarginLeft: 5.35
+                                property var eldurFragments: []
+                                property string eldurRun: "[{\"size\":15.299999237060547,\"family\":\"monospace\",\"line\":24.479999542236328}]"
+
+                                text: "max-width"
+                                color: "#1d1f23"
+                                font.family: "monospace"
+                                font.pixelSize: 15
+                                font.letterSpacing: 0.18
+
+                                EldurInlineBox {
+                                    fragments: inlineRun4.eldurFragments
+                                    font.family: EldurFonts.family("monospace")
+                                    font.pixelSize: 15
+                                    font.letterSpacing: 0.18
+                                    fill: "#f1efe8"
+                                    radii: [3, 3, 3, 3]
+                                    paddingTop: 1.53
+                                    paddingBottom: 1.53
+                                    reachLeft: 5.35
+                                    reachRight: 5.35
+                                }
+                            }
+
+                            EldurRun {
+                                text: " sit on the baseline. Longer examples belong in a block:"
+                                color: "#1d1f23"
+                                font.family: "serif"
+                                font.pixelSize: 17
                             }
                         }
 
@@ -814,7 +871,7 @@ ApplicationWindow {
                             implicitWidth: preText.implicitWidth + 40
                             implicitHeight: preText.implicitHeight + 32
                             Layout.fillWidth: true
-                            Layout.topMargin: 20 - pFlow2.eldurCarry
+                            Layout.topMargin: 20 - pFlow3.eldurCarry
                             antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                             EldurScroller {
@@ -877,7 +934,7 @@ ApplicationWindow {
 
                         // <p>
                         Text {
-                            id: p8
+                            id: p7
                             property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
 
                             text: "Lists remain simple:"
@@ -905,7 +962,7 @@ ApplicationWindow {
                             implicitWidth: ulContent.implicitWidth + 24
                             implicitHeight: ulContent.implicitHeight
                             Layout.fillWidth: true
-                            Layout.topMargin: 16 - p8.eldurCarry
+                            Layout.topMargin: 16 - p7.eldurCarry
 
                             ColumnLayout {
                                 id: ulContent
@@ -1065,7 +1122,7 @@ ApplicationWindow {
 
                         // <p>
                         Text {
-                            id: p10
+                            id: p9
                             property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                             text: "Continue reading in the next issue."
@@ -1095,7 +1152,7 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         Layout.topMargin: 40 - main.eldurCarry
                         Layout.bottomMargin: 16
-                        Layout.preferredHeight: implicitHeight - p11.eldurCarry
+                        Layout.preferredHeight: implicitHeight - p10.eldurCarry
 
                         Rectangle {
                             anchors.left: parent.left
@@ -1115,7 +1172,7 @@ ApplicationWindow {
 
                             // <p>
                             Text {
-                                id: p11
+                                id: p10
                                 property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                                 text: "Typography notes is a test page. All faces are generic families."

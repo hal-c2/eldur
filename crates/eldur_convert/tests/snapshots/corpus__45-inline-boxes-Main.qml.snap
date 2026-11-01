@@ -69,29 +69,24 @@ ApplicationWindow {
                         anchors.right: parent.right
                         anchors.top: parent.top
 
-                        Text {
+                        EldurRun {
                             text: "Yearly plan "
-                            textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: EldurFonts.family("sans-serif")
+                            font.family: "sans-serif"
                             font.pixelSize: 16
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
                         }
 
-                        Text {
+                        EldurRun {
                             id: inlineRun
                             readonly property real eldurMarginRight: 8
                             readonly property real eldurMarginLeft: 14
                             property var eldurFragments: []
+                            property string eldurRun: "[{\"size\":12,\"family\":\"sans-serif\",\"line\":18}]"
 
                             text: "Save 20%"
-                            textFormat: Text.PlainText
                             color: "#166534"
-                            font.family: EldurFonts.family("sans-serif")
+                            font.family: "sans-serif"
                             font.pixelSize: 12
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
 
                             EldurInlineBox {
                                 fragments: inlineRun.eldurFragments
@@ -106,14 +101,11 @@ ApplicationWindow {
                             }
                         }
 
-                        Text {
+                        EldurRun {
                             text: " today."
-                            textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: EldurFonts.family("sans-serif")
+                            font.family: "sans-serif"
                             font.pixelSize: 16
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
                         }
                     }
                 }
@@ -140,29 +132,24 @@ ApplicationWindow {
                         anchors.right: parent.right
                         anchors.top: parent.top
 
-                        Text {
+                        EldurRun {
                             text: "Call "
-                            textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: EldurFonts.family("sans-serif")
+                            font.family: "sans-serif"
                             font.pixelSize: 16
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
                         }
 
-                        Text {
+                        EldurRun {
                             id: inlineRun2
                             readonly property real eldurMarginRight: 4
                             readonly property real eldurMarginLeft: 4
                             property var eldurFragments: []
+                            property string eldurRun: "[{\"size\":14,\"family\":\"monospace\",\"line\":21}]"
 
                             text: "render()"
-                            textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: EldurFonts.family("monospace")
+                            font.family: "monospace"
                             font.pixelSize: 14
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
 
                             EldurInlineBox {
                                 fragments: inlineRun2.eldurFragments
@@ -177,29 +164,24 @@ ApplicationWindow {
                             }
                         }
 
-                        Text {
+                        EldurRun {
                             text: " and then "
-                            textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: EldurFonts.family("sans-serif")
+                            font.family: "sans-serif"
                             font.pixelSize: 16
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
                         }
 
-                        Text {
+                        EldurRun {
                             id: inlineRun3
                             readonly property real eldurMarginRight: 4
                             readonly property real eldurMarginLeft: 4
                             property var eldurFragments: []
+                            property string eldurRun: "[{\"size\":14,\"family\":\"monospace\",\"line\":21}]"
 
                             text: "flush()"
-                            textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: EldurFonts.family("monospace")
+                            font.family: "monospace"
                             font.pixelSize: 14
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
 
                             EldurInlineBox {
                                 fragments: inlineRun3.eldurFragments
@@ -214,14 +196,11 @@ ApplicationWindow {
                             }
                         }
 
-                        Text {
+                        EldurRun {
                             text: " once."
-                            textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: EldurFonts.family("sans-serif")
+                            font.family: "sans-serif"
                             font.pixelSize: 16
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
                         }
                     }
                 }
@@ -248,29 +227,23 @@ ApplicationWindow {
                         anchors.right: parent.right
                         anchors.top: parent.top
 
-                        Text {
+                        EldurRun {
                             text: "Before "
-                            textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: EldurFonts.family("sans-serif")
+                            font.family: "sans-serif"
                             font.pixelSize: 16
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
                         }
 
-                        Text {
+                        EldurRun {
                             id: inlineRun4
                             readonly property real eldurMarginRight: 8
                             readonly property real eldurMarginLeft: 8
                             property var eldurFragments: []
 
                             text: "bordered"
-                            textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: EldurFonts.family("sans-serif")
+                            font.family: "sans-serif"
                             font.pixelSize: 16
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
 
                             EldurInlineBox {
                                 fragments: inlineRun4.eldurFragments
@@ -283,14 +256,11 @@ ApplicationWindow {
                             }
                         }
 
-                        Text {
+                        EldurRun {
                             text: " after."
-                            textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: EldurFonts.family("sans-serif")
+                            font.family: "sans-serif"
                             font.pixelSize: 16
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
                         }
                     }
                 }
@@ -337,29 +307,23 @@ ApplicationWindow {
                         anchors.right: parent.right
                         anchors.top: parent.top
 
-                        Text {
+                        EldurRun {
                             text: "Side "
-                            textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: EldurFonts.family("sans-serif")
+                            font.family: "sans-serif"
                             font.pixelSize: 16
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
                         }
 
-                        Text {
+                        EldurRun {
                             id: inlineRun5
                             readonly property real eldurMarginRight: 6
                             readonly property real eldurMarginLeft: 10
                             property var eldurFragments: []
 
                             text: "uneven edges"
-                            textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: EldurFonts.family("sans-serif")
+                            font.family: "sans-serif"
                             font.pixelSize: 16
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
 
                             EldurInlineBox {
                                 fragments: inlineRun5.eldurFragments
@@ -375,14 +339,11 @@ ApplicationWindow {
                             }
                         }
 
-                        Text {
+                        EldurRun {
                             text: " side."
-                            textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: EldurFonts.family("sans-serif")
+                            font.family: "sans-serif"
                             font.pixelSize: 16
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
                         }
                     }
                 }
@@ -409,29 +370,23 @@ ApplicationWindow {
                         anchors.right: parent.right
                         anchors.top: parent.top
 
-                        Text {
+                        EldurRun {
                             text: "This sentence runs on "
-                            textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: EldurFonts.family("sans-serif")
+                            font.family: "sans-serif"
                             font.pixelSize: 16
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
                         }
 
-                        Text {
+                        EldurRun {
                             id: inlineRun6
                             readonly property real eldurMarginRight: 5
                             readonly property real eldurMarginLeft: 5
                             property var eldurFragments: []
 
                             text: "with a highlighted stretch of words that is long enough to break across two lines of the paragraph"
-                            textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: EldurFonts.family("sans-serif")
+                            font.family: "sans-serif"
                             font.pixelSize: 16
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
 
                             EldurInlineBox {
                                 fragments: inlineRun6.eldurFragments
@@ -446,14 +401,11 @@ ApplicationWindow {
                             }
                         }
 
-                        Text {
+                        EldurRun {
                             text: " and ends."
-                            textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: EldurFonts.family("sans-serif")
+                            font.family: "sans-serif"
                             font.pixelSize: 16
-                            wrapMode: Text.WordWrap
-                            renderType: Text.NativeRendering
                         }
                     }
                 }
@@ -528,6 +480,7 @@ ApplicationWindow {
                                 readonly property real eldurMarginRight: 8
                                 readonly property real eldurMarginLeft: 14
                                 property var eldurFragments: []
+                                property string eldurRun: "[{\"size\":12,\"family\":\"sans-serif\",\"weight\":600}]"
 
                                 text: "Save 20%"
                                 textFormat: Text.PlainText

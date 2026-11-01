@@ -105,12 +105,7 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("form", "* #done[*] y:", CONTROLROW),
     ("hidden_lines", "* #s4[*] width:", HANGING),
     ("cards", "* .card[*] height:", CREATED_STRETCH),
-    ("lines_closed", "* #sp[*] height:", SPANSCAN),
-    ("lines_open", "* #sp[*] height:", SPANSCAN),
     ("lines_created", "* #ws[*] width:", SPANSCAN),
-    ("lines_created", "* #ws[*] height:", SPANSCAN),
-    ("lines_created", "* #ms[*] width:", SPANSCAN),
-    ("lines_created", "* #ms[*] height:", SPANSCAN),
     ("created_lines", "* #reset[*] x:", BUTTONWIDTH),
     (
         "input_real_more",

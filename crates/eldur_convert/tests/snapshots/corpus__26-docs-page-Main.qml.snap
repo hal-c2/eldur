@@ -897,30 +897,25 @@ ApplicationWindow {
                                 Layout.topMargin: 16 - subtitle.eldurCarry
                                 Layout.preferredHeight: implicitHeight
 
-                                Text {
+                                EldurRun {
                                     text: "Tidewater reads its settings from "
-                                    textFormat: Text.PlainText
                                     color: "#24292f"
-                                    font.family: EldurFonts.family("sans-serif")
+                                    font.family: "sans-serif"
                                     font.pixelSize: 16
-                                    wrapMode: Text.WordWrap
-                                    renderType: Text.NativeRendering
                                 }
 
-                                Text {
+                                EldurRun {
                                     id: inlineRun
                                     readonly property real eldurMarginRight: 5
                                     readonly property real eldurMarginLeft: 5
                                     property var eldurFragments: []
+                                    property string eldurRun: "[{\"size\":13.600000381469727,\"family\":\"monospace\",\"line\":21.760000228881836}]"
 
                                     text: "tidewater.toml"
-                                    textFormat: Text.PlainText
                                     color: "#24292f"
-                                    font.family: EldurFonts.family("monospace")
+                                    font.family: "monospace"
                                     font.pixelSize: 14
                                     font.letterSpacing: -0.24
-                                    wrapMode: Text.WordWrap
-                                    renderType: Text.NativeRendering
 
                                     EldurInlineBox {
                                         fragments: inlineRun.eldurFragments
@@ -936,30 +931,25 @@ ApplicationWindow {
                                     }
                                 }
 
-                                Text {
+                                EldurRun {
                                     text: " in the working directory. Every key can be overridden with an environment variable: "
-                                    textFormat: Text.PlainText
                                     color: "#24292f"
-                                    font.family: EldurFonts.family("sans-serif")
+                                    font.family: "sans-serif"
                                     font.pixelSize: 16
-                                    wrapMode: Text.WordWrap
-                                    renderType: Text.NativeRendering
                                 }
 
-                                Text {
+                                EldurRun {
                                     id: inlineRun2
                                     readonly property real eldurMarginRight: 5
                                     readonly property real eldurMarginLeft: 5
                                     property var eldurFragments: []
+                                    property string eldurRun: "[{\"size\":13.600000381469727,\"family\":\"monospace\",\"line\":21.760000228881836}]"
 
                                     text: "queue.url"
-                                    textFormat: Text.PlainText
                                     color: "#24292f"
-                                    font.family: EldurFonts.family("monospace")
+                                    font.family: "monospace"
                                     font.pixelSize: 14
                                     font.letterSpacing: -0.24
-                                    wrapMode: Text.WordWrap
-                                    renderType: Text.NativeRendering
 
                                     EldurInlineBox {
                                         fragments: inlineRun2.eldurFragments
@@ -975,30 +965,25 @@ ApplicationWindow {
                                     }
                                 }
 
-                                Text {
+                                EldurRun {
                                     text: " becomes "
-                                    textFormat: Text.PlainText
                                     color: "#24292f"
-                                    font.family: EldurFonts.family("sans-serif")
+                                    font.family: "sans-serif"
                                     font.pixelSize: 16
-                                    wrapMode: Text.WordWrap
-                                    renderType: Text.NativeRendering
                                 }
 
-                                Text {
+                                EldurRun {
                                     id: inlineRun3
                                     readonly property real eldurMarginRight: 5
                                     readonly property real eldurMarginLeft: 5
                                     property var eldurFragments: []
+                                    property string eldurRun: "[{\"size\":13.600000381469727,\"family\":\"monospace\",\"line\":21.760000228881836}]"
 
                                     text: "TIDEWATER_QUEUE_URL"
-                                    textFormat: Text.PlainText
                                     color: "#24292f"
-                                    font.family: EldurFonts.family("monospace")
+                                    font.family: "monospace"
                                     font.pixelSize: 14
                                     font.letterSpacing: -0.24
-                                    wrapMode: Text.WordWrap
-                                    renderType: Text.NativeRendering
 
                                     EldurInlineBox {
                                         fragments: inlineRun3.eldurFragments
@@ -1014,14 +999,11 @@ ApplicationWindow {
                                     }
                                 }
 
-                                Text {
+                                EldurRun {
                                     text: "."
-                                    textFormat: Text.PlainText
                                     color: "#24292f"
-                                    font.family: EldurFonts.family("sans-serif")
+                                    font.family: "sans-serif"
                                     font.pixelSize: 16
-                                    wrapMode: Text.WordWrap
-                                    renderType: Text.NativeRendering
                                 }
                             }
 
@@ -1100,30 +1082,25 @@ ApplicationWindow {
                                             Layout.topMargin: 4 - calloutTitle.eldurCarry
                                             Layout.preferredHeight: implicitHeight
 
-                                            Text {
+                                            EldurRun {
                                                 text: "Settings are read once at start-up. Send "
-                                                textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: EldurFonts.family("sans-serif")
+                                                font.family: "sans-serif"
                                                 font.pixelSize: 16
-                                                wrapMode: Text.WordWrap
-                                                renderType: Text.NativeRendering
                                             }
 
-                                            Text {
+                                            EldurRun {
                                                 id: inlineRun4
                                                 readonly property real eldurMarginRight: 5
                                                 readonly property real eldurMarginLeft: 5
                                                 property var eldurFragments: []
+                                                property string eldurRun: "[{\"size\":13.600000381469727,\"family\":\"monospace\",\"line\":21.760000228881836}]"
 
                                                 text: "SIGHUP"
-                                                textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: EldurFonts.family("monospace")
+                                                font.family: "monospace"
                                                 font.pixelSize: 14
                                                 font.letterSpacing: -0.24
-                                                wrapMode: Text.WordWrap
-                                                renderType: Text.NativeRendering
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun4.eldurFragments
@@ -1139,14 +1116,11 @@ ApplicationWindow {
                                                 }
                                             }
 
-                                            Text {
+                                            EldurRun {
                                                 text: " to reload them without dropping jobs."
-                                                textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: EldurFonts.family("sans-serif")
+                                                font.family: "sans-serif"
                                                 font.pixelSize: 16
-                                                wrapMode: Text.WordWrap
-                                                renderType: Text.NativeRendering
                                             }
                                         }
                                     }
@@ -1588,20 +1562,19 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
 
-                                            Text {
+                                            EldurRun {
                                                 id: inlineRun5
                                                 readonly property real eldurMarginRight: 5
                                                 readonly property real eldurMarginLeft: 5
                                                 property var eldurFragments: []
+                                                property string eldurRun: "[{\"size\":11.90000057220459,\"family\":\"monospace\",\"line\":19.040000915527344}]"
 
                                                 text: "queue.url"
-                                                textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: EldurFonts.family("monospace")
+                                                font.family: "monospace"
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
-                                                renderType: Text.NativeRendering
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun5.eldurFragments
@@ -1772,20 +1745,19 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
 
-                                            Text {
+                                            EldurRun {
                                                 id: inlineRun6
                                                 readonly property real eldurMarginRight: 5
                                                 readonly property real eldurMarginLeft: 5
                                                 property var eldurFragments: []
+                                                property string eldurRun: "[{\"size\":11.90000057220459,\"family\":\"monospace\",\"line\":19.040000915527344}]"
 
                                                 text: "worker.concurrency"
-                                                textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: EldurFonts.family("monospace")
+                                                font.family: "monospace"
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
-                                                renderType: Text.NativeRendering
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun6.eldurFragments
@@ -1844,20 +1816,19 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
 
-                                            Text {
+                                            EldurRun {
                                                 id: inlineRun7
                                                 readonly property real eldurMarginRight: 5
                                                 readonly property real eldurMarginLeft: 5
                                                 property var eldurFragments: []
+                                                property string eldurRun: "[{\"size\":11.90000057220459,\"family\":\"monospace\",\"line\":19.040000915527344}]"
 
                                                 text: "1"
-                                                textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: EldurFonts.family("monospace")
+                                                font.family: "monospace"
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
-                                                renderType: Text.NativeRendering
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun7.eldurFragments
@@ -1976,20 +1947,19 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
 
-                                            Text {
+                                            EldurRun {
                                                 id: inlineRun8
                                                 readonly property real eldurMarginRight: 5
                                                 readonly property real eldurMarginLeft: 5
                                                 property var eldurFragments: []
+                                                property string eldurRun: "[{\"size\":11.90000057220459,\"family\":\"monospace\",\"line\":19.040000915527344}]"
 
                                                 text: "worker.max_attempts"
-                                                textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: EldurFonts.family("monospace")
+                                                font.family: "monospace"
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
-                                                renderType: Text.NativeRendering
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun8.eldurFragments
@@ -2048,20 +2018,19 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
 
-                                            Text {
+                                            EldurRun {
                                                 id: inlineRun9
                                                 readonly property real eldurMarginRight: 5
                                                 readonly property real eldurMarginLeft: 5
                                                 property var eldurFragments: []
+                                                property string eldurRun: "[{\"size\":11.90000057220459,\"family\":\"monospace\",\"line\":19.040000915527344}]"
 
                                                 text: "3"
-                                                textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: EldurFonts.family("monospace")
+                                                font.family: "monospace"
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
-                                                renderType: Text.NativeRendering
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun9.eldurFragments
@@ -2188,20 +2157,19 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
 
-                                            Text {
+                                            EldurRun {
                                                 id: inlineRun10
                                                 readonly property real eldurMarginRight: 5
                                                 readonly property real eldurMarginLeft: 5
                                                 property var eldurFragments: []
+                                                property string eldurRun: "[{\"size\":11.90000057220459,\"family\":\"monospace\",\"line\":19.040000915527344}]"
 
                                                 text: "log.level"
-                                                textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: EldurFonts.family("monospace")
+                                                font.family: "monospace"
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
-                                                renderType: Text.NativeRendering
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun10.eldurFragments
@@ -2268,20 +2236,19 @@ ApplicationWindow {
                                             anchors.rightMargin: 12
                                             anchors.topMargin: 9
 
-                                            Text {
+                                            EldurRun {
                                                 id: inlineRun11
                                                 readonly property real eldurMarginRight: 5
                                                 readonly property real eldurMarginLeft: 5
                                                 property var eldurFragments: []
+                                                property string eldurRun: "[{\"size\":11.90000057220459,\"family\":\"monospace\",\"line\":19.040000915527344}]"
 
                                                 text: "\"info\""
-                                                textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: EldurFonts.family("monospace")
+                                                font.family: "monospace"
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
-                                                renderType: Text.NativeRendering
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun11.eldurFragments
@@ -2326,30 +2293,26 @@ ApplicationWindow {
                                             anchors.rightMargin: 13
                                             anchors.topMargin: 9
 
-                                            Text {
+                                            EldurRun {
                                                 text: "One of "
-                                                textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: EldurFonts.family("sans-serif")
+                                                font.family: "sans-serif"
                                                 font.pixelSize: 14
-                                                wrapMode: Text.WordWrap
-                                                renderType: Text.NativeRendering
                                             }
 
-                                            Text {
+                                            EldurRun {
                                                 id: inlineRun12
                                                 readonly property real eldurMarginRight: 5
                                                 readonly property real eldurMarginLeft: 5
                                                 property var eldurFragments: []
+                                                property string eldurRun: "[{\"size\":11.90000057220459,\"family\":\"monospace\",\"line\":19.040000915527344}]"
 
                                                 text: "debug"
-                                                textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: EldurFonts.family("monospace")
+                                                font.family: "monospace"
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
-                                                renderType: Text.NativeRendering
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun12.eldurFragments
@@ -2365,30 +2328,26 @@ ApplicationWindow {
                                                 }
                                             }
 
-                                            Text {
+                                            EldurRun {
                                                 text: ", "
-                                                textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: EldurFonts.family("sans-serif")
+                                                font.family: "sans-serif"
                                                 font.pixelSize: 14
-                                                wrapMode: Text.WordWrap
-                                                renderType: Text.NativeRendering
                                             }
 
-                                            Text {
+                                            EldurRun {
                                                 id: inlineRun13
                                                 readonly property real eldurMarginRight: 5
                                                 readonly property real eldurMarginLeft: 5
                                                 property var eldurFragments: []
+                                                property string eldurRun: "[{\"size\":11.90000057220459,\"family\":\"monospace\",\"line\":19.040000915527344}]"
 
                                                 text: "info"
-                                                textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: EldurFonts.family("monospace")
+                                                font.family: "monospace"
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
-                                                renderType: Text.NativeRendering
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun13.eldurFragments
@@ -2404,30 +2363,26 @@ ApplicationWindow {
                                                 }
                                             }
 
-                                            Text {
+                                            EldurRun {
                                                 text: ", "
-                                                textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: EldurFonts.family("sans-serif")
+                                                font.family: "sans-serif"
                                                 font.pixelSize: 14
-                                                wrapMode: Text.WordWrap
-                                                renderType: Text.NativeRendering
                                             }
 
-                                            Text {
+                                            EldurRun {
                                                 id: inlineRun14
                                                 readonly property real eldurMarginRight: 5
                                                 readonly property real eldurMarginLeft: 5
                                                 property var eldurFragments: []
+                                                property string eldurRun: "[{\"size\":11.90000057220459,\"family\":\"monospace\",\"line\":19.040000915527344}]"
 
                                                 text: "warn"
-                                                textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: EldurFonts.family("monospace")
+                                                font.family: "monospace"
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
-                                                renderType: Text.NativeRendering
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun14.eldurFragments
@@ -2443,30 +2398,26 @@ ApplicationWindow {
                                                 }
                                             }
 
-                                            Text {
+                                            EldurRun {
                                                 text: " or "
-                                                textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: EldurFonts.family("sans-serif")
+                                                font.family: "sans-serif"
                                                 font.pixelSize: 14
-                                                wrapMode: Text.WordWrap
-                                                renderType: Text.NativeRendering
                                             }
 
-                                            Text {
+                                            EldurRun {
                                                 id: inlineRun15
                                                 readonly property real eldurMarginRight: 5
                                                 readonly property real eldurMarginLeft: 5
                                                 property var eldurFragments: []
+                                                property string eldurRun: "[{\"size\":11.90000057220459,\"family\":\"monospace\",\"line\":19.040000915527344}]"
 
                                                 text: "error"
-                                                textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: EldurFonts.family("monospace")
+                                                font.family: "monospace"
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
-                                                renderType: Text.NativeRendering
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun15.eldurFragments
@@ -2482,14 +2433,11 @@ ApplicationWindow {
                                                 }
                                             }
 
-                                            Text {
+                                            EldurRun {
                                                 text: "."
-                                                textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: EldurFonts.family("sans-serif")
+                                                font.family: "sans-serif"
                                                 font.pixelSize: 14
-                                                wrapMode: Text.WordWrap
-                                                renderType: Text.NativeRendering
                                             }
                                         }
                                     }

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html><head><style>body{margin:8px;font:14px Arial}p{margin:0 0 10px}.big{font-size:22px}</style></head><body>
+<p id="s1">Text with <span id="s1r">a run</span> after</p>
+<p id="s2">Text with <span id="s2r">a run</span> after</p>
+<p id="s3">Text with <span id="s3r">a run</span> after</p>
+<p id="s4">Text with <span id="s4r">a run</span> after</p>
+<p id="s5">Text with <span id="s5r">a run</span> after</p>
+<p id="s6">Text with <span id="s6r" class="big">a run</span> after</p>
+<p id="s7">Text with <b id="s7r" style="font-size:20px">a run</b> after</p>
+<p id="s8">Text with <span id="s8r" style="font-size:14px">a run</span> after</p>
+<p id="s9">Text with <span id="s9r" style="font-size:20px">a run</span> after</p>
+<p id="s10"><span id="s10r">All one span</span></p>
+<p id="s11">Text with <span id="s11r">a run <i id="s11i">inside</i></span> after</p>
+<p id="s12">Text with <span id="s12r" style="font-size:24px">a run</span> after</p>
+<p id="s13">Text with no run</p>
+<p id="s14">Text with <span id="s14r" style="font-size:24px">a run</span> after</p>
+<script>function rect(n){const r=n.getBoundingClientRect();return [r.x,r.y,r.width,r.height]}
+function rects(n){return Array.from(n.getClientRects()).map(r=>[r.x,r.y,r.width,r.height])}
+function report(tag,ids){for(const id of ids){const n=document.getElementById(id);if(n)console.log("LC "+tag+" "+id+" "+JSON.stringify({b:rect(n),l:rects(n)}))}}
+const $=(id)=>document.getElementById(id);
+const ids=[];for(let i=1;i<=14;i++){ids.push("s"+i,"s"+i+"r")}ids.push("s11i","s13n");
+report("start",ids);
+{$("s1r").style.fontSize="24px";report("size",ids)}
+{$("s1r").style.fontSize="";report("back",ids)}
+{$("s2r").style.fontFamily="serif";report("family",ids)}
+{$("s3r").style.lineHeight="40px";report("line",ids)}
+{$("s4r").style.verticalAlign="super";report("valign",ids)}
+{$("s5r").className="big";report("class",ids)}
+{$("s6r").classList.remove("big");report("unclass",ids)}
+{$("s7r").textContent="now holds rather more words than it did before so that this run has to go over the end of the first line and wrap all the way round to the next line of it and more";report("text",ids)}
+{$("s8").style.fontSize="20px";report("block",ids)}
+{$("s9").style.lineHeight="2";report("blockline",ids)}
+{$("s10r").style.fontSize="30px";report("whole",ids)}
+{$("s11i").style.fontSize="30px";report("nested",ids)}
+{$("s12r").style.fontSize="14px";report("tall",ids)}
+{const n=document.createElement("span");n.id="s13n";n.style.fontSize="24px";n.textContent="made";$("s13").appendChild(n);report("created",ids)}
+{$("s14r").remove();report("removed",ids)}
+{Text <span id=@ style="vertical-align:middle;font-size:30px">middle run</span> after;report("font-family:'Nimbus Roman';font-weight:bold",ids)}
+{Text <span id=@ style="vertical-align:middle;font-size:30px">middle run</span> after;report("font-family:'Nimbus Roman';font-style:italic",ids)}
+{Text <span id=@ style="vertical-align:middle;font-size:30px">middle run</span> after;report("font-family:'Noto Sans';font-weight:bold",ids)}
+{Text <span id=@ style="vertical-align:middle;font-size:30px">middle run</span> after;report("font-family:'Nimbus Sans';font-weight:bold;font-style:italic",ids)}
+</script>
+</body></html>

@@ -21,6 +21,47 @@ use crate::boxes::{BoxKind, Inline, LayoutBox, Span, node_line};
 
 /// The layouter, written beside `Main.qml` when anything may use it.
 pub(crate) const ELDUR_LINES_QML: &str = include_str!("EldurLines.qml");
+pub(crate) const ELDUR_RUN_QML: &str = include_str!("EldurRun.qml");
+
+/// Every direct `Text` of an `EldurLines` under `obj` becomes an `EldurRun`,
+/// without the properties that type already has. Done last, since the emitters
+/// recognise a run by being a `Text`.
+pub(crate) fn name_runs(obj: &mut Object) {
+    let lines = obj.type_name == "EldurLines";
+    for child in obj.children_mut() {
+        if lines && child.type_name == "Text" {
+            child.type_name = "EldurRun".to_owned();
+            // `EldurLines` resolves a run's stack, for the same cost as an enum.
+            if let Some(Value::Expr(e)) = child.get("font.family")
+                && let Some(literal) = e
+                    .strip_prefix("EldurFonts.family(")
+                    .and_then(|e| e.strip_suffix(')'))
+                && let Ok(stack) = serde_json::from_str::<String>(literal)
+            {
+                child.set("font.family", Value::string(stack));
+            }
+            // What a `Text` left unset stays Qt's default, not the run's.
+            for (name, common, unset) in [
+                ("textFormat", "Text.PlainText", "Text.AutoText"),
+                ("wrapMode", "Text.WordWrap", "Text.NoWrap"),
+                ("renderType", "Text.NativeRendering", "Text.QtRendering"),
+            ] {
+                match child.get(name) {
+                    None => {
+                        child.set(name, Value::expr(unset));
+                    }
+                    Some(Value::Expr(e)) if e == common => {
+                        child.members.retain(
+                            |m| !matches!(m, Member::Property { name: n, .. } if n == name),
+                        );
+                    }
+                    Some(_) => {}
+                }
+            }
+        }
+        name_runs(child);
+    }
+}
 /// What an inline element paints of its own box, beside it when used.
 pub(crate) const ELDUR_INLINE_BOX_QML: &str = include_str!("EldurInlineBox.qml");
 
@@ -37,31 +78,35 @@ pub(crate) fn has_atomic(items: &[Inline<'_>]) -> bool {
     })
 }
 
-/// Whether a span's own `line-height` makes a line taller than the block's
-/// strut does. One `Text` has one line height, so such a span takes a run of
-/// its own for `EldurLines` to measure. Under `normal` on both sides Qt's own
-/// line grows with the font and is left to it, and an inherited `line-height`
-/// on another font is what `rich_shift` measures the `Text` for.
-fn raises_line(block: &ComputedStyle, span: &ComputedStyle) -> bool {
-    if span.line_height == block.line_height {
-        return false;
-    }
-    let reach = |st: &ComputedStyle| {
-        let ascent = text_baseline(st);
-        (ascent, line_height(st) - ascent)
-    };
-    let (block_up, block_down) = reach(block);
-    let (span_up, span_down) = reach(span);
-    block_up.max(span_up) + block_down.max(span_down) > line_height(block) + 0.5
+/// Whether a span's box on the line differs from its parent's: its own font,
+/// line height or alignment. One `Text` has one of each, so such a span is a run
+/// of its own, and `EldurLines` makes the line box from all of them (layout.md §1.3).
+/// A bold face of the same extents changes nothing and stays a tag.
+fn own_box(parent: &ComputedStyle, span: &ComputedStyle) -> bool {
+    span.vertical_align != VerticalAlign::Baseline
+        || (span.font_size - parent.font_size).abs() > 1e-3
+        || super::fonts::expected_face(&span.font_family)
+            != super::fonts::expected_face(&parent.font_family)
+        || super::fonts::extents(span) != super::fonts::extents(parent)
+        || (line_height(span) - line_height(parent)).abs() > 1e-3
 }
 
-fn holds_tall_span(block: &ComputedStyle, items: &[Inline<'_>]) -> bool {
+fn holds_own_box(parent: &ComputedStyle, items: &[Inline<'_>]) -> bool {
     items.iter().any(|item| match item {
         Inline::Span(span) => {
-            raises_line(block, span.style) || holds_tall_span(block, &span.children)
+            own_box(parent, span.style) || holds_own_box(span.style, &span.children)
         }
         Inline::Text(_) | Inline::Atomic(_) | Inline::LineBreak => false,
     })
+}
+
+/// Whether a run must be cut at this span for the box it paints: on a line of
+/// runs nothing is RichText, so any background or side space is drawn beside the text.
+fn paints_on_line(style: &ComputedStyle) -> bool {
+    paints_box(style)
+        || !style.background_color.is_transparent()
+        || super::text::inline_space(style, super::text::Side::Left) > 0.0
+        || super::text::inline_space(style, super::text::Side::Right) > 0.0
 }
 
 /// Whether an inline element paints a box RichText cannot: RichText has a background
@@ -105,10 +150,20 @@ pub(crate) fn needs_lines_for_boxes(items: &[Inline<'_>]) -> bool {
     holds_box(items)
 }
 
-/// Whether `items` must be placed by `EldurLines` for a span's `line-height`.
-/// A span that is the whole line is already the `Text`'s own (`whole_span`).
-pub(crate) fn needs_lines_for_leading(block: &ComputedStyle, items: &[Inline<'_>]) -> bool {
-    holds_tall_span(block, items) && super::text::whole_span(block, items).is_none()
+fn holds_painted(items: &[Inline<'_>]) -> bool {
+    items.iter().any(|item| match item {
+        Inline::Span(span) => paints_on_line(span.style) || holds_painted(&span.children),
+        Inline::Text(_) | Inline::Atomic(_) | Inline::LineBreak => false,
+    })
+}
+
+/// Whether `items` need `EldurLines` for the runs' own metrics. A span that is
+/// the whole line is already the `Text`'s own (`whole_span`).
+pub(crate) fn needs_lines_for_runs(block: &ComputedStyle, items: &[Inline<'_>]) -> bool {
+    match (super::text::whole_span(block, items), items) {
+        (Some(_), [Inline::Span(span)]) => holds_own_box(span.style, &span.children),
+        _ => holds_own_box(block, items),
+    }
 }
 
 fn has_words(items: &[Inline<'_>]) -> bool {
@@ -158,7 +213,7 @@ fn run_boxes<'b, 'a>(
     each_span(items, &mut spans);
     spans
         .into_iter()
-        .filter(|s| paints_box(s.style))
+        .filter(|s| paints_on_line(s.style))
         .map(|s| {
             let mut with = runs
                 .iter()
@@ -191,7 +246,7 @@ enum Piece<'b, 'a> {
 }
 
 fn pieces<'b, 'a>(
-    block: &ComputedStyle,
+    parent: &ComputedStyle,
     items: &'b [Inline<'a>],
     chain: &mut Vec<&'b Span<'a>>,
     run: &mut Vec<Inline<'a>>,
@@ -206,11 +261,11 @@ fn pieces<'b, 'a>(
             }
             Inline::Span(span)
                 if has_atomic(&span.children)
-                    || holds_tall_span(block, &span.children)
-                    || holds_box(&span.children) =>
+                    || holds_own_box(span.style, &span.children)
+                    || holds_painted(&span.children) =>
             {
-                let tall = raises_line(block, span.style) || paints_box(span.style);
-                if tall {
+                let own = own_box(parent, span.style) || paints_on_line(span.style);
+                if own {
                     end_run(run, out);
                 }
                 chain.push(span);
@@ -218,13 +273,13 @@ fn pieces<'b, 'a>(
                 if span.node.is_some() && !has_words(&span.children) {
                     push_in_chain(run, Inline::Text(String::new()), chain);
                 }
-                pieces(block, &span.children, chain, run, out);
+                pieces(span.style, &span.children, chain, run, out);
                 chain.pop();
-                if tall {
+                if own {
                     end_run(run, out);
                 }
             }
-            Inline::Span(span) if raises_line(block, span.style) || paints_box(span.style) => {
+            Inline::Span(span) if own_box(parent, span.style) || paints_on_line(span.style) => {
                 end_run(run, out);
                 push_in_chain(run, item.clone(), chain);
                 end_run(run, out);
@@ -232,6 +287,91 @@ fn pieces<'b, 'a>(
             other => push_in_chain(run, other.clone(), chain),
         }
     }
+}
+
+/// What a run's boxes are, outermost first: each span around its text that has
+/// its own box on the line. Every leaf of a run has the same ones, as `pieces`
+/// cuts where they change, so the first path to a leaf tells.
+fn run_levels<'b, 'a>(
+    parent: &'b ComputedStyle,
+    items: &'b [Inline<'a>],
+    out: &mut Vec<(&'b ComputedStyle, Option<NodeId>)>,
+) {
+    let Some(span) = items.iter().find_map(|item| match item {
+        Inline::Span(span) => Some(span),
+        Inline::Text(t) if !t.is_empty() => None,
+        _ => None,
+    }) else {
+        return;
+    };
+    // Text beside the span is of the parent's box, so the span is the same box.
+    let beside = items
+        .iter()
+        .any(|i| matches!(i, Inline::Text(t) if !t.is_empty()));
+    if beside && !own_box(parent, span.style) {
+        return;
+    }
+    let mut next = parent;
+    if own_box(parent, span.style) {
+        out.push((span.style, span.node));
+        next = span.style;
+    }
+    run_levels(next, &span.children, out);
+}
+
+/// One run's boxes for `EldurLines`, as a script's changes give them to it too.
+/// In JSON, not a JavaScript literal: Qt compiles each binding of a document at a
+/// cost that grows with how many it has, and a page has many runs.
+fn levels_json(levels: &[(&ComputedStyle, Option<NodeId>)]) -> String {
+    let parts: Vec<String> = levels
+        .iter()
+        .map(|(style, node)| {
+            let mut fields = vec![
+                format!("\"size\":{}", fmt_number(f64::from(style.font_size))),
+                format!("\"family\":{}", super::fonts::stack(style)),
+            ];
+            if style.font_weight != 400 {
+                fields.push(format!("\"weight\":{}", style.font_weight));
+            }
+            if style.font_style != eldur_css::FontStyle::Normal {
+                fields.push("\"italic\":true".to_owned());
+            }
+            if let Some(line) = super::text::line_height(style) {
+                fields.push(format!("\"line\":{}", fmt_number(f64::from(line))));
+            }
+            let align = match style.vertical_align {
+                VerticalAlign::Baseline => None,
+                VerticalAlign::Sub => Some("sub"),
+                VerticalAlign::Super => Some("super"),
+                VerticalAlign::Top => Some("top"),
+                VerticalAlign::TextTop => Some("text-top"),
+                VerticalAlign::Middle => Some("middle"),
+                VerticalAlign::Bottom => Some("bottom"),
+                VerticalAlign::TextBottom => Some("text-bottom"),
+                VerticalAlign::Length(px) => {
+                    fields.push(format!("\"shift\":{}", fmt_number(f64::from(px))));
+                    None
+                }
+                VerticalAlign::Percent(p) => {
+                    fields.push(format!("\"percent\":{}", fmt_number(f64::from(p))));
+                    None
+                }
+            };
+            if let Some(align) = align {
+                fields.push(format!("\"align\":\"{align}\""));
+            }
+            // The runs a top or bottom box holds are one thing on the line.
+            if matches!(
+                style.vertical_align,
+                VerticalAlign::Top | VerticalAlign::Bottom
+            ) && let Some(node) = node
+            {
+                fields.push(format!("\"group\":{}", node.index()));
+            }
+            format!("{{{}}}", fields.join(","))
+        })
+        .collect();
+    format!("[{}]", parts.join(","))
 }
 
 /// Puts `inner` in `run` inside `chain`, the spans cut at a box, in the piece
@@ -374,7 +514,12 @@ fn string_property(obj: &mut Object, name: &str, value: &str) {
     );
 }
 
-fn vertical_align(obj: &mut Object, align: VerticalAlign) {
+fn vertical_align(obj: &mut Object, style: &ComputedStyle) {
+    let mut align = style.vertical_align;
+    // An atomic box's line height, if it has none of its own, is its font's.
+    if let VerticalAlign::Percent(p) = align {
+        align = VerticalAlign::Length(p / 100.0 * line_height(style));
+    }
     let name = match align {
         VerticalAlign::Baseline => return,
         VerticalAlign::Sub => "sub",
@@ -397,6 +542,7 @@ fn vertical_align(obj: &mut Object, align: VerticalAlign) {
             );
             "length"
         }
+        VerticalAlign::Percent(_) => return,
     };
     string_property(obj, "eldurVAlign", name);
 }
@@ -454,6 +600,21 @@ impl Emitter<'_, '_> {
             flow.set("preserveSpace", true);
         }
 
+        // Boxes cut elements too, but those are told by `all_inline`; these are
+        // the elements only runs cut.
+        let mut seen = std::collections::HashSet::new();
+        for piece in &list {
+            if let Piece::Run(items) = piece {
+                let mut spans = Vec::new();
+                each_span(items, &mut spans);
+                for node in spans.iter().filter_map(|s| s.node) {
+                    if !seen.insert(node) {
+                        self.cut_nodes.insert(node);
+                    }
+                }
+            }
+        }
+
         let run_nodes: Vec<Vec<Option<NodeId>>> = list
             .iter()
             .filter_map(|piece| match piece {
@@ -471,23 +632,47 @@ impl Emitter<'_, '_> {
             match piece {
                 Piece::Run(items) => {
                     let drawn = drop_doubled_spaces(&items, &mut false);
-                    // RichText has no `lineLaidOut`, so the line could not place it:
-                    // the run takes the font of the element whose box it is.
-                    let own = sole_box(&drawn).unwrap_or(style);
+                    // The run is drawn in the font of its innermost box: tags
+                    // cannot give an exact size or a family, and this line has
+                    // only `lineLaidOut` to place a Text with.
+                    let mut levels = Vec::new();
+                    run_levels(style, &items, &mut levels);
+                    let mut own = sole_box(&drawn).unwrap_or(style).clone();
+                    if let Some((leaf, _)) = levels.last() {
+                        own.font_size = leaf.font_size;
+                        own.font_family.clone_from(&leaf.font_family);
+                        own.line_height = leaf.line_height;
+                    }
                     self.boxes_drawn = true;
-                    let mut text = self.text(own, decoration, &drawn, line);
+                    let mut text = self.text(&own, decoration, &drawn, line);
                     self.boxes_drawn = false;
+                    // A run that is all one span hoists that span's font, which
+                    // may not be the innermost.
+                    if !levels.is_empty() {
+                        let leaf_font = self.text(&own, decoration, &[], line);
+                        for member in &leaf_font.members {
+                            if let Member::Property { name, value } = member
+                                && (name == "font.pixelSize" || name == "font.family")
+                            {
+                                text.set(name, value.clone());
+                            }
+                        }
+                    }
                     drop_own_leading(&mut text);
+                    if !levels.is_empty() {
+                        text.members.insert(
+                            0,
+                            Member::PropertyDecl {
+                                ty: "string".to_owned(),
+                                name: "eldurRun".to_owned(),
+                                value: Some(Value::string(levels_json(&levels))),
+                                readonly: false,
+                                required: false,
+                            },
+                        );
+                    }
                     let mut spans = Vec::new();
                     each_span(&items, &mut spans);
-                    let own_line = spans
-                        .iter()
-                        .filter(|span| raises_line(style, span.style))
-                        .map(|span| line_height(span.style))
-                        .fold(0.0_f32, f32::max);
-                    if own_line > 0.0 {
-                        declare_own_line(&mut text, own_line);
-                    }
                     // A label cut by its control still takes a press on its words.
                     for span in spans {
                         if !span.node.is_some_and(|n| self.has_tapped_label(n)) {
@@ -529,7 +714,7 @@ impl Emitter<'_, '_> {
                     let mut obj = part.obj;
                     // A `Text` is placed as a run: the line measures it on its
                     // natural height.
-                    if obj.type_name == "Text" && raises_line(style, &a.style) {
+                    if obj.type_name == "Text" && own_box(style, &a.style) {
                         drop_own_leading(&mut obj);
                         declare_own_line(&mut obj, line_height(&a.style));
                     }
@@ -554,7 +739,7 @@ impl Emitter<'_, '_> {
                     } else {
                         self.place_atomic(obj, &part.hint, part.margins, 0.0)
                     };
-                    vertical_align(&mut placed, a.style.vertical_align);
+                    vertical_align(&mut placed, &a.style);
                     if self.options.source_comments
                         && let Some(node) = a.node
                     {

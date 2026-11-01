@@ -72,7 +72,7 @@ Inline runs become one `Text`. See "Inline formatting" for when they split.
 | a | inline | `Text` with `<a href>` (StyledText) or `Text` + `MouseArea` | `href` → `Qt.openUrlExternally()`; `#id` → scroll to target; `title` → `ToolTip` | Approx | External links open in the system browser |
 | em | inline | `<i>` in StyledText | — | Full | |
 | strong | inline | `<b>` in StyledText | — | Full | |
-| small | inline | `<small>` in StyledText (verify) | — | Approx | |
+| small | inline | A run in `EldurLines` at its exact size | — | Full | `font-size: smaller` |
 | s | inline | `font.strikeout: true` | — | Full | |
 | cite | inline | `font.italic: true` | — | Full | |
 | q | inline | text wrapped in curly quotes | `cite` → ignored | Approx | Quotes are inserted as text |
@@ -87,8 +87,8 @@ Inline runs become one `Text`. See "Inline formatting" for when they split.
 | var | inline | `Text` with `font.italic: true` and monospace | — | Approx | |
 | samp | inline | `Text` with monospace family | — | Approx | |
 | kbd | inline | `Text` with monospace family | — | Approx | No key-cap border; add `Rectangle` if styled |
-| sub | inline | `<sub>` in StyledText (verify) | — | Approx | Shifts baseline |
-| sup | inline | `<sup>` in StyledText (verify) | — | Approx | Shifts baseline |
+| sub | inline | A run in `EldurLines` at its exact size and shift | — | Full | |
+| sup | inline | A run in `EldurLines` at its exact size and shift | — | Full | |
 | i | inline | `<i>` in StyledText | — | Full | |
 | b | inline | `<b>` in StyledText | — | Full | |
 | u | inline | `font.underline: true` | — | Full | |

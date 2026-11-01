@@ -1,7 +1,7 @@
 //! CSS Fonts 4 & CSS Inline 3: `font-family`, `font-size`, `font-weight`,
 //! `font-style`, `font-variant-caps`, and `line-height`.
 
-use swc_css_ast::ComponentValue;
+use swc_css_ast::{ComponentValue, Token};
 
 use crate::{ComputedStyle, FontStyle, LineHeight};
 
@@ -120,6 +120,71 @@ pub(crate) fn parse_font_size(
     let uctx = UnitContext::for_font_size(ctx);
     let len = parse_length_cvs(cvs, &uctx, true)?;
     length_to_px(&len, &uctx, true)
+}
+
+/// `font_size_unscaled` and `font_size_keyword` for a `font-size` of `cvs` that
+/// has computed to `px`. Measured from Chromium: a keyword and whatever scales
+/// one (`em`, `%`, `smaller`, `larger`) stays subject to `monospace`; `px` and
+/// `rem` do not.
+pub(crate) fn font_size_origin(
+    cvs: &[ComponentValue],
+    px: f32,
+    ctx: &ComputeContext<'_>,
+) -> (Option<f32>, Option<u8>) {
+    let parent = ctx.parent;
+    let parent_unscaled = parent.map_or(Some(16.0), |p| p.font_size_unscaled);
+    let parent_fs = parent.map_or(16.0, |p| p.font_size);
+    let mut cur = Cursor::new(cvs);
+    if let Some(id) = cur.eat_ident() {
+        let low = id.to_ascii_lowercase();
+        if let Some(at) = FONT_SIZE_KEYWORDS.iter().position(|k| *k == low) {
+            return (Some(px), u8::try_from(at).ok());
+        }
+        return (parent_unscaled.map(|u| u * px / parent_fs), None);
+    }
+    let scales = match cvs {
+        [ComponentValue::PreservedToken(t)] => match &t.token {
+            Token::Percentage { .. } => true,
+            Token::Dimension { dimension } => dimension.unit.eq_ignore_ascii_case("em"),
+            _ => false,
+        },
+        _ => false,
+    };
+    if scales && parent_fs > 0.0 {
+        (parent_unscaled.map(|u| u * px / parent_fs), None)
+    } else {
+        (None, None)
+    }
+}
+
+const FONT_SIZE_KEYWORDS: [&str; 8] = [
+    "xx-small",
+    "x-small",
+    "small",
+    "medium",
+    "large",
+    "x-large",
+    "xx-large",
+    "xxx-large",
+];
+
+/// The keywords' sizes in the generic `monospace`, measured from Chromium.
+const MONOSPACE_KEYWORD_SIZES: [f32; 8] = [9.0, 10.0, 12.0, 13.0, 16.0, 20.0, 26.0, 39.0];
+
+/// Gives `style` the size its family makes of its size: the generic `monospace`
+/// alone, not in a list, has a default of 13px where other families have 16.
+pub(crate) fn settle_font_size(style: &mut ComputedStyle) {
+    let Some(unscaled) = style.font_size_unscaled else {
+        return;
+    };
+    style.font_size = if matches!(style.font_family.as_slice(), [one] if one == "monospace") {
+        match style.font_size_keyword {
+            Some(at) => MONOSPACE_KEYWORD_SIZES[usize::from(at)],
+            None => unscaled * 13.0 / 16.0,
+        }
+    } else {
+        unscaled
+    };
 }
 
 /// Parses `font-weight` (`normal`, `bold`, `bolder`, `lighter`, or `<number [1,1000]>`).

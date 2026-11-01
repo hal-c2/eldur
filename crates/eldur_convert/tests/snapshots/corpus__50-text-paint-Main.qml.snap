@@ -245,24 +245,43 @@ ApplicationWindow {
                     }
 
                     // <p id="first">
-                    Text {
+                    Item {
                         id: first
-                        text: "<div style=\"line-height:24px\"><font color=\"#dc2626\"><span style=\"font-size:32px\">F</span></font>irst letter of a line</div>"
-                        textFormat: Text.RichText
-                        color: "#111111"
-                        font.family: EldurFonts.family("sans-serif")
-                        font.pixelSize: 16
-                        wrapMode: Text.WordWrap
-                        transform: Translate {
-                            y: 6
-                        }
+                        implicitWidth: pFlow.implicitWidth
+                        implicitHeight: pFlow.implicitHeight
                         Layout.row: 1
                         Layout.column: 2
                         Layout.preferredWidth: 280
                         Layout.minimumWidth: 280
                         Layout.maximumWidth: 280
                         Layout.fillHeight: true
-                        renderType: Text.NativeRendering
+
+                        EldurLines {
+                            id: pFlow
+                            color: "#111111"
+                            font.family: EldurFonts.family("sans-serif")
+                            font.pixelSize: 16
+                            lineHeight: 24
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+
+                            EldurRun {
+                                property string eldurRun: "[{\"size\":32,\"family\":\"sans-serif\",\"line\":48}]"
+
+                                text: "F"
+                                color: "#dc2626"
+                                font.family: "sans-serif"
+                                font.pixelSize: 32
+                            }
+
+                            EldurRun {
+                                text: "irst letter of a line"
+                                color: "#111111"
+                                font.family: "sans-serif"
+                                font.pixelSize: 16
+                            }
+                        }
                     }
 
                     // <p id="line">

@@ -8,7 +8,7 @@ Target: Qt 6.11, QtQuick, QtQuick.Controls (Basic style), QtQuick.Layouts, QtQui
 |---|---|---|---|
 | Root document | `ApplicationWindow` > `ScrollView` > page `Item` | Full | Body scrolls inside the ScrollView. |
 | Block container (normal flow) | `ColumnLayout` | Full | See §1 for why. |
-| Inline run of text | `Text { textFormat: Text.StyledText }` | Approx | See §2. |
+| Inline run of text | `Text { textFormat: Text.StyledText }`, or `EldurLines` when runs differ in metrics | Full | See §2. |
 | `display: flex` | `RowLayout` / `ColumnLayout`, or `Flow` if wrapping | Approx | See §3. |
 | `display: grid`, `table` | `GridLayout`, or `TableView` for large data tables | Approx | See §4, §8. |
 | `position: relative` | Same parent, `transform: Translate` | Full | See §5. |
@@ -255,9 +255,55 @@ The converter's own numbers (`emit/fonts.rs`, `extents`, `normal_line`) decide l
 - Width, same face: Qt is narrower by at most 0.16 px per 26 characters (12 px: 151.98 vs 152.09; 16 px: 202.63 vs 202.78; 96 px: equal). `renderType` and `PreferNoHinting` do not change it, `PreferFullHinting` is worse. No setting reaches it.
 - Qt rounds a fractional size to a whole pixel, so a 13.33 px control's text is 13 px, widened by `text_scale`'s 13.33 / 13.
 
+#### Inline runs: the line box, measured
+
+The rule below reproduces Chromium's table in `crates/eldur_convert/tests/inline_runs/chromium.json` (181 cases, recorded by its `gen.mjs`). All sizes are CSS px at the run's own font.
+
+- **A run's font.** `A = round(ascent·s)`, `D = round(descent·s)`, `G = round(gap·s)`. An inline element's rect is `A + D` high, with its top `A` above the run's baseline: the font's, not the line's.
+- **Its line height.** `normal` is `A + D + G`. A number is `n ×` the run's own size, since the number is what inherits. A length, `%` or `em` is the parent's computed px. Floored to 1/64 px.
+- **Its box.** `above = A + floor((lh − A − D) / 2 + 1e-4)`, `below = lh − above`. With `normal`: `above = A + floor(G/2)`, `below = D + ceil(G/2)`.
+- **Its shift** (down positive, from the parent's baseline, cumulative, floored in magnitude to 1/64):
+
+| `vertical-align` | Shift |
+|---|---|
+| `sub` | `+(parent size / 5 + 1)` |
+| `super` | `−(parent size / 3 + 1)` |
+| length | `−px` |
+| `%` | `−` that share of the run's own line height |
+| `middle` | `−xheight(parent) / 2 + (above − below) / 2` |
+| `text-top` | `above − A(parent)` |
+| `text-bottom` | `D(parent) − below` |
+
+- **The line box** is `max(above − shift) + max(below + shift)` over the strut and every box on the line. That counts each ancestor inline box of the fragment, also one holding only a smaller run, and empty and whitespace-only spans in standards mode. A box counts only on lines where it has a fragment (four lines of one span: 16 + 23 + 23 + 16).
+- **`top` and `bottom`** boxes form a group placed afterwards: the line grows if the group is taller, and the group sits at the line's top or bottom.
+- **Bold and italic** do not change the line for Liberation or Noto, and do for Nimbus, so faces are compared by extents and not by name. A family alone can change the line.
+
+Examples: `line-height: 1.5` at 14 px with a 24 px span is 36; `a<sub>2</sub>b<sup>3</sup>` at 16 px is 22.453125.
+
+**Size of `monospace`** (`crates/eldur_css/tests/monospace_size/chromium.jsonl`, 49 cases). The generic family alone, not in a list, shrinks sizes that come from a keyword. Absolute keywords `xx-small…xxx-large` are 9, 10, 12, 13, 16, 20, 26, 39. Sizes derived from a keyword by `em`, `%`, `smaller`, `larger` are the unscaled size × 13/16. `px` and `rem` are exempt. Leaving for another family restores the unscaled size.
+
+**Why not rich text** (measured in Qt 6.11, against Chromium's value):
+
+| Content | `Text.RichText` | What is wrong with it |
+|---|---|---|
+| 14 + 20 px, wrapped to three lines | 55 | Line heights come from Qt's font metrics and not the rule above; plain text is 3 × 16 = 48 |
+| `<div line-height:21px>` with a 24 px span, three lines | 69 (27 + 21 + 21) | Qt grows a tall line by its own natural height |
+| `a<sub>2</sub>b<sup>3</sup>` at 16 px | 16 | Chromium's is 22.45: the shifts do not grow the line |
+
+Qt's document layout has no per-line box of this kind and no fractional heights, so a paragraph whose runs differ in metrics goes through `EldurLines`.
+
+**Cost.** Qt's compile of a document grows faster than the number of JavaScript bindings and enum assignments in it: 400 paragraphs of seven runs took 22 s cold when each run wrote its own, and 0.6 s now (0.5 s for the same page as one `Text` each). So what all runs share lives in `EldurRun.qml`, `eldurRun` is a JSON string, and a run's family is a literal that `EldurLines` resolves once.
+
 ## 2. Inline formatting context
 
-**Decision:** one `Text` per inline formatting context, with `textFormat: Text.StyledText`. When the content holds an atomic box (a replaced element, a control, `inline-block`, `inline-flex`) it is laid out by `EldurLines`: see below.
+**Decision:** one `Text` per inline formatting context, with `textFormat: Text.StyledText`, as long as its runs share one size, family and line height, and nothing moves one off the baseline; `<b>`, `<i>`, `<a>` stay in it. Otherwise the content is laid out by `EldurLines`, one `EldurRun` per run with its exact size (§1.3), never `<big>` or `<small>`. Content holding an atomic box (a replaced element, a control, `inline-block`, `inline-flex`) goes the same way: see below. On a page with scripts a change to a run (`style.fontSize`, a class, `textContent`) splits a `Text` into lines at that moment and gives the runs their boxes (`setRunLevels`); a font set on the block itself stays in place and keeps the models.
+
+**Not done, runs:**
+- Qt draws whole pixel sizes only, so a 13.33 px run is 13 px, and a long one drifts up to about 3% in width against its box (26 px over a 900 px line). Rects come from the CSS size where a run is short enough to agree; see the `KNOWN` list in `tests/inline_runs_e2e.rs`.
+- A block adopted for another cause (a parent's font, a class causing `_gAdopt`) may still lose its inline models.
+- `getClientRects` gives one rect for a `<q>` Chromium gives three (the quotes are generated) and misses a `<br>`'s empty rect; the bounding box and lines agree.
+- A run in a fractional position is drawn there, blurred by Qt's filtering, while Chromium's glyphs look placed differently. Rounding or flooring the origin was measured and is worse over the corpus (`64-inline-runs` −0.65, `66-inline-runs-script` −1.26; `65-inline-text-elements` −1.39, `26-docs-page` −0.59).
+- A `<abbr title>`'s dotted underline in a single `Text` is a solid `<u>`: tags cannot draw it.
 
 **Lines with boxes.** `EldurLines.qml` is one line layouter for static and script pages, written beside `Main.qml` when the page uses it or has a runtime. Its children are the content in order. Text is cut only at boxes: each run between two boxes stays one `Text`, shaped whole, so no ligature or kerning is lost at a word boundary, and `lineLaidOut` places that `Text`'s lines. The tradeoff is that a scriptless page with such a line now has JavaScript functions in QML, though not `eldur_runtime.js`. Heights follow CSS 2.2 §10.8 with Chromium's rounding: the strut is `round(ascent) + floor(leading / 2)` above and `round(descent) + ceil(leading / 2)` below, and `normal` is the rule in §1.3 (`EldurLines` reads it from `EldurFonts`). A box's baseline is its text's (rounded ascent), the bottom border edge for a check box, radio or slider, the bottom margin edge for a textarea or a box with no line. A line with nothing on it has no strut. The layouter runs a frame after a width change, because a table reads implicit sizes while working out that width; a script's read settles it first.
 

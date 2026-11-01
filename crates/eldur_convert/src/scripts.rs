@@ -517,11 +517,18 @@ impl DomResolver for Resolver<'_> {
     }
 
     fn resolve(&self, query: &DomQuery) -> Vec<QmlTarget> {
-        self.scripts
-            .matches
-            .get(query)
-            .map(|nodes| nodes.iter().filter_map(|&n| self.target(n)).collect())
-            .unwrap_or_default()
+        let Some(nodes) = self.scripts.matches.get(query) else {
+            return Vec::new();
+        };
+        // An inline element has no object to name, only a node the runtime makes.
+        // A list without it would be a wrong answer, so the runtime's query answers.
+        if nodes
+            .iter()
+            .any(|n| !self.targets.contains_key(n) && self.inline_covered.contains(n))
+        {
+            return Vec::new();
+        }
+        nodes.iter().filter_map(|&n| self.target(n)).collect()
     }
 
     fn element(&self, key: ElementKey) -> Option<QmlTarget> {

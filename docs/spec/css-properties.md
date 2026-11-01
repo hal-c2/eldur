@@ -165,8 +165,8 @@ CSS grid line numbers start at 1; `Layout.row` and `Layout.column` start at 0.
 | word-break: keep-all | — | `Text.wrapMode: Text.WordWrap` | — | Approx | |
 | overflow-wrap: break-word, anywhere | — | `Text.WrapAtWordBoundaryOrAnywhere` | — | Full | Breaks at word boundaries first and mid-word only when a word does not fit, as CSS does |
 | vertical-align: baseline, top, middle, bottom | keywords | `Text.verticalAlignment` for block text; inline alignment is Approx | — | Approx | |
-| vertical-align: sub, super | — | Rich text `<sub>`/`<sup>` with `Text.textFormat: Text.RichText` | — | Approx | `StyledText` does not support these tags |
-| vertical-align: px, % | length | Emulated `y` offset of the inline run | px ×1 | Emulated | |
+| vertical-align: sub, super | — | The run in `EldurLines`, shifted by `layout.md` §1.3 | — | Full | Exact size and line box; no rich text tag |
+| vertical-align: px, %, text-top, text-bottom, middle, top, bottom on inline text | length, keyword | The run in `EldurLines`, shifted by `layout.md` §1.3 | px ×1 | Full | |
 | text-shadow: offset, color (no blur) | px, color | Duplicate `Text` behind with offset; `Text.style: Text.Raised` with `styleColor` only matches a (1px, 1px) offset | px ×1 | Approx | |
 | text-shadow: blur | px | `layer.enabled: true` with `layer.effect: MultiEffect { shadowEnabled: true; … }` | px ×1 | Approx | |
 | writing-mode: vertical-* | keywords | Unsupported | — | Unsupported | |

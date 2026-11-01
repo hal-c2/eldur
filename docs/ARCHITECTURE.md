@@ -91,17 +91,21 @@ when nothing is painted) whose content layout is anchored inside with
 `implicitWidth`/`implicitHeight` are the content's implicit size plus those
 margins. Otherwise the box is just its layout (no extra `Item`).
 
-**Inline formatting context → one `Text`.** A run of inline content becomes
-one `Text { textFormat: Text.StyledText; wrapMode: Text.Wrap }` with
+**Inline formatting context → one `Text`.** A run of inline content of one
+font becomes one `Text { textFormat: Text.StyledText; wrapMode: Text.Wrap }` with
 `Layout.fillWidth: true`, using StyledText tags for `b/strong/i/em/u/s/a/
-br/sub/sup/code` and `<font color>` for colour changes. Links get
+br` and `<font color>` for colour changes. Links get
 `onLinkActivated: (link) => Qt.openUrlExternally(link)`. The run is split
 into separate items only when an inline box needs something StyledText cannot
 draw: background, border, padding, a script or `:hover` target. The block's font, colour, line
 height, alignment and letter spacing go on the `Text`. A run holding
 an atomic box (a replaced element, a control, `inline-block`) is laid out by
 `EldurLines.qml`, written beside `Main.qml`: the text between boxes stays whole
-`Text` runs and the boxes sit on CSS line boxes (`docs/spec/layout.md` §2).
+`Text` runs and the boxes sit on CSS line boxes (`docs/spec/layout.md` §2). So is
+a run whose font size, family, line height or `vertical-align` gives it other
+metrics than its neighbours: one `EldurRun` per run, at its exact size, on line
+boxes computed as Chromium does (`docs/spec/layout.md` §1.3). A script changing
+such a run moves the paragraph to the same layouter when it runs.
 
 **Flexbox → `RowLayout`/`ColumnLayout`, `Flow` for wrapping.** `gap` →
 `spacing`; `flex-grow` > 0 → `Layout.fillWidth/fillHeight` with

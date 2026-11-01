@@ -78,11 +78,9 @@ impl Emitter<'_, '_> {
             styled: String::new(),
             plain: String::new(),
             rich: false,
-            html: if self.boxes_drawn {
-                needs_html_around_boxes(items, &state.family)
-            } else {
-                needs_html(items, &state.family)
-            },
+            // On a line of runs each has its own font and `EldurInlineBox` paints:
+            // RichText, which the line could not place, has nothing left to do.
+            html: !self.boxes_drawn && needs_html(items, &state.family),
             preserve: !matches!(style.white_space, WhiteSpace::Normal | WhiteSpace::NoWrap),
             prev_space: true,
             link_colors: Vec::new(),
@@ -508,24 +506,6 @@ impl Emitter<'_, '_> {
             // Whole pixels, as `font.pixelSize`.
             css.push(format!("font-size:{}px", style.font_size.round().max(1.0)));
             state.font_size = style.font_size;
-        } else if (style.font_size - parent.font_size).abs() > 0.5 {
-            let ratio = style.font_size / parent.font_size.max(1.0);
-            if ratio < 1.0 {
-                tag(&mut open, "<small>".to_owned(), "</small>");
-            } else {
-                tag(&mut open, "<big>".to_owned(), "</big>");
-            }
-            self.diags.info(
-                "qml",
-                line,
-                format!(
-                    "{what}: font size {}px inside {}px text is approximated with <{}>",
-                    round(style.font_size),
-                    round(parent.font_size),
-                    if ratio < 1.0 { "small" } else { "big" }
-                ),
-            );
-            state.font_size = style.font_size;
         }
         let family = font_family(&style.font_family);
         if m.html && family != parent.family {
@@ -534,17 +514,8 @@ impl Emitter<'_, '_> {
                 super::fonts::css_families(&style.font_family)
             ));
             state.family = family;
-        } else if family != parent.family {
-            self.diags.info(
-                "qml",
-                line,
-                format!(
-                    "{what}: font family `{family}` inside `{}` text is not converted",
-                    parent.family
-                ),
-            );
         }
-        let drawn = self.boxes_drawn && super::inline::paints_box(style);
+        let drawn = self.boxes_drawn;
         if m.html && !drawn && !style.background_color.is_transparent() {
             css.push(format!(
                 "background-color:{}",
@@ -628,13 +599,6 @@ impl Emitter<'_, '_> {
                 format!("{what}: inline padding and borders are not converted"),
             );
         }
-        if !matches!(style.vertical_align, VerticalAlign::Baseline) {
-            self.diags.info(
-                "qml",
-                line,
-                format!("{what}: `vertical-align` on inline text is not converted"),
-            );
-        }
 
         if !css.is_empty() {
             open.push(format!("<span style=\"{}\">", css.join(";")));
@@ -685,13 +649,13 @@ fn push_space(m: &mut Markup, px: f32) {
 }
 
 #[derive(Clone, Copy)]
-enum Side {
+pub(super) enum Side {
     Left,
     Right,
 }
 
 /// The padding and border width on one side of an inline box.
-fn inline_space(style: &ComputedStyle, side: Side) -> f32 {
+pub(super) fn inline_space(style: &ComputedStyle, side: Side) -> f32 {
     let (padding, border) = match side {
         Side::Left => (&style.padding.left, &style.border.left),
         Side::Right => (&style.padding.right, &style.border.right),
@@ -868,25 +832,6 @@ pub(super) fn needs_html(items: &[Inline<'_>], family: &str) -> bool {
                 || inline_space(style, Side::Left) > 0.0
                 || inline_space(style, Side::Right) > 0.0
                 || needs_html(&span.children, &own)
-        }
-        _ => false,
-    })
-}
-
-/// As `needs_html`, with what `EldurInlineBox` paints and the line makes room for
-/// left out.
-fn needs_html_around_boxes(items: &[Inline<'_>], family: &str) -> bool {
-    items.iter().any(|item| match item {
-        Inline::Span(span) => {
-            let own = font_family(&span.style.font_family);
-            let bare = !super::inline::paints_box(span.style)
-                && (!span.style.background_color.is_transparent()
-                    || inline_space(span.style, Side::Left) > 0.0
-                    || inline_space(span.style, Side::Right) > 0.0);
-            own != family
-                || bare
-                || is_first_letter(span)
-                || needs_html_around_boxes(&span.children, &own)
         }
         _ => false,
     })

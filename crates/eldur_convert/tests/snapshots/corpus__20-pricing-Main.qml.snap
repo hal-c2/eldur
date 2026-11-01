@@ -270,6 +270,7 @@ ApplicationWindow {
                                                             readonly property real eldurMarginRight: 8
                                                             readonly property real eldurMarginLeft: 14
                                                             property var eldurFragments: []
+                                                            property string eldurRun: "[{\"size\":12,\"family\":\"sans-serif\",\"weight\":600}]"
 
                                                             text: "Save 20%"
                                                             textFormat: Text.PlainText
