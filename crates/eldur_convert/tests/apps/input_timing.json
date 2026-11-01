@@ -1,0 +1,10 @@
+{"steps":[
+ {"name": "button", "clickAt": [50, 25], "settle": 100},
+ {"name": "plain", "clickAt": [50, 65], "settle": 100},
+ {"name": "field", "clickAt": [50, 105], "settle": 100},
+ {"name": "label", "clickAt": [50, 145], "settle": 100},
+ {"name": "right", "clickAt": [50, 65], "button": "right", "settle": 100},
+ {"name": "double", "dblAt": [50, 185], "settle": 100},
+ {"name": "key", "key": "Tab", "settle": 100}
+],
+"watch":[]}

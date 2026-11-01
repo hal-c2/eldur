@@ -184,14 +184,11 @@ pub(crate) enum PseudoClass {
     Has(Vec<RelativeSelector>),
     Link,
     AnyLink,
-    Checked,
-    Disabled,
     Enabled,
     Required,
     Optional,
     ReadOnly,
     ReadWrite,
-    PlaceholderShown,
     Default,
     Indeterminate,
     Lang(Vec<String>),
@@ -255,12 +252,6 @@ pub(crate) struct DynamicFacts {
 }
 
 impl DynamicFacts {
-    pub(crate) fn single_state(node: NodeId, state: PseudoState) -> Self {
-        let mut facts = Self::default();
-        facts.set(node, DynamicFact::State(state), Some(true), 0);
-        facts
-    }
-
     pub(crate) fn recording() -> Self {
         Self {
             by_node: HashMap::new(),
@@ -412,6 +403,9 @@ fn collect_compound_self_dynamic_states(c: &CompoundSelector, out: &mut Vec<Pseu
                 if !out.contains(st) {
                     out.push(*st);
                 }
+            }
+            PseudoClass::Enabled if !out.contains(&PseudoState::Disabled) => {
+                out.push(PseudoState::Disabled);
             }
             PseudoClass::Is(list)
             | PseudoClass::Where(list)
@@ -584,7 +578,9 @@ fn has_multi_element_dynamic_pseudos(sel: &Selector) -> bool {
         let mut has_other = false;
         for pc in &compound.pseudos {
             match pc {
-                PseudoClass::Dynamic(_) => has_self = true,
+                // Each element's own state, as true of it at load as later: no
+                // second element is being waited on.
+                PseudoClass::Dynamic(state) => has_self |= !state.starts_from_the_document(),
                 PseudoClass::Is(list)
                 | PseudoClass::Where(list)
                 | PseudoClass::Not(list)
@@ -1404,14 +1400,16 @@ fn convert_pseudo_class(
             "empty" => Ok(PseudoClass::Empty),
             "link" => Ok(PseudoClass::Link),
             "any-link" => Ok(PseudoClass::AnyLink),
-            "checked" => Ok(PseudoClass::Checked),
-            "disabled" => Ok(PseudoClass::Disabled),
+            "checked" => Ok(PseudoClass::Dynamic(PseudoState::Checked)),
+            "disabled" => Ok(PseudoClass::Dynamic(PseudoState::Disabled)),
             "enabled" => Ok(PseudoClass::Enabled),
             "required" => Ok(PseudoClass::Required),
             "optional" => Ok(PseudoClass::Optional),
             "read-only" => Ok(PseudoClass::ReadOnly),
             "read-write" => Ok(PseudoClass::ReadWrite),
-            "placeholder-shown" => Ok(PseudoClass::PlaceholderShown),
+            "placeholder-shown" => Ok(PseudoClass::Dynamic(PseudoState::PlaceholderShown)),
+            "valid" => Ok(PseudoClass::Dynamic(PseudoState::Valid)),
+            "invalid" => Ok(PseudoClass::Dynamic(PseudoState::Invalid)),
             "default" => Ok(PseudoClass::Default),
             "indeterminate" => Ok(PseudoClass::Indeterminate),
             "hover" => Ok(PseudoClass::Dynamic(PseudoState::Hover)),
@@ -1423,9 +1421,8 @@ fn convert_pseudo_class(
             "target" | "target-within" | "local-link" | "defined" | "fullscreen" | "modal"
             | "picture-in-picture" | "popover-open" | "autofill" | "-webkit-autofill"
             | "playing" | "paused" | "seeking" | "buffering" | "stalled" | "muted"
-            | "volume-locked" | "open" | "closed" | "valid" | "invalid" | "user-valid"
-            | "user-invalid" | "in-range" | "out-of-range" | "blank" | "current" | "past"
-            | "future" => Ok(PseudoClass::Never),
+            | "volume-locked" | "open" | "closed" | "user-valid" | "user-invalid" | "in-range"
+            | "out-of-range" | "blank" | "current" | "past" | "future" => Ok(PseudoClass::Never),
             _ => Err(ConvertError::Invalid),
         },
         Some(children) => convert_functional_pseudo_class(name_lower, children, opts, used_nesting),
@@ -2190,15 +2187,6 @@ fn matches_pseudo_class(
         PseudoClass::Link => {
             is_hyperlink(elem) && ctx.state(node, PseudoState::Visited) != Some(true)
         }
-        PseudoClass::Checked => ctx
-            .state(node, PseudoState::Checked)
-            .unwrap_or_else(|| is_checked(elem)),
-        PseudoClass::Disabled => {
-            is_form_control(elem)
-                && ctx
-                    .state(node, PseudoState::Disabled)
-                    .unwrap_or_else(|| is_disabled_control(doc, node, elem))
-        }
         PseudoClass::Enabled => {
             is_form_control(elem)
                 && !ctx
@@ -2209,7 +2197,6 @@ fn matches_pseudo_class(
         PseudoClass::Optional => is_required_candidate(elem) && !elem.has_attr("required"),
         PseudoClass::ReadWrite => is_read_write(doc, node, elem),
         PseudoClass::ReadOnly => !is_read_write(doc, node, elem),
-        PseudoClass::PlaceholderShown => is_placeholder_shown(doc, node, elem),
         PseudoClass::Default => is_default_control(doc, node, elem),
         PseudoClass::Indeterminate => is_indeterminate(doc, node, elem),
         PseudoClass::Lang(ranges) => matches_lang(doc, node, ranges),
@@ -2218,9 +2205,62 @@ fn matches_pseudo_class(
             PseudoState::Visited => {
                 is_hyperlink(elem) && ctx.state(node, PseudoState::Visited) == Some(true)
             }
+            state if state.starts_from_the_document() => ctx
+                .state(node, state)
+                .unwrap_or_else(|| document_state(doc, node, elem, state)),
             other => ctx.state(node, other) == Some(true),
         },
         PseudoClass::Never => false,
+    }
+}
+
+fn document_state(doc: &Document, node: NodeId, elem: &Element, state: PseudoState) -> bool {
+    match state {
+        PseudoState::Checked => is_checked(elem),
+        PseudoState::Disabled => is_form_control(elem) && is_disabled_control(doc, node, elem),
+        PseudoState::PlaceholderShown => is_placeholder_shown(doc, node, elem),
+        PseudoState::Valid => can_be_invalid(doc, node, elem) && !breaks_a_constraint(elem),
+        PseudoState::Invalid => can_be_invalid(doc, node, elem) && breaks_a_constraint(elem),
+        _ => false,
+    }
+}
+
+pub(crate) fn state_in_document(doc: &Document, node: NodeId, state: PseudoState) -> bool {
+    doc.element(node)
+        .is_some_and(|elem| document_state(doc, node, elem, state))
+}
+
+/// What constraint validation looks at: a control that is neither disabled nor
+/// read only, and of a type that takes a value from the person.
+fn can_be_invalid(doc: &Document, node: NodeId, elem: &Element) -> bool {
+    is_required_candidate(elem)
+        && !is_disabled_control(doc, node, elem)
+        && !(elem.has_attr("readonly") && elem.local_name() != "select")
+}
+
+/// The markup's own value against its constraints. A `pattern` is a script's
+/// regular expression, so it is left for the running page to say.
+fn breaks_a_constraint(elem: &Element) -> bool {
+    let ty = elem.attr("type").unwrap_or("text").to_ascii_lowercase();
+    let value = elem.attr("value").unwrap_or("");
+    if elem.has_attr("required") {
+        let filled = match (elem.local_name(), ty.as_str()) {
+            ("input", "checkbox" | "radio") => elem.has_attr("checked"),
+            // What a select or textarea holds is in its children: the page says.
+            ("input", _) => !value.is_empty(),
+            _ => true,
+        };
+        if !filled {
+            return true;
+        }
+    }
+    if elem.local_name() != "input" || value.is_empty() {
+        return false;
+    }
+    match ty.as_str() {
+        "email" => !value.contains('@'),
+        "url" => !value.contains(':'),
+        _ => false,
     }
 }
 

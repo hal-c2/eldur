@@ -405,6 +405,8 @@ pub(crate) fn eat_list_style_type(cur: &mut Cursor<'_>) -> Option<ListStyleType>
         "upper-alpha" | "upper-latin" => ListStyleType::UpperAlpha,
         "lower-roman" => ListStyleType::LowerRoman,
         "upper-roman" => ListStyleType::UpperRoman,
+        "disclosure-closed" => ListStyleType::DisclosureClosed,
+        "disclosure-open" => ListStyleType::DisclosureOpen,
         "none" => ListStyleType::None,
         _ => {
             cur.restore(saved);

@@ -1,0 +1,14 @@
+{"steps":[
+ {"name":"kept link","click":"#keep"},
+ {"name":"frag by mouse","click":"#frag","settle":200},
+ {"name":"tab after frag","key":"Tab"},
+ {"name":"back up","click":"#keep"},
+ {"name":"capture stops","click":"#sc"},
+ {"name":"bubble stops","click":"#sb"},
+ {"name":"tab back","key":"Shift+Tab"},
+ {"name":"tab back 2","key":"Shift+Tab"},
+ {"name":"enter on kept","key":"Enter"},
+ {"name":"tab to frag","key":"Tab"},
+ {"name":"enter on frag","key":"Enter","settle":200}
+],
+"watch":[{"sel":"#end"},{"sel":"#frag"}]}

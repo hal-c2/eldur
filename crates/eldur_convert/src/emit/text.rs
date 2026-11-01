@@ -190,11 +190,9 @@ impl Emitter<'_, '_> {
             let (params, body) = if self.runtime_dom {
                 (
                     vec!["eventPoint".to_owned()],
-                    vec![
-                        "if (Eldur.tapPrevented(eventPoint))".to_owned(),
-                        "    return;".to_owned(),
-                        follow,
-                    ],
+                    vec![format!(
+                        "Eldur.afterTap(eventPoint, function () {{ {follow} }});"
+                    )],
                 )
             } else {
                 (Vec::new(), vec![follow])

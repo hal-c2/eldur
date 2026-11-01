@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Script</title>
+<style>
+html, body { margin: 0; padding: 8px; }
+button:hover { background-color: rgb(255, 0, 0); }
+input:focus { background-color: rgb(0, 255, 0); }
+input:checked + label { color: rgb(0, 0, 255); }
+input:disabled { color: rgb(1, 2, 3); }
+input:required { border-color: rgb(4, 5, 6); }
+input:invalid { outline-color: rgb(7, 8, 9); }
+input:placeholder-shown { color: rgb(10, 11, 12); }
+form:focus-within { background-color: rgb(13, 14, 15); }
+</style>
+</head>
+<body>
+<button id="once">once</button>
+<button id="stopper">stop</button>
+<button id="aborted">abort</button>
+<button id="send">send</button>
+<button id="fill">fill</button>
+<div id="box"><span id="in">inner</span></div>
+<form id="f"><input id="auto" autofocus required placeholder="here"><input id="c" type="checkbox"><label for="c" id="cl">box</label><input id="dis" disabled></form>
+<div id="host"></div>
+<script>
+function name(n) { return n === document ? "document" : n === window ? "window" : !n ? "null" : n.id || n.tagName.toLowerCase(); }
+function $(i) { return document.getElementById(i); }
+console.log("load active=" + name(document.activeElement) + " focus=" + document.hasFocus());
+$("once").addEventListener("click", function () { console.log("once"); }, { once: true });
+$("stopper").addEventListener("click", function (e) { console.log("first"); e.stopImmediatePropagation(); });
+$("stopper").addEventListener("click", function () { console.log("never"); });
+var ac = new AbortController();
+$("aborted").addEventListener("click", function () { console.log("before abort"); ac.abort(); }, { signal: ac.signal });
+$("box").addEventListener("click", function (e) { console.log("capture " + e.eventPhase + " " + name(e.target)); }, { capture: true });
+$("box").addEventListener("click", function (e) { console.log("bubble " + e.eventPhase + " " + name(e.target)); });
+function report(e) {
+  console.log([e.type, e.constructor === undefined ? "" : "", name(e.target), name(e.currentTarget), e.bubbles, e.cancelable,
+    e.isTrusted, e.defaultPrevented, e.detail, e.key, e.code, e.clientX, e.button, e.composedPath().map(name).join(">")].join(" "));
+}
+["hi", "mine", "mouse", "key"].forEach(function (t) { $("box").addEventListener(t, report); document.addEventListener(t, report); });
+$("in").addEventListener("mine", function (e) { e.preventDefault(); });
+$("send").addEventListener("click", function () {
+  console.log("d1 " + $("in").dispatchEvent(new Event("hi")));
+  console.log("d2 " + $("in").dispatchEvent(new Event("hi", { bubbles: true })));
+  console.log("d3 " + $("in").dispatchEvent(new CustomEvent("mine", { bubbles: true, cancelable: true, detail: 42 })));
+  console.log("d4 " + $("in").dispatchEvent(new MouseEvent("mouse", { bubbles: true, clientX: 9, button: 2 })));
+  console.log("d5 " + $("in").dispatchEvent(new KeyboardEvent("key", { bubbles: true, key: "x", code: "KeyX" })));
+});
+$("fill").addEventListener("click", function () {
+  $("host").innerHTML = '<input id="made" value="a"><input id="mc" type="checkbox"><button id="mb">go</button><select id="ms"><option>1</option><option>2</option></select>';
+  console.log("filled " + name(document.getElementById("made")));
+});
+document.addEventListener("input", function (e) { console.log("input " + name(e.target)); });
+document.addEventListener("change", function (e) { console.log("change " + name(e.target)); });
+document.addEventListener("click", function (e) { if (e.target.id === "mb" || e.target.id === "mc") console.log("click " + name(e.target) + " " + e.isTrusted); });
+</script>
+</body>
+</html>

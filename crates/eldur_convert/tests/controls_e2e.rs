@@ -126,6 +126,7 @@ TestCase {
 
     function test_button_click_once_and_submit() {
         mouseClick(find("go"))
+        wait(0)
         compare(logged().split("click;").length - 1, 1, logged())
         verify(logged().indexOf("submit:true;") !== -1, logged())
     }
@@ -133,6 +134,7 @@ TestCase {
     function test_label_toggles_its_checkbox_once() {
         const c = find("c")
         mouseClick(find("cl"))
+        wait(0)
         compare(c.checked, true)
         verify(logged().indexOf("check:true:yes;") !== -1, logged())
     }

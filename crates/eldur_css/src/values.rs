@@ -748,6 +748,8 @@ pub enum ListStyleType {
     UpperAlpha,
     LowerRoman,
     UpperRoman,
+    DisclosureClosed,
+    DisclosureOpen,
     None,
 }
 

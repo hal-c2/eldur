@@ -1,0 +1,47 @@
+<!doctype html><html><head><style>
+body{margin:0;font:13px Arial}
+#fl{position:absolute;left:600px;top:10px;width:50px;height:30px;background:#eee}
+#ta{position:absolute;left:10px;top:10px;width:150px;height:60px;box-sizing:border-box;margin:0;font:13px/16px monospace}
+#sel{position:absolute;left:10px;top:80px;width:120px;height:24px;box-sizing:border-box;margin:0}
+#num{position:absolute;left:10px;top:115px;width:120px;height:24px;box-sizing:border-box;margin:0}
+#rng{position:absolute;left:10px;top:150px;width:120px;height:20px;margin:0}
+#lb{position:absolute;left:10px;top:180px;width:200px;height:24px}
+#inl{width:80px;height:20px;box-sizing:border-box;margin:0}
+#lc{position:absolute;left:10px;top:210px;width:200px;height:24px}
+#btn{position:absolute;left:10px;top:245px;width:100px;height:26px;margin:0}
+#mover{position:absolute;left:120px;top:245px;width:100px;height:26px;margin:0}
+#tgt{position:absolute;left:230px;top:245px;width:100px;height:26px;box-sizing:border-box;margin:0}
+#gone{position:absolute;left:10px;top:285px;width:100px;height:26px;box-sizing:border-box;margin:0}
+#kill{position:absolute;left:120px;top:285px;width:100px;height:26px;margin:0}
+#after{position:absolute;left:230px;top:285px;width:100px;height:26px;box-sizing:border-box;margin:0}
+#auto{position:absolute;left:350px;top:10px;width:100px;height:26px;box-sizing:border-box;margin:0}
+</style></head><body>
+<input id="auto" autofocus value="au">
+<textarea id="ta"></textarea>
+<select id="sel"><option value="a">Aa</option><option value="b">Bb</option><option value="c">Cc</option></select>
+<input id="num" type="number" min="0" max="5" value="2">
+<input id="rng" type="range" min="0" max="10" value="5">
+<label id="lb">Name <input id="inl" value="in"></label>
+<label id="lc"><input id="chk" type="checkbox"> <span id="lct">tick</span></label>
+<button id="btn">go</button><button id="mover">move</button><input id="tgt" value="t">
+<input id="gone" value="g"><button id="kill">kill</button><input id="after" value="a">
+<div id="fl"></div>
+<script>
+const L=[];const log=s=>L.push(s);
+const g=i=>document.getElementById(i);
+for(const t of ["mousedown","click","focus","blur","input","change","keydown","keyup","beforeinput"]){
+ document.addEventListener(t,e=>{if(e.target.id==="fl")return;log(t+":"+(e.target.id||e.target.tagName)+(e.key?"="+e.key:"")+(e.inputType?"/"+e.inputType:"")+(t==="click"?" d="+e.detail:""))},true);
+}
+g("mover").addEventListener("click",()=>{g("tgt").focus();log("moved="+document.activeElement.id)});
+g("gone").addEventListener("keydown",e=>{if(e.key==="x")g("gone").remove()});
+g("kill").addEventListener("mousedown",e=>{e.preventDefault()});
+g("kill").addEventListener("click",()=>{const a=document.activeElement;if(a&&a.id==="after")a.remove()});
+const fl=g("fl");fl.addEventListener("mousedown",e=>e.preventDefault());
+let step=0;
+const v=i=>g(i)?g(i).value:"(gone)";
+fl.addEventListener("click",()=>{const l=L.join(" ");L.length=0;const a=document.activeElement;const t=g("ta");
+console.log("H "+(step++)+" "+l);
+console.log("H   = ta="+t.value.length+" sel="+v("sel")+"/"+g("sel").selectedIndex+" num="+v("num")+" rng="+v("rng")+" inl="+v("inl")+" chk="+g("chk").checked+" tgt="+v("tgt")+" gone="+v("gone")+" after="+v("after")+" active="+(a.id||a.tagName));
+console.log("H   ~ scrollH="+(t.scrollHeight>t.clientHeight)+" top="+(t.scrollTop>0)+" caret="+t.selectionStart)});
+console.log("H start active="+(document.activeElement.id||document.activeElement.tagName));
+</script></body></html>

@@ -12,6 +12,10 @@ Item {
     property Item keySource: scroller
     // A box whose children this scroller moves without holding them.
     property Item overlaidOn: null
+    // The runtime's say on a key first: a listener's `preventDefault` stops the move.
+    property var keyGate: null
+    // A key let go over no control is still the page's.
+    property var keyUpGate: null
 
     function moveTo(x, y) {
         const nextX = Math.max(0, Math.min(x, Math.max(0, scroller.contentWidth - scroller.width)));
@@ -41,19 +45,21 @@ Item {
         return true;
     }
 
-    // A click on a scroller inside belongs to that one, and one on a control
-    // leaves the focus the control took.
+    // A click on a scroller inside belongs to that one, and one on what has or
+    // takes focus keeps it; a click on anything else takes it off what had it.
     function holdsInner(point) {
         const held = input.Window.activeFocusItem;
-        for (let at = held; at && held !== input && !(held instanceof EldurScrollInput); at = at.parent) {
-            if (at === scroller) return true;
+        if (held && held !== input && !(held instanceof EldurScrollInput)) {
+            const there = scroller.mapToItem(held, point.x, point.y);
+            if (held.contains(there)) return true;
         }
         let at = scroller.contentItem;
         let p = scroller.mapToItem(at, point.x, point.y);
         for (;;) {
             const kid = at.childAt(p.x, p.y);
             if (!kid) return false;
-            if (kid instanceof Flickable) return true;
+            if (kid instanceof Flickable || (kid.enabled && kid.activeFocusOnTab === true)) return true;
+            if (kid.enabled && kid.focusPolicy !== undefined && (kid.focusPolicy & Qt.ClickFocus)) return true;
             p = at.mapToItem(kid, p.x, p.y);
             at = kid;
         }
@@ -64,7 +70,11 @@ Item {
     Connections {
         target: input.keySource.Keys
         function onPressed(event) {
+            if (input.keyGate && !input.keyGate(event)) return;
             event.accepted = input.scroller.interactive && input.keyStep(event.key);
+        }
+        function onReleased(event) {
+            if (input.keyUpGate) input.keyUpGate(event);
         }
     }
 
@@ -113,6 +123,9 @@ Item {
         parent: input.scroller
         gesturePolicy: TapHandler.DragThreshold
         onTapped: (eventPoint) => {
+            // With a layer, the press has been answered: a listener can have
+            // prevented it, which nothing here can know.
+            if (input.keyGate) return;
             if (!input.holdsInner(eventPoint.position)) input.forceActiveFocus();
         }
     }

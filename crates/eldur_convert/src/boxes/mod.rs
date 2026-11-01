@@ -48,7 +48,8 @@ pub(crate) struct LayoutBox<'a> {
     pub kind: BoxKind,
     pub content: Content<'a>,
     /// The `outside` marker of a list item; an `inside` one is inline
-    /// content.
+    /// content, except a disclosure triangle, which starts this box's first
+    /// line (see [`Marker::in_line`]).
     pub marker: Option<Marker<'a>>,
 }
 
@@ -58,6 +59,8 @@ pub(crate) struct Marker<'a> {
     pub kind: MarkerKind,
     /// `::marker` if it has rules, otherwise the list item's own style.
     pub style: &'a ComputedStyle,
+    /// An `inside` triangle: it pushes the first line along, on this box.
+    pub in_line: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -65,6 +68,10 @@ pub(crate) enum MarkerKind {
     Disc,
     Circle,
     Square,
+    /// A summary's triangle, which turns as its `<details>` opens and closes.
+    Disclosure {
+        open: bool,
+    },
     /// `1. `, `iv. `: the trailing space is part of the marker string.
     Text(String),
     Image(String),
@@ -318,11 +325,18 @@ impl<'a> Builder<'a, '_> {
         }
         let mut children = Vec::new();
         let mut marker = None;
+        let mut in_line = None;
         if style.display == Display::ListItem
             && let Some(kind) = self.list_marker(node, style)
         {
             let marker_style = self.styles.computed(node).and_then(|s| s.marker.as_deref());
-            if style.list_style_inside {
+            if style.list_style_inside && matches!(kind, MarkerKind::Disclosure { .. }) {
+                in_line = Some(Marker {
+                    kind,
+                    style: marker_style.unwrap_or(style),
+                    in_line: true,
+                });
+            } else if style.list_style_inside {
                 // Chromium leaves about 1em after an inside bullet (measured:
                 // text 22px from the edge at 16px): an em space, which white
                 // space processing leaves alone.
@@ -331,7 +345,7 @@ impl<'a> Builder<'a, '_> {
                     MarkerKind::Circle => "\u{25e6}\u{2003}".to_owned(),
                     MarkerKind::Square => "\u{25aa}\u{2003}".to_owned(),
                     MarkerKind::Text(t) => t,
-                    MarkerKind::Image(_) => String::new(),
+                    MarkerKind::Image(_) | MarkerKind::Disclosure { .. } => String::new(),
                 };
                 let raw = whitespace::Raw::Text {
                     text,
@@ -349,15 +363,22 @@ impl<'a> Builder<'a, '_> {
                 marker = Some(Marker {
                     kind,
                     style: marker_style.unwrap_or(style),
+                    in_line: false,
                 });
             }
         }
         self.children_of(node, &mut children);
-        let content = if is_table_container(style.display) {
+        let mut content = if is_table_container(style.display) {
             table::internal_content(style.display, children, style)
         } else {
             group(table::wrap_orphans(children, style), style)
         };
+        if let Some(triangle) = in_line {
+            match &mut content {
+                Content::Blocks(blocks) => start_first_line(blocks, triangle, style),
+                _ => marker = Some(triangle),
+            }
+        }
         LayoutBox {
             node: Some(node),
             style: Cow::Borrowed(style),
@@ -740,6 +761,8 @@ impl<'a> Builder<'a, '_> {
             ListStyleType::Disc => Some(MarkerKind::Disc),
             ListStyleType::Circle => Some(MarkerKind::Circle),
             ListStyleType::Square => Some(MarkerKind::Square),
+            ListStyleType::DisclosureClosed => Some(MarkerKind::Disclosure { open: false }),
+            ListStyleType::DisclosureOpen => Some(MarkerKind::Disclosure { open: true }),
             ListStyleType::Decimal => text(self.ordinal(node).to_string()),
             ListStyleType::DecimalLeadingZero => {
                 let n = self.ordinal(node);
@@ -800,6 +823,31 @@ impl<'a> Builder<'a, '_> {
 
 /// Wraps inline runs in anonymous blocks when `children` mix block-level
 /// and inline-level boxes (CSS 2.2 §9.2.1.1).
+/// An inline marker before block content is a line of its own (measured: a
+/// summary holding only a heading has the triangle above the heading).
+fn start_first_line<'a>(
+    blocks: &mut Vec<LayoutBox<'a>>,
+    triangle: Marker<'a>,
+    parent: &'a ComputedStyle,
+) {
+    let first = blocks.iter().position(|b| !is_out_of_flow(&b.style));
+    match first {
+        Some(i) if blocks[i].node.is_none() && matches!(blocks[i].content, Content::Inline(_)) => {
+            blocks[i].marker = Some(triangle);
+        }
+        _ => blocks.insert(
+            first.unwrap_or(blocks.len()),
+            LayoutBox {
+                node: None,
+                style: Cow::Owned(anonymous_style(parent)),
+                kind: BoxKind::Block,
+                content: Content::Empty,
+                marker: Some(triangle),
+            },
+        ),
+    }
+}
+
 fn group<'a>(children: Vec<Child<'a>>, parent: &'a ComputedStyle) -> Content<'a> {
     if !children.iter().any(|c| matches!(c, Child::Block(_))) {
         let raw = children
@@ -831,7 +879,10 @@ fn group<'a>(children: Vec<Child<'a>>, parent: &'a ComputedStyle) -> Content<'a>
         match child {
             Child::Inline(raw) => run.push(raw),
             Child::Block(b) if is_out_of_flow(&b.style) => {
-                if b.style.blockified_inline {
+                // With no line to sit below it stays where the tree has it: scripts
+                // walk the items for tree order, in Tab and in queries.
+                let no_line = matches!(inline_content(run.clone()), Content::Empty);
+                if b.style.blockified_inline || no_line {
                     blocks.push(*b);
                 } else {
                     below_run.push(*b);

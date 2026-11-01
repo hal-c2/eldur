@@ -21,7 +21,7 @@ use eldur_css::{
     ComputedStyle, Condition, ConditionalStyles, Display, LengthPercentage, PseudoState, Rgba,
     Shadow, Structural, StyleMap, Stylesheet, TransformFn,
 };
-use eldur_dom::{Document, NodeId};
+use eldur_dom::{Document, Element, NodeId};
 use eldur_js::ElementRef;
 use eldur_qml::{Member, Object, Value};
 
@@ -289,12 +289,12 @@ fn conditions(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Vec<Cond> {
         let initial = match v.state {
             PseudoState::Hover | PseudoState::Active | PseudoState::Visited => false,
             PseudoState::Focus | PseudoState::FocusVisible => {
-                if control.is_none() {
+                if control.is_none() && !has("tabindex") {
                     diags.info(
                         "css",
                         line,
                         format!(
-                            "`:focus` styles of {} are left out: only form controls take focus here",
+                            "`:focus` styles of {} are left out: only form controls and what has a `tabindex` take focus here",
                             describe(doc, v.node)
                         ),
                     );
@@ -303,12 +303,27 @@ fn conditions(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Vec<Cond> {
                 false
             }
             PseudoState::FocusWithin => {
-                diags.info(
-                    "css",
-                    line,
-                    "`:focus-within` styles are left out: QML has no such state".to_owned(),
-                );
-                continue;
+                if focusable_within(doc, v.node).is_empty() {
+                    continue;
+                }
+                false
+            }
+            PseudoState::PlaceholderShown => {
+                if !matches!(control, Some(Control::Text | Control::TextArea))
+                    || !has("placeholder")
+                {
+                    continue;
+                }
+                eldur_css::state_in_document(doc, v.node, v.state)
+            }
+            PseudoState::Valid | PseudoState::Invalid => {
+                if element
+                    .and_then(|e| broken_constraint("", e, control))
+                    .is_none()
+                {
+                    continue;
+                }
+                eldur_css::state_in_document(doc, v.node, v.state)
             }
             PseudoState::Checked => {
                 if !matches!(control, Some(Control::CheckBox | Control::Radio)) {
@@ -1385,6 +1400,9 @@ fn expand(
 }
 
 fn negate(cond: &str) -> String {
+    if cond.contains(' ') {
+        return format!("!({cond})");
+    }
     cond.strip_prefix('!')
         .map_or_else(|| format!("!{cond}"), str::to_owned)
 }
@@ -1596,6 +1614,10 @@ struct Sources {
     classes: BTreeMap<Path, (NodeId, BTreeSet<String>)>,
     /// Hover/press handlers to add: path, handler type, id.
     handlers: BTreeMap<Path, Vec<(&'static str, String)>>,
+    /// What takes the focus by `tabindex`, with no control's policy to do it.
+    focusable: BTreeSet<Path>,
+    /// Some style follows the focus, so a click on nothing has to take it away.
+    reads_focus: bool,
     /// Controls that must report hover.
     hover_enabled: BTreeSet<Path>,
     /// Elements that read their place: path, node, and whether the
@@ -1677,26 +1699,65 @@ impl Sources {
                         .push(("HoverHandler", handler.clone()));
                     format!("{handler}.hovered")
                 }
-                (PseudoState::Active, Some(_)) => format!("{id}.pressed"),
-                (PseudoState::Active, None) => {
+                (PseudoState::Active, _) => {
                     // Passive: it does not take the press from a TapHandler
-                    // or MouseArea a script listens on.
+                    // or MouseArea a script listens on. It also stays when the
+                    // mouse leaves still held, which a control's `pressed` does
+                    // not; that says a held Space.
                     let handler = ids.claim(&format!("{id} press"));
                     self.handlers
                         .entry(path.clone())
                         .or_default()
                         .push(("PointHandler", handler.clone()));
-                    format!("{handler}.active")
+                    if control.is_some() {
+                        format!("{handler}.active || {id}.pressed")
+                    } else {
+                        format!("{handler}.active")
+                    }
                 }
                 (PseudoState::FocusVisible, Some(Control::Button { .. })) => {
                     format!("{id}.visualFocus")
                 }
-                (PseudoState::Focus | PseudoState::FocusVisible, _) => {
+                (PseudoState::Focus | PseudoState::FocusVisible, focusing) => {
+                    self.reads_focus = true;
+                    if focusing.is_none() {
+                        self.focusable.insert(path.clone());
+                    }
                     format!("{id}.activeFocus")
                 }
                 (PseudoState::Checked, _) => format!("{id}.checked"),
                 (PseudoState::Disabled, _) => format!("!{id}.enabled"),
-                (PseudoState::FocusWithin | PseudoState::Visited, _) => return None,
+                (PseudoState::PlaceholderShown, _) => format!("{id}.text === \"\""),
+                (PseudoState::Invalid, _) => broken_constraint(&id, doc.element(node)?, control)?,
+                (PseudoState::Valid, _) => {
+                    negate(&broken_constraint(&id, doc.element(node)?, control)?)
+                }
+                (PseudoState::FocusWithin, _) => {
+                    self.reads_focus = true;
+                    let mut holders = Vec::new();
+                    for inner in focusable_within(doc, node) {
+                        let Some(inner_path) = markers.get(&inner.index()) else {
+                            continue;
+                        };
+                        let Some(held) = object_at(root, inner_path) else {
+                            continue;
+                        };
+                        let inner_id = match &held.id {
+                            Some(have) => have.clone(),
+                            None => {
+                                let made = ids.claim("within");
+                                held.id = Some(made.clone());
+                                made
+                            }
+                        };
+                        holders.push(format!("{inner_id}.activeFocus"));
+                    }
+                    if holders.is_empty() {
+                        return None;
+                    }
+                    holders.join(" || ")
+                }
+                (PseudoState::Visited, _) => return None,
             },
             Condition::Structural { test, .. } => {
                 let of_type = &mut self
@@ -1729,6 +1790,7 @@ impl Sources {
         paths.extend(self.handlers.keys());
         paths.extend(self.hover_enabled.iter());
         paths.extend(self.positions.keys());
+        paths.extend(self.focusable.iter());
         for path in paths.into_iter().rev() {
             let Some(obj) = object_at(root, path) else {
                 continue;
@@ -1739,6 +1801,15 @@ impl Sources {
             if self.hover_enabled.contains(path) {
                 obj.set("hoverEnabled", true);
             }
+            // What a `tabindex` made focusable already has its handler.
+            if self.focusable.contains(path)
+                && !obj.members.iter().any(
+                    |m| matches!(m, Member::Property { name, .. } if name == "activeFocusOnTab"),
+                )
+            {
+                obj.set("activeFocusOnTab", true);
+                obj.push_child(takes_focus_on_tap());
+            }
             if let Some((node, classes)) = self.classes.get(path) {
                 crate::metadata::declare_classes(obj, doc, *node, classes);
             }
@@ -1746,7 +1817,49 @@ impl Sources {
                 crate::metadata::declare_position(obj, doc, node, of_type);
             }
         }
+        // A scroller takes the focus of a click on nothing by itself.
+        if self.reads_focus && !self.probe && !has_scroll_input(root) {
+            root.push_child(takes_focus_on_tap());
+        }
     }
+}
+
+/// A page with no runtime has only Qt to take the focus: a stop in its chain, or
+/// with a negative `tabindex` a press alone. A control has its own policy.
+pub(super) fn takes_focus_by_tabindex(obj: &mut Object, doc: &Document, node: NodeId) {
+    let Some(element) = doc.element(node) else {
+        return;
+    };
+    let Some(index) = element
+        .attr("tabindex")
+        .and_then(|t| t.trim().parse::<i32>().ok())
+    else {
+        return;
+    };
+    if matches!(
+        element.local_name(),
+        "button" | "input" | "select" | "textarea" | "a" | "summary"
+    ) {
+        return;
+    }
+    if index >= 0 {
+        obj.set("activeFocusOnTab", true);
+    }
+    obj.push_child(takes_focus_on_tap());
+}
+
+fn takes_focus_on_tap() -> Object {
+    let mut tap = Object::new("TapHandler");
+    tap.set("onTapped", Value::expr("parent.forceActiveFocus()"));
+    tap
+}
+
+fn has_scroll_input(obj: &Object) -> bool {
+    obj.type_name == "EldurScrollInput"
+        || obj.members.iter().any(|m| match m {
+            Member::Child(child) => has_scroll_input(child),
+            _ => false,
+        })
 }
 
 fn no_item(doc: &Document, cond: &Condition, diags: &mut Diagnostics) {
@@ -1775,5 +1888,64 @@ fn state_name(state: PseudoState) -> &'static str {
         PseudoState::Checked => ":checked",
         PseudoState::Disabled => ":disabled",
         PseudoState::Visited => ":visited",
+        PseudoState::PlaceholderShown => ":placeholder-shown",
+        PseudoState::Valid => ":valid",
+        PseudoState::Invalid => ":invalid",
     }
 }
+
+/// `node` and what inside it can hold the focus: QML's `activeFocus` says so of
+/// the one item only, so `:focus-within` asks each.
+fn focusable_within(doc: &Document, node: NodeId) -> Vec<NodeId> {
+    let mut out = Vec::new();
+    let mut stack = vec![node];
+    while let Some(at) = stack.pop() {
+        if classify(doc, at).is_some() {
+            out.push(at);
+        }
+        stack.extend(doc.element_children(at));
+    }
+    out.sort_by_key(|n| n.index());
+    out
+}
+
+/// When `id`, an item for `element`, breaks a constraint of its attributes:
+/// `None` if nothing there can. `minlength` is left out: it only counts once a
+/// person has edited, which no property says.
+fn broken_constraint(id: &str, element: &Element, control: Option<Control>) -> Option<String> {
+    if element.has_attr("disabled") || element.has_attr("readonly") {
+        return None;
+    }
+    let required = element.has_attr("required");
+    match control? {
+        Control::CheckBox | Control::Radio if required => Some(format!("!{id}.checked")),
+        Control::Select if required => Some(format!("{id}.currentText === \"\"")),
+        Control::Text | Control::TextArea => {
+            let text = format!("{id}.text");
+            let mut broken = Vec::new();
+            if required {
+                broken.push(format!("{text} === \"\""));
+            }
+            let test = match element.attr("type").map(str::to_ascii_lowercase).as_deref() {
+                Some("email") => Some(EMAIL.to_owned()),
+                Some("url") => Some(URL.to_owned()),
+                _ => None,
+            };
+            if let Some(test) = test {
+                broken.push(format!("{text} !== \"\" && !{test}.test({text})"));
+            }
+            if let Some(pattern) = element.attr("pattern") {
+                broken.push(format!(
+                    "{text} !== \"\" && !new RegExp({}).test({text})",
+                    super::controls::js_string(&format!("^(?:{pattern})$"))
+                ));
+            }
+            (!broken.is_empty()).then(|| broken.join(" || "))
+        }
+        _ => None,
+    }
+}
+
+// WHATWG's valid e-mail address, and a scheme for a URL.
+const EMAIL: &str = r"/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/";
+const URL: &str = r"/^[a-zA-Z][a-zA-Z0-9+.-]*:\S*$/";

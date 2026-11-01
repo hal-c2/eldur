@@ -1,0 +1,18 @@
+{"steps":[
+ {"name":"once 1","click":"#once"},
+ {"name":"once 2","click":"#once"},
+ {"name":"stop immediate","click":"#stopper"},
+ {"name":"abort 1","click":"#aborted"},
+ {"name":"abort 2","click":"#aborted"},
+ {"name":"capture and bubble","click":"#in"},
+ {"name":"dispatched","click":"#send"},
+ {"name":"fill","click":"#fill"},
+ {"name":"made checkbox","click":"#mc"},
+ {"name":"made button","click":"#mb"},
+ {"name":"made text","click":"#made"},
+ {"name":"made text types","type":["#made","bc"]},
+ {"name":"made text leaves","key":"Tab"},
+ {"name":"hover","hover":"#send"},
+ {"name":"label","click":"#cl"}
+],
+"watch":[{"sel":"#auto"},{"sel":"#c"},{"sel":"#cl"},{"sel":"#dis"},{"sel":"#send"},{"sel":"#f"},{"sel":"#made"},{"sel":"#mc"}]}

@@ -1,6 +1,7 @@
 //! Links: a fragment (`href="#id"`) scrolls the page's `Flickable` to its
 //! target, as a browser does; any other URL opens outside.
 
+use eldur_dom::NodeId;
 use eldur_qml::{Member, Object, Value};
 
 use super::controls::js_string;
@@ -34,6 +35,41 @@ impl Emitter<'_, '_> {
         }
     }
 
+    /// A link with a box of its own has no text run to carry it, so the box does.
+    pub(super) fn block_link(&mut self, obj: &mut Object, node: NodeId) {
+        let Some(element) = self.doc.element(node) else {
+            return;
+        };
+        if element.local_name() != "a" || obj.type_name == "Text" {
+            return;
+        }
+        let Some(href) = element.attr("href").map(str::to_owned) else {
+            return;
+        };
+        let follow = self.follow(&href);
+        // This handler may hear the tap before the one a listener is on.
+        let (params, body) = if self.runtime_dom {
+            (
+                vec!["eventPoint".to_owned()],
+                vec![format!(
+                    "Eldur.afterTap(eventPoint, function () {{ {follow} }});"
+                )],
+            )
+        } else {
+            (Vec::new(), vec![follow])
+        };
+        let mut tap = Object::new("TapHandler");
+        tap.members.push(Member::Handler {
+            name: "onTapped".to_owned(),
+            params,
+            body,
+        });
+        obj.push_child(tap);
+        let mut hover = Object::new("HoverHandler");
+        hover.set("cursorShape", Value::expr("Qt.PointingHandCursor"));
+        obj.push_child(hover);
+    }
+
     /// `onLinkActivated` for a `Text` with links, some to `fragments`.
     pub(super) fn link_handler(&mut self, text: &mut Object, fragments: bool) {
         let body = if fragments {
@@ -49,11 +85,9 @@ impl Emitter<'_, '_> {
         };
         // `preventDefault` in a listener on the link, whose tap comes first.
         let body = if self.runtime_dom {
-            let mut guarded = vec![
-                "if (Eldur.linkPrevented())".to_owned(),
-                "    return;".to_owned(),
-            ];
+            let mut guarded = vec!["Eldur.afterClick(function () {".to_owned()];
             guarded.extend(body);
+            guarded.push("});".to_owned());
             guarded
         } else {
             body

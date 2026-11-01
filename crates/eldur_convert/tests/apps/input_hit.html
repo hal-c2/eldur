@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Hit</title>
+<style>
+html, body { margin: 0; padding: 0; }
+body { width: 1280px; height: 800px; user-select: none; }
+div { box-sizing: border-box; }
+#parent { position: absolute; left: 20px; top: 20px; width: 100px; height: 100px; background: #dde; }
+#spill { position: absolute; left: 60px; top: 60px; width: 150px; height: 150px; background: #bcd; }
+#clip { position: absolute; left: 300px; top: 20px; width: 100px; height: 100px; background: #ded; overflow: hidden; }
+#clipped { position: absolute; left: 60px; top: 60px; width: 150px; height: 150px; background: #9b9; }
+#under { position: absolute; left: 500px; top: 20px; width: 100px; height: 100px; background: #edd; }
+#none { position: absolute; left: 500px; top: 20px; width: 100px; height: 100px; background: rgba(0,0,0,.2); pointer-events: none; }
+#low { position: absolute; left: 700px; top: 20px; width: 100px; height: 100px; background: #dd9; z-index: 2; }
+#high { position: absolute; left: 720px; top: 40px; width: 100px; height: 100px; background: #9dd; z-index: 1; }
+#slid { position: absolute; left: 900px; top: 20px; width: 100px; height: 100px; background: #d9d; transform: translate(100px, 50px); }
+#ghost { position: absolute; left: 20px; top: 300px; width: 100px; height: 100px; background: #eee; visibility: hidden; }
+#back { position: absolute; left: 0; top: 280px; width: 200px; height: 200px; background: #fafafa; z-index: -1; }
+#roll { position: absolute; left: 300px; top: 300px; width: 200px; height: 100px; overflow: auto; background: #eef; }
+#roll div { height: 400px; }
+#stop { position: absolute; left: 600px; top: 300px; width: 200px; height: 100px; overflow: auto; background: #fee; }
+#stop div { height: 400px; }
+#handle { position: absolute; left: 900px; top: 300px; width: 60px; height: 60px; background: #8ac; }
+</style>
+</head>
+<body>
+<div id="back"></div>
+<div id="parent"><div id="spill"></div></div>
+<div id="clip"><div id="clipped"></div></div>
+<div id="under"></div><div id="none"></div>
+<div id="low"></div><div id="high"></div>
+<div id="slid"></div>
+<div id="ghost"></div>
+<div id="roll"><div></div></div>
+<div id="stop"><div></div></div>
+<div id="handle"></div>
+<script>
+function name(n) { return n === document ? "document" : n === window ? "window" : !n ? "null" : n.id || n.tagName.toLowerCase(); }
+document.addEventListener("click", function (e) {
+  console.log("click " + name(e.target) + " " + e.composedPath().map(name).join(">") + " " + e.offsetX + " " + e.offsetY);
+});
+document.addEventListener("wheel", function (e) {
+  console.log("wheel " + name(e.target) + " " + e.deltaX + " " + e.deltaY + " " + e.deltaMode + " " + e.cancelable);
+}, { passive: true });
+document.getElementById("stop").addEventListener("wheel", function (e) {
+  e.preventDefault();
+  console.log("stopped " + e.defaultPrevented);
+});
+var h = document.getElementById("handle");
+["pointerdown", "pointermove", "pointerup", "gotpointercapture", "lostpointercapture"].forEach(function (t) {
+  document.addEventListener(t, function (e) {
+    console.log(t + " " + name(e.target) + " " + e.clientX + " " + e.clientY + " " + h.hasPointerCapture(e.pointerId));
+  });
+});
+h.addEventListener("pointerdown", function (e) { h.setPointerCapture(e.pointerId); });
+</script>
+</body>
+</html>

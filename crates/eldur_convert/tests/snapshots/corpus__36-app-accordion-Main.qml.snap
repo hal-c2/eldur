@@ -141,9 +141,16 @@ ApplicationWindow {
                                     y: 2
                                 }
                                 wrapMode: Text.WordWrap
+                                onLineLaidOut: (line) => { line.y = line.number * lineHeight; if (line.number === 0) { line.x += 15.88; line.width -= 15.88; } }
                                 objectName: "s1"
                                 Layout.fillWidth: true
                                 renderType: Text.NativeRendering
+
+                                EldurDisclosure {
+                                    em: 15
+                                    color: parent.color
+                                    y: Math.round(parent.baselineOffset) - height
+                                }
                             }
 
                             // <p>
@@ -224,9 +231,17 @@ ApplicationWindow {
                                     y: 2
                                 }
                                 wrapMode: Text.WordWrap
+                                onLineLaidOut: (line) => { line.y = line.number * lineHeight; if (line.number === 0) { line.x += 15.88; line.width -= 15.88; } }
                                 objectName: "s2"
                                 Layout.fillWidth: true
                                 renderType: Text.NativeRendering
+
+                                EldurDisclosure {
+                                    open: true
+                                    em: 15
+                                    color: parent.color
+                                    y: Math.round(parent.baselineOffset) - height
+                                }
                             }
 
                             // <p>

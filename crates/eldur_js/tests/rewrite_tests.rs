@@ -185,6 +185,24 @@ function syncForm() {
 }
 
 #[test]
+fn a_page_that_keeps_attributes_reads_disabled_from_them() {
+    let resolver = FakeResolver::default().with_id("save", 1, "save", TargetKind::Button);
+    let scripts = [classic(
+        "app.js",
+        "function f() { return document.getElementById(\"save\").disabled; }",
+    )];
+    let mut analysis = analyze(&scripts);
+    analysis.reads_attributes = true;
+    analysis.live_queries.clear();
+    let out = rewrite(&scripts, &analysis, &resolver);
+    assert!(
+        out.page_js.contains("Eldur.wrap(save).disabled"),
+        "{}",
+        out.page_js
+    );
+}
+
+#[test]
 fn maps_style_classlist_dataset_attributes_and_innerhtml() {
     let resolver = FakeResolver::default()
         .with_id("panel", 1, "panel", TargetKind::Box)
@@ -707,7 +725,7 @@ class Counter extends Base {
 
     bump(step) {
     return Eldur.asyncRun(this, function*() {
-        const delta = (yield (Promise.resolve(step)));
+        const delta = (yield (Eldur.Promise.resolve(step)));
         this.count += delta;
         return this.count;
     });
@@ -725,7 +743,7 @@ function loadGreeting(raw) {
     } catch (__eldur_err) {
         status = "fallback";
     }
-    const compute = (x) => Eldur.asyncRun(this, function*() { return ((yield (Promise.resolve(x)))) + 1; });
+    const compute = (x) => Eldur.asyncRun(this, function*() { return ((yield (Eldur.Promise.resolve(x)))) + 1; });
     const n = (yield (compute(2)));
     msgText.text = status + ":" + n + ":" + extra;
 });
@@ -2663,4 +2681,49 @@ fn a_sort_goes_through_the_runtime_as_the_engines_is_not_stable() {
     assert!(js.contains("plain = Eldur.sort(names)"), "{js}");
     // Short-circuits on the object, which a plain call would not.
     assert!(js.contains("maybe?.sort()"), "{js}");
+}
+
+/// A QML id written into a script means whatever the script's own name of that
+/// spelling means there, so an element sharing a name with a page variable or
+/// parameter has to be looked up.
+#[test]
+fn a_page_name_spelled_like_an_id_does_not_stand_for_the_element() {
+    let resolver = FakeResolver::default()
+        .with_id("order", 1, "order", TargetKind::Text)
+        .with_id("total", 2, "total", TargetKind::Text)
+        .with_id("plain", 3, "plain", TargetKind::Text);
+    let scripts = [classic(
+        "page.js",
+        "var order = [1, 2];\n\
+         var plain = document.getElementById('plain');\n\
+         function show(total) {\n\
+           document.getElementById('order').title = order.join();\n\
+           document.getElementById('total').title = total;\n\
+           plain.title = 'x';\n\
+         }\n",
+    )];
+    let out = run_rewrite_resolved(&scripts, &resolver);
+    assert!(
+        out.page_js.contains("getElementById(\"order\")")
+            || out.page_js.contains("getElementById('order')"),
+        "{}",
+        out.page_js
+    );
+    assert!(
+        out.page_js.contains("getElementById(\"total\")")
+            || out.page_js.contains("getElementById('total')"),
+        "{}",
+        out.page_js
+    );
+    // Bound to its own element, the name still is the element.
+    assert!(
+        !out.page_js.contains("getElementById(\"plain\")"),
+        "{}",
+        out.page_js
+    );
+    assert!(
+        !out.page_js.contains("getElementById('plain')"),
+        "{}",
+        out.page_js
+    );
 }

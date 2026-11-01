@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Dialog</title>
+<style>
+html, body { margin: 0; padding: 0; }
+body { width: 1280px; height: 800px; font: 16px sans-serif; }
+button { margin: 4px; }
+#p { top: 600px; }
+dialog::backdrop { background: rgba(0,0,0,.5); }
+</style>
+</head>
+<body>
+<button id="open">Open</button><button id="plain">Show</button><button id="tog" popovertarget="pop">Pop</button>
+<dialog id="d"><button id="a">A</button><button id="b">B</button><form method="dialog"><button id="done" value="yes">Done</button></form></dialog>
+<dialog id="p">plain</dialog>
+<div id="pop" popover>popped</div>
+<details id="det"><summary id="sum">More</summary><p id="inside">hidden text</p></details>
+<details id="stay"><summary id="sum2">Stay</summary><p>kept</p></details>
+<script>
+function $(i) { return document.getElementById(i); }
+function name(n) { return !n ? "null" : n === document ? "document" : n.id || n.tagName.toLowerCase(); }
+["click","cancel","close","toggle","beforetoggle","focusin"].forEach(function (t) {
+  document.addEventListener(t, function (e) {
+    console.log([t, name(e.target), name(document.activeElement), e.bubbles, e.cancelable, $("d").open, $("det").open, $("d").returnValue].join(" "));
+  }, true);
+});
+$("open").addEventListener("click", function () { $("d").showModal(); console.log("modal " + $("d").open + " " + name(document.activeElement) + " " + $("d").matches(":modal")); });
+$("plain").addEventListener("click", function () { $("p").show(); console.log("shown " + $("p").open + " " + $("p").getBoundingClientRect().width); });
+$("b").addEventListener("click", function () { $("d").close("bye"); console.log("closed " + $("d").returnValue + " " + name(document.activeElement)); });
+$("sum2").addEventListener("click", function (e) { e.preventDefault(); });
+$("det").addEventListener("toggle", function () { console.log("toggled " + $("det").open + " " + $("inside").offsetHeight); });
+$("pop").addEventListener("toggle", function (e) { console.log("pop " + e.oldState + " " + e.newState); });
+</script>
+</body>
+</html>

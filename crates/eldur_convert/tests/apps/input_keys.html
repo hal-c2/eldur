@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Keys</title>
+<style>
+html, body { margin: 0; padding: 0; }
+body { width: 1280px; height: 800px; font: 16px sans-serif; }
+input, button, select, textarea { display: block; margin: 8px; width: 200px; height: 32px; }
+input[type=checkbox], input[type=radio] { width: 20px; height: 20px; display: inline-block; }
+#box { width: 120px; height: 40px; background: #dde; margin: 8px; }
+#first { width: 120px; height: 40px; background: #ded; margin: 8px; }
+#skip { width: 120px; height: 40px; background: #edd; margin: 8px; }
+a { display: block; margin: 8px; }
+</style>
+</head>
+<body>
+<form id="f" action="#sent">
+  <input id="t" name="t" value="ab">
+  <input id="no" name="no" value="">
+  <button id="sub">Send</button>
+</form>
+<div id="box" tabindex="0">box</div>
+<div id="first" tabindex="2">first</div>
+<div id="skip" tabindex="-1">skip</div>
+<button id="btn" type="button">Press</button>
+<a id="ln" href="#here">link</a>
+<label id="lab" for="chk">check</label><input id="chk" type="checkbox">
+<div id="group"><input id="r1" type="radio" name="g" checked><input id="r2" type="radio" name="g"><input id="r3" type="radio" name="g"></div>
+<select id="sel"><option>one</option><option>two</option><option>three</option></select>
+<button id="gone" type="button">Gone</button>
+<script>
+function name(n) {
+  if (n === document) return "document";
+  if (n === window) return "window";
+  if (!n) return "null";
+  return n.id || n.tagName.toLowerCase();
+}
+var types = ["keydown","keypress","beforeinput","input","keyup","change","focus","blur","focusin","focusout","click","submit"];
+function log(e) {
+  var t = e.target;
+  console.log([e.type, name(t), name(e.currentTarget), e.eventPhase, e.key === undefined ? "" : e.key, e.code === undefined ? "" : e.code,
+    e.repeat ? "R" : "-", e.shiftKey ? "S" : "-", e.ctrlKey ? "C" : "-", e.altKey ? "A" : "-",
+    name(e.relatedTarget), name(document.activeElement), e.defaultPrevented, e.bubbles, e.cancelable, e.isTrusted,
+    e.inputType === undefined ? "" : e.inputType, e.data === undefined || e.data === null ? "" : e.data,
+    t.value === undefined ? "" : t.value, t.checked === undefined ? "" : t.checked].join("|"));
+}
+types.forEach(function (ty) {
+  document.addEventListener(ty, log, true);
+  document.body.addEventListener(ty, log);
+});
+document.getElementById("no").addEventListener("keydown", function (e) { if (e.key === "x") e.preventDefault(); });
+document.getElementById("no").addEventListener("beforeinput", function (e) { if (e.data === "y") e.preventDefault(); });
+document.getElementById("box").addEventListener("keydown", function (e) { if (e.key === "ArrowDown") { e.preventDefault(); document.getElementById("first").focus(); } });
+document.getElementById("f").addEventListener("submit", function (e) { e.preventDefault(); });
+document.getElementById("gone").addEventListener("click", function () { document.getElementById("gone").style.display = "none"; });
+</script>
+</body>
+</html>

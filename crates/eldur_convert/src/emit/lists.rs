@@ -54,6 +54,63 @@ fn line_height_px(style: &ComputedStyle) -> f32 {
     }
 }
 
+pub(crate) const ELDUR_DISCLOSURE_QML: &str = include_str!("EldurDisclosure.qml");
+
+/// A summary's triangle, without its place.
+fn disclosure(open: bool, style: &ComputedStyle) -> Object {
+    let mut obj = Object::new("EldurDisclosure");
+    if open {
+        obj.set("open", true);
+    }
+    obj.set("em", number(style.font_size));
+    obj
+}
+
+/// An `inside` triangle goes in the first line of what holds the text: in a
+/// `Text` it moves that line along and sits on its baseline, and among the pieces
+/// of an `EldurLines` it is the first. It takes the colour the line has now,
+/// whatever a script or a state does to it, unless `::marker` has its own.
+pub(super) fn disclosure_in_line(obj: &mut Object, marker: &Marker<'_>, own_colour: bool) {
+    let MarkerKind::Disclosure { open } = marker.kind else {
+        return;
+    };
+    let mut triangle = disclosure(open, marker.style);
+    if own_colour {
+        triangle.set("color", color(marker.style.color));
+    } else {
+        triangle.set("color", Value::expr("parent.color"));
+    }
+    if obj.type_name == "EldurLines" {
+        let first = obj
+            .members
+            .iter()
+            .position(|m| matches!(m, Member::Child(_)))
+            .unwrap_or(obj.members.len());
+        obj.members.insert(first, Member::Child(triangle));
+    } else {
+        // Chromium rounds a font's ascent.
+        triangle.set(
+            "y",
+            Value::expr("Math.round(parent.baselineOffset) - height"),
+        );
+        // Under this handler Qt puts a line at the bottom of a fixed height rather
+        // than at its top, where the block's half-leading is worked out from.
+        let row = if obj.get("lineHeight").is_some() {
+            "line.y = line.number * lineHeight; "
+        } else {
+            ""
+        };
+        obj.set(
+            "onLineLaidOut",
+            Value::expr(format!(
+                "(line) => {{ {row}if (line.number === 0) {{ line.x += {0}; line.width -= {0}; }} }}",
+                fmt_number(round(1.05859 * marker.style.font_size))
+            )),
+        );
+        obj.push_child(triangle);
+    }
+}
+
 impl Emitter<'_, '_> {
     /// The first line's distance from `b`'s top, and its height. The marker
     /// follows the first line, through the padding and borders on the way.
@@ -116,6 +173,23 @@ impl Emitter<'_, '_> {
         };
         match &marker.kind {
             shape @ (MarkerKind::Disc | MarkerKind::Circle | MarkerKind::Square) => bullet(shape),
+            MarkerKind::Disclosure { open } => {
+                // Measured at 16 and 32px: 19 and 29px left of the box, which is
+                // what is left of an `outside` marker's gap at any size.
+                let mut obj = disclosure(*open, style);
+                obj.set("x", number(-(9.0 + 0.625 * style.font_size)));
+                let baseline = super::text::whole_baseline(style, line_height);
+                obj.set(
+                    "y",
+                    // A little above an inside one's, measured at 16px.
+                    Value::expr(format!(
+                        "{} - height",
+                        fmt_number(round(offset + baseline - 0.25))
+                    )),
+                );
+                obj.set("color", color(style.color));
+                obj
+            }
             MarkerKind::Text(text) => {
                 let mut obj = Object::new("Text");
                 obj.set("text", Value::String(text.clone()));

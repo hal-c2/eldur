@@ -133,6 +133,14 @@ pub struct Analysis {
     /// A bubbling event is listened for on something no literal query names
     /// (`document`, `window`, `event.target`, a created element).
     pub listens_unresolved: bool,
+    /// Every event a script's `addEventListener` or `on*` property names, on
+    /// any target, and those of the page's `on*` attributes.
+    pub heard_events: BTreeSet<String>,
+    /// A listener whose event no literal names, or `addEventListener` used
+    /// other than by calling it: it may hear anything.
+    pub hears_unnamed_events: bool,
+    /// A script calls `getSelection`.
+    pub reads_text_selection: bool,
     /// Elements whose children scripts insert, remove, replace or reorder
     /// (the receiver of `appendChild`, `insertBefore`, `removeChild`,
     /// `append`, `replaceChildren`, `innerHTML =`, `textContent =`, …), in
@@ -181,6 +189,12 @@ pub struct Analysis {
 }
 
 impl Analysis {
+    /// A listener for `event` may exist, on whatever target.
+    #[must_use]
+    pub fn may_hear(&self, event: &str) -> bool {
+        self.hears_unnamed_events || self.heard_events.contains(event)
+    }
+
     /// The runtime has to compute some element's style itself: to read it back,
     /// or to place what a script creates among the page's margins.
     #[must_use]
@@ -385,7 +399,10 @@ pub fn rewrite(
     rewrite::rewrite(scripts, analysis, resolver)
 }
 
+use std::collections::BTreeSet;
+
 mod analyze;
+mod computed;
 mod edit;
 mod lower;
 mod parse;

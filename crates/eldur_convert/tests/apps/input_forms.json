@@ -1,0 +1,20 @@
+{"steps":[
+ {"name":"go invalid","click":"#go","settle":50},
+ {"name":"type name","type":["#name","hello"]},
+ {"name":"go valid","click":"#go"},
+ {"name":"skip","click":"#nov"},
+ {"name":"outside","click":"#outside"},
+ {"name":"plain","click":"#plain"},
+ {"name":"prevented check","click":"#prev"},
+ {"name":"radio","click":"#r2"},
+ {"name":"reset button","click":"#again"},
+ {"name":"stop link","click":"#stop"},
+ {"name":"fragment link","click":"#frag"},
+ {"name":"report","click":"#report","settle":100},
+ {"name":"api","click":"#api"},
+ {"name":"selection","click":"#api-sel"},
+ {"name":"api2","click":"#api2","settle":200},
+ {"name":"api3","click":"#api3"}
+],
+"quietLoad":true,
+"watch":[{"sel":"#name"},{"sel":"#box"},{"sel":"#r1"},{"sel":"#r2"},{"sel":"#prev"}]}

@@ -425,7 +425,10 @@ fn export_name(state: PseudoState) -> Option<&'static str> {
         PseudoState::FocusWithin => "eldurFocusWithin",
         PseudoState::Checked => "eldurChecked",
         PseudoState::Disabled => "eldurDisabled",
-        PseudoState::Visited => return None,
+        PseudoState::Visited
+        | PseudoState::PlaceholderShown
+        | PseudoState::Valid
+        | PseudoState::Invalid => return None,
     })
 }
 
@@ -1148,6 +1151,7 @@ pub(crate) fn add(
         let mut obj = objects[*i]
             .clone()
             .expect("a distinct template has an object");
+        crate::scripts::hook_template_keys(&mut obj, scripts);
         for m in &mut obj.members {
             if let Member::PropertyDecl { name, value, .. } = m
                 && name == "eldurTemplate"

@@ -133,6 +133,11 @@ fn has_no_item(doc: &Document, node: NodeId, live: &HashSet<NodeId>) -> bool {
     }
 }
 
+fn first_autofocus(doc: &Document) -> Option<NodeId> {
+    doc.descendants(doc.root())
+        .find(|n| doc.element(*n).is_some_and(|e| e.has_attr("autofocus")))
+}
+
 pub(crate) fn tag(obj: &mut Object, doc: &Document, node: NodeId) {
     let Some(element) = doc.element(node) else {
         return;
@@ -142,6 +147,11 @@ pub(crate) fn tag(obj: &mut Object, doc: &Document, node: NodeId) {
         "eldurTag",
         Value::String(element.local_name().to_ascii_lowercase()),
     )];
+    // A browser gives it to the first that asks. `focus: true` would lose to the
+    // page's scroll keys, which ask as well.
+    if element.has_attr("autofocus") && first_autofocus(doc) == Some(node) {
+        obj.set("Component.onCompleted", Value::expr("forceActiveFocus()"));
+    }
     if element.local_name() == "details" && element.has_attr("open") {
         decls.push(decl("bool", "eldurOpen", Value::Bool(true)));
     }
@@ -163,6 +173,12 @@ pub(crate) fn tag(obj: &mut Object, doc: &Document, node: NodeId) {
     }
 }
 
+/// `pointer-events: none`, computed: what the runtime's hit test looks through.
+pub(crate) fn declare_no_hit(obj: &mut Object) {
+    obj.members
+        .insert(0, decl("bool", "eldurNoHit", Value::Bool(true)));
+}
+
 /// `eldurStyle`: a `style` attribute as written, which the cascade of what a
 /// script makes inherits from.
 pub(crate) fn declare_style(obj: &mut Object, doc: &Document, node: NodeId) {
@@ -173,6 +189,28 @@ pub(crate) fn declare_style(obj: &mut Object, doc: &Document, node: NodeId) {
         obj.members
             .insert(0, decl("string", "eldurStyle", Value::string(style)));
     }
+}
+
+/// An element whose attributes the runtime acts on when it hears the person
+/// itself: what a control validates by, what a link follows, what takes a stop
+/// in the focus order or opens a dialog.
+pub(crate) fn acts_on_attrs(doc: &Document, node: NodeId) -> bool {
+    doc.element(node).is_some_and(|e| {
+        matches!(
+            e.local_name(),
+            "form"
+                | "input"
+                | "select"
+                | "textarea"
+                | "button"
+                | "label"
+                | "fieldset"
+                | "a"
+                | "dialog"
+                | "details"
+        ) || e.attr("tabindex").is_some()
+            || e.attr("popover").is_some()
+    })
 }
 
 /// `eldurAttrs`: what the markup says, for scripts that ask. `id` and `class`

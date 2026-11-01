@@ -30,6 +30,189 @@
 // 1. Standard library polyfills for Qt 6.11
 // ---------------------------------------------------------------------------
 
+
+// A page tells when its promises run: after each listener a browser runs them,
+// while the engine's own wait for the event loop, past all of a press's events.
+// Nothing reaches the engine's queue from a script, so promises are made here.
+var _micro = { queue: [], draining: false, native: false };
+
+function _microEnqueue(job) {
+    _micro.queue.push(job);
+    Qt.callLater(_microDrain);
+}
+
+function _microDrain() {
+    if (_micro.draining) {
+        return;
+    }
+    _micro.draining = true;
+    while (_micro.queue.length > 0) {
+        var job = _micro.queue.shift();
+        try {
+            job();
+        } catch (err) {
+            console.error(err && err.stack ? err.stack : err);
+        }
+    }
+    _micro.draining = false;
+}
+
+var Promise = (function() {
+    var PENDING = 0, FULFILLED = 1, REJECTED = 2;
+
+    function settle(p, state, value) {
+        if (p._state !== PENDING) {
+            return;
+        }
+        p._state = state;
+        p._value = value;
+        var waiting = p._waiting;
+        p._waiting = [];
+        waiting.forEach(function(w) { schedule(p, w); });
+    }
+
+    function schedule(p, w) {
+        _microEnqueue(function() {
+            var handler = p._state === FULFILLED ? w.onFulfilled : w.onRejected;
+            if (typeof handler !== "function") {
+                (p._state === FULFILLED ? w.resolve : w.reject)(p._value);
+                return;
+            }
+            var result;
+            try {
+                result = handler(p._value);
+            } catch (err) {
+                w.reject(err);
+                return;
+            }
+            w.resolve(result);
+        });
+    }
+
+    function resolver(p) {
+        var called = false;
+        function reject(reason) {
+            if (!called) {
+                called = true;
+                settle(p, REJECTED, reason);
+            }
+        }
+        function resolve(value) {
+            if (called) {
+                return;
+            }
+            called = true;
+            if (value === p) {
+                settle(p, REJECTED, new TypeError("Chaining cycle detected for promise"));
+                return;
+            }
+            if (value && (typeof value === "object" || typeof value === "function")) {
+                var then;
+                try {
+                    then = value.then;
+                } catch (err) {
+                    settle(p, REJECTED, err);
+                    return;
+                }
+                if (typeof then === "function") {
+                    _microEnqueue(function() {
+                        var inner = resolver(p);
+                        try {
+                            then.call(value, inner.resolve, inner.reject);
+                        } catch (err) {
+                            inner.reject(err);
+                        }
+                    });
+                    return;
+                }
+            }
+            settle(p, FULFILLED, value);
+        }
+        return { resolve: resolve, reject: reject };
+    }
+
+    function Promise(executor) {
+        if (typeof executor !== "function") {
+            throw new TypeError("Promise resolver " + executor + " is not a function");
+        }
+        this._state = PENDING;
+        this._value = undefined;
+        this._waiting = [];
+        var r = resolver(this);
+        try {
+            executor(r.resolve, r.reject);
+        } catch (err) {
+            r.reject(err);
+        }
+    }
+
+    Promise.prototype.then = function(onFulfilled, onRejected) {
+        var self = this;
+        return new Promise(function(resolve, reject) {
+            var w = { onFulfilled: onFulfilled, onRejected: onRejected, resolve: resolve, reject: reject };
+            if (self._state === PENDING) {
+                self._waiting.push(w);
+            } else {
+                schedule(self, w);
+            }
+        });
+    };
+    Promise.prototype["catch"] = function(onRejected) {
+        return this.then(undefined, onRejected);
+    };
+    Promise.prototype["finally"] = function(run) {
+        if (typeof run !== "function") {
+            return this.then(run, run);
+        }
+        return this.then(function(value) {
+            return Promise.resolve(run()).then(function() { return value; });
+        }, function(reason) {
+            return Promise.resolve(run()).then(function() { throw reason; });
+        });
+    };
+    Object.defineProperty(Promise.prototype, Symbol.toStringTag, { value: "Promise" });
+
+    Promise.resolve = function(value) {
+        return value instanceof Promise ? value : new Promise(function(resolve) { resolve(value); });
+    };
+    Promise.reject = function(reason) {
+        return new Promise(function(_resolve, reject) { reject(reason); });
+    };
+    Promise.all = function(iterable) {
+        var items = Array.from(iterable);
+        return new Promise(function(resolve, reject) {
+            var left = items.length;
+            var out = new Array(left);
+            if (left === 0) {
+                resolve(out);
+            }
+            items.forEach(function(item, i) {
+                Promise.resolve(item).then(function(value) {
+                    out[i] = value;
+                    if (--left === 0) {
+                        resolve(out);
+                    }
+                }, reject);
+            });
+        });
+    };
+    Promise.race = function(iterable) {
+        var items = Array.from(iterable);
+        return new Promise(function(resolve, reject) {
+            items.forEach(function(item) { Promise.resolve(item).then(resolve, reject); });
+        });
+    };
+    Promise.withResolvers = function() {
+        var out = {};
+        out.promise = new Promise(function(resolve, reject) {
+            out.resolve = resolve;
+            out.reject = reject;
+        });
+        return out;
+    };
+    return Promise;
+})();
+
 (function installPolyfills() {
     if (!Array.prototype.at) {
         Object.defineProperty(Array.prototype, "at", {
@@ -325,6 +508,10 @@ function init(rootItem, baseUrl, documentUrl) {
     if (docUrl !== "") {
         _updateLocationFromHref(docUrl, false);
     }
+    // The layer belongs to the page it was made on, and may have gone with it.
+    if (_in && _in.page !== _root) {
+        _in = null;
+    }
     _vModels = [];
     _vRules = null;
     _gCascadeRules = null;
@@ -337,6 +524,7 @@ function init(rootItem, baseUrl, documentUrl) {
         // match its nodes change, so they must be read before any write.
         _walkItems(_root, function() { return false; });
         _gLive = [];
+        _gLiveTemplates = [];
         _gStaticBase = null;
         _gSnapshotStatics();
     }
@@ -367,12 +555,27 @@ function _setUpDetails(raw) {
     var kids = _rawElementChildren(raw);
     var summary = kids.filter(function(k) { return _nodeTag(k) === "summary"; })[0];
     _detailsShow(raw, raw.eldurOpen === true);
-    if (summary) {
-        wrap(summary).addEventListener("click", function() {
-            summary.forceActiveFocus();
-            wrap(raw).open = !_meta(raw).detailsOpen;
+    // Open from the start is a toggle too, once the page's scripts have run.
+    if (raw.eldurOpen === true) {
+        Qt.callLater(function() {
+            dispatchEvent(wrap(raw), new Event("toggle"));
         });
     }
+    if (summary) {
+        wrap(summary).addEventListener("click", function(ev) {
+            // Last on its element, and the page's listeners further up have yet to
+            // run: the toggle waits for what they say.
+            summary.forceActiveFocus();
+            _afterThisDispatch(ev, function() {
+                wrap(raw).open = !_meta(raw).detailsOpen;
+            });
+        });
+    }
+}
+
+function _afterThisDispatch(ev, run) {
+    ev._afterDispatch = ev._afterDispatch || [];
+    ev._afterDispatch.push(run);
 }
 
 function _detailsShow(raw, open) {
@@ -385,12 +588,31 @@ function _detailsShow(raw, open) {
     if (_gHasCascade()) {
         _gTouch(raw);
     }
+    var seenSummary = false;
     _rawElementChildren(raw).forEach(function(kid) {
         if (_nodeTag(kid) !== "summary") {
             kid.visible = open && _gStyleAllowsShow(kid);
+        } else if (!seenSummary) {
+            seenSummary = true;
+            _detailsTurnMarker(kid, open);
         }
     });
     _layoutChanged(raw);
+}
+
+// It hangs off whichever item holds the summary's first line.
+function _detailsTurnMarker(item, open) {
+    if (item.eldurDisclosure === true) {
+        item.open = open;
+        return true;
+    }
+    var kids = item.children || [];
+    for (var i = 0; i < kids.length; ++i) {
+        if (_detailsTurnMarker(kids[i], open)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function _gStyleAllowsShow(kid) {
@@ -639,10 +861,7 @@ function _wakeForTimers() {
     _timerWake.start();
 }
 
-// One callback a turn of the event loop: the engine posts a promise's reactions as
-// events, so they run after this turn and before the next callback, as a microtask
-// checkpoint would have them. Reactions that queue further reactions can still lose
-// the race, since nothing here can see or drain the engine's queue.
+// One callback a turn of the event loop, with what it queued run before the next.
 function _timerTurn() {
     _timerTurnQueued = true;
     Qt.callLater(_timerRunOne);
@@ -650,6 +869,7 @@ function _timerTurn() {
 
 function _timerRunOne() {
     _timerTurnQueued = false;
+    _microDrain();
     var t = _timers[0];
     if (!t || t.due > Date.now()) {
         _wakeForTimers();
@@ -665,6 +885,7 @@ function _timerRunOne() {
     try {
         t.callback.apply(null, t.args);
     } finally {
+        _microDrain();
         if (_timers.length > 0 && _timers[0].due <= Date.now()) {
             _timerTurn();
         } else {
@@ -747,6 +968,7 @@ function _ensureRafAnim() {
         var timestamp = Date.now() - _startTime;
         for (var i = 0; i < batch.length; ++i) {
             batch[i].cb(timestamp);
+            _microDrain();
         }
         if (_rafQueue.length > 0) {
             _rafAnim.running = true;
@@ -772,8 +994,14 @@ function _scrollToFragment(hash) {
     var active = document.activeElement;
     if (active && active !== document.body && typeof active.blur === "function") {
         active.blur();
+        // Nothing near the link keeps the keys: Qt would hand Tab on from there.
+        (_root.contentItem || _root).forceActiveFocus();
     }
     if (found) {
+        // The next Tab goes on from here, though nothing here has the focus.
+        if (_in) {
+            _in.tabFrom = _unwrap(found);
+        }
         _scrollIntoView(_unwrap(found), { block: "start" });
     } else if (page) {
         scrollTo(page.contentX, 0);
@@ -826,7 +1054,7 @@ function cancelAnimationFrame(id) {
 }
 
 function queueMicrotask(callback) {
-    Promise.resolve().then(callback);
+    _microEnqueue(callback);
 }
 
 function structuredClone(value) {
@@ -3200,6 +3428,21 @@ function _polishDown(item) {
 // Takes a node out of the DOM. Never destroys it: a script may hold it and put
 // it back, as with a modal, and bindings of the page may read it by id.
 function _detachNode(raw) {
+    // A browser says so as it goes; Qt only moves the focus, when it gets there.
+    if (_in && _in.focused) {
+        for (var at = _in.focused; at; at = _gParent(at)) {
+            if (at === raw) {
+                var was = _in.focused;
+                _in.focused = null;
+                _inFocusEvents(was, null, "blur", "focusout");
+                // The page's keys are the body's now, and Qt would hold them nowhere.
+                if (_in.pageKeys) {
+                    _in.pageKeys.forceActiveFocus();
+                }
+                break;
+            }
+        }
+    }
     if (!raw.__eldurInline) {
         _wsLeave(raw);
     }
@@ -3594,6 +3837,9 @@ function _isAnonLines(raw) {
 function _logicalParent(raw) {
     if (raw && raw.__eldurInline) {
         return raw.parent;
+    }
+    if (_dialogs.moved > 0 && raw && _meta(raw).topFrom) {
+        return _meta(raw).topFrom;
     }
     if (raw && raw.eldurInlineOwner !== undefined) {
         var cutFrom = _vCutOwner(raw);
@@ -4327,7 +4573,8 @@ function setStyle(item, prop, value) {
         _inlineOpacity(raw, m);
     } else if (name === "position") {
         // A template holds the box's form, and layouts place what is in them.
-        if (str === "absolute" || str === "fixed") {
+        // Not yet in the page: the item a template swaps it for is set this again.
+        if ((str === "absolute" || str === "fixed") && raw.parent) {
             console.warn("eldur: style.position = \"" + str + "\" from a script is not applied; use a class");
         }
     } else if (name === "left" || name === "top" || name === "right" || name === "bottom") {
@@ -4339,12 +4586,14 @@ function setStyle(item, prop, value) {
         }
     } else if (name === "color") {
         _inlineColor(raw, Boolean(m.styles.color));
-    } else if (_gActive() && _gStaticBase !== null) {
+    } else if (_gActive() && _gStaticBase !== null && !_startsEvents(raw) && _gLiveTemplates.indexOf(raw) === -1) {
         // The next pass adopts it: only the box form has all of a box's answers.
     } else if (name === "width") {
         _inlinePx(raw, raw, "width", str);
+        _inlineInLayout(raw);
     } else if (name === "height") {
         _inlinePx(raw, raw, "height", str);
+        _inlineInLayout(raw);
     } else if (name === "backgroundColor" || name === "background") {
         if (raw.background && raw.background.color !== undefined) {
             _inlinePaint(raw, raw.background, "color", str);
@@ -4363,6 +4612,22 @@ function setStyle(item, prop, value) {
     } else if (name === "borderWidth" && raw.border !== undefined) {
         _inlinePx(raw, raw, "border.width", str);
     }
+}
+
+// A layout writes `width` and `height` itself and reads only what it is told
+// through `Layout`; the cascade's passes do not paint a template's control.
+function _inlineInLayout(raw) {
+    if (!raw.parent || !_gIsLayout(raw.parent)) {
+        return;
+    }
+    var m = _meta(raw);
+    var boxed = m.styles.boxSizing === "border-box";
+    var across = parseFloat(m.styles.width);
+    var down = parseFloat(m.styles.height);
+    var wide = (raw.leftPadding || 0) + (raw.rightPadding || 0);
+    var tall = (raw.topPadding || 0) + (raw.bottomPadding || 0);
+    _gMarginTool().size(raw, isNaN(across) ? -1 : across + (boxed ? 0 : wide),
+        isNaN(down) ? -1 : down + (boxed ? 0 : tall));
 }
 
 function _inlinePaint(raw, target, prop, str) {
@@ -4486,6 +4751,18 @@ function getStyle(item, prop) {
         return m.styles[camel];
     }
     var raw = _unwrap(item);
+    // What the page's own style="" attribute said, as el.style reports it
+    // until a script writes over it.
+    if (raw && typeof raw.eldurStyle === "string" && raw.eldurStyle !== "") {
+        var wanted = camel.indexOf("--") === 0 ? camel : _camelToKebab(camel);
+        var decls = raw.eldurStyle.split(";");
+        for (var d = decls.length - 1; d >= 0; --d) {
+            var colon = decls[d].indexOf(":");
+            if (colon > 0 && decls[d].slice(0, colon).trim().toLowerCase() === wanted) {
+                return decls[d].slice(colon + 1).trim();
+            }
+        }
+    }
     if (camel === "display" && raw && typeof raw.visible === "boolean") {
         return raw.visible ? "" : "none";
     }
@@ -4621,6 +4898,8 @@ function setAttribute(item, attrName, attrValue) {
         wrap(raw).type = val;
     } else if (name === "class") {
         setClassName(raw, val);
+    } else if (name === "disabled" && _nodeTag(raw) === "fieldset") {
+        _fieldsetTurned(raw);
     } else if (name === "disabled" && typeof raw.enabled === "boolean") {
         raw.enabled = false;
     } else if (name === "hidden" && typeof raw.visible === "boolean") {
@@ -4727,6 +5006,8 @@ function removeAttribute(item, attrName) {
         delete m.dataset[_kebabToCamel(name.slice(5))];
     } else if (name === "id" && typeof raw.objectName === "string") {
         raw.objectName = "";
+    } else if (name === "disabled" && _nodeTag(raw) === "fieldset") {
+        _fieldsetTurned(raw);
     } else if (name === "disabled" && typeof raw.enabled === "boolean") {
         raw.enabled = true;
     } else if (name === "hidden" && typeof raw.visible === "boolean") {
@@ -4885,6 +5166,17 @@ function focus(item) {
     if (!raw.__eldurInline && _itHidden(raw)) {
         return;
     }
+    // A link in a line is not an item: its `Text` holds the focus for it.
+    if (_in && raw.__eldurInline && raw.model) {
+        _in.inlineFocus = raw;
+        var line = raw.model.text;
+        if (line.activeFocus) {
+            _inFocusChanged();
+        } else {
+            line.forceActiveFocus();
+        }
+        return;
+    }
     var prev = _activeElement;
     _activeElement = raw;
     var hadFocus = Boolean(raw.activeFocus || raw.focus);
@@ -4892,6 +5184,17 @@ function focus(item) {
         raw.forceActiveFocus();
     } else if (typeof raw.focus === "boolean") {
         raw.focus = true;
+    }
+    // Before its window shows Qt gives no focus to hear of, and a script at load
+    // hears of it all the same. The window's own change then finds it told.
+    if (_in && !raw.activeFocus && !_inWindowActive() && _in.focused !== raw) {
+        var before = _in.focused;
+        _in.focused = raw;
+        if (before) {
+            _inFocusEvents(before, raw, "blur", "focusout");
+        }
+        _inFocusEvents(raw, before, "focus", "focusin");
+        return;
     }
     var nowFocus = Boolean(raw.activeFocus || raw.focus);
     if (!hadFocus && !nowFocus) {
@@ -4919,6 +5222,11 @@ function blur(item) {
     var hadFocus = Boolean(raw.activeFocus || raw.focus);
     if (typeof raw.focus === "boolean") {
         raw.focus = false;
+    }
+    if (_in && _in.focused === raw && !_inWindowActive()) {
+        _in.focused = null;
+        _inFocusEvents(raw, null, "blur", "focusout");
+        return;
     }
     var nowFocus = Boolean(raw.activeFocus || raw.focus);
     if (wasActive && (!hadFocus || nowFocus)) {
@@ -5062,6 +5370,60 @@ function _borderOf(raw, side) {
 }
 
 // An inline box has no client area.
+// A script addresses the TextArea itself, so no ScrollView can hold it: with it
+// clipped, its top padding moves the text as a scroller would.
+function scrollArea(raw) {
+    var m = _meta(raw);
+    if (m.areaTop !== undefined) {
+        return;
+    }
+    m.areaTop = raw.topPadding;
+    m.areaScroll = 0;
+    raw.clip = true;
+    var keep = function() {
+        // A template's item may have replaced it by now.
+        if (m.raw === undefined || m.raw === raw) {
+            _areaScrollTo(raw, m.areaScroll);
+        }
+    };
+    // Later: the text's size changes as the control's implicit height is worked
+    // out, and reading sizes now is a binding loop on it.
+    var keepLater = function() { Qt.callLater(keep); };
+    raw.contentSizeChanged.connect(keepLater);
+    raw.heightChanged.connect(keepLater);
+    raw.cursorRectangleChanged.connect(function() {
+        if (!raw.activeFocus) {
+            return;
+        }
+        var caret = raw.cursorRectangle;
+        var top = caret.y - m.areaTop;
+        var bottom = caret.y + caret.height + raw.bottomPadding - raw.height;
+        if (top < 0) {
+            _areaScrollTo(raw, m.areaScroll + top);
+        } else if (bottom > 0) {
+            _areaScrollTo(raw, m.areaScroll + bottom);
+        }
+    });
+    var wheel = Qt.createQmlObject("import QtQuick; WheelHandler { target: null; acceptedDevices: PointerDevice.AllDevices }", raw, "eldur_area_wheel");
+    wheel.wheel.connect(function(ev) {
+        var was = m.areaScroll;
+        _areaScrollTo(raw, was - (ev.pixelDelta.y || ev.angleDelta.y));
+        // At its end a wheel goes on to the page.
+        ev.accepted = m.areaScroll !== was;
+    });
+}
+
+function _areaScrollHeight(raw) {
+    return Math.ceil(raw.contentHeight + _meta(raw).areaTop + raw.bottomPadding);
+}
+
+function _areaScrollTo(raw, to) {
+    var m = _meta(raw);
+    var most = Math.max(0, _areaScrollHeight(raw) - raw.height);
+    m.areaScroll = Math.max(0, Math.min(to, most));
+    _gSet(raw, "topPadding", m.areaTop - m.areaScroll);
+}
+
 function _clientSize(item, axis) {
     _layoutForRead();
     var raw = _gCurrent(_unwrap(item));
@@ -5212,7 +5574,22 @@ var _BUBBLES = {
     keydown: true, keyup: true, keypress: true, focusin: true, focusout: true,
     mousedown: true, mouseup: true, mousemove: true, mouseover: true, mouseout: true,
     pointerdown: true, pointerup: true, touchstart: true, touchend: true,
-    contextmenu: true, wheel: true
+    contextmenu: true, wheel: true, auxclick: true, pointermove: true, pointerover: true,
+    pointerout: true, pointercancel: true, gotpointercapture: true, lostpointercapture: true,
+    beforeinput: true, select: true
+};
+
+// Not bubbling, yet `document` is on their path for a capturing listener.
+// The page's own: the runtime delivers these at the root.
+var _ROOT_HEARS = {
+    load: true, DOMContentLoaded: true, resize: true, scroll: true, hashchange: true, popstate: true,
+    pageshow: true, pagehide: true, beforeunload: true, unload: true, visibilitychange: true,
+    message: true, error: true, storage: true, online: true, offline: true, readystatechange: true
+};
+
+var _DOCUMENT_HEARS = {
+    mouseenter: true, mouseleave: true, pointerenter: true, pointerleave: true,
+    focus: true, blur: true, invalid: true, toggle: true
 };
 
 function event(type, targetItem, qtEvent) {
@@ -5306,10 +5683,20 @@ function event(type, targetItem, qtEvent) {
         defaultPrevented: false,
         eventPhase: 0,
         timeStamp: Date.now() - _startTime,
-        detail: ev.detail !== undefined ? ev.detail : null,
+        detail: ev.detail !== undefined ? ev.detail : 0,
+        relatedTarget: null,
+        isTrusted: true,
         _propagationStopped: false,
         _immediateStopped: false,
+        _passive: false,
+        _path: [],
+        composedPath: function() {
+            return domEvent._path.slice();
+        },
         preventDefault: function() {
+            if (!domEvent.cancelable || domEvent._passive) {
+                return;
+            }
             domEvent.defaultPrevented = true;
             if (qtEvent && typeof qtEvent.accepted === "boolean") {
                 qtEvent.accepted = true;
@@ -5329,9 +5716,11 @@ function event(type, targetItem, qtEvent) {
     return domEvent;
 }
 
-function Event(type, opts) {
+function _uiEvent(type, opts) {
     var o = opts || {};
     var e = event(type, null, { detail: o.detail });
+    e.isTrusted = false;
+    if (o.relatedTarget !== undefined) { e.relatedTarget = o.relatedTarget; }
     e.bubbles = o.bubbles !== undefined ? Boolean(o.bubbles) : false;
     e.cancelable = o.cancelable !== undefined ? Boolean(o.cancelable) : false;
     if (typeof o.key === "string") { e.key = o.key; }
@@ -5355,32 +5744,52 @@ function Event(type, opts) {
     return e;
 }
 
+// Only a mouse event has a place, and a button.
+function _withoutPlace(e) {
+    ["clientX", "clientY", "pageX", "pageY", "screenX", "screenY", "offsetX", "offsetY", "x", "y", "button", "buttons",
+        "relatedTarget"].forEach(function(name) { delete e[name]; });
+    return e;
+}
+
+function Event(type, opts) {
+    var e = _withoutPlace(_uiEvent(type, opts));
+    delete e.detail;
+    return e;
+}
+
 function CustomEvent(type, opts) {
-    return Event(type, opts);
+    var e = _withoutPlace(_uiEvent(type, opts));
+    e.detail = opts && opts.detail !== undefined ? opts.detail : null;
+    return e;
 }
 
 function KeyboardEvent(type, opts) {
-    return Event(type, opts);
+    return _withoutPlace(_uiEvent(type, opts));
 }
 
 function MouseEvent(type, opts) {
-    return Event(type, opts);
+    return _uiEvent(type, opts);
 }
 
 function PointerEvent(type, opts) {
-    return Event(type, opts);
+    var e = _uiEvent(type, opts);
+    var o = opts || {};
+    e.pointerId = o.pointerId || 0;
+    e.pointerType = o.pointerType || "";
+    e.isPrimary = Boolean(o.isPrimary);
+    return e;
 }
 
 function FocusEvent(type, opts) {
-    return Event(type, opts);
+    return _uiEvent(type, opts);
 }
 
 function InputEvent(type, opts) {
-    return Event(type, opts);
+    return _uiEvent(type, opts);
 }
 
 function WheelEvent(type, opts) {
-    return Event(type, opts);
+    return _uiEvent(type, opts);
 }
 
 function EventTarget() {
@@ -5434,7 +5843,11 @@ function _dispatchDynamic(raw, type, qtEv) {
     var target = _eventTarget(raw);
     var domEv = qtEv && qtEv.preventDefault ? qtEv : event(type, target, qtEv);
     domEv.target = target;
+    if (_UNCANCELLABLE[type] === true && !(qtEv && qtEv.preventDefault)) {
+        domEv.cancelable = false;
+    }
     var path = _eventPath(raw);
+    domEv._path = path.map(_eventTarget);
     for (var down = path.length - 1; down > 0 && !domEv._propagationStopped; --down) {
         _runListeners(path[down], "capture:" + type, type, domEv, 1);
     }
@@ -5449,6 +5862,12 @@ function _dispatchDynamic(raw, type, qtEv) {
     }
     domEv.currentTarget = null;
     domEv.eventPhase = 0;
+    domEv._path = [];
+    if (domEv._afterDispatch && !domEv.defaultPrevented) {
+        var after = domEv._afterDispatch;
+        domEv._afterDispatch = null;
+        after.forEach(function(run) { run(); });
+    }
     return !domEv.defaultPrevented;
 }
 
@@ -5467,7 +5886,11 @@ function _eventPath(raw) {
     // The root may be inside an item that is not the page's.
     for (var at = _logicalParent(raw); at; at = _logicalParent(at)) {
         if (at === _root) {
-            path.push(_root, document, window);
+            // Where the page has its `html`, the root item is no element of the page.
+            if (_nodeTag(path[path.length - 1]) !== "html") {
+                path.push(_root);
+            }
+            path.push(document, window);
             break;
         }
         if (_isDomTarget(at) && !_isInternalHelperNode(at)) {
@@ -5502,17 +5925,45 @@ function _runListeners(raw, key, type, domEv, phase) {
                 list.splice(at, 1);
             }
         }
+        domEv._passive = _isPassive(m, key, fn, raw, type);
+        // With no script under it, a listener's end is where promises run.
+        var native = _micro.native;
+        _micro.native = false;
         fn.call(target, domEv);
+        _micro.native = native;
+        if (native) {
+            _microDrain();
+        }
+        domEv._passive = false;
         if (domEv._immediateStopped) {
             break;
         }
     }
 }
 
+// What the listener said, or Chromium's default: scrolling doesn't wait for a
+// wheel listener high enough up to be on every page.
+function _isPassive(m, key, fn, raw, type) {
+    var said = m.passive && m.passive[key];
+    if (said && said.has(fn)) {
+        return said.get(fn);
+    }
+    return (type === "wheel" || type === "mousewheel" || type === "touchstart" || type === "touchmove")
+        && (raw === document || raw === window || raw === _root || _nodeTag(raw) === "body");
+}
+
 // The converter's handler for what the runtime cannot connect itself; `false`
 // when a listener prevented the default.
 function fire(item, type, qtEv) {
     var raw = _unwrap(item);
+    if (_in) {
+        if (type === "keydown" || type === "keyup") {
+            return !_inKeyed(qtEv, type === "keydown");
+        }
+        if (type === "submit" || type === "reset") {
+            return true;
+        }
+    }
     if (Boolean(_meta(raw).connected[type])) {
         return true;
     }
@@ -5541,6 +5992,8 @@ function _flushChange(raw) {
     }
 }
 
+var _UNCANCELLABLE = { input: true, change: true, focus: true, blur: true, focusin: true, focusout: true, select: true };
+
 function _pageSurface() {
     var home = _root.contentItem || _root;
     for (var i = 0; i < home.children.length; ++i) {
@@ -5558,6 +6011,24 @@ function _connectSignalOnce(raw, type) {
     }
     if (!raw || typeof raw !== "object") {
         return false;
+    }
+    if (_in && _IN_POINTER[type] === true && !(type === "click" && typeof raw.clicked === "function")) {
+        m.connected[type] = true;
+        return true;
+    }
+    // The layer's one key and focus path hears these for everything.
+    if (_in && _IN_LAYERED[type] === true) {
+        // A control the runtime made also has signals of its own for its keys.
+        var ownKey = type === "keydown" ? raw.eldurKeyDown : type === "keyup" ? raw.eldurKeyUp : null;
+        if (typeof ownKey === "function") {
+            ownKey.connect(function(qtEv) {
+                if (!raw.activeFocus) {
+                    _dispatchDynamic(raw, type, qtEv);
+                }
+            });
+        }
+        m.connected[type] = true;
+        return true;
     }
     if (raw.__eldurInline) {
         _vConnect(raw, type);
@@ -5589,7 +6060,12 @@ function _connectSignalOnce(raw, type) {
                     }
                 });
             }
-            raw.clicked.connect(function() { _clickedControl(raw); });
+            raw.clicked.connect(function() {
+                // A press the input layer saw comes to its click there.
+                if (!(_in && _in.pressed)) {
+                    _clickedControl(raw);
+                }
+            });
             m.connected[type] = true;
             return true;
         }
@@ -5633,7 +6109,7 @@ function _connectSignalOnce(raw, type) {
         return true;
     } else if (type === "input") {
         if (typeof raw.textEdited === "function") {
-            raw.textEdited.connect(function() { _dispatchDynamic(raw, "input", null); });
+            raw.textEdited.connect(function() { _inTyped(raw); });
             m.connected[type] = true;
             return true;
         }
@@ -5651,7 +6127,11 @@ function _connectSignalOnce(raw, type) {
         if (typeof raw.textChanged === "function") {
             // TextArea has no "edited by the user" signal.
             raw.textChanged.connect(function() {
-                if (raw.activeFocus) {
+                if (_in) {
+                    if (_in.typing) {
+                        _inTyped(raw);
+                    }
+                } else if (raw.activeFocus) {
                     _dispatchDynamic(raw, "input", null);
                 }
             });
@@ -5690,6 +6170,11 @@ function _connectSignalOnce(raw, type) {
         if (typeof raw.editingFinished === "function") {
             // Enter, then leaving the field, is one `change`, and none if nothing changed.
             m.changeBase = String(raw.text);
+            if (_in) {
+                // Before the blur, with nothing focused: the layer's focus path says when.
+                m.connected[type] = true;
+                return true;
+            }
             if (typeof raw.activeFocusChanged === "function") {
                 raw.activeFocusChanged.connect(function() {
                     if (raw.activeFocus) {
@@ -5824,7 +6309,10 @@ function listenBound(item, eventType, handler, options) {
 // own listeners. What is fired only at the root (`resize`, `hashchange`, ...)
 // is listened for there.
 function _listenerHome(item, eventType) {
-    if ((item === document || item === window) && _BUBBLES[String(eventType)] === true) {
+    // A script's own event type is in no table, and goes up to the document as any other.
+    if ((item === document || item === window)
+        && (_BUBBLES[String(eventType)] === true || _DOCUMENT_HEARS[String(eventType)] === true
+            || _ROOT_HEARS[String(eventType)] !== true)) {
         return item;
     }
     return _unwrap(item);
@@ -5852,13 +6340,17 @@ function _addListener(item, eventType, handler, options) {
     var raw = item === document || item === window ? item : _unwrap(item);
     var type = String(eventType);
     var key = _isCapture(options) ? "capture:" + type : type;
+    var said = options && typeof options === "object" ? options : {};
+    if (said.signal && said.signal.aborted) {
+        return false;
+    }
     var m = _listenerMeta(raw);
     if (!m.listeners[key]) {
         m.listeners[key] = [];
     }
     if (m.listeners[key].indexOf(handler) === -1) {
         m.listeners[key].push(handler);
-        if (options && typeof options === "object" && Boolean(options.once)) {
+        if (Boolean(said.once)) {
             if (!m.onceListeners[key]) {
                 m.onceListeners[key] = [];
             }
@@ -5866,7 +6358,18 @@ function _addListener(item, eventType, handler, options) {
                 m.onceListeners[key].push(handler);
             }
         }
+        if (said.passive !== undefined) {
+            m.passive = m.passive || {};
+            m.passive[key] = m.passive[key] || new Map();
+            m.passive[key].set(handler, Boolean(said.passive));
+        }
+        if (said.signal) {
+            said.signal.addEventListener("abort", function() {
+                unlisten(item, eventType, handler, options);
+            });
+        }
     }
+    _inInstallFor(raw, type);
     _wantForControls(type);
     return true;
 }
@@ -5888,6 +6391,7 @@ function _wantForControls(type) {
 }
 
 function _connectControls(from) {
+    _inWireControls(from);
     var kinds = Object.keys(_controlEvents);
     if (kinds.length === 0) {
         return;
@@ -5967,6 +6471,9 @@ function setOn(item, eventType, handler) {
 }
 
 function fireSubmit(item) {
+    if (_in) {
+        return;
+    }
     for (var at = item; at; at = at.parent) {
         if (at.eldurTag === "form") {
             fire(at, "submit", null);
@@ -6622,7 +7129,7 @@ function _genericElementSource(tag, inputType) {
         return _inputSource(inputType || "text");
     }
     if (tag === "textarea") {
-        return _NATIVE_IMPORTS + "TextArea { " + _NATIVE_TEXT + "color: \"black\"; background: Rectangle { color: \"white\"; border.color: \"#767676\" } }";
+        return _NATIVE_IMPORTS + "TextArea { " + _NATIVE_TEXT + _KEY_SIGNALS + "color: \"black\"; background: Rectangle { color: \"white\"; border.color: \"#767676\" } }";
     }
     if (tag === "select") {
         return _NATIVE_IMPORTS + "ComboBox { id: control; " + _KEY_SIGNALS
@@ -6965,6 +7472,9 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
                 _leaveFlow(next);
             }
         }
+        if (_gActive() && next && m.createdTag) {
+            _gLiveTemplates.push(next);
+        }
         m.templateComponent = component;
     } else {
         var tag = String(m.createdTag || "div").toLowerCase();
@@ -7016,7 +7526,7 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
             _gGrave.parent = null;
         }
         oldRaw.parent = _gGrave;
-    } else {
+    } else if (!oldRaw.__eldurInline) {
         oldRaw.destroy();
     }
     // A new item starts with its template's place.
@@ -7109,6 +7619,12 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
     for (ei = 0; ei < evNames.length; ++ei) {
         _connectSignalOnce(next, evNames[ei]);
     }
+    // What was attached to the old object went with it.
+    if (m.areaTop !== undefined) {
+        m.areaTop = undefined;
+        scrollArea(next);
+    }
+    _connectControls(next);
 
     return next;
 }
@@ -7584,6 +8100,115 @@ function wrap(rawItem) {
         get _item() { return rawItem; },
         style: styleProxy,
         get elements() { return _formElements(rawItem); },
+        get length() {
+            var sel = _vSelectModel(rawItem);
+            if (sel) {
+                return _vOptions(sel).length;
+            }
+            return _nodeTag(rawItem) === "form" ? _formElements(rawItem).length : undefined;
+        },
+        // Forms: the constraint validation and default-action API.
+        get validity() { return _validity(rawItem).flags; },
+        get validationMessage() { return _validity(rawItem).message; },
+        get willValidate() { return !_isBarred(rawItem); },
+        checkValidity: function() {
+            return _nodeTag(rawItem) === "form" ? _formCheck(rawItem) : _checkOne(rawItem);
+        },
+        reportValidity: function() {
+            if (_nodeTag(rawItem) === "form") {
+                return _formReport(rawItem);
+            }
+            var fine = _checkOne(rawItem);
+            if (!fine) {
+                _reportFirst([rawItem]);
+            }
+            return fine;
+        },
+        setCustomValidity: function(text) { m.customValidity = String(text); },
+        requestSubmit: function(submitter) { _inSubmit(rawItem, submitter ? _unwrap(submitter) : null); },
+        submit: function() { _formNavigate(rawItem, null); },
+        reset: function() { _formReset(rawItem); },
+        get form() {
+            var form = _inFormOf(rawItem);
+            return form ? wrap(form) : null;
+        },
+        get action() { return getAttribute(rawItem, "action") || ""; },
+        get method() { return String(getAttribute(rawItem, "method") || "get").toLowerCase(); },
+        get noValidate() { return getAttribute(rawItem, "novalidate") !== null; },
+        get formNoValidate() { return getAttribute(rawItem, "formnovalidate") !== null; },
+        get required() { return getAttribute(rawItem, "required") !== null; },
+        set required(v) { _reflectFlag(m, "required", v); },
+        get readOnly() { return getAttribute(rawItem, "readonly") !== null; },
+        get multiple() { return getAttribute(rawItem, "multiple") !== null; },
+        get minLength() { var n = parseInt(getAttribute(rawItem, "minlength"), 10); return isNaN(n) ? -1 : n; },
+        get maxLength() { var n = parseInt(getAttribute(rawItem, "maxlength"), 10); return isNaN(n) ? -1 : n; },
+        get defaultValue() {
+            return m.defaultValueSet !== undefined ? m.defaultValueSet : (getAttribute(rawItem, "value") || "");
+        },
+        set defaultValue(v) {
+            m.defaultValueSet = String(v);
+            // A field somebody or something has written keeps what it has.
+            var kept = typeof rawItem.text === "string" && (m.edited || m.explicitValue !== undefined) ? rawItem.text : null;
+            setAttribute(rawItem, "value", String(v));
+            if (kept !== null) {
+                rawItem.text = kept;
+            }
+        },
+        get defaultChecked() { return getAttribute(rawItem, "checked") !== null; },
+        set defaultChecked(v) { _reflectFlag(m, "checked", v); },
+        get selectionStart() { return _inIsField(rawItem) ? rawItem.selectionStart === rawItem.selectionEnd ? rawItem.cursorPosition : rawItem.selectionStart : null; },
+        get selectionEnd() { return _inIsField(rawItem) ? rawItem.selectionStart === rawItem.selectionEnd ? rawItem.cursorPosition : rawItem.selectionEnd : null; },
+        get selectionDirection() { return _inIsField(rawItem) ? "forward" : null; },
+        setSelectionRange: function(start, end) {
+            if (_inIsField(rawItem)) {
+                rawItem.select(start, end);
+                _selectEvent(rawItem);
+            }
+        },
+        select: function() {
+            if (_inIsField(rawItem)) {
+                // Chromium's takes the focus too, and the spec's is silent.
+                focus(rawItem);
+                rawItem.selectAll();
+                _selectEvent(rawItem);
+            }
+        },
+        get labels() {
+            var mine = wrapper.id;
+            return _asNodeList(_elementsUnder(_root, function(node) {
+                if (_nodeTag(node) !== "label") {
+                    return false;
+                }
+                return _labelControl(node) === rawItem;
+            }, false).map(wrap));
+        },
+        get control() {
+            var found = _labelControl(rawItem);
+            return found ? wrap(found) : null;
+        },
+        // `dialog`.
+        showModal: function() { _dialogOpen(rawItem, true); },
+        show: function() { _dialogOpen(rawItem, false); },
+        close: function(value) { _dialogClose(rawItem, value); },
+        get returnValue() { return m.returnValue === undefined ? "" : m.returnValue; },
+        set returnValue(v) { m.returnValue = String(v); },
+        // `popover`.
+        showPopover: function() { _inInstallNow(); _popoverShow(rawItem, true); },
+        hidePopover: function() { _inInstallNow(); _popoverShow(rawItem, false); },
+        togglePopover: function() { _inInstallNow(); _popoverShow(rawItem, !m.popoverOpen); },
+        setPointerCapture: function(id) { _inInstallNow(); _in.captureNext = rawItem; },
+        releasePointerCapture: function(id) {
+            if (_in && (_in.capture === rawItem || _in.captureNext === rawItem)) {
+                _in.captureNext = null;
+                _in.release = true;
+            }
+        },
+        hasPointerCapture: function(id) {
+            if (!_in) {
+                return false;
+            }
+            return (_in.captureNext === undefined ? _in.capture : _in.captureNext) === rawItem;
+        },
         get type() {
             // A static control's QML type is what it was written as.
             var written = m.inputType || getAttribute(rawItem, "type") || "";
@@ -7659,7 +8284,24 @@ function wrap(rawItem) {
             Qt.callLater(function() {
                 dispatchEvent(wrap(rawItem), new Event("toggle"));
             });
+            // Of those that share a name only one stays open.
+            var group = getAttribute(rawItem, "name");
+            if (next && group) {
+                _elementsUnder(_root, function(node) {
+                    return !node.__eldurInline && node !== rawItem && _nodeTag(node) === "details"
+                        && getAttribute(node, "name") === group && _meta(node).detailsOpen === true;
+                }, false).forEach(function(node) { wrap(node).open = false; });
+            }
         },
+        // What takes a stop by itself says 0, what does not -1, until a page says otherwise.
+        get tabIndex() {
+            var written = parseInt(getAttribute(rawItem, "tabindex"), 10);
+            if (!isNaN(written)) {
+                return written;
+            }
+            return typeof rawItem.clicked === "function" || _inIsField(rawItem) || _inIsLink(rawItem) ? 0 : -1;
+        },
+        set tabIndex(v) { setAttribute(rawItem, "tabindex", String(parseInt(v, 10) || 0)); },
         get innerHTML() { return getInnerHTML(rawItem); },
         set innerHTML(v) { setInnerHTML(rawItem, v); },
         get nodeType() {
@@ -7741,10 +8383,6 @@ function wrap(rawItem) {
             var sel = _vSelectModel(rawItem);
             return sel ? _asNodeList(_vOptions(sel).filter(function(o) { return o.sel; }).map(wrap)) : undefined;
         },
-        get length() {
-            var sel = _vSelectModel(rawItem);
-            return sel ? _vOptions(sel).length : undefined;
-        },
         set length(n) {
             if (this.options) {
                 this.options.length = n;
@@ -7775,14 +8413,25 @@ function wrap(rawItem) {
                 var current = rawItem.currentValue;
                 return current !== undefined && current !== null ? String(current) : rawItem.currentText;
             }
+            // A button's text is its label; its value is what the markup says.
+            if (_nodeTag(rawItem) === "button") {
+                return m.explicitValue !== undefined ? String(m.explicitValue) : (getAttribute(rawItem, "value") || "");
+            }
             // Before `text`: a checkbox's `text` is not its form value.
             if (typeof rawItem.checked === "boolean" && typeof rawItem.value === "string") {
                 return rawItem.value;
+            }
+            // Only controls have one, whatever Qt's `text` holds for what shows.
+            if (_vIsTagged(rawItem) && !/^(input|textarea|select|option|li|meter|progress|param|data)$/.test(_nodeTag(rawItem))) {
+                return m.explicitValue;
             }
             var unset = m.explicitValue === undefined && getAttribute(rawItem, "value") === null;
             var label = _G_INPUT_LABEL[getAttribute(rawItem, "type") || m.inputType];
             if (unset && label && rawItem.text === label) {
                 return "";
+            }
+            if (m.numberText !== undefined) {
+                return _inNumberValid(m.numberText) ? m.numberText : "";
             }
             // A SpinBox has no empty state. Zero nobody wrote stands for one.
             if (unset && rawItem.value === 0 && typeof rawItem.editable === "boolean") {
@@ -7790,6 +8439,9 @@ function wrap(rawItem) {
             }
             if (typeof rawItem.text === "string") {
                 return rawItem.text;
+            }
+            if (m.numberWritten && m.numberWritten.at === rawItem.value) {
+                return m.numberWritten.text;
             }
             if (typeof rawItem.value === "number") {
                 return typeof rawItem.indeterminate === "boolean"
@@ -7820,6 +8472,9 @@ function wrap(rawItem) {
                 rawItem.text = String(v);
             } else if (typeof rawItem.value === "number") {
                 rawItem.value = Number(v) || 0;
+                // What was written stands until the value moves: Qt's clamps to its
+                // range, and validity is about what the field holds.
+                m.numberWritten = { text: String(v), at: rawItem.value };
             }
         },
         get selectedIndex() {
@@ -7840,10 +8495,14 @@ function wrap(rawItem) {
             }
         },
         get checked() {
-            if (typeof rawItem.checked === "boolean") {
-                return Boolean(rawItem.checked);
+            if (m.explicitChecked !== undefined) {
+                return typeof rawItem.checked === "boolean" ? Boolean(rawItem.checked) : m.explicitChecked;
             }
-            return Boolean(m.explicitChecked);
+            // Only an input has one; Qt gives one to every button.
+            if (_nodeTag(rawItem) !== "input" && _vIsTagged(rawItem)) {
+                return undefined;
+            }
+            return typeof rawItem.checked === "boolean" ? Boolean(rawItem.checked) : false;
         },
         set checked(v) {
             m.explicitChecked = Boolean(v);
@@ -7851,11 +8510,13 @@ function wrap(rawItem) {
                 rawItem.checked = Boolean(v);
             }
         },
-        get disabled() { return rawItem.__eldurInline ? _vGetAttr(rawItem, "disabled") !== null : rawItem.enabled !== undefined ? !rawItem.enabled : Boolean(m.explicitDisabled); },
+        get disabled() { return _nodeTag(rawItem) === "fieldset" ? getAttribute(rawItem, "disabled") !== null : rawItem.__eldurInline ? _vGetAttr(rawItem, "disabled") !== null : rawItem.enabled !== undefined ? getAttribute(rawItem, "disabled") !== null || (!rawItem.enabled && !_isDisabled(rawItem)) : Boolean(m.explicitDisabled); },
         set disabled(v) {
             m.explicitDisabled = Boolean(v);
             _reflectFlag(m, "disabled", v);
-            if (typeof rawItem.enabled === "boolean") {
+            if (_nodeTag(rawItem) === "fieldset") {
+                _fieldsetTurned(rawItem);
+            } else if (typeof rawItem.enabled === "boolean") {
                 rawItem.enabled = !v;
             }
             // `focus` stays set in Qt, and `activeElement` would go on reading it.
@@ -8103,6 +8764,9 @@ function wrap(rawItem) {
         get clientHeight() { return _clientSize(rawItem, "height"); },
         get scrollTop() {
             _layoutForRead();
+            if (m.areaTop !== undefined) {
+                return m.areaScroll;
+            }
             var scroller = _scrollerOf(rawItem);
             if (scroller) {
                 return scroller.contentY;
@@ -8113,6 +8777,10 @@ function wrap(rawItem) {
             return m.scrollTop || 0;
         },
         set scrollTop(v) {
+            if (m.areaTop !== undefined) {
+                _areaScrollTo(rawItem, Number(v) || 0);
+                return;
+            }
             _applyScrollOffset("y", v);
         },
         get scrollLeft() {
@@ -8136,6 +8804,9 @@ function wrap(rawItem) {
         },
         get scrollHeight() {
             _layoutForRead();
+            if (m.areaTop !== undefined) {
+                return Math.max(_areaScrollHeight(rawItem), _clientSize(rawItem, "height"));
+            }
             return Math.max(_computeScrollDimension("y"), rawItem.eldurTag === "html" || rawItem === _root ? _root.height : 0);
         },
         get isConnected() {
@@ -9918,7 +10589,7 @@ function _vClientRects(v, whole) {
 // `_connectSignalOnce` for a node: what reaches it is its `Text`'s tap.
 function _vConnect(v, type) {
     _meta(v).connected[type] = true;
-    if (type === "click" && v.model && !v.model.select) {
+    if (type === "click" && v.model && !v.model.select && !_in) {
         _vTapHandler(v.model.text);
     }
 }
@@ -9928,6 +10599,9 @@ function _vTapHandler(text) {
     if (!m.vTap) {
         m.vTap = Qt.createQmlObject("import QtQuick; TapHandler {}", text, "eldur_vtap");
         m.vTap.tapped.connect(function(eventPoint, btn) {
+            if (_in) {
+                return;
+            }
             _beginTap({
                 position: eventPoint.position,
                 scenePosition: eventPoint.scenePosition,
@@ -9965,10 +10639,15 @@ function _vReconnect(node) {
 var _tap = null;
 
 // `childAt` stops at a parent's bounds, where a dropdown's list has only started.
-function _deepestUnder(item, scene) {
-    if (!item.visible || typeof item.mapFromItem !== "function") {
+function _deepestUnder(item, scene, parentOff) {
+    if (!item.visible || typeof item.mapFromItem !== "function" || (_in && item === _in.overlay)) {
         return null;
     }
+    // A shadow is outside its box; only paint.
+    if (typeof item.spread === "number" && typeof item.blur === "number") {
+        return null;
+    }
+    var off = _vIsTagged(item) || _meta(item).createdTag ? _hitOff(item) : Boolean(parentOff);
     var local = item.mapFromItem(null, scene.x, scene.y);
     var inside = local.x >= 0 && local.y >= 0 && local.x < item.width && local.y < item.height;
     if (item.clip && !inside) {
@@ -9979,39 +10658,52 @@ function _deepestUnder(item, scene) {
         kids.push({ at: i, kid: item.children[i] });
     }
     kids.sort(function(a, b) { return (b.kid.z - a.kid.z) || (b.at - a.at); });
+    // What only paints the box (a border's strips, an effect) can lie over the
+    // box's children, and an element under it is the one the point is on.
+    var painted = null;
     for (var k = 0; k < kids.length; ++k) {
-        var found = _deepestUnder(kids[k].kid, scene);
+        var found = _deepestUnder(kids[k].kid, scene, off);
         if (found) {
-            return found;
+            if (_isElementBetween(found, kids[k].kid)) {
+                return found;
+            }
+            painted = painted || found;
         }
+    }
+    if (painted) {
+        return painted;
     }
     // Positioned boxes hang from the initial containing block; it paints nothing,
     // and lies over the page.
     if (inside && _isPlainTextItem(item) && _isLines(item.parent) && !item.parent.runCovers(item, local.x, local.y)) {
         return null;
     }
-    return inside && item !== _root.eldurInitialBlock ? item : null;
+    return inside && !off && item !== _root.eldurInitialBlock ? item : null;
+}
+
+function _isElementBetween(found, top) {
+    for (var at = found; at; at = at.parent) {
+        if (_vIsTagged(at) || _meta(at).createdTag || _vModelOf(at)) {
+            return true;
+        }
+        if (at === top) {
+            return false;
+        }
+    }
+    return false;
+}
+
+// `pointer-events: none`, which is inherited and can be undone further down.
+function _hitOff(item) {
+    if (item.eldurNoHit === true || _focusIsGhost(item)) {
+        return true;
+    }
+    return _gHasCascade() && _gIsElement(item) && _gStyle(item)["pointer-events"] === "none";
 }
 
 function _deepestAt(scene) {
     var top = _root.contentItem || _root;
     return _deepestUnder(top, scene) || top;
-}
-
-// Pressing what takes no focus moves it to the page.
-function _blurUnlessFocusable(target) {
-    var raw = target;
-    for (; raw; raw = _gParent(raw)) {
-        if (raw.activeFocusOnTab === true || typeof raw.clicked === "function"
-            || typeof raw.cursorPosition === "number" || getAttribute(raw, "tabindex") !== null
-            || _nodeTag(raw) === "summary") {
-            return;
-        }
-    }
-    var active = document.activeElement;
-    if (active && active.blur && active !== document.body) {
-        active.blur();
-    }
 }
 
 function _beginTap(qtEv, heardBy) {
@@ -10036,7 +10728,6 @@ function _beginTap(qtEv, heardBy) {
         }
     }
     t.target = t.target || _unwrap(document.body) || heardBy;
-    _blurUnlessFocusable(t.target);
     t.ev = event("click", wrap(t.target), qtEv);
     t.ev.target = wrap(t.target);
     t.ev.bubbles = true;
@@ -10067,29 +10758,2096 @@ function _vClick(v) {
 // A control takes the press for itself, so no handler above it hears: the
 // event goes up from here. Its toggle has happened; `preventDefault` undoes it.
 function _clickedControl(raw) {
-    var m = _meta(raw);
-    var toggled = Boolean(m.toggledNow);
-    m.toggledNow = false;
-    var ev = event("click", wrap(raw), null);
-    _dispatchDynamic(raw, "click", ev);
-    if (!toggled) {
-        return;
-    }
-    if (ev.defaultPrevented) {
-        raw.checked = !raw.checked;
-        return;
-    }
-    _toggleEvents(raw);
+    var counted = _meta(raw).clickDetail;
+    _clickedControlWith(raw, event("click", wrap(raw), counted ? { detail: counted } : null));
 }
 
 function _toggleEvents(raw) {
     var m = _meta(raw);
-    if (m.connected.input) {
+    if (_in || m.connected.input) {
         _dispatchDynamic(raw, "input", null);
     }
-    if (m.connected.change) {
+    if (_in || m.connected.change) {
         _dispatchDynamic(raw, "change", null);
     }
+}
+
+// ---------------------------------------------------------------------------
+// The input layer. A page with listeners hears the mouse here, at one item over
+// everything, and not at each element: a control or a link takes a press for
+// itself, and a handler on an element hears nothing that starts outside its box.
+// It sees a press before anything under it does, and takes nothing from them.
+// ---------------------------------------------------------------------------
+
+var _IN_POINTER = {
+    click: true, dblclick: true, auxclick: true, contextmenu: true, wheel: true,
+    mousedown: true, mouseup: true, mousemove: true, mouseover: true, mouseout: true,
+    mouseenter: true, mouseleave: true, pointerdown: true, pointerup: true, pointermove: true,
+    pointerover: true, pointerout: true, pointerenter: true, pointerleave: true,
+    gotpointercapture: true, lostpointercapture: true, pointercancel: true
+};
+var _IN_WANTS = {
+    keydown: true, keyup: true, keypress: true, beforeinput: true, input: true, change: true,
+    submit: true, reset: true, invalid: true, focus: true, blur: true, focusin: true,
+    focusout: true, select: true
+};
+
+var _IN_LAYERED = {
+    keydown: true, keyup: true, keypress: true, beforeinput: true, focus: true, blur: true,
+    focusin: true, focusout: true, submit: true, reset: true, invalid: true, select: true
+};
+
+var _in = null;
+
+function _inInstallFor(raw, type) {
+    if (_in || !_root || (_IN_POINTER[type] !== true && _IN_WANTS[type] !== true)) {
+        return;
+    }
+    if (raw !== document && raw !== window && !raw.__eldurInline && typeof raw.mapToItem !== "function") {
+        return;
+    }
+    _inInstall();
+}
+
+function _inInstall() {
+    _in = {
+        page: _root, overlay: null, held: 0, last: null, pressed: false, hoverP: null, hoverM: null,
+        downTarget: {}, noMouse: false, count: 0, countButton: -1, countAt: null, countTime: 0,
+        capture: null, captureNext: null, defaults: [], scrolled: null, restoreFocus: null,
+        restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusShift: false,
+        spaceDown: null, typing: null, popovers: [], radioLast: {}, focusProbe: null
+    };
+    var home = _root.contentItem || _root;
+    var overlay = Qt.createQmlObject("import QtQuick\n"
+        + "Item { anchors.fill: parent; z: 1000000\n"
+        + "  signal pointed(point scene, int buttons, int modifiers)\n"
+        + "  signal wheeled(var ev)\n"
+        + "  PointHandler { acceptedButtons: Qt.AllButtons\n"
+        + "    onActiveChanged: parent.pointed(active ? point.scenePosition : Qt.point(-1e9, 0), active ? point.pressedButtons : 0, point.modifiers)\n"
+        + "    onPointChanged: if (active) parent.pointed(point.scenePosition, point.pressedButtons, point.modifiers)\n"
+        + "  }\n"
+        + "  WheelHandler { target: null; blocking: false; acceptedDevices: PointerDevice.AllDevices; onWheel: (ev) => parent.wheeled(ev) }\n"
+        + "}", home, "eldur_input");
+    _in.overlay = overlay;
+    overlay.pointed.connect(_inPointed);
+    // On what holds the page: Qt gives a hover to one branch, so one over the
+    // page would leave every element's `:hover` and cursor without.
+    var hover = Qt.createQmlObject("import QtQuick; HoverHandler { blocking: false }", home, "eldur_input_hover");
+    hover.pointChanged.connect(function() {
+        if (hover.hovered) {
+            _inPointed(hover.point.scenePosition, -1, hover.point.modifiers);
+        }
+    });
+    overlay.wheeled.connect(_inWheel);
+    var probe = Qt.createQmlObject("import QtQuick; Item { readonly property Item held: Window.activeFocusItem; readonly property bool active: Window.active }",
+        home, "eldur_input_focus");
+    _in.focusProbe = probe;
+    probe.heldChanged.connect(_inFocusChanged);
+    _in.focused = null;
+    // `autofocus` asked before the layer was there to hear.
+    Qt.callLater(_inFocusChanged);
+    _inKeysOn(home);
+    _inWireControls(_root);
+    // What listened before there was a layer got a handler of its own only if it
+    // came first; there is no such listener, as this runs at the first.
+}
+
+// One call for each thing the mouse does; `buttons` is -1 for "as it was", from
+// a hover, and a released point has no position left to read.
+function _inPointed(scene, buttons, modifiers) {
+    // Nothing the mouse does overtakes the click of the release before it.
+    _inFlushLater();
+    if (scene.x === -1e9) {
+        scene = _in.last;
+    }
+    if (!scene) {
+        return;
+    }
+    var held = buttons === -1 ? _in.held : buttons;
+    var at = _in.last;
+    var changed = !at || at.x !== scene.x || at.y !== scene.y;
+    if (held === _in.held && !changed) {
+        return;
+    }
+    var mods = modifiers || 0;
+    var was = _in.held;
+    _in.last = Qt.point(scene.x, scene.y);
+    if (changed) {
+        _in.held = was;
+        _inMoved(_in.last, mods);
+    }
+    for (var bit = 1; bit <= 16; bit <<= 1) {
+        if ((held & bit) && !(_in.held & bit)) {
+            _in.held |= bit;
+            _inDown(bit, _in.last, mods, was);
+        } else if (!(held & bit) && (_in.held & bit)) {
+            _in.held &= ~bit;
+            _inUp(bit, _in.last, mods);
+        }
+    }
+}
+
+function _inElementOf(deep, scene) {
+    for (var at = deep; at; at = at.parent) {
+        var model = _vModelOf(at);
+        if (model && !model.select) {
+            var local = at.mapFromItem(null, scene.x, scene.y);
+            return _vHitAt(model, local.x, local.y) || _vHostElement(model);
+        }
+        if (!_isInternalHelperNode(at) && (_vIsTagged(at) || Boolean(_meta(at).createdTag))) {
+            return at;
+        }
+    }
+    return null;
+}
+
+function _inHit(scene) {
+    return _dialogHit(_inElementOf(_deepestAt(scene), scene) || _inCanvasAt(scene));
+}
+
+// Past the body's own box, in its margin or below it, the press is on the root.
+function _inCanvasAt(scene) {
+    var body = document.body;
+    var box = body.getBoundingClientRect();
+    var inside = scene.x >= box.left && scene.x < box.right && scene.y >= box.top && scene.y < box.bottom;
+    return _unwrap(inside || !_taggedHtml() ? body : document.documentElement);
+}
+
+// A wheel only passive listeners hear scrolls without waiting, and cannot be stopped.
+function _inWheelWaits(raw) {
+    return _eventPath(raw).some(function(node) {
+        var m = _listenerMeta(node);
+        return Object.keys(m.listeners).some(function(key) {
+            return key.indexOf("wheel") === 0 && m.listeners[key].some(function(fn) {
+                return !_isPassive(m, key, fn, node, "wheel");
+            });
+        });
+    });
+}
+
+function _IN_BUTTON(bit) {
+    return bit === Qt.RightButton ? 2 : bit === Qt.MiddleButton ? 1 : bit === Qt.BackButton ? 3
+        : bit === Qt.ForwardButton ? 4 : 0;
+}
+
+function _inFire(type, raw, scene, mods, init) {
+    var o = init || {};
+    var pointerish = type.indexOf("pointer") === 0 || type === "click" || type === "auxclick"
+        || type === "contextmenu" || type === "gotpointercapture" || type === "lostpointercapture";
+    var ev = event(type, wrap(raw), {
+        modifiers: mods, scenePosition: scene, position: scene, detail: o.detail || 0
+    });
+    var quiet = type === "mouseenter" || type === "mouseleave" || type === "pointerenter"
+        || type === "pointerleave" || type === "gotpointercapture" || type === "lostpointercapture";
+    ev.bubbles = !(type === "mouseenter" || type === "mouseleave" || type === "pointerenter" || type === "pointerleave");
+    ev.cancelable = !quiet && type !== "pointermove_" && (type !== "wheel" || _inWheelWaits(raw));
+    ev.button = o.button === undefined ? 0 : o.button;
+    ev.buttons = _in.held;
+    ev.relatedTarget = o.related ? _eventTarget(o.related) : null;
+    if (pointerish) {
+        ev.pointerType = "mouse";
+        ev.pointerId = 1;
+        ev.isPrimary = true;
+    }
+    ev.pageX = scene.x + _inScrollX();
+    ev.pageY = scene.y + _inScrollY();
+    ev.screenX = scene.x;
+    ev.screenY = scene.y;
+    ev.x = scene.x;
+    ev.y = scene.y;
+    _inOffset(ev, raw, scene);
+    if (o.delta) {
+        ev.deltaX = o.delta.x;
+        ev.deltaY = o.delta.y;
+    }
+    _micro.native = true;
+    _dispatchDynamic(raw, type, ev);
+    _micro.native = false;
+    return ev;
+}
+
+function _inScrollX() {
+    var page = _findRootScroller();
+    return page ? page.contentX : 0;
+}
+
+function _inScrollY() {
+    var page = _findRootScroller();
+    return page ? page.contentY : 0;
+}
+
+// Measured only if read: most listeners on a move never do.
+function _inOffset(ev, raw, scene) {
+    var box = null;
+    var measure = function() {
+        if (box === null) {
+            box = { x: 0, y: 0 };
+            if (raw && raw !== document && raw !== window) {
+                var element = wrap(raw);
+                var r = element.getBoundingClientRect();
+                box = { x: r.left + (element.clientLeft || 0), y: r.top + (element.clientTop || 0) };
+            }
+        }
+        return box;
+    };
+    Object.defineProperty(ev, "offsetX", { get: function() { return scene.x - measure().x; }, configurable: true });
+    Object.defineProperty(ev, "offsetY", { get: function() { return scene.y - measure().y; }, configurable: true });
+}
+
+function _inPathOf(raw) {
+    if (!raw) {
+        return [];
+    }
+    return _eventPath(raw).filter(function(n) { return n !== document && n !== window; });
+}
+
+// Out of one element and over another; enter and leave go to each ancestor that
+// changed sides, the deepest first when leaving and last when entering.
+function _inBoundary(prefix, from, to, scene, mods) {
+    if (from === to) {
+        return;
+    }
+    var button = prefix === "pointer" ? -1 : 0;
+    var fromPath = _inPathOf(from);
+    var toPath = _inPathOf(to);
+    if (from) {
+        _inFire(prefix + "out", from, scene, mods, { related: to, button: button });
+        for (var i = 0; i < fromPath.length; ++i) {
+            if (toPath.indexOf(fromPath[i]) === -1) {
+                _inFire(prefix + "leave", fromPath[i], scene, mods, { related: to, button: button });
+            }
+        }
+    }
+    if (to) {
+        _inFire(prefix + "over", to, scene, mods, { related: from, button: button });
+        for (var j = toPath.length - 1; j >= 0; --j) {
+            if (fromPath.indexOf(toPath[j]) === -1) {
+                _inFire(prefix + "enter", toPath[j], scene, mods, { related: from, button: button });
+            }
+        }
+    }
+}
+
+function _inRetarget(scene, mods) {
+    _inCaptureTurn(scene, mods);
+    var target = _in.capture || _inHit(scene);
+    var overP = _in.hoverP;
+    _in.hoverP = target;
+    _inBoundary("pointer", overP, target, scene, mods);
+    if (!_in.noMouse) {
+        var overM = _in.hoverM;
+        _in.hoverM = target;
+        _inBoundary("mouse", overM, target, scene, mods);
+    }
+    return target;
+}
+
+function _inMoved(scene, mods) {
+    var target = _inRetarget(scene, mods);
+    _inFire("pointermove", target, scene, mods, { button: -1 });
+    if (!_in.noMouse) {
+        _inFire("mousemove", target, scene, mods, { button: 0 });
+    }
+}
+
+function _inDown(bit, scene, mods, heldBefore) {
+    var target = _inRetarget(scene, mods);
+    var button = _IN_BUTTON(bit);
+    var now = Date.now();
+    var at = _in.countAt;
+    var again = _in.countButton === bit && at && now - _in.countTime <= Qt.styleHints.mouseDoubleClickInterval
+        && Math.abs(at.x - scene.x) < 2 && Math.abs(at.y - scene.y) < 2;
+    _in.count = again ? _in.count + 1 : 1;
+    _in.countButton = bit;
+    _in.countAt = Qt.point(scene.x, scene.y);
+    _in.countTime = now;
+    _in.pressed = true;
+    _in.downTarget[bit] = target;
+    if (heldBefore === 0) {
+        _in.noMouse = !_inFire("pointerdown", target, scene, mods, { button: button }).defaultPrevented ? false : true;
+        _inHoldScrollers(target);
+    } else {
+        _inFire("pointermove", target, scene, mods, { button: button });
+    }
+    if (_in.noMouse) {
+        return;
+    }
+    // Under a disabled control no mouse event starts, and focus moves as ever.
+    var barred = _inMouseBarred(target);
+    if (!barred && _inFire("mousedown", target, scene, mods, { button: button, detail: _in.count }).defaultPrevented) {
+        _inKeepFocus(target);
+    } else {
+        _inFocusOnPress(target);
+    }
+    if (bit === Qt.RightButton) {
+        _inFire("contextmenu", target, scene, mods, { button: button });
+    }
+}
+
+function _inUp(bit, scene, mods) {
+    var target = _in.capture || _inHit(scene);
+    var button = _IN_BUTTON(bit);
+    var count = _in.count;
+    var from = _in.downTarget[bit];
+    delete _in.downTarget[bit];
+    var heldBy = _in.capture;
+    if (_in.held === 0) {
+        _inFire("pointerup", target, scene, mods, { button: button });
+    } else {
+        _inFire("pointermove", target, scene, mods, { button: button });
+    }
+    if (!_in.noMouse && !_inMouseBarred(target)) {
+        _inFire("mouseup", target, scene, mods, { button: button, detail: count });
+    }
+    if (_in.held === 0) {
+        _inEndCapture(scene, mods);
+        _in.noMouse = false;
+        _inRestoreFocus();
+    }
+    var moved = _inReleaseScrollers();
+    var hitNow = heldBy || _inHit(scene);
+    // After the release is delivered: what is under the point has had its say
+    // on the press (a box toggled, a link followed), and listeners read that.
+    _inLater(function() {
+        _popoverDismiss(hitNow);
+        _inClickOn(_inCommon(from, hitNow), bit, button, count, scene, mods, moved);
+    });
+}
+
+// `Qt.callLater` keeps one of each function, and closures of one count as one.
+function _inLater(run) {
+    _in.later.push(run);
+    Qt.callLater(_inFlushLater);
+}
+
+function _inFlushLater() {
+    var runs = _in.later;
+    _in.later = [];
+    runs.forEach(function(run) { run(); });
+}
+
+function _inCommon(a, b) {
+    if (!a || !b) {
+        return null;
+    }
+    var other = _eventPath(b);
+    var mine = _eventPath(a);
+    for (var i = 0; i < mine.length; ++i) {
+        if (other.indexOf(mine[i]) !== -1 && mine[i] !== document && mine[i] !== window) {
+            return mine[i];
+        }
+    }
+    return null;
+}
+
+function _inClickOn(target, bit, button, count, scene, mods, moved) {
+    var defaults = _in.defaults;
+    _in.defaults = [];
+    if (_in.held === 0) {
+        _in.pressed = false;
+    }
+    // A touch-like drag moved the scroller: the press was that, not a click.
+    if (!target || moved) {
+        return;
+    }
+    if (bit !== Qt.LeftButton) {
+        _inFire("auxclick", target, scene, mods, { button: button, detail: count });
+        return;
+    }
+    if (_inMouseBarred(target)) {
+        return;
+    }
+    var ev = _inClickEvent(target, scene, mods, count);
+    if (typeof target.clicked === "function") {
+        _clickedControlWith(target, ev);
+    } else {
+        _dispatchDynamic(target, "click", ev);
+    }
+    if (!ev.defaultPrevented) {
+        defaults.forEach(function(run) { run(); });
+    }
+    if (count === 2) {
+        _inFire("dblclick", target, scene, mods, { detail: 2 });
+    }
+}
+
+function _inClickEvent(target, scene, mods, count) {
+    var ev = event("click", wrap(target), { modifiers: mods, scenePosition: scene, position: scene, detail: count });
+    ev.bubbles = true;
+    ev.buttons = _in.held;
+    ev.pointerType = "mouse";
+    ev.pointerId = 1;
+    ev.isPrimary = true;
+    ev.pageX = scene.x + _inScrollX();
+    ev.pageY = scene.y + _inScrollY();
+    ev.screenX = scene.x;
+    ev.screenY = scene.y;
+    ev.x = scene.x;
+    ev.y = scene.y;
+    _inOffset(ev, target, scene);
+    return ev;
+}
+
+function _inIsOffControl(raw) {
+    return /^(button|input|select|textarea)$/.test(_nodeTag(raw)) && (raw.enabled === false || _isDisabled(raw));
+}
+
+function _inMouseBarred(target) {
+    for (var at = target; at; at = _gParent(at)) {
+        if (_inIsOffControl(at)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// A prevented `mousedown` keeps focus where it was. Only then is a control told
+// not to take it: this runs before the press reaches the control.
+function _inKeepFocus(target) {
+    for (var at = target; at; at = _gParent(at)) {
+        if (typeof at.focusPolicy === "number") {
+            _in.restoreFocus = { item: at, policy: at.focusPolicy };
+            at.focusPolicy = Qt.NoFocus;
+            return;
+        }
+        if (typeof at.activeFocusOnPress === "boolean") {
+            _in.restoreFocus = { item: at, press: at.activeFocusOnPress };
+            at.activeFocusOnPress = false;
+            return;
+        }
+    }
+}
+
+function _inRestoreFocus() {
+    var r = _in.restoreFocus;
+    _in.restoreFocus = null;
+    if (!r) {
+        return;
+    }
+    if (r.policy !== undefined) {
+        r.item.focusPolicy = r.policy;
+    } else {
+        r.item.activeFocusOnPress = r.press;
+    }
+}
+
+// The one word on what a press does to focus where there is a layer; a page
+// without one has only what `EldurScrollInput` does. The nearest ancestor that
+// can take focus does, and with none, the page, whose scroller under the press
+// is then the one the keys move.
+function _inFocusOnPress(target) {
+    _in.tabFrom = null;
+    for (var at = target; at; at = _gParent(at)) {
+        if (_inIsOffControl(at)) {
+            continue;
+        }
+        if (typeof at.clicked === "function" || typeof at.cursorPosition === "number"
+            || at.activeFocusOnTab === true) {
+            return;
+        }
+        if (getAttribute(at, "tabindex") !== null || _inIsLink(at) || _nodeTag(at) === "summary" || _nodeTag(at) === "dialog") {
+            focus(at);
+            return;
+        }
+    }
+    var active = document.activeElement;
+    if (active && active.blur && active !== document.body) {
+        active.blur();
+    }
+    // Where the next Tab starts, there being nothing focused to start from.
+    _in.tabFrom = target;
+    _inKeysToScroller(target);
+}
+
+function _inKeysToScroller(target) {
+    var from = target;
+    while (from && from.__eldurInline) {
+        from = _logicalParent(from);
+    }
+    for (var at = from; at; at = at.parent) {
+        var input = _meta(at).keysInput;
+        if (input) {
+            input.forceActiveFocus();
+            return;
+        }
+    }
+}
+
+// Dragging on what hears the mouse is the page's to answer; Chromium scrolls no
+// page by a mouse drag at all, though a Flickable does.
+function _inHoldScrollers(target) {
+    var path = _eventPath(target);
+    var hears = path.some(function(n) {
+        var m = _listenerMeta(n);
+        return ["pointerdown", "pointermove", "mousedown", "mousemove"].some(function(t) {
+            return _hasListeners(m, t);
+        });
+    });
+    _in.restoreScroll = [];
+    _in.scrolled = [];
+    _inScrollersOver(target).forEach(function(s) {
+        if (hears && s.interactive) {
+            s.interactive = false;
+            _in.restoreScroll.push(s);
+        } else {
+            _in.scrolled.push({ item: s, x: s.contentX, y: s.contentY });
+        }
+    });
+}
+
+function _inScrollersOver(target) {
+    var out = [];
+    var from = target;
+    while (from && from.__eldurInline) {
+        from = _logicalParent(from);
+    }
+    for (var at = from; at; at = at.parent) {
+        if (typeof at.contentY === "number" && typeof at.interactive === "boolean") {
+            out.push(at);
+        }
+    }
+    return out;
+}
+
+function _inReleaseScrollers() {
+    _in.restoreScroll.forEach(function(s) { s.interactive = true; });
+    _in.restoreScroll = [];
+    var moved = (_in.scrolled || []).some(function(e) {
+        return e.item.contentX !== e.x || e.item.contentY !== e.y;
+    });
+    _in.scrolled = null;
+    return moved;
+}
+
+function _inWheel(qtEv) {
+    var scene = qtEv.scenePosition || _in.last || Qt.point(qtEv.x, qtEv.y);
+    if (qtEv.x !== undefined && !qtEv.scenePosition) {
+        scene = _in.overlay.mapToItem(null, qtEv.x, qtEv.y);
+    }
+    var target = _inRetarget(scene, qtEv.modifiers);
+    // A scroller moves half the angle's units: the same as `delta` says.
+    var delta = {
+        x: qtEv.pixelDelta.x ? -qtEv.pixelDelta.x : -qtEv.angleDelta.x / 2 + 0,
+        y: qtEv.pixelDelta.y ? -qtEv.pixelDelta.y : -qtEv.angleDelta.y / 2 + 0
+    };
+    var ev = _inFire("wheel", target, scene, qtEv.modifiers, { delta: delta });
+    if (ev.defaultPrevented) {
+        // Each scroller under it hears the wheel after this, and asks.
+        var off = _inScrollersOver(target).filter(function(s) { return s.interactive; });
+        off.forEach(function(s) { s.interactive = false; });
+        _inLater(function() {
+            off.forEach(function(s) { s.interactive = true; });
+        });
+    }
+}
+
+// `setPointerCapture`: takes effect at the next pointer event, as the spec asks.
+function _inCaptureTurn(scene, mods) {
+    var next = _in.captureNext;
+    if (next === undefined || next === null && _in.capture === null || next === _in.capture) {
+        return;
+    }
+    var old = _in.capture;
+    _in.capture = next;
+    if (old) {
+        _inFire("lostpointercapture", old, scene, mods, {});
+    }
+    if (next) {
+        _inFire("gotpointercapture", next, scene, mods, {});
+    }
+}
+
+function _inEndCapture(scene, mods) {
+    _in.captureNext = null;
+    _inCaptureTurn(scene, mods);
+}
+
+// What the converter emitted for a link: followed unless the click is prevented.
+function afterClick(follow) {
+    if (_in && _in.pressed) {
+        _in.defaults.push(follow);
+    } else if (!linkPrevented()) {
+        follow();
+    }
+}
+
+// What the converter emitted for a label's tap.
+// A label's control gets a click of its own, counted as the press that made it.
+function labelled(item) {
+    var raw = _unwrap(item);
+    if (typeof raw.click === "function") {
+        _meta(raw).clickDetail = 1;
+        raw.click();
+        delete _meta(raw).clickDetail;
+        return;
+    }
+    raw.forceActiveFocus();
+    if (_in) {
+        var ev = event("click", wrap(raw), { detail: 1 });
+        ev.target = wrap(raw);
+        ev.bubbles = true;
+        _dispatchDynamic(raw, "click", ev);
+    }
+}
+
+function afterTap(eventPoint, run) {
+    if (_in && _in.pressed) {
+        _in.defaults.push(run);
+    } else if (!tapPrevented(eventPoint)) {
+        run();
+    }
+}
+
+function _clickedControlWith(raw, ev) {
+    var m = _meta(raw);
+    var toggled = Boolean(m.toggledNow);
+    m.toggledNow = false;
+    _dispatchDynamic(raw, "click", ev);
+    if (toggled) {
+        if (ev.defaultPrevented) {
+            _inUndoToggle(raw);
+            return;
+        }
+        _toggleEvents(raw);
+    }
+    if (_in && !ev.defaultPrevented) {
+        _inActivate(raw);
+    }
+}
+
+// A prevented click puts the box back, and a radio's group as it was.
+function _inUndoToggle(raw) {
+    if (!_inIsRadio(raw)) {
+        raw.checked = !raw.checked;
+        return;
+    }
+    var was = _in ? _meta(raw).radioWas : null;
+    raw.checked = false;
+    if (was) {
+        was.checked = true;
+    }
+}
+
+function _inWatchRadio(raw) {
+    var key = wrap(raw).name;
+    if (!key) {
+        return;
+    }
+    if (raw.checked) {
+        _in.radioLast[key] = raw;
+    }
+    raw.checkedChanged.connect(function() {
+        if (raw.checked) {
+            _meta(raw).radioWas = _in.radioLast[key] || null;
+            _in.radioLast[key] = raw;
+        }
+    });
+}
+
+
+// ---------------------------------------------------------------------------
+// The keyboard and focus. Qt offers a key to the focused item's `Keys`, then to
+// that of each parent; Keys attach only from QML, so a small object per item
+// listens. Whichever hears a key first answers for all of them, with one
+// sequence of events and one default action, and says whether Qt may go on.
+// ---------------------------------------------------------------------------
+// `Keys` can't be reached from a script, only from QML: `_IN_KEY_HEAR` listens
+// there. A made control has its own signals, and `_inKeyed` hears a key once.
+var _IN_KEY_HEAR = "import QtQuick; QtObject { property Item who; property var hear; "
+    + "property Connections c: Connections { target: who ? who.Keys : null; "
+    + "function onPressed(event) { hear(event, true); } "
+    + "function onReleased(event) { hear(event, false); } } }";
+
+function _inKeysOn(item) {
+    var m = _meta(item);
+    if (m.inKeys === item) {
+        return;
+    }
+    m.inKeys = item;
+    if (typeof item.eldurKeyDown === "function") {
+        item.eldurKeyDown.connect(function(qtEv) { _inKeyed(qtEv, true); });
+        item.eldurKeyUp.connect(function(qtEv) { _inKeyed(qtEv, false); });
+        return;
+    }
+    var listen = Qt.createQmlObject(_IN_KEY_HEAR, _in.overlay, "eldur-keys");
+    listen.hear = _inKeyed;
+    listen.who = item;
+}
+
+// What can take focus and what starts control events, wherever it came from.
+function _inWireControls(from) {
+    if (!_in) {
+        return;
+    }
+    _walkItems(from, function(item) {
+        if (item.__eldurInline) {
+            return false;
+        }
+        if (typeof item.keyStep === "function") {
+            // The scroller moves on keys in its own handler: ask first.
+            // The walk starts at the root: the first is the page's own.
+            _in.pageKeys = _in.pageKeys || item;
+            item.keyGate = _inKeyGate;
+            item.keyUpGate = _inKeyUpGate;
+            _meta(item.scroller).keysInput = item;
+            if (item.overlaidOn) {
+                _meta(item.overlaidOn).keysInput = item;
+            }
+        } else if (_startsEvents(item) || _inHasTabIndex(item)) {
+            _inKeysOn(item);
+            if (typeof item.clicked === "function") {
+                _connectSignalOnce(item, "click");
+                if (_inIsRadio(item)) {
+                    _inWatchRadio(item);
+                }
+            }
+            if (_inIsField(item)) {
+                _connectSignalOnce(item, "input");
+            }
+            if (typeof item.activeFocusChanged === "function" && typeof item.cursorPosition === "number") {
+                _meta(item).changeBase = String(item.text);
+                // Qt leaves a written value's caret at its end, a browser before it.
+                if (!_meta(item).caretPlaced) {
+                    _meta(item).caretPlaced = true;
+                    item.cursorPosition = 0;
+                }
+            }
+            if (typeof item.valueModified === "function") {
+                _inWireNumber(item);
+            }
+        }
+        return false;
+    });
+}
+
+// A number field holds what was typed, valid or not; `value` follows when it can.
+// Its editor takes keys before the SpinBox would hear them.
+function _inWireNumber(raw) {
+    var m = _meta(raw);
+    var editor = raw.contentItem;
+    if (m.numberEditor === editor || !editor || typeof editor.cursorPosition !== "number") {
+        return;
+    }
+    m.numberEditor = editor;
+    var hear = Qt.createQmlObject("import QtQuick; Connections { property Item who; target: who ? who.Keys : null; "
+        + "signal down(var event); signal up(var event); "
+        + "function onPressed(event) { down(event); } function onReleased(event) { up(event); } }", raw, "eldur_number_keys");
+    hear.who = editor;
+    hear.down.connect(function(qtEv) { _inKeyed(qtEv, true); });
+    hear.up.connect(function(qtEv) { _inKeyed(qtEv, false); });
+    // Qt would commit its own reading of the text at focus out.
+    raw.valueFromText = function(text) {
+        return _inNumberValid(text) ? Math.round(Number(text)) : raw.value;
+    };
+    raw.valueChanged.connect(function() {
+        if (m.numberText !== undefined && !m.numberEditing) {
+            delete m.numberText;
+            editor.text = Qt.binding(function() { return raw.displayText; });
+        }
+    });
+}
+
+function _inNumberValid(text) {
+    return /^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(text);
+}
+
+function _inNumberKey(raw, key, text, writes) {
+    var m = _meta(raw);
+    var editor = raw.contentItem;
+    if (key === Qt.Key_Up || key === Qt.Key_Down) {
+        if (key === Qt.Key_Up ? raw.value < raw.to : raw.value > raw.from) {
+            return _inInputEvent("beforeinput", raw, "insertText", null).defaultPrevented;
+        }
+        return false;
+    }
+    var at = editor.cursorPosition;
+    var was = String(editor.text);
+    var from = Math.min(editor.selectionStart, editor.selectionEnd);
+    var to = Math.max(editor.selectionStart, editor.selectionEnd);
+    var type = null;
+    var data = null;
+    if (writes) {
+        // A number field takes what a number can be written with, and nothing else.
+        // It is asked first all the same.
+        if (!/^[0-9eE+\-.]$/.test(text)) {
+            _inInputEvent("beforeinput", raw, "insertText", text);
+            return true;
+        }
+        type = "insertText";
+        data = text;
+    } else if (key === Qt.Key_Backspace && (at > 0 || from !== to)) {
+        type = "deleteContentBackward";
+        from = from !== to ? from : at - 1;
+    } else if (key === Qt.Key_Delete && (at < was.length || from !== to)) {
+        type = "deleteContentForward";
+        to = from !== to ? to : at + 1;
+    }
+    if (!type) {
+        return false;
+    }
+    if (_inInputEvent("beforeinput", raw, type, data).defaultPrevented) {
+        return true;
+    }
+    var now = was.slice(0, from) + (data || "") + was.slice(to);
+    m.numberEditing = true;
+    m.numberText = now;
+    editor.text = now;
+    editor.cursorPosition = from + (data || "").length;
+    if (_inNumberValid(now)) {
+        raw.value = Math.round(Number(now));
+    }
+    m.numberEditing = false;
+    m.numberDirty = true;
+    _inInputEvent("input", raw, type, data);
+    return true;
+}
+
+// A range moves by a step, a tenth of itself for a page, and to its ends, and
+// a key's move is both events at once.
+function _inRangeKey(raw, key) {
+    var step = raw.stepSize > 0 ? raw.stepSize : 1;
+    var page = Math.max(step, (raw.to - raw.from) / 10);
+    var moves = {};
+    moves[Qt.Key_Right] = raw.value + step;
+    moves[Qt.Key_Up] = raw.value + step;
+    moves[Qt.Key_Left] = raw.value - step;
+    moves[Qt.Key_Down] = raw.value - step;
+    moves[Qt.Key_PageUp] = raw.value + page;
+    moves[Qt.Key_PageDown] = raw.value - page;
+    moves[Qt.Key_Home] = raw.from;
+    moves[Qt.Key_End] = raw.to;
+    if (moves[key] === undefined) {
+        return false;
+    }
+    var next = Math.max(raw.from, Math.min(raw.to, moves[key]));
+    if (next !== raw.value) {
+        raw.value = next;
+        _dispatchDynamic(raw, "input", null);
+        _dispatchDynamic(raw, "change", null);
+    }
+    return true;
+}
+
+function _inHasTabIndex(item) {
+    return (_vIsTagged(item) || Boolean(_meta(item).createdTag)) && getAttribute(item, "tabindex") !== null;
+}
+
+function _inKeyGate(qtEv) {
+    _inKeyed(qtEv, true);
+    return !qtEv.accepted;
+}
+
+function _inKeyUpGate(qtEv) {
+    _inKeyed(qtEv, false);
+}
+
+function _inIsField(raw) {
+    return typeof raw.cursorPosition === "number";
+}
+
+function _inIsCheck(raw) {
+    return _nodeTag(raw) === "input" && typeof raw.checked === "boolean" && typeof raw.clicked === "function";
+}
+
+function _inIsRadio(raw) {
+    return _inIsCheck(raw) && typeof raw.checkState !== "number";
+}
+
+function _inKeyTarget() {
+    return _in.focused || _vBody();
+}
+
+function _vBody() {
+    var body = document.body;
+    return body ? _unwrap(body) : _root;
+}
+
+function _inKeyEvent(type, raw, qtEv) {
+    var ev = event(type, wrap(raw), qtEv);
+    ev.bubbles = true;
+    ev.cancelable = true;
+    // Platforms differ on whether a modifier counts itself; the web has it held
+    // on its way down and let go on its way up.
+    var going = type !== "keyup";
+    if (qtEv.key === Qt.Key_Shift) {
+        ev.shiftKey = going;
+    } else if (qtEv.key === Qt.Key_Control) {
+        ev.ctrlKey = going;
+    } else if (qtEv.key === Qt.Key_Alt) {
+        ev.altKey = going;
+    } else if (qtEv.key === Qt.Key_Meta) {
+        ev.metaKey = going;
+    }
+    _micro.native = true;
+    _dispatchDynamic(raw, type, ev);
+    _micro.native = false;
+    return ev;
+}
+
+function _inInputEvent(type, raw, inputType, data) {
+    var ev = event(type, wrap(raw), {});
+    ev.bubbles = true;
+    ev.cancelable = type === "beforeinput";
+    ev.inputType = inputType;
+    ev.data = data;
+    delete ev.key;
+    delete ev.code;
+    _dispatchDynamic(raw, type, ev);
+    return ev;
+}
+
+function _inKeyed(qtEv, down) {
+    var seen = _in.keysSeen;
+    var id = (down ? "d" : "u") + qtEv.key;
+    if (id in seen) {
+        qtEv.accepted = seen[id];
+        return seen[id];
+    }
+    delete seen[(down ? "u" : "d") + qtEv.key];
+    if (!_in.keysLater) {
+        _in.keysLater = true;
+        Qt.callLater(_inKeysDone);
+    }
+    var taken = down ? _inKeyDown(qtEv) : _inKeyUp(qtEv);
+    seen[id] = taken;
+    qtEv.accepted = taken;
+    return taken;
+}
+
+function _inKeysDone() {
+    _in.keysLater = false;
+    _in.keysSeen = {};
+}
+
+function _inKeyDown(qtEv) {
+    var raw = _inKeyTarget();
+    if (_inKeyEvent("keydown", raw, qtEv).defaultPrevented) {
+        return true;
+    }
+    // keydown's listeners can have moved the focus: the rest happens there.
+    raw = _inKeyTarget();
+    var key = qtEv.key;
+    var text = String(qtEv.text);
+    var enter = key === Qt.Key_Return || key === Qt.Key_Enter;
+    // A link's click takes the place of the keypress.
+    if (enter && _inIsLink(raw)) {
+        _inKeyClick(raw);
+        return true;
+    }
+    var writes = !(qtEv.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))
+        && (enter || (text.length > 0 && text.charCodeAt(0) >= 0x20 && text.charCodeAt(0) !== 0x7f));
+    if (writes && _inKeyEvent("keypress", raw, qtEv).defaultPrevented) {
+        return true;
+    }
+    if (key === Qt.Key_Tab || key === Qt.Key_Backtab) {
+        _inTabStep(key === Qt.Key_Backtab);
+        return true;
+    }
+    if (key === Qt.Key_Escape && _dialogEscape()) {
+        return true;
+    }
+    if (_inIsField(raw)) {
+        return _inFieldKey(raw, key, text, enter, writes);
+    }
+    if (enter && _inIsCheck(raw)) {
+        _inImplicitSubmit(raw);
+        return true;
+    }
+    if (key === Qt.Key_Space && (typeof raw.clicked === "function" || _nodeTag(raw) === "summary")) {
+        _in.spaceDown = raw;
+        return true;
+    }
+    if (enter && (typeof raw.clicked === "function" || _nodeTag(raw) === "summary" || _inIsLink(raw))) {
+        _inKeyClick(raw);
+        return true;
+    }
+    if (typeof raw.valueModified === "function" && raw.contentItem) {
+        return _inNumberKey(raw, key, text, writes);
+    }
+    if (typeof raw.moved === "function" && typeof raw.stepSize === "number") {
+        return _inRangeKey(raw, key);
+    }
+    if (_inIsRadio(raw)) {
+        var step = key === Qt.Key_Right || key === Qt.Key_Down ? 1 : key === Qt.Key_Left || key === Qt.Key_Up ? -1 : 0;
+        if (step !== 0) {
+            _inRadioStep(raw, step);
+            return true;
+        }
+    }
+    return false;
+}
+
+// What Qt's field took after `beforeinput` let it: the `input` that says so.
+function _inTyped(raw) {
+    _meta(raw).edited = true;
+    if (!_in) {
+        _dispatchDynamic(raw, "input", null);
+        return;
+    }
+    var what = _in.typing;
+    _in.typing = null;
+    _inInputEvent("input", raw, what ? what.type : "insertText", what ? what.data : null);
+}
+
+function _inFieldKey(raw, key, text, enter, writes) {
+    var area = typeof raw.wrapMode === "number" && typeof raw.echoMode !== "number";
+    var readOnly = raw.readOnly === true;
+    if (enter && !area) {
+        if (!readOnly && _inInputEvent("beforeinput", raw, "insertLineBreak", null).defaultPrevented) {
+            return true;
+        }
+        _flushChange(raw);
+        _inImplicitSubmit(raw);
+        return true;
+    }
+    var hasSelection = raw.selectionStart !== raw.selectionEnd;
+    var what = null;
+    if (enter) {
+        what = { type: "insertLineBreak", data: null };
+    } else if (writes) {
+        what = { type: "insertText", data: text };
+    } else if (key === Qt.Key_Backspace && (raw.cursorPosition > 0 || hasSelection)) {
+        what = { type: "deleteContentBackward", data: null };
+    } else if (key === Qt.Key_Delete && (raw.cursorPosition < raw.text.length || hasSelection)) {
+        what = { type: "deleteContentForward", data: null };
+    }
+    if (!what) {
+        return false;
+    }
+    // Readonly takes nothing, and only typing is still asked about first.
+    if (readOnly && what.type !== "insertText") {
+        return false;
+    }
+    if (_inInputEvent("beforeinput", raw, what.type, what.data).defaultPrevented) {
+        return true;
+    }
+    if (readOnly) {
+        return false;
+    }
+    _in.typing = what;
+    return false;
+}
+
+function _inKeyUp(qtEv) {
+    var raw = _inKeyTarget();
+    var prevented = _inKeyEvent("keyup", raw, qtEv).defaultPrevented;
+    if (qtEv.key === Qt.Key_Space && _in.spaceDown) {
+        var down = _in.spaceDown;
+        _in.spaceDown = null;
+        if (!prevented && down === _inKeyTarget()) {
+            _inKeyClick(down);
+        }
+        return true;
+    }
+    return prevented;
+}
+
+function _inIsLink(raw) {
+    return _nodeTag(raw) === "a" && getAttribute(raw, "href") !== null;
+}
+
+// A key's click comes from nowhere: no point, no count, and it is a click all
+// the same, with the element's default action after it.
+// Qt's `click()` also takes the focus, which a click from a key does not.
+function _inPress(raw) {
+    if (_inIsCheck(raw) && !(_inIsRadio(raw) && raw.checked)) {
+        var m = _meta(raw);
+        // Held as a press is, so the box's events wait for its click.
+        var was = m.pressing;
+        m.pressing = true;
+        raw.toggle();
+        m.pressing = was;
+        m.toggledNow = true;
+    }
+    raw.clicked();
+}
+
+function _inKeyClick(raw) {
+    if (typeof raw.clicked === "function") {
+        _inPress(raw);
+        return;
+    }
+    var ev = event("click", wrap(raw), {});
+    ev.bubbles = true;
+    ev.cancelable = true;
+    ev.pointerType = "";
+    ev.pointerId = -1;
+    _dispatchDynamic(raw, "click", ev);
+    if (!ev.defaultPrevented && _inIsLink(raw)) {
+        _inFollow(raw);
+    }
+}
+
+function _selectEvent(raw) {
+    _later(function() {
+        var ev = event("select", wrap(raw), {});
+        ev.bubbles = true;
+        ev.cancelable = false;
+        _dispatchDynamic(raw, "select", ev);
+    });
+}
+
+function _labelControl(label) {
+    var named = getAttribute(label, "for");
+    if (named !== null) {
+        var found = document.getElementById(named);
+        return found ? _unwrap(found) : null;
+    }
+    return _elementsUnder(label, function(node) {
+        return /^(button|input|select|textarea|meter|output|progress)$/.test(_nodeTag(node));
+    }, true)[0] || null;
+}
+
+function _inFollow(raw) {
+    var href = String(getAttribute(raw, "href"));
+    if (href.charAt(0) === "#") {
+        // A link to where the address already says still goes there.
+        if (location.hash === href) {
+            _scrollToFragment(href);
+        } else {
+            location.hash = href;
+        }
+    } else {
+        Qt.openUrlExternally(href);
+    }
+}
+
+function _inRadioGroup(raw) {
+    var name = wrap(raw).name;
+    if (!name) {
+        return [raw];
+    }
+    return _elementsUnder(_root, function(node) {
+        return _inIsRadio(node) && wrap(node).name === name && wrap(node).form === wrap(raw).form;
+    }, false);
+}
+
+function _inRadioStep(raw, step) {
+    var group = _inRadioGroup(raw).filter(function(r) { return r === raw || _inCanFocus(r); });
+    var next = group[(group.indexOf(raw) + step + group.length) % group.length];
+    if (next !== raw) {
+        focus(next);
+        _inPress(next);
+    }
+}
+
+function _inCanFocus(raw) {
+    if (raw.enabled === false || _itHidden(raw) || _inIsOffControl(raw)) {
+        return false;
+    }
+    for (var at = raw; at; at = at.parent) {
+        if (at.visible === false) {
+            return false;
+        }
+    }
+    return !_dialogInert(raw);
+}
+
+// The sequential focus order: positive tabindexes by number, then the rest as
+// they stand in the tree. Of a radio group only the checked one takes a stop.
+function _inTabStops() {
+    var positive = [];
+    var natural = [];
+    _elementsUnder(_root, function(node) { return !node.__eldurInline; }, false).forEach(function(node) {
+        var written = getAttribute(node, "tabindex");
+        var tag = _nodeTag(node);
+        var natively = typeof node.clicked === "function" || _inIsField(node) || typeof node.activated === "function"
+            || typeof node.moved === "function" || typeof node.valueModified === "function"
+            || _inIsLink(node) || tag === "summary";
+        var index = written === null ? (natively ? 0 : -1) : parseInt(written, 10);
+        if (isNaN(index) || index < 0 || !_inCanFocus(node)) {
+            return;
+        }
+        if (_inIsRadio(node) && !node.checked && _inRadioGroup(node).some(function(r) { return r.checked; })) {
+            return;
+        }
+        if (index > 0) {
+            positive.push({ node: node, index: index, at: positive.length });
+        } else {
+            natural.push(node);
+        }
+    });
+    positive.sort(function(a, b) { return a.index - b.index || a.at - b.at; });
+    return positive.map(function(p) { return p.node; }).concat(natural);
+}
+
+function _inWindowActive() {
+    return Boolean(_in.focusProbe && _in.focusProbe.active);
+}
+
+// From what has focus but is no stop, or where a press or a fragment left off:
+// the nearest stop in the tree, whatever its number. Forward with none left starts
+// over at the page's first stop of no number.
+function _inTabFrom(stops, from, back) {
+    var order = _elementsUnder(_root, function(node) { return !node.__eldurInline; }, false);
+    var here = order.indexOf(from);
+    var best = -1;
+    var bestAt = back ? -1 : order.length;
+    for (var i = 0; i < stops.length; ++i) {
+        var at = order.indexOf(stops[i]);
+        if (back ? at < here && at > bestAt : at > here && at < bestAt) {
+            best = i;
+            bestAt = at;
+        }
+    }
+    if (best >= 0 || back) {
+        return best;
+    }
+    for (var n = 0; n < stops.length; ++n) {
+        if (parseInt(getAttribute(stops[n], "tabindex"), 10) > 0 !== true) {
+            return n;
+        }
+    }
+    return 0;
+}
+
+// Past either end Tab leaves for the browser around the page, and the page is
+// left with nothing focused; from there it comes back in at the other end.
+function _inTabOut() {
+    var was = _in.focused;
+    if (was) {
+        wrap(was).blur();
+        _inKeysToScroller(was);
+    }
+}
+
+function _inTabStep(back) {
+    var stops = _inTabStops();
+    if (stops.length === 0) {
+        _inTabOut();
+        return;
+    }
+    var from = _in.tabFrom;
+    _in.tabFrom = null;
+    var at = from ? -1 : stops.indexOf(_in.focused);
+    var next;
+    if (at >= 0) {
+        next = at + (back ? -1 : 1);
+    } else if (from || _in.focused) {
+        next = _inTabFrom(stops, from || _in.focused, back);
+    } else {
+        next = back ? stops.length - 1 : 0;
+    }
+    if (next < 0 || next >= stops.length) {
+        _inTabOut();
+        return;
+    }
+    var raw = stops[next];
+    focus(raw);
+    // A field reached by Tab starts all selected, so typing replaces it.
+    if (_inIsField(raw) && typeof raw.selectAll === "function" && typeof raw.echoMode === "number") {
+        raw.selectAll();
+    }
+}
+
+function _inFocusElement() {
+    var item = _in.focusProbe.held;
+    var body = _vBody();
+    if (_in.inlineFocus && item === _in.inlineFocus.model.text) {
+        return _in.inlineFocus;
+    }
+    _in.inlineFocus = null;
+    for (var at = item; at; at = at.parent) {
+        if (at === body || at === _root) {
+            return null;
+        }
+        if (typeof at.keyStep === "function") {
+            return null;
+        }
+        if (_vIsTagged(at) || Boolean(_meta(at).createdTag)) {
+            return at;
+        }
+    }
+    // The window's own root holds the focus nothing else does.
+    return item && item.parent ? undefined : null;
+}
+
+function _inFocusChanged() {
+    var now = _inFocusElement();
+    // In a popup of its own (a select's list): the select still has the focus.
+    if (now === undefined || now === _in.focused) {
+        return;
+    }
+    var was = _in.focused;
+    // Qt takes it at once from what a script just disabled; a page hears at its next update.
+    if (!now && was && !was.__eldurInline && !was.enabled && !_in.focusSettling) {
+        _in.focusSettling = true;
+        Qt.callLater(function() {
+            _inFocusChanged();
+            _in.focusSettling = false;
+        });
+        return;
+    }
+    _in.focused = now;
+    // Focus somewhere is where the next Tab starts, whatever a fragment said before.
+    if (now && _nodeTag(now) !== "body") {
+        _in.tabFrom = null;
+    }
+    if (now && _inIsField(now)) {
+        _meta(now).changeBase = String(now.text);
+    }
+    if (now) {
+        _inWatchHidden(now);
+    }
+    _in.focusShift = true;
+    if (was) {
+        if (_inIsField(was)) {
+            _flushChange(was);
+        } else if (_meta(was).numberDirty) {
+            _meta(was).numberDirty = false;
+            _dispatchDynamic(was, "change", null);
+        }
+        var heard = function() { _inFocusEvents(was, now, "blur", "focusout"); };
+        // A script's change to what stays shown holds nothing back: focus moves in one go.
+        if (was.__eldurInline || (was.visible && was.enabled)) {
+            heard();
+        } else {
+            whenBlurred(was, "blur", heard);
+        }
+    }
+    _in.focusShift = false;
+    _activeElement = now;
+    if (now) {
+        _inFocusEvents(now, was, "focus", "focusin");
+    }
+}
+
+// Qt lets what it hid keep the focus; the page loses it, a moment later.
+function _inWatchHidden(raw) {
+    var m = _meta(raw);
+    if (m.inHidden || raw.__eldurInline) {
+        return;
+    }
+    m.inHidden = true;
+    // A hidden box's `visibility` and a `disabled` control both come as not enabled.
+    var look = function() {
+        if ((raw.visible && raw.enabled) || _in.focused !== raw) {
+            return;
+        }
+        Qt.callLater(function() {
+            if (_in.focused === raw && (!raw.visible || !raw.enabled)) {
+                (_root.contentItem || _root).forceActiveFocus();
+            }
+        });
+    };
+    raw.visibleChanged.connect(look);
+    raw.enabledChanged.connect(look);
+}
+
+function _inFocusEvents(raw, other, one, two) {
+    [one, two].forEach(function(type) {
+        var ev = event(type, wrap(raw), {});
+        ev.bubbles = type === "focusin" || type === "focusout";
+        ev.cancelable = false;
+        ev.relatedTarget = other ? wrap(other) : null;
+        _dispatchDynamic(raw, type, ev);
+    });
+}
+
+function _inImplicitSubmit(raw) {
+    var form = _inFormOf(raw);
+    if (!form) {
+        return;
+    }
+    var submit = _inDefaultButton(form);
+    if (submit) {
+        if (!_inIsOffControl(submit)) {
+            _inPress(submit);
+        }
+        return;
+    }
+    // HTML: with no submit button, only a form of one such field goes by Enter.
+    var fields = _formElements(form);
+    var blocking = 0;
+    Array.prototype.forEach.call(fields, function(el) {
+        if (_inIsField(_unwrap(el)) && !/^(hidden|checkbox|radio|range|color|file|submit|reset|button|image)$/.test(el.type)) {
+            blocking++;
+        }
+    });
+    if (blocking <= 1) {
+        _inSubmit(form, null);
+    }
+}
+
+function _inFormOf(raw) {
+    var named = getAttribute(raw, "form");
+    if (named !== null) {
+        var found = document.getElementById(named);
+        return found && _nodeTag(_unwrap(found)) === "form" ? _unwrap(found) : null;
+    }
+    for (var at = _gParent(raw); at; at = _gParent(at)) {
+        if (_nodeTag(at) === "form") {
+            return at;
+        }
+    }
+    return null;
+}
+
+function _inIsSubmitter(raw) {
+    var tag = _nodeTag(raw);
+    var type = String(getAttribute(raw, "type") || "").toLowerCase();
+    if (wrap(raw).type === "submit") {
+        return true;
+    }
+    return tag === "button" ? type === "" || type === "submit" : tag === "input" && (type === "submit" || type === "image");
+}
+
+function _inDefaultButton(form) {
+    var found = null;
+    _elementsUnder(_root, function(node) {
+        if (!found && !node.__eldurInline && typeof node.clicked === "function" && _inIsSubmitter(node)
+            && _inFormOf(node) === form) {
+            found = node;
+        }
+        return false;
+    }, false);
+    return found;
+}
+
+
+// ---------------------------------------------------------------------------
+// A form's default actions and constraint validation (HTML 4.10.21, 4.10.20).
+// ---------------------------------------------------------------------------
+function _inSubmit(form, submitter) {
+    var skip = getAttribute(form, "novalidate") !== null
+        || (submitter && getAttribute(submitter, "formnovalidate") !== null);
+    if (!skip && !_formReport(form)) {
+        return;
+    }
+    var ev = event("submit", wrap(form), {});
+    ev.bubbles = true;
+    ev.cancelable = true;
+    ev.submitter = submitter ? wrap(submitter) : null;
+    _dispatchDynamic(form, "submit", ev);
+    if (!ev.defaultPrevented) {
+        _formNavigate(form, submitter);
+    }
+}
+
+// There is no network to send to, and the page has nowhere to go: the method
+// `dialog` is the one that stays here.
+function _formNavigate(form, submitter) {
+    var method = String((submitter && getAttribute(submitter, "formmethod")) || getAttribute(form, "method") || "get");
+    if (method.toLowerCase() === "dialog") {
+        for (var at = form; at; at = _gParent(at)) {
+            if (_nodeTag(at) === "dialog") {
+                _dialogClose(at, submitter ? wrap(submitter).value : undefined);
+                return;
+            }
+        }
+        return;
+    }
+    var action = (submitter && getAttribute(submitter, "formaction")) || getAttribute(form, "action") || "";
+    console.warn("eldur: a form was submitted to \"" + action + "\", and a converted page does not navigate: nothing was sent");
+}
+
+function _formReset(form) {
+    var ev = event("reset", wrap(form), {});
+    ev.bubbles = true;
+    ev.cancelable = true;
+    _dispatchDynamic(form, "reset", ev);
+    if (ev.defaultPrevented) {
+        return;
+    }
+    Array.prototype.forEach.call(_formElements(form), function(el) {
+        var raw = _unwrap(el);
+        var tag = _nodeTag(raw);
+        if (tag === "select") {
+            _selectReset(raw);
+        } else if (_inIsCheck(raw)) {
+            raw.checked = getAttribute(raw, "checked") !== null;
+        } else if (_inIsField(raw) && typeof raw.text === "string") {
+            raw.text = el.defaultValue;
+            _meta(raw).changeBase = String(raw.text);
+            _meta(raw).edited = false;
+        }
+    });
+}
+
+function _selectReset(raw) {
+    if (_vSelectModel(raw)) {
+        return;
+    }
+    var at = _meta(raw).defaultIndex;
+    if (typeof raw.currentIndex === "number" && typeof at === "number") {
+        raw.currentIndex = at;
+    }
+}
+
+function _isBarred(raw) {
+    var tag = _nodeTag(raw);
+    if (tag !== "input" && tag !== "select" && tag !== "textarea" && tag !== "button") {
+        return true;
+    }
+    var type = String(wrap(raw).type || "").toLowerCase();
+    if (tag === "button" && type !== "submit") {
+        return true;
+    }
+    if (tag === "input" && /^(hidden|reset|button)$/.test(type)) {
+        return true;
+    }
+    return _isDisabled(raw) || (tag !== "select" && tag !== "button" && getAttribute(raw, "readonly") !== null);
+}
+
+// Each control answers for itself: `enabled` passes to all an item holds, and a
+// fieldset's legend stays usable. A `GroupBox` with its legend was never held off.
+function _fieldsetTurned(raw) {
+    raw.enabled = true;
+    _elementsUnder(raw, function(node) {
+        return !node.__eldurInline && /^(button|input|select|textarea)$/.test(_nodeTag(node));
+    }, false).forEach(function(node) {
+        node.enabled = !_isDisabled(node);
+    });
+}
+
+// Written, or from a disabled fieldset other than through its first legend.
+function _isDisabled(raw) {
+    if (getAttribute(raw, "disabled") !== null) {
+        return true;
+    }
+    var from = raw;
+    for (var at = _gParent(raw); at; at = _gParent(at)) {
+        if (_nodeTag(at) === "fieldset" && getAttribute(at, "disabled") !== null) {
+            var legend = _rawElementChildren(at).filter(function(k) { return _nodeTag(k) === "legend"; })[0];
+            if (legend !== from) {
+                return true;
+            }
+        }
+        from = at;
+    }
+    return false;
+}
+
+function _steps(raw) {
+    var type = String(wrap(raw).type || "").toLowerCase();
+    if (type !== "number" && type !== "range") {
+        return null;
+    }
+    var min = parseFloat(getAttribute(raw, "min"));
+    var max = parseFloat(getAttribute(raw, "max"));
+    var written = getAttribute(raw, "step");
+    var step = written === null ? 1 : parseFloat(written);
+    if (String(written).toLowerCase() === "any") {
+        step = 0;
+    } else if (isNaN(step) || step <= 0) {
+        step = 1;
+    }
+    return { min: min, max: max, step: step, base: isNaN(min) ? 0 : min };
+}
+
+function _emailProblem(value) {
+    var one = function(text) {
+        var at = text.indexOf("@");
+        if (at < 0) {
+            return "Please include an '@' in the email address. '" + text + "' is missing an '@'.";
+        }
+        if (at === 0) {
+            return "Please enter a part followed by '@'. '" + text + "' is incomplete.";
+        }
+        if (at === text.length - 1) {
+            return "Please enter a part following '@'. '" + text + "' is incomplete.";
+        }
+        return /^[A-Za-z0-9.!#$%&'*+\/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*$/.test(text)
+            ? "" : "Please enter an email address.";
+    };
+    return one(value);
+}
+
+// Each flag of `validity`, with the message Chromium gives for the first in its order.
+function _validity(raw) {
+    var m = _meta(raw);
+    var flags = {
+        valueMissing: false, typeMismatch: false, patternMismatch: false, tooLong: false, tooShort: false,
+        rangeUnderflow: false, rangeOverflow: false, stepMismatch: false, badInput: false, customError: false
+    };
+    var message = "";
+    var say = function(text) { if (message === "") { message = text; } };
+    var el = wrap(raw);
+    var tag = _nodeTag(raw);
+    var type = String(el.type || "").toLowerCase();
+    var value = _inIsCheck(raw) ? "" : String(el.value);
+    if (m.customValidity) {
+        flags.customError = true;
+        say(m.customValidity);
+    }
+    if (!_isBarred(raw)) {
+        if (getAttribute(raw, "required") !== null) {
+            if (type === "checkbox") {
+                if (!raw.checked) {
+                    flags.valueMissing = true;
+                    say("Please check this box if you want to proceed.");
+                }
+            } else if (type === "radio") {
+                if (!_inRadioGroup(raw).some(function(r) { return r.checked; })) {
+                    flags.valueMissing = true;
+                    say("Please select one of these options.");
+                }
+            } else if (value === "") {
+                flags.valueMissing = true;
+                say(tag === "select" ? "Please select an item in the list." : "Please fill out this field.");
+            }
+        }
+        if (value !== "" && tag !== "select") {
+            if (type === "email") {
+                var problem = _emailProblem(value);
+                if (problem !== "") {
+                    flags.typeMismatch = true;
+                    say(problem);
+                }
+            } else if (type === "url" && !/^[A-Za-z][A-Za-z0-9+.-]*:\S*$/.test(value)) {
+                flags.typeMismatch = true;
+                say("Please enter a URL.");
+            }
+            var pattern = getAttribute(raw, "pattern");
+            if (pattern !== null && !_inIsCheck(raw)) {
+                var whole = null;
+                try { whole = new RegExp("^(?:" + pattern + ")$"); } catch (e) { whole = null; }
+                if (whole && !whole.test(value)) {
+                    flags.patternMismatch = true;
+                    say("Please match the requested format.");
+                }
+            }
+            // Length limits are for what a person typed, not what a script set.
+            if (m.edited) {
+                var most = parseInt(getAttribute(raw, "maxlength"), 10);
+                var least = parseInt(getAttribute(raw, "minlength"), 10);
+                if (!isNaN(most) && value.length > most) {
+                    flags.tooLong = true;
+                    say("Please shorten this text to " + most + " characters or less (you are currently using " + value.length + " characters).");
+                }
+                if (!isNaN(least) && value.length < least) {
+                    flags.tooShort = true;
+                    say("Please lengthen this text to " + least + " characters or more (you are currently using " + value.length + " characters).");
+                }
+            }
+            var steps = _steps(raw);
+            var number = parseFloat(value);
+            if (steps && !isNaN(number)) {
+                if (!isNaN(steps.min) && number < steps.min) {
+                    flags.rangeUnderflow = true;
+                    say("Value must be greater than or equal to " + steps.min + ".");
+                }
+                if (!isNaN(steps.max) && number > steps.max) {
+                    flags.rangeOverflow = true;
+                    say("Value must be less than or equal to " + steps.max + ".");
+                }
+                if (steps.step > 0) {
+                    var off = (number - steps.base) / steps.step;
+                    if (Math.abs(off - Math.round(off)) > 1e-9) {
+                        flags.stepMismatch = true;
+                        var low = steps.base + Math.floor(off) * steps.step;
+                        var high = low + steps.step;
+                        if (!isNaN(steps.min) && low < steps.min) {
+                            say("Please enter a valid value. The nearest valid value is " + high + ".");
+                        } else if (!isNaN(steps.max) && high > steps.max) {
+                            say("Please enter a valid value. The nearest valid value is " + low + ".");
+                        } else {
+                            say("Please enter a valid value. The two nearest valid values are " + low + " and " + high + ".");
+                        }
+                    }
+                }
+            }
+        }
+    }
+    flags.valid = !Object.keys(flags).some(function(k) { return flags[k] === true; });
+    return { flags: flags, message: _isBarred(raw) ? "" : message };
+}
+
+function _formControlsOf(form) {
+    return _inFormListed(form).filter(function(raw) { return !_isBarred(raw); });
+}
+
+function _inFormListed(form) {
+    return _elementsUnder(_root, function(node) {
+        return /^(button|input|select|textarea)$/.test(_nodeTag(node)) && _inFormOf(node) === form;
+    }, false);
+}
+
+function _checkOne(raw) {
+    if (_isBarred(raw) || _validity(raw).flags.valid) {
+        return true;
+    }
+    var ev = event("invalid", wrap(raw), {});
+    ev.bubbles = false;
+    ev.cancelable = true;
+    _dispatchDynamic(raw, "invalid", ev);
+    _meta(raw).invalidPrevented = ev.defaultPrevented;
+    return false;
+}
+
+function _formCheck(form) {
+    var ok = true;
+    _formControlsOf(form).forEach(function(raw) {
+        if (!_checkOne(raw)) {
+            ok = false;
+        }
+    });
+    return ok;
+}
+
+// The first that nobody cancelled takes the focus. Chromium shows a bubble there,
+// and this says what it would have said, since Qt has none.
+function _formReport(form) {
+    var failed = _formControlsOf(form).filter(function(raw) { return !_checkOne(raw); });
+    _reportFirst(failed);
+    return failed.length === 0;
+}
+
+function _reportFirst(failed) {
+    var first = failed.filter(function(raw) { return _meta(raw).invalidPrevented !== true; })[0];
+    if (first) {
+        focus(first);
+        console.warn("eldur: " + (first.objectName || _nodeTag(first)) + ": " + _validity(first).message);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// `dialog` and `popover`.
+// ---------------------------------------------------------------------------
+var _dialogs = [];
+_dialogs.moved = 0;
+
+function _dialogInert(raw) {
+    if (_dialogs.length === 0) {
+        return false;
+    }
+    var top = _dialogs[_dialogs.length - 1].raw;
+    for (var at = raw; at; at = _gParent(at)) {
+        if (at === top) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function _toggleEvent(raw, type, from, to) {
+    var ev = event(type, wrap(raw), {});
+    ev.bubbles = false;
+    ev.cancelable = type === "beforetoggle" && to === "open";
+    ev.oldState = from;
+    ev.newState = to;
+    _dispatchDynamic(raw, type, ev);
+    return ev;
+}
+
+function _simpleEvent(raw, type, cancelable) {
+    var ev = event(type, wrap(raw), {});
+    ev.bubbles = false;
+    ev.cancelable = Boolean(cancelable);
+    _dispatchDynamic(raw, type, ev);
+    return ev;
+}
+
+function _later(run) {
+    if (_in) {
+        _inLater(run);
+    } else {
+        Qt.callLater(run);
+    }
+}
+
+function _showBoxOf(raw, shown) {
+    if (_gHasCascade()) {
+        _gTouch(raw);
+    }
+    raw.visible = shown;
+    _layoutChanged(raw);
+}
+
+// What the dialog's focusing steps pick: `autofocus` inside, the first that can
+// take focus inside, or the dialog.
+function _dialogFocus(raw) {
+    var inside = _elementsUnder(raw, function(node) { return node !== raw && !node.__eldurInline; }, false)
+        .filter(function(node) {
+            return (typeof node.clicked === "function" || _inIsField(node) || typeof node.activated === "function"
+                || getAttribute(node, "tabindex") !== null) && _inCanFocus(node);
+        });
+    var auto = inside.filter(function(node) { return getAttribute(node, "autofocus") !== null; })[0];
+    focus(auto || inside[0] || raw);
+}
+
+function _dialogOpen(raw, modal) {
+    var el = wrap(raw);
+    if (getAttribute(raw, "open") !== null) {
+        return;
+    }
+    if (_toggleEvent(raw, "beforetoggle", "closed", "open").defaultPrevented) {
+        return;
+    }
+    var before = _inPresent() ? _inPresent() : null;
+    setAttribute(raw, "open", "");
+    var m = _meta(raw);
+    m.dialogModal = modal;
+    m.dialogBefore = before;
+    if (modal) {
+        _dialogs.push({ raw: raw, backdrop: _dialogBackdrop(raw) });
+    }
+    _showBoxOf(raw, true);
+    _dialogPlace(raw, modal);
+    _inInstallNow();
+    _dialogFocus(raw);
+    _later(function() { _toggleEvent(raw, "toggle", "closed", "open"); });
+}
+
+function _inPresent() {
+    return _in ? _in.focused : _activeElement;
+}
+
+function _inInstallNow() {
+    if (!_in && _root) {
+        _inInstall();
+    }
+}
+
+// In the top layer: above all else, centred in the window when modal.
+function _dialogPlace(raw, modal) {
+    var win = _root.contentItem || _root;
+    var m = _meta(raw);
+    // Out of the flow for good: Qt's layouts have no such thing, so out of the layout.
+    if (!m.topFrom) {
+        m.topFrom = _logicalParent(raw);
+        // `fit-content` came out as the width of what holds it; a written width stays.
+        m.topFits = raw.width >= raw.parent.width;
+        _dialogs.moved++;
+        raw.parent = win;
+    }
+    raw.z = 500000;
+    // What the page's flow anchored it with would hold it at full width.
+    raw.anchors.left = undefined;
+    raw.anchors.right = undefined;
+    raw.anchors.top = undefined;
+    raw.anchors.bottom = undefined;
+    var place = function() {
+        if (m.topFits) {
+            raw.width = raw.implicitWidth;
+        }
+        raw.height = raw.implicitHeight;
+        raw.x = Math.max(0, (win.width - raw.width) / 2);
+        var top = parseFloat(window.getComputedStyle(wrap(raw)).top);
+        raw.y = modal || isNaN(top) ? Math.max(0, (win.height - raw.height) / 2) : top;
+    };
+    place();
+    Qt.callLater(place);
+}
+
+function _dialogBackdrop(raw) {
+    var color = _gHasCascade() && typeof _gBackdropColor === "function" ? _gBackdropColor(raw) : "#1a000000";
+    var home = _root.contentItem || _root;
+    var box = Qt.createQmlObject("import QtQuick; Rectangle { anchors.fill: parent; z: 400000; MouseArea { anchors.fill: parent } }", home, "eldur_backdrop");
+    box.color = color;
+    return box;
+}
+
+function _dialogClose(raw, value, cancelled) {
+    if (getAttribute(raw, "open") === null) {
+        return;
+    }
+    var m = _meta(raw);
+    _toggleEvent(raw, "beforetoggle", "open", "closed");
+    if (cancelled) {
+        m.returnValue = "";
+    }
+    removeAttribute(raw, "open");
+    _showBoxOf(raw, false);
+    _dialogs = _dialogs.filter(function(d) {
+        if (d.raw === raw) {
+            d.backdrop.destroy();
+            return false;
+        }
+        return true;
+    });
+    if (value !== undefined && value !== null) {
+        m.returnValue = String(value);
+    }
+    var before = m.dialogBefore;
+    m.dialogBefore = null;
+    if (before) {
+        focus(before);
+    }
+    _later(function() {
+        _simpleEvent(raw, "close", false);
+        _toggleEvent(raw, "toggle", "open", "closed");
+    });
+}
+
+function _dialogEscape() {
+    if (_dialogs.length === 0) {
+        return false;
+    }
+    var top = _dialogs[_dialogs.length - 1].raw;
+    if (!_simpleEvent(top, "cancel", true).defaultPrevented) {
+        _dialogClose(top, undefined, true);
+    }
+    return true;
+}
+
+// A press inside the modal's backdrop lands on the dialog.
+function _dialogHit(hit) {
+    return hit && _dialogInert(hit) ? _dialogs[_dialogs.length - 1].raw : hit;
+}
+
+function _popoverShow(raw, shown) {
+    var m = _meta(raw);
+    if (Boolean(m.popoverOpen) === shown) {
+        return;
+    }
+    var from = shown ? "closed" : "open";
+    var to = shown ? "open" : "closed";
+    if (_toggleEvent(raw, "beforetoggle", from, to).defaultPrevented) {
+        return;
+    }
+    m.popoverOpen = shown;
+    if (shown) {
+        _in.popovers.push(raw);
+        raw.z = 500000;
+    } else {
+        _in.popovers = _in.popovers.filter(function(p) { return p !== raw; });
+    }
+    _showBoxOf(raw, shown);
+    if (shown) {
+        _dialogPlace(raw, true);
+    }
+    _later(function() { _toggleEvent(raw, "toggle", from, to); });
+}
+
+function _popoverDismiss(hit) {
+    if (!_in || !_in.popovers) {
+        return;
+    }
+    _in.popovers.slice().forEach(function(pop) {
+        for (var at = hit; at; at = _gParent(at)) {
+            if (at === pop || getAttribute(at, "popovertarget") === wrap(pop).id) {
+                return;
+            }
+        }
+        _popoverShow(pop, false);
+    });
+}
+
+// What a control's unprevented click goes on to do.
+function _inActivate(raw) {
+    var target = getAttribute(raw, "popovertarget");
+    if (target !== null) {
+        var pop = document.getElementById(target);
+        if (pop) {
+            _inInstallNow();
+            var action = getAttribute(raw, "popovertargetaction") || "toggle";
+            var popRaw = _unwrap(pop);
+            var open = Boolean(_meta(popRaw).popoverOpen);
+            _popoverShow(popRaw, action === "show" ? true : action === "hide" ? false : !open);
+        }
+        return;
+    }
+    var form = _inFormOf(raw);
+    if (!form || _nodeTag(raw) === "fieldset") {
+        return;
+    }
+    if (_inIsSubmitter(raw)) {
+        _inSubmit(form, raw);
+    } else if (wrap(raw).type === "reset") {
+        _formReset(form);
+    }
+}
+
+// `URLSearchParams`: the application/x-www-form-urlencoded format (URL standard §5).
+function _formEncode(text) {
+    return encodeURIComponent(String(text)).replace(/%20/g, "+").replace(/[!'()~]/g, function(c) {
+        return "%" + c.charCodeAt(0).toString(16).toUpperCase();
+    });
+}
+
+function _formDecode(text) {
+    try {
+        return decodeURIComponent(String(text).replace(/\+/g, " "));
+    } catch (e) {
+        return String(text);
+    }
+}
+
+function URLSearchParams(init) {
+    var entries = [];
+    if (init instanceof FormData) {
+        entries = init._entries.map(function(e) { return [e[0], e[1]]; });
+    } else if (init instanceof URLSearchParams) {
+        entries = init._entries.map(function(e) { return [e[0], e[1]]; });
+    } else if (typeof init === "string") {
+        init.replace(/^\?/, "").split("&").forEach(function(part) {
+            if (part !== "") {
+                var eq = part.indexOf("=");
+                entries.push(eq < 0 ? [_formDecode(part), ""] : [_formDecode(part.slice(0, eq)), _formDecode(part.slice(eq + 1))]);
+            }
+        });
+    } else if (init && typeof init === "object") {
+        Object.keys(init).forEach(function(k) { entries.push([k, String(init[k])]); });
+    }
+    this._entries = entries;
+}
+URLSearchParams.prototype = {
+    append: function(name, value) { this._entries.push([String(name), String(value)]); },
+    delete: function(name) { this._entries = this._entries.filter(function(e) { return e[0] !== String(name); }); },
+    get: function(name) {
+        var hit = this._entries.filter(function(e) { return e[0] === String(name); });
+        return hit.length > 0 ? hit[0][1] : null;
+    },
+    getAll: function(name) {
+        return this._entries.filter(function(e) { return e[0] === String(name); }).map(function(e) { return e[1]; });
+    },
+    has: function(name) { return this._entries.some(function(e) { return e[0] === String(name); }); },
+    set: function(name, value) {
+        var key = String(name), done = false;
+        this._entries = this._entries.filter(function(e) {
+            if (e[0] !== key) {
+                return true;
+            }
+            if (done) {
+                return false;
+            }
+            done = true;
+            e[1] = String(value);
+            return true;
+        });
+        if (!done) {
+            this._entries.push([key, String(value)]);
+        }
+    },
+    sort: function() {
+        this._entries.sort(function(a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; });
+    },
+    forEach: function(run) {
+        var self = this;
+        this._entries.forEach(function(e) { run(e[1], e[0], self); });
+    },
+    toString: function() {
+        return this._entries.map(function(e) { return _formEncode(e[0]) + "=" + _formEncode(e[1]); }).join("&");
+    }
+};
+
+// `AbortController`, for a listener's `signal`.
+function AbortController() {
+    var heard = [];
+    this.signal = {
+        aborted: false,
+        reason: undefined,
+        addEventListener: function(type, run) {
+            if (type === "abort") {
+                heard.push(run);
+            }
+        },
+        removeEventListener: function(type, run) {
+            heard = heard.filter(function(h) { return h !== run; });
+        }
+    };
+    var signal = this.signal;
+    this.abort = function(reason) {
+        if (signal.aborted) {
+            return;
+        }
+        signal.aborted = true;
+        signal.reason = reason === undefined ? "AbortError" : reason;
+        var runs = heard;
+        heard = [];
+        runs.forEach(function(run) { run({ type: "abort", target: signal }); });
+    };
 }
 
 // Inserting: what a script made as a QML object becomes a node when it goes
@@ -10337,8 +13095,10 @@ function _vOptionValue(v) {
 function _vSelected(model) {
     var opts = _vOptions(model);
     var found = -1;
+    // A list with several chosen answers with the first; a single one's last wins.
+    var first = Boolean(model.text) && getAttribute(model.text, "multiple") !== null;
     for (var i = 0; i < opts.length; ++i) {
-        if (opts[i].sel) {
+        if (opts[i].sel && !(first && found !== -1)) {
             found = i;
         }
     }
@@ -10348,6 +13108,9 @@ function _vSelected(model) {
 function _vEnsureSelected(model) {
     var opts = _vOptions(model);
     var keep = _vSelected(model);
+    if (model.text && getAttribute(model.text, "multiple") !== null) {
+        return;
+    }
     for (var i = 0; i < opts.length; ++i) {
         if (i !== keep) {
             opts[i].sel = false;
@@ -10393,10 +13156,11 @@ function _vSelectModel(raw) {
 // HTML's listed elements of a form, hidden or not, in tree order. Names and ids
 // reach them as properties. `<input type=image>` is the standard's exception.
 function _formElements(form) {
-    var list = _elementsUnder(form, function(node) {
+    var list = _elementsUnder(_root, function(node) {
         var tag = _nodeTag(node);
         return /^(button|fieldset|input|object|output|select|textarea)$/.test(tag)
-            && !(tag === "input" && wrap(node).type === "image");
+            && !(tag === "input" && wrap(node).type === "image")
+            && _inFormOf(node) === form;
     }, false).map(wrap);
     var col = _asHTMLCollection(list);
     list.forEach(function(el) {
@@ -10415,7 +13179,7 @@ function _formEntries(form) {
     Array.prototype.forEach.call(_formElements(_unwrap(form)), function(el) {
         var tag = String(el.tagName).toLowerCase();
         var type = String(el.type || "").toLowerCase();
-        if (!el.name || el.disabled || tag === "button" || tag === "fieldset" || tag === "output" || tag === "object"
+        if (!el.name || _isDisabled(_unwrap(el)) || tag === "button" || tag === "fieldset" || tag === "output" || tag === "object"
             || /^(submit|button|reset|image)$/.test(type)) {
             return;
         }
@@ -10423,6 +13187,12 @@ function _formEntries(form) {
             if (el.checked) {
                 entries.push([el.name, getAttribute(_unwrap(el), "value") || "on"]);
             }
+            return;
+        }
+        if (tag === "select" && el.multiple) {
+            Array.prototype.forEach.call(el.selectedOptions, function(option) {
+                entries.push([el.name, String(option.value)]);
+            });
             return;
         }
         entries.push([el.name, String(el.value)]);
@@ -10692,7 +13462,7 @@ var _plainPseudos = {
     "checked": function(n) {
         return n.checked === true || _meta(n).explicitChecked === true;
     },
-    "disabled": function(n) { return _isFormControl(n) && n.enabled === false; },
+    "disabled": function(n) { return _isFormControl(n) && (n.enabled === false || _isDisabled(n)); },
     "enabled": function(n) { return _isFormControl(n) && n.enabled !== false; },
     "focus": function(n) { return n.activeFocus === true; },
     "focus-visible": function(n) { return n.activeFocus === true; },
@@ -10715,8 +13485,12 @@ var _plainPseudos = {
     "placeholder-shown": function(n) {
         return typeof n.placeholderText === "string" && n.placeholderText !== "" && n.text === "";
     },
-    "valid": function(n) { return _isFormControl(n); },
-    "invalid": function() { return false; }
+    "modal": function(n) {
+        return _dialogs.some(function(d) { return d.raw === n; });
+    },
+    "popover-open": function(n) { return Boolean(_meta(n).popoverOpen); },
+    "valid": function(n) { return _isFormControl(n) && !_isBarred(n) && _validity(n).flags.valid; },
+    "invalid": function(n) { return _isFormControl(n) && !_isBarred(n) && !_validity(n).flags.valid; }
 };
 
 function _nodeTag(node) {
@@ -11466,7 +14240,13 @@ var document = {
     get head() { return _root ? wrap(_root) : null; },
     get hidden() { return false; },
     get visibilityState() { return "visible"; },
+    hasFocus: function() {
+        return Qt.application.state === Qt.ApplicationActive;
+    },
     get activeElement() {
+        if (_in) {
+            return _in.focused && !_in.focusShift ? wrap(_in.focused) : document.body;
+        }
         if (_focusHeld && (_focusHeld.visible === false || _focusHeld.activeFocus)) {
             return wrap(_focusHeld);
         }
@@ -11537,6 +14317,9 @@ var document = {
         }
         if (tag === "input") {
             _meta(created).lastGenericInputSource = qmlSrc;
+        }
+        if (tag === "textarea") {
+            scrollArea(created);
         }
         _connectControls(created);
         if (created && created.parent !== undefined) {
@@ -11617,6 +14400,7 @@ var window = {
     requestAnimationFrame: requestAnimationFrame,
     cancelAnimationFrame: cancelAnimationFrame,
     queueMicrotask: queueMicrotask,
+    Promise: Promise,
     structuredClone: structuredClone,
     fetch: fetch,
     alert: alert,
@@ -11678,6 +14462,9 @@ var window = {
 var _gDirty = false;
 var _gGen = 0;
 var _gLive = [];
+// An open page's templates paint themselves, but the margins between them and
+// what a script adds beside them are still this page's to work out.
+var _gLiveTemplates = [];
 var _gMetricsCache = {};
 var _gRunning = false;
 var _gStaticBase = null;
@@ -15563,7 +18350,7 @@ function _aAnimationsOf(raw) {
 
 // --- :hover and the like ----------------------------------------------------
 
-var _G_STATE_WORD = /:(hover|focus-within|focus-visible|focus|active|checked)\b/g;
+var _G_STATE_WORD = /:(hover|focus-within|focus-visible|focus|active|checked|placeholder-shown|valid|invalid)\b/g;
 var _gStateRules = null;
 
 // Each compound that names a state, without it: what has to be watched.
@@ -15628,9 +18415,40 @@ function _gWatch(raw, kind) {
         if (raw.checkedChanged) {
             raw.checkedChanged.connect(changed);
         }
+    } else if (kind === "placeholder-shown" || kind === "valid" || kind === "invalid") {
+        if (raw.textChanged) {
+            raw.textChanged.connect(changed);
+        }
+        if (raw.checkedChanged) {
+            raw.checkedChanged.connect(changed);
+        }
     } else if (raw.activeFocusChanged) {
         raw.activeFocusChanged.connect(changed);
     }
+}
+
+// A template was probed for its element's classes: the attributes that make a
+// control invalid come only with the markup, so these states are read here.
+function _gPaintFormStates() {
+    var rules = _gLoadStateRules().filter(function(rule) {
+        return rule.kinds.some(function(kind) { return /^(placeholder-shown|valid|invalid)$/.test(kind); });
+    });
+    if (rules.length === 0) {
+        return;
+    }
+    _gLiveTemplates.forEach(function(raw) {
+        if (!raw || !raw.background || !_isConnected(raw)
+            || !rules.some(function(rule) { return _matchesList(raw, rule.list); })) {
+            return;
+        }
+        var s = _gStyle(raw);
+        if (s.won["background-color"] && raw.background.color !== undefined) {
+            raw.background.color = _gQtColor(s["background-color"]);
+        }
+        if (s.won.color && raw.color !== undefined) {
+            raw.color = _gQtColor(s.color);
+        }
+    });
 }
 
 function _gWatchStates() {
@@ -16178,6 +18996,8 @@ function _gMarginPass() {
     };
     if (_gActive()) {
         _gLive.forEach(visit);
+        _gLiveTemplates = _gLiveTemplates.filter(function(raw) { return Boolean(raw); });
+        _gLiveTemplates.forEach(visit);
     } else {
         _walkItems(_root, function(item) {
             if (_meta(item).createdTag) {
@@ -16438,6 +19258,7 @@ function _gSettle() {
     }
     _gPrune();
     _gWatchStates();
+    _gPaintFormStates();
     _tableRepaintAll();
     _aScan();
     _gReposition();

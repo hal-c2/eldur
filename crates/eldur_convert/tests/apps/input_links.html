@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head><style>
+body { margin: 8px; }
+a { display: block; width: 200px; height: 24px; margin: 4px; }
+#tall { height: 1500px; }
+</style></head>
+<body>
+<a id="keep" href="https://example.org/kept">kept out</a>
+<a id="frag" href="#end">to the end</a>
+<div id="stopcap"><button id="sc">capture stops</button></div>
+<div id="stopbub"><button id="sb">bubble stops</button></div>
+<div id="tall"></div>
+<div id="end">end</div>
+<script>
+function line(ev) {
+  console.log(ev.type, ev.target.id, ev.currentTarget === window ? "window" : ev.currentTarget === document ? "document" : ev.currentTarget.id, ev.eventPhase, ev.detail, ev.defaultPrevented, ev.isTrusted, location.hash);
+}
+var keep = document.getElementById("keep");
+keep.addEventListener("click", function (ev) { line(ev); ev.preventDefault(); });
+document.getElementById("frag").addEventListener("click", line);
+document.addEventListener("click", line);
+var sc = document.getElementById("stopcap");
+sc.addEventListener("click", function (ev) { line(ev); ev.stopPropagation(); }, true);
+document.getElementById("sc").addEventListener("click", line);
+var sb = document.getElementById("stopbub");
+sb.addEventListener("click", line);
+document.getElementById("sb").addEventListener("click", function (ev) { line(ev); ev.stopPropagation(); });
+</script>
+</body>
+</html>

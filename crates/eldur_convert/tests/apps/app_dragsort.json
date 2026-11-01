@@ -1,0 +1,16 @@
+{"steps":[
+ {"name":"to first","move":[100,125]},
+ {"name":"press","down":"left"},
+ {"name":"drag a little","move":[100,145]},
+ {"name":"past second","move":[100,180]},
+ {"name":"past third","move":[100,230]},
+ {"name":"outside","move":[600,300]},
+ {"name":"drop","up":"left","settle":50},
+ {"name":"click only","click":"#r3"},
+ {"name":"to last","move":[100,240]},
+ {"name":"press 2","down":"left"},
+ {"name":"up the list","move":[100,120]},
+ {"name":"drop 2","up":"left","settle":50}
+],
+"quietLoad":true,
+"watch":[{"sel":".row"},{"sel":"#order"}]}

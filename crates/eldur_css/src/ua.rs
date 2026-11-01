@@ -19,6 +19,22 @@ noframes, noscript, param, rp, script, style, template, title {
     display: none;
 }
 
+[popover]:not(:popover-open) {
+    display: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: fit-content;
+    height: fit-content;
+    margin: auto;
+    border: solid;
+    padding: 0.25em;
+    color: black;
+    background-color: white;
+}
+
 dialog:not([open]) {
     display: none;
 }
@@ -132,6 +148,15 @@ ol, ul, menu, dir {
     margin-top: 1em;
     margin-bottom: 1em;
     padding-left: 40px;
+}
+
+details > summary:first-of-type {
+    display: list-item;
+    list-style: disclosure-closed inside;
+}
+
+details[open] > summary:first-of-type {
+    list-style-type: disclosure-open;
 }
 
 ul, menu, dir {
@@ -425,7 +450,7 @@ rt {
     font-size: 50%;
 }
 
-dialog[open] {
+dialog {
     display: block;
     position: absolute;
     left: 0;

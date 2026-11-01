@@ -20,6 +20,7 @@ pub(crate) use decoration::{
     ELDUR_BORDER_QML, ELDUR_ROUND_CLIP_QML, ELDUR_SCROLL_INPUT_QML, ELDUR_SCROLLER_QML,
     ELDUR_STICKY_QML,
 };
+pub(crate) use lists::ELDUR_DISCLOSURE_QML;
 pub(crate) use text::ELDUR_TEXT_LINES_QML;
 pub(crate) const ELDUR_FILTER_QML: &str = include_str!("EldurFilter.qml");
 pub(crate) const ELDUR_FILTER_QSB: &[u8] = include_bytes!("eldur_filter.frag.qsb");
@@ -735,7 +736,10 @@ impl<'a, 'd> Emitter<'a, 'd> {
             Content::Inline(items)
                 if inline::has_atomic(items)
                     || inline::needs_lines_for_leading(style, items)
-                    || inline::needs_lines_for_boxes(items) =>
+                    || inline::needs_lines_for_boxes(items)
+                    // RichText has no `lineLaidOut` to make the triangle's room.
+                    || (b.marker.as_ref().is_some_and(|m| m.in_line)
+                        && text::needs_html(items, &text::font_family(&style.font_family))) =>
             {
                 Some((self.inline_flow(b, decoration, items, line), "Content"))
             }
@@ -773,6 +777,12 @@ impl<'a, 'd> Emitter<'a, 'd> {
         if inner.is_none() && (wanted || gains || b.marker.is_some()) {
             // Scripts write text into it; a marker still has its line.
             inner = Some((self.text(style, decoration, &[], line), "Text"));
+        }
+        if let Some(marker) = b.marker.as_ref().filter(|m| m.in_line)
+            && let Some((obj, _)) = &mut inner
+        {
+            let own_colour = marker.style.color != style.color;
+            lists::disclosure_in_line(obj, marker, own_colour);
         }
 
         if inner.is_none()
@@ -826,7 +836,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             || inner.is_none()
             || (has_height(style) && inner.is_some())
             || (inner_has_id && outer_id.is_some())
-            || b.marker.is_some()
+            || b.marker.as_ref().is_some_and(|m| !m.in_line)
             || !overlays.is_empty()
             || !corner_slots.is_empty()
             || style.display == Display::TableCell;
@@ -847,7 +857,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             // items, so they fill it; block flow keeps its content height.
             let fill = matches!(b.kind, BoxKind::Flex | BoxKind::Grid);
             let mut extra = Vec::new();
-            if let Some(marker) = &b.marker {
+            if let Some(marker) = b.marker.as_ref().filter(|m| !m.in_line) {
                 extra.push(self.marker(b, marker));
             }
             extra.append(&mut corner_slots);
@@ -1008,15 +1018,22 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 );
             }
             crate::metadata::tag(&mut e.obj, self.doc, node);
+            self.block_link(&mut e.obj, node);
+            if b.style.pointer_events == eldur_css::PointerEvents::None {
+                crate::metadata::declare_no_hit(&mut e.obj);
+            }
             crate::metadata::declare_whitespace(&mut e.obj, self.doc, node, &self.live_tables);
             // A hidden box's `style` attribute may be what hides it.
+            // Where a listener can be handed any element, a script can read any element's `style`.
             if self.open_elements
                 || self.cascade_rules
+                || self.by_path
                 || b.style.visibility == eldur_css::Visibility::Collapse
             {
                 crate::metadata::declare_style(&mut e.obj, self.doc, node);
             }
-            if self.script_attrs {
+            if self.script_attrs || (self.by_path && crate::metadata::acts_on_attrs(self.doc, node))
+            {
                 crate::metadata::declare_attrs(&mut e.obj, self.doc, node);
             }
         }
@@ -1024,6 +1041,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
             e.obj.members.push(carry::hint_comment(&hint(self.doc, b)));
         }
         if let Some(node) = b.node {
+            if !self.by_path {
+                dynamic::takes_focus_by_tabindex(&mut e.obj, self.doc, node);
+            }
             if self.collapsed.contains(&node) {
                 e.obj.set("visible", false);
             }
@@ -1345,7 +1365,9 @@ fn fieldset_parts<'b, 'l>(
         return None;
     };
     let (first, rest) = children.split_first()?;
-    is(first.node, "legend").then_some((first, rest))
+    // Out of flow it is one more box, placed as any other and no fieldset's label.
+    (is(first.node, "legend") && !crate::boxes::is_out_of_flow(&first.style))
+        .then_some((first, rest))
 }
 
 /// A readable base for a generated id: the first class, else the tag.

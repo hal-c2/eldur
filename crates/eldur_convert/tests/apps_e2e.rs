@@ -28,6 +28,20 @@ const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 /// between the two text engines.
 const GEOMETRY_TOLERANCE: f64 = 2.0;
 
+const INLINECONTROL: &str = "a line of inline-block checkboxes or radios with margins is 4px taller than \
+                             Chromium's: their baseline in the line box";
+const SELECTQUEUE: &str = "setSelectionRange then select() on a field: Chromium queues a third `select` \
+                           whose cause a probe did not find; each call here queues one when it changes the selection";
+const FOCUSREVEAL: &str = "select()'s focus scrolls Chromium's page by all of its overflow; here only as far as the field needs";
+const NONAVIGATION: &str =
+    "form.submit() reloads the page in Chromium; a converted page does not navigate, and says so";
+const CLOSEDDETAILS: &str = "the margin of a closed details' hidden last child still collapses out of it, at conversion time";
+const DIALOGTEXT: &str =
+    "the page logs a fractional text width: Qt's glyphs make 71.77, Chromium's 71.81";
+const MADEINLINE: &str = "controls from innerHTML stack as blocks: a created box is laid out by itself, without a line to share";
+const BUTTONKIDS: &str = "a Button shows only the text of what it holds: an element inside is no item, so the button is the target";
+const NOBUBBLE: &str = "Qt has no validation bubble: the message goes to the log, on purpose";
+const H1LINE: &str = "the 22px heading line is 25px here and 26px in Chromium (font metrics, not in this work), so the centre of a row is a pixel higher and clientY says so";
 const COMPACT: &str = "a right-aligned row: its buttons are whole pixels wider (see BUTTONWIDTH), which would start this one 2px left; not confirmed";
 const BUTTONWIDTH: &str = "a button's width is whole pixels (`Math.ceil` in emit/controls.rs): \
                            five on a line add up to 2.2px against Chromium's fractions";
@@ -37,17 +51,57 @@ const FONT: &str = "Helvetica: Qt's fontconfig match has line height 23 where Ch
 const FONTFOLLOW: &str = "follows from the Helvetica line height and width difference";
 const HANGING: &str = "a span wrapped across lines measures the space hanging at its first line's end; \
                        the scan over the Text's links cannot tell that space from the word before it";
+const SCRIPTPOSITION: &str = "style.position = \"absolute\" from a script leaves an element in the layout that holds it, \
+                              since a template has one form; the runtime says so, and a class does work (input_real_made)";
+const AREALINE: &str = "a TextArea has no line height to set: `font: 13px/16px` keeps Qt's taller line, so three lines overflow what Chromium fits";
 const NEVER_SCRIPT: &str =
     "a script in the body makes no item, so its source is not in the body's textContent";
-
-const TEMPLATE_MARGIN: &str = "a template's margins are worked out where the converter tried it, \
-     as the last child of the body, so a created box's bottom margin collapsed away";
 
 /// `(page, what differs, why)`. `what` starts a difference's name, as printed by a
 /// failing test, `<step> <selector>[<row>] <field>:`; `*` stands for any text.
 const KNOWN: &[(&str, &str, &str)] = &[
-    ("created_empty_body", "load log:", TEMPLATE_MARGIN),
-    ("created_empty_body", "load #two[*] y:", TEMPLATE_MARGIN),
+    ("input_keys", "* #sel[*] y:", INLINECONTROL),
+    ("input_forms", "* #box[*] y:", INLINECONTROL),
+    ("input_forms", "* #prev[*] y:", INLINECONTROL),
+    ("input_forms", "selection log:", SELECTQUEUE),
+    ("input_forms", "selection #*[*] y:", FOCUSREVEAL),
+    ("input_forms", "api2 #*[*] y:", FOCUSREVEAL),
+    ("input_forms", "api3 (focus):", NONAVIGATION),
+    ("input_forms", "api3 #*[*] y:", NONAVIGATION),
+    ("input_forms", "api3 #name[*] value:", NONAVIGATION),
+    ("input_forms", "*eldur: a form was submitted*", NONAVIGATION),
+    ("input_script", "* #mc[*] x:", MADEINLINE),
+    ("input_script", "* #mc[*] y:", MADEINLINE),
+    ("input_dialog", "* #stay[*] y:", CLOSEDDETAILS),
+    (
+        "input_real_invalid",
+        "*eldur: b: Please fill out this field.*",
+        NOBUBBLE,
+    ),
+    ("input_disabled", "*report wn log:*", BUTTONKIDS),
+    ("input_disabled_open", "*report wn log:*", BUTTONKIDS),
+    (
+        "input_disabled",
+        "*eldur: need: Please fill out this field.*",
+        NOBUBBLE,
+    ),
+    (
+        "input_disabled_open",
+        "*eldur: need: Please fill out this field.*",
+        NOBUBBLE,
+    ),
+    (
+        "app_dialogdetails",
+        "*eldur: text: Please fill out this field.*",
+        NOBUBBLE,
+    ),
+    ("app_dragsort", "*click only log:*", H1LINE),
+    ("input_dialog", "plain show log:", DIALOGTEXT),
+    (
+        "input_bubble",
+        "*eldur: need: Please fill out this field.*",
+        NOBUBBLE,
+    ),
     ("theme", "* #compact[*] x:", COMPACT),
     ("cards", "* #cart[*] height:", FONT),
     ("cards", "* .buy[*] y:", FONTFOLLOW),
@@ -71,6 +125,21 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("lines_created", "* #ms[*] width:", SPANSCAN),
     ("lines_created", "* #ms[*] height:", SPANSCAN),
     ("created_lines", "* #reset[*] x:", BUTTONWIDTH),
+    (
+        "input_real_more",
+        "*eldur: style.position = *",
+        SCRIPTPOSITION,
+    ),
+    (
+        "input_real_widgets",
+        "report 6 (enter2) log:*scrollH=true*",
+        AREALINE,
+    ),
+    (
+        "input_real_widgets",
+        "report 7 (three) log:*scrollH=true*",
+        AREALINE,
+    ),
 ];
 
 const TEST: &str = r##"
@@ -110,16 +179,46 @@ TestCase {
         const r = e.getBoundingClientRect()
         return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
     }
+    // What is held, for the events the test sends meanwhile: a test's mouse has
+    // no state of its own.
+    property int mods: 0
+    property int held: 0
+    property point at: Qt.point(1200, 790)
+    readonly property var buttonOf: ({ left: Qt.LeftButton, right: Qt.RightButton, middle: Qt.MiddleButton })
+    readonly property var modOf: ({ Shift: Qt.ShiftModifier, Control: Qt.ControlModifier, Alt: Qt.AltModifier })
+    readonly property var keyOf: ({ Enter: Qt.Key_Return, Escape: Qt.Key_Escape, Tab: Qt.Key_Tab, End: Qt.Key_End,
+        ArrowDown: Qt.Key_Down, ArrowUp: Qt.Key_Up, ArrowLeft: Qt.Key_Left, ArrowRight: Qt.Key_Right,
+        Backspace: Qt.Key_Backspace, Delete: Qt.Key_Delete, Home: Qt.Key_Home, PageDown: Qt.Key_PageDown,
+        PageUp: Qt.Key_PageUp, Space: Qt.Key_Space, Shift: Qt.Key_Shift, Control: Qt.Key_Control, Alt: Qt.Key_Alt,
+        KeyA: Qt.Key_A, KeyB: Qt.Key_B, KeyS: Qt.Key_S, Digit1: Qt.Key_1 })
     function press(name) {
-        const keys = { Enter: Qt.Key_Return, Escape: Qt.Key_Escape, Tab: Qt.Key_Tab, End: Qt.Key_End,
-            ArrowDown: Qt.Key_Down, ArrowUp: Qt.Key_Up, Backspace: Qt.Key_Backspace,
-            Home: Qt.Key_Home, PageDown: Qt.Key_PageDown, PageUp: Qt.Key_PageUp, Space: Qt.Key_Space }
-        keyClick(keys[name])
+        const parts = name.split("+")
+        let mod = mods
+        for (const m of parts.slice(0, -1)) mod |= modOf[m]
+        const last = parts[parts.length - 1]
+        // Shift+Tab is what Qt calls Backtab.
+        keyClick(last === "Tab" && (mod & Qt.ShiftModifier) ? Qt.Key_Backtab : (keyOf[last] || last), mod)
+    }
+    function moveTo(x, y) {
+        at = Qt.point(x, y)
+        mouseMove(page, x, y, -1, held, mods)
     }
     function act(s) {
-        if (s.click) { const p = center(s.click); mouseMove(page, p.x, p.y); mouseClick(page, p.x, p.y) }
-        if (s.clickAt) { mouseMove(page, s.clickAt[0], s.clickAt[1]); mouseClick(page, s.clickAt[0], s.clickAt[1]) }
-        if (s.hover) { const p = center(s.hover); mouseMove(page, p.x, p.y) }
+        if (s.click) { const p = center(s.click); moveTo(p.x, p.y); mouseClick(page, p.x, p.y, Qt.LeftButton, mods) }
+        if (s.clickAt) {
+            moveTo(s.clickAt[0], s.clickAt[1])
+            mouseClick(page, s.clickAt[0], s.clickAt[1], buttonOf[s.button || "left"], mods)
+        }
+        if (s.dblAt) {
+            moveTo(s.dblAt[0], s.dblAt[1])
+            mouseDoubleClickSequence(page, s.dblAt[0], s.dblAt[1], Qt.LeftButton, mods)
+        }
+        if (s.move) moveTo(s.move[0], s.move[1])
+        if (s.down) { held |= buttonOf[s.down]; mousePress(page, at.x, at.y, buttonOf[s.down], mods) }
+        if (s.up) { held &= ~buttonOf[s.up]; mouseRelease(page, at.x, at.y, buttonOf[s.up], mods) }
+        if (s.hold) { mods |= modOf[s.hold]; keyPress(keyOf[s.hold], mods) }
+        if (s.unhold) { keyRelease(keyOf[s.unhold], mods); mods &= ~modOf[s.unhold] }
+        if (s.hover) { const p = center(s.hover); moveTo(p.x, p.y) }
         if (s.type) {
             const p = center(s.type[0])
             mouseMove(page, p.x, p.y)
@@ -128,6 +227,7 @@ TestCase {
             for (const c of s.type[1]) keyClick(c)
         }
         if (s.key) press(s.key)
+        if (s.keys) { for (const c of s.keys) keyClick(c) }
         if (s.wheel) {
             const p = s.wheel[0] === "page" ? { x: 1200, y: 400 } : center(s.wheel[0])
             mouseMove(page, p.x, p.y)
@@ -254,7 +354,10 @@ fn differences(steps: &[Value], want: &[Value]) -> Vec<String> {
                 got["log"], want["log"]
             ));
         }
-        if got["state"]["(focus)"] != want["state"]["(focus)"] {
+        // A step recorded without state (`bubble`) has none to hold this to.
+        if !want["state"]["(focus)"].is_null()
+            && got["state"]["(focus)"] != want["state"]["(focus)"]
+        {
             out.push(format!(
                 "{step} (focus): got {} Chromium {}",
                 got["state"]["(focus)"], want["state"]["(focus)"]
@@ -339,6 +442,12 @@ fn page(name: &str) {
     let (steps, trouble) = parse(&text);
     let mut all = differences(&steps, chromium[name].as_array().expect("recorded"));
     all.extend(trouble);
+    // Chromium's made-up move at load and the test's first real one are not a
+    // user's: the test starts from what each thinks is under the mouse.
+    let spec: Value = serde_json::from_str(&read(format!("{name}.json"))).expect("json");
+    if spec["quietLoad"] == true {
+        all.retain(|d| !d.starts_with("load log"));
+    }
     // Read mid-flight on two real clocks, its load state has nothing to agree on.
     if name == "motion_running" {
         all.retain(|d| !d.starts_with("load "));
@@ -556,6 +665,132 @@ fn scroll_keys() {
 #[test]
 fn created_empty_body() {
     page("created_empty_body");
+}
+
+#[test]
+fn input_pointer() {
+    page("input_pointer");
+}
+
+#[test]
+fn input_keys() {
+    page("input_keys");
+}
+
+#[test]
+fn input_forms() {
+    page("input_forms");
+}
+
+#[test]
+fn input_bubble() {
+    page("input_bubble");
+}
+
+#[test]
+fn app_signup() {
+    page("app_signup");
+}
+
+#[test]
+fn app_keylist() {
+    page("app_keylist");
+}
+
+#[test]
+fn app_dialogdetails() {
+    page("app_dialogdetails");
+}
+
+#[test]
+fn app_dragsort() {
+    page("app_dragsort");
+}
+
+#[test]
+fn input_disabled() {
+    page("input_disabled");
+}
+
+#[test]
+fn input_disabled_open() {
+    page("input_disabled_open");
+}
+
+#[test]
+fn input_disabled_closed() {
+    page("input_disabled_closed");
+}
+
+#[test]
+fn input_tabs() {
+    page("input_tabs");
+}
+
+// The same real mouse and keys as Chromium, heard line for line.
+#[test]
+fn input_real_invalid() {
+    page("input_real_invalid");
+}
+
+#[test]
+fn input_timing() {
+    page("input_timing");
+}
+
+#[test]
+fn input_real() {
+    page("input_real");
+}
+
+#[test]
+fn input_real_more() {
+    page("input_real_more");
+}
+
+#[test]
+fn input_real_more_closed() {
+    page("input_real_more_closed");
+}
+
+#[test]
+fn input_real_made() {
+    page("input_real_made");
+}
+
+#[test]
+fn input_real_widgets() {
+    page("input_real_widgets");
+}
+
+#[test]
+fn input_states_open() {
+    page("input_states_open");
+}
+
+#[test]
+fn input_states_closed() {
+    page("input_states_closed");
+}
+
+#[test]
+fn input_links() {
+    page("input_links");
+}
+
+#[test]
+fn input_hit() {
+    page("input_hit");
+}
+
+#[test]
+fn input_script() {
+    page("input_script");
+}
+
+#[test]
+fn input_dialog() {
+    page("input_dialog");
 }
 
 #[test]

@@ -406,16 +406,18 @@ impl Emitter<'_, '_> {
             format!("{id}.forceActiveFocus();")
         };
         // The label's own click comes first, and can keep the control's away.
-        let guard = if self.by_path {
-            format!("{id}.enabled && !Eldur.tapPrevented(eventPoint)")
+        let body = if self.by_path {
+            format!(
+                "if ({id}.enabled) Eldur.afterTap(eventPoint, function () {{ Eldur.labelled({id}); }});"
+            )
         } else {
-            format!("{id}.enabled")
+            format!("if ({id}.enabled) {{ {action} }}")
         };
         let mut tap = Object::new("TapHandler");
         tap.members.push(Member::Handler {
             name: "onTapped".to_owned(),
             params: vec!["eventPoint".to_owned(), "button".to_owned()],
-            body: vec![format!("if ({guard}) {{ {action} }}")],
+            body: vec![body],
         });
         obj.push_child(tap);
     }
@@ -501,7 +503,7 @@ impl Emitter<'_, '_> {
             }
         }
         let element = self.doc.element(node);
-        if element.is_some_and(|e| e.has_attr("disabled")) {
+        if element.is_some_and(|e| e.has_attr("disabled")) || self.in_disabled_fieldset(node) {
             obj.set("enabled", false);
         }
         if let Some(name) = element.and_then(|e| e.attr("name")) {
@@ -726,16 +728,14 @@ impl Emitter<'_, '_> {
             );
         }
         if self.wanted.contains(&node) {
-            // Scripts address the object that is laid out, so this one
-            // cannot sit in a ScrollView.
+            // Scripts address the object that is laid out, so this one cannot
+            // sit in a ScrollView: the runtime scrolls its text under the clip.
             obj.set("clip", true);
-            self.diags.info(
-                "html",
-                line,
-                format!(
-                    "{} is used by a script: it clips rather than scrolls",
-                    describe(self.doc, node)
-                ),
+            crate::scripts::add_handler(
+                &mut obj,
+                "Component.onCompleted",
+                &[],
+                vec![format!("Eldur.scrollArea({id});")],
             );
             let (w, h) = self.text_area_size(node, style, line);
             obj.set("implicitWidth", number(w));
@@ -1428,6 +1428,29 @@ impl Emitter<'_, '_> {
         ))
     }
 
+    /// Inside a disabled `<fieldset>` other than through its first `<legend>`.
+    fn in_disabled_fieldset(&self, node: NodeId) -> bool {
+        let mut from = node;
+        for at in self.doc.ancestors(node) {
+            if self
+                .doc
+                .element(at)
+                .is_some_and(|e| e.local_name() == "fieldset" && e.has_attr("disabled"))
+            {
+                let first_legend = self.doc.element_children(at).find(|&k| {
+                    self.doc
+                        .element(k)
+                        .is_some_and(|e| e.local_name() == "legend")
+                });
+                if first_legend != Some(from) {
+                    return true;
+                }
+            }
+            from = at;
+        }
+        false
+    }
+
     /// `<fieldset>` with a `<legend>`: a GroupBox, whose label sits on the
     /// top border and whose content starts below the taller of the two.
     pub(super) fn fieldset(
@@ -1488,12 +1511,21 @@ impl Emitter<'_, '_> {
             column.set("anchors.right", Value::expr("parent.right"));
             obj.push_child(column);
         }
-        if self
-            .doc
-            .element(node)
-            .is_some_and(|e| e.has_attr("disabled"))
+        // Item.enabled is inherited by every control inside, and the legend's are
+        // not disabled: then each of the others says so for itself.
+        let legend_controls = legend.node.is_some_and(|n| {
+            self.doc.descendants(n).any(|d| {
+                self.doc.element(d).is_some_and(|e| {
+                    matches!(e.local_name(), "button" | "input" | "select" | "textarea")
+                })
+            })
+        });
+        if !legend_controls
+            && self
+                .doc
+                .element(node)
+                .is_some_and(|e| e.has_attr("disabled"))
         {
-            // Item.enabled is inherited by every control inside.
             obj.set("enabled", false);
         }
         if self.wanted.contains(&node) {
@@ -1698,6 +1730,30 @@ mod tests {
         assert!(q.contains("label: "), "{q}");
         assert!(q.contains("text: \"Plan\""), "{q}");
         assert!(q.contains("enabled: false"), "{q}");
+    }
+
+    #[test]
+    fn with_no_runtime_a_tabindex_takes_the_focus() {
+        let (q, _) = qml("<div tabindex=0>a</div>");
+        assert!(q.contains("activeFocusOnTab: true"), "{q}");
+        assert!(q.contains("TapHandler"), "{q}");
+    }
+
+    #[test]
+    fn an_out_of_flow_legend_is_no_label() {
+        let (q, _) =
+            qml("<fieldset><legend style='position:absolute'>Plan</legend><p>x</p></fieldset>");
+        assert!(!q.contains("GroupBox {"), "{q}");
+    }
+
+    #[test]
+    fn a_disabled_fieldset_holds_its_controls_and_not_its_legends() {
+        let (q, _) = qml(
+            "<fieldset disabled><legend><button id=l>l</button></legend><button id=o>o</button></fieldset>",
+        );
+        let (legend, rest) = q.split_once("id: blockFlow").expect("the content");
+        assert!(!legend.contains("enabled: false"), "{q}");
+        assert!(rest.contains("enabled: false"), "{q}");
     }
 
     #[test]

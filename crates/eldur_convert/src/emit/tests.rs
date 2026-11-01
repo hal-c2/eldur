@@ -2244,3 +2244,126 @@ fn a_first_letter_is_a_run_of_its_own() {
         "{diags:?}"
     );
 }
+
+const FORM_PAGE: &str = "<form id=\"f\"><input id=\"i\"><button id=\"b\">Go</button></form>";
+
+fn hooks(script: &str) -> String {
+    let out = convert_str(
+        &format!("<!doctype html><body>{FORM_PAGE}<script>{script}</script></body>"),
+        &Options::default(),
+    );
+    out.main_qml().expect("Main.qml").to_owned()
+}
+
+/// The words in a page's text or strings say nothing of what it listens for.
+#[test]
+fn a_word_in_a_script_is_not_a_listener() {
+    let qml = hooks(
+        "document.addEventListener('click', function () { document.title = 'submit keydown keyup'; });",
+    );
+    assert!(!qml.contains("fireSubmit"), "{qml}");
+    assert!(!qml.contains("Keys.onPressed"), "{qml}");
+    assert!(!qml.contains("Keys.onReleased"), "{qml}");
+}
+
+#[test]
+fn a_listener_for_a_form_event_anywhere_hooks_the_controls() {
+    let qml = hooks("document.addEventListener('submit', function (e) { e.preventDefault(); });");
+    assert!(qml.contains("fireSubmit"), "{qml}");
+    let qml = hooks("window.onkeyup = function () {};");
+    assert!(qml.contains("Keys.onReleased"), "{qml}");
+}
+
+/// What the analysis cannot read has to count as listening for everything.
+#[test]
+fn an_event_named_at_run_time_hooks_the_controls() {
+    let qml = hooks(
+        "['submit', 'keydown'].forEach(function (n) { document.addEventListener(n, function () {}); });",
+    );
+    assert!(qml.contains("fireSubmit"), "{qml}");
+    assert!(qml.contains("Keys.onPressed"), "{qml}");
+    let qml =
+        hooks("var on = document.addEventListener.bind(document); on('submit', function () {});");
+    assert!(qml.contains("fireSubmit"), "{qml}");
+}
+
+/// The keys of a textarea no script names are the page's as much as any other's:
+/// inside a `ScrollView` the focus lands on the view and they go nowhere.
+#[test]
+fn a_textarea_reached_only_through_a_helper_takes_the_keys_itself() {
+    let html = r#"<textarea id="ta"></textarea><script>
+        const g = (i) => document.getElementById(i);
+        document.addEventListener("keydown", function () { g("ta"); });
+    </script>"#;
+    let out = convert_str(html, &Options::default());
+    let qml = out.main_qml().expect("Main.qml");
+    assert!(!qml.contains("ScrollView"), "{qml}");
+    let area = qml.find("TextArea {").expect("a TextArea");
+    assert!(qml[area..].contains("Keys.onPressed"), "{qml}");
+    assert!(qml[area..].contains("Eldur.scrollArea(ta)"), "{qml}");
+}
+
+/// A control a script makes becomes its template's: without the hook there, what
+/// it is typed into is heard by nobody, and Tab is Qt's own.
+#[test]
+fn a_template_control_tells_the_page_of_its_keys() {
+    let html = r#"<div id="a"></div><script>
+        document.addEventListener("keydown", function () {});
+        document.getElementById("a").appendChild(document.createElement("input"));
+    </script>"#;
+    let out = convert_str(html, &Options::default());
+    let qml = out.main_qml().expect("Main.qml");
+    let template = qml.find("eldurT_input_0\n").expect("a template");
+    assert!(qml[template..].contains("Keys.onPressed"), "{qml}");
+    assert!(!qml[template..].contains("Keys.onReleased"), "{qml}");
+}
+
+fn warnings(html: &str) -> Vec<String> {
+    convert_str(html, &Options::default())
+        .diagnostics
+        .into_iter()
+        .filter(|d| d.severity == crate::Severity::Warning)
+        .map(|d| d.message)
+        .collect()
+}
+
+#[test]
+fn html_drag_and_drop_is_said_not_to_work() {
+    let says = |w: Vec<String>| w.iter().any(|m| m.contains("drag and drop"));
+    assert!(says(warnings(
+        "<!doctype html><div draggable=\"true\">x</div>"
+    )));
+    assert!(says(warnings(
+        "<!doctype html><div ondrop=\"go()\">x</div><script>function go() {}</script>"
+    )));
+    assert!(says(warnings(
+        "<!doctype html><div id=\"d\">x</div><script>document.getElementById('d').addEventListener('dragstart', function () {});</script>"
+    )));
+    assert!(!says(warnings(
+        "<!doctype html><div draggable=\"false\">drag</div>"
+    )));
+}
+
+#[test]
+fn contenteditable_is_said_not_to_edit() {
+    let says = |w: Vec<String>| w.iter().any(|m| m.contains("contenteditable"));
+    assert!(says(warnings(
+        "<!doctype html><div contenteditable>x</div>"
+    )));
+    assert!(!says(warnings(
+        "<!doctype html><div contenteditable=\"false\">x</div>"
+    )));
+}
+
+/// Only what a script can tell: selecting text by hand needs no warning.
+#[test]
+fn a_script_reading_the_text_selection_is_warned() {
+    let says = |w: Vec<String>| w.iter().any(|m| m.contains("text selection"));
+    assert!(says(warnings(
+        "<!doctype html><p>x</p><script>var s = window.getSelection();</script>"
+    )));
+    assert!(says(warnings(
+        "<!doctype html><p>x</p><script>document.addEventListener('selectionchange', function () {});</script>"
+    )));
+    assert!(!says(warnings("<!doctype html><p>getSelection</p>")));
+}

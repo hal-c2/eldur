@@ -274,6 +274,7 @@ ApplicationWindow {
                     // <label>
                     Text {
                         id: label
+                        property var eldurAttrs: ({ "for": "email" })
                         property string eldurTag: "label"
                         property string eldurWs: "\n    "
                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : title.eldurCarry
@@ -290,7 +291,7 @@ ApplicationWindow {
 
                         TapHandler {
                             onTapped: (eventPoint, button) => {
-                                if (email.enabled && !Eldur.tapPrevented(eventPoint)) { email.forceActiveFocus(); }
+                                if (email.enabled) Eldur.afterTap(eventPoint, function () { Eldur.labelled(email); });
                             }
                         }
                     }
@@ -314,6 +315,7 @@ ApplicationWindow {
 
                             TextField {
                                 id: email
+                                property var eldurAttrs: ({ "type": "text" })
                                 property string eldurTag: "input"
                                 property string eldurWs: "\n    "
 

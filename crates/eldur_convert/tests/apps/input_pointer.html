@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Pointer</title>
+<style>
+html, body { margin: 0; padding: 0; }
+body { width: 1280px; height: 800px; user-select: none; }
+#outer { position: absolute; left: 100px; top: 100px; width: 400px; height: 300px; background: #dde; }
+#inner { position: absolute; left: 50px; top: 50px; width: 200px; height: 100px; background: #bcd; }
+#leaf { position: absolute; left: 20px; top: 20px; width: 60px; height: 40px; background: #89a; }
+#side { position: absolute; left: 600px; top: 100px; width: 200px; height: 200px; background: #edd; }
+#over { position: absolute; left: 640px; top: 140px; width: 100px; height: 100px; background: rgba(0,0,0,.2); pointer-events: none; }
+#stay { position: absolute; left: 600px; top: 400px; width: 200px; height: 100px; background: #ded; }
+</style>
+</head>
+<body>
+<div id="outer"><div id="inner"><div id="leaf"></div></div></div>
+<div id="side"></div>
+<div id="over"></div>
+<div id="stay"></div>
+<script>
+function name(n) {
+  if (n === document) return "document";
+  if (n === window) return "window";
+  if (!n) return "null";
+  return n.id || n.tagName.toLowerCase();
+}
+var types = ["pointerover","pointerenter","pointerdown","pointermove","pointerup","pointerout","pointerleave",
+  "mouseover","mouseenter","mousedown","mouseup","mousemove","mouseout","mouseleave",
+  "click","dblclick","auxclick","contextmenu"];
+function log(e) {
+  console.log([e.type, name(e.target), name(e.currentTarget), e.eventPhase, e.button, e.buttons, e.detail,
+    name(e.relatedTarget), e.shiftKey ? "S" : "-", e.ctrlKey ? "C" : "-", e.altKey ? "A" : "-",
+    e.clientX, e.clientY, e.pageX, e.pageY, e.offsetX, e.offsetY, e.defaultPrevented, e.bubbles, e.cancelable,
+    e.isTrusted, e.pointerType === undefined ? "" : e.pointerType].join(" "));
+}
+// Delegated from far up, in both phases: nothing listens on the elements themselves.
+types.forEach(function (t) {
+  document.addEventListener(t, log, true);
+  document.body.addEventListener(t, log);
+});
+// Non-bubbling pairs do reach a listener of their own.
+["mouseenter","mouseleave","pointerenter","pointerleave"].forEach(function (t) {
+  document.getElementById("inner").addEventListener(t, log);
+});
+document.getElementById("stay").addEventListener("contextmenu", function (e) { e.preventDefault(); });
+document.getElementById("stay").addEventListener("mousedown", function (e) { e.preventDefault(); });
+</script>
+</body>
+</html>

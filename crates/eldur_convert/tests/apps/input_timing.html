@@ -1,0 +1,29 @@
+<!doctype html><html><head><style>
+body{margin:0}
+#b,#d,#t,#l,#dbl{position:absolute;left:10px;width:100px;height:30px;margin:0;box-sizing:border-box}
+#b{top:10px}#d{top:50px;background:#ccc}#t{top:90px}#l{top:130px;background:#acc}#c{position:absolute;left:150px;top:130px}
+#dbl{top:170px;background:#cca}
+</style></head><body>
+<button id="b">b</button>
+<div id="d"></div>
+<input id="t">
+<label id="l" for="c">L</label><input id="c" type="checkbox">
+<div id="dbl"></div>
+<script>
+const say=s=>console.log(s);
+const queue=(t,e)=>{
+ const w=t+":"+(e.target.id||e.target.tagName);
+ setTimeout(()=>say("timeout after "+w),0);
+ Promise.resolve().then(()=>say("promise after "+w));
+ queueMicrotask(()=>say("microtask after "+w));
+};
+for(const t of ["pointerdown","mousedown","pointerup","mouseup"]){
+ document.addEventListener(t,e=>{say(t+":"+(e.target.id||e.target.tagName));queue(t,e)});
+}
+for(const t of ["click","dblclick","auxclick","contextmenu","focus","blur","change","input"]){
+ document.addEventListener(t,e=>say(t+":"+(e.target.id||e.target.tagName)+(t==="change"||t==="click"?" checked="+document.getElementById("c").checked:"")),true);
+}
+document.addEventListener("keydown",e=>{say("keydown:"+e.key);queue("keydown",e)});
+document.addEventListener("keyup",e=>{say("keyup:"+e.key);queue("keyup",e)});
+document.addEventListener("keypress",e=>{say("keypress:"+e.key);queue("keypress",e)});
+</script></body></html>

@@ -1,0 +1,40 @@
+<!doctype html><html><head><style>
+body{margin:0}
+#f input,#f button,#f select,#out,#plain,#stop,#dis{position:absolute;box-sizing:border-box;width:100px;height:30px;left:10px;margin:0}
+#a{top:10px}#b{top:50px}#c{top:90px;width:20px;height:20px}#r1{top:130px;width:20px;height:20px}#r2{top:160px;width:20px;height:20px}
+#sub{top:200px}#res{top:240px}#dis{top:280px}
+#plain{top:320px;left:200px;background:#ccc}#stop{top:360px;left:200px;background:#caa}
+#nf{position:absolute;left:200px;top:10px;width:100px;height:30px;box-sizing:border-box;margin:0}
+#lb{position:absolute;left:200px;top:60px;width:100px;height:30px;background:#acc}
+#req:invalid{outline:0}
+</style></head><body>
+<form id="f" action="#x">
+<input id="a" name="a" value="one"><input id="b" name="b" required>
+<input id="c" type="checkbox" name="c"><input id="r1" type="radio" name="r" value="1" checked><input id="r2" type="radio" name="r" value="2">
+<button id="sub">go</button><button id="res" type="reset">rs</button><button id="dis" disabled>x</button>
+</form>
+<input id="nf" value="keep"><label id="lb" for="c">L</label>
+<div id="plain"></div><div id="fl" style="position:absolute;left:600px;top:10px;width:50px;height:30px;background:#eee"></div><div id="vt" style="position:absolute;left:600px;top:60px;width:50px;height:30px;background:#ddd"></div><div id="stop"></div>
+<script>
+const L=[];const log=s=>L.push(s);
+const flush=n=>{console.log("H "+n+" "+L.join(" "));L.length=0};
+window.flush=flush;
+const ids=["a","b","c","r1","r2","sub","res","dis","nf","lb","plain","stop"];
+for(const t of ["mousedown","mouseup","click","dblclick","focus","blur","focusin","focusout","input","change","keydown","keyup","invalid"]){
+ document.addEventListener(t,e=>{if(e.target.id==="fl"||e.target.id==="vt")return;log(t+":"+(e.target.id||e.target.tagName)+(e.key?"="+e.key:"")+(e.shiftKey?"+S":""))},true);
+}
+const f=document.getElementById("f");
+f.addEventListener("submit",e=>{e.preventDefault();log("submit:"+(e.submitter?e.submitter.id:"none")+":"+document.getElementById("a").value+":"+document.getElementById("b").value)});
+f.addEventListener("reset",e=>log("reset"));
+document.getElementById("stop").addEventListener("mousedown",e=>e.preventDefault());
+document.getElementById("nf").addEventListener("keydown",e=>{if(e.key==="x")e.preventDefault()});
+document.getElementById("c").addEventListener("click",e=>{if(window.veto)e.preventDefault();log("ck="+e.target.checked)});
+const st=()=>["a","b"].map(i=>document.getElementById(i).value).join("|")+" c="+document.getElementById("c").checked+" r2="+document.getElementById("r2").checked+" active="+(document.activeElement.id||document.activeElement.tagName)+" valid="+f.checkValidity();
+window.st=()=>{L.length=0;const s=st();L.length=0;return s};
+let step=0;
+document.getElementById("fl").addEventListener("mousedown",e=>e.preventDefault());
+document.getElementById("vt").addEventListener("mousedown",e=>e.preventDefault());
+document.getElementById("fl").addEventListener("click",e=>{const l=L.join(" ");L.length=0;const s=st();L.length=0;console.log("H "+(step++)+" "+l);console.log("H   = "+s)});
+document.getElementById("vt").addEventListener("click",e=>{window.veto=!window.veto});
+console.log("H start "+window.st());
+</script></body></html>

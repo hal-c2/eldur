@@ -13,7 +13,7 @@ use crate::parse::{
 };
 use crate::properties::{self, ComputeContext, CssWide, Longhand, PropertyKind};
 use crate::selectors::{
-    DynamicFacts, MatchContext, PseudoElement, RuleIndex, Selector, Specificity,
+    DynamicFact, DynamicFacts, MatchContext, PseudoElement, RuleIndex, Selector, Specificity,
     compute_ancestor_blooms, matches_selector,
 };
 use crate::{
@@ -418,19 +418,28 @@ pub(crate) fn compute_styles(
             });
             continue;
         }
-        let facts = DynamicFacts::single_state(cond_node, state);
-        let mut variant_root_fs = root_font_size;
-        let mut changed: Vec<(NodeId, Box<ComputedStyle>)> = Vec::new();
-        for child in doc.element_children(doc.root()) {
-            engine.compute_variant_subtree(
-                child,
-                &facts,
-                None,
-                None,
-                &mut variant_root_fs,
-                &styles,
-                &mut changed,
-            );
+        let changed_when = |holds: bool| {
+            let mut facts = DynamicFacts::default();
+            facts.set(cond_node, DynamicFact::State(state), Some(holds), 0);
+            let mut variant_root_fs = root_font_size;
+            let mut changed: Vec<(NodeId, Box<ComputedStyle>)> = Vec::new();
+            for child in doc.element_children(doc.root()) {
+                engine.compute_variant_subtree(
+                    child,
+                    &facts,
+                    None,
+                    None,
+                    &mut variant_root_fs,
+                    &styles,
+                    &mut changed,
+                );
+            }
+            changed
+        };
+        let mut changed = changed_when(true);
+        // Already so in the document: what shows is what leaving the state takes away.
+        if changed.is_empty() && state.starts_from_the_document() {
+            changed = changed_when(false);
         }
 
         if !changed.is_empty() {

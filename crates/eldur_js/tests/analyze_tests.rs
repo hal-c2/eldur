@@ -107,6 +107,9 @@ fn tracks_listeners_and_property_writes_across_variables_functions_and_loops() {
         reads_computed_style: _,
         touches_inline_style: _,
         adopts_for_inline: _,
+        heard_events: _,
+        hears_unnamed_events: _,
+        reads_text_selection: _,
     } = analyze(&[s1, s2]);
     // Nothing here can add, remove or rename an element, but
     // `setAttribute("class", …)` can take any class off one.
@@ -1449,4 +1452,57 @@ fn a_class_written_after_insertion_opens_the_page() {
     assert_eq!(res.created[0].class_sets, sets(&[&["card", "h"]]));
     assert!(res.created[0].open_classes);
     assert!(res.open_elements);
+}
+
+#[test]
+fn computed_access_to_an_unknown_name_may_hear_anything() {
+    let hears = |source: &str| analyze(&[classic("a.js", source)]).may_hear("submit");
+    assert!(hears("var e = document.body; e[\"on\" + x] = f;"));
+    assert!(hears(
+        "var e = document.body; var m = \"addEventListener\"; e[m](\"submit\", f);"
+    ));
+    assert!(hears("var e = document.body; e[\"onsubmit\"] = f;"));
+    assert!(!hears(
+        "var e = document.body; e[\"title\"] = f; var a = [1]; a[0] = 2;"
+    ));
+}
+
+#[test]
+fn a_computed_read_hears_nothing_unless_its_value_can_go_on_to_be_called() {
+    let hears = |source: &str| analyze(&[classic("a.js", source)]).may_hear("keydown");
+    // What a read gives is only looked at, or the key can name no method.
+    for quiet in [
+        "var a = [1]; var i = 0; var x = a[i] + 1;",
+        "var a = []; for (var i = 0; i < a.length; i++) { if (a[i].id > 3) { a[i].id = 4; } }",
+        "var a = []; for (var i = 0; i < a.length; i++) { show(a[i]); }",
+        "function f(all, to) { all[to].focus(); all[to].classList.toggle(\"x\"); }",
+        "function f(el, k) { const item = el[k]; console.log(item.name); }",
+        "function f(c, k) { c[k] = 0; c[k] = \"s\"; c[k] = [1]; }",
+        // Every value of a table the page wrote is already seen by the analysis.
+        "var rules = { a: function(v) { return v; } }; function f(id, v) { return rules[id](v); }",
+    ] {
+        assert!(!hears(quiet), "{quiet}");
+    }
+    for heard in [
+        "function f(el, x, g) { el[x](\"keydown\", g); }",
+        "function f(el, x, g) { el[x] = g; }",
+        "function f(el, x, g) { const add = el[x]; add.call(el, \"keydown\", g); }",
+        "function f(el, x, g) { const add = el[x]; add(\"keydown\", g); }",
+        "function f(el, x, g) { let add; add = el[x]; add(\"keydown\", g); }",
+        "function f(el, x, g) { const add = el[x]; const b = add; b(\"keydown\", g); }",
+        "function f(el, x, g) { el[x].call(el, \"keydown\", g); }",
+        "function f(el, x, g) { (g || el[x])(\"keydown\"); }",
+        "function f(el, x, g) { g(el[x]); }",
+        "function f(el, x, g) { const add = el[x]; g(add); }",
+        "function f(el, x) { return el[x]; }",
+        "var pick = (el, x) => el[x];",
+        "function f(el, x, o) { o.add = el[x]; }",
+        "function f(el, x) { return [el[x]]; }",
+        "function f(el, x) { return { add: el[x] }; }",
+        // A table reassigned from elsewhere is no longer only what the page wrote.
+        "var rules = {}; rules = window.other; function f(id, v) { rules[id](v); }",
+        "var i = 0; i = name(); function f(el, g) { el[i](\"keydown\", g); }",
+    ] {
+        assert!(hears(heard), "{heard}");
+    }
 }

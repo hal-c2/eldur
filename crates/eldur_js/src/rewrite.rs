@@ -106,6 +106,9 @@ struct PageBuilder<'a> {
 struct StaticOnly<'a> {
     inner: &'a dyn DomResolver,
     live: &'a [DomQuery],
+    /// Names the page's scripts give to something other than the element of
+    /// that QML id: written into a script, the id would mean the page's thing.
+    shadowed: HashSet<String>,
 }
 
 impl DomResolver for StaticOnly<'_> {
@@ -115,10 +118,13 @@ impl DomResolver for StaticOnly<'_> {
 
     fn resolve(&self, query: &DomQuery) -> Vec<QmlTarget> {
         if self.live.contains(query) {
-            Vec::new()
-        } else {
-            self.inner.resolve(query)
+            return Vec::new();
         }
+        let targets = self.inner.resolve(query);
+        if targets.iter().any(|t| self.shadowed.contains(&t.qml_id)) {
+            return Vec::new();
+        }
+        targets
     }
 
     fn element(&self, key: ElementKey) -> Option<QmlTarget> {
@@ -143,6 +149,7 @@ pub(crate) fn rewrite(
         } else {
             &analysis.live_queries
         },
+        shadowed: HashSet::new(),
     };
     let allocator = Allocator::default();
     let mut diagnostics: Vec<Diagnostic> = Vec::new();
@@ -198,6 +205,11 @@ pub(crate) fn rewrite(
         .map(|v| (v.idx, v.input, &v.parsed))
         .collect();
     let cross_script = build_cross_script_query_map(&valid_refs);
+    let resolver = &StaticOnly {
+        inner: resolver,
+        live: &[],
+        shadowed: names_shadowing_ids(&valid_scripts, &cross_script, resolver),
+    };
 
     let mut shared = SharedRewriteState {
         reads_attributes: analysis.reads_attributes,
@@ -1628,6 +1640,32 @@ fn prepare_module_symbol_renames<'a>(
     }
 
     (symbol_renames, elided_dom_symbols)
+}
+
+/// Every name a script binds, in any scope, save one bound only to the element
+/// of that same id.
+fn names_shadowing_ids(
+    scripts: &[ValidScript<'_>],
+    cross_script: &HashMap<String, DomQuery>,
+    resolver: &dyn DomResolver,
+) -> HashSet<String> {
+    let mut names = HashSet::new();
+    for v in scripts {
+        let scoping = &v.parsed.scoping;
+        let bindings =
+            ScriptQueryBindings::build(v.input, &v.parsed.program, scoping, cross_script);
+        for sym_id in scoping.symbol_ids() {
+            let name = scoping.symbol_name(sym_id);
+            let is_the_element = bindings.symbol_queries.get(&sym_id).is_some_and(|query| {
+                crate::lower::resolve_query_to_single_target(query, resolver)
+                    .is_some_and(|t| t.qml_id == name)
+            });
+            if !is_the_element {
+                names.insert(name.to_string());
+            }
+        }
+    }
+    names
 }
 
 fn collect_program_declared_names(program: &Program<'_>, out: &mut HashSet<String>) {

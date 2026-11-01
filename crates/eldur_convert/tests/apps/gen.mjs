@@ -3,10 +3,10 @@
 // and each step it keeps the console lines since the last step and what
 // `snapshot.js` reads.
 //
-//   node crates/eldur_convert/tests/apps/gen.mjs [--shots DIR]
+//   node crates/eldur_convert/tests/apps/gen.mjs [--shots DIR] [--only a,b]
 //
 // writes `chromium.json`, and with `--shots` each page's last state as
-// DIR/<page>.png. Regenerate it; never edit it by hand.
+// DIR/<page>.png. `--only` rerecords those pages and keeps the rest. Regenerate it; never edit it by hand.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -16,6 +16,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../../..");
 const { loadPlaywright } = await import(path.join(root, "tools/visual/playwright.mjs"));
 const shots = process.argv.includes("--shots") ? process.argv[process.argv.indexOf("--shots") + 1] : null;
+
+const only = process.argv.includes("--only") ? process.argv[process.argv.indexOf("--only") + 1].split(",") : null;
 
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();
@@ -44,7 +46,13 @@ async function act(step) {
     const { x, y } = await center(step.click);
     await page.mouse.click(x, y);
   }
-  if (step.clickAt) await page.mouse.click(step.clickAt[0], step.clickAt[1]);
+  if (step.clickAt) await page.mouse.click(step.clickAt[0], step.clickAt[1], { button: step.button ?? "left" });
+  if (step.dblAt) await page.mouse.dblclick(step.dblAt[0], step.dblAt[1]);
+  if (step.move) await page.mouse.move(step.move[0], step.move[1]);
+  if (step.down) await page.mouse.down({ button: step.down });
+  if (step.up) await page.mouse.up({ button: step.up });
+  if (step.hold) await page.keyboard.down(step.hold);
+  if (step.unhold) await page.keyboard.up(step.unhold);
   if (step.hover) {
     const { x, y } = await center(step.hover);
     await page.mouse.move(x, y);
@@ -56,6 +64,7 @@ async function act(step) {
     await page.keyboard.type(step.type[1]);
   }
   if (step.key) await page.keyboard.press(step.key);
+  if (step.keys) await page.keyboard.type(step.keys);
   if (step.wheel) {
     const { x, y } = step.wheel[0] === "page" ? { x: 1200, y: 400 } : await center(step.wheel[0]);
     await page.mouse.move(x, y);
@@ -97,13 +106,19 @@ async function state(name, watch) {
   return { name, log: lines, state: read };
 }
 
+const recorded = path.join(here, "chromium.json");
+const kept = only ? JSON.parse(fs.readFileSync(recorded, "utf8")) : {};
 const out = {};
 for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort()) {
   const name = file.slice(0, -5);
+  if (only && !only.includes(name)) {
+    out[name] = kept[name];
+    continue;
+  }
   const spec = JSON.parse(fs.readFileSync(path.join(here, `${name}.json`), "utf8"));
   log = [];
   // A tab that scrolled to its end can no longer take a screenshot on the next page.
-  await page.close();
+  await page.close().catch(() => {});
   page = await openTab();
   await page.mouse.move(1200, 790);
   await page.goto("file://" + path.join(here, file), { waitUntil: "load" });
@@ -111,6 +126,14 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
   const steps = [await state("load", spec.loadMoves ? [] : spec.watch)];
   for (const step of spec.steps) {
     await act(step);
+    if (spec.bubble) {
+      // Chromium's validation bubble kills the headless renderer, sooner or later:
+      // what the page said before that is the record, and its state is not read.
+      await page.waitForTimeout(200);
+      steps.push({ name: step.name, log, state: {} });
+      log = [];
+      break;
+    }
     steps.push(await state(step.name, spec.watch));
   }
   out[name] = steps;
@@ -120,4 +143,4 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
   }
 }
 await browser.close();
-fs.writeFileSync(path.join(here, "chromium.json"), JSON.stringify(out, null, 1) + "\n");
+fs.writeFileSync(recorded, JSON.stringify(out, null, 1) + "\n");
