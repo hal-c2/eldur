@@ -1,0 +1,41 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/18px sans-serif}
+.row{display:flex;height:150px;margin-bottom:5px}
+.col{display:flex;flex-direction:column}
+.w{width:100px}
+.a{background:#f88}
+.g1{flex:1}
+</style></head><body>
+<div class="row" id="r1">
+<div class="col w" id="c1"><div class="a" id="c1a">a</div><div class="a" id="c1b">b</div></div>
+<div class="col w" id="c2"><div class="a g1" id="c2a">a</div><div class="a" id="c2b">b</div></div>
+<div class="col w" id="c3" style="align-self:start"><div class="a" id="c3a">a</div><div class="a" id="c3b">b</div></div>
+<div class="col w" id="c4" style="justify-content:center"><div class="a" id="c4a">a</div><div class="a" id="c4b">b</div></div>
+<div class="col w" id="c5" style="justify-content:space-between"><div class="a" id="c5a">a</div><div class="a" id="c5b">b</div></div>
+<div class="w" id="c6"><div class="a" id="c6a" style="height:100%">a</div><div class="a" id="c6b">b</div></div>
+<div class="w a" id="c7"><div id="c7a">a</div><div id="c7b">b</div></div>
+<div class="w a" id="c8" style="min-height:40px;align-self:start"><div id="c8a">a</div><div id="c8b">b</div></div>
+</div>
+<div class="row" id="r2">
+<div class="w" id="n1" style="display:flex"><div class="col" id="n1a"><div class="a g1" id="n1b">a</div></div><div class="a" id="n1c">c</div></div>
+<div class="w col" id="n2"><div class="col" id="n2a"><div class="a" id="n2b">a</div></div><div class="col g1" id="n2c"><div class="a g1" id="n2d">g</div></div></div>
+<div class="w col" id="n3"><div style="display:flex" id="n3a"><div class="a" id="n3b">a</div></div><div style="display:flex;flex:1" id="n3c"><div class="a" id="n3d">g</div></div></div>
+<div class="w col" id="n4"><div class="a" id="n4a" style="min-height:30px">a</div><div class="a" id="n4b" style="min-height:30px;flex:1">b</div></div>
+<div class="w col" id="n5"><div id="n5a" class="g1"><div class="a" id="n5b" style="height:100%">h</div></div></div>
+<div class="w" id="n6" style="display:flex"><div class="a" id="n6a" style="height:100%">h</div></div>
+</div>
+<div style="display:grid;grid-template-columns:100px 100px 100px;height:150px;margin-bottom:5px" id="o">
+<div class="col" id="g1"><div class="a" id="g1a">a</div><div class="a" id="g1b">b</div></div>
+<div class="col" id="g2"><div class="a g1" id="g2a">a</div><div class="a" id="g2b">b</div></div>
+<div class="col" id="g3" style="align-self:center"><div class="a" id="g3a">a</div><div class="a" id="g3b">b</div></div>
+</div>
+<div class="col" id="m1" style="min-height:100px;width:100px"><div class="a" id="m1a">a</div><div class="a g1" id="m1b">b</div></div>
+<div style="display:flex;min-height:60px" id="m2"><div class="col w" id="m2a"><div class="a g1" id="m2b">a</div></div></div>
+<div style="display:flex" id="m3"><div style="width:50px;height:50px" id="m3a"></div><div class="col w" id="m3b"><div class="a g1" id="m3c">a</div><div class="a" id="m3d">b</div></div></div>
+<div id="after">z</div>
+<script>
+function rect(i){var b=document.getElementById(i).getBoundingClientRect();return i+":"+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)+","+Math.round(b.height)}
+function log(ids){console.log("CS "+ids.map(rect).join(" "))}
+["c1","c2","c3","c4","c5","c6","c7","c8","g1","g2","g3"].forEach(function(i){log([i,i+"a",i+"b"])});
+log(["n1","n1a","n1b","n1c"]);log(["n2","n2a","n2b","n2c","n2d"]);log(["n3","n3a","n3b","n3c","n3d"]);log(["n4","n4a","n4b"]);log(["n5","n5a","n5b"]);log(["n6","n6a"]);
+log(["m1","m1a","m1b"]);log(["m2","m2a","m2b"]);log(["m3","m3a","m3b","m3c","m3d","after"]);
+</script></body></html>

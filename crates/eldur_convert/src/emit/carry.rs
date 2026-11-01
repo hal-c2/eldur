@@ -440,7 +440,7 @@ impl Emitter<'_, '_> {
         }
     }
 
-    fn item_id(&mut self, obj: &mut Object) -> String {
+    pub(super) fn item_id(&mut self, obj: &mut Object) -> String {
         if let Some(id) = &obj.id {
             return id.clone();
         }

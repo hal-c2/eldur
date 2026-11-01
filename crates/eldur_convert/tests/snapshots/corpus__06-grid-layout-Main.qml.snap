@@ -44,6 +44,7 @@ ApplicationWindow {
                     implicitWidth: bodyContent.implicitWidth
                     implicitHeight: bodyContent.implicitHeight
                     Layout.fillWidth: true
+                    Layout.preferredHeight: root.height
 
                     ColumnLayout {
                         id: bodyContent

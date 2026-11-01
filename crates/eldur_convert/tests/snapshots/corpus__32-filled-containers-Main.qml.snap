@@ -686,6 +686,7 @@ ApplicationWindow {
             Layout.minimumWidth: 90
             Layout.maximumWidth: 90
             Layout.preferredHeight: 24
+            Layout.alignment: Qt.AlignTop
 
             Text {
                 id: cellText

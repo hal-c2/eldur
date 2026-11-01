@@ -1,0 +1,39 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/18px sans-serif}
+.row{display:flex;height:200px;margin-bottom:10px}
+.g{display:grid;width:80px;margin-right:5px}
+.a{background:#f88}
+.h{height:30px;background:#8f8}
+</style></head><body>
+<div class="row" id="r1">
+<div class="g" id="s1" style="align-content:start"><div class="a" id="s1a">a</div><div class="a" id="s1b">b</div></div>
+<div class="g" id="s2" style="align-content:end"><div class="a" id="s2a">a</div><div class="a" id="s2b">b</div></div>
+<div class="g" id="s3" style="align-content:center"><div class="a" id="s3a">a</div><div class="a" id="s3b">b</div></div>
+<div class="g" id="s4" style="align-content:space-between"><div class="a" id="s4a">a</div><div class="a" id="s4b">b</div></div>
+<div class="g" id="s5" style="align-content:space-around"><div class="a" id="s5a">a</div><div class="a" id="s5b">b</div></div>
+<div class="g" id="s6" style="align-content:space-evenly"><div class="a" id="s6a">a</div><div class="a" id="s6b">b</div></div>
+<div class="g" id="s7" style="align-content:stretch"><div class="a" id="s7a">a</div><div class="a" id="s7b">b</div></div>
+</div>
+<div class="row" id="r2">
+<div class="g" id="i1" style="align-items:start"><div class="a" id="i1a">a</div><div class="a" id="i1b">b</div></div>
+<div class="g" id="i2" style="align-items:center"><div class="a" id="i2a">a</div><div class="a" id="i2b">b</div></div>
+<div class="g" id="i3" style="align-items:end"><div class="a" id="i3a">a</div><div class="a" id="i3b">b</div></div>
+<div class="g" id="i4"><div class="a" id="i4a" style="align-self:center">a</div><div class="a" id="i4b" style="align-self:end">b</div></div>
+<div class="g" id="i5" style="grid-template-rows:1fr 1fr;align-items:center"><div class="a" id="i5a">a</div><div class="a" id="i5b">b</div></div>
+<div class="g" id="i6" style="grid-template-rows:1fr 2fr"><div class="a" id="i6a">a</div><div class="a" id="i6b">b</div></div>
+<div class="g" id="i7" style="grid-template-rows:auto 1fr"><div class="a" id="i7a">a</div><div class="a" id="i7b">b</div></div>
+<div class="g" id="i8" style="grid-template-rows:50px 1fr"><div class="a" id="i8a">a</div><div class="a" id="i8b">b</div></div>
+</div>
+<div class="row" id="r3">
+<div class="g" id="h1"><div class="h" id="h1a">a</div><div class="h" id="h1b">b</div></div>
+<div class="g" id="h2" style="grid-template-rows:1fr 1fr"><div class="h" id="h2a">a</div><div class="h" id="h2b">b</div></div>
+<div class="g" id="h3" style="grid-template-rows:1fr 1fr;align-content:start"><div class="a" id="h3a">a</div><div class="h" id="h3b">b</div></div>
+<div class="g" id="h4" style="grid-template-columns:1fr 1fr"><div class="a" id="h4a">a</div><div class="a" id="h4b">b</div><div class="h" id="h4c">c</div><div class="a" id="h4d">d</div></div>
+<div class="g" id="h5" style="height:100%"><div class="a" id="h5a">a</div><div class="a" id="h5b">b</div></div>
+<div class="g" id="h6" style="grid-auto-rows:20px"><div class="a" id="h6a">a</div><div class="a" id="h6b">b</div></div>
+</div>
+<script>
+function rect(i){var b=document.getElementById(i).getBoundingClientRect();return i+":"+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)+","+Math.round(b.height)}
+function log(ids){console.log("CS "+ids.map(rect).join(" "))}
+["s1","s2","s3","s4","s5","s6","s7","i1","i2","i3","i4","i5","i6","i7","i8","h1","h2","h3","h5","h6"].forEach(function(i){log([i,i+"a",i+"b"])});
+log(["h4","h4a","h4b","h4c","h4d"]);
+</script></body></html>

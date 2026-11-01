@@ -22,7 +22,7 @@ use eldur_css::{
 };
 use eldur_qml::{Member, Object, Value};
 
-use super::Emitter;
+use super::{Emitter, Given};
 use super::flow::{is_layout, is_viewport_relative, size_value};
 use super::units::{fmt_number, length_expr, number, px_part, round};
 use crate::boxes::{BoxKind, LayoutBox, describe, node_line};
@@ -187,6 +187,7 @@ impl Emitter<'_, '_> {
         line: Option<u32>,
     ) -> Object {
         let style = &*b.style;
+        let given = self.own_given;
         let row = matches!(
             style.flex_direction,
             FlexDirection::Row | FlexDirection::RowReverse
@@ -304,6 +305,21 @@ impl Emitter<'_, '_> {
                 layout.push_child(spacer());
                 spacers_at.push(layout.members.len() - 1);
             }
+            let own_definite = super::flow::has_height(style) || given == Given::Definite;
+            self.child_given = if row {
+                let (m_start, m_end) = (&child.style.margin.top, &child.style.margin.bottom);
+                let stretches = cross(style.align_items, child.style.align_self, m_start, m_end)
+                    == Cross::Stretch;
+                match (stretches, own_definite) {
+                    (true, true) => Given::Definite,
+                    (true, false) => Given::Stretched,
+                    (false, _) => Given::Content,
+                }
+            } else if child.style.flex_grow > 0.0 && own_definite {
+                Given::Definite
+            } else {
+                Given::Content
+            };
             let mut obj = self.item(child, decoration).obj;
             let lead_gap = if spacers && i > 0 { gap } else { 0.0 };
             self.flex_item(&mut obj, child, style, axis, unequal_grow, lead_gap);
@@ -591,13 +607,20 @@ impl Emitter<'_, '_> {
             // Stretching block flow would spread its children apart; a CSS
             // block's stay at the top and only its unpainted end moves.
             (Cross::Stretch, None)
-                if row && obj.type_name == "ColumnLayout" && b.kind == BoxKind::Block =>
+                if row
+                    && obj.type_name == "ColumnLayout"
+                    && b.kind == BoxKind::Block
+                    && !super::flow::holds_percent_height(b) =>
             {
                 obj.set("Layout.fillHeight", false);
                 obj.set("Layout.alignment", Value::expr("Qt.AlignTop"));
             }
             (Cross::Stretch, None) => {
                 obj.set(&format!("Layout.fill{cross_name}"), true);
+                // Its percentage children can overflow it, not raise the row.
+                if row && b.kind == BoxKind::Block && super::flow::holds_percent_height(b) {
+                    obj.set("Layout.minimumHeight", Value::Number(0.0));
+                }
                 match max_cross {
                     Some(v) => {
                         obj.set(&format!("Layout.maximum{cross_name}"), v);

@@ -754,6 +754,36 @@ impl Emitter<'_, '_> {
                     number(l.px + l.percent / 100.0 * base + extra_h),
                 );
             }
+            Size::Length(Length::Linear(l))
+                if self.percent_of_parent && l.px == 0.0 && l.vw == 0.0 && l.vh == 0.0 =>
+            {
+                // A full-height item with a sibling overflows its column, which Qt's
+                // layouts answer with a recursive rearrange: it takes what the sibling
+                // leaves.
+                if self.percent_fills {
+                    obj.set("Layout.preferredHeight", 0.0);
+                    obj.set("Layout.fillHeight", true);
+                } else {
+                    let h = format!("parent.height * {}", fmt_number(f64::from(l.percent) / 100.0));
+                    obj.set("Layout.preferredHeight", Value::expr(h.clone()));
+                    obj.set("Layout.minimumHeight", Value::expr(h));
+                }
+            }
+            Size::Length(Length::Linear(l))
+                if let Some(vh) = self.percent_of_vh
+                    && l.vw == 0.0
+                    && l.vh == 0.0 =>
+            {
+                let of_viewport = eldur_css::LengthPercentage {
+                    vh: vh * l.percent / 100.0,
+                    percent: 0.0,
+                    ..*l
+                };
+                obj.set(
+                    "Layout.preferredHeight",
+                    size_value(&Length::Linear(of_viewport), extra_h),
+                );
+            }
             Size::Length(_) => {
                 self.diags.info(
                     "css",
@@ -838,6 +868,21 @@ fn float_run(boxes: &[LayoutBox<'_>]) -> usize {
         return 0;
     };
     boxes.iter().take_while(|b| side(b) == Some(first)).count()
+}
+
+impl Emitter<'_, '_> {
+    /// Whether a percentage height on a child of the current block means
+    /// anything.
+    pub(super) fn percent_resolves(&self) -> bool {
+        self.percent_height_base.is_some() || self.percent_of_vh.is_some()
+    }
+}
+
+/// A stretched block fills after all if a child's percentage height needs that.
+pub(crate) fn holds_percent_height(b: &LayoutBox<'_>) -> bool {
+    matches!(&b.content, crate::boxes::Content::Blocks(kids) if kids.iter().any(|k| {
+        matches!(&k.style.height, Size::Length(Length::Linear(l)) if l.percent != 0.0)
+    }))
 }
 
 pub(crate) fn has_height(style: &ComputedStyle) -> bool {

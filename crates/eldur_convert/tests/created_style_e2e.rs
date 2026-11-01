@@ -57,6 +57,18 @@ TestCase {
 }
 "##;
 
+const OVERFLOW: &str = "a `height: 100%` item with a sibling takes what the sibling leaves: \
+    overflowing its column makes Qt's layouts warn of a recursive rearrange";
+
+/// `(page, Chromium's line, ours, why)`: what is known to differ, in full, so a
+/// changed difference and one that went away both fail.
+const KNOWN: &[(&str, &str, &str, &str)] = &[(
+    "stretch_flex",
+    "CS c6:500,0,100,150 c6a:500,0,100,150 c6b:500,150,100,18",
+    "CS c6:500,0,100,150 c6a:500,0,100,132 c6b:500,132,100,18",
+    OVERFLOW,
+)];
+
 /// Runs one page; `Err` has what went wrong.
 fn run(name: &str, html: &str, want: &[&str], clicks: &str, probes: &str) -> Result<(), String> {
     let options = Options {
@@ -100,9 +112,18 @@ fn run(name: &str, html: &str, want: &[&str], clicks: &str, probes: &str) -> Res
         .lines()
         .filter_map(|l| l.find("CS ").map(|at| &l[at..]))
         .collect();
+    let known: Vec<_> = KNOWN.iter().filter(|k| k.0 == name).collect();
+    for k in &known {
+        if !want.contains(&k.1) || !logged.contains(&k.2) {
+            problems.push(format!("known difference is gone: {}", k.2));
+        }
+    }
     for i in 0..logged.len().max(want.len()) {
         let (got, chromium) = (logged.get(i), want.get(i));
-        if got != chromium {
+        let listed = known
+            .iter()
+            .any(|k| chromium == Some(&k.1) && got == Some(&k.2));
+        if got != chromium && !listed {
             problems.push(format!(
                 "line {i}\n    got      {}\n    Chromium {}",
                 got.unwrap_or(&"(nothing)"),
@@ -268,4 +289,34 @@ fn grid_fractions() {
 #[test]
 fn row_fractions() {
     page("row_fractions");
+}
+
+/// A grid given its height: by a flex row, a grid, `height` or `min-height`.
+#[test]
+fn stretch_grid() {
+    page("stretch_grid");
+}
+
+/// `align-content`, `align-items`, tracks and own heights in a stretched grid.
+#[test]
+fn stretch_grid_align() {
+    page("stretch_grid_align");
+}
+
+/// `body` a grid at `height: 100%` of a definite `html`.
+#[test]
+fn stretch_grid_body() {
+    page("stretch_grid_body");
+}
+
+/// The same with `html` auto high, where the percentage is auto too.
+#[test]
+fn stretch_grid_body_auto() {
+    page("stretch_grid_body_auto");
+}
+
+/// Flex columns stretched by rows and grids, grown children, percentages of them.
+#[test]
+fn stretch_flex() {
+    page("stretch_flex");
 }
