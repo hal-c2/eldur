@@ -5,6 +5,7 @@
 // line's content in order; a script may add, remove or change them.
 import QtQuick
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 
 Item {
     id: lines
@@ -22,11 +23,14 @@ Item {
     property real firstBaseline: 0
     property real lastBaseline: 0
     // Where the box of an inline element this is lies: its font's, on the first line.
-    readonly property real fontTop: firstBaseline - Math.round(metrics.ascent)
-    readonly property real fontHeight: Math.round(metrics.ascent) + Math.round(metrics.descent)
+    readonly property var fontExtents: EldurFonts.extents(font, cssSize > 0 ? cssSize : undefined)
+    readonly property real fontTop: firstBaseline - fontExtents.ascent
+    readonly property real fontHeight: fontExtents.ascent + fontExtents.descent
 
     property var _runs: new Map()
     property var _watched: new Set()
+    // The fractional CSS size, where the font's own is rounded to a whole one.
+    property real cssSize: 0
     property var _ownLeading: new Map()
     property bool _running: false
     property bool _scheduled: false
@@ -397,13 +401,11 @@ Item {
         built.push(line);
 
         const round = Math.round;
-        const fontAscent = round(metrics.ascent);
-        const fontDescent = round(metrics.descent);
+        const extents = lines.fontExtents;
+        const fontAscent = extents.ascent;
+        const fontDescent = extents.descent;
         // CSS gives the odd pixel of leading to the bottom, as Chromium rounds it.
-        // Qt drops the font's line gap, which `normal` includes: 1.15 is what the
-        // common fallback fonts come to, as `CONTENT_AREA` says for the converter.
-        const leading = (lineHeight > 0 ? lineHeight : round(lines.font.pixelSize * 1.15))
-            - fontAscent - fontDescent;
+        const leading = lineHeight > 0 ? lineHeight - fontAscent - fontDescent : extents.gap;
         const strutAbove = fontAscent + Math.floor(leading / 2);
         // A fractional line-height stays fractional: lines add up as the block's do.
         const strutBelow = fontDescent + leading - Math.floor(leading / 2);

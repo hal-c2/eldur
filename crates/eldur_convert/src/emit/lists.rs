@@ -12,7 +12,6 @@ use eldur_dom::NodeId;
 use eldur_qml::{Member, Object, Value};
 
 use super::decoration::border_width;
-use super::text::CONTENT_AREA;
 use super::units::{ROOT_ID, color, fmt_number, length_expr, number, round};
 use super::{Emitter, hint};
 use crate::boxes::{
@@ -48,7 +47,7 @@ pub(crate) fn bullet_top(line_height: f32, size: f32, font_size: f32) -> f32 {
 
 fn line_height_px(style: &ComputedStyle) -> f32 {
     match style.line_height {
-        LineHeight::Normal => CONTENT_AREA * style.font_size,
+        LineHeight::Normal => super::fonts::normal_line(style),
         LineHeight::Number(n) => n * style.font_size,
         LineHeight::Px(px) => px,
     }

@@ -25,6 +25,9 @@
 /// to `page.js`.
 pub const RUNTIME_JS: &str = include_str!("eldur_runtime.js");
 
+/// The font module generated pages and the runtime import (`eldur_fonts.js`).
+pub const FONTS_JS: &str = include_str!("eldur_fonts.js");
+
 /// How a script snippet was embedded in the HTML document.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ScriptKind {

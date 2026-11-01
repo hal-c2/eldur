@@ -8,6 +8,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import QtQuick.Shapes
+import "eldur_fonts.js" as EldurFonts
 
 ApplicationWindow {
     id: root
@@ -235,14 +236,15 @@ ApplicationWindow {
                             text: "Tidewater"
                             textFormat: Text.PlainText
                             color: "#24292f"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 18
                             font.weight: 700
                             lineHeight: 28.8
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 4
+                                y: EldurFonts.shift("sans-serif", 18, 700, false, 28.8)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             Layout.maximumWidth: Math.ceil(implicitWidth)
@@ -267,14 +269,15 @@ ApplicationWindow {
                                 text: "v2.4"
                                 textFormat: Text.PlainText
                                 color: "#0969da"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 12
                                 font.weight: 600
                                 lineHeight: 19.2
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2
+                                    y: EldurFonts.shift("sans-serif", 12, 600, false, 19.2)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 anchors.left: parent.left
                                 anchors.right: parent.right
@@ -341,7 +344,7 @@ ApplicationWindow {
                                     text: "Getting started"
                                     textFormat: Text.PlainText
                                     color: "#57606a"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 12
                                     font.weight: 700
                                     font.letterSpacing: 0.72
@@ -349,8 +352,9 @@ ApplicationWindow {
                                     lineHeight: 19.2
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2
+                                        y: EldurFonts.shift("sans-serif", 12, 700, false, 19.2)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -392,13 +396,14 @@ ApplicationWindow {
                                             text: "Installation"
                                             textFormat: Text.PlainText
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             lineHeight: 22.4
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 3
+                                                y: EldurFonts.shift("sans-serif", 14, 400, false, 22.4)
                                             }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -436,13 +441,14 @@ ApplicationWindow {
                                             text: "Quick start"
                                             textFormat: Text.PlainText
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             lineHeight: 22.4
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 3
+                                                y: EldurFonts.shift("sans-serif", 14, 400, false, 22.4)
                                             }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -483,14 +489,15 @@ ApplicationWindow {
                                             text: "Configuration"
                                             textFormat: Text.PlainText
                                             color: "#0969da"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             font.weight: 600
                                             lineHeight: 22.4
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 3
+                                                y: EldurFonts.shift("sans-serif", 14, 600, false, 22.4)
                                             }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -520,7 +527,7 @@ ApplicationWindow {
                                     text: "Guides"
                                     textFormat: Text.PlainText
                                     color: "#57606a"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 12
                                     font.weight: 700
                                     font.letterSpacing: 0.72
@@ -528,8 +535,9 @@ ApplicationWindow {
                                     lineHeight: 19.2
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2
+                                        y: EldurFonts.shift("sans-serif", 12, 700, false, 19.2)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -571,13 +579,14 @@ ApplicationWindow {
                                             text: "Scheduling jobs"
                                             textFormat: Text.PlainText
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             lineHeight: 22.4
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 3
+                                                y: EldurFonts.shift("sans-serif", 14, 400, false, 22.4)
                                             }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -615,13 +624,14 @@ ApplicationWindow {
                                             text: "Retries and backoff"
                                             textFormat: Text.PlainText
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             lineHeight: 22.4
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 3
+                                                y: EldurFonts.shift("sans-serif", 14, 400, false, 22.4)
                                             }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -659,13 +669,14 @@ ApplicationWindow {
                                             text: "Observability"
                                             textFormat: Text.PlainText
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             lineHeight: 22.4
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 3
+                                                y: EldurFonts.shift("sans-serif", 14, 400, false, 22.4)
                                             }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -695,7 +706,7 @@ ApplicationWindow {
                                     text: "Reference"
                                     textFormat: Text.PlainText
                                     color: "#57606a"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 12
                                     font.weight: 700
                                     font.letterSpacing: 0.72
@@ -703,8 +714,9 @@ ApplicationWindow {
                                     lineHeight: 19.2
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2
+                                        y: EldurFonts.shift("sans-serif", 12, 700, false, 19.2)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -743,13 +755,14 @@ ApplicationWindow {
                                             text: "CLI"
                                             textFormat: Text.PlainText
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             lineHeight: 22.4
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 3
+                                                y: EldurFonts.shift("sans-serif", 14, 400, false, 22.4)
                                             }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -787,13 +800,14 @@ ApplicationWindow {
                                             text: "HTTP API"
                                             textFormat: Text.PlainText
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             lineHeight: 22.4
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 3
+                                                y: EldurFonts.shift("sans-serif", 14, 400, false, 22.4)
                                             }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -834,14 +848,15 @@ ApplicationWindow {
                                 text: "Configuration"
                                 textFormat: Text.PlainText
                                 color: "#24292f"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 32
                                 font.weight: 700
                                 lineHeight: 40
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2
+                                    y: EldurFonts.shift("sans-serif", 32, 700, false, 40)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 renderType: Text.NativeRendering
@@ -855,13 +870,14 @@ ApplicationWindow {
                                 text: "Tell the scheduler where your queues live and how hard to try."
                                 textFormat: Text.PlainText
                                 color: "#57606a"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 18
                                 lineHeight: 28.8
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 4
+                                    y: EldurFonts.shift("sans-serif", 18, 400, false, 28.8)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.topMargin: 8
@@ -874,7 +890,7 @@ ApplicationWindow {
                                 property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                                 color: "#24292f"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 16
                                 lineHeight: 25.6
                                 Layout.fillWidth: true
@@ -885,7 +901,7 @@ ApplicationWindow {
                                     text: "Tidewater reads its settings from "
                                     textFormat: Text.PlainText
                                     color: "#24292f"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 16
                                     wrapMode: Text.WordWrap
                                     renderType: Text.NativeRendering
@@ -900,7 +916,7 @@ ApplicationWindow {
                                     text: "tidewater.toml"
                                     textFormat: Text.PlainText
                                     color: "#24292f"
-                                    font.family: "monospace"
+                                    font.family: EldurFonts.family("monospace")
                                     font.pixelSize: 14
                                     font.letterSpacing: -0.24
                                     wrapMode: Text.WordWrap
@@ -908,7 +924,7 @@ ApplicationWindow {
 
                                     EldurInlineBox {
                                         fragments: inlineRun.eldurFragments
-                                        font.family: "monospace"
+                                        font.family: EldurFonts.family("monospace")
                                         font.pixelSize: 14
                                         font.letterSpacing: -0.24
                                         fill: "#eff1f3"
@@ -924,7 +940,7 @@ ApplicationWindow {
                                     text: " in the working directory. Every key can be overridden with an environment variable: "
                                     textFormat: Text.PlainText
                                     color: "#24292f"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 16
                                     wrapMode: Text.WordWrap
                                     renderType: Text.NativeRendering
@@ -939,7 +955,7 @@ ApplicationWindow {
                                     text: "queue.url"
                                     textFormat: Text.PlainText
                                     color: "#24292f"
-                                    font.family: "monospace"
+                                    font.family: EldurFonts.family("monospace")
                                     font.pixelSize: 14
                                     font.letterSpacing: -0.24
                                     wrapMode: Text.WordWrap
@@ -947,7 +963,7 @@ ApplicationWindow {
 
                                     EldurInlineBox {
                                         fragments: inlineRun2.eldurFragments
-                                        font.family: "monospace"
+                                        font.family: EldurFonts.family("monospace")
                                         font.pixelSize: 14
                                         font.letterSpacing: -0.24
                                         fill: "#eff1f3"
@@ -963,7 +979,7 @@ ApplicationWindow {
                                     text: " becomes "
                                     textFormat: Text.PlainText
                                     color: "#24292f"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 16
                                     wrapMode: Text.WordWrap
                                     renderType: Text.NativeRendering
@@ -978,7 +994,7 @@ ApplicationWindow {
                                     text: "TIDEWATER_QUEUE_URL"
                                     textFormat: Text.PlainText
                                     color: "#24292f"
-                                    font.family: "monospace"
+                                    font.family: EldurFonts.family("monospace")
                                     font.pixelSize: 14
                                     font.letterSpacing: -0.24
                                     wrapMode: Text.WordWrap
@@ -986,7 +1002,7 @@ ApplicationWindow {
 
                                     EldurInlineBox {
                                         fragments: inlineRun3.eldurFragments
-                                        font.family: "monospace"
+                                        font.family: EldurFonts.family("monospace")
                                         font.pixelSize: 14
                                         font.letterSpacing: -0.24
                                         fill: "#eff1f3"
@@ -1002,7 +1018,7 @@ ApplicationWindow {
                                     text: "."
                                     textFormat: Text.PlainText
                                     color: "#24292f"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 16
                                     wrapMode: Text.WordWrap
                                     renderType: Text.NativeRendering
@@ -1058,14 +1074,15 @@ ApplicationWindow {
                                             text: "Note"
                                             textFormat: Text.PlainText
                                             color: "#0969da"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 16
                                             font.weight: 600
                                             lineHeight: 25.6
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 4
+                                                y: EldurFonts.shift("sans-serif", 16, 600, false, 25.6)
                                             }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
                                             renderType: Text.NativeRendering
@@ -1076,7 +1093,7 @@ ApplicationWindow {
                                             property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 16
                                             lineHeight: 25.6
                                             Layout.fillWidth: true
@@ -1087,7 +1104,7 @@ ApplicationWindow {
                                                 text: "Settings are read once at start-up. Send "
                                                 textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: "sans-serif"
+                                                font.family: EldurFonts.family("sans-serif")
                                                 font.pixelSize: 16
                                                 wrapMode: Text.WordWrap
                                                 renderType: Text.NativeRendering
@@ -1102,7 +1119,7 @@ ApplicationWindow {
                                                 text: "SIGHUP"
                                                 textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: "monospace"
+                                                font.family: EldurFonts.family("monospace")
                                                 font.pixelSize: 14
                                                 font.letterSpacing: -0.24
                                                 wrapMode: Text.WordWrap
@@ -1110,7 +1127,7 @@ ApplicationWindow {
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun4.eldurFragments
-                                                    font.family: "monospace"
+                                                    font.family: EldurFonts.family("monospace")
                                                     font.pixelSize: 14
                                                     font.letterSpacing: -0.24
                                                     fill: "#eff1f3"
@@ -1126,7 +1143,7 @@ ApplicationWindow {
                                                 text: " to reload them without dropping jobs."
                                                 textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: "sans-serif"
+                                                font.family: EldurFonts.family("sans-serif")
                                                 font.pixelSize: 16
                                                 wrapMode: Text.WordWrap
                                                 renderType: Text.NativeRendering
@@ -1161,14 +1178,15 @@ ApplicationWindow {
                                     text: "A minimal file"
                                     textFormat: Text.PlainText
                                     color: "#24292f"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 22
                                     font.weight: 700
                                     lineHeight: 28.6
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 1
+                                        y: EldurFonts.shift("sans-serif", 22, 700, false, 28.6)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -1185,13 +1203,14 @@ ApplicationWindow {
                                 text: "This is enough to run one worker against a local queue:"
                                 textFormat: Text.PlainText
                                 color: "#24292f"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 16
                                 lineHeight: 25.6
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 4
+                                    y: EldurFonts.shift("sans-serif", 16, 400, false, 25.6)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.topMargin: 12 - h2.eldurCarry
@@ -1234,10 +1253,14 @@ ApplicationWindow {
                                         text: "[queue]\nurl = \"redis://localhost:6379/0\"\n\n[worker]\nconcurrency = 4\nmax_attempts = 5"
                                         textFormat: Text.PlainText
                                         color: "#24292f"
-                                        font.family: "monospace"
+                                        font.family: EldurFonts.family("monospace")
                                         font.pixelSize: 13
                                         lineHeight: 18.85
                                         lineHeightMode: Text.FixedHeight
+                                        transform: Translate {
+                                            y: EldurFonts.shift("monospace", 13, 400, false, 18.85)
+                                        }
+                                        bottomPadding: EldurFonts.slack(font, lineHeight)
                                         wrapMode: Text.NoWrap
                                         x: 16
                                         y: 16
@@ -1303,14 +1326,15 @@ ApplicationWindow {
                                     text: "Options"
                                     textFormat: Text.PlainText
                                     color: "#24292f"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 22
                                     font.weight: 700
                                     lineHeight: 28.6
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 1
+                                        y: EldurFonts.shift("sans-serif", 22, 700, false, 28.6)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -1345,7 +1369,7 @@ ApplicationWindow {
 
                                     FontMetrics {
                                         id: tableFont
-                                        font.family: "sans-serif"
+                                        font.family: EldurFonts.family("sans-serif")
                                         font.pixelSize: 14
                                         font.weight: 600
                                     }
@@ -1383,14 +1407,15 @@ ApplicationWindow {
                                             text: "Key"
                                             textFormat: Text.PlainText
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             font.weight: 600
                                             lineHeight: 22.4
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 3
+                                                y: EldurFonts.shift("sans-serif", 14, 600, false, 22.4)
                                             }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1435,14 +1460,15 @@ ApplicationWindow {
                                             text: "Default"
                                             textFormat: Text.PlainText
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             font.weight: 600
                                             lineHeight: 22.4
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 3
+                                                y: EldurFonts.shift("sans-serif", 14, 600, false, 22.4)
                                             }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1495,14 +1521,15 @@ ApplicationWindow {
                                             text: "Description"
                                             textFormat: Text.PlainText
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             font.weight: 600
                                             lineHeight: 22.4
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 3
+                                                y: EldurFonts.shift("sans-serif", 14, 600, false, 22.4)
                                             }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1516,7 +1543,7 @@ ApplicationWindow {
 
                                     FontMetrics {
                                         id: tableFont2
-                                        font.family: "sans-serif"
+                                        font.family: EldurFonts.family("sans-serif")
                                         font.pixelSize: 14
                                     }
 
@@ -1551,7 +1578,7 @@ ApplicationWindow {
                                         EldurLines {
                                             id: tdFlow
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             lineHeight: 22.4
                                             anchors.left: parent.left
@@ -1570,7 +1597,7 @@ ApplicationWindow {
                                                 text: "queue.url"
                                                 textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: "monospace"
+                                                font.family: EldurFonts.family("monospace")
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
@@ -1578,7 +1605,7 @@ ApplicationWindow {
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun5.eldurFragments
-                                                    font.family: "monospace"
+                                                    font.family: EldurFonts.family("monospace")
                                                     font.pixelSize: 12
                                                     font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
@@ -1625,13 +1652,14 @@ ApplicationWindow {
                                             text: "none"
                                             textFormat: Text.PlainText
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             lineHeight: 22.4
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 3
+                                                y: EldurFonts.shift("sans-serif", 14, 400, false, 22.4)
                                             }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1684,13 +1712,14 @@ ApplicationWindow {
                                             text: "Where jobs are stored. Required."
                                             textFormat: Text.PlainText
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             lineHeight: 22.4
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 3
+                                                y: EldurFonts.shift("sans-serif", 14, 400, false, 22.4)
                                             }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1733,7 +1762,7 @@ ApplicationWindow {
                                         EldurLines {
                                             id: tdFlow2
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             lineHeight: 22.4
                                             anchors.left: parent.left
@@ -1752,7 +1781,7 @@ ApplicationWindow {
                                                 text: "worker.concurrency"
                                                 textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: "monospace"
+                                                font.family: EldurFonts.family("monospace")
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
@@ -1760,7 +1789,7 @@ ApplicationWindow {
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun6.eldurFragments
-                                                    font.family: "monospace"
+                                                    font.family: EldurFonts.family("monospace")
                                                     font.pixelSize: 12
                                                     font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
@@ -1805,7 +1834,7 @@ ApplicationWindow {
                                         EldurLines {
                                             id: tdFlow3
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             lineHeight: 22.4
                                             anchors.left: parent.left
@@ -1824,7 +1853,7 @@ ApplicationWindow {
                                                 text: "1"
                                                 textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: "monospace"
+                                                font.family: EldurFonts.family("monospace")
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
@@ -1832,7 +1861,7 @@ ApplicationWindow {
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun7.eldurFragments
-                                                    font.family: "monospace"
+                                                    font.family: EldurFonts.family("monospace")
                                                     font.pixelSize: 12
                                                     font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
@@ -1887,13 +1916,14 @@ ApplicationWindow {
                                             text: "Jobs run at the same time by one worker."
                                             textFormat: Text.PlainText
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             lineHeight: 22.4
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 3
+                                                y: EldurFonts.shift("sans-serif", 14, 400, false, 22.4)
                                             }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -1936,7 +1966,7 @@ ApplicationWindow {
                                         EldurLines {
                                             id: tdFlow4
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             lineHeight: 22.4
                                             anchors.left: parent.left
@@ -1955,7 +1985,7 @@ ApplicationWindow {
                                                 text: "worker.max_attempts"
                                                 textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: "monospace"
+                                                font.family: EldurFonts.family("monospace")
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
@@ -1963,7 +1993,7 @@ ApplicationWindow {
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun8.eldurFragments
-                                                    font.family: "monospace"
+                                                    font.family: EldurFonts.family("monospace")
                                                     font.pixelSize: 12
                                                     font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
@@ -2008,7 +2038,7 @@ ApplicationWindow {
                                         EldurLines {
                                             id: tdFlow5
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             lineHeight: 22.4
                                             anchors.left: parent.left
@@ -2027,7 +2057,7 @@ ApplicationWindow {
                                                 text: "3"
                                                 textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: "monospace"
+                                                font.family: EldurFonts.family("monospace")
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
@@ -2035,7 +2065,7 @@ ApplicationWindow {
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun9.eldurFragments
-                                                    font.family: "monospace"
+                                                    font.family: EldurFonts.family("monospace")
                                                     font.pixelSize: 12
                                                     font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
@@ -2090,13 +2120,14 @@ ApplicationWindow {
                                             text: "Tries before a job moves to the dead-letter queue."
                                             textFormat: Text.PlainText
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             lineHeight: 22.4
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 3
+                                                y: EldurFonts.shift("sans-serif", 14, 400, false, 22.4)
                                             }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -2147,7 +2178,7 @@ ApplicationWindow {
                                         EldurLines {
                                             id: tdFlow6
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             lineHeight: 22.4
                                             anchors.left: parent.left
@@ -2166,7 +2197,7 @@ ApplicationWindow {
                                                 text: "log.level"
                                                 textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: "monospace"
+                                                font.family: EldurFonts.family("monospace")
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
@@ -2174,7 +2205,7 @@ ApplicationWindow {
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun10.eldurFragments
-                                                    font.family: "monospace"
+                                                    font.family: EldurFonts.family("monospace")
                                                     font.pixelSize: 12
                                                     font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
@@ -2227,7 +2258,7 @@ ApplicationWindow {
                                         EldurLines {
                                             id: tdFlow7
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             lineHeight: 22.4
                                             anchors.left: parent.left
@@ -2246,7 +2277,7 @@ ApplicationWindow {
                                                 text: "\"info\""
                                                 textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: "monospace"
+                                                font.family: EldurFonts.family("monospace")
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
@@ -2254,7 +2285,7 @@ ApplicationWindow {
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun11.eldurFragments
-                                                    font.family: "monospace"
+                                                    font.family: EldurFonts.family("monospace")
                                                     font.pixelSize: 12
                                                     font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
@@ -2285,7 +2316,7 @@ ApplicationWindow {
                                         EldurLines {
                                             id: tdFlow8
                                             color: "#24292f"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 14
                                             lineHeight: 22.4
                                             anchors.left: parent.left
@@ -2299,7 +2330,7 @@ ApplicationWindow {
                                                 text: "One of "
                                                 textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: "sans-serif"
+                                                font.family: EldurFonts.family("sans-serif")
                                                 font.pixelSize: 14
                                                 wrapMode: Text.WordWrap
                                                 renderType: Text.NativeRendering
@@ -2314,7 +2345,7 @@ ApplicationWindow {
                                                 text: "debug"
                                                 textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: "monospace"
+                                                font.family: EldurFonts.family("monospace")
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
@@ -2322,7 +2353,7 @@ ApplicationWindow {
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun12.eldurFragments
-                                                    font.family: "monospace"
+                                                    font.family: EldurFonts.family("monospace")
                                                     font.pixelSize: 12
                                                     font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
@@ -2338,7 +2369,7 @@ ApplicationWindow {
                                                 text: ", "
                                                 textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: "sans-serif"
+                                                font.family: EldurFonts.family("sans-serif")
                                                 font.pixelSize: 14
                                                 wrapMode: Text.WordWrap
                                                 renderType: Text.NativeRendering
@@ -2353,7 +2384,7 @@ ApplicationWindow {
                                                 text: "info"
                                                 textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: "monospace"
+                                                font.family: EldurFonts.family("monospace")
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
@@ -2361,7 +2392,7 @@ ApplicationWindow {
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun13.eldurFragments
-                                                    font.family: "monospace"
+                                                    font.family: EldurFonts.family("monospace")
                                                     font.pixelSize: 12
                                                     font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
@@ -2377,7 +2408,7 @@ ApplicationWindow {
                                                 text: ", "
                                                 textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: "sans-serif"
+                                                font.family: EldurFonts.family("sans-serif")
                                                 font.pixelSize: 14
                                                 wrapMode: Text.WordWrap
                                                 renderType: Text.NativeRendering
@@ -2392,7 +2423,7 @@ ApplicationWindow {
                                                 text: "warn"
                                                 textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: "monospace"
+                                                font.family: EldurFonts.family("monospace")
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
@@ -2400,7 +2431,7 @@ ApplicationWindow {
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun14.eldurFragments
-                                                    font.family: "monospace"
+                                                    font.family: EldurFonts.family("monospace")
                                                     font.pixelSize: 12
                                                     font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
@@ -2416,7 +2447,7 @@ ApplicationWindow {
                                                 text: " or "
                                                 textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: "sans-serif"
+                                                font.family: EldurFonts.family("sans-serif")
                                                 font.pixelSize: 14
                                                 wrapMode: Text.WordWrap
                                                 renderType: Text.NativeRendering
@@ -2431,7 +2462,7 @@ ApplicationWindow {
                                                 text: "error"
                                                 textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: "monospace"
+                                                font.family: EldurFonts.family("monospace")
                                                 font.pixelSize: 12
                                                 font.letterSpacing: -0.06
                                                 wrapMode: Text.NoWrap
@@ -2439,7 +2470,7 @@ ApplicationWindow {
 
                                                 EldurInlineBox {
                                                     fragments: inlineRun15.eldurFragments
-                                                    font.family: "monospace"
+                                                    font.family: EldurFonts.family("monospace")
                                                     font.pixelSize: 12
                                                     font.letterSpacing: -0.06
                                                     fill: "#eff1f3"
@@ -2455,7 +2486,7 @@ ApplicationWindow {
                                                 text: "."
                                                 textFormat: Text.PlainText
                                                 color: "#24292f"
-                                                font.family: "sans-serif"
+                                                font.family: EldurFonts.family("sans-serif")
                                                 font.pixelSize: 14
                                                 wrapMode: Text.WordWrap
                                                 renderType: Text.NativeRendering

@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 
 ApplicationWindow {
     id: root
@@ -67,7 +68,7 @@ ApplicationWindow {
                         EldurLines {
                             id: pFlow
                             color: "#1b2231"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 16
                             lineHeight: 24
                             anchors.left: parent.left
@@ -78,7 +79,7 @@ ApplicationWindow {
                                 text: "Release notes for "
                                 textFormat: Text.PlainText
                                 color: "#1b2231"
-                                font.family: "Liberation Sans"
+                                font.family: EldurFonts.family("Liberation Sans, sans-serif")
                                 font.pixelSize: 16
                                 wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
@@ -98,14 +99,15 @@ ApplicationWindow {
                                     text: "NEW"
                                     textFormat: Text.PlainText
                                     color: "#3730a3"
-                                    font.family: "Liberation Sans"
+                                    font.family: EldurFonts.family("Liberation Sans, sans-serif")
                                     font.pixelSize: 12
                                     font.weight: 700
                                     lineHeight: 16
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 1
+                                        y: EldurFonts.shift("Liberation Sans, sans-serif", 12, 700, false, 16)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -121,7 +123,7 @@ ApplicationWindow {
                                 text: " features and "
                                 textFormat: Text.PlainText
                                 color: "#1b2231"
-                                font.family: "Liberation Sans"
+                                font.family: EldurFonts.family("Liberation Sans, sans-serif")
                                 font.pixelSize: 16
                                 wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
@@ -141,14 +143,15 @@ ApplicationWindow {
                                     text: "BETA"
                                     textFormat: Text.PlainText
                                     color: "#3730a3"
-                                    font.family: "Liberation Sans"
+                                    font.family: EldurFonts.family("Liberation Sans, sans-serif")
                                     font.pixelSize: 12
                                     font.weight: 700
                                     lineHeight: 16
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 1
+                                        y: EldurFonts.shift("Liberation Sans, sans-serif", 12, 700, false, 16)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -164,7 +167,7 @@ ApplicationWindow {
                                 text: " previews, with a badge in the middle of a sentence that is long enough to wrap onto a second line in the page."
                                 textFormat: Text.PlainText
                                 color: "#1b2231"
-                                font.family: "Liberation Sans"
+                                font.family: EldurFonts.family("Liberation Sans, sans-serif")
                                 font.pixelSize: 16
                                 wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
@@ -193,7 +196,7 @@ ApplicationWindow {
                     EldurLines {
                         id: narrowFlow
                         color: "#1b2231"
-                        font.family: "Liberation Sans"
+                        font.family: EldurFonts.family("Liberation Sans, sans-serif")
                         font.pixelSize: 16
                         lineHeight: 24
                         anchors.left: parent.left
@@ -225,13 +228,14 @@ ApplicationWindow {
                                     text: "layout"
                                     textFormat: Text.PlainText
                                     color: "#1b2231"
-                                    font.family: "Liberation Sans"
+                                    font.family: EldurFonts.family("Liberation Sans, sans-serif")
                                     font.pixelSize: 14
                                     lineHeight: 20
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2
+                                        y: EldurFonts.shift("Liberation Sans, sans-serif", 14, 400, false, 20)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -248,7 +252,7 @@ ApplicationWindow {
                             text: " "
                             textFormat: Text.PlainText
                             color: "#1b2231"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
@@ -276,13 +280,14 @@ ApplicationWindow {
                                     text: "flexbox"
                                     textFormat: Text.PlainText
                                     color: "#1b2231"
-                                    font.family: "Liberation Sans"
+                                    font.family: EldurFonts.family("Liberation Sans, sans-serif")
                                     font.pixelSize: 14
                                     lineHeight: 20
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2
+                                        y: EldurFonts.shift("Liberation Sans, sans-serif", 14, 400, false, 20)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -299,7 +304,7 @@ ApplicationWindow {
                             text: " "
                             textFormat: Text.PlainText
                             color: "#1b2231"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
@@ -327,13 +332,14 @@ ApplicationWindow {
                                     text: "grid"
                                     textFormat: Text.PlainText
                                     color: "#1b2231"
-                                    font.family: "Liberation Sans"
+                                    font.family: EldurFonts.family("Liberation Sans, sans-serif")
                                     font.pixelSize: 14
                                     lineHeight: 20
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2
+                                        y: EldurFonts.shift("Liberation Sans, sans-serif", 14, 400, false, 20)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -350,7 +356,7 @@ ApplicationWindow {
                             text: " "
                             textFormat: Text.PlainText
                             color: "#1b2231"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
@@ -378,13 +384,14 @@ ApplicationWindow {
                                     text: "typography"
                                     textFormat: Text.PlainText
                                     color: "#1b2231"
-                                    font.family: "Liberation Sans"
+                                    font.family: EldurFonts.family("Liberation Sans, sans-serif")
                                     font.pixelSize: 14
                                     lineHeight: 20
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2
+                                        y: EldurFonts.shift("Liberation Sans, sans-serif", 14, 400, false, 20)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -401,7 +408,7 @@ ApplicationWindow {
                             text: " "
                             textFormat: Text.PlainText
                             color: "#1b2231"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
@@ -429,13 +436,14 @@ ApplicationWindow {
                                     text: "colour"
                                     textFormat: Text.PlainText
                                     color: "#1b2231"
-                                    font.family: "Liberation Sans"
+                                    font.family: EldurFonts.family("Liberation Sans, sans-serif")
                                     font.pixelSize: 14
                                     lineHeight: 20
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2
+                                        y: EldurFonts.shift("Liberation Sans, sans-serif", 14, 400, false, 20)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -452,7 +460,7 @@ ApplicationWindow {
                             text: " "
                             textFormat: Text.PlainText
                             color: "#1b2231"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
@@ -480,13 +488,14 @@ ApplicationWindow {
                                     text: "motion"
                                     textFormat: Text.PlainText
                                     color: "#1b2231"
-                                    font.family: "Liberation Sans"
+                                    font.family: EldurFonts.family("Liberation Sans, sans-serif")
                                     font.pixelSize: 14
                                     lineHeight: 20
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2
+                                        y: EldurFonts.shift("Liberation Sans, sans-serif", 14, 400, false, 20)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -516,7 +525,7 @@ ApplicationWindow {
                     EldurLines {
                         id: centeredFlow
                         color: "#1b2231"
-                        font.family: "Liberation Sans"
+                        font.family: EldurFonts.family("Liberation Sans, sans-serif")
                         font.pixelSize: 16
                         lineHeight: 24
                         textAlign: Text.AlignHCenter
@@ -541,14 +550,15 @@ ApplicationWindow {
                                 text: "Get started"
                                 textFormat: Text.PlainText
                                 color: "#ffffff"
-                                font.family: "Liberation Sans"
+                                font.family: EldurFonts.family("Liberation Sans, sans-serif")
                                 font.pixelSize: 16
                                 font.weight: 700
                                 lineHeight: 24
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 3
+                                    y: EldurFonts.shift("Liberation Sans, sans-serif", 16, 700, false, 24)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 anchors.left: parent.left
@@ -565,7 +575,7 @@ ApplicationWindow {
                             text: " "
                             textFormat: Text.PlainText
                             color: "#1b2231"
-                            font.family: "Liberation Sans"
+                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
                             font.pixelSize: 16
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
@@ -587,14 +597,15 @@ ApplicationWindow {
                                 text: "Read the docs"
                                 textFormat: Text.PlainText
                                 color: "#2563eb"
-                                font.family: "Liberation Sans"
+                                font.family: EldurFonts.family("Liberation Sans, sans-serif")
                                 font.pixelSize: 16
                                 font.weight: 700
                                 lineHeight: 24
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 3
+                                    y: EldurFonts.shift("Liberation Sans, sans-serif", 16, 700, false, 24)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 anchors.left: parent.left
@@ -615,7 +626,7 @@ ApplicationWindow {
                     property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                     color: "#1b2231"
-                    font.family: "Liberation Sans"
+                    font.family: EldurFonts.family("Liberation Sans, sans-serif")
                     font.pixelSize: 16
                     lineHeight: 24
                     Layout.fillWidth: true
@@ -626,7 +637,7 @@ ApplicationWindow {
                         text: "Status: "
                         textFormat: Text.PlainText
                         color: "#1b2231"
-                        font.family: "Liberation Sans"
+                        font.family: EldurFonts.family("Liberation Sans, sans-serif")
                         font.pixelSize: 16
                         wrapMode: Text.WordWrap
                         renderType: Text.NativeRendering
@@ -673,13 +684,14 @@ ApplicationWindow {
                                 text: "Online"
                                 textFormat: Text.PlainText
                                 color: "#166534"
-                                font.family: "Liberation Sans"
+                                font.family: EldurFonts.family("Liberation Sans, sans-serif")
                                 font.pixelSize: 14
                                 lineHeight: 20
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2
+                                    y: EldurFonts.shift("Liberation Sans, sans-serif", 14, 400, false, 20)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.maximumWidth: Math.ceil(implicitWidth)
@@ -698,7 +710,7 @@ ApplicationWindow {
                         text: " since Monday."
                         textFormat: Text.PlainText
                         color: "#1b2231"
-                        font.family: "Liberation Sans"
+                        font.family: EldurFonts.family("Liberation Sans, sans-serif")
                         font.pixelSize: 16
                         wrapMode: Text.WordWrap
                         renderType: Text.NativeRendering
@@ -711,7 +723,7 @@ ApplicationWindow {
                     property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                     color: "#1b2231"
-                    font.family: "Liberation Sans"
+                    font.family: EldurFonts.family("Liberation Sans, sans-serif")
                     font.pixelSize: 16
                     lineHeight: 24
                     Layout.fillWidth: true
@@ -747,21 +759,18 @@ ApplicationWindow {
 
                                 // <div>
                                 Text {
-                                    readonly property FontMetrics metrics: FontMetrics {
-                                        font.family: "Liberation Sans"
-                                        font.pixelSize: 28
-                                        font.weight: 700
-                                    }
-
                                     text: "42"
                                     textFormat: Text.PlainText
                                     color: "#1b2231"
-                                    font.family: "Liberation Sans"
+                                    font.family: EldurFonts.family("Liberation Sans, sans-serif")
                                     font.pixelSize: 28
                                     font.weight: 700
                                     lineHeight: 32
                                     lineHeightMode: Text.FixedHeight
-                                    bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
+                                    transform: Translate {
+                                        y: EldurFonts.shift("Liberation Sans, sans-serif", 28, 700, false, 32)
+                                    }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     renderType: Text.NativeRendering
@@ -771,13 +780,14 @@ ApplicationWindow {
                                     text: "open issues"
                                     textFormat: Text.PlainText
                                     color: "#92400e"
-                                    font.family: "Liberation Sans"
+                                    font.family: EldurFonts.family("Liberation Sans, sans-serif")
                                     font.pixelSize: 13
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     transform: Translate {
-                                        y: 5
+                                        y: EldurFonts.shift("Liberation Sans, sans-serif", 13, 400, false, 24) + 1
                                     }
                                     Layout.fillWidth: true
                                     renderType: Text.NativeRendering
@@ -815,21 +825,18 @@ ApplicationWindow {
 
                                 // <div>
                                 Text {
-                                    readonly property FontMetrics metrics: FontMetrics {
-                                        font.family: "Liberation Sans"
-                                        font.pixelSize: 28
-                                        font.weight: 700
-                                    }
-
                                     text: "7"
                                     textFormat: Text.PlainText
                                     color: "#1b2231"
-                                    font.family: "Liberation Sans"
+                                    font.family: EldurFonts.family("Liberation Sans, sans-serif")
                                     font.pixelSize: 28
                                     font.weight: 700
                                     lineHeight: 32
                                     lineHeightMode: Text.FixedHeight
-                                    bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
+                                    transform: Translate {
+                                        y: EldurFonts.shift("Liberation Sans, sans-serif", 28, 700, false, 32)
+                                    }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     renderType: Text.NativeRendering
@@ -839,13 +846,14 @@ ApplicationWindow {
                                     text: "releases"
                                     textFormat: Text.PlainText
                                     color: "#92400e"
-                                    font.family: "Liberation Sans"
+                                    font.family: EldurFonts.family("Liberation Sans, sans-serif")
                                     font.pixelSize: 13
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     transform: Translate {
-                                        y: 5
+                                        y: EldurFonts.shift("Liberation Sans, sans-serif", 13, 400, false, 24) + 1
                                     }
                                     Layout.fillWidth: true
                                     renderType: Text.NativeRendering

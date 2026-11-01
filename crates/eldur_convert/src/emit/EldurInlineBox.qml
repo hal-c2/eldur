@@ -3,6 +3,7 @@
 // lines are; each line holds one fragment, cut where the line breaks
 // (box-decoration-break: slice, CSS Fragmentation 3 §5.4).
 import QtQuick
+import "eldur_fonts.js" as EldurFonts
 
 Item {
     id: box
@@ -29,15 +30,11 @@ Item {
         && Qt.colorEqual(borderColors[0], borderColors[1])
         && Qt.colorEqual(borderColors[1], borderColors[2])
         && Qt.colorEqual(borderColors[2], borderColors[3])
+    readonly property var extents: EldurFonts.extents(font)
     readonly property real overhang: Math.max(radii[0], radii[1], radii[2], radii[3],
                                               borderWidths[1], borderWidths[3]) + 2
 
     z: -1
-
-    FontMetrics {
-        id: metrics
-        font: box.font
-    }
 
     Repeater {
         model: box.fragments.length
@@ -51,9 +48,9 @@ Item {
             readonly property bool last: index === box.fragments.length - 1 && box.closes
 
             x: at.x - (first ? box.reachLeft : 0)
-            y: at.ascent - Math.round(metrics.ascent) + (at.y || 0) - box.paddingTop - box.borderWidths[0]
+            y: at.ascent - box.extents.ascent + (at.y || 0) - box.paddingTop - box.borderWidths[0]
             width: at.width + (first ? box.reachLeft : 0) + (last ? box.reachRight : 0)
-            height: Math.round(metrics.ascent) + Math.round(metrics.descent) + box.paddingTop
+            height: box.extents.ascent + box.extents.descent + box.paddingTop
                 + box.paddingBottom + box.borderWidths[0] + box.borderWidths[2]
             clip: !first || !last
 

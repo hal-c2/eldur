@@ -15,7 +15,7 @@ use eldur_js::TargetKind;
 use eldur_qml::{Member, Object, Value};
 
 use super::flow::{Emitted, MarginSet};
-use super::text::{font_extents, font_family};
+
 use super::units::{color, number, round};
 use super::{Emitter, Target};
 use crate::boxes::{Content, Inline, LayoutBox, describe};
@@ -184,9 +184,8 @@ pub(super) fn line_box(style: &ComputedStyle) -> Option<f32> {
 /// A family's numbers for sizing a control, in em, measured in Chromium: what each
 /// `size` or `cols` counts, what a font's widest glyph adds once, and the line
 /// gap `line-height: normal` rounds in. Hinted advances run wider below
-/// [`SMALL_FONT`], which is where the UA's 13.33px sits. A stopgap like
-/// `font_extents`, and right where fontconfig resolves as on the machine it was
-/// measured on.
+/// [`SMALL_FONT`], which is where the UA's 13.33px sits. Right where the page
+/// reaches the faces it was measured on (layout.md §1.3).
 struct ControlFont {
     names: &'static [&'static str],
     small: (f32, f32),
@@ -230,8 +229,24 @@ const CONTROL_FONTS: &[ControlFont] = &[
     },
 ];
 
+/// The name `CONTROL_FONTS` goes by: Chromium sizes a control by how the page
+/// spells the font, not only by the face it reaches.
+fn named_family(families: &[String]) -> String {
+    for family in families {
+        let generic = match family.as_str() {
+            "-apple-system" | "BlinkMacSystemFont" => continue,
+            "system-ui" | "ui-sans-serif" | "ui-rounded" => "sans-serif",
+            "ui-serif" => "serif",
+            "ui-monospace" => "monospace",
+            other => other,
+        };
+        return generic.to_owned();
+    }
+    "serif".to_owned()
+}
+
 fn control_font(style: &ComputedStyle) -> (f32, f32, f32) {
-    let family = font_family(&style.font_family);
+    let family = named_family(&style.font_family);
     let font = CONTROL_FONTS
         .iter()
         .find(|f| f.names.contains(&family.as_str()) || f.names.is_empty())
@@ -267,10 +282,7 @@ pub(crate) fn control_fonts_json() -> String {
 /// A control's line at `line-height: normal`: Chromium rounds ascent, descent
 /// and line gap each.
 pub(super) fn normal_line(style: &ComputedStyle) -> f32 {
-    let (ascent, descent) = font_extents(&font_family(&style.font_family));
-    let (_, _, gap) = control_font(style);
-    let fs = style.font_size;
-    (ascent * fs).round() + (descent * fs).round() + (gap * fs).round()
+    super::fonts::normal_line(style)
 }
 
 /// The `<input>` content width: `size` average glyphs and the widest one's excess.
@@ -336,10 +348,7 @@ fn with_native_box(style: &ComputedStyle, control: Control) -> Option<ComputedSt
 /// Whole pixels: a fractional `font.pointSize` is rounded to one when the font
 /// is loaded, and `font.pixelSize` is an int, so Qt has no 13.33px glyphs.
 fn set_font(obj: &mut Object, style: &ComputedStyle) {
-    obj.set(
-        "font.family",
-        Value::string(font_family(&style.font_family)),
-    );
+    obj.set("font.family", super::fonts::family_value(style));
     obj.set(
         "font.pixelSize",
         Value::Number(f64::from(style.font_size).round().max(1.0)),

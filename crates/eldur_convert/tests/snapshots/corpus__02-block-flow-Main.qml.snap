@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 
 ApplicationWindow {
     id: root
@@ -88,25 +89,20 @@ ApplicationWindow {
                                 // <h1>
                                 Text {
                                     id: h1
-                                    readonly property FontMetrics metrics: FontMetrics {
-                                        font.family: "sans-serif"
-                                        font.pixelSize: 32
-                                        font.weight: 700
-                                    }
                                     property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
 
                                     text: "Block flow"
                                     textFormat: Text.PlainText
                                     color: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 32
                                     font.weight: 700
                                     lineHeight: 38.4
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 1
+                                        y: EldurFonts.shift("sans-serif", 32, 700, false, 38.4)
                                     }
-                                    bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.topMargin: 21.44
@@ -121,13 +117,14 @@ ApplicationWindow {
                                     text: "Nested block boxes, collapsing margins, and widths in normal flow."
                                     textFormat: Text.PlainText
                                     color: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 16
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3
+                                        y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.topMargin: 21.44 - h1.eldurCarry
@@ -170,14 +167,15 @@ ApplicationWindow {
                                     text: "Collapsing margins between siblings"
                                     textFormat: Text.PlainText
                                     color: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 20
                                     font.weight: 700
                                     lineHeight: 30
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 4
+                                        y: EldurFonts.shift("sans-serif", 20, 700, false, 30)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     renderType: Text.NativeRendering
@@ -188,13 +186,14 @@ ApplicationWindow {
                                     text: "Adjacent sections are separated by a 24px margin. The gap is 24px, not 48px, because the bottom margin of one section and the top margin of the next collapse into one."
                                     textFormat: Text.PlainText
                                     color: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 16
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3
+                                        y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.topMargin: 10
@@ -206,13 +205,14 @@ ApplicationWindow {
                                     text: "This paragraph sits inside the section and has a one-em bottom margin."
                                     textFormat: Text.PlainText
                                     color: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 16
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3
+                                        y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.topMargin: 16
@@ -250,14 +250,15 @@ ApplicationWindow {
                                     text: "Padding in pixels and ems"
                                     textFormat: Text.PlainText
                                     color: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 20
                                     font.weight: 700
                                     lineHeight: 30
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 4
+                                        y: EldurFonts.shift("sans-serif", 20, 700, false, 30)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     renderType: Text.NativeRendering
@@ -268,10 +269,10 @@ ApplicationWindow {
                                     id: p
                                     property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
 
-                                    text: "<div style=\"line-height:24px\">The outer padding is set in pixels. The box below uses <span style=\"font-family:'monospace'\">padding: 1em 1.5em</span> and a slightly smaller font, so its spacing scales with its own text.</div>"
+                                    text: "<div style=\"line-height:24px\">The outer padding is set in pixels. The box below uses <span style=\"font-family:'JetBrainsMono Nerd Font','Liberation Mono','Cousine','Noto Sans Mono','DejaVu Sans Mono'\">padding: 1em 1.5em</span> and a slightly smaller font, so its spacing scales with its own text.</div>"
                                     textFormat: Text.RichText
                                     color: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 16
                                     wrapMode: Text.WordWrap
                                     transform: Translate {
@@ -301,13 +302,14 @@ ApplicationWindow {
                                         text: "Padding in em units follows the element's own font size, which is 0.9rem here."
                                         textFormat: Text.PlainText
                                         color: "#1f2430"
-                                        font.family: "sans-serif"
+                                        font.family: EldurFonts.family("sans-serif")
                                         font.pixelSize: 14
                                         lineHeight: 21.6
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 2
+                                            y: EldurFonts.shift("sans-serif", 14.4, 400, false, 21.6)
                                         }
+                                        bottomPadding: EldurFonts.slack(font, lineHeight)
                                         wrapMode: Text.WordWrap
                                         anchors.left: parent.left
                                         anchors.right: parent.right
@@ -349,14 +351,15 @@ ApplicationWindow {
                                     text: "Half-width columns"
                                     textFormat: Text.PlainText
                                     color: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 20
                                     font.weight: 700
                                     lineHeight: 30
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 4
+                                        y: EldurFonts.shift("sans-serif", 20, 700, false, 30)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     renderType: Text.NativeRendering
@@ -393,13 +396,14 @@ ApplicationWindow {
                                                 text: "Left column with width 50 percent of the containing block."
                                                 textFormat: Text.PlainText
                                                 color: "#1f2430"
-                                                font.family: "sans-serif"
+                                                font.family: EldurFonts.family("sans-serif")
                                                 font.pixelSize: 16
                                                 lineHeight: 24
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: 3
+                                                    y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                                                 }
+                                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                                 wrapMode: Text.WordWrap
                                                 anchors.left: parent.left
                                                 anchors.right: parent.right
@@ -429,13 +433,14 @@ ApplicationWindow {
                                                 text: "Right column, also 50 percent wide, floated to the right edge."
                                                 textFormat: Text.PlainText
                                                 color: "#1f2430"
-                                                font.family: "sans-serif"
+                                                font.family: EldurFonts.family("sans-serif")
                                                 font.pixelSize: 16
                                                 lineHeight: 24
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: 3
+                                                    y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                                                 }
+                                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                                 wrapMode: Text.WordWrap
                                                 anchors.left: parent.left
                                                 anchors.right: parent.right
@@ -478,14 +483,15 @@ ApplicationWindow {
                                     text: "Fixed width, centred"
                                     textFormat: Text.PlainText
                                     color: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 20
                                     font.weight: 700
                                     lineHeight: 30
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 4
+                                        y: EldurFonts.shift("sans-serif", 20, 700, false, 30)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     renderType: Text.NativeRendering
@@ -508,10 +514,10 @@ ApplicationWindow {
 
                                     Text {
                                         id: fixedBoxText
-                                        text: "<div style=\"line-height:24px\">A 480 pixel box with <span style=\"font-family:'monospace'\">margin: 0 auto</span> centres itself in the page wrapper, so the free space is split equally on both sides.</div>"
+                                        text: "<div style=\"line-height:24px\">A 480 pixel box with <span style=\"font-family:'JetBrainsMono Nerd Font','Liberation Mono','Cousine','Noto Sans Mono','DejaVu Sans Mono'\">margin: 0 auto</span> centres itself in the page wrapper, so the free space is split equally on both sides.</div>"
                                         textFormat: Text.RichText
                                         color: "#1f2430"
-                                        font.family: "sans-serif"
+                                        font.family: EldurFonts.family("sans-serif")
                                         font.pixelSize: 16
                                         wrapMode: Text.WordWrap
                                         transform: Translate {
@@ -556,13 +562,14 @@ ApplicationWindow {
                                             text: "Border-box sizing: this 320 pixel box includes its 2em padding and 6 pixel border in that width."
                                             textFormat: Text.PlainText
                                             color: "#1f2430"
-                                            font.family: "sans-serif"
+                                            font.family: EldurFonts.family("sans-serif")
                                             font.pixelSize: 16
                                             lineHeight: 24
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 3
+                                                y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                                             }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             Layout.fillWidth: true
                                             renderType: Text.NativeRendering
@@ -598,14 +605,15 @@ ApplicationWindow {
                                     text: "Parent and first child"
                                     textFormat: Text.PlainText
                                     color: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 17
                                     font.weight: 700
                                     lineHeight: 25.2
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3
+                                        y: EldurFonts.shift("sans-serif", 16.8, 700, false, 25.2)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     renderType: Text.NativeRendering
@@ -619,13 +627,14 @@ ApplicationWindow {
                                     text: "The heading's top margin collapses through the grey parent, so the parent's top edge sits at the margin set on the parent itself and the heading appears flush with it."
                                     textFormat: Text.PlainText
                                     color: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 16
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3
+                                        y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.topMargin: 8.4 - h3.eldurCarry
@@ -637,13 +646,14 @@ ApplicationWindow {
                                     text: "The parent has no top padding or border, which is why the collapse happens."
                                     textFormat: Text.PlainText
                                     color: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 16
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3
+                                        y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.topMargin: 12 - p2.eldurCarry
@@ -685,13 +695,14 @@ ApplicationWindow {
                                     text: "End of block flow test."
                                     textFormat: Text.PlainText
                                     color: "#5b6375"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 14
                                     lineHeight: 21
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 2
+                                        y: EldurFonts.shift("sans-serif", 14, 400, false, 21)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     renderType: Text.NativeRendering

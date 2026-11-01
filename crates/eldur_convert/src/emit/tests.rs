@@ -1039,8 +1039,9 @@ fn a_transformed_text_keeps_its_baseline_shift_first() {
         "<p>x</p>",
     ));
     let text = object_after(&qml, "<p>");
-    // Chromium's baseline is 14 + floor((24 - 17) / 2) = 17 down, Qt's 14.
-    let nudge = text.find("y: 3\n").expect("nudge");
+    // How far is `fonts_e2e`'s: Chromium's baseline is 14 + floor((24 - 17) / 2)
+    // = 17 down, Qt's 14.
+    let nudge = text.find("y: EldurFonts.shift(").expect("nudge");
     let moved = text.find("x: 10").expect("translate");
     assert!(nudge < moved, "{text}");
 }
@@ -1075,34 +1076,18 @@ fn fixed_box_leaves_the_flow_for_the_window() {
 
 #[test]
 fn glyphs_sit_on_chromiums_whole_pixel_baseline() {
-    // The shifts are what tools/visual/paint/gen.mjs measured: Chromium's
-    // baseline below the line's top less the row Qt paints a fixed line's
-    // on (layout.md §1.2). `.a` .. `.f` are the fonts it probes.
+    // The shift is worked out at run time: `fonts_e2e` holds it to what
+    // tools/visual/paint/gen.mjs measured. The call has the font's CSS size and
+    // the line, which Chromium rounds with.
     let (qml, _) = convert(&page(
-        "p{margin:0} .a{font:15px/1.5 sans-serif} .b{font:17px/1.5 sans-serif} \
-         .c{font:bold 28px/1.5 sans-serif} .d{font:16px/1.5 serif} \
-         .e{font:16px/1.1 sans-serif} .f{font:13px/1 sans-serif}",
-        "<p class=a>a</p><p class=b>b</p><p class=c>c</p><p class=d>d</p>\
-         <p class=e>e</p><p class=f>f</p>",
+        "p{margin:0} .a{font:bold 14.4px/1.5 sans-serif}",
+        "<p class=a>a</p>",
     ));
-    let measured = include_str!("../../../../tools/visual/paint/shifts.txt");
-    let mut seen = 0;
-    for line in measured.lines().filter(|l| !l.starts_with('#')) {
-        let fields: Vec<&str> = line.split(' ').collect();
-        let [class, _, _, shift] = fields[..] else {
-            panic!("{line}");
-        };
-        let p = object_after(&qml, &format!("<p class=\"{class}\">"));
-        match p.find("transform: Translate {") {
-            Some(t) => {
-                let y = p[t..].lines().nth(1).map(str::trim);
-                assert_eq!(y, Some(format!("y: {shift}").as_str()), "{p}");
-            }
-            None => assert_eq!(shift, "0", "{p}"),
-        }
-        seen += 1;
-    }
-    assert_eq!(seen, 6, "{measured}");
+    let p = object_after(&qml, "<p class=\"a\">");
+    assert!(
+        p.contains("y: EldurFonts.shift(\"sans-serif\", 14.4, 700, false, 21.6)"),
+        "{p}"
+    );
 }
 
 #[test]
@@ -1325,21 +1310,12 @@ fn tight_line_height_does_not_grow_the_last_line() {
     ));
     let d = object_after(&qml, "<p class=\"d\">");
     assert!(d.contains("lineHeight: 96"), "{d}");
+    // Of the Text's own font, and nothing when the line is taller: `fonts_e2e`
+    // holds what it comes to at run time.
     assert!(
-        d.contains("bottomPadding: Math.min(0, lineHeight - Math.ceil(metrics.height))"),
+        d.contains("bottomPadding: EldurFonts.slack(font, lineHeight)"),
         "{d}"
     );
-    // The metrics are of the Text's own font.
-    let metrics = d
-        .split("readonly property FontMetrics metrics: FontMetrics {")
-        .nth(1)
-        .and_then(|rest| rest.split('}').next())
-        .unwrap_or_else(|| panic!("no metrics in {d}"));
-    assert!(metrics.contains("font.family: \"sans-serif\""), "{d}");
-    assert!(metrics.contains("font.pixelSize: 96"), "{d}");
-    // A line taller than the font needs nothing.
-    let e = object_after(&qml, "<p class=\"e\">");
-    assert!(!e.contains("bottomPadding"), "{e}");
 }
 
 #[test]
@@ -1404,19 +1380,20 @@ fn text_of_a_flex_or_grid_box_is_placed_as_its_one_item() {
             .to_owned()
     };
     let a = text("a");
-    assert!(a.contains("verticalAlignment: Text.AlignVCenter"), "{a}");
+    // A fixed line is placed by its Translate, whose values fonts_e2e checks.
+    assert!(a.contains(".lineHeight) / 2"), "{a}");
     assert!(
         a.contains("horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter"),
         "{a}"
     );
     let b = text("b");
-    assert!(b.contains("verticalAlignment: Text.AlignVCenter"), "{b}");
+    assert!(b.contains(".lineHeight) / 2"), "{b}");
     assert!(
         b.contains("horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignHCenter"),
         "{b}"
     );
     let c = text("c");
-    assert!(c.contains("verticalAlignment: Text.AlignBottom"), "{c}");
+    assert!(c.contains(".lineHeight)\n"), "{c}");
     assert!(
         c.contains("horizontalAlignment: lineCount > 1 ? Text.AlignLeft : Text.AlignRight"),
         "{c}"

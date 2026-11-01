@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
@@ -72,17 +73,21 @@ ApplicationWindow {
 
                 // <h1>
                 Text {
-                    id: h1
                     property string eldurTag: "h1"
                     property string eldurWs: "\n"
-                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                     text: "Create your account"
                     textFormat: Text.PlainText
                     color: "#111111"
-                    font.family: "Arial"
+                    font.family: EldurFonts.family("Arial, sans-serif")
                     font.pixelSize: 32
                     font.weight: 700
+                    lineHeight: EldurFonts.normalLine(font)
+                    lineHeightMode: Text.FixedHeight
+                    transform: Translate {
+                        y: EldurFonts.shift("Arial, sans-serif", 32, 700, false, 0)
+                    }
+                    bottomPadding: EldurFonts.slack(font, lineHeight)
                     wrapMode: Text.WordWrap
                     Layout.fillWidth: true
                     renderType: Text.NativeRendering
@@ -96,13 +101,13 @@ ApplicationWindow {
                     property bool cls_invalid: false
                     property string eldurWs: "\n"
                     property string eldurWsEnd: "\n"
-                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin) - Layout.topMargin + blockFlow5.eldurCarry + 0.000001) : h1.eldurCarry
+                    property real eldurCarry: visible ? (0.56 + blockFlow5.eldurCarry) : 0
 
                     spacing: 0
                     objectName: "signup"
                     Layout.fillWidth: true
                     Layout.maximumWidth: 380
-                    Layout.topMargin: 21.44 - h1.eldurCarry
+                    Layout.topMargin: 21.44
 
                     // <div id="f-name" class="field">
                     ColumnLayout {
@@ -121,18 +126,22 @@ ApplicationWindow {
 
                         // <label>
                         Text {
-                            id: label
                             property var eldurAttrs: ({ "for": "name" })
                             property string eldurTag: "label"
                             property string eldurWs: "\n    "
-                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                             text: "Name"
                             textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 14
                             font.weight: 700
+                            lineHeight: EldurFonts.normalLine(font)
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("Arial, sans-serif", 14, 700, false, 0)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             renderType: Text.NativeRendering
@@ -149,10 +158,10 @@ ApplicationWindow {
                             property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                             color: "#111111"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 16
                             Layout.fillWidth: true
-                            Layout.topMargin: 4 - label.eldurCarry
+                            Layout.topMargin: 4
                             Layout.preferredHeight: implicitHeight
 
                             // <input id="name">
@@ -163,7 +172,7 @@ ApplicationWindow {
                                 property string eldurWs: "\n    "
 
                                 color: "#000000"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial")
                                 font.pixelSize: 14
                                 verticalAlignment: TextInput.AlignVCenter
                                 background: Rectangle {
@@ -201,13 +210,18 @@ ApplicationWindow {
                             text: "Please enter your name."
                             textFormat: Text.PlainText
                             color: "#cc0000"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 12
+                            lineHeight: EldurFonts.normalLine(font)
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("Arial, sans-serif", 12, 400, false, 0)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             visible: fName.cls_invalid ? true : (signup.cls_invalid ? true : (body.cls_invalid ? true : page.cls_invalid))
                             Layout.fillWidth: true
                             Layout.topMargin: 3 - blockFlow.eldurCarry
-                            Layout.preferredHeight: implicitHeight
                             renderType: Text.NativeRendering
                         }
                     }
@@ -230,18 +244,22 @@ ApplicationWindow {
 
                         // <label>
                         Text {
-                            id: label2
                             property var eldurAttrs: ({ "for": "email" })
                             property string eldurTag: "label"
                             property string eldurWs: "\n    "
-                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                             text: "Email"
                             textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 14
                             font.weight: 700
+                            lineHeight: EldurFonts.normalLine(font)
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("Arial, sans-serif", 14, 700, false, 0)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             renderType: Text.NativeRendering
@@ -258,10 +276,10 @@ ApplicationWindow {
                             property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                             color: "#111111"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 16
                             Layout.fillWidth: true
-                            Layout.topMargin: 4 - label2.eldurCarry
+                            Layout.topMargin: 4
                             Layout.preferredHeight: implicitHeight
 
                             // <input id="email">
@@ -272,7 +290,7 @@ ApplicationWindow {
                                 property string eldurWs: "\n    "
 
                                 color: "#000000"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial")
                                 font.pixelSize: 14
                                 verticalAlignment: TextInput.AlignVCenter
                                 background: Rectangle {
@@ -311,13 +329,18 @@ ApplicationWindow {
                             text: "That doesn't look like an email address."
                             textFormat: Text.PlainText
                             color: "#cc0000"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 12
+                            lineHeight: EldurFonts.normalLine(font)
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("Arial, sans-serif", 12, 400, false, 0)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             visible: fEmail.cls_invalid ? true : (signup.cls_invalid ? true : (body.cls_invalid ? true : page.cls_invalid))
                             Layout.fillWidth: true
                             Layout.topMargin: 3 - blockFlow2.eldurCarry
-                            Layout.preferredHeight: implicitHeight
                             renderType: Text.NativeRendering
                         }
                     }
@@ -340,18 +363,22 @@ ApplicationWindow {
 
                         // <label>
                         Text {
-                            id: label3
                             property var eldurAttrs: ({ "for": "pass" })
                             property string eldurTag: "label"
                             property string eldurWs: "\n    "
-                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                             text: "Password"
                             textFormat: Text.PlainText
                             color: "#111111"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 14
                             font.weight: 700
+                            lineHeight: EldurFonts.normalLine(font)
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("Arial, sans-serif", 14, 700, false, 0)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             renderType: Text.NativeRendering
@@ -368,10 +395,10 @@ ApplicationWindow {
                             property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                             color: "#111111"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 16
                             Layout.fillWidth: true
-                            Layout.topMargin: 4 - label3.eldurCarry
+                            Layout.topMargin: 4
                             Layout.preferredHeight: implicitHeight
 
                             // <input id="pass">
@@ -382,7 +409,7 @@ ApplicationWindow {
                                 property string eldurWs: "\n    "
 
                                 color: "#000000"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial")
                                 font.pixelSize: 14
                                 verticalAlignment: TextInput.AlignVCenter
                                 background: Rectangle {
@@ -429,8 +456,14 @@ ApplicationWindow {
                                 text: ""
                                 textFormat: Text.PlainText
                                 color: "#555555"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial, sans-serif")
                                 font.pixelSize: 12
+                                lineHeight: EldurFonts.normalLine(font)
+                                lineHeightMode: Text.FixedHeight
+                                transform: Translate {
+                                    y: EldurFonts.shift("Arial, sans-serif", 12, 400, false, 0)
+                                }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 anchors.left: parent.left
                                 anchors.right: parent.right
@@ -450,13 +483,18 @@ ApplicationWindow {
                             text: "Use at least eight characters."
                             textFormat: Text.PlainText
                             color: "#cc0000"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 12
+                            lineHeight: EldurFonts.normalLine(font)
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("Arial, sans-serif", 12, 400, false, 0)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             visible: fPass.cls_invalid ? true : (signup.cls_invalid ? true : (body.cls_invalid ? true : page.cls_invalid))
                             Layout.fillWidth: true
                             Layout.topMargin: 3 - strength.eldurCarry
-                            Layout.preferredHeight: implicitHeight
                             renderType: Text.NativeRendering
                         }
                     }
@@ -482,7 +520,7 @@ ApplicationWindow {
                             property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                             color: "#111111"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 16
                             Layout.fillWidth: true
                             Layout.preferredHeight: implicitHeight
@@ -532,12 +570,12 @@ ApplicationWindow {
                             }
 
                             Text {
-                                readonly property string eldurInline: "{\"bare\":false,\"hoisted\":false,\"html\":false,\"k\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(17, 17, 17)\",\"display\":\"block\",\"family\":\"Arial\",\"italic\":false,\"size\":16.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\" \"},{\"attrs\":[[\"for\",\"terms\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(17, 17, 17)\",\"display\":\"inline\",\"family\":\"Arial\",\"italic\":false,\"size\":14.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"I accept the terms\"}],\"tag\":\"label\"}],\"pre\":false,\"strike\":false,\"underline\":false}"
+                                readonly property string eldurInline: "{\"bare\":false,\"hoisted\":false,\"html\":false,\"k\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(17, 17, 17)\",\"display\":\"block\",\"family\":\"Arial, sans-serif\",\"italic\":false,\"size\":16.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\" \"},{\"attrs\":[[\"for\",\"terms\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(17, 17, 17)\",\"display\":\"inline\",\"family\":\"Arial, sans-serif\",\"italic\":false,\"size\":14.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"I accept the terms\"}],\"tag\":\"label\"}],\"pre\":false,\"strike\":false,\"underline\":false}"
 
                                 text: " <small>I accept the terms</small>"
                                 textFormat: Text.StyledText
                                 color: "#111111"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial, sans-serif")
                                 font.pixelSize: 16
                                 wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
@@ -561,13 +599,18 @@ ApplicationWindow {
                             text: "You have to accept the terms."
                             textFormat: Text.PlainText
                             color: "#cc0000"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 12
+                            lineHeight: EldurFonts.normalLine(font)
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("Arial, sans-serif", 12, 400, false, 0)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             visible: fTerms.cls_invalid ? true : (signup.cls_invalid ? true : (body.cls_invalid ? true : page.cls_invalid))
                             Layout.fillWidth: true
                             Layout.topMargin: 3 - blockFlow4.eldurCarry
-                            Layout.preferredHeight: implicitHeight
                             renderType: Text.NativeRendering
                         }
                     }
@@ -577,7 +620,7 @@ ApplicationWindow {
                         property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                         color: "#111111"
-                        font.family: "Arial"
+                        font.family: EldurFonts.family("Arial, sans-serif")
                         font.pixelSize: 16
                         Layout.fillWidth: true
                         Layout.topMargin: 14 - fTerms.eldurCarry
@@ -592,7 +635,7 @@ ApplicationWindow {
 
                             text: "Sign up"
                             palette.buttonText: "#000000"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial")
                             font.pixelSize: 14
                             background: Rectangle {
                                 color: "#efefef"
@@ -646,15 +689,20 @@ ApplicationWindow {
                     visible: false
                     Layout.fillWidth: true
                     Layout.topMargin: 16 - signup.eldurCarry
-                    Layout.preferredHeight: implicitHeight
 
                     Text {
                         id: doneText
                         text: ""
                         textFormat: Text.PlainText
                         color: "#111111"
-                        font.family: "Arial"
+                        font.family: EldurFonts.family("Arial, sans-serif")
                         font.pixelSize: 16
+                        lineHeight: EldurFonts.normalLine(font)
+                        lineHeightMode: Text.FixedHeight
+                        transform: Translate {
+                            y: EldurFonts.shift("Arial, sans-serif", 16, 400, false, 0)
+                        }
+                        bottomPadding: EldurFonts.slack(font, lineHeight)
                         wrapMode: Text.WordWrap
                         anchors.left: parent.left
                         anchors.right: parent.right

@@ -8,6 +8,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Effects
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
@@ -94,9 +95,15 @@ ApplicationWindow {
                             text: "Acme"
                             textFormat: Text.PlainText
                             color: "#ffffff"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 18
                             font.weight: 700
+                            lineHeight: EldurFonts.normalLine(font)
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("Arial, sans-serif", 18, 700, false, 0)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             Layout.maximumWidth: Math.ceil(implicitWidth)
@@ -137,7 +144,7 @@ ApplicationWindow {
                                     property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                                     color: "#ffffff"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial, sans-serif")
                                     font.pixelSize: 14
                                     Layout.fillWidth: true
                                     Layout.preferredHeight: implicitHeight
@@ -152,7 +159,7 @@ ApplicationWindow {
 
                                         text: "Account ▾"
                                         palette.buttonText: "#ffffff"
-                                        font.family: "Arial"
+                                        font.family: EldurFonts.family("Arial")
                                         font.pixelSize: 13
                                         background: Rectangle {
                                             color: "#444d56"
@@ -242,22 +249,26 @@ ApplicationWindow {
                                         property var eldurAttrs: ({ "data-action": "profile" })
                                         property string eldurTag: "li"
                                         property string eldurWs: "\n      "
-                                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                                         color: mProfileHover.hovered ? "#0366d6" : "#00000000"
                                         implicitWidth: mProfileText.implicitWidth + 24
                                         implicitHeight: mProfileText.implicitHeight + 12
                                         objectName: "m-profile"
                                         Layout.fillWidth: true
-                                        Layout.preferredHeight: implicitHeight
 
                                         Text {
                                             id: mProfileText
                                             text: "Your profile"
                                             textFormat: Text.PlainText
                                             color: mProfileHover.hovered ? "#ffffff" : "#24292e"
-                                            font.family: "Arial"
+                                            font.family: EldurFonts.family("Arial, sans-serif")
                                             font.pixelSize: 14
+                                            lineHeight: EldurFonts.normalLine(font)
+                                            lineHeightMode: Text.FixedHeight
+                                            transform: Translate {
+                                                y: EldurFonts.shift("Arial, sans-serif", 14, 400, false, 0)
+                                            }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -279,23 +290,26 @@ ApplicationWindow {
                                         property var eldurAttrs: ({ "data-action": "settings" })
                                         property string eldurTag: "li"
                                         property string eldurWs: "\n      "
-                                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : mProfile.eldurCarry
 
                                         color: mSettingsHover.hovered ? "#0366d6" : "#00000000"
                                         implicitWidth: mSettingsText.implicitWidth + 24
                                         implicitHeight: mSettingsText.implicitHeight + 12
                                         objectName: "m-settings"
                                         Layout.fillWidth: true
-                                        Layout.topMargin: -mProfile.eldurCarry
-                                        Layout.preferredHeight: implicitHeight
 
                                         Text {
                                             id: mSettingsText
                                             text: "Settings"
                                             textFormat: Text.PlainText
                                             color: mSettingsHover.hovered ? "#ffffff" : "#24292e"
-                                            font.family: "Arial"
+                                            font.family: EldurFonts.family("Arial, sans-serif")
                                             font.pixelSize: 14
+                                            lineHeight: EldurFonts.normalLine(font)
+                                            lineHeightMode: Text.FixedHeight
+                                            transform: Translate {
+                                                y: EldurFonts.shift("Arial, sans-serif", 14, 400, false, 0)
+                                            }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -317,14 +331,13 @@ ApplicationWindow {
                                         property string eldurTag: "li"
                                         property string eldurClasses: "sep"
                                         property string eldurWs: "\n      "
-                                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 1) - Layout.topMargin - 1 + 0.000001) : mSettings.eldurCarry
 
                                         color: sepHover.hovered ? "#0366d6" : "#e1e4e8"
                                         implicitWidth: 0
                                         implicitHeight: 0
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: 1
-                                        Layout.topMargin: 4 - mSettings.eldurCarry
+                                        Layout.topMargin: 4
 
                                         HoverHandler {
                                             id: sepHover
@@ -343,16 +356,21 @@ ApplicationWindow {
                                         implicitHeight: mLogoutText.implicitHeight + 12
                                         objectName: "m-logout"
                                         Layout.fillWidth: true
-                                        Layout.topMargin: 4 - sep.eldurCarry
-                                        Layout.preferredHeight: implicitHeight
+                                        Layout.topMargin: 4
 
                                         Text {
                                             id: mLogoutText
                                             text: "Sign out"
                                             textFormat: Text.PlainText
                                             color: mLogoutHover.hovered ? "#ffffff" : "#24292e"
-                                            font.family: "Arial"
+                                            font.family: EldurFonts.family("Arial, sans-serif")
                                             font.pixelSize: 14
+                                            lineHeight: EldurFonts.normalLine(font)
+                                            lineHeightMode: Text.FixedHeight
+                                            transform: Translate {
+                                                y: EldurFonts.shift("Arial, sans-serif", 14, 400, false, 0)
+                                            }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -395,16 +413,20 @@ ApplicationWindow {
 
                         // <p>
                         Text {
-                            id: p
                             property string eldurTag: "p"
                             property string eldurWs: "\n  "
-                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                             text: "Welcome back. Pick something from the menu."
                             textFormat: Text.PlainText
                             color: "#000000"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 14
+                            lineHeight: EldurFonts.normalLine(font)
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("Arial, sans-serif", 14, 400, false, 0)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             Layout.topMargin: 14
@@ -420,12 +442,18 @@ ApplicationWindow {
                             text: "Nothing chosen yet."
                             textFormat: Text.PlainText
                             color: "#586069"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 14
+                            lineHeight: EldurFonts.normalLine(font)
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("Arial, sans-serif", 14, 400, false, 0)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             objectName: "status"
                             Layout.fillWidth: true
-                            Layout.topMargin: 14 - p.eldurCarry
+                            Layout.topMargin: 14
                             Layout.bottomMargin: 14
                             renderType: Text.NativeRendering
                         }

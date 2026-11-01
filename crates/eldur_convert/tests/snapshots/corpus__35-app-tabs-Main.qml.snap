@@ -8,6 +8,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Effects
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
@@ -65,12 +66,10 @@ ApplicationWindow {
 
                 // <div class="page">
                 Rectangle {
-                    id: page2
                     property string eldurTag: "div"
                     property string eldurClasses: "page"
                     property string eldurWs: "\n"
                     property string eldurWsEnd: "\n"
-                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin - (alerts.eldurCarry)) - Layout.topMargin + alerts.eldurCarry + 0.000001) : 0
 
                     color: "#ffffff"
                     radius: 8
@@ -79,7 +78,6 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignHCenter
                     Layout.maximumWidth: 640
-                    Layout.preferredHeight: implicitHeight - alerts.eldurCarry
                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                     RectangularShadow {
@@ -100,24 +98,27 @@ ApplicationWindow {
 
                         // <h1>
                         Item {
-                            id: h1
                             property string eldurTag: "h1"
                             property string eldurWs: "\n  "
-                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                             implicitWidth: h1Text.implicitWidth + 48
                             implicitHeight: h1Text.implicitHeight + 20
                             Layout.fillWidth: true
-                            Layout.preferredHeight: implicitHeight
 
                             Text {
                                 id: h1Text
                                 text: "Account settings"
                                 textFormat: Text.PlainText
                                 color: "#222222"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial, Helvetica, sans-serif")
                                 font.pixelSize: 20
                                 font.weight: 700
+                                lineHeight: EldurFonts.normalLine(font)
+                                lineHeightMode: Text.FixedHeight
+                                transform: Translate {
+                                    y: EldurFonts.shift("Arial, Helvetica, sans-serif", 20, 700, false, 0)
+                                }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 anchors.left: parent.left
                                 anchors.right: parent.right
@@ -131,19 +132,16 @@ ApplicationWindow {
 
                         // <div class="tabs">
                         Rectangle {
-                            id: tabs
                             property var eldurAttrs: ({ "role": "tablist" })
                             property string eldurTag: "div"
                             property string eldurClasses: "tabs"
                             property string eldurWs: "\n  "
                             property string eldurWsEnd: "\n  "
-                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h1.eldurCarry
 
                             color: "#00000000"
                             implicitWidth: tabsContent.implicitWidth + 48
                             implicitHeight: tabsContent.implicitHeight + 17
                             Layout.fillWidth: true
-                            Layout.topMargin: -h1.eldurCarry
 
                             Rectangle {
                                 anchors.left: parent.left
@@ -176,7 +174,7 @@ ApplicationWindow {
 
                                     text: "Profile"
                                     palette.buttonText: tabProfile.cls_active ? "#1a56db" : "#555555"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial")
                                     font.pixelSize: 14
                                     font.weight: tabProfile.cls_active ? 700 : 400
                                     background: Rectangle {
@@ -220,7 +218,7 @@ ApplicationWindow {
 
                                     text: "Billing"
                                     palette.buttonText: tabBilling.cls_active ? "#1a56db" : (tabBilling.hovered ? "#000000" : "#555555")
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial")
                                     font.pixelSize: 14
                                     background: Rectangle {
                                         color: "#00000000"
@@ -266,7 +264,7 @@ ApplicationWindow {
 
                                     text: "Alerts"
                                     palette.buttonText: tabAlerts.cls_active ? "#1a56db" : (tabAlerts.hovered ? "#000000" : "#555555")
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial")
                                     font.pixelSize: 14
                                     background: Rectangle {
                                         color: "#00000000"
@@ -315,13 +313,11 @@ ApplicationWindow {
                             property bool cls_active: true
                             property string eldurWs: "\n  "
                             property string eldurWsEnd: "\n  "
-                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : tabs.eldurCarry
 
                             implicitWidth: profileContent.implicitWidth + 48
                             implicitHeight: profileContent.implicitHeight + 48
                             objectName: "profile"
                             Layout.fillWidth: true
-                            Layout.topMargin: -tabs.eldurCarry
                             visible: profile.cls_active
 
                             ColumnLayout {
@@ -342,14 +338,15 @@ ApplicationWindow {
                                     text: "Profile"
                                     textFormat: Text.PlainText
                                     color: "#222222"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial, Helvetica, sans-serif")
                                     font.pixelSize: 16
                                     font.weight: 700
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3
+                                        y: EldurFonts.shift("Arial, Helvetica, sans-serif", 16, 700, false, 24)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     renderType: Text.NativeRendering
@@ -363,13 +360,14 @@ ApplicationWindow {
                                     text: "Your name and photo are shown to people you work with."
                                     textFormat: Text.PlainText
                                     color: "#222222"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial, Helvetica, sans-serif")
                                     font.pixelSize: 16
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3
+                                        y: EldurFonts.shift("Arial, Helvetica, sans-serif", 16, 400, false, 24)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.topMargin: 8
@@ -384,13 +382,14 @@ ApplicationWindow {
                                     text: "Change them whenever you like."
                                     textFormat: Text.PlainText
                                     color: "#222222"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial, Helvetica, sans-serif")
                                     font.pixelSize: 16
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3
+                                        y: EldurFonts.shift("Arial, Helvetica, sans-serif", 16, 400, false, 24)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.topMargin: 12
@@ -408,14 +407,12 @@ ApplicationWindow {
                             property bool cls_active: false
                             property string eldurWs: "\n  "
                             property string eldurWsEnd: "\n  "
-                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : profile.eldurCarry
 
                             implicitWidth: billingContent.implicitWidth + 48
                             implicitHeight: billingContent.implicitHeight + 48
                             objectName: "billing"
                             visible: billing.cls_active
                             Layout.fillWidth: true
-                            Layout.topMargin: -profile.eldurCarry
 
                             ColumnLayout {
                                 id: billingContent
@@ -435,14 +432,15 @@ ApplicationWindow {
                                     text: "Billing"
                                     textFormat: Text.PlainText
                                     color: "#222222"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial, Helvetica, sans-serif")
                                     font.pixelSize: 16
                                     font.weight: 700
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3
+                                        y: EldurFonts.shift("Arial, Helvetica, sans-serif", 16, 700, false, 24)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     renderType: Text.NativeRendering
@@ -456,13 +454,14 @@ ApplicationWindow {
                                     text: "You are on the free plan."
                                     textFormat: Text.PlainText
                                     color: "#222222"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial, Helvetica, sans-serif")
                                     font.pixelSize: 16
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3
+                                        y: EldurFonts.shift("Arial, Helvetica, sans-serif", 16, 400, false, 24)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.topMargin: 8
@@ -480,14 +479,12 @@ ApplicationWindow {
                             property bool cls_active: false
                             property string eldurWs: "\n  "
                             property string eldurWsEnd: "\n  "
-                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : billing.eldurCarry
 
                             implicitWidth: alertsContent.implicitWidth + 48
                             implicitHeight: alertsContent.implicitHeight + 48
                             objectName: "alerts"
                             visible: alerts.cls_active
                             Layout.fillWidth: true
-                            Layout.topMargin: -billing.eldurCarry
 
                             ColumnLayout {
                                 id: alertsContent
@@ -507,14 +504,15 @@ ApplicationWindow {
                                     text: "Alerts"
                                     textFormat: Text.PlainText
                                     color: "#222222"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial, Helvetica, sans-serif")
                                     font.pixelSize: 16
                                     font.weight: 700
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3
+                                        y: EldurFonts.shift("Arial, Helvetica, sans-serif", 16, 700, false, 24)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     renderType: Text.NativeRendering
@@ -528,13 +526,14 @@ ApplicationWindow {
                                     text: "We send a weekly summary by email."
                                     textFormat: Text.PlainText
                                     color: "#222222"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial, Helvetica, sans-serif")
                                     font.pixelSize: 16
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3
+                                        y: EldurFonts.shift("Arial, Helvetica, sans-serif", 16, 400, false, 24)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.topMargin: 8
@@ -549,13 +548,14 @@ ApplicationWindow {
                                     text: "You can turn it off here."
                                     textFormat: Text.PlainText
                                     color: "#222222"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial, Helvetica, sans-serif")
                                     font.pixelSize: 16
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3
+                                        y: EldurFonts.shift("Arial, Helvetica, sans-serif", 16, 400, false, 24)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.topMargin: 12
@@ -570,13 +570,14 @@ ApplicationWindow {
                                     text: "Security alerts are always on."
                                     textFormat: Text.PlainText
                                     color: "#222222"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial, Helvetica, sans-serif")
                                     font.pixelSize: 16
                                     lineHeight: 24
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: 3
+                                        y: EldurFonts.shift("Arial, Helvetica, sans-serif", 16, 400, false, 24)
                                     }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     Layout.fillWidth: true
                                     Layout.topMargin: 12

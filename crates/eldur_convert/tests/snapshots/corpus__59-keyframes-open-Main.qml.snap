@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
@@ -93,13 +94,14 @@ ApplicationWindow {
                             text: ""
                             textFormat: Text.PlainText
                             color: "#222222"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             lineHeight: 24
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 3
+                                y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
                             anchors.right: parent.right
@@ -162,13 +164,14 @@ ApplicationWindow {
                 text: ""
                 textFormat: Text.PlainText
                 color: "#222222"
-                font.family: "sans-serif"
+                font.family: EldurFonts.family("sans-serif")
                 font.pixelSize: 16
                 lineHeight: 24
                 lineHeightMode: Text.FixedHeight
                 transform: Translate {
-                    y: 3
+                    y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                 }
+                bottomPadding: EldurFonts.slack(font, lineHeight)
                 wrapMode: Text.WordWrap
                 anchors.left: parent.left
                 anchors.right: parent.right
@@ -270,13 +273,14 @@ ApplicationWindow {
                 text: ""
                 textFormat: Text.PlainText
                 color: "#222222"
-                font.family: "sans-serif"
+                font.family: EldurFonts.family("sans-serif")
                 font.pixelSize: 16
                 lineHeight: 24
                 lineHeightMode: Text.FixedHeight
                 transform: Translate {
-                    y: 3
+                    y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                 }
+                bottomPadding: EldurFonts.slack(font, lineHeight)
                 wrapMode: Text.WordWrap
                 anchors.left: parent.left
                 anchors.right: parent.right

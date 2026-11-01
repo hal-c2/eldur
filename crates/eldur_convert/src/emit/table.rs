@@ -1651,7 +1651,7 @@ impl<'a> Emitter<'a, '_> {
         }
         let id = self.ids.claim("table font");
         let mut metrics = Object::new("FontMetrics").with_id(&id);
-        metrics.set("font.family", Value::string(family));
+        metrics.set("font.family", super::fonts::family_value(style));
         metrics.set("font.pixelSize", Value::Number(size));
         if style.font_weight != 400 {
             metrics.set("font.weight", Value::Number(weight));

@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
@@ -84,14 +85,19 @@ ApplicationWindow {
                             id: h1
                             property string eldurTag: "h1"
                             property string eldurWs: "\n  "
-                            property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                             text: "Team"
                             textFormat: Text.PlainText
                             color: "#000000"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 32
                             font.weight: 700
+                            lineHeight: EldurFonts.normalLine(font)
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("Arial, sans-serif", 32, 700, false, 0)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             Layout.topMargin: 21.44
@@ -103,10 +109,10 @@ ApplicationWindow {
                             property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                             color: "#000000"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 16
                             Layout.fillWidth: true
-                            Layout.topMargin: 21.44 - h1.eldurCarry
+                            Layout.topMargin: 21.44 - (h1.visible ? 0.56 : 0)
                             Layout.preferredHeight: implicitHeight
 
                             // <button id="open" class="btn">
@@ -118,7 +124,7 @@ ApplicationWindow {
 
                                 text: "Invite someone"
                                 palette.buttonText: "#ffffff"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial")
                                 font.pixelSize: 14
                                 background: Rectangle {
                                     color: "#1a56db"
@@ -164,8 +170,14 @@ ApplicationWindow {
                             text: ""
                             textFormat: Text.PlainText
                             color: "#00aa66"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 16
+                            lineHeight: EldurFonts.normalLine(font)
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("Arial, sans-serif", 16, 400, false, 0)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             objectName: "result"
                             Layout.preferredHeight: text === "" ? 0 : -1
@@ -257,14 +269,19 @@ ApplicationWindow {
                         id: title
                         property string eldurTag: "h2"
                         property string eldurWs: "\n    "
-                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                         text: "Invite someone"
                         textFormat: Text.PlainText
                         color: "#000000"
-                        font.family: "Arial"
+                        font.family: EldurFonts.family("Arial, sans-serif")
                         font.pixelSize: 18
                         font.weight: 700
+                        lineHeight: EldurFonts.normalLine(font)
+                        lineHeightMode: Text.FixedHeight
+                        transform: Translate {
+                            y: EldurFonts.shift("Arial, sans-serif", 18, 700, false, 0)
+                        }
+                        bottomPadding: EldurFonts.slack(font, lineHeight)
                         wrapMode: Text.WordWrap
                         objectName: "title"
                         Layout.fillWidth: true
@@ -273,20 +290,24 @@ ApplicationWindow {
 
                     // <label>
                     Text {
-                        id: label
                         property var eldurAttrs: ({ "for": "email" })
                         property string eldurTag: "label"
                         property string eldurWs: "\n    "
-                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : title.eldurCarry
 
                         text: "Email"
                         textFormat: Text.PlainText
                         color: "#000000"
-                        font.family: "Arial"
+                        font.family: EldurFonts.family("Arial, sans-serif")
                         font.pixelSize: 14
+                        lineHeight: EldurFonts.normalLine(font)
+                        lineHeightMode: Text.FixedHeight
+                        transform: Translate {
+                            y: EldurFonts.shift("Arial, sans-serif", 14, 400, false, 0)
+                        }
+                        bottomPadding: EldurFonts.slack(font, lineHeight)
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
-                        Layout.topMargin: 12 - title.eldurCarry
+                        Layout.topMargin: 12
                         renderType: Text.NativeRendering
 
                         TapHandler {
@@ -301,10 +322,10 @@ ApplicationWindow {
                         property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                         color: "#000000"
-                        font.family: "Arial"
+                        font.family: EldurFonts.family("Arial, sans-serif")
                         font.pixelSize: 16
                         Layout.fillWidth: true
-                        Layout.topMargin: 4 - label.eldurCarry
+                        Layout.topMargin: 4
                         Layout.preferredHeight: implicitHeight
 
                         // <input id="email">
@@ -320,7 +341,7 @@ ApplicationWindow {
                                 property string eldurWs: "\n    "
 
                                 color: "#000000"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial")
                                 font.pixelSize: 13
                                 verticalAlignment: TextInput.AlignVCenter
                                 background: Rectangle {
@@ -371,7 +392,7 @@ ApplicationWindow {
 
                             text: "Cancel"
                             palette.buttonText: "#1a56db"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial")
                             font.pixelSize: 14
                             background: Rectangle {
                                 color: "#ffffff"
@@ -412,7 +433,7 @@ ApplicationWindow {
 
                             text: "Send invite"
                             palette.buttonText: "#ffffff"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial")
                             font.pixelSize: 14
                             background: Rectangle {
                                 color: "#1a56db"

@@ -97,7 +97,10 @@ fn inline_code_keeps_its_font_background_and_padding() {
     let qml = out.main_qml().expect("Main.qml");
     // `code` has a radius, so it is a box of its own rather than a RichText
     // span: rich text squares the corners.
-    assert!(qml.contains("font.family: \"monospace\""), "{qml}");
+    assert!(
+        qml.contains("font.family: EldurFonts.family(\"monospace\")"),
+        "{qml}"
+    );
     assert!(qml.contains("fill: \"#eff1f3\""), "{qml}");
     assert!(
         !out.diagnostics

@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
@@ -78,14 +79,15 @@ ApplicationWindow {
                         text: "Frequently asked questions"
                         textFormat: Text.PlainText
                         color: "#333333"
-                        font.family: "Arial"
+                        font.family: EldurFonts.family("Arial, sans-serif")
                         font.pixelSize: 22
                         font.weight: 700
                         lineHeight: 33
                         lineHeightMode: Text.FixedHeight
                         transform: Translate {
-                            y: 4
+                            y: EldurFonts.shift("Arial, sans-serif", 22, 700, false, 33)
                         }
+                        bottomPadding: EldurFonts.slack(font, lineHeight)
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
                         renderType: Text.NativeRendering
@@ -132,14 +134,15 @@ ApplicationWindow {
                                 text: "How do I reset my password?"
                                 textFormat: Text.PlainText
                                 color: "#333333"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial, sans-serif")
                                 font.pixelSize: 15
                                 font.weight: 700
                                 lineHeight: 22.5
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2
+                                    y: EldurFonts.shift("Arial, sans-serif", 15, 700, false, 22.5)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 onLineLaidOut: (line) => { line.y = line.number * lineHeight; if (line.number === 0) { line.x += 15.88; line.width -= 15.88; } }
                                 objectName: "s1"
@@ -163,13 +166,14 @@ ApplicationWindow {
                                 text: "Use the link on the sign-in page. We will email you a new one."
                                 textFormat: Text.PlainText
                                 color: "#333333"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial, sans-serif")
                                 font.pixelSize: 15
                                 lineHeight: 22.5
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2
+                                    y: EldurFonts.shift("Arial, sans-serif", 15, 400, false, 22.5)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.topMargin: 8 - s1.eldurCarry
@@ -222,14 +226,15 @@ ApplicationWindow {
                                 text: "Can I change my plan?"
                                 textFormat: Text.PlainText
                                 color: "#333333"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial, sans-serif")
                                 font.pixelSize: 15
                                 font.weight: 700
                                 lineHeight: 22.5
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2
+                                    y: EldurFonts.shift("Arial, sans-serif", 15, 700, false, 22.5)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 onLineLaidOut: (line) => { line.y = line.number * lineHeight; if (line.number === 0) { line.x += 15.88; line.width -= 15.88; } }
                                 objectName: "s2"
@@ -254,13 +259,14 @@ ApplicationWindow {
                                 text: "Yes, at any time from the billing page."
                                 textFormat: Text.PlainText
                                 color: "#333333"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial, sans-serif")
                                 font.pixelSize: 15
                                 lineHeight: 22.5
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2
+                                    y: EldurFonts.shift("Arial, sans-serif", 15, 400, false, 22.5)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 Layout.topMargin: 8 - s2.eldurCarry
@@ -280,14 +286,15 @@ ApplicationWindow {
                         text: "Shipping"
                         textFormat: Text.PlainText
                         color: "#333333"
-                        font.family: "Arial"
+                        font.family: EldurFonts.family("Arial, sans-serif")
                         font.pixelSize: 16
                         font.weight: 700
                         lineHeight: 24
                         lineHeightMode: Text.FixedHeight
                         transform: Translate {
-                            y: 3
+                            y: EldurFonts.shift("Arial, sans-serif", 16, 700, false, 24)
                         }
+                        bottomPadding: EldurFonts.slack(font, lineHeight)
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
                         Layout.topMargin: 24 - d2.eldurCarry
@@ -347,7 +354,7 @@ ApplicationWindow {
 
                                     text: "How long does delivery take?"
                                     palette.buttonText: accItem.cls_open ? "#123a9c" : "#000000"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial, sans-serif")
                                     font.pixelSize: 15
                                     font.weight: 700
                                     background: Rectangle {
@@ -389,13 +396,14 @@ ApplicationWindow {
                                         text: "Three to five working days in most places."
                                         textFormat: Text.PlainText
                                         color: "#333333"
-                                        font.family: "Arial"
+                                        font.family: EldurFonts.family("Arial, sans-serif")
                                         font.pixelSize: 15
                                         lineHeight: 22.5
                                         lineHeightMode: Text.FixedHeight
                                         transform: Translate {
-                                            y: 2
+                                            y: EldurFonts.shift("Arial, sans-serif", 15, 400, false, 22.5)
                                         }
+                                        bottomPadding: EldurFonts.slack(font, lineHeight)
                                         wrapMode: Text.WordWrap
                                         anchors.left: parent.left
                                         anchors.right: parent.right
@@ -448,7 +456,7 @@ ApplicationWindow {
 
                                         text: "Do you ship abroad?"
                                         palette.buttonText: accItem2.cls_open ? "#123a9c" : "#000000"
-                                        font.family: "Arial"
+                                        font.family: EldurFonts.family("Arial, sans-serif")
                                         font.pixelSize: 15
                                         font.weight: 700
                                         background: Rectangle {
@@ -490,13 +498,14 @@ ApplicationWindow {
                                             text: "We ship to most of Europe and North America, for a fee worked out at checkout."
                                             textFormat: Text.PlainText
                                             color: "#333333"
-                                            font.family: "Arial"
+                                            font.family: EldurFonts.family("Arial, sans-serif")
                                             font.pixelSize: 15
                                             lineHeight: 22.5
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 2
+                                                y: EldurFonts.shift("Arial, sans-serif", 15, 400, false, 22.5)
                                             }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -550,7 +559,7 @@ ApplicationWindow {
 
                                         text: "Can I return something?"
                                         palette.buttonText: accItem3.cls_open ? "#123a9c" : "#000000"
-                                        font.family: "Arial"
+                                        font.family: EldurFonts.family("Arial, sans-serif")
                                         font.pixelSize: 15
                                         font.weight: 700
                                         background: Rectangle {
@@ -592,13 +601,14 @@ ApplicationWindow {
                                             text: "Within thirty days, unused."
                                             textFormat: Text.PlainText
                                             color: "#333333"
-                                            font.family: "Arial"
+                                            font.family: EldurFonts.family("Arial, sans-serif")
                                             font.pixelSize: 15
                                             lineHeight: 22.5
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: 2
+                                                y: EldurFonts.shift("Arial, sans-serif", 15, 400, false, 22.5)
                                             }
+                                            bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
@@ -623,13 +633,14 @@ ApplicationWindow {
                         text: "0 open"
                         textFormat: Text.PlainText
                         color: "#666666"
-                        font.family: "Arial"
+                        font.family: EldurFonts.family("Arial, sans-serif")
                         font.pixelSize: 15
                         lineHeight: 22.5
                         lineHeightMode: Text.FixedHeight
                         transform: Translate {
-                            y: 2
+                            y: EldurFonts.shift("Arial, sans-serif", 15, 400, false, 22.5)
                         }
+                        bottomPadding: EldurFonts.slack(font, lineHeight)
                         wrapMode: Text.WordWrap
                         objectName: "opened"
                         Layout.fillWidth: true

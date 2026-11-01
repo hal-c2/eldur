@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
@@ -73,17 +74,21 @@ ApplicationWindow {
 
                     // <h1>
                     Text {
-                        id: h1
                         property string eldurTag: "h1"
                         property string eldurWs: "\n"
-                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                         text: "Class toggles"
                         textFormat: Text.PlainText
                         color: "#1f2430"
-                        font.family: "sans-serif"
+                        font.family: EldurFonts.family("sans-serif")
                         font.pixelSize: 24
                         font.weight: 700
+                        lineHeight: EldurFonts.normalLine(font)
+                        lineHeightMode: Text.FixedHeight
+                        transform: Translate {
+                            y: EldurFonts.shift("sans-serif", 24, 700, false, 0)
+                        }
+                        bottomPadding: EldurFonts.slack(font, lineHeight)
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
                         renderType: Text.NativeRendering
@@ -91,17 +96,15 @@ ApplicationWindow {
 
                     // <div class="toolbar">
                     RowLayout {
-                        id: toolbar
                         property string eldurTag: "div"
                         property string eldurClasses: "toolbar"
                         property string eldurWs: "\n\n"
                         property string eldurWsEnd: "\n"
-                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h1.eldurCarry
 
                         spacing: 0
                         Layout.fillWidth: true
                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                        Layout.topMargin: 20 - h1.eldurCarry
+                        Layout.topMargin: 20
 
                         // <button id="compact">
                         Button {
@@ -111,7 +114,7 @@ ApplicationWindow {
 
                             text: "Compact"
                             palette.buttonText: "#1f2430"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             background: Rectangle {
                                 color: "#ffffff"
@@ -151,7 +154,7 @@ ApplicationWindow {
 
                             text: "OK"
                             palette.buttonText: "#1f2430"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             background: Rectangle {
                                 color: "#ffffff"
@@ -192,7 +195,7 @@ ApplicationWindow {
 
                             text: "Warn"
                             palette.buttonText: "#1f2430"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             background: Rectangle {
                                 color: "#ffffff"
@@ -233,7 +236,7 @@ ApplicationWindow {
 
                             text: "More"
                             palette.buttonText: "#1f2430"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             background: Rectangle {
                                 color: "#ffffff"
@@ -273,17 +276,15 @@ ApplicationWindow {
 
                     // <div class="tabs">
                     RowLayout {
-                        id: tabs
                         property string eldurTag: "div"
                         property string eldurClasses: "tabs"
                         property string eldurWs: "\n\n"
                         property string eldurWsEnd: "\n"
-                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : toolbar.eldurCarry
 
                         spacing: 0
                         Layout.fillWidth: true
                         Layout.maximumWidth: Number.POSITIVE_INFINITY
-                        Layout.topMargin: 20 - toolbar.eldurCarry
+                        Layout.topMargin: 20
 
                         // <div id="tab1" class="tab">
                         Rectangle {
@@ -306,8 +307,14 @@ ApplicationWindow {
                                 text: "One"
                                 textFormat: Text.PlainText
                                 color: tab1.cls_active ? "#ffffff" : "#5a6275"
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 16
+                                lineHeight: EldurFonts.normalLine(font)
+                                lineHeightMode: Text.FixedHeight
+                                transform: Translate {
+                                    y: EldurFonts.shift("sans-serif", 16, 400, false, 0)
+                                }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 anchors.left: parent.left
                                 anchors.right: parent.right
@@ -346,8 +353,14 @@ ApplicationWindow {
                                 text: "Two"
                                 textFormat: Text.PlainText
                                 color: tab2.cls_active ? (tab1.cls_active ? "#3b5bdb" : "#ffffff") : (tab1.cls_active ? "#3b5bdb" : "#5a6275")
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 16
+                                lineHeight: EldurFonts.normalLine(font)
+                                lineHeightMode: Text.FixedHeight
+                                transform: Translate {
+                                    y: EldurFonts.shift("sans-serif", 16, 400, false, 0)
+                                }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 anchors.left: parent.left
                                 anchors.right: parent.right
@@ -386,8 +399,14 @@ ApplicationWindow {
                                 text: "Three"
                                 textFormat: Text.PlainText
                                 color: tab3.cls_active ? (tab2.cls_active ? "#3b5bdb" : "#ffffff") : (tab2.cls_active ? "#3b5bdb" : "#5a6275")
-                                font.family: "sans-serif"
+                                font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 16
+                                lineHeight: EldurFonts.normalLine(font)
+                                lineHeightMode: Text.FixedHeight
+                                transform: Translate {
+                                    y: EldurFonts.shift("sans-serif", 16, 400, false, 0)
+                                }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 anchors.left: parent.left
                                 anchors.right: parent.right
@@ -418,7 +437,6 @@ ApplicationWindow {
                         property bool cls_compact: false
                         property string eldurWs: "\n\n"
                         property string eldurWsEnd: "\n"
-                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin - (item3.eldurCarry)) - Layout.topMargin + item3.eldurCarry + 0.000001) : tabs.eldurCarry
 
                         color: "#ffffff"
                         implicitWidth: listContent.implicitWidth + 2
@@ -428,8 +446,7 @@ ApplicationWindow {
                         objectName: "list"
                         Layout.preferredWidth: 422
                         Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
-                        Layout.topMargin: 20 - tabs.eldurCarry
-                        Layout.preferredHeight: implicitHeight - item3.eldurCarry
+                        Layout.topMargin: 20
 
                         ColumnLayout {
                             id: listContent
@@ -448,14 +465,12 @@ ApplicationWindow {
                                 property string eldurClasses: "item"
                                 property bool cls_done: false
                                 property string eldurWs: "\n  "
-                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                                 color: item1Hover.hovered ? "#eef2ff" : "#00000000"
                                 implicitWidth: item1Text.implicitWidth + 28
                                 implicitHeight: list.cls_compact ? (item1Text.implicitHeight + 4) : (item1Text.implicitHeight + 20)
                                 objectName: "item1"
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: implicitHeight
                                 opacity: item1.cls_done ? (item1Hover.hovered ? 0.8 : 0.5) : 1
 
                                 Behavior on opacity {
@@ -471,8 +486,14 @@ ApplicationWindow {
                                     text: "Write the page"
                                     textFormat: Text.PlainText
                                     color: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 16
+                                    lineHeight: EldurFonts.normalLine(font)
+                                    lineHeightMode: Text.FixedHeight
+                                    transform: Translate {
+                                        y: EldurFonts.shift("sans-serif", 16, 400, false, 0)
+                                    }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -501,15 +522,12 @@ ApplicationWindow {
                                 property string eldurClasses: "item"
                                 property bool cls_done: false
                                 property string eldurWs: "\n  "
-                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : item1.eldurCarry
 
                                 color: item2Hover.hovered ? "#eef2ff" : "#00000000"
                                 implicitWidth: item2Text.implicitWidth + 28
                                 implicitHeight: list.cls_compact ? (item2Text.implicitHeight + 4) : (item2Text.implicitHeight + 20)
                                 objectName: "item2"
                                 Layout.fillWidth: true
-                                Layout.topMargin: -item1.eldurCarry
-                                Layout.preferredHeight: implicitHeight
                                 opacity: item2.cls_done ? (item2Hover.hovered ? 0.8 : 0.5) : 1
 
                                 Behavior on opacity {
@@ -525,8 +543,14 @@ ApplicationWindow {
                                     text: "Convert it"
                                     textFormat: Text.PlainText
                                     color: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 16
+                                    lineHeight: EldurFonts.normalLine(font)
+                                    lineHeightMode: Text.FixedHeight
+                                    transform: Translate {
+                                        y: EldurFonts.shift("sans-serif", 16, 400, false, 0)
+                                    }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -555,15 +579,12 @@ ApplicationWindow {
                                 property string eldurClasses: "item"
                                 property bool cls_done: false
                                 property string eldurWs: "\n  "
-                                property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : item2.eldurCarry
 
                                 color: item3Hover.hovered ? "#eef2ff" : "#00000000"
                                 implicitWidth: item3Text.implicitWidth + 28
                                 implicitHeight: list.cls_compact ? (item3Text.implicitHeight + 4) : (item3Text.implicitHeight + 20)
                                 objectName: "item3"
                                 Layout.fillWidth: true
-                                Layout.topMargin: -item2.eldurCarry
-                                Layout.preferredHeight: implicitHeight
                                 opacity: item3.cls_done ? (item3Hover.hovered ? 0.8 : 0.5) : 1
 
                                 Behavior on opacity {
@@ -579,8 +600,14 @@ ApplicationWindow {
                                     text: "Check the QML"
                                     textFormat: Text.PlainText
                                     color: "#1f2430"
-                                    font.family: "sans-serif"
+                                    font.family: EldurFonts.family("sans-serif")
                                     font.pixelSize: 16
+                                    lineHeight: EldurFonts.normalLine(font)
+                                    lineHeightMode: Text.FixedHeight
+                                    transform: Translate {
+                                        y: EldurFonts.shift("sans-serif", 16, 400, false, 0)
+                                    }
+                                    bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap
                                     anchors.left: parent.left
                                     anchors.right: parent.right
@@ -612,7 +639,6 @@ ApplicationWindow {
                         property bool cls_ok: false
                         property bool cls_warn: false
                         property string eldurWs: "\n\n"
-                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : list.eldurCarry
 
                         color: "#ffffff"
                         implicitWidth: statusText.implicitWidth + 28
@@ -620,17 +646,22 @@ ApplicationWindow {
                         objectName: "status"
                         Layout.preferredWidth: 448
                         Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
-                        Layout.topMargin: 20 - list.eldurCarry
+                        Layout.topMargin: 20
                         Layout.bottomMargin: panel.cls_d_none ? ((panel.visible ? 0 : 20)) : 0
-                        Layout.preferredHeight: implicitHeight
 
                         Text {
                             id: statusText
                             text: "Status"
                             textFormat: Text.PlainText
                             color: status.cls_ok ? (status.cls_warn ? "#e67700" : "#2b8a3e") : (status.cls_warn ? "#e67700" : "#1f2430")
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
+                            lineHeight: EldurFonts.normalLine(font)
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("sans-serif", 16, 400, false, 0)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
                             anchors.right: parent.right
@@ -649,7 +680,6 @@ ApplicationWindow {
                         property string eldurClasses: "panel d-none"
                         property bool cls_d_none: true
                         property string eldurWs: "\n\n"
-                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : status.eldurCarry
 
                         color: "#fff3bf"
                         implicitWidth: panelText.implicitWidth + 28
@@ -658,16 +688,21 @@ ApplicationWindow {
                         visible: !panel.cls_d_none
                         Layout.preferredWidth: 448
                         Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
-                        Layout.topMargin: 20 - status.eldurCarry
-                        Layout.preferredHeight: implicitHeight
+                        Layout.topMargin: 20
 
                         Text {
                             id: panelText
                             text: "More details"
                             textFormat: Text.PlainText
                             color: "#1f2430"
-                            font.family: "sans-serif"
+                            font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
+                            lineHeight: EldurFonts.normalLine(font)
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("sans-serif", 16, 400, false, 0)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             anchors.left: parent.left
                             anchors.right: parent.right

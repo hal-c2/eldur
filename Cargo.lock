@@ -354,6 +354,7 @@ dependencies = [
  "eldur_qml",
  "imagesize",
  "insta",
+ "serde",
  "serde_json",
  "thiserror",
  "url",

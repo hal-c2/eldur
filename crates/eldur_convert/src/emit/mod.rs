@@ -11,6 +11,7 @@ mod decoration;
 pub(crate) mod dynamic;
 mod flex;
 mod flow;
+mod fonts;
 mod grid;
 mod ids;
 mod image;
@@ -749,7 +750,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     self.declare_inline_model(&mut text, b, decoration, items);
                 }
                 if matches!(b.kind, BoxKind::Flex | BoxKind::Grid) {
-                    place_anonymous_item(&mut text, style, b.kind);
+                    place_anonymous_item(&mut text, style, b.kind, &mut self.ids);
                 }
                 Some((text, "Text"))
             }
@@ -1407,7 +1408,7 @@ enum Place {
 /// the Text's alignment. A line shorter than the container is the whole
 /// item, so `text-align` does not move it; wrapped lines make the item as
 /// wide as the container and `text-align` places them.
-fn place_anonymous_item(text: &mut Object, style: &ComputedStyle, kind: BoxKind) {
+fn place_anonymous_item(text: &mut Object, style: &ComputedStyle, kind: BoxKind, ids: &mut Ids) {
     let content = |a: Align| match a {
         Align::Center | Align::SpaceAround | Align::SpaceEvenly => Place::Center,
         Align::End | Align::FlexEnd | Align::Right => Place::End,
@@ -1465,6 +1466,33 @@ fn place_anonymous_item(text: &mut Object, style: &ComputedStyle, kind: BoxKind)
             "horizontalAlignment",
             Value::expr(format!("lineCount > 1 ? {wrapped} : {single}")),
         );
+    }
+    // Qt centres a fixed line by the font's height, not the line's, where the
+    // shift that puts its glyphs on Chromium's row expects the line at the top.
+    // The Translate moves it from there: padding would feed `height` back into
+    // the implicit height a wrapper takes from it.
+    if text.get("lineHeightMode").is_some() {
+        let share = match vertical {
+            Place::Center => " / 2",
+            Place::End => "",
+            Place::Start | Place::Stretch => return,
+        };
+        let id = text.id.get_or_insert_with(|| ids.claim("text")).clone();
+        let free = format!("({id}.height - {id}.lineCount * {id}.lineHeight){share}");
+        let shift = match text.get("transform") {
+            Some(Value::Object(t)) => match t.get("y") {
+                Some(Value::Expr(y)) => format!("{y} + "),
+                _ => String::new(),
+            },
+            _ => String::new(),
+        };
+        text.set(
+            "transform",
+            Value::Object(Box::new(
+                Object::new("Translate").prop("y", Value::expr(format!("{shift}{free}"))),
+            )),
+        );
+        return;
     }
     let flag = match vertical {
         Place::Center => Some("Text.AlignVCenter"),

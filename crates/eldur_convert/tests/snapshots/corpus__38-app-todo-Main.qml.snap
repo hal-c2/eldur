@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
@@ -107,14 +108,15 @@ ApplicationWindow {
                             text: "Todos"
                             textFormat: Text.PlainText
                             color: "#2f855a"
-                            font.family: "Arial"
+                            font.family: EldurFonts.family("Arial, sans-serif")
                             font.pixelSize: 24
                             font.weight: 700
                             lineHeight: 33.6
                             lineHeightMode: Text.FixedHeight
                             transform: Translate {
-                                y: 3
+                                y: EldurFonts.shift("Arial, sans-serif", 24, 700, false, 33.6)
                             }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
                             wrapMode: Text.WordWrap
                             Layout.fillWidth: true
                             renderType: Text.NativeRendering
@@ -142,7 +144,7 @@ ApplicationWindow {
                                 property string eldurWs: "\n    "
 
                                 color: "#000000"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial")
                                 font.pixelSize: 14
                                 verticalAlignment: TextInput.AlignVCenter
                                 background: Rectangle {
@@ -180,7 +182,7 @@ ApplicationWindow {
 
                                 text: "Add"
                                 palette.buttonText: "#ffffff"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial")
                                 font.pixelSize: 13
                                 background: Rectangle {
                                     color: "#2f855a"
@@ -231,13 +233,14 @@ ApplicationWindow {
                                 text: ""
                                 textFormat: Text.PlainText
                                 color: "#000000"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial, sans-serif")
                                 font.pixelSize: 16
                                 lineHeight: 22.4
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 2
+                                    y: EldurFonts.shift("Arial, sans-serif", 16, 400, false, 22.4)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 anchors.left: parent.left
                                 anchors.right: parent.right
@@ -278,13 +281,14 @@ ApplicationWindow {
                                 text: ""
                                 textFormat: Text.PlainText
                                 color: "#4a5568"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial, sans-serif")
                                 font.pixelSize: 13
                                 lineHeight: 18.2
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 1
+                                    y: EldurFonts.shift("Arial, sans-serif", 13, 400, false, 18.2)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 objectName: "count"
                                 Layout.preferredHeight: text === "" ? 0 : -1
@@ -315,7 +319,7 @@ ApplicationWindow {
                                 EldurLines {
                                     id: filtersFlow
                                     color: "#4a5568"
-                                    font.family: "Arial"
+                                    font.family: EldurFonts.family("Arial, sans-serif")
                                     font.pixelSize: 13
                                     lineHeight: 18.2
                                     anchors.left: parent.left
@@ -333,7 +337,7 @@ ApplicationWindow {
 
                                         text: "All"
                                         palette.buttonText: fAll.cls_current ? "#2f855a" : "#000000"
-                                        font.family: "Arial"
+                                        font.family: EldurFonts.family("Arial")
                                         font.pixelSize: 13
                                         background: Rectangle {
                                             color: "#00000000"
@@ -370,7 +374,7 @@ ApplicationWindow {
                                         text: " "
                                         textFormat: Text.PlainText
                                         color: "#4a5568"
-                                        font.family: "Arial"
+                                        font.family: EldurFonts.family("Arial, sans-serif")
                                         font.pixelSize: 13
                                         wrapMode: Text.WordWrap
                                         renderType: Text.NativeRendering
@@ -386,7 +390,7 @@ ApplicationWindow {
 
                                         text: "Active"
                                         palette.buttonText: fActive.cls_current ? "#2f855a" : "#000000"
-                                        font.family: "Arial"
+                                        font.family: EldurFonts.family("Arial")
                                         font.pixelSize: 13
                                         background: Rectangle {
                                             color: "#00000000"
@@ -423,7 +427,7 @@ ApplicationWindow {
                                         text: " "
                                         textFormat: Text.PlainText
                                         color: "#4a5568"
-                                        font.family: "Arial"
+                                        font.family: EldurFonts.family("Arial, sans-serif")
                                         font.pixelSize: 13
                                         wrapMode: Text.WordWrap
                                         renderType: Text.NativeRendering
@@ -439,7 +443,7 @@ ApplicationWindow {
 
                                         text: "Done"
                                         palette.buttonText: fDone.cls_current ? "#2f855a" : "#000000"
-                                        font.family: "Arial"
+                                        font.family: EldurFonts.family("Arial")
                                         font.pixelSize: 13
                                         background: Rectangle {
                                             color: "#00000000"
@@ -486,13 +490,14 @@ ApplicationWindow {
                     text: ""
                     textFormat: Text.PlainText
                     color: "#000000"
-                    font.family: "Arial"
+                    font.family: EldurFonts.family("Arial, sans-serif")
                     font.pixelSize: 16
                     lineHeight: 22.4
                     lineHeightMode: Text.FixedHeight
                     transform: Translate {
-                        y: 2
+                        y: EldurFonts.shift("Arial, sans-serif", 16, 400, false, 22.4)
                     }
+                    bottomPadding: EldurFonts.slack(font, lineHeight)
                     wrapMode: Text.WordWrap
                     objectName: "row"
                     visible: false

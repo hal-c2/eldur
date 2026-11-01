@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
@@ -288,13 +289,14 @@ ApplicationWindow {
                         text: "Grows"
                         textFormat: Text.PlainText
                         color: "#111111"
-                        font.family: "sans-serif"
+                        font.family: EldurFonts.family("sans-serif")
                         font.pixelSize: 16
                         lineHeight: 24
                         lineHeightMode: Text.FixedHeight
                         transform: Translate {
-                            y: 3
+                            y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                         }
+                        bottomPadding: EldurFonts.slack(font, lineHeight)
                         wrapMode: Text.WordWrap
                         objectName: "x-grow"
                         Layout.row: 0
@@ -314,13 +316,14 @@ ApplicationWindow {
                         text: "Turns"
                         textFormat: Text.PlainText
                         color: "#111111"
-                        font.family: "sans-serif"
+                        font.family: EldurFonts.family("sans-serif")
                         font.pixelSize: 16
                         lineHeight: 24
                         lineHeightMode: Text.FixedHeight
                         transform: Translate {
-                            y: 3
+                            y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                         }
+                        bottomPadding: EldurFonts.slack(font, lineHeight)
                         wrapMode: Text.WordWrap
                         objectName: "x-turn"
                         Layout.row: 0
@@ -379,13 +382,14 @@ ApplicationWindow {
                         text: "In ems"
                         textFormat: Text.PlainText
                         color: "#111111"
-                        font.family: "sans-serif"
+                        font.family: EldurFonts.family("sans-serif")
                         font.pixelSize: 20
                         lineHeight: 30
                         lineHeightMode: Text.FixedHeight
                         transform: Translate {
-                            y: 4
+                            y: EldurFonts.shift("sans-serif", 20, 400, false, 30)
                         }
+                        bottomPadding: EldurFonts.slack(font, lineHeight)
                         wrapMode: Text.WordWrap
                         objectName: "x-pem"
                         Layout.row: 1
@@ -405,13 +409,14 @@ ApplicationWindow {
                         text: "Moved and small"
                         textFormat: Text.PlainText
                         color: "#111111"
-                        font.family: "sans-serif"
+                        font.family: EldurFonts.family("sans-serif")
                         font.pixelSize: 16
                         lineHeight: 24
                         lineHeightMode: Text.FixedHeight
                         transform: Translate {
-                            y: 3
+                            y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                         }
+                        bottomPadding: EldurFonts.slack(font, lineHeight)
                         wrapMode: Text.WordWrap
                         objectName: "x-pboth"
                         Layout.row: 1
@@ -486,13 +491,14 @@ ApplicationWindow {
                 text: ""
                 textFormat: Text.PlainText
                 color: "#111111"
-                font.family: "sans-serif"
+                font.family: EldurFonts.family("sans-serif")
                 font.pixelSize: 16
                 lineHeight: 24
                 lineHeightMode: Text.FixedHeight
                 transform: Translate {
-                    y: 3
+                    y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                 }
+                bottomPadding: EldurFonts.slack(font, lineHeight)
                 wrapMode: Text.WordWrap
                 anchors.left: parent.left
                 anchors.right: parent.right
@@ -515,19 +521,20 @@ ApplicationWindow {
             text: ""
             textFormat: Text.PlainText
             color: "#111111"
-            font.family: "sans-serif"
+            font.family: EldurFonts.family("sans-serif")
             font.pixelSize: 16
             lineHeight: 24
             lineHeightMode: Text.FixedHeight
             transform: [
                 Translate {
-                    y: 3
+                    y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                 },
                 Scale {
                     xScale: 1.5
                     yScale: 1.5
                 }
             ]
+            bottomPadding: EldurFonts.slack(font, lineHeight)
             wrapMode: Text.WordWrap
             z: 1
             Layout.row: 0
@@ -562,13 +569,14 @@ ApplicationWindow {
                 text: ""
                 textFormat: Text.PlainText
                 color: "#111111"
-                font.family: "sans-serif"
+                font.family: EldurFonts.family("sans-serif")
                 font.pixelSize: 16
                 lineHeight: 24
                 lineHeightMode: Text.FixedHeight
                 transform: Translate {
-                    y: 3
+                    y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                 }
+                bottomPadding: EldurFonts.slack(font, lineHeight)
                 wrapMode: Text.WordWrap
                 anchors.left: parent.left
                 anchors.right: parent.right
@@ -591,19 +599,20 @@ ApplicationWindow {
             text: ""
             textFormat: Text.PlainText
             color: "#111111"
-            font.family: "sans-serif"
+            font.family: EldurFonts.family("sans-serif")
             font.pixelSize: 16
             lineHeight: 24
             lineHeightMode: Text.FixedHeight
             transform: [
                 Translate {
-                    y: 3
+                    y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
                 },
                 Scale {
                     xScale: 1.5
                     yScale: 1.5
                 }
             ]
+            bottomPadding: EldurFonts.slack(font, lineHeight)
             wrapMode: Text.WordWrap
             z: 1
             Layout.fillWidth: true

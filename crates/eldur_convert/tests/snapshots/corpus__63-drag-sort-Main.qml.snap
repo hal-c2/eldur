@@ -7,6 +7,7 @@ expression: qml
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import "eldur_fonts.js" as EldurFonts
 import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
@@ -74,17 +75,21 @@ ApplicationWindow {
 
                     // <h1>
                     Text {
-                        id: h1
                         property string eldurTag: "h1"
                         property string eldurWs: "\n"
-                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001) : 0
 
                         text: "Order the steps"
                         textFormat: Text.PlainText
                         color: "#222222"
-                        font.family: "Arial"
+                        font.family: EldurFonts.family("Arial, sans-serif")
                         font.pixelSize: 22
                         font.weight: 700
+                        lineHeight: EldurFonts.normalLine(font)
+                        lineHeightMode: Text.FixedHeight
+                        transform: Translate {
+                            y: EldurFonts.shift("Arial, sans-serif", 22, 700, false, 0)
+                        }
+                        bottomPadding: EldurFonts.slack(font, lineHeight)
                         wrapMode: Text.WordWrap
                         Layout.fillWidth: true
                         renderType: Text.NativeRendering
@@ -96,7 +101,6 @@ ApplicationWindow {
                         property string eldurTag: "div"
                         property string eldurWs: "\n"
                         property string eldurWsEnd: "\n"
-                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 200) - Layout.topMargin - 200 + 0.000001) : h1.eldurCarry
 
                         implicitWidth: listContent.implicitWidth
                         implicitHeight: listContent.implicitHeight
@@ -105,7 +109,7 @@ ApplicationWindow {
                         Layout.preferredWidth: 300
                         Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
                         Layout.preferredHeight: 200
-                        Layout.topMargin: 12 - h1.eldurCarry
+                        Layout.topMargin: 12
 
                         ColumnLayout {
                             id: listContent
@@ -170,13 +174,14 @@ ApplicationWindow {
                                 text: "Plan"
                                 textFormat: Text.PlainText
                                 color: "#222222"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial, sans-serif")
                                 font.pixelSize: 16
                                 lineHeight: 44
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 13
+                                    y: EldurFonts.shift("Arial, sans-serif", 16, 400, false, 44)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 anchors.left: parent.left
                                 anchors.right: parent.right
@@ -215,13 +220,14 @@ ApplicationWindow {
                                 text: "Build"
                                 textFormat: Text.PlainText
                                 color: "#222222"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial, sans-serif")
                                 font.pixelSize: 16
                                 lineHeight: 44
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 13
+                                    y: EldurFonts.shift("Arial, sans-serif", 16, 400, false, 44)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 anchors.left: parent.left
                                 anchors.right: parent.right
@@ -260,13 +266,14 @@ ApplicationWindow {
                                 text: "Test"
                                 textFormat: Text.PlainText
                                 color: "#222222"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial, sans-serif")
                                 font.pixelSize: 16
                                 lineHeight: 44
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 13
+                                    y: EldurFonts.shift("Arial, sans-serif", 16, 400, false, 44)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 anchors.left: parent.left
                                 anchors.right: parent.right
@@ -305,13 +312,14 @@ ApplicationWindow {
                                 text: "Ship"
                                 textFormat: Text.PlainText
                                 color: "#222222"
-                                font.family: "Arial"
+                                font.family: EldurFonts.family("Arial, sans-serif")
                                 font.pixelSize: 16
                                 lineHeight: 44
                                 lineHeightMode: Text.FixedHeight
                                 transform: Translate {
-                                    y: 13
+                                    y: EldurFonts.shift("Arial, sans-serif", 16, 400, false, 44)
                                 }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
                                 wrapMode: Text.WordWrap
                                 anchors.left: parent.left
                                 anchors.right: parent.right
@@ -329,18 +337,22 @@ ApplicationWindow {
                         id: order
                         property string eldurTag: "div"
                         property string eldurWs: "\n"
-                        property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : list.eldurCarry
 
                         text: "Plan, Build, Test, Ship"
                         textFormat: Text.PlainText
                         color: "#222222"
-                        font.family: "Arial"
+                        font.family: EldurFonts.family("Arial, sans-serif")
                         font.pixelSize: 16
+                        lineHeight: EldurFonts.normalLine(font)
+                        lineHeightMode: Text.FixedHeight
+                        transform: Translate {
+                            y: EldurFonts.shift("Arial, sans-serif", 16, 400, false, 0)
+                        }
+                        bottomPadding: EldurFonts.slack(font, lineHeight)
                         wrapMode: Text.WordWrap
                         objectName: "order"
                         Layout.fillWidth: true
-                        Layout.topMargin: 16 - list.eldurCarry
-                        Layout.preferredHeight: implicitHeight
+                        Layout.topMargin: 16
                         renderType: Text.NativeRendering
                     }
                 }

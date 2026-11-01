@@ -8,6 +8,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import QtQuick.Shapes
+import "eldur_fonts.js" as EldurFonts
 import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
@@ -286,8 +287,14 @@ ApplicationWindow {
                 text: ""
                 textFormat: Text.PlainText
                 color: "#000000"
-                font.family: "serif"
+                font.family: EldurFonts.family("serif")
                 font.pixelSize: 16
+                lineHeight: EldurFonts.normalLine(font)
+                lineHeightMode: Text.FixedHeight
+                transform: Translate {
+                    y: EldurFonts.shift("serif", 16, 400, false, 0)
+                }
+                bottomPadding: EldurFonts.slack(font, lineHeight)
                 wrapMode: Text.WordWrap
                 anchors.left: parent.left
                 anchors.right: parent.right
@@ -374,8 +381,14 @@ ApplicationWindow {
                 text: ""
                 textFormat: Text.PlainText
                 color: "#000000"
-                font.family: "serif"
+                font.family: EldurFonts.family("serif")
                 font.pixelSize: 16
+                lineHeight: EldurFonts.normalLine(font)
+                lineHeightMode: Text.FixedHeight
+                transform: Translate {
+                    y: EldurFonts.shift("serif", 16, 400, false, 0)
+                }
+                bottomPadding: EldurFonts.slack(font, lineHeight)
                 wrapMode: Text.WordWrap
                 anchors.left: parent.left
                 anchors.right: parent.right
@@ -398,11 +411,16 @@ ApplicationWindow {
             text: ""
             textFormat: Text.PlainText
             color: "#000000"
-            font.family: "serif"
+            font.family: EldurFonts.family("serif")
             font.pixelSize: 16
+            lineHeight: EldurFonts.normalLine(font)
+            lineHeightMode: Text.FixedHeight
+            transform: Translate {
+                y: EldurFonts.shift("serif", 16, 400, false, 0)
+            }
+            bottomPadding: EldurFonts.slack(font, lineHeight)
             wrapMode: Text.WordWrap
             Layout.fillWidth: true
-            Layout.preferredHeight: implicitHeight
             renderType: Text.NativeRendering
         }
     }
@@ -470,12 +488,17 @@ ApplicationWindow {
             text: ""
             textFormat: Text.PlainText
             color: "#000000"
-            font.family: "serif"
+            font.family: EldurFonts.family("serif")
             font.pixelSize: 16
+            lineHeight: EldurFonts.normalLine(font)
+            lineHeightMode: Text.FixedHeight
+            transform: Translate {
+                y: EldurFonts.shift("serif", 16, 400, false, 0)
+            }
+            bottomPadding: EldurFonts.slack(font, lineHeight)
             wrapMode: Text.WordWrap
             Layout.fillWidth: true
             Layout.topMargin: 16
-            Layout.preferredHeight: implicitHeight
             renderType: Text.NativeRendering
         }
     }
@@ -501,7 +524,7 @@ ApplicationWindow {
                 readonly property Component eldurTextRun: sectionFlowRun
 
                 color: "#000000"
-                font.family: "serif"
+                font.family: EldurFonts.family("serif")
                 font.pixelSize: 16
                 anchors.left: parent.left
                 anchors.right: parent.right
@@ -514,7 +537,7 @@ ApplicationWindow {
                         text: ""
                         textFormat: Text.PlainText
                         color: "#000000"
-                        font.family: "serif"
+                        font.family: EldurFonts.family("serif")
                         font.pixelSize: 16
                         wrapMode: Text.WordWrap
                         width: parent ? Math.min(implicitWidth, parent.width) : implicitWidth
