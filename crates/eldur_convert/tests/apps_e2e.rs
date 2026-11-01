@@ -105,15 +105,45 @@ TestCase {
         const r = e.getBoundingClientRect()
         return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
     }
+    // What is held, for the events the test sends meanwhile: a test's mouse has
+    // no state of its own.
+    property int mods: 0
+    property int held: 0
+    property point at: Qt.point(1200, 790)
+    readonly property var buttonOf: ({ left: Qt.LeftButton, right: Qt.RightButton, middle: Qt.MiddleButton })
+    readonly property var modOf: ({ Shift: Qt.ShiftModifier, Control: Qt.ControlModifier, Alt: Qt.AltModifier })
+    readonly property var keyOf: ({ Enter: Qt.Key_Return, Escape: Qt.Key_Escape, Tab: Qt.Key_Tab, End: Qt.Key_End,
+        ArrowDown: Qt.Key_Down, ArrowUp: Qt.Key_Up, ArrowLeft: Qt.Key_Left, ArrowRight: Qt.Key_Right,
+        Backspace: Qt.Key_Backspace, Delete: Qt.Key_Delete, Home: Qt.Key_Home, PageDown: Qt.Key_PageDown,
+        PageUp: Qt.Key_PageUp, Space: Qt.Key_Space, Shift: Qt.Key_Shift, Control: Qt.Key_Control, Alt: Qt.Key_Alt,
+        KeyA: Qt.Key_A, KeyB: Qt.Key_B, KeyS: Qt.Key_S, Digit1: Qt.Key_1 })
     function press(name) {
-        const keys = { Enter: Qt.Key_Return, Escape: Qt.Key_Escape, Tab: Qt.Key_Tab, End: Qt.Key_End,
-            ArrowDown: Qt.Key_Down, ArrowUp: Qt.Key_Up, Backspace: Qt.Key_Backspace,
-            Home: Qt.Key_Home, PageDown: Qt.Key_PageDown, PageUp: Qt.Key_PageUp, Space: Qt.Key_Space }
-        keyClick(keys[name])
+        const parts = name.split("+")
+        let mod = mods
+        for (const m of parts.slice(0, -1)) mod |= modOf[m]
+        const last = parts[parts.length - 1]
+        // Shift+Tab is what Qt calls Backtab.
+        keyClick(last === "Tab" && (mod & Qt.ShiftModifier) ? Qt.Key_Backtab : keyOf[last], mod)
+    }
+    function moveTo(x, y) {
+        at = Qt.point(x, y)
+        mouseMove(page, x, y, -1, held, mods)
     }
     function act(s) {
-        if (s.click) { const p = center(s.click); mouseMove(page, p.x, p.y); mouseClick(page, p.x, p.y) }
-        if (s.clickAt) { mouseMove(page, s.clickAt[0], s.clickAt[1]); mouseClick(page, s.clickAt[0], s.clickAt[1]) }
+        if (s.click) { const p = center(s.click); moveTo(p.x, p.y); mouseClick(page, p.x, p.y, Qt.LeftButton, mods) }
+        if (s.clickAt) {
+            moveTo(s.clickAt[0], s.clickAt[1])
+            mouseClick(page, s.clickAt[0], s.clickAt[1], buttonOf[s.button || "left"], mods)
+        }
+        if (s.dblAt) {
+            moveTo(s.dblAt[0], s.dblAt[1])
+            mouseDoubleClickSequence(page, s.dblAt[0], s.dblAt[1], Qt.LeftButton, mods)
+        }
+        if (s.move) moveTo(s.move[0], s.move[1])
+        if (s.down) { held |= buttonOf[s.down]; mousePress(page, at.x, at.y, buttonOf[s.down], mods) }
+        if (s.up) { held &= ~buttonOf[s.up]; mouseRelease(page, at.x, at.y, buttonOf[s.up], mods) }
+        if (s.hold) { mods |= modOf[s.hold]; keyPress(keyOf[s.hold], mods) }
+        if (s.unhold) { keyRelease(keyOf[s.unhold], mods); mods &= ~modOf[s.unhold] }
         if (s.hover) { const p = center(s.hover); mouseMove(page, p.x, p.y) }
         if (s.type) {
             const p = center(s.type[0])
@@ -123,6 +153,7 @@ TestCase {
             for (const c of s.type[1]) keyClick(c)
         }
         if (s.key) press(s.key)
+        if (s.keys) { for (const c of s.keys) keyClick(c) }
         if (s.wheel) {
             const p = s.wheel[0] === "page" ? { x: 1200, y: 400 } : center(s.wheel[0])
             mouseMove(page, p.x, p.y)
@@ -334,6 +365,12 @@ fn page(name: &str) {
     let (steps, trouble) = parse(&text);
     let mut all = differences(&steps, chromium[name].as_array().expect("recorded"));
     all.extend(trouble);
+    // Chromium's made-up move at load and the test's first real one are not a
+    // user's: the test starts from what each thinks is under the mouse.
+    let spec: Value = serde_json::from_str(&read(format!("{name}.json"))).expect("json");
+    if spec["quietLoad"] == true {
+        all.retain(|d| !d.starts_with("load log"));
+    }
     // Read mid-flight on two real clocks, its load state has nothing to agree on.
     if name == "motion_running" {
         all.retain(|d| !d.starts_with("load "));
@@ -551,6 +588,11 @@ fn scroll_keys() {
 #[test]
 fn created_empty_body() {
     page("created_empty_body");
+}
+
+#[test]
+fn input_pointer() {
+    page("input_pointer");
 }
 
 #[test]

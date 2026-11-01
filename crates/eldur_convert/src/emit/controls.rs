@@ -406,16 +406,16 @@ impl Emitter<'_, '_> {
             format!("{id}.forceActiveFocus();")
         };
         // The label's own click comes first, and can keep the control's away.
-        let guard = if self.by_path {
-            format!("{id}.enabled && !Eldur.tapPrevented(eventPoint)")
+        let body = if self.by_path {
+            format!("if ({id}.enabled) Eldur.afterTap(eventPoint, function () {{ {action} }});")
         } else {
-            format!("{id}.enabled")
+            format!("if ({id}.enabled) {{ {action} }}")
         };
         let mut tap = Object::new("TapHandler");
         tap.members.push(Member::Handler {
             name: "onTapped".to_owned(),
             params: vec!["eventPoint".to_owned(), "button".to_owned()],
-            body: vec![format!("if ({guard}) {{ {action} }}")],
+            body: vec![body],
         });
         obj.push_child(tap);
     }

@@ -290,7 +290,7 @@ ApplicationWindow {
 
                         TapHandler {
                             onTapped: (eventPoint, button) => {
-                                if (email.enabled && !Eldur.tapPrevented(eventPoint)) { email.forceActiveFocus(); }
+                                if (email.enabled) Eldur.afterTap(eventPoint, function () { email.forceActiveFocus(); });
                             }
                         }
                     }

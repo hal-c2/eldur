@@ -508,12 +508,12 @@ ApplicationWindow {
                             renderType: Text.NativeRendering
 
                             onLinkActivated: (link) => {
-                                if (Eldur.linkPrevented())
-                                    return;
+                                Eldur.afterClick(function () {
                                 if (link.startsWith("#"))
                                     root.scrollToFragment(link);
                                 else
                                     Qt.openUrlExternally(link);
+                                });
                             }
 
                             HoverHandler {

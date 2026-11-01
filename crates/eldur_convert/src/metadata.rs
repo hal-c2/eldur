@@ -163,6 +163,12 @@ pub(crate) fn tag(obj: &mut Object, doc: &Document, node: NodeId) {
     }
 }
 
+/// `pointer-events: none`, computed: what the runtime's hit test looks through.
+pub(crate) fn declare_no_hit(obj: &mut Object) {
+    obj.members
+        .insert(0, decl("bool", "eldurNoHit", Value::Bool(true)));
+}
+
 /// `eldurStyle`: a `style` attribute as written, which the cascade of what a
 /// script makes inherits from.
 pub(crate) fn declare_style(obj: &mut Object, doc: &Document, node: NodeId) {

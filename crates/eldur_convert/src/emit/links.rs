@@ -49,11 +49,9 @@ impl Emitter<'_, '_> {
         };
         // `preventDefault` in a listener on the link, whose tap comes first.
         let body = if self.runtime_dom {
-            let mut guarded = vec![
-                "if (Eldur.linkPrevented())".to_owned(),
-                "    return;".to_owned(),
-            ];
+            let mut guarded = vec!["Eldur.afterClick(function () {".to_owned()];
             guarded.extend(body);
+            guarded.push("});".to_owned());
             guarded
         } else {
             body

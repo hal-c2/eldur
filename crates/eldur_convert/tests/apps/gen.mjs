@@ -44,7 +44,13 @@ async function act(step) {
     const { x, y } = await center(step.click);
     await page.mouse.click(x, y);
   }
-  if (step.clickAt) await page.mouse.click(step.clickAt[0], step.clickAt[1]);
+  if (step.clickAt) await page.mouse.click(step.clickAt[0], step.clickAt[1], { button: step.button ?? "left" });
+  if (step.dblAt) await page.mouse.dblclick(step.dblAt[0], step.dblAt[1]);
+  if (step.move) await page.mouse.move(step.move[0], step.move[1]);
+  if (step.down) await page.mouse.down({ button: step.down });
+  if (step.up) await page.mouse.up({ button: step.up });
+  if (step.hold) await page.keyboard.down(step.hold);
+  if (step.unhold) await page.keyboard.up(step.unhold);
   if (step.hover) {
     const { x, y } = await center(step.hover);
     await page.mouse.move(x, y);
@@ -56,6 +62,7 @@ async function act(step) {
     await page.keyboard.type(step.type[1]);
   }
   if (step.key) await page.keyboard.press(step.key);
+  if (step.keys) await page.keyboard.type(step.keys);
   if (step.wheel) {
     const { x, y } = step.wheel[0] === "page" ? { x: 1200, y: 400 } : await center(step.wheel[0]);
     await page.mouse.move(x, y);

@@ -22151,6 +22151,997 @@
    }
   }
  ],
+ "input_pointer": [
+  {
+   "name": "load",
+   "log": [
+    "pointerover body document 1 -1 0 0 null - - - 0 0 0 0 0 0 false true true true mouse",
+    "pointerover body body 2 -1 0 0 null - - - 0 0 0 0 0 0 false true true true mouse",
+    "pointerenter document document 2 -1 0 0 null - - - 0 0 0 0 0 0 false false false true mouse",
+    "pointerenter html document 1 -1 0 0 null - - - 0 0 0 0 0 0 false false false true mouse",
+    "pointerenter body document 1 -1 0 0 null - - - 0 0 0 0 0 0 false false false true mouse",
+    "pointerenter body body 2 -1 0 0 null - - - 0 0 0 0 0 0 false false false true mouse",
+    "mouseover body document 1 0 0 0 null - - - 0 0 0 0 0 0 false true true true ",
+    "mouseover body body 2 0 0 0 null - - - 0 0 0 0 0 0 false true true true ",
+    "mouseenter document document 2 0 0 0 null - - - 0 0 0 0 0 0 false false false true ",
+    "mouseenter html document 1 0 0 0 null - - - 0 0 0 0 0 0 false false false true ",
+    "mouseenter body document 1 0 0 0 null - - - 0 0 0 0 0 0 false false false true ",
+    "mouseenter body body 2 0 0 0 null - - - 0 0 0 0 0 0 false false false true ",
+    "pointermove body document 1 -1 0 0 null - - - 0 0 0 0 0 0 false true true true mouse",
+    "pointermove body body 2 -1 0 0 null - - - 0 0 0 0 0 0 false true true true mouse",
+    "mousemove body document 1 0 0 0 null - - - 0 0 0 0 0 0 false true true true ",
+    "mousemove body body 2 0 0 0 null - - - 0 0 0 0 0 0 false true true true "
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "to outer",
+   "log": [
+    "pointerout body document 1 -1 0 0 outer - - - 120 120 120 120 120 120 false true true true mouse",
+    "pointerout body body 2 -1 0 0 outer - - - 120 120 120 120 120 120 false true true true mouse",
+    "pointerover outer document 1 -1 0 0 body - - - 120 120 120 120 20 20 false true true true mouse",
+    "pointerover outer body 3 -1 0 0 body - - - 120 120 120 120 20 20 false true true true mouse",
+    "pointerenter outer document 1 -1 0 0 body - - - 120 120 120 120 20 20 false false false true mouse",
+    "mouseout body document 1 0 0 0 outer - - - 120 120 120 120 120 120 false true true true ",
+    "mouseout body body 2 0 0 0 outer - - - 120 120 120 120 120 120 false true true true ",
+    "mouseover outer document 1 0 0 0 body - - - 120 120 120 120 20 20 false true true true ",
+    "mouseover outer body 3 0 0 0 body - - - 120 120 120 120 20 20 false true true true ",
+    "mouseenter outer document 1 0 0 0 body - - - 120 120 120 120 20 20 false false false true ",
+    "pointermove outer document 1 -1 0 0 null - - - 120 120 120 120 20 20 false true true true mouse",
+    "pointermove outer body 3 -1 0 0 null - - - 120 120 120 120 20 20 false true true true mouse",
+    "mousemove outer document 1 0 0 0 null - - - 120 120 120 120 20 20 false true true true ",
+    "mousemove outer body 3 0 0 0 null - - - 120 120 120 120 20 20 false true true true "
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "within outer",
+   "log": [
+    "pointermove outer document 1 -1 0 0 null - - - 130 125 130 125 30 25 false true true true mouse",
+    "pointermove outer body 3 -1 0 0 null - - - 130 125 130 125 30 25 false true true true mouse",
+    "mousemove outer document 1 0 0 0 null - - - 130 125 130 125 30 25 false true true true ",
+    "mousemove outer body 3 0 0 0 null - - - 130 125 130 125 30 25 false true true true "
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "to leaf",
+   "log": [
+    "pointerout outer document 1 -1 0 0 leaf - - - 180 180 180 180 80 80 false true true true mouse",
+    "pointerout outer body 3 -1 0 0 leaf - - - 180 180 180 180 80 80 false true true true mouse",
+    "pointerover leaf document 1 -1 0 0 outer - - - 180 180 180 180 10 10 false true true true mouse",
+    "pointerover leaf body 3 -1 0 0 outer - - - 180 180 180 180 10 10 false true true true mouse",
+    "pointerenter inner document 1 -1 0 0 outer - - - 180 180 180 180 30 30 false false false true mouse",
+    "pointerenter inner inner 2 -1 0 0 outer - - - 180 180 180 180 30 30 false false false true mouse",
+    "pointerenter leaf document 1 -1 0 0 outer - - - 180 180 180 180 10 10 false false false true mouse",
+    "mouseout outer document 1 0 0 0 leaf - - - 180 180 180 180 80 80 false true true true ",
+    "mouseout outer body 3 0 0 0 leaf - - - 180 180 180 180 80 80 false true true true ",
+    "mouseover leaf document 1 0 0 0 outer - - - 180 180 180 180 10 10 false true true true ",
+    "mouseover leaf body 3 0 0 0 outer - - - 180 180 180 180 10 10 false true true true ",
+    "mouseenter inner document 1 0 0 0 outer - - - 180 180 180 180 30 30 false false false true ",
+    "mouseenter inner inner 2 0 0 0 outer - - - 180 180 180 180 30 30 false false false true ",
+    "mouseenter leaf document 1 0 0 0 outer - - - 180 180 180 180 10 10 false false false true ",
+    "pointermove leaf document 1 -1 0 0 null - - - 180 180 180 180 10 10 false true true true mouse",
+    "pointermove leaf body 3 -1 0 0 null - - - 180 180 180 180 10 10 false true true true mouse",
+    "mousemove leaf document 1 0 0 0 null - - - 180 180 180 180 10 10 false true true true ",
+    "mousemove leaf body 3 0 0 0 null - - - 180 180 180 180 10 10 false true true true "
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "leaf to inner",
+   "log": [
+    "pointerout leaf document 1 -1 0 0 inner - - - 300 200 300 200 130 30 false true true true mouse",
+    "pointerout leaf body 3 -1 0 0 inner - - - 300 200 300 200 130 30 false true true true mouse",
+    "pointerleave leaf document 1 -1 0 0 inner - - - 300 200 300 200 130 30 false false false true mouse",
+    "pointerover inner document 1 -1 0 0 leaf - - - 300 200 300 200 150 50 false true true true mouse",
+    "pointerover inner body 3 -1 0 0 leaf - - - 300 200 300 200 150 50 false true true true mouse",
+    "mouseout leaf document 1 0 0 0 inner - - - 300 200 300 200 130 30 false true true true ",
+    "mouseout leaf body 3 0 0 0 inner - - - 300 200 300 200 130 30 false true true true ",
+    "mouseleave leaf document 1 0 0 0 inner - - - 300 200 300 200 130 30 false false false true ",
+    "mouseover inner document 1 0 0 0 leaf - - - 300 200 300 200 150 50 false true true true ",
+    "mouseover inner body 3 0 0 0 leaf - - - 300 200 300 200 150 50 false true true true ",
+    "pointermove inner document 1 -1 0 0 null - - - 300 200 300 200 150 50 false true true true mouse",
+    "pointermove inner body 3 -1 0 0 null - - - 300 200 300 200 150 50 false true true true mouse",
+    "mousemove inner document 1 0 0 0 null - - - 300 200 300 200 150 50 false true true true ",
+    "mousemove inner body 3 0 0 0 null - - - 300 200 300 200 150 50 false true true true "
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "out of all",
+   "log": [
+    "pointerout inner document 1 -1 0 0 body - - - 550 450 550 450 400 300 false true true true mouse",
+    "pointerout inner body 3 -1 0 0 body - - - 550 450 550 450 400 300 false true true true mouse",
+    "pointerleave inner document 1 -1 0 0 body - - - 550 450 550 450 400 300 false false false true mouse",
+    "pointerleave inner inner 2 -1 0 0 body - - - 550 450 550 450 400 300 false false false true mouse",
+    "pointerleave outer document 1 -1 0 0 body - - - 550 450 550 450 450 350 false false false true mouse",
+    "pointerover body document 1 -1 0 0 inner - - - 550 450 550 450 550 450 false true true true mouse",
+    "pointerover body body 2 -1 0 0 inner - - - 550 450 550 450 550 450 false true true true mouse",
+    "mouseout inner document 1 0 0 0 body - - - 550 450 550 450 400 300 false true true true ",
+    "mouseout inner body 3 0 0 0 body - - - 550 450 550 450 400 300 false true true true ",
+    "mouseleave inner document 1 0 0 0 body - - - 550 450 550 450 400 300 false false false true ",
+    "mouseleave inner inner 2 0 0 0 body - - - 550 450 550 450 400 300 false false false true ",
+    "mouseleave outer document 1 0 0 0 body - - - 550 450 550 450 450 350 false false false true ",
+    "mouseover body document 1 0 0 0 inner - - - 550 450 550 450 550 450 false true true true ",
+    "mouseover body body 2 0 0 0 inner - - - 550 450 550 450 550 450 false true true true ",
+    "pointermove body document 1 -1 0 0 null - - - 550 450 550 450 550 450 false true true true mouse",
+    "pointermove body body 2 -1 0 0 null - - - 550 450 550 450 550 450 false true true true mouse",
+    "mousemove body document 1 0 0 0 null - - - 550 450 550 450 550 450 false true true true ",
+    "mousemove body body 2 0 0 0 null - - - 550 450 550 450 550 450 false true true true "
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "to side under none",
+   "log": [
+    "pointerout body document 1 -1 0 0 side - - - 690 190 690 190 690 190 false true true true mouse",
+    "pointerout body body 2 -1 0 0 side - - - 690 190 690 190 690 190 false true true true mouse",
+    "pointerover side document 1 -1 0 0 body - - - 690 190 690 190 90 90 false true true true mouse",
+    "pointerover side body 3 -1 0 0 body - - - 690 190 690 190 90 90 false true true true mouse",
+    "pointerenter side document 1 -1 0 0 body - - - 690 190 690 190 90 90 false false false true mouse",
+    "mouseout body document 1 0 0 0 side - - - 690 190 690 190 690 190 false true true true ",
+    "mouseout body body 2 0 0 0 side - - - 690 190 690 190 690 190 false true true true ",
+    "mouseover side document 1 0 0 0 body - - - 690 190 690 190 90 90 false true true true ",
+    "mouseover side body 3 0 0 0 body - - - 690 190 690 190 90 90 false true true true ",
+    "mouseenter side document 1 0 0 0 body - - - 690 190 690 190 90 90 false false false true ",
+    "pointermove side document 1 -1 0 0 null - - - 690 190 690 190 90 90 false true true true mouse",
+    "pointermove side body 3 -1 0 0 null - - - 690 190 690 190 90 90 false true true true mouse",
+    "mousemove side document 1 0 0 0 null - - - 690 190 690 190 90 90 false true true true ",
+    "mousemove side body 3 0 0 0 null - - - 690 190 690 190 90 90 false true true true "
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "click leaf",
+   "log": [
+    "pointerout side document 1 -1 0 0 leaf - - - 180 180 180 180 -420 80 false true true true mouse",
+    "pointerout side body 3 -1 0 0 leaf - - - 180 180 180 180 -420 80 false true true true mouse",
+    "pointerleave side document 1 -1 0 0 leaf - - - 180 180 180 180 -420 80 false false false true mouse",
+    "pointerover leaf document 1 -1 0 0 side - - - 180 180 180 180 10 10 false true true true mouse",
+    "pointerover leaf body 3 -1 0 0 side - - - 180 180 180 180 10 10 false true true true mouse",
+    "pointerenter outer document 1 -1 0 0 side - - - 180 180 180 180 80 80 false false false true mouse",
+    "pointerenter inner document 1 -1 0 0 side - - - 180 180 180 180 30 30 false false false true mouse",
+    "pointerenter inner inner 2 -1 0 0 side - - - 180 180 180 180 30 30 false false false true mouse",
+    "pointerenter leaf document 1 -1 0 0 side - - - 180 180 180 180 10 10 false false false true mouse",
+    "mouseout side document 1 0 0 0 leaf - - - 180 180 180 180 -420 80 false true true true ",
+    "mouseout side body 3 0 0 0 leaf - - - 180 180 180 180 -420 80 false true true true ",
+    "mouseleave side document 1 0 0 0 leaf - - - 180 180 180 180 -420 80 false false false true ",
+    "mouseover leaf document 1 0 0 0 side - - - 180 180 180 180 10 10 false true true true ",
+    "mouseover leaf body 3 0 0 0 side - - - 180 180 180 180 10 10 false true true true ",
+    "mouseenter outer document 1 0 0 0 side - - - 180 180 180 180 80 80 false false false true ",
+    "mouseenter inner document 1 0 0 0 side - - - 180 180 180 180 30 30 false false false true ",
+    "mouseenter inner inner 2 0 0 0 side - - - 180 180 180 180 30 30 false false false true ",
+    "mouseenter leaf document 1 0 0 0 side - - - 180 180 180 180 10 10 false false false true ",
+    "pointermove leaf document 1 -1 0 0 null - - - 180 180 180 180 10 10 false true true true mouse",
+    "pointermove leaf body 3 -1 0 0 null - - - 180 180 180 180 10 10 false true true true mouse",
+    "mousemove leaf document 1 0 0 0 null - - - 180 180 180 180 10 10 false true true true ",
+    "mousemove leaf body 3 0 0 0 null - - - 180 180 180 180 10 10 false true true true ",
+    "pointerdown leaf document 1 0 1 0 null - - - 180 180 180 180 10 10 false true true true mouse",
+    "pointerdown leaf body 3 0 1 0 null - - - 180 180 180 180 10 10 false true true true mouse",
+    "mousedown leaf document 1 0 1 1 null - - - 180 180 180 180 10 10 false true true true ",
+    "mousedown leaf body 3 0 1 1 null - - - 180 180 180 180 10 10 false true true true ",
+    "pointerup leaf document 1 0 0 0 null - - - 180 180 180 180 10 10 false true true true mouse",
+    "pointerup leaf body 3 0 0 0 null - - - 180 180 180 180 10 10 false true true true mouse",
+    "mouseup leaf document 1 0 0 1 null - - - 180 180 180 180 10 10 false true true true ",
+    "mouseup leaf body 3 0 0 1 null - - - 180 180 180 180 10 10 false true true true ",
+    "click leaf document 1 0 0 1 null - - - 180 180 180 180 10 10 false true true true mouse",
+    "click leaf body 3 0 0 1 null - - - 180 180 180 180 10 10 false true true true mouse"
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "wait 1",
+   "log": [],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "right click inner",
+   "log": [
+    "pointerout leaf document 1 -1 0 0 inner - - - 300 200 300 200 130 30 false true true true mouse",
+    "pointerout leaf body 3 -1 0 0 inner - - - 300 200 300 200 130 30 false true true true mouse",
+    "pointerleave leaf document 1 -1 0 0 inner - - - 300 200 300 200 130 30 false false false true mouse",
+    "pointerover inner document 1 -1 0 0 leaf - - - 300 200 300 200 150 50 false true true true mouse",
+    "pointerover inner body 3 -1 0 0 leaf - - - 300 200 300 200 150 50 false true true true mouse",
+    "mouseout leaf document 1 0 0 0 inner - - - 300 200 300 200 130 30 false true true true ",
+    "mouseout leaf body 3 0 0 0 inner - - - 300 200 300 200 130 30 false true true true ",
+    "mouseleave leaf document 1 0 0 0 inner - - - 300 200 300 200 130 30 false false false true ",
+    "mouseover inner document 1 0 0 0 leaf - - - 300 200 300 200 150 50 false true true true ",
+    "mouseover inner body 3 0 0 0 leaf - - - 300 200 300 200 150 50 false true true true ",
+    "pointermove inner document 1 -1 0 0 null - - - 300 200 300 200 150 50 false true true true mouse",
+    "pointermove inner body 3 -1 0 0 null - - - 300 200 300 200 150 50 false true true true mouse",
+    "mousemove inner document 1 0 0 0 null - - - 300 200 300 200 150 50 false true true true ",
+    "mousemove inner body 3 0 0 0 null - - - 300 200 300 200 150 50 false true true true ",
+    "pointerdown inner document 1 2 2 0 null - - - 300 200 300 200 150 50 false true true true mouse",
+    "pointerdown inner body 3 2 2 0 null - - - 300 200 300 200 150 50 false true true true mouse",
+    "mousedown inner document 1 2 2 1 null - - - 300 200 300 200 150 50 false true true true ",
+    "mousedown inner body 3 2 2 1 null - - - 300 200 300 200 150 50 false true true true ",
+    "contextmenu inner document 1 2 2 0 null - - - 300 200 300 200 150 50 false true true true mouse",
+    "contextmenu inner body 3 2 2 0 null - - - 300 200 300 200 150 50 false true true true mouse",
+    "pointerup inner document 1 2 0 0 null - - - 300 200 300 200 150 50 false true true true mouse",
+    "pointerup inner body 3 2 0 0 null - - - 300 200 300 200 150 50 false true true true mouse",
+    "mouseup inner document 1 2 0 1 null - - - 300 200 300 200 150 50 false true true true ",
+    "mouseup inner body 3 2 0 1 null - - - 300 200 300 200 150 50 false true true true ",
+    "auxclick inner document 1 2 0 1 null - - - 300 200 300 200 150 50 false true true true mouse",
+    "auxclick inner body 3 2 0 1 null - - - 300 200 300 200 150 50 false true true true mouse"
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "wait 2",
+   "log": [],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "middle click outer",
+   "log": [
+    "pointerout inner document 1 -1 0 0 outer - - - 120 120 120 120 -30 -30 false true true true mouse",
+    "pointerout inner body 3 -1 0 0 outer - - - 120 120 120 120 -30 -30 false true true true mouse",
+    "pointerleave inner document 1 -1 0 0 outer - - - 120 120 120 120 -30 -30 false false false true mouse",
+    "pointerleave inner inner 2 -1 0 0 outer - - - 120 120 120 120 -30 -30 false false false true mouse",
+    "pointerover outer document 1 -1 0 0 inner - - - 120 120 120 120 20 20 false true true true mouse",
+    "pointerover outer body 3 -1 0 0 inner - - - 120 120 120 120 20 20 false true true true mouse",
+    "mouseout inner document 1 0 0 0 outer - - - 120 120 120 120 -30 -30 false true true true ",
+    "mouseout inner body 3 0 0 0 outer - - - 120 120 120 120 -30 -30 false true true true ",
+    "mouseleave inner document 1 0 0 0 outer - - - 120 120 120 120 -30 -30 false false false true ",
+    "mouseleave inner inner 2 0 0 0 outer - - - 120 120 120 120 -30 -30 false false false true ",
+    "mouseover outer document 1 0 0 0 inner - - - 120 120 120 120 20 20 false true true true ",
+    "mouseover outer body 3 0 0 0 inner - - - 120 120 120 120 20 20 false true true true ",
+    "pointermove outer document 1 -1 0 0 null - - - 120 120 120 120 20 20 false true true true mouse",
+    "pointermove outer body 3 -1 0 0 null - - - 120 120 120 120 20 20 false true true true mouse",
+    "mousemove outer document 1 0 0 0 null - - - 120 120 120 120 20 20 false true true true ",
+    "mousemove outer body 3 0 0 0 null - - - 120 120 120 120 20 20 false true true true ",
+    "pointerdown outer document 1 1 4 0 null - - - 120 120 120 120 20 20 false true true true mouse",
+    "pointerdown outer body 3 1 4 0 null - - - 120 120 120 120 20 20 false true true true mouse",
+    "mousedown outer document 1 1 4 1 null - - - 120 120 120 120 20 20 false true true true ",
+    "mousedown outer body 3 1 4 1 null - - - 120 120 120 120 20 20 false true true true ",
+    "pointerup outer document 1 1 0 0 null - - - 120 120 120 120 20 20 false true true true mouse",
+    "pointerup outer body 3 1 0 0 null - - - 120 120 120 120 20 20 false true true true mouse",
+    "mouseup outer document 1 1 0 1 null - - - 120 120 120 120 20 20 false true true true ",
+    "mouseup outer body 3 1 0 1 null - - - 120 120 120 120 20 20 false true true true ",
+    "auxclick outer document 1 1 0 1 null - - - 120 120 120 120 20 20 false true true true mouse",
+    "auxclick outer body 3 1 0 1 null - - - 120 120 120 120 20 20 false true true true mouse"
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "wait 3",
+   "log": [],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "double click side",
+   "log": [
+    "pointerout outer document 1 -1 0 0 side - - - 700 150 700 150 600 50 false true true true mouse",
+    "pointerout outer body 3 -1 0 0 side - - - 700 150 700 150 600 50 false true true true mouse",
+    "pointerleave outer document 1 -1 0 0 side - - - 700 150 700 150 600 50 false false false true mouse",
+    "pointerover side document 1 -1 0 0 outer - - - 700 150 700 150 100 50 false true true true mouse",
+    "pointerover side body 3 -1 0 0 outer - - - 700 150 700 150 100 50 false true true true mouse",
+    "pointerenter side document 1 -1 0 0 outer - - - 700 150 700 150 100 50 false false false true mouse",
+    "mouseout outer document 1 0 0 0 side - - - 700 150 700 150 600 50 false true true true ",
+    "mouseout outer body 3 0 0 0 side - - - 700 150 700 150 600 50 false true true true ",
+    "mouseleave outer document 1 0 0 0 side - - - 700 150 700 150 600 50 false false false true ",
+    "mouseover side document 1 0 0 0 outer - - - 700 150 700 150 100 50 false true true true ",
+    "mouseover side body 3 0 0 0 outer - - - 700 150 700 150 100 50 false true true true ",
+    "mouseenter side document 1 0 0 0 outer - - - 700 150 700 150 100 50 false false false true ",
+    "pointermove side document 1 -1 0 0 null - - - 700 150 700 150 100 50 false true true true mouse",
+    "pointermove side body 3 -1 0 0 null - - - 700 150 700 150 100 50 false true true true mouse",
+    "mousemove side document 1 0 0 0 null - - - 700 150 700 150 100 50 false true true true ",
+    "mousemove side body 3 0 0 0 null - - - 700 150 700 150 100 50 false true true true ",
+    "pointerdown side document 1 0 1 0 null - - - 700 150 700 150 100 50 false true true true mouse",
+    "pointerdown side body 3 0 1 0 null - - - 700 150 700 150 100 50 false true true true mouse",
+    "mousedown side document 1 0 1 1 null - - - 700 150 700 150 100 50 false true true true ",
+    "mousedown side body 3 0 1 1 null - - - 700 150 700 150 100 50 false true true true ",
+    "pointerup side document 1 0 0 0 null - - - 700 150 700 150 100 50 false true true true mouse",
+    "pointerup side body 3 0 0 0 null - - - 700 150 700 150 100 50 false true true true mouse",
+    "mouseup side document 1 0 0 1 null - - - 700 150 700 150 100 50 false true true true ",
+    "mouseup side body 3 0 0 1 null - - - 700 150 700 150 100 50 false true true true ",
+    "click side document 1 0 0 1 null - - - 700 150 700 150 100 50 false true true true mouse",
+    "click side body 3 0 0 1 null - - - 700 150 700 150 100 50 false true true true mouse",
+    "pointerdown side document 1 0 1 0 null - - - 700 150 700 150 100 50 false true true true mouse",
+    "pointerdown side body 3 0 1 0 null - - - 700 150 700 150 100 50 false true true true mouse",
+    "mousedown side document 1 0 1 2 null - - - 700 150 700 150 100 50 false true true true ",
+    "mousedown side body 3 0 1 2 null - - - 700 150 700 150 100 50 false true true true ",
+    "pointerup side document 1 0 0 0 null - - - 700 150 700 150 100 50 false true true true mouse",
+    "pointerup side body 3 0 0 0 null - - - 700 150 700 150 100 50 false true true true mouse",
+    "mouseup side document 1 0 0 2 null - - - 700 150 700 150 100 50 false true true true ",
+    "mouseup side body 3 0 0 2 null - - - 700 150 700 150 100 50 false true true true ",
+    "click side document 1 0 0 2 null - - - 700 150 700 150 100 50 false true true true mouse",
+    "click side body 3 0 0 2 null - - - 700 150 700 150 100 50 false true true true mouse",
+    "dblclick side document 1 0 0 2 null - - - 700 150 700 150 100 50 false true true true ",
+    "dblclick side body 3 0 0 2 null - - - 700 150 700 150 100 50 false true true true "
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "wait 4",
+   "log": [],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "to leaf again",
+   "log": [
+    "pointerout side document 1 -1 0 0 leaf - - - 180 180 180 180 -420 80 false true true true mouse",
+    "pointerout side body 3 -1 0 0 leaf - - - 180 180 180 180 -420 80 false true true true mouse",
+    "pointerleave side document 1 -1 0 0 leaf - - - 180 180 180 180 -420 80 false false false true mouse",
+    "pointerover leaf document 1 -1 0 0 side - - - 180 180 180 180 10 10 false true true true mouse",
+    "pointerover leaf body 3 -1 0 0 side - - - 180 180 180 180 10 10 false true true true mouse",
+    "pointerenter outer document 1 -1 0 0 side - - - 180 180 180 180 80 80 false false false true mouse",
+    "pointerenter inner document 1 -1 0 0 side - - - 180 180 180 180 30 30 false false false true mouse",
+    "pointerenter inner inner 2 -1 0 0 side - - - 180 180 180 180 30 30 false false false true mouse",
+    "pointerenter leaf document 1 -1 0 0 side - - - 180 180 180 180 10 10 false false false true mouse",
+    "mouseout side document 1 0 0 0 leaf - - - 180 180 180 180 -420 80 false true true true ",
+    "mouseout side body 3 0 0 0 leaf - - - 180 180 180 180 -420 80 false true true true ",
+    "mouseleave side document 1 0 0 0 leaf - - - 180 180 180 180 -420 80 false false false true ",
+    "mouseover leaf document 1 0 0 0 side - - - 180 180 180 180 10 10 false true true true ",
+    "mouseover leaf body 3 0 0 0 side - - - 180 180 180 180 10 10 false true true true ",
+    "mouseenter outer document 1 0 0 0 side - - - 180 180 180 180 80 80 false false false true ",
+    "mouseenter inner document 1 0 0 0 side - - - 180 180 180 180 30 30 false false false true ",
+    "mouseenter inner inner 2 0 0 0 side - - - 180 180 180 180 30 30 false false false true ",
+    "mouseenter leaf document 1 0 0 0 side - - - 180 180 180 180 10 10 false false false true ",
+    "pointermove leaf document 1 -1 0 0 null - - - 180 180 180 180 10 10 false true true true mouse",
+    "pointermove leaf body 3 -1 0 0 null - - - 180 180 180 180 10 10 false true true true mouse",
+    "mousemove leaf document 1 0 0 0 null - - - 180 180 180 180 10 10 false true true true ",
+    "mousemove leaf body 3 0 0 0 null - - - 180 180 180 180 10 10 false true true true "
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "press leaf",
+   "log": [
+    "pointerdown leaf document 1 0 1 0 null - - - 180 180 180 180 10 10 false true true true mouse",
+    "pointerdown leaf body 3 0 1 0 null - - - 180 180 180 180 10 10 false true true true mouse",
+    "mousedown leaf document 1 0 1 1 null - - - 180 180 180 180 10 10 false true true true ",
+    "mousedown leaf body 3 0 1 1 null - - - 180 180 180 180 10 10 false true true true "
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "drag to inner",
+   "log": [
+    "pointerout leaf document 1 -1 1 0 inner - - - 300 200 300 200 130 30 false true true true mouse",
+    "pointerout leaf body 3 -1 1 0 inner - - - 300 200 300 200 130 30 false true true true mouse",
+    "pointerleave leaf document 1 -1 1 0 inner - - - 300 200 300 200 130 30 false false false true mouse",
+    "pointerover inner document 1 -1 1 0 leaf - - - 300 200 300 200 150 50 false true true true mouse",
+    "pointerover inner body 3 -1 1 0 leaf - - - 300 200 300 200 150 50 false true true true mouse",
+    "mouseout leaf document 1 0 1 0 inner - - - 300 200 300 200 130 30 false true true true ",
+    "mouseout leaf body 3 0 1 0 inner - - - 300 200 300 200 130 30 false true true true ",
+    "mouseleave leaf document 1 0 1 0 inner - - - 300 200 300 200 130 30 false false false true ",
+    "mouseover inner document 1 0 1 0 leaf - - - 300 200 300 200 150 50 false true true true ",
+    "mouseover inner body 3 0 1 0 leaf - - - 300 200 300 200 150 50 false true true true ",
+    "pointermove inner document 1 -1 1 0 null - - - 300 200 300 200 150 50 false true true true mouse",
+    "pointermove inner body 3 -1 1 0 null - - - 300 200 300 200 150 50 false true true true mouse",
+    "mousemove inner document 1 0 1 0 null - - - 300 200 300 200 150 50 false true true true ",
+    "mousemove inner body 3 0 1 0 null - - - 300 200 300 200 150 50 false true true true "
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "drag to side",
+   "log": [
+    "pointerout inner document 1 -1 1 0 side - - - 700 150 700 150 550 0 false true true true mouse",
+    "pointerout inner body 3 -1 1 0 side - - - 700 150 700 150 550 0 false true true true mouse",
+    "pointerleave inner document 1 -1 1 0 side - - - 700 150 700 150 550 0 false false false true mouse",
+    "pointerleave inner inner 2 -1 1 0 side - - - 700 150 700 150 550 0 false false false true mouse",
+    "pointerleave outer document 1 -1 1 0 side - - - 700 150 700 150 600 50 false false false true mouse",
+    "pointerover side document 1 -1 1 0 inner - - - 700 150 700 150 100 50 false true true true mouse",
+    "pointerover side body 3 -1 1 0 inner - - - 700 150 700 150 100 50 false true true true mouse",
+    "pointerenter side document 1 -1 1 0 inner - - - 700 150 700 150 100 50 false false false true mouse",
+    "mouseout inner document 1 0 1 0 side - - - 700 150 700 150 550 0 false true true true ",
+    "mouseout inner body 3 0 1 0 side - - - 700 150 700 150 550 0 false true true true ",
+    "mouseleave inner document 1 0 1 0 side - - - 700 150 700 150 550 0 false false false true ",
+    "mouseleave inner inner 2 0 1 0 side - - - 700 150 700 150 550 0 false false false true ",
+    "mouseleave outer document 1 0 1 0 side - - - 700 150 700 150 600 50 false false false true ",
+    "mouseover side document 1 0 1 0 inner - - - 700 150 700 150 100 50 false true true true ",
+    "mouseover side body 3 0 1 0 inner - - - 700 150 700 150 100 50 false true true true ",
+    "mouseenter side document 1 0 1 0 inner - - - 700 150 700 150 100 50 false false false true ",
+    "pointermove side document 1 -1 1 0 null - - - 700 150 700 150 100 50 false true true true mouse",
+    "pointermove side body 3 -1 1 0 null - - - 700 150 700 150 100 50 false true true true mouse",
+    "mousemove side document 1 0 1 0 null - - - 700 150 700 150 100 50 false true true true ",
+    "mousemove side body 3 0 1 0 null - - - 700 150 700 150 100 50 false true true true "
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "release side",
+   "log": [
+    "pointerup side document 1 0 0 0 null - - - 700 150 700 150 100 50 false true true true mouse",
+    "pointerup side body 3 0 0 0 null - - - 700 150 700 150 100 50 false true true true mouse",
+    "mouseup side document 1 0 0 1 null - - - 700 150 700 150 100 50 false true true true ",
+    "mouseup side body 3 0 0 1 null - - - 700 150 700 150 100 50 false true true true ",
+    "click body document 1 0 0 1 null - - - 700 150 700 150 700 150 false true true true mouse",
+    "click body body 2 0 0 1 null - - - 700 150 700 150 700 150 false true true true mouse"
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "wait 5",
+   "log": [],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "press inner",
+   "log": [
+    "pointerout side document 1 -1 0 0 inner - - - 300 200 300 200 -300 100 false true true true mouse",
+    "pointerout side body 3 -1 0 0 inner - - - 300 200 300 200 -300 100 false true true true mouse",
+    "pointerleave side document 1 -1 0 0 inner - - - 300 200 300 200 -300 100 false false false true mouse",
+    "pointerover inner document 1 -1 0 0 side - - - 300 200 300 200 150 50 false true true true mouse",
+    "pointerover inner body 3 -1 0 0 side - - - 300 200 300 200 150 50 false true true true mouse",
+    "pointerenter outer document 1 -1 0 0 side - - - 300 200 300 200 200 100 false false false true mouse",
+    "pointerenter inner document 1 -1 0 0 side - - - 300 200 300 200 150 50 false false false true mouse",
+    "pointerenter inner inner 2 -1 0 0 side - - - 300 200 300 200 150 50 false false false true mouse",
+    "mouseout side document 1 0 0 0 inner - - - 300 200 300 200 -300 100 false true true true ",
+    "mouseout side body 3 0 0 0 inner - - - 300 200 300 200 -300 100 false true true true ",
+    "mouseleave side document 1 0 0 0 inner - - - 300 200 300 200 -300 100 false false false true ",
+    "mouseover inner document 1 0 0 0 side - - - 300 200 300 200 150 50 false true true true ",
+    "mouseover inner body 3 0 0 0 side - - - 300 200 300 200 150 50 false true true true ",
+    "mouseenter outer document 1 0 0 0 side - - - 300 200 300 200 200 100 false false false true ",
+    "mouseenter inner document 1 0 0 0 side - - - 300 200 300 200 150 50 false false false true ",
+    "mouseenter inner inner 2 0 0 0 side - - - 300 200 300 200 150 50 false false false true ",
+    "pointermove inner document 1 -1 0 0 null - - - 300 200 300 200 150 50 false true true true mouse",
+    "pointermove inner body 3 -1 0 0 null - - - 300 200 300 200 150 50 false true true true mouse",
+    "mousemove inner document 1 0 0 0 null - - - 300 200 300 200 150 50 false true true true ",
+    "mousemove inner body 3 0 0 0 null - - - 300 200 300 200 150 50 false true true true "
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "press inner down",
+   "log": [
+    "pointerdown inner document 1 0 1 0 null - - - 300 200 300 200 150 50 false true true true mouse",
+    "pointerdown inner body 3 0 1 0 null - - - 300 200 300 200 150 50 false true true true mouse",
+    "mousedown inner document 1 0 1 1 null - - - 300 200 300 200 150 50 false true true true ",
+    "mousedown inner body 3 0 1 1 null - - - 300 200 300 200 150 50 false true true true "
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "to leaf pressed",
+   "log": [
+    "pointerout inner document 1 -1 1 0 leaf - - - 180 180 180 180 30 30 false true true true mouse",
+    "pointerout inner body 3 -1 1 0 leaf - - - 180 180 180 180 30 30 false true true true mouse",
+    "pointerover leaf document 1 -1 1 0 inner - - - 180 180 180 180 10 10 false true true true mouse",
+    "pointerover leaf body 3 -1 1 0 inner - - - 180 180 180 180 10 10 false true true true mouse",
+    "pointerenter leaf document 1 -1 1 0 inner - - - 180 180 180 180 10 10 false false false true mouse",
+    "mouseout inner document 1 0 1 0 leaf - - - 180 180 180 180 30 30 false true true true ",
+    "mouseout inner body 3 0 1 0 leaf - - - 180 180 180 180 30 30 false true true true ",
+    "mouseover leaf document 1 0 1 0 inner - - - 180 180 180 180 10 10 false true true true ",
+    "mouseover leaf body 3 0 1 0 inner - - - 180 180 180 180 10 10 false true true true ",
+    "mouseenter leaf document 1 0 1 0 inner - - - 180 180 180 180 10 10 false false false true ",
+    "pointermove leaf document 1 -1 1 0 null - - - 180 180 180 180 10 10 false true true true mouse",
+    "pointermove leaf body 3 -1 1 0 null - - - 180 180 180 180 10 10 false true true true mouse",
+    "mousemove leaf document 1 0 1 0 null - - - 180 180 180 180 10 10 false true true true ",
+    "mousemove leaf body 3 0 1 0 null - - - 180 180 180 180 10 10 false true true true "
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "release in leaf",
+   "log": [
+    "pointerup leaf document 1 0 0 0 null - - - 180 180 180 180 10 10 false true true true mouse",
+    "pointerup leaf body 3 0 0 0 null - - - 180 180 180 180 10 10 false true true true mouse",
+    "mouseup leaf document 1 0 0 1 null - - - 180 180 180 180 10 10 false true true true ",
+    "mouseup leaf body 3 0 0 1 null - - - 180 180 180 180 10 10 false true true true ",
+    "click inner document 1 0 0 1 null - - - 180 180 180 180 30 30 false true true true mouse",
+    "click inner body 3 0 0 1 null - - - 180 180 180 180 30 30 false true true true mouse"
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "wait 6",
+   "log": [],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "hold shift",
+   "log": [],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "shift click stay",
+   "log": [
+    "pointerout leaf document 1 -1 0 0 stay S - - 700 450 700 450 530 280 false true true true mouse",
+    "pointerout leaf body 3 -1 0 0 stay S - - 700 450 700 450 530 280 false true true true mouse",
+    "pointerleave leaf document 1 -1 0 0 stay S - - 700 450 700 450 530 280 false false false true mouse",
+    "pointerleave inner document 1 -1 0 0 stay S - - 700 450 700 450 550 300 false false false true mouse",
+    "pointerleave inner inner 2 -1 0 0 stay S - - 700 450 700 450 550 300 false false false true mouse",
+    "pointerleave outer document 1 -1 0 0 stay S - - 700 450 700 450 600 350 false false false true mouse",
+    "pointerover stay document 1 -1 0 0 leaf S - - 700 450 700 450 100 50 false true true true mouse",
+    "pointerover stay body 3 -1 0 0 leaf S - - 700 450 700 450 100 50 false true true true mouse",
+    "pointerenter stay document 1 -1 0 0 leaf S - - 700 450 700 450 100 50 false false false true mouse",
+    "mouseout leaf document 1 0 0 0 stay S - - 700 450 700 450 530 280 false true true true ",
+    "mouseout leaf body 3 0 0 0 stay S - - 700 450 700 450 530 280 false true true true ",
+    "mouseleave leaf document 1 0 0 0 stay S - - 700 450 700 450 530 280 false false false true ",
+    "mouseleave inner document 1 0 0 0 stay S - - 700 450 700 450 550 300 false false false true ",
+    "mouseleave inner inner 2 0 0 0 stay S - - 700 450 700 450 550 300 false false false true ",
+    "mouseleave outer document 1 0 0 0 stay S - - 700 450 700 450 600 350 false false false true ",
+    "mouseover stay document 1 0 0 0 leaf S - - 700 450 700 450 100 50 false true true true ",
+    "mouseover stay body 3 0 0 0 leaf S - - 700 450 700 450 100 50 false true true true ",
+    "mouseenter stay document 1 0 0 0 leaf S - - 700 450 700 450 100 50 false false false true ",
+    "pointermove stay document 1 -1 0 0 null S - - 700 450 700 450 100 50 false true true true mouse",
+    "pointermove stay body 3 -1 0 0 null S - - 700 450 700 450 100 50 false true true true mouse",
+    "mousemove stay document 1 0 0 0 null S - - 700 450 700 450 100 50 false true true true ",
+    "mousemove stay body 3 0 0 0 null S - - 700 450 700 450 100 50 false true true true ",
+    "pointerdown stay document 1 0 1 0 null S - - 700 450 700 450 100 50 false true true true mouse",
+    "pointerdown stay body 3 0 1 0 null S - - 700 450 700 450 100 50 false true true true mouse",
+    "mousedown stay document 1 0 1 1 null S - - 700 450 700 450 100 50 false true true true ",
+    "mousedown stay body 3 0 1 1 null S - - 700 450 700 450 100 50 true true true true ",
+    "pointerup stay document 1 0 0 0 null S - - 700 450 700 450 100 50 false true true true mouse",
+    "pointerup stay body 3 0 0 0 null S - - 700 450 700 450 100 50 false true true true mouse",
+    "mouseup stay document 1 0 0 1 null S - - 700 450 700 450 100 50 false true true true ",
+    "mouseup stay body 3 0 0 1 null S - - 700 450 700 450 100 50 false true true true ",
+    "click stay document 1 0 0 1 null S - - 700 450 700 450 100 50 false true true true mouse",
+    "click stay body 3 0 0 1 null S - - 700 450 700 450 100 50 false true true true mouse"
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "unhold shift",
+   "log": [],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "wait 7",
+   "log": [],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "right on stay",
+   "log": [
+    "pointermove stay document 1 -1 0 0 null - - - 650 420 650 420 50 20 false true true true mouse",
+    "pointermove stay body 3 -1 0 0 null - - - 650 420 650 420 50 20 false true true true mouse",
+    "mousemove stay document 1 0 0 0 null - - - 650 420 650 420 50 20 false true true true ",
+    "mousemove stay body 3 0 0 0 null - - - 650 420 650 420 50 20 false true true true ",
+    "pointerdown stay document 1 2 2 0 null - - - 650 420 650 420 50 20 false true true true mouse",
+    "pointerdown stay body 3 2 2 0 null - - - 650 420 650 420 50 20 false true true true mouse",
+    "mousedown stay document 1 2 2 1 null - - - 650 420 650 420 50 20 false true true true ",
+    "mousedown stay body 3 2 2 1 null - - - 650 420 650 420 50 20 true true true true ",
+    "contextmenu stay document 1 2 2 0 null - - - 650 420 650 420 50 20 false true true true mouse",
+    "contextmenu stay body 3 2 2 0 null - - - 650 420 650 420 50 20 true true true true mouse",
+    "pointerup stay document 1 2 0 0 null - - - 650 420 650 420 50 20 false true true true mouse",
+    "pointerup stay body 3 2 0 0 null - - - 650 420 650 420 50 20 false true true true mouse",
+    "mouseup stay document 1 2 0 1 null - - - 650 420 650 420 50 20 false true true true ",
+    "mouseup stay body 3 2 0 1 null - - - 650 420 650 420 50 20 false true true true ",
+    "auxclick stay document 1 2 0 1 null - - - 650 420 650 420 50 20 false true true true mouse",
+    "auxclick stay body 3 2 0 1 null - - - 650 420 650 420 50 20 false true true true mouse"
+   ],
+   "state": {
+    "#leaf": [
+     {
+      "box": [
+       170,
+       170,
+       60,
+       40
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
  "lines_closed": [
   {
    "name": "load",

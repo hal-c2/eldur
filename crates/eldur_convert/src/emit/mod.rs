@@ -1008,6 +1008,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 );
             }
             crate::metadata::tag(&mut e.obj, self.doc, node);
+            if b.style.pointer_events == eldur_css::PointerEvents::None {
+                crate::metadata::declare_no_hit(&mut e.obj);
+            }
             crate::metadata::declare_whitespace(&mut e.obj, self.doc, node, &self.live_tables);
             // A hidden box's `style` attribute may be what hides it.
             if self.open_elements

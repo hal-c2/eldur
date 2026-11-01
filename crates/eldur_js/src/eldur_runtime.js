@@ -5213,7 +5213,15 @@ var _BUBBLES = {
     keydown: true, keyup: true, keypress: true, focusin: true, focusout: true,
     mousedown: true, mouseup: true, mousemove: true, mouseover: true, mouseout: true,
     pointerdown: true, pointerup: true, touchstart: true, touchend: true,
-    contextmenu: true, wheel: true
+    contextmenu: true, wheel: true, auxclick: true, pointermove: true, pointerover: true,
+    pointerout: true, pointercancel: true, gotpointercapture: true, lostpointercapture: true,
+    beforeinput: true, select: true
+};
+
+// Not bubbling, yet `document` is on their path for a capturing listener.
+var _DOCUMENT_HEARS = {
+    mouseenter: true, mouseleave: true, pointerenter: true, pointerleave: true,
+    focus: true, blur: true, invalid: true, toggle: true
 };
 
 function event(type, targetItem, qtEvent) {
@@ -5307,10 +5315,20 @@ function event(type, targetItem, qtEvent) {
         defaultPrevented: false,
         eventPhase: 0,
         timeStamp: Date.now() - _startTime,
-        detail: ev.detail !== undefined ? ev.detail : null,
+        detail: ev.detail !== undefined ? ev.detail : 0,
+        relatedTarget: null,
+        isTrusted: true,
         _propagationStopped: false,
         _immediateStopped: false,
+        _passive: false,
+        _path: [],
+        composedPath: function() {
+            return domEvent._path.slice();
+        },
         preventDefault: function() {
+            if (!domEvent.cancelable || domEvent._passive) {
+                return;
+            }
             domEvent.defaultPrevented = true;
             if (qtEvent && typeof qtEvent.accepted === "boolean") {
                 qtEvent.accepted = true;
@@ -5330,9 +5348,11 @@ function event(type, targetItem, qtEvent) {
     return domEvent;
 }
 
-function Event(type, opts) {
+function _uiEvent(type, opts) {
     var o = opts || {};
     var e = event(type, null, { detail: o.detail });
+    e.isTrusted = false;
+    if (o.relatedTarget !== undefined) { e.relatedTarget = o.relatedTarget; }
     e.bubbles = o.bubbles !== undefined ? Boolean(o.bubbles) : false;
     e.cancelable = o.cancelable !== undefined ? Boolean(o.cancelable) : false;
     if (typeof o.key === "string") { e.key = o.key; }
@@ -5356,32 +5376,45 @@ function Event(type, opts) {
     return e;
 }
 
+function Event(type, opts) {
+    var e = _uiEvent(type, opts);
+    delete e.detail;
+    return e;
+}
+
 function CustomEvent(type, opts) {
-    return Event(type, opts);
+    var e = _uiEvent(type, opts);
+    e.detail = opts && opts.detail !== undefined ? opts.detail : null;
+    return e;
 }
 
 function KeyboardEvent(type, opts) {
-    return Event(type, opts);
+    return _uiEvent(type, opts);
 }
 
 function MouseEvent(type, opts) {
-    return Event(type, opts);
+    return _uiEvent(type, opts);
 }
 
 function PointerEvent(type, opts) {
-    return Event(type, opts);
+    var e = _uiEvent(type, opts);
+    var o = opts || {};
+    e.pointerId = o.pointerId || 0;
+    e.pointerType = o.pointerType || "";
+    e.isPrimary = Boolean(o.isPrimary);
+    return e;
 }
 
 function FocusEvent(type, opts) {
-    return Event(type, opts);
+    return _uiEvent(type, opts);
 }
 
 function InputEvent(type, opts) {
-    return Event(type, opts);
+    return _uiEvent(type, opts);
 }
 
 function WheelEvent(type, opts) {
-    return Event(type, opts);
+    return _uiEvent(type, opts);
 }
 
 function EventTarget() {
@@ -5436,6 +5469,7 @@ function _dispatchDynamic(raw, type, qtEv) {
     var domEv = qtEv && qtEv.preventDefault ? qtEv : event(type, target, qtEv);
     domEv.target = target;
     var path = _eventPath(raw);
+    domEv._path = path.map(_eventTarget);
     for (var down = path.length - 1; down > 0 && !domEv._propagationStopped; --down) {
         _runListeners(path[down], "capture:" + type, type, domEv, 1);
     }
@@ -5450,6 +5484,7 @@ function _dispatchDynamic(raw, type, qtEv) {
     }
     domEv.currentTarget = null;
     domEv.eventPhase = 0;
+    domEv._path = [];
     return !domEv.defaultPrevented;
 }
 
@@ -5503,11 +5538,24 @@ function _runListeners(raw, key, type, domEv, phase) {
                 list.splice(at, 1);
             }
         }
+        domEv._passive = _isPassive(m, key, fn, raw, type);
         fn.call(target, domEv);
+        domEv._passive = false;
         if (domEv._immediateStopped) {
             break;
         }
     }
+}
+
+// What the listener said, or Chromium's default: scrolling doesn't wait for a
+// wheel listener high enough up to be on every page.
+function _isPassive(m, key, fn, raw, type) {
+    var said = m.passive && m.passive[key];
+    if (said && said.has(fn)) {
+        return said.get(fn);
+    }
+    return (type === "wheel" || type === "mousewheel" || type === "touchstart" || type === "touchmove")
+        && (raw === document || raw === window || raw === _root || _nodeTag(raw) === "body");
 }
 
 // The converter's handler for what the runtime cannot connect itself; `false`
@@ -5560,6 +5608,10 @@ function _connectSignalOnce(raw, type) {
     if (!raw || typeof raw !== "object") {
         return false;
     }
+    if (_in && _IN_POINTER[type] === true && !(type === "click" && typeof raw.clicked === "function")) {
+        m.connected[type] = true;
+        return true;
+    }
     if (raw.__eldurInline) {
         _vConnect(raw, type);
         return true;
@@ -5590,7 +5642,12 @@ function _connectSignalOnce(raw, type) {
                     }
                 });
             }
-            raw.clicked.connect(function() { _clickedControl(raw); });
+            raw.clicked.connect(function() {
+                // A press the input layer saw comes to its click there.
+                if (!(_in && _in.pressed)) {
+                    _clickedControl(raw);
+                }
+            });
             m.connected[type] = true;
             return true;
         }
@@ -5825,7 +5882,8 @@ function listenBound(item, eventType, handler, options) {
 // own listeners. What is fired only at the root (`resize`, `hashchange`, ...)
 // is listened for there.
 function _listenerHome(item, eventType) {
-    if ((item === document || item === window) && _BUBBLES[String(eventType)] === true) {
+    if ((item === document || item === window)
+        && (_BUBBLES[String(eventType)] === true || _DOCUMENT_HEARS[String(eventType)] === true)) {
         return item;
     }
     return _unwrap(item);
@@ -5853,13 +5911,17 @@ function _addListener(item, eventType, handler, options) {
     var raw = item === document || item === window ? item : _unwrap(item);
     var type = String(eventType);
     var key = _isCapture(options) ? "capture:" + type : type;
+    var said = options && typeof options === "object" ? options : {};
+    if (said.signal && said.signal.aborted) {
+        return false;
+    }
     var m = _listenerMeta(raw);
     if (!m.listeners[key]) {
         m.listeners[key] = [];
     }
     if (m.listeners[key].indexOf(handler) === -1) {
         m.listeners[key].push(handler);
-        if (options && typeof options === "object" && Boolean(options.once)) {
+        if (Boolean(said.once)) {
             if (!m.onceListeners[key]) {
                 m.onceListeners[key] = [];
             }
@@ -5867,7 +5929,18 @@ function _addListener(item, eventType, handler, options) {
                 m.onceListeners[key].push(handler);
             }
         }
+        if (said.passive !== undefined) {
+            m.passive = m.passive || {};
+            m.passive[key] = m.passive[key] || new Map();
+            m.passive[key].set(handler, Boolean(said.passive));
+        }
+        if (said.signal) {
+            said.signal.addEventListener("abort", function() {
+                unlisten(item, eventType, handler, options);
+            });
+        }
     }
+    _inInstallFor(raw, type);
     _wantForControls(type);
     return true;
 }
@@ -9969,10 +10042,15 @@ function _vReconnect(node) {
 var _tap = null;
 
 // `childAt` stops at a parent's bounds, where a dropdown's list has only started.
-function _deepestUnder(item, scene) {
-    if (!item.visible || typeof item.mapFromItem !== "function") {
+function _deepestUnder(item, scene, parentOff) {
+    if (!item.visible || typeof item.mapFromItem !== "function" || (_in && item === _in.overlay)) {
         return null;
     }
+    // A shadow is outside its box; only paint.
+    if (typeof item.spread === "number" && typeof item.blur === "number") {
+        return null;
+    }
+    var off = _vIsTagged(item) || _meta(item).createdTag ? _hitOff(item) : Boolean(parentOff);
     var local = item.mapFromItem(null, scene.x, scene.y);
     var inside = local.x >= 0 && local.y >= 0 && local.x < item.width && local.y < item.height;
     if (item.clip && !inside) {
@@ -9983,18 +10061,47 @@ function _deepestUnder(item, scene) {
         kids.push({ at: i, kid: item.children[i] });
     }
     kids.sort(function(a, b) { return (b.kid.z - a.kid.z) || (b.at - a.at); });
+    // What only paints the box (a border's strips, an effect) can lie over the
+    // box's children, and an element under it is the one the point is on.
+    var painted = null;
     for (var k = 0; k < kids.length; ++k) {
-        var found = _deepestUnder(kids[k].kid, scene);
+        var found = _deepestUnder(kids[k].kid, scene, off);
         if (found) {
-            return found;
+            if (_isElementBetween(found, kids[k].kid)) {
+                return found;
+            }
+            painted = painted || found;
         }
+    }
+    if (painted) {
+        return painted;
     }
     // Positioned boxes hang from the initial containing block; it paints nothing,
     // and lies over the page.
     if (inside && _isPlainTextItem(item) && _isLines(item.parent) && !item.parent.runCovers(item, local.x, local.y)) {
         return null;
     }
-    return inside && item !== _root.eldurInitialBlock ? item : null;
+    return inside && !off && item !== _root.eldurInitialBlock ? item : null;
+}
+
+function _isElementBetween(found, top) {
+    for (var at = found; at; at = at.parent) {
+        if (_vIsTagged(at) || _meta(at).createdTag || _vModelOf(at)) {
+            return true;
+        }
+        if (at === top) {
+            return false;
+        }
+    }
+    return false;
+}
+
+// `pointer-events: none`, which is inherited and can be undone further down.
+function _hitOff(item) {
+    if (item.eldurNoHit === true) {
+        return true;
+    }
+    return _gHasCascade() && _gIsElement(item) && _gStyle(item)["pointer-events"] === "none";
 }
 
 function _deepestAt(scene) {
@@ -10071,19 +10178,7 @@ function _vClick(v) {
 // A control takes the press for itself, so no handler above it hears: the
 // event goes up from here. Its toggle has happened; `preventDefault` undoes it.
 function _clickedControl(raw) {
-    var m = _meta(raw);
-    var toggled = Boolean(m.toggledNow);
-    m.toggledNow = false;
-    var ev = event("click", wrap(raw), null);
-    _dispatchDynamic(raw, "click", ev);
-    if (!toggled) {
-        return;
-    }
-    if (ev.defaultPrevented) {
-        raw.checked = !raw.checked;
-        return;
-    }
-    _toggleEvents(raw);
+    _clickedControlWith(raw, event("click", wrap(raw), null));
 }
 
 function _toggleEvents(raw) {
@@ -10094,6 +10189,546 @@ function _toggleEvents(raw) {
     if (m.connected.change) {
         _dispatchDynamic(raw, "change", null);
     }
+}
+
+// ---------------------------------------------------------------------------
+// The input layer. A page with listeners hears the mouse here, at one item over
+// everything, and not at each element: a control or a link takes a press for
+// itself, and a handler on an element hears nothing that starts outside its box.
+// It sees a press before anything under it does, and takes nothing from them.
+// ---------------------------------------------------------------------------
+
+var _IN_POINTER = {
+    click: true, dblclick: true, auxclick: true, contextmenu: true, wheel: true,
+    mousedown: true, mouseup: true, mousemove: true, mouseover: true, mouseout: true,
+    mouseenter: true, mouseleave: true, pointerdown: true, pointerup: true, pointermove: true,
+    pointerover: true, pointerout: true, pointerenter: true, pointerleave: true,
+    gotpointercapture: true, lostpointercapture: true, pointercancel: true
+};
+var _IN_WANTS = {
+    keydown: true, keyup: true, keypress: true, beforeinput: true, input: true, change: true,
+    submit: true, reset: true, invalid: true, focus: true, blur: true, focusin: true,
+    focusout: true, select: true
+};
+
+var _in = null;
+
+function _inInstallFor(raw, type) {
+    if (_in || !_root || (_IN_POINTER[type] !== true && _IN_WANTS[type] !== true)) {
+        return;
+    }
+    if (raw !== document && raw !== window && !raw.__eldurInline && typeof raw.mapToItem !== "function") {
+        return;
+    }
+    _inInstall();
+}
+
+function _inInstall() {
+    _in = {
+        overlay: null, held: 0, last: null, pressed: false, hoverP: null, hoverM: null,
+        downTarget: {}, noMouse: false, count: 0, countButton: -1, countAt: null, countTime: 0,
+        capture: null, captureNext: null, defaults: [], scrolled: null, restoreFocus: null,
+        restoreScroll: [], later: []
+    };
+    var home = _root.contentItem || _root;
+    var overlay = Qt.createQmlObject("import QtQuick\n"
+        + "Item { anchors.fill: parent; z: 1000000\n"
+        + "  signal pointed(point scene, int buttons, int modifiers)\n"
+        + "  signal wheeled(var ev)\n"
+        + "  PointHandler { acceptedButtons: Qt.AllButtons\n"
+        + "    onActiveChanged: parent.pointed(active ? point.scenePosition : Qt.point(-1e9, 0), active ? point.pressedButtons : 0, point.modifiers)\n"
+        + "    onPointChanged: if (active) parent.pointed(point.scenePosition, point.pressedButtons, point.modifiers)\n"
+        + "  }\n"
+        + "  WheelHandler { target: null; blocking: false; acceptedDevices: PointerDevice.AllDevices; onWheel: (ev) => parent.wheeled(ev) }\n"
+        + "}", home, "eldur_input");
+    _in.overlay = overlay;
+    overlay.pointed.connect(_inPointed);
+    // On what holds the page: Qt gives a hover to one branch, so one over the
+    // page would leave every element's `:hover` and cursor without.
+    var hover = Qt.createQmlObject("import QtQuick; HoverHandler { blocking: false }", home, "eldur_input_hover");
+    hover.pointChanged.connect(function() {
+        if (hover.hovered) {
+            _inPointed(hover.point.scenePosition, -1, hover.point.modifiers);
+        }
+    });
+    overlay.wheeled.connect(_inWheel);
+    // What listened before there was a layer got a handler of its own only if it
+    // came first; there is no such listener, as this runs at the first.
+}
+
+// One call for each thing the mouse does; `buttons` is -1 for "as it was", from
+// a hover, and a released point has no position left to read.
+function _inPointed(scene, buttons, modifiers) {
+    // Nothing the mouse does overtakes the click of the release before it.
+    _inFlushLater();
+    if (scene.x === -1e9) {
+        scene = _in.last;
+    }
+    if (!scene) {
+        return;
+    }
+    var held = buttons === -1 ? _in.held : buttons;
+    var at = _in.last;
+    var changed = !at || at.x !== scene.x || at.y !== scene.y;
+    if (held === _in.held && !changed) {
+        return;
+    }
+    var mods = modifiers || 0;
+    var was = _in.held;
+    _in.last = Qt.point(scene.x, scene.y);
+    if (changed) {
+        _in.held = was;
+        _inMoved(_in.last, mods);
+    }
+    for (var bit = 1; bit <= 16; bit <<= 1) {
+        if ((held & bit) && !(_in.held & bit)) {
+            _in.held |= bit;
+            _inDown(bit, _in.last, mods, was);
+        } else if (!(held & bit) && (_in.held & bit)) {
+            _in.held &= ~bit;
+            _inUp(bit, _in.last, mods);
+        }
+    }
+}
+
+function _inElementOf(deep, scene) {
+    for (var at = deep; at; at = at.parent) {
+        var model = _vModelOf(at);
+        if (model && !model.select) {
+            var local = at.mapFromItem(null, scene.x, scene.y);
+            return _vHitAt(model, local.x, local.y) || _vHostElement(model);
+        }
+        if (!_isInternalHelperNode(at) && (_vIsTagged(at) || Boolean(_meta(at).createdTag))) {
+            return at;
+        }
+    }
+    return null;
+}
+
+function _inHit(scene) {
+    return _inElementOf(_deepestAt(scene), scene) || _unwrap(document.body);
+}
+
+function _IN_BUTTON(bit) {
+    return bit === Qt.RightButton ? 2 : bit === Qt.MiddleButton ? 1 : bit === Qt.BackButton ? 3
+        : bit === Qt.ForwardButton ? 4 : 0;
+}
+
+function _inFire(type, raw, scene, mods, init) {
+    var o = init || {};
+    var pointerish = type.indexOf("pointer") === 0 || type === "click" || type === "auxclick"
+        || type === "contextmenu" || type === "gotpointercapture" || type === "lostpointercapture";
+    var ev = event(type, wrap(raw), {
+        modifiers: mods, scenePosition: scene, position: scene, detail: o.detail || 0
+    });
+    var quiet = type === "mouseenter" || type === "mouseleave" || type === "pointerenter"
+        || type === "pointerleave" || type === "gotpointercapture" || type === "lostpointercapture";
+    ev.bubbles = !(type === "mouseenter" || type === "mouseleave" || type === "pointerenter" || type === "pointerleave");
+    ev.cancelable = !quiet && type !== "pointermove_";
+    ev.button = o.button === undefined ? 0 : o.button;
+    ev.buttons = _in.held;
+    ev.relatedTarget = o.related ? _eventTarget(o.related) : null;
+    if (pointerish) {
+        ev.pointerType = "mouse";
+        ev.pointerId = 1;
+        ev.isPrimary = true;
+    }
+    ev.pageX = scene.x + _inScrollX();
+    ev.pageY = scene.y + _inScrollY();
+    ev.screenX = scene.x;
+    ev.screenY = scene.y;
+    ev.x = scene.x;
+    ev.y = scene.y;
+    _inOffset(ev, raw, scene);
+    if (o.delta) {
+        ev.deltaX = o.delta.x;
+        ev.deltaY = o.delta.y;
+    }
+    _dispatchDynamic(raw, type, ev);
+    return ev;
+}
+
+function _inScrollX() {
+    var page = _findRootScroller();
+    return page ? page.contentX : 0;
+}
+
+function _inScrollY() {
+    var page = _findRootScroller();
+    return page ? page.contentY : 0;
+}
+
+// Measured only if read: most listeners on a move never do.
+function _inOffset(ev, raw, scene) {
+    var box = null;
+    var measure = function() {
+        if (box === null) {
+            box = { x: 0, y: 0 };
+            if (raw && raw !== document && raw !== window) {
+                var element = wrap(raw);
+                var r = element.getBoundingClientRect();
+                box = { x: r.left + (element.clientLeft || 0), y: r.top + (element.clientTop || 0) };
+            }
+        }
+        return box;
+    };
+    Object.defineProperty(ev, "offsetX", { get: function() { return scene.x - measure().x; }, configurable: true });
+    Object.defineProperty(ev, "offsetY", { get: function() { return scene.y - measure().y; }, configurable: true });
+}
+
+function _inPathOf(raw) {
+    if (!raw) {
+        return [];
+    }
+    return _eventPath(raw).filter(function(n) { return n !== document && n !== window; });
+}
+
+// Out of one element and over another; enter and leave go to each ancestor that
+// changed sides, the deepest first when leaving and last when entering.
+function _inBoundary(prefix, from, to, scene, mods) {
+    if (from === to) {
+        return;
+    }
+    var button = prefix === "pointer" ? -1 : 0;
+    var fromPath = _inPathOf(from);
+    var toPath = _inPathOf(to);
+    if (from) {
+        _inFire(prefix + "out", from, scene, mods, { related: to, button: button });
+        for (var i = 0; i < fromPath.length; ++i) {
+            if (toPath.indexOf(fromPath[i]) === -1) {
+                _inFire(prefix + "leave", fromPath[i], scene, mods, { related: to, button: button });
+            }
+        }
+    }
+    if (to) {
+        _inFire(prefix + "over", to, scene, mods, { related: from, button: button });
+        for (var j = toPath.length - 1; j >= 0; --j) {
+            if (fromPath.indexOf(toPath[j]) === -1) {
+                _inFire(prefix + "enter", toPath[j], scene, mods, { related: from, button: button });
+            }
+        }
+    }
+}
+
+function _inRetarget(scene, mods) {
+    _inCaptureTurn(scene, mods);
+    var target = _in.capture || _inHit(scene);
+    var overP = _in.hoverP;
+    _in.hoverP = target;
+    _inBoundary("pointer", overP, target, scene, mods);
+    if (!_in.noMouse) {
+        var overM = _in.hoverM;
+        _in.hoverM = target;
+        _inBoundary("mouse", overM, target, scene, mods);
+    }
+    return target;
+}
+
+function _inMoved(scene, mods) {
+    var target = _inRetarget(scene, mods);
+    _inFire("pointermove", target, scene, mods, { button: -1 });
+    if (!_in.noMouse) {
+        _inFire("mousemove", target, scene, mods, { button: 0 });
+    }
+}
+
+function _inDown(bit, scene, mods, heldBefore) {
+    var target = _inRetarget(scene, mods);
+    var button = _IN_BUTTON(bit);
+    var now = Date.now();
+    var at = _in.countAt;
+    var again = _in.countButton === bit && at && now - _in.countTime <= Qt.styleHints.mouseDoubleClickInterval
+        && Math.abs(at.x - scene.x) < 2 && Math.abs(at.y - scene.y) < 2;
+    _in.count = again ? _in.count + 1 : 1;
+    _in.countButton = bit;
+    _in.countAt = Qt.point(scene.x, scene.y);
+    _in.countTime = now;
+    _in.pressed = true;
+    _in.downTarget[bit] = target;
+    if (heldBefore === 0) {
+        _in.noMouse = !_inFire("pointerdown", target, scene, mods, { button: button }).defaultPrevented ? false : true;
+        _inHoldScrollers(target);
+    } else {
+        _inFire("pointermove", target, scene, mods, { button: button });
+    }
+    if (_in.noMouse) {
+        return;
+    }
+    var down = _inFire("mousedown", target, scene, mods, { button: button, detail: _in.count });
+    if (down.defaultPrevented) {
+        _inKeepFocus(target);
+    } else if (bit === Qt.LeftButton) {
+        _inFocusOnPress(target);
+    }
+    if (bit === Qt.RightButton) {
+        _inFire("contextmenu", target, scene, mods, { button: button });
+    }
+}
+
+function _inUp(bit, scene, mods) {
+    var target = _in.capture || _inHit(scene);
+    var button = _IN_BUTTON(bit);
+    var count = _in.count;
+    var from = _in.downTarget[bit];
+    delete _in.downTarget[bit];
+    if (_in.held === 0) {
+        _inFire("pointerup", target, scene, mods, { button: button });
+    } else {
+        _inFire("pointermove", target, scene, mods, { button: button });
+    }
+    if (!_in.noMouse) {
+        _inFire("mouseup", target, scene, mods, { button: button, detail: count });
+    }
+    if (_in.held === 0) {
+        _inEndCapture(scene, mods);
+        _in.noMouse = false;
+        _inRestoreFocus();
+    }
+    var moved = _inReleaseScrollers();
+    var hitNow = _inHit(scene);
+    // After the release is delivered: what is under the point has had its say
+    // on the press (a box toggled, a link followed), and listeners read that.
+    _inLater(function() {
+        _inClickOn(_inCommon(from, hitNow), bit, button, count, scene, mods, moved);
+    });
+}
+
+// `Qt.callLater` keeps one of each function, and closures of one count as one.
+function _inLater(run) {
+    _in.later.push(run);
+    Qt.callLater(_inFlushLater);
+}
+
+function _inFlushLater() {
+    var runs = _in.later;
+    _in.later = [];
+    runs.forEach(function(run) { run(); });
+}
+
+function _inCommon(a, b) {
+    if (!a || !b) {
+        return null;
+    }
+    var other = _eventPath(b);
+    var mine = _eventPath(a);
+    for (var i = 0; i < mine.length; ++i) {
+        if (other.indexOf(mine[i]) !== -1 && mine[i] !== document && mine[i] !== window) {
+            return mine[i];
+        }
+    }
+    return null;
+}
+
+function _inClickOn(target, bit, button, count, scene, mods, moved) {
+    var defaults = _in.defaults;
+    _in.defaults = [];
+    if (_in.held === 0) {
+        _in.pressed = false;
+    }
+    // A touch-like drag moved the scroller: the press was that, not a click.
+    if (!target || moved) {
+        return;
+    }
+    if (bit !== Qt.LeftButton) {
+        _inFire("auxclick", target, scene, mods, { button: button, detail: count });
+        return;
+    }
+    var ev = _inClickEvent(target, scene, mods, count);
+    if (typeof target.clicked === "function") {
+        _clickedControlWith(target, ev);
+    } else {
+        _dispatchDynamic(target, "click", ev);
+    }
+    if (!ev.defaultPrevented) {
+        defaults.forEach(function(run) { run(); });
+    }
+    if (count === 2) {
+        _inFire("dblclick", target, scene, mods, { detail: 2 });
+    }
+}
+
+function _inClickEvent(target, scene, mods, count) {
+    var ev = event("click", wrap(target), { modifiers: mods, scenePosition: scene, position: scene, detail: count });
+    ev.bubbles = true;
+    ev.buttons = _in.held;
+    ev.pointerType = "mouse";
+    ev.pointerId = 1;
+    ev.isPrimary = true;
+    ev.pageX = scene.x + _inScrollX();
+    ev.pageY = scene.y + _inScrollY();
+    ev.screenX = scene.x;
+    ev.screenY = scene.y;
+    ev.x = scene.x;
+    ev.y = scene.y;
+    _inOffset(ev, target, scene);
+    return ev;
+}
+
+// A prevented `mousedown` keeps focus where it was. Only then is a control told
+// not to take it: this runs before the press reaches the control.
+function _inKeepFocus(target) {
+    for (var at = target; at; at = _gParent(at)) {
+        if (typeof at.focusPolicy === "number") {
+            _in.restoreFocus = { item: at, policy: at.focusPolicy };
+            at.focusPolicy = Qt.NoFocus;
+            return;
+        }
+        if (typeof at.activeFocusOnPress === "boolean") {
+            _in.restoreFocus = { item: at, press: at.activeFocusOnPress };
+            at.activeFocusOnPress = false;
+            return;
+        }
+    }
+}
+
+function _inRestoreFocus() {
+    var r = _in.restoreFocus;
+    _in.restoreFocus = null;
+    if (!r) {
+        return;
+    }
+    if (r.policy !== undefined) {
+        r.item.focusPolicy = r.policy;
+    } else {
+        r.item.activeFocusOnPress = r.press;
+    }
+}
+
+// The nearest ancestor that can take focus does, and with none, the page.
+function _inFocusOnPress(target) {
+    for (var at = target; at; at = _gParent(at)) {
+        if (typeof at.clicked === "function" || typeof at.cursorPosition === "number"
+            || at.activeFocusOnTab === true) {
+            return;
+        }
+        if (getAttribute(at, "tabindex") !== null) {
+            focus(at);
+            return;
+        }
+    }
+    _blurUnlessFocusable(target);
+}
+
+// Dragging on what hears the mouse is the page's to answer; Chromium scrolls no
+// page by a mouse drag at all, though a Flickable does.
+function _inHoldScrollers(target) {
+    var path = _eventPath(target);
+    var hears = path.some(function(n) {
+        var m = _listenerMeta(n);
+        return ["pointerdown", "pointermove", "mousedown", "mousemove"].some(function(t) {
+            return _hasListeners(m, t);
+        });
+    });
+    _in.restoreScroll = [];
+    _in.scrolled = [];
+    _inScrollersOver(target).forEach(function(s) {
+        if (hears && s.interactive) {
+            s.interactive = false;
+            _in.restoreScroll.push(s);
+        } else {
+            _in.scrolled.push({ item: s, x: s.contentX, y: s.contentY });
+        }
+    });
+}
+
+function _inScrollersOver(target) {
+    var out = [];
+    var from = target;
+    while (from && from.__eldurInline) {
+        from = _logicalParent(from);
+    }
+    for (var at = from; at; at = at.parent) {
+        if (typeof at.contentY === "number" && typeof at.interactive === "boolean") {
+            out.push(at);
+        }
+    }
+    return out;
+}
+
+function _inReleaseScrollers() {
+    _in.restoreScroll.forEach(function(s) { s.interactive = true; });
+    _in.restoreScroll = [];
+    var moved = (_in.scrolled || []).some(function(e) {
+        return e.item.contentX !== e.x || e.item.contentY !== e.y;
+    });
+    _in.scrolled = null;
+    return moved;
+}
+
+function _inWheel(qtEv) {
+    var scene = qtEv.scenePosition || _in.last || Qt.point(qtEv.x, qtEv.y);
+    if (qtEv.x !== undefined && !qtEv.scenePosition) {
+        scene = _in.overlay.mapToItem(null, qtEv.x, qtEv.y);
+    }
+    var target = _inRetarget(scene, qtEv.modifiers);
+    // A scroller moves half the angle's units: the same as `delta` says.
+    var delta = {
+        x: qtEv.pixelDelta.x ? -qtEv.pixelDelta.x : -qtEv.angleDelta.x / 2 + 0,
+        y: qtEv.pixelDelta.y ? -qtEv.pixelDelta.y : -qtEv.angleDelta.y / 2 + 0
+    };
+    var ev = _inFire("wheel", target, scene, qtEv.modifiers, { delta: delta });
+    if (ev.defaultPrevented) {
+        // Each scroller under it hears the wheel after this, and asks.
+        var off = _inScrollersOver(target).filter(function(s) { return s.interactive; });
+        off.forEach(function(s) { s.interactive = false; });
+        _inLater(function() {
+            off.forEach(function(s) { s.interactive = true; });
+        });
+    }
+}
+
+// `setPointerCapture`: takes effect at the next pointer event, as the spec asks.
+function _inCaptureTurn(scene, mods) {
+    var next = _in.captureNext;
+    if (next === undefined || next === null && _in.capture === null || next === _in.capture) {
+        return;
+    }
+    var old = _in.capture;
+    _in.capture = next;
+    if (old) {
+        _inFire("lostpointercapture", old, scene, mods, {});
+    }
+    if (next) {
+        _inFire("gotpointercapture", next, scene, mods, {});
+    }
+}
+
+function _inEndCapture(scene, mods) {
+    _in.captureNext = null;
+    _inCaptureTurn(scene, mods);
+}
+
+// What the converter emitted for a link: followed unless the click is prevented.
+function afterClick(follow) {
+    if (_in && _in.pressed) {
+        _in.defaults.push(follow);
+    } else if (!linkPrevented()) {
+        follow();
+    }
+}
+
+// What the converter emitted for a label's tap.
+function afterTap(eventPoint, run) {
+    if (_in && _in.pressed) {
+        _in.defaults.push(run);
+    } else if (!tapPrevented(eventPoint)) {
+        run();
+    }
+}
+
+function _clickedControlWith(raw, ev) {
+    var m = _meta(raw);
+    var toggled = Boolean(m.toggledNow);
+    m.toggledNow = false;
+    _dispatchDynamic(raw, "click", ev);
+    if (!toggled) {
+        return;
+    }
+    if (ev.defaultPrevented) {
+        raw.checked = !raw.checked;
+        return;
+    }
+    _toggleEvents(raw);
 }
 
 // Inserting: what a script made as a QML object becomes a node when it goes

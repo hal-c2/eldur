@@ -139,7 +139,7 @@ ApplicationWindow {
 
                             TapHandler {
                                 onTapped: (eventPoint, button) => {
-                                    if (name.enabled && !Eldur.tapPrevented(eventPoint)) { name.forceActiveFocus(); }
+                                    if (name.enabled) Eldur.afterTap(eventPoint, function () { name.forceActiveFocus(); });
                                 }
                             }
                         }
@@ -248,7 +248,7 @@ ApplicationWindow {
 
                             TapHandler {
                                 onTapped: (eventPoint, button) => {
-                                    if (email.enabled && !Eldur.tapPrevented(eventPoint)) { email.forceActiveFocus(); }
+                                    if (email.enabled) Eldur.afterTap(eventPoint, function () { email.forceActiveFocus(); });
                                 }
                             }
                         }
@@ -358,7 +358,7 @@ ApplicationWindow {
 
                             TapHandler {
                                 onTapped: (eventPoint, button) => {
-                                    if (pass.enabled && !Eldur.tapPrevented(eventPoint)) { pass.forceActiveFocus(); }
+                                    if (pass.enabled) Eldur.afterTap(eventPoint, function () { pass.forceActiveFocus(); });
                                 }
                             }
                         }
@@ -544,7 +544,7 @@ ApplicationWindow {
 
                                 TapHandler {
                                     onTapped: (eventPoint, button) => {
-                                        if (terms.enabled && !Eldur.tapPrevented(eventPoint)) { terms.click(); }
+                                        if (terms.enabled) Eldur.afterTap(eventPoint, function () { terms.click(); });
                                     }
                                 }
                             }
