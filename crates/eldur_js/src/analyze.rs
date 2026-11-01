@@ -1238,18 +1238,15 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
     }
 
     fn visit_computed_member_expression(&mut self, it: &ComputedMemberExpression<'a>) {
-        match &it.expression {
-            Expression::StringLiteral(name) => {
-                let name = name.value.as_str();
-                if name == "addEventListener" {
-                    self.listener_mentions += 1;
-                }
-                if let Some(event) = name.strip_prefix("on") {
-                    self.analysis.heard_events.insert(event.to_owned());
-                }
+        // The rest is `computed`'s: it depends on where the member stands.
+        if let Expression::StringLiteral(name) = &it.expression {
+            let name = name.value.as_str();
+            if name == "addEventListener" {
+                self.listener_mentions += 1;
             }
-            // The rest is `computed`'s: it depends on where the member stands.
-            _ => {}
+            if let Some(event) = name.strip_prefix("on") {
+                self.analysis.heard_events.insert(event.to_owned());
+            }
         }
         walk::walk_computed_member_expression(self, it);
     }

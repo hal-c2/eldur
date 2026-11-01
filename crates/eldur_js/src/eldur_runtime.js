@@ -4573,15 +4573,9 @@ function setStyle(item, prop, value) {
         _inlineOpacity(raw, m);
     } else if (name === "position") {
         // A template holds the box's form, and layouts place what is in them.
-        // Later: the item a template swaps it for is the one the page keeps.
-        if (str === "absolute" || str === "fixed") {
-            var styled = wrap(raw);
-            Qt.callLater(function() {
-                var now = _unwrap(styled);
-                if (now && now.parent && !_rawHasNoFlowParent(now)) {
-                    console.warn("eldur: style.position = \"" + str + "\" from a script is not applied; use a class");
-                }
-            });
+        // Not yet in the page: the item a template swaps it for is set this again.
+        if ((str === "absolute" || str === "fixed") && raw.parent) {
+            console.warn("eldur: style.position = \"" + str + "\" from a script is not applied; use a class");
         }
     } else if (name === "left" || name === "top" || name === "right" || name === "bottom") {
         _setOffset(raw, name, str);
@@ -5386,9 +5380,17 @@ function scrollArea(raw) {
     m.areaTop = raw.topPadding;
     m.areaScroll = 0;
     raw.clip = true;
-    var keep = function() { _areaScrollTo(raw, m.areaScroll); };
-    raw.contentSizeChanged.connect(keep);
-    raw.heightChanged.connect(keep);
+    var keep = function() {
+        // A template's item may have replaced it by now.
+        if (m.raw === undefined || m.raw === raw) {
+            _areaScrollTo(raw, m.areaScroll);
+        }
+    };
+    // Later: the text's size changes as the control's implicit height is worked
+    // out, and reading sizes now is a binding loop on it.
+    var keepLater = function() { Qt.callLater(keep); };
+    raw.contentSizeChanged.connect(keepLater);
+    raw.heightChanged.connect(keepLater);
     raw.cursorRectangleChanged.connect(function() {
         if (!raw.activeFocus) {
             return;
@@ -5419,7 +5421,7 @@ function _areaScrollTo(raw, to) {
     var m = _meta(raw);
     var most = Math.max(0, _areaScrollHeight(raw) - raw.height);
     m.areaScroll = Math.max(0, Math.min(to, most));
-    raw.topPadding = m.areaTop - m.areaScroll;
+    _gSet(raw, "topPadding", m.areaTop - m.areaScroll);
 }
 
 function _clientSize(item, axis) {
@@ -11449,8 +11451,13 @@ function _inWatchRadio(raw) {
 // listens. Whichever hears a key first answers for all of them, with one
 // sequence of events and one default action, and says whether Qt may go on.
 // ---------------------------------------------------------------------------
-// `Keys` can't be reached from a script: a written control has the converter's
-// handler, which comes to `fire`, and a made one has its own signals, for here.
+// `Keys` can't be reached from a script, only from QML: `_IN_KEY_HEAR` listens
+// there. A made control has its own signals, and `_inKeyed` hears a key once.
+var _IN_KEY_HEAR = "import QtQuick; QtObject { property Item who; property var hear; "
+    + "property Connections c: Connections { target: who ? who.Keys : null; "
+    + "function onPressed(event) { hear(event, true); } "
+    + "function onReleased(event) { hear(event, false); } } }";
+
 function _inKeysOn(item) {
     var m = _meta(item);
     if (m.inKeys === item) {
@@ -11460,7 +11467,11 @@ function _inKeysOn(item) {
     if (typeof item.eldurKeyDown === "function") {
         item.eldurKeyDown.connect(function(qtEv) { _inKeyed(qtEv, true); });
         item.eldurKeyUp.connect(function(qtEv) { _inKeyed(qtEv, false); });
+        return;
     }
+    var listen = Qt.createQmlObject(_IN_KEY_HEAR, _in.overlay, "eldur-keys");
+    listen.hear = _inKeyed;
+    listen.who = item;
 }
 
 // What can take focus and what starts control events, wherever it came from.
