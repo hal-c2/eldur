@@ -147,7 +147,7 @@ On a page with cascade rules a script's `el.style.<prop>` holds over the class b
 | `el.style.setProperty(name, val)` | `Eldur.wrap(<id>).style.setProperty(name, val)` | Supports both standard CSS properties (`background-color`, `width`, etc.) and CSS custom properties (`--*`) |
 | `el.style.getPropertyValue(name)` | `Eldur.wrap(<id>).style.getPropertyValue(name)` | Reads custom properties (`--*`) or mapped inline style values |
 | `el.style.removeProperty(name)` | `Eldur.wrap(<id>).style.removeProperty(name)` | Removes custom or inline property and returns previous value |
-| `el.style.cssText` (get / set) | `Eldur.wrap(<id>).style.cssText` | Parses `"prop: val; ..."` declarations and applies each via `setStyle` / `setProperty` (emits `Unsupported` static diagnostic because arbitrary CSS declarations cannot be statically bound in QML) |
+| `el.style.cssText` (get / set) | `Eldur.wrap(<id>).style.cssText` | The element's whole style declaration, the `style` attribute's part included. Reading gives `prop: value;` pairs joined by spaces, as Chromium does, so `cssText += "…"` appends. Setting replaces it: each declaration is applied through `setStyle`, and what the new text no longer names, the attribute's properties included, goes back to the cascade. No static diagnostic, since the runtime applies it like any `style.*` write. |
 | `window.getComputedStyle(el)` / `getComputedStyle(el)` | `Eldur.getComputedStyle(el)` | Returns live-like style view with `getPropertyValue(name)` and camelCase properties (`display`, `visibility`, `opacity`, `width`, `height`, `color`, `backgroundColor`, `borderRadius`, `borderWidth`, `fontSize`) |
 
 ---
@@ -488,7 +488,7 @@ container filled with inline-level children (`_gFillsLine`).
   `NATIVE_BORDER` in Rust, the created sources in the runtime.
 - A SpinBox has no empty state: a `type=number` nobody wrote reads `""` and shows 0.
 
-**Created elements on lines.** A created inline-level element under a static parent joins its line: a static `Text` becomes the line's first run, and an empty parent gets an anonymous line. Whitespace before the reference node becomes a text node there. A created `<span>` the rules make `inline-block` is a box even with no template for it. A created box's own children still use the older `_gLines` layouter, which does not place text beside boxes.
+**Created elements on lines.** A created inline-level element under a static parent joins its line: a static `Text` becomes the line's first run, and an empty parent gets an anonymous line. Whitespace before the reference node becomes a text node there. A created `<span>` the rules make `inline-block` is a box even with no template for it. When the parent's Text was anchored across a padded box (an `<li>`'s), the line keeps the box's content width; it doesn't take the Text's, which on the line is only as wide as its words. A created box's own children still use the older `_gLines` layouter, which does not place text beside boxes.
 
 ## 14. Realistic pages
 

@@ -510,20 +510,6 @@ impl<'a> Visit<'a> for UnsupportedChecker<'_> {
         walk::walk_static_member_expression(self, it);
     }
 
-    fn visit_assignment_expression(&mut self, it: &oxc_ast::ast::AssignmentExpression<'a>) {
-        if let oxc_ast::ast::AssignmentTarget::StaticMemberExpression(member) = &it.left
-            && member.property.name == "cssText"
-            && let Expression::StaticMemberExpression(inner) = unwrap_parens(&member.object)
-            && inner.property.name == "style"
-        {
-            self.report(
-                it.span,
-                "style.cssText assignment cannot be mapped statically in QML",
-            );
-        }
-        walk::walk_assignment_expression(self, it);
-    }
-
     fn visit_call_expression(&mut self, it: &CallExpression<'a>) {
         let callee = unwrap_parens(&it.callee);
         if is_global_or_window_member(callee, "RegExp", self.scoping) {

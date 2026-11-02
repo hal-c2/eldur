@@ -454,7 +454,11 @@ get `property string eldurKey: "<qmlId>"`. The runtime cannot read QML ids.
    - swap the item behind the stable wrapper and destroy the old one.
 
    This generalises today's `set type` swap. Children come after their
-   parent, because their key depends on the parent's template.
+   parent, because their key depends on the parent's template. Children
+   that are all text nodes go in as `appendChild` would put them: into the
+   template's own Text (its inline model), not into a column below it.
+   Element children stay items, since one may be a box that something is
+   placed in (a relative span holding an absolute dot).
 3. **Class changes after connection** (`className =` or `classList.*`) set
    `cls_*` as today. If the new key resolves to a *different* Component (a
    form change), the element is rematerialised in place. A class set
@@ -483,6 +487,9 @@ up in this order, and the first hit wins:
 
 A miss at step 1 logs once per key:
 `console.warn("eldur: no style template for li.foo@todoList; using <step>")`.
+An element of a line's model that a box splits into items (`_vToReal`) does
+not log. The model showed only its font and colour, which the item is given,
+unless the model also painted a background or edges.
 At conversion time, `Unknown` parents and `open` class values produce
 diagnostic `dynamic-context` (§12). `@*` templates are not exact for
 inherited properties, since they inherit from `<body>`, and the diagnostic

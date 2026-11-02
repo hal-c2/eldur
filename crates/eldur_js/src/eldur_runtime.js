@@ -5292,22 +5292,24 @@ function setStyle(item, prop, value) {
     var str = value === null || value === undefined ? "" : String(value);
     var m = _meta(raw);
     if (rawName === "cssText") {
+        // The text replaces the whole declaration, the style attribute's
+        // part too: what it no longer names goes back to the cascade.
+        // The attribute's properties stay cleared after a later replacement.
+        var before = _styleDecls(raw, m).concat(
+            typeof raw.eldurStyle === "string" ? _parseDecls(raw.eldurStyle) : []);
+        var after = _parseDecls(str);
+        var named = {};
+        for (var a = 0; a < after.length; ++a) {
+            named[after[a][0]] = true;
+        }
         m.styles = {};
-        var decls = str.split(";");
-        for (var i = 0; i < decls.length; ++i) {
-            var d = decls[i].trim();
-            if (!d) {
-                continue;
+        for (var b = 0; b < before.length; ++b) {
+            if (!named[before[b][0]]) {
+                setStyle(raw, before[b][0], "");
             }
-            var colon = d.indexOf(":");
-            if (colon === -1) {
-                continue;
-            }
-            var k = d.slice(0, colon).trim();
-            var v = d.slice(colon + 1).trim();
-            if (k) {
-                setStyle(raw, k, v);
-            }
+        }
+        for (var i = 0; i < after.length; ++i) {
+            setStyle(raw, after[i][0], after[i][1]);
         }
         return;
     }
@@ -5498,6 +5500,51 @@ function _camelToKebab(propName) {
     });
 }
 
+// `name: value` pairs of a declaration text, names in kebab case.
+function _parseDecls(text) {
+    var out = [];
+    var decls = String(text).split(";");
+    for (var i = 0; i < decls.length; ++i) {
+        var colon = decls[i].indexOf(":");
+        if (colon <= 0) {
+            continue;
+        }
+        var k = decls[i].slice(0, colon).trim();
+        var v = decls[i].slice(colon + 1).trim();
+        if (k && v) {
+            out.push([k.indexOf("--") === 0 ? k : k.toLowerCase(), v]);
+        }
+    }
+    return out;
+}
+
+// The element's style declaration as el.style holds it: the style
+// attribute's properties where they were, as scripts have since set them,
+// then what scripts added, in the order they added it.
+function _styleDecls(raw, m) {
+    var out = [];
+    var seen = {};
+    var attr = raw && typeof raw.eldurStyle === "string" ? _parseDecls(raw.eldurStyle) : [];
+    for (var i = 0; i < attr.length; ++i) {
+        var k = attr[i][0];
+        var camel = k.indexOf("--") === 0 ? k : _kebabToCamel(k);
+        var v = Object.prototype.hasOwnProperty.call(m.styles, camel) ? m.styles[camel] : attr[i][1];
+        seen[k] = true;
+        if (v !== "") {
+            out.push([k, v]);
+        }
+    }
+    var keys = Object.keys(m.styles);
+    for (var j = 0; j < keys.length; ++j) {
+        var kebab = keys[j].indexOf("--") === 0 ? keys[j] : _camelToKebab(keys[j]);
+        if (!seen[kebab] && m.styles[keys[j]] !== "") {
+            seen[kebab] = true;
+            out.push([kebab, m.styles[keys[j]]]);
+        }
+    }
+    return out;
+}
+
 function getStyle(item, prop) {
     var vRaw = _unwrap(item);
     if (vRaw && vRaw.__eldurInline) {
@@ -5506,18 +5553,9 @@ function getStyle(item, prop) {
     var m = _meta(item);
     var rawName = String(prop);
     if (rawName === "cssText") {
-        var keys = Object.keys(m.styles);
-        var parts = [];
-        var seen = {};
-        for (var i = 0; i < keys.length; ++i) {
-            var k = keys[i];
-            var kebab = k.indexOf("--") === 0 ? k : _camelToKebab(k);
-            if (!seen[kebab] && m.styles[k] !== "") {
-                seen[kebab] = true;
-                parts.push(kebab + ": " + m.styles[k]);
-            }
-        }
-        return parts.join("; ");
+        return _styleDecls(_unwrap(item), m).map(function(d) {
+            return d[0] + ": " + d[1] + ";";
+        }).join(" ");
     }
     if (Object.prototype.hasOwnProperty.call(m.styles, rawName)) {
         return m.styles[rawName];
@@ -7620,6 +7658,14 @@ function _textStartsLine(raw, column, lines) {
     var model = _vModelOf(text);
     var top = text.y;
     var extra = raw.implicitHeight - text.implicitHeight - column.implicitHeight;
+    // A flow under the text took the text's width; on the line the text is
+    // only as wide as its words, so the flow keeps the box's content width.
+    if (column === _meta(raw).flow) {
+        var left = text.x;
+        var right = raw.width - text.x - text.width;
+        column.x = left;
+        column.width = Qt.binding(function() { return Math.max(0, raw.width - left - right); });
+    }
     text.anchors.left = undefined;
     text.anchors.right = undefined;
     text.anchors.top = undefined;
@@ -8157,7 +8203,7 @@ function _lookupTemplate(raw) {
     for (var i = 1; i < keys.length; ++i) {
         var cand = keys[i];
         if (templates[cand]) {
-            if (!_warnedMissingTemplates[exact]) {
+            if (!_meta(raw).lookCarried && !_warnedMissingTemplates[exact]) {
                 _warnedMissingTemplates[exact] = true;
                 console.warn("eldur: no style template for " + exact + "; using " + cand);
             }
@@ -8169,7 +8215,7 @@ function _lookupTemplate(raw) {
     var classed = exact.split("@")[0] + ".";
     var classless = exact.indexOf(".") < 0
         && Object.keys(templates).some(function(k) { return k.indexOf(classed) === 0; });
-    if (!classless && !_warnedMissingTemplates[exact]) {
+    if (!classless && !_meta(raw).lookCarried && !_warnedMissingTemplates[exact]) {
         _warnedMissingTemplates[exact] = true;
         console.warn("eldur: no style template for " + exact + "; using generic");
     }
@@ -8428,7 +8474,13 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
         }
     }
 
-    if (childElements.length > 0 && !(carried && _vCarryModel(next, carried, childElements))) {
+    // Text nodes join the template's own Text rather than a column below it.
+    // Elements stay items: one may be a box something is placed in.
+    var onlyText = childElements.length > 0 && childElements.every(function(n) {
+        return _meta(n).createdTag === "#text";
+    });
+    if (childElements.length > 0 && !(carried && _vCarryModel(next, carried, childElements))
+        && !(onlyText && _vTryInsert(next, childElements, null))) {
         // Before the template's trailing spacers, renumbered.
         _insertChildren(next, childElements, null);
     }
@@ -14610,6 +14662,9 @@ function _vToReal(v) {
     m.raw = made;
     m.createdTag = v.eldurTag;
     m.connected = {};
+    // What the model painted, font and colour alone, the item is given below:
+    // it lacks nothing a template would add.
+    m.lookCarried = _vCullable(look);
     if (m._setRaw) {
         m._setRaw(made);
     }
@@ -14627,6 +14682,9 @@ function _vToReal(v) {
         made.font.underline = look.underline;
         made.font.strikeout = look.strike;
         made.font.pixelSize = look.size;
+        if (look.family) {
+            made.font.family = EldurFonts.family(look.family);
+        }
     }
     // The element is an item now, as its children are: a created element taking
     // a model's nodes would itself go back into a model it is no longer in.

@@ -1,0 +1,19 @@
+<!doctype html><html><head><style>
+body{margin:10px;font:15px Arial,sans-serif}
+.item{padding:4px}
+.badge{display:inline-block;min-width:16px;padding:0 5px;border-radius:8px;background:#c00;color:#fff;font-size:11px;text-align:center}
+</style></head><body>
+<ul id="list"><li class="item" id="i0">Inbox</li><li class="item" id="i1">Sent</li></ul>
+<p id="p">Total <b id="bb">bold</b> tail</p>
+<script>
+const L=(n,e)=>{const r=e.getBoundingClientRect();console.log('CS '+n+' '+[r.x,r.y,r.width,r.height].join(','))};
+const b=document.createElement('span');b.className='badge';b.id='bd0';b.textContent='3';
+document.getElementById('i0').appendChild(b);
+const c=document.createElement('span');c.className='badge';c.id='bd1';c.appendChild(document.createTextNode('12'));
+document.getElementById('i1').appendChild(c);
+const d=document.createElement('span');d.className='badge';d.id='bd2';d.textContent='7';
+document.getElementById('p').appendChild(d);
+console.log('CS nodes '+b.childNodes.length+' '+c.childNodes.length+' '+d.childNodes.length);
+setTimeout(()=>{L('bd0',b);L('bd1',c);L('bd2',d);L('i0',document.getElementById('i0'));L('p',document.getElementById('p'));b.textContent='45';
+setTimeout(()=>{L('bd0b',b);console.log('CS nodes2 '+b.childNodes.length+' '+b.firstChild.nodeValue);document.body.appendChild(document.createElement('div')).id='csdone';},50)},100);
+</script></body></html>

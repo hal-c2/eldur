@@ -654,3 +654,13 @@ fn rule_probe_crt4() {
 fn rule_table_widths() {
     page("rule_table_widths");
 }
+
+#[test]
+fn rule_css_text() {
+    page("rule_css_text");
+}
+
+#[test]
+fn rule_badge_in_text() {
+    page("rule_badge_in_text");
+}

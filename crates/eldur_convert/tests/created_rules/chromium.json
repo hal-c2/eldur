@@ -510,6 +510,20 @@
   "clicks": [],
   "probes": []
  },
+ "rule_badge_in_text": {
+  "log": [
+   "CS nodes 1 1 1",
+   "CS bd0 90.703125,23,26,12",
+   "CS bd1 84.859375,48,26,12",
+   "CS bd2 100.859375,84,26,12",
+   "CS i0 50,15,1220,25",
+   "CS p 10,80,1260,17",
+   "CS bd0b 90.703125,23,26,12",
+   "CS nodes2 1 45"
+  ],
+  "clicks": [],
+  "probes": []
+ },
  "rule_bare_ids": {
   "log": [
    "CS ctl 108,91,185,21",
@@ -603,6 +617,21 @@
    "CS d2 8,198,400,16",
    "CS d3 8,238,400,10",
    "CS end 8,248,1264,5"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "rule_css_text": {
+  "log": [
+   "CS css color: red; padding: 4px 6px; border: 1px solid blue; | 4px 6px | red",
+   "CS css2 color: red; padding: 4px 6px; border: 1px solid blue; margin-left: 20px;",
+   "CS card0 color: green;",
+   "CS card1 width: 200px; background-color: rgb(0, 0, 255); |  | 200px",
+   "CS card2 [] 1256px",
+   "CS box 30,10,1240,27",
+   "CS card 10,37,1260,21",
+   "CS after 10,58,1260,17",
+   "CS comp 6px 20px rgb(255, 0, 0) 1px"
   ],
   "clicks": [],
   "probes": []
