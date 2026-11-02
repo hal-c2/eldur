@@ -3379,7 +3379,10 @@ function _keepCollapsing(layout) {
 
 function _settleLayouts() {
     _gSettle();
-    var dirty = _layoutDirty;
+    // A write queues its item each time, and the cascade queues the root: one
+    // walk of each subtree is the whole of it.
+    var queued = new Set(_layoutDirty);
+    var dirty = Array.from(queued);
     _layoutDirty = [];
     _tableSettle(dirty);
     var done = [];
@@ -3396,9 +3399,13 @@ function _settleLayouts() {
             }
         }
     }
+    dirty.forEach(_keepCollapsing);
     for (var i = 0; i < dirty.length; ++i) {
-        _keepCollapsing(dirty[i]);
-        if (dirty[i].parent) {
+        var covered = false;
+        for (var a = dirty[i].parent; a && !covered; a = a.parent) {
+            covered = queued.has(a);
+        }
+        if (dirty[i].parent && !covered) {
             _polishSubtree(dirty[i]);
         }
         for (var p = dirty[i].parent; p && done.indexOf(p) < 0; p = p.parent) {
