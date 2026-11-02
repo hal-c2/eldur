@@ -629,6 +629,11 @@ fn motion_keyframes() {
 }
 
 #[test]
+fn motion_slow_frame() {
+    page("motion_slow_frame");
+}
+
+#[test]
 fn motion_transitions() {
     page("motion_transitions");
 }

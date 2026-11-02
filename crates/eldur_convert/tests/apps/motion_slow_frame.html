@@ -1,0 +1,30 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:8px;font:14px Arial}
+@keyframes mid{0%{height:10px}50%{height:50px}100%{height:30px}}
+#run{animation:mid 30ms linear 2 both;height:7px}
+</style></head><body>
+<button id="btn">go</button><div id="run" style="display:none">r</div>
+<script>
+// A frame can come late: here the script itself holds it past the first
+// iteration. A browser starts the animation at the frame that shows it, and
+// the page is told of every iteration either way.
+var $ = function(id) { return document.getElementById(id); };
+var log = [];
+var r = $("run");
+["animationstart","animationiteration","animationend"].forEach(function(n) {
+  r.addEventListener(n, function(e) { log.push(n + " " + e.animationName + " " + e.elapsedTime); });
+});
+var step = 0;
+$("btn").addEventListener("click", function() {
+  step++;
+  if (step === 1) {
+    r.style.display = "block";
+    console.log("run " + r.getAnimations().length);
+    var until = Date.now() + 45;
+    while (Date.now() < until) {}
+  } else if (step === 2) {
+    console.log("events " + log.join(","));
+    console.log("run end " + getComputedStyle(r).height + " " + r.getBoundingClientRect().height);
+  }
+});
+</script></body></html>

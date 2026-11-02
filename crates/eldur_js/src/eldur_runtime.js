@@ -19598,6 +19598,10 @@ function _aTellPhase(a, state) {
         if (was === "idle" || was === "before") {
             if (phase === "active") {
                 _aQueue(a, "animationstart", Math.max(-t.delay, 0));
+                // A first frame that comes late lands past the iterations it skipped.
+                if (state.iteration > Math.floor(Math.max(-t.delay, 0) / t.duration)) {
+                    _aQueue(a, "animationiteration", state.iteration * t.duration);
+                }
             } else if (phase === "after") {
                 _aQueue(a, "animationstart", Math.max(-t.delay, 0));
                 if (t.iterations > 1) {

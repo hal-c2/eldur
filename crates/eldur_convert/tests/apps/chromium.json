@@ -100903,6 +100903,70 @@
    }
   }
  ],
+ "motion_slow_frame": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#run": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "r"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "s1",
+   "log": [
+    "run 1"
+   ],
+   "state": {
+    "#run": [
+     {
+      "box": [
+       8,
+       29,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "r"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  },
+  {
+   "name": "s2",
+   "log": [
+    "events animationstart mid 0,animationiteration mid 0.03,animationend mid 0.06",
+    "run end 30px 30"
+   ],
+   "state": {
+    "#run": [
+     {
+      "box": [
+       8,
+       29,
+       1264,
+       30
+      ],
+      "shown": true,
+      "text": "r"
+     }
+    ],
+    "(focus)": "btn"
+   }
+  }
+ ],
  "motion_static": [
   {
    "name": "load",
