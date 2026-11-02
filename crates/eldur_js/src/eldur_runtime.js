@@ -1944,6 +1944,8 @@ function _syncEldurClasses(raw, m) {
 // a generated box there would be one more thing a line or a column measures apart.
 var _pseudoRules = null;
 var _pseudoPending = false;
+// What each selector does to the counters generated text shows: set when some does.
+var _counterRules = [];
 
 function _pseudoLoad() {
     _pseudoRules = [];
@@ -1951,6 +1953,9 @@ function _pseudoLoad() {
         return;
     }
     _pseudoRules = JSON.parse(_root.eldurPseudoRules);
+    if (typeof _root.eldurCounterRules === "string") {
+        _counterRules = JSON.parse(_root.eldurCounterRules);
+    }
     // What the converter already wrote is matched here, before any class moves.
     _pseudoFlush(true);
 }
@@ -1966,8 +1971,261 @@ function _pseudoTouch() {
     });
 }
 
+// An element in or out changes the numbers after it.
+function _counterTouch() {
+    if (_counterRules.length > 0) {
+        _pseudoTouch();
+    }
+}
+
+function _counterUsed(rule) {
+    return rule.parts.some(function(part) {
+        return typeof part !== "string" && (part.counter !== undefined || part.counters !== undefined);
+    });
+}
+
+function _counterAlpha(n) {
+    var out = "";
+    while (n > 0) {
+        n -= 1;
+        out = String.fromCharCode(97 + n % 26) + out;
+        n = Math.floor(n / 26);
+    }
+    return out;
+}
+
+function _counterRoman(n) {
+    var marks = [[1000, "m"], [900, "cm"], [500, "d"], [400, "cd"], [100, "c"], [90, "xc"],
+        [50, "l"], [40, "xl"], [10, "x"], [9, "ix"], [5, "v"], [4, "iv"], [1, "i"]];
+    var out = "";
+    marks.forEach(function(mark) {
+        while (n >= mark[0]) {
+            out += mark[1];
+            n -= mark[0];
+        }
+    });
+    return out;
+}
+
+// A counter's value in a list style, as the converter writes it.
+function _counterFormat(n, style) {
+    switch (style) {
+    case "none": return "";
+    case "disc": return "\u2022";
+    case "circle": return "\u25e6";
+    case "square": return "\u25aa";
+    case "disclosure-closed": return "\u25b8";
+    case "disclosure-open": return "\u25be";
+    case "decimal-leading-zero": return (n < 0 ? "-" : "") + (Math.abs(n) < 10 ? "0" : "") + Math.abs(n);
+    case "lower-alpha": return n > 0 ? _counterAlpha(n) : String(n);
+    case "upper-alpha": return n > 0 ? _counterAlpha(n).toUpperCase() : String(n);
+    case "lower-roman": return n > 0 && n < 4000 ? _counterRoman(n) : String(n);
+    case "upper-roman": return n > 0 && n < 4000 ? _counterRoman(n).toUpperCase() : String(n);
+    default: return String(n);
+    }
+}
+
+function _counterDisplayed(raw) {
+    return _gHasCascade() ? _gStyle(raw).display !== "none" : raw.visible !== false;
+}
+
+// The counters each of `wanted` sees at its `::before` and its `::after`: the
+// document walked in order, each element's reset, then increment, then set
+// (CSS Lists 3 §4), a counter reaching its element's following siblings.
+function _counterValues(wanted) {
+    var changes = new Map();
+    _counterRules.forEach(function(rule, order) {
+        var rank = rule.spec[0] * 1e6 + rule.spec[1] * 1e3 + rule.spec[2];
+        var found = document.querySelectorAll(rule.sel);
+        for (var i = 0; i < found.length; ++i) {
+            var raw = _unwrap(found[i]);
+            var entry = changes.get(raw) || {};
+            rule.changes.forEach(function(change) {
+                var weight = (change[2] ? 1e9 : 0) + rank;
+                var had = entry[change[0]];
+                if (!had || weight > had.weight || (weight === had.weight && order >= had.order)) {
+                    entry[change[0]] = { list: change[1], weight: weight, order: order };
+                }
+            });
+            changes.set(raw, entry);
+        }
+    });
+    var frames = [[]];
+    var innermost = function(name) {
+        for (var f = frames.length - 1; f >= 0; --f) {
+            for (var j = 0; j < frames[f].length; ++j) {
+                if (frames[f][j].name === name) {
+                    return frames[f][j];
+                }
+            }
+        }
+        var made = { name: name, value: 0 };
+        frames[frames.length - 1].push(made);
+        return made;
+    };
+    var snapshot = function() {
+        var all = [];
+        frames.forEach(function(frame) {
+            frame.forEach(function(c) { all.push([c.name, c.value]); });
+        });
+        return all;
+    };
+    var out = new Map();
+    var visit = function(raw) {
+        if (!_counterDisplayed(raw)) {
+            return;
+        }
+        var own = changes.get(raw);
+        if (own) {
+            var frame = frames[frames.length - 1];
+            (own["counter-reset"] ? own["counter-reset"].list : []).forEach(function(c) {
+                var at = frame.filter(function(x) { return x.name === c[0]; })[0];
+                if (at) {
+                    at.value = c[1];
+                } else {
+                    frame.push({ name: c[0], value: c[1] });
+                }
+            });
+            (own["counter-increment"] ? own["counter-increment"].list : []).forEach(function(c) {
+                innermost(c[0]).value += c[1];
+            });
+            (own["counter-set"] ? own["counter-set"].list : []).forEach(function(c) {
+                innermost(c[0]).value = c[1];
+            });
+        }
+        var seen = wanted.has(raw) ? { before: snapshot() } : null;
+        frames.push([]);
+        _rawElementChildren(raw).forEach(visit);
+        frames.pop();
+        if (seen) {
+            seen.after = snapshot();
+            out.set(raw, seen);
+        }
+    };
+    var top = _unwrap(document.documentElement);
+    if (top) {
+        visit(top);
+    }
+    return out;
+}
+
+function _counterText(part, seen) {
+    var name = part.counter !== undefined ? part.counter : part.counters;
+    var values = seen.filter(function(c) { return c[0] === name; }).map(function(c) { return c[1]; });
+    if (values.length === 0) {
+        values = [0];
+    }
+    if (part.counter !== undefined) {
+        return _counterFormat(values[values.length - 1], part.style);
+    }
+    return values.map(function(v) { return _counterFormat(v, part.style); }).join(part.sep);
+}
+
 function _pseudoHolder(raw) {
-    return typeof raw.text === "string" ? raw : _findTextChild(raw);
+    if (typeof raw.text === "string") {
+        return raw;
+    }
+    return _pseudoLines(raw) ? null : _findTextChild(raw);
+}
+
+// An element whose content is on lines: its generated text is a run there.
+function _pseudoLines(raw) {
+    for (var i = 0; raw.children && i < raw.children.length; ++i) {
+        if (_isLines(raw.children[i])) {
+            return raw.children[i];
+        }
+    }
+    return null;
+}
+
+// The run of generated text at a side of the lines, which no script sees: its
+// model has no node but the text.
+function _pseudoRun(raw, side) {
+    var made = _meta(raw).pseudoRuns;
+    if (made && made[side] && made[side].parent) {
+        return _vModelOf(made[side]);
+    }
+    var lines = _pseudoLines(raw);
+    if (!lines || lines.children.length === 0) {
+        return null;
+    }
+    var run = lines.children[side === "before" ? 0 : lines.children.length - 1];
+    var model = _vModelOf(run);
+    return model && model.kids.length > 0 && model.kids.every(function(k) { return k.gen; }) ? model : null;
+}
+
+function _pseudoNewRun(raw, side) {
+    var lines = _pseudoLines(raw);
+    var item = Qt.createQmlObject("import QtQuick; Text { property string eldurInline: \"\" }", _qobjectParent());
+    var k = _vLiveBase(lines);
+    item.eldurInline = JSON.stringify({ bare: false, hoisted: true, html: false, k: k, pre: false,
+        strike: false, underline: false, kids: [{ gen: { text: "", c: _pseudoLook(k, {}) } }] });
+    item.font = lines.font;
+    item.color = lines.color;
+    item.wrapMode = 1; // Text.WordWrap
+    item.renderType = 1; // Text.NativeRendering
+    var after = [];
+    for (var i = 0; side === "before" && i < lines.children.length; ++i) {
+        after.push(lines.children[i]);
+    }
+    item.parent = lines;
+    after.forEach(function(c) {
+        c.parent = null;
+        c.parent = lines;
+    });
+    var model = _vModelOf(item);
+    model.kids[0].pseudo = true;
+    var m = _meta(raw);
+    m.pseudoRuns = m.pseudoRuns || {};
+    m.pseudoRuns[side] = item;
+    return model;
+}
+
+function _pseudoSetRuns(raw, before, after, baseline, looks) {
+    var m = _meta(raw);
+    // Generated text the element's own Text held before it had lines.
+    var own = _findTextChild(raw);
+    if (own && m.pseudo && !m.pseudo.model && own.text !== "") {
+        own.text = _pseudoOwn(raw, own.text);
+        _layoutChanged(raw);
+        _gTouch();
+    }
+    var first = _pseudoRun(raw, "before");
+    var last = _pseudoRun(raw, "after");
+    // One run alone is the side the converter wrote: the side whose text it has.
+    if (first && first === last) {
+        var had = first.kids.map(function(k) { return k.gen.text; }).join("");
+        if (had === after && had !== before) {
+            first = null;
+        } else {
+            last = null;
+        }
+    }
+    if (!first && before !== "" && !baseline) {
+        first = _pseudoNewRun(raw, "before");
+    }
+    if (!last && after !== "" && !baseline) {
+        last = _pseudoNewRun(raw, "after");
+    }
+    var put = function(model, text, decls) {
+        if (!model) {
+            return;
+        }
+        var now = model.kids.map(function(k) { return k.gen.text; }).join("");
+        var c = _pseudoLook(_vBase(model), decls);
+        if (baseline && now === text) {
+            return;
+        }
+        if (now === text && model.kids.length === 1 && JSON.stringify(model.kids[0].gen.c) === JSON.stringify(c)) {
+            return;
+        }
+        model.kids = [{ gen: { text: text, c: c }, pseudo: true }];
+        _vRender(model);
+        _layoutChanged(model.text.parent);
+    };
+    put(first, before, looks.before);
+    put(last, after, looks.after);
+    m.pseudo = { before: before, after: after, model: true, look: JSON.stringify(looks) };
 }
 
 // `str` without what generated text the element holds.
@@ -1993,20 +2251,47 @@ function _pseudoWrapped(raw, str) {
 
 function _pseudoFlush(baseline) {
     var seen = new Map();
+    var numbered = null;
+    if (_counterRules.length > 0 || _pseudoRules.some(_counterUsed)) {
+        var wanted = new Set();
+        _pseudoRules.forEach(function(rule) {
+            if (_counterUsed(rule)) {
+                var at = document.querySelectorAll(rule.sel);
+                for (var w = 0; w < at.length; ++w) {
+                    wanted.add(_unwrap(at[w]));
+                }
+            }
+        });
+        numbered = wanted.size > 0 ? _counterValues(wanted) : null;
+    }
     _pseudoRules.forEach(function(rule, order) {
         var found = document.querySelectorAll(rule.sel);
         for (var i = 0; i < found.length; ++i) {
             var raw = _unwrap(found[i]);
-            if (!raw || raw.__eldurInline || !_pseudoHolder(raw)) {
+            if (!raw || raw.__eldurInline || (!_pseudoHolder(raw) && !_pseudoLines(raw))) {
                 continue;
             }
-            var entry = seen.get(raw) || { before: null, after: null };
+            var entry = seen.get(raw) || { before: null, after: null, looks: { before: {}, after: {} } };
             var side = rule.after ? "after" : "before";
             var rank = rule.spec[0] * 1e6 + rule.spec[1] * 1e3 + rule.spec[2];
-            if (!entry[side] || rank > entry[side].rank
-                || (rank === entry[side].rank && order > entry[side].order)) {
+            (rule.decls || []).forEach(function(d) {
+                var weight = (d[2] ? 1e9 : 0) + rank;
+                var had = entry.looks[side][d[0]];
+                if (!had || weight > had.weight || (weight === had.weight && order >= had.order)) {
+                    entry.looks[side][d[0]] = { value: d[1], weight: weight, order: order };
+                }
+            });
+            if (!rule.drawOnly && (!entry[side] || rank > entry[side].rank
+                || (rank === entry[side].rank && order > entry[side].order))) {
+                var counted = numbered && numbered.get(raw);
                 var text = rule.parts.map(function(part) {
-                    return typeof part === "string" ? part : (getAttribute(raw, part.attr) || "");
+                    if (typeof part === "string") {
+                        return part;
+                    }
+                    if (part.attr !== undefined) {
+                        return getAttribute(raw, part.attr) || "";
+                    }
+                    return counted ? _counterText(part, rule.after ? counted.after : counted.before) : "";
                 }).join("");
                 entry[side] = { rank: rank, order: order, text: text };
             }
@@ -2016,7 +2301,13 @@ function _pseudoFlush(baseline) {
     var next = new Set();
     seen.forEach(function(entry, raw) {
         next.add(raw);
-        _pseudoSet(raw, entry.before ? entry.before.text : "", entry.after ? entry.after.text : "", baseline);
+        var look = function(side) {
+            var out = {};
+            Object.keys(entry.looks[side]).forEach(function(prop) { out[prop] = entry.looks[side][prop].value; });
+            return out;
+        };
+        _pseudoSet(raw, entry.before ? entry.before.text : "", entry.after ? entry.after.text : "", baseline,
+            { before: entry.before ? look("before") : {}, after: entry.after ? look("after") : {} });
     });
     _pseudoShown.forEach(function(raw) {
         if (!next.has(raw)) {
@@ -2029,8 +2320,62 @@ var _pseudoShown = new Set();
 
 // A `Text` with a model renders from it: generated text is a node there, which
 // no script reads, and a leaf the converter wrote it into gives it back.
-function _pseudoInModel(model, raw, before, after, baseline) {
+// How generated text is drawn: the element's text, and what the rules on its
+// `::before` or `::after` say.
+function _pseudoLook(base, decls) {
+    var c = {
+        color: base.color, weight: base.weight, italic: base.italic, size: base.size, family: base.family,
+        us: base.us, kw: base.kw, visible: base.visible !== false, underline: false, strike: false,
+        bg: "rgba(0, 0, 0, 0)", display: "inline"
+    };
+    Object.keys(decls || {}).forEach(function(prop) {
+        _vApply(c, prop, decls[prop], base);
+    });
+    if (decls && (decls["font-size"] !== undefined || decls["font-family"] !== undefined) && c.us !== undefined) {
+        c.size = c.family !== "monospace" ? c.us : c.kw !== undefined ? _V_MONO_SIZES[c.kw] : c.us * 13 / 16;
+    }
+    return c;
+}
+
+// Generated text a `Text` cannot draw in its own font: it goes in a model.
+function _pseudoOwnFont(base, c) {
+    return c.size !== base.size || EldurFonts.family(c.family) !== EldurFonts.family(base.family);
+}
+
+// The generated text the converter or a template wrote at either end of a
+// model: the rules' text, until they say otherwise.
+function _pseudoAdopt(model) {
+    var kids = model.kids;
+    var lead = 0;
+    while (lead < kids.length && kids[lead].gen) {
+        ++lead;
+    }
+    var tail = kids.length;
+    while (tail > lead && kids[tail - 1].gen) {
+        --tail;
+    }
+    var had = { before: "", after: "" };
+    kids.forEach(function(k, i) {
+        if (k.gen && !k.pseudo && (i < lead || i >= tail)) {
+            k.pseudo = true;
+            had[i < lead && (lead < kids.length || i === 0) ? "before" : "after"] += k.gen.text;
+        }
+    });
+    return had;
+}
+
+function _pseudoInModel(model, raw, before, after, baseline, looks) {
     var m = _meta(raw);
+    if (!m.pseudo) {
+        var had = _pseudoAdopt(model);
+        if (had.before !== "" || had.after !== "") {
+            if (had.before === before && had.after === after) {
+                m.pseudo = { before: before, after: after, model: true, look: JSON.stringify(looks || { before: {}, after: {} }) };
+                return;
+            }
+            baseline = false;
+        }
+    }
     if (baseline) {
         var leaves = model.kids.filter(function(k) { return k.vtext; });
         var first = leaves[0], last = leaves[leaves.length - 1];
@@ -2046,29 +2391,52 @@ function _pseudoInModel(model, raw, before, after, baseline) {
         }
     }
     var kids = model.kids.filter(function(k) { return !k.pseudo; });
+    looks = looks || { before: {}, after: {} };
     if (before) {
-        kids.unshift({ gen: { text: before, c: {} }, pseudo: true });
+        kids.unshift({ gen: { text: before, c: _pseudoLook(_vBase(model), looks.before) }, pseudo: true });
     }
     if (after) {
-        kids.push({ gen: { text: after, c: {} }, pseudo: true });
+        kids.push({ gen: { text: after, c: _pseudoLook(_vBase(model), looks.after) }, pseudo: true });
     }
     model.kids = kids;
-    m.pseudo = { before: before, after: after, model: true };
+    m.pseudo = { before: before, after: after, model: true, look: JSON.stringify(looks) };
     if (!baseline) {
         _vRender(model);
     }
 }
 
-function _pseudoSet(raw, before, after, baseline) {
+function _pseudoSet(raw, before, after, baseline, looks) {
     var m = _meta(raw);
     var was = m.pseudo || { before: "", after: "" };
-    if (was.before === before && was.after === after) {
+    looks = looks || { before: {}, after: {} };
+    var look = JSON.stringify(looks);
+    var holder = _pseudoHolder(raw);
+    if (was.before === before && was.after === after && (was.look || look) === look
+        && (holder || !m.pseudo || m.pseudo.model)) {
         return;
     }
-    var holder = _pseudoHolder(raw);
+    if (!holder) {
+        _pseudoSetRuns(raw, before, after, baseline, looks);
+        return;
+    }
     var model = _vOwnModel(raw) || _vExisting(raw);
+    if (!model && !baseline && typeof holder.text === "string" && holder.textFormat === 0) {
+        // Text drawn otherwise than the element's is a node of the element's model.
+        var live = _vLiveBase(holder);
+        var plainLook = JSON.stringify(_pseudoLook(live, {}));
+        var differs = function(text, decls) {
+            var c = _pseudoLook(live, decls);
+            return text !== "" && (_pseudoOwnFont(live, c) || JSON.stringify(c) !== plainLook);
+        };
+        if (differs(before, looks.before) || differs(after, looks.after)) {
+            var own = _pseudoOwn(raw, holder.text);
+            m.pseudo = null;
+            _meta(holder).explicitText = own;
+            model = _vEnsureModel(holder);
+        }
+    }
     if (model) {
-        _pseudoInModel(model, raw, before, after, baseline);
+        _pseudoInModel(model, raw, before, after, baseline, looks);
         return;
     }
     if (baseline) {
@@ -2290,7 +2658,8 @@ function _appendTarget(raw) {
         return _isPlainTextItem(raw) ? _flowInText(raw) : raw;
     }
     var flow = Qt.createQmlObject("import QtQuick; import QtQuick.Layouts; ColumnLayout { spacing: 0 }", raw, "eldur_flow");
-    var extra = raw.implicitHeight - text.implicitHeight;
+    // An empty text's height is already out of the box's.
+    var extra = raw.implicitHeight - (text.text === "" ? 0 : text.implicitHeight);
     flow.x = Qt.binding(function() { return text.x; });
     flow.y = Qt.binding(function() { return text.y + (text.text === "" ? 0 : text.height); });
     flow.width = Qt.binding(function() { return text.width; });
@@ -2577,17 +2946,21 @@ function _tableCollapses(host) {
     if (host.eldurOuterEdge > 0) {
         return true;
     }
-    var styles = _meta(host).styles || {};
+    // A static table's grid sits inside the element that holds its style.
+    var table = _meta(host).hostBox || host;
+    var styles = _meta(table).styles || {};
     var written = styles.borderCollapse || styles["border-collapse"];
     if (written === undefined && _gHasCascade()) {
-        written = _gComputed(host, "border-collapse");
+        written = _gComputed(table, "border-collapse");
     }
     return String(written).trim() === "collapse";
 }
 
 // A cell's CSS width is a floor on its column, as its text is.
 function _tableCellWidth(item, exact) {
-    var wanted = exact ? item.implicitWidth : Math.ceil(item.implicitWidth);
+    // A box's implicit width is the last width it was given, not what it needs.
+    var needs = _gIsBox(item) ? _gIntrinsic(item, _gStyle(item)) : item.implicitWidth;
+    var wanted = exact ? needs : Math.ceil(needs);
     if (_gHasCascade()) {
         var s = _gStyle(item);
         var px = /px$/.test(String(s.width)) ? _gPx(s.width, 0, s.fontSize, s.rootSize) : null;
@@ -2739,23 +3112,34 @@ function _tablePlaceAll(host, live) {
     sections.forEach(function(group) {
         var end = rows.length + group.rows.length;
         group.rows.forEach(function(item) {
-            rows.push({ item: item, end: end });
+            rows.push({ item: item, end: end, section: group.item || null });
         });
     });
     var placed = _tablePlace(rows);
+    _tableShadeBoxes(host, rows, placed);
     // What a cell needs changes as its text wraps in the width given below, and
     // whenever a script writes to it afterwards.
     placed.cells.forEach(function(c) {
         var cm = _meta(c.item);
         if (!cm.tableWatched) {
             cm.tableWatched = true;
-            var again = function() { _layoutChanged(c.item); };
+            // A cell the cascade styles is sized by the pass that places the
+            // table, which the generic layout reruns when its content changes;
+            // following its own size too would start that pass on every read.
+            var again = function() {
+                if (!_gIsBox(c.item)) {
+                    _layoutChanged(c.item);
+                }
+            };
             c.item.implicitHeightChanged.connect(again);
             c.item.implicitWidthChanged.connect(again);
         }
     });
     var measure = function() {
         return placed.cells.map(function(c) {
+            if (_gIsBox(c.item)) {
+                return _tableBoxNeeds(c);
+            }
             var text = _findTextChild(c.item);
             return {
                 tableSlot: [c.row, c.column, c.rowSpan, c.columnSpan],
@@ -2771,12 +3155,25 @@ function _tablePlaceAll(host, live) {
     // beside it and its top border with the row above. It has all four of its own,
     // where a static cell paints the sides it won.
     var collapsed = _tableCollapses(host);
+    var at = {};
+    placed.cells.forEach(function(c) { at[c.row + "," + c.column] = c; });
+    // A static cell that won all its sides paints them as a made one does; beside
+    // a made cell, which paints its left border whatever it won, they share one.
+    var paintsRight = function(c) {
+        if (_tableOwnBorders(c.item)) {
+            return true;
+        }
+        var next = at[c.row + "," + (c.column + c.columnSpan)];
+        return Boolean(c.item.border) && c.item.border.width > 0 && Boolean(next) && _tableOwnBorders(next.item);
+    };
+    // A cell's right border is the next one's left: that column holds it, so the
+    // last column alone keeps a whole one.
     var sharedAcross = function(c) {
-        return collapsed && c.column > 0 && c.item.eldurTemplate !== undefined && c.item.border
+        return collapsed && c.column + c.columnSpan < placed.columns && paintsRight(c)
             ? c.item.border.width : 0;
     };
     var sharedRight = function(c) {
-        return collapsed && c.item.eldurTemplate !== undefined && c.item.border ? c.item.border.width : 0;
+        return collapsed && paintsRight(c) ? c.item.border.width : 0;
     };
     var adapters = measure().map(function(a, i) {
         var over = sharedAcross(placed.cells[i]);
@@ -2847,7 +3244,12 @@ function _tablePlaceAll(host, live) {
         var last = c.column + c.columnSpan >= widths.length;
         c.item.x = left[c.column] || 0;
         _meta(c.item).tableBorderOver = last ? 0 : sharedRight(c);
+        _meta(c.item).tableCellInset = collapsed && (_tableOwnBorders(c.item) || paintsRight(c))
+            ? c.item.border.width / 2 : 0;
         c.item.width = acrossFrom(c) + _meta(c.item).tableBorderOver;
+        if (_gIsBox(c.item)) {
+            _gPlace(c.item, c.item.width, { forceW: c.item.width }, null);
+        }
     });
     // Text wraps in the width it now has.
     var zeros = rows.map(function() { return 0; });
@@ -2855,8 +3257,7 @@ function _tablePlaceAll(host, live) {
         zeros[r] = row.item.eldurMinHeight || 0;
     });
     var shared = function(c) {
-        return collapsed && c.row > 0 && c.item.eldurTemplate !== undefined && c.item.border
-            ? c.item.border.width : 0;
+        return collapsed && c.row > 0 && _tableOwnBorders(c.item) ? c.item.border.width : 0;
     };
     var heights = rows.length > 0
         ? _root.tableRowHeights({
@@ -2873,9 +3274,14 @@ function _tablePlaceAll(host, live) {
         }
         var over = shared(c);
         c.item.y = -over;
-        c.item.height = sum + over;
+        if (_gIsBox(c.item)) {
+            _tableBoxFill(c.item, sum + over);
+        } else {
+            c.item.height = sum + over;
+        }
     });
     rows.forEach(function(row, r) {
+        _meta(row.item).tableCollapsed = collapsed;
         row.item.implicitWidth = total;
         row.item.implicitHeight = heights[r];
         if (row.item.parent && row.item.parent !== host && row.item.parent.spacing !== undefined) {
@@ -2909,6 +3315,89 @@ function _tablePlaceAll(host, live) {
             }
         }
     }
+}
+
+// A cell a template or the cascade made paints all four of its borders; a static
+// one paints only the sides it won.
+function _tableOwnBorders(cell) {
+    return (cell.eldurTemplate !== undefined || _gIsBox(cell)) && Boolean(cell.border);
+}
+
+// What a cell the cascade styles needs, as `measure` hands the solver: its
+// content on one line, its narrowest, and its height in the width it has now.
+function _tableBoxNeeds(c) {
+    var s = _gStyle(c.item);
+    // Its text is laid out by `_gPaintText`, which lets a snapped column be short.
+    var wide = _tableCellWidth(c.item, true);
+    return {
+        tableSlot: [c.row, c.column, c.rowSpan, c.columnSpan],
+        implicitWidth: wide,
+        implicitHeight: c.item.implicitHeight,
+        minContentWidth: Math.min(_gNarrowest(c.item, s), wide)
+    };
+}
+
+// A cell is as tall as its row, and what it holds sits in the middle of that
+// (`vertical-align: middle` is a cell's default in the UA sheet).
+function _tableBoxFill(cell, height) {
+    var s = _gStyle(cell);
+    var natural = cell.implicitHeight;
+    _gPlace(cell, cell.width, { forceW: cell.width, forceH: height }, null);
+    var align = String(s["vertical-align"] || "middle");
+    var room = Math.max(height - natural, 0);
+    var down = align === "top" || align === "baseline" ? 0 : align === "bottom" ? room : room / 2;
+    if (down > 0) {
+        var kids = cell.children;
+        for (var i = 0; i < kids.length; ++i) {
+            if (!(kids[i].z < 0)) {
+                kids[i].y += down;
+            }
+        }
+    }
+}
+
+// Row and section backgrounds show through a cell the cascade styles, which
+// paints only its own: the cell takes what they add up to.
+function _tableShadeBoxes(host, rows, placed) {
+    if (!placed.cells.some(function(c) { return _gIsBox(c.item); })) {
+        return;
+    }
+    var columns = _tableColumns(host);
+    placed.cells.forEach(function(c) {
+        if (!_gIsBox(c.item)) {
+            return;
+        }
+        var column = columns[c.column] || {};
+        var color = _tableBackground(c.item, c.column,
+            [column.group, column.col, rows[c.row].section, rows[c.row].item]);
+        var shade = color.a > 0 ? String(color) : undefined;
+        _meta(c.item).tableShade = shade;
+    });
+}
+
+// A collapsed table's row reaches to the middle of the borders around it: its
+// outer ones are half the table's, the ones above and below half its
+// neighbours' (CSS 2 §17.6.2). Cells that paint all four of their borders sit
+// at the row's own edges. Left, right, top, bottom.
+function _tableRowInset(row) {
+    if (_tablePartTag(row) !== "tr" || !_meta(row).tableCollapsed) {
+        return [0, 0, 0, 0];
+    }
+    var first = null;
+    var last = null;
+    var across = 0;
+    var up = 0;
+    for (var i = 0; i < row.children.length; ++i) {
+        var cell = row.children[i];
+        if (cell.visible && _tableOwnBorders(cell)) {
+            first = first && first.x <= cell.x ? first : cell;
+            last = last && last.x >= cell.x ? last : cell;
+            across = Math.max(across, cell.border.width / 2);
+            // Below the first row a cell reaches up over the border it shares.
+            up = Math.min(up, cell.y);
+        }
+    }
+    return first ? [first.border.width / 2, last.border.width / 2, across + up, across] : [0, 0, 0, 0];
 }
 
 // The width a live table has comes from its parent's polish, after the cells it
@@ -3483,6 +3972,7 @@ function _polishDown(item) {
 // Takes a node out of the DOM. Never destroys it: a script may hold it and put
 // it back, as with a modal, and bindings of the page may read it by id.
 function _detachNode(raw) {
+    _counterTouch();
     // A browser says so as it goes; Qt only moves the focus, when it gets there.
     if (_in && _in.focused) {
         for (var at = _in.focused; at; at = _gParent(at)) {
@@ -3864,8 +4354,10 @@ function _rawKids(raw, withText) {
             }
             continue;
         }
-        // A run of a line is a text node to a script, not an element.
-        if (!withText && _isLines(container) && _isPlainTextItem(child) && !child.objectName) {
+        // A run of a line is a text node to a script, not an element; what a
+        // script made is one, with an id or without.
+        if (!withText && _isLines(container) && _isPlainTextItem(child) && !child.objectName
+            && !_meta(child).createdTag) {
             continue;
         }
         if (isLayout && _isLayoutSpacer(child)) {
@@ -4035,7 +4527,9 @@ function getText(item) {
     // A tagged one is an element of its own, read with the others below.
     if (textChild && !textChild.eldurTag
         && !(_rawElementChildren(raw).length > 0 && textChild.text.trim() === "")) {
-        return _pseudoOwn(raw, String(textChild.text));
+        // A cell whose generated text has a font of its own holds a model.
+        var cellModel = _vModelOf(textChild);
+        return cellModel ? _vText(cellModel) : _pseudoOwn(raw, String(textChild.text));
     }
     var m = _meta(raw);
     if (m.explicitText !== undefined) {
@@ -5368,12 +5862,21 @@ function getBoundingClientRect(item) {
     var w = (typeof raw.width === "number" ? raw.width : 0) - (_meta(raw).tableBorderOver || 0);
     var h = typeof raw.height === "number" ? raw.height : 0;
     var x = typeof raw.x === "number" ? raw.x : 0;
+    var inset = _tableRowInset(raw);
+    // A collapsed cell, like its row, reaches to the middle of its borders.
+    var half = _meta(raw).tableCellInset || 0;
+    if (half > 0) {
+        w = raw.width;
+        inset = [half, half, half, half];
+    }
+    w -= inset[0] + inset[1];
+    h -= inset[2] + inset[3];
     var y = typeof raw.y === "number" ? raw.y : 0;
     if (typeof raw.mapToItem === "function") {
         var pt = raw.mapToItem(null, 0, 0);
         if (pt) {
-            x = pt.x;
-            y = pt.y - _gGlyphShift(raw);
+            x = pt.x + inset[0];
+            y = pt.y + inset[2] - _gGlyphShift(raw);
         }
         // An inline element is as tall as its font, whatever its line holds.
         if (_isLines(raw) && !_isAnonLines(raw) && _vInlineTag(_nodeTag(raw))
@@ -7088,6 +7591,15 @@ function _gBoxTextToKids(raw) {
     if (!text || !_linesAvailable()) {
         return;
     }
+    // Generated text is no node to take: it goes on the lines as a run of its own.
+    var held = _meta(raw).pseudo;
+    if (held && !held.model) {
+        text.text = _pseudoOwn(raw, text.text);
+        _meta(raw).pseudo = null;
+        _layoutChanged(raw);
+        _gTouch();
+        _pseudoTouch();
+    }
     var model = _vModelOf(text);
     if (!model && text.text === "") {
         return;
@@ -7113,6 +7625,8 @@ function _inlineBecomesLines(raw) {
     next.objectName = name;
     next.font = font;
     next.color = color;
+    // The text is a node of the line from now on.
+    delete m.explicitText;
     if (text !== "") {
         var node = _unwrap(document.createTextNode(text));
         _insertInFlow(next, [node], null);
@@ -7185,6 +7699,7 @@ function _insertRawNodesBefore(container, rawNodes, rawRef) {
 function _insertInFlow(container, rawNodes, rawRef) {
     _layoutChanged(container);
     _gTouch();
+    _counterTouch();
     if (!rawRef && container.children
         && (typeof container.spacing === "number" || typeof container.columnSpacing === "number")) {
         for (var s = container.children.length - 1; s >= 0 && _isLayoutSpacer(container.children[s]); --s) {
@@ -7545,6 +8060,10 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
         m.explicitChecked = oldRaw.checked;
     }
     var childElements = _rawElementChildren(oldRaw);
+    // A line's text runs are nodes among its elements, in their order.
+    if (_isLines(oldRaw) && !_isAnonLines(oldRaw) && m.createdTag) {
+        childElements = _rawChildNodes(oldRaw);
+    }
     // A model's elements stand among its text: taking them alone loses the text.
     var carried = null;
     if (childElements.some(function(k) { return k.__eldurInline; })) {
@@ -8402,7 +8921,11 @@ function wrap(rawItem) {
             _gNameChanged(rawItem, ["#" + was, "#" + s]);
         },
         get tagName() { return _inferTagName(rawItem); },
-        get nodeName() { return _inferTagName(rawItem); },
+        get nodeName() {
+            // "#text" and "#comment" are names, not tags, and are never upper case.
+            var name = _inferTagName(rawItem);
+            return name.charAt(0) === "#" ? name.toLowerCase() : name;
+        },
         get baseURI() { return _getDocumentBaseUrl(); },
         get textContent() { return getText(rawItem); },
         set textContent(v) { setText(rawItem, v); },
@@ -10368,6 +10891,11 @@ function _vHex(css) {
 // Whether the node needs what only RichText has.
 function _vNeedsHtml(kids, pc, family) {
     for (var i = 0; i < kids.length; ++i) {
+        var gen = kids[i].gen;
+        if (gen && gen.c && gen.c.size !== undefined
+            && (gen.c.size !== pc.size || EldurFonts.family(gen.c.family) !== EldurFonts.family(pc.family))) {
+            return true;
+        }
         if (kids[i].kids) {
             var c = _vStyle(kids[i]);
             if ((c.bg !== "rgba(0, 0, 0, 0)" && c.bg !== "transparent")
@@ -10407,9 +10935,24 @@ function _vWriteText(st, data, owner) {
 }
 
 function _vWriteGen(st, gen, pc, owner) {
-    _vWrap(st, gen.c, pc, false, null, function() {
+    // Generated text is no run of its own: a font of its own is in the markup.
+    var c = gen.c || {};
+    var css = [];
+    if (st.html && c.size !== undefined && c.size !== pc.size) {
+        css.push("font-size:" + c.size + "px");
+    }
+    if (st.html && c.family && EldurFonts.family(c.family) !== EldurFonts.family(pc.family)) {
+        css.push("font-family:'" + String(EldurFonts.family(c.family)).replace(/'/g, "") + "'");
+    }
+    if (css.length > 0) {
+        st.out += "<span style=\"" + css.join(";") + "\">";
+    }
+    _vWrap(st, c, pc, false, null, function() {
         _vWriteText(st, gen.text, owner);
     });
+    if (css.length > 0) {
+        st.out += "</span>";
+    }
 }
 
 function _vWrap(st, c, pc, isLink, href, body) {
@@ -10830,6 +11373,30 @@ function _vBlockFont(raw, name) {
     return true;
 }
 
+// A script can fill an element before it is in the page, when the block has
+// no cascade yet and its model took Qt's default font; the cascade brings the
+// font the runs inherit.
+function _vInheritFont(text, s) {
+    var model = _vModelOf(text);
+    if (!model || model.select || model.hoisted || model.text !== text) {
+        return;
+    }
+    var family = _gFamily(s["font-family"]);
+    if (model.k.size === s.fontSize && model.k.family === family) {
+        return;
+    }
+    var line = _gLineHeight(s);
+    model.k.size = s.fontSize;
+    model.k.us = s.fontSize;
+    model.k.kw = undefined;
+    model.k.family = family;
+    model.k.lf = s.lineFactor === null ? undefined : s.lineFactor;
+    model.k.lh = line === null ? undefined : line;
+    model.fontMoved = true;
+    ++_vGen;
+    _vRender(model);
+}
+
 function _vRunsFor(model) {
     if (model.select || _vRunning) {
         return false;
@@ -11025,6 +11592,32 @@ function _vTwin(model) {
             + "wrapMode: parent.wrapMode; lineHeight: parent.lineHeight; lineHeightMode: parent.lineHeightMode; "
             + "horizontalAlignment: parent.horizontalAlignment }", text, "eldur_twin");
         _meta(model.twin).isFragment = true;
+        if (_meta(text).gBeside) {
+            _gCutTwin(text, model.twin);
+        } else if (typeof text.eldurCut === "function" || (text.parent && typeof text.parent._placeLine === "function")) {
+            // The converter's floats, or the line boxes a run is on, place the
+            // text's lines; its twin's go to the same places.
+            var twin = model.twin;
+            var lines = text.parent;
+            twin.lineLaidOut.connect(function(line) {
+                if (typeof text.eldurCut === "function") {
+                    text.eldurCut(line);
+                } else if (lines && typeof lines._placeLine === "function") {
+                    // A placed line keeps the words it was measured with; the
+                    // twin's breaks there too, a pixel being less than a word.
+                    // Where the line went is added from the run's places.
+                    // The space the twin drops is on the drawn first line.
+                    var run = lines._runs.get(text);
+                    var at = run && run.place && run.place[line.number];
+                    if (at) {
+                        var dropped = line.number === 0 && text.textFormat === 0 && String(text.text).charAt(0) === " "
+                            ? _vMetrics(text).advanceWidth(" ") : 0;
+                        line.width = Math.max(1, at.width - dropped + 1);
+                    }
+                }
+            });
+            twin.forceLayout();
+        }
     }
     if (model.twinText === null || model.twinText === undefined) {
         var st = _vMarkup(model, true);
@@ -11041,9 +11634,10 @@ function _vTwin(model) {
 
 function _vHitAt(model, x, y) {
     var twin = _vTwin(model);
-    // A plain `Text` draws the space its marked twin drops.
+    // A plain `Text` draws the space its marked twin drops, on its first line.
     var drawn = model.text;
-    if (drawn.textFormat === 0 && String(drawn.text).charAt(0) === " ") {
+    var firstLine = twin.contentHeight / Math.max(1, twin.lineCount);
+    if (drawn.textFormat === 0 && String(drawn.text).charAt(0) === " " && y < firstLine) {
         x -= _vMetrics(drawn).advanceWidth(" ");
     }
     var link = twin.linkAt(x, y);
@@ -13766,7 +14360,8 @@ function _vToReal(v) {
         var plain = _unwrap(document.createTextNode(v.data));
         var said = _itemMeta.get(v);
         if (said && said.wrapper) {
-            // Whoever holds the node still means this text.
+            // Whoever holds the node still means this text, which is a text node.
+            said.createdTag = _meta(plain).createdTag;
             _itemMeta.delete(v);
             _itemMeta.set(plain, said);
             said.raw = plain;
@@ -13813,8 +14408,12 @@ function _vToReal(v) {
         made.font.strikeout = look.strike;
         made.font.pixelSize = look.size;
     }
-    if (kids && !_vTryInsert(made, kids, null)) {
-        _insertChildren(made, kids, null);
+    // The element is an item now, as its children are: a created element taking
+    // a model's nodes would itself go back into a model it is no longer in.
+    if (kids) {
+        _insertChildren(made, kids.map(_vRunToItem), null);
+        // A box among them makes the element a line, a new item.
+        made = _gCurrent(made);
     }
     var keys = Object.keys(m.styles);
     for (var i = 0; i < keys.length; ++i) {
@@ -14149,7 +14748,7 @@ function _vStaysInline(node, into, ref) {
         return false;
     }
     // A span the page's CSS makes a box is a box.
-    if (!node.__eldurInline && tag !== "#text" && _gActive()) {
+    if (!node.__eldurInline && tag !== "#text" && _gHasCascade()) {
         return _gStyleInto(node, into, ref).display === "inline";
     }
     return true;
@@ -15395,7 +15994,11 @@ var _gWarned = {};
 var _gMarginHelper = null;
 
 var _G_CONTROL = /^(button|input|textarea|select|img|table|thead|tbody|tfoot|tr|td|th|caption|colgroup|col|canvas|video|audio|svg|iframe)$/;
-var _G_INHERITED = ["color", "font-family", "font-weight", "font-style", "text-align", "visibility", "white-space"];
+var _G_INHERITED = ["color", "font-family", "font-weight", "font-style", "text-align", "visibility", "white-space",
+    "border-collapse", "border-spacing"];
+var _G_INHERITED_INITIAL = { "color": "rgb(0, 0, 0)", "font-family": "", "font-weight": "400", "font-style": "normal",
+    "text-align": "start", "visibility": "visible", "white-space": "normal", "border-collapse": "separate",
+    "border-spacing": "0px" };
 var _G_INITIAL = {
     "display": "inline", "position": "static", "box-sizing": "content-box", "opacity": "1",
     "background-color": "rgba(0, 0, 0, 0)", "flex-direction": "row", "flex-wrap": "nowrap",
@@ -15418,7 +16021,7 @@ var _G_INITIAL = {
     "background-position-x": "0%", "background-position-y": "0%", "background-repeat": "repeat",
     "text-shadow": "none", "outline-style": "none", "outline-width": "medium",
     "outline-color": "currentcolor", "outline-offset": "0px", "object-fit": "fill", "object-position": "50% 50%", "background-origin": "padding-box", "background-clip": "border-box", "background-attachment": "scroll",
-    "float": "none", "clear": "none"
+    "float": "none", "clear": "none", "vertical-align": "baseline"
 };
 // The controls whose box the UA sheet in the rule table describes: padding and
 // border are the control's insets.
@@ -15485,8 +16088,55 @@ function _gBoxSource(tag, outOfFlow) {
         + "Text { " + _NATIVE_TEXT + "visible: text !== \"\"; wrapMode: Text.Wrap; color: \"black\"; font.pixelSize: 16 } }";
 }
 
+// A cell is a box too: what it holds flows as in any block, and `_tableLayout`
+// gives it its width and its row's height.
 function _gWantsBox(tag) {
-    return !_G_CONTROL.test(tag) && !/^(#text|option|optgroup|script|style|template)$/.test(tag);
+    return (!_G_CONTROL.test(tag) || /^t[dh]$/.test(tag))
+        && !/^(#text|option|optgroup|script|style|template)$/.test(tag);
+}
+
+function _gIsCell(raw) {
+    return _gIsBox(raw) && /^t[dh]$/.test(_meta(raw).createdTag || "");
+}
+
+// The narrowest a box's content goes: its longest word, or its widest child's.
+function _gNarrowest(raw, s) {
+    var e = _gEdges(raw, s, 0);
+    var frame = e.pl + e.pr + e.bl + e.br;
+    var fixed = _gPx(s.width, null, s.fontSize, s.rootSize);
+    if (fixed !== null) {
+        return _gOuterWidth(s, e, fixed);
+    }
+    var words = function(text) {
+        var white = s["white-space"];
+        if (white === "nowrap" || white === "pre") {
+            return _gTextAdvance(text, _gFontOf(s));
+        }
+        var metrics = _vMetrics(text);
+        metrics.font = _gFontOf(s);
+        var widest = 0;
+        String(text.text).split(/\s+/).forEach(function(word) {
+            widest = Math.max(widest, metrics.advanceWidth(word));
+        });
+        return widest;
+    };
+    if (!_gIsBox(raw)) {
+        return _meta(raw).createdTag && _isPlainTextItem(raw) ? words(raw) + frame : _gIntrinsic(raw, s);
+    }
+    var best = 0;
+    var text = _gTextOf(raw);
+    if (text && text.text !== "") {
+        best = words(text);
+    }
+    _gBoxKids(raw).forEach(function(kid) {
+        var ks = _gStyle(kid);
+        if (ks.display === "none" || _gOutOfFlow(ks)) {
+            return;
+        }
+        var ke = _gEdges(kid, ks, 0);
+        best = Math.max(best, _gNarrowest(kid, ks) + (ke.ml || 0) + (ke.mr || 0));
+    });
+    return best + frame;
 }
 
 // --- The cascade -----------------------------------------------------------
@@ -15998,12 +16648,12 @@ function _gStyle(raw) {
         var name = _G_INHERITED[h];
         var text = value(name);
         if (text === "initial") {
-            text = { "color": "rgb(0, 0, 0)", "font-family": "", "font-weight": "400", "font-style": "normal", "text-align": "start", "visibility": "visible", "white-space": "normal" }[name];
+            text = _G_INHERITED_INITIAL[name];
         } else if (text === "inherit") {
             if (inherited) {
                 text = inherited[name];
             } else {
-                text = { "color": "rgb(0, 0, 0)", "font-family": "", "font-weight": "400", "font-style": "normal", "text-align": "start", "visibility": "visible", "white-space": "normal" }[name];
+                text = _G_INHERITED_INITIAL[name];
             }
         }
         s[name] = text;
@@ -16189,9 +16839,14 @@ function _gIntrinsic(raw, s) {
     var e = _gEdges(raw, s, 0);
     var frame = e.pl + e.pr + e.bl + e.br;
     if (!_gIsBox(raw)) {
-        return _gPx(s.width, null, s.fontSize, s.rootSize) !== null
-            ? _gOuterWidth(s, e, _gPx(s.width, null, s.fontSize, s.rootSize))
-            : (raw.implicitWidth || 0) + (_gControlFrame(raw) ? frame : 0);
+        if (_gPx(s.width, null, s.fontSize, s.rootSize) !== null) {
+            return _gOuterWidth(s, e, _gPx(s.width, null, s.fontSize, s.rootSize));
+        }
+        // A created text has its old font until it is painted.
+        if (_meta(raw).createdTag && _isPlainTextItem(raw) && raw.text !== "") {
+            return _gTextAdvance(raw, _gFontOf(s)) + frame;
+        }
+        return (raw.implicitWidth || 0) + (_gControlFrame(raw) ? frame : 0);
     }
     var fixed = _gPx(s.width, null, s.fontSize, s.rootSize);
     if (fixed !== null) {
@@ -16200,7 +16855,7 @@ function _gIntrinsic(raw, s) {
     var best = 0;
     var text = _gTextOf(raw);
     if (text && text.text !== "") {
-        best = _gTextAdvance(text);
+        best = _gTextAdvance(text, _gFontOf(s));
     }
     var kids = _gBoxKids(raw);
     var row = _gIsFlex(s) && String(s["flex-direction"]).indexOf("row") === 0;
@@ -16228,14 +16883,16 @@ function _gIntrinsic(raw, s) {
 
 // Qt's implicit width reaches past a line's last advance to its ink; CSS sizes
 // a box to the advances. One line of plain text in one font is known.
-function _gTextAdvance(text) {
+// A style just changed is measured in the font it gives, which the text gets
+// only when it is painted.
+function _gTextAdvance(text, font) {
     var plain = String(text.text);
     var flat = text.textFormat === 0; // Text.PlainText
     if (/\n/.test(plain) || !flat && /</.test(plain)) {
         return text.implicitWidth;
     }
     var metrics = _vMetrics(text);
-    metrics.font = text.font;
+    metrics.font = font || text.font;
     // Text.RichText and Text.StyledText take off a run's edge spaces.
     var styled = text.textFormat === 1 || text.textFormat === 4;
     return metrics.advanceWidth(styled ? plain.trim().replace(/\s+/g, " ") : plain);
@@ -16371,6 +17028,7 @@ function _gPlaceLeaf(raw, s, e, used, fixedH, margins, frameH) {
     var height = fixedH;
     if (height === null) {
         height = raw.implicitHeight;
+        _gFollowOwnHeight(raw);
         if (_gLabelled(raw, s) && raw.contentItem.lineCount > 1) {
             var line = _gLineHeight(s);
             height += (raw.contentItem.lineCount - 1) * (line === null ? _gControlLine(s) : line);
@@ -16380,6 +17038,21 @@ function _gPlaceLeaf(raw, s, e, used, fixedH, margins, frameH) {
         raw.height = height;
     }
     return margins;
+}
+
+// A layout in a box, such as a table, sizes itself after the pass that placed
+// it, and again when a script changes its rows: the box then lays out anew.
+function _gFollowOwnHeight(raw) {
+    var m = _meta(raw);
+    if (m.gFollowsHeight || !_gIsLayout(raw)) {
+        return;
+    }
+    m.gFollowsHeight = true;
+    raw.implicitHeightChanged.connect(function() {
+        if (_gIsBox(raw.parent)) {
+            _gTouch();
+        }
+    });
 }
 
 // What flows in a box, text nodes too: not its own `Text`, not virtual nodes.
@@ -16411,6 +17084,23 @@ function _gFlowGroups(raw) {
         } else {
             run = null;
             groups.push({ kid: kids[i] });
+        }
+    }
+    // Generated text is no child, and starts or ends the lines it is on.
+    var made = _meta(raw).pseudoRuns;
+    if (made && made.before && made.before.parent) {
+        if (groups.length > 0 && groups[0].run) {
+            groups[0].run.unshift(made.before);
+        } else {
+            groups.unshift({ run: [made.before], lines: null });
+        }
+    }
+    if (made && made.after && made.after.parent) {
+        var last = groups[groups.length - 1];
+        if (last && last.run) {
+            last.run.push(made.after);
+        } else {
+            groups.push({ run: [made.after], lines: null });
         }
     }
     return groups;
@@ -16466,13 +17156,52 @@ function _gArrangeLines(raw, groups) {
     if (_gLinesMatch(raw, groups)) {
         return;
     }
+    // What is in no group, an out-of-flow box's slot, keeps its place among
+    // them: a script reads the children in this order.
     var old = [];
-    for (var i = 0; i < raw.children.length; ++i) {
-        if (_isAnonLines(raw.children[i])) {
-            old.push(raw.children[i]);
+    var order = [];
+    var groupOf = function(item) {
+        for (var g = 0; g < groups.length; ++g) {
+            if (groups[g].kid === item || groups[g].run && groups[g].run.indexOf(item) !== -1) {
+                return groups[g];
+            }
         }
+        return null;
+    };
+    var place = function(item) {
+        var group = groupOf(item);
+        if (order.indexOf(group || item) === -1) {
+            order.push(group || item);
+        }
+    };
+    var before = [];
+    for (var i = 0; i < raw.children.length; ++i) {
+        before.push(raw.children[i]);
     }
+    before.forEach(function(child) {
+        if (_isAnonLines(child)) {
+            old.push(child);
+            for (var k = 0; k < child.children.length; ++k) {
+                if (groupOf(child.children[k])) {
+                    place(child.children[k]);
+                }
+            }
+        } else {
+            place(child);
+        }
+    });
     groups.forEach(function(group) {
+        if (order.indexOf(group) === -1) {
+            order.push(group);
+        }
+    });
+    order.forEach(function(group) {
+        if (groups.indexOf(group) === -1) {
+            var item = group;
+            item.parent = null;
+            item.parent = raw;
+            return;
+        }
         if (group.kid) {
             group.kid.parent = null;
             group.kid.parent = raw;
@@ -16490,8 +17219,12 @@ function _gArrangeLines(raw, groups) {
 }
 
 // One box's run of inline content on the one layouter there is. Returns its height.
-function _gLayOutRun(group, s, innerW, x, y) {
+function _gLayOutRun(group, s, innerW, x, y, cut) {
     var lines = group.lines;
+    var ex = cut ? { left: cut.left, from: cut.from - x, to: cut.to - x, top: cut.top - y, bottom: cut.bottom - y } : null;
+    if (JSON.stringify(lines.exclusion || null) !== JSON.stringify(ex)) {
+        lines.exclusion = ex;
+    }
     var whitespace = s["white-space"];
     lines.font = _gFontOf(s);
     lines.color = _gQtColor(s.color);
@@ -16552,11 +17285,18 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
     }
     var collapseTop = e.pt === 0 && e.bt === 0 && open;
     var collapseBottom = autoH && e.pb === 0 && e.bb === 0 && open;
+    // Floats beside this box in its parent's flow, in this box's terms: every
+    // line in the formatting context is cut by them (CSS 2 §9.5), not only the
+    // parent's own.
+    var around = open ? _meta(raw).gAround || null : null;
     var text = _gTextOf(raw);
     if (text && text.text !== "") {
         _gPaintText(text, s, innerW, raw);
         text.x = x;
         text.y = y + _gLineShift(text, s);
+        if (around || _meta(text).gBeside) {
+            _gBeside(text, around, 0, 0);
+        }
         y += text.height;
         first = false;
     } else if (text) {
@@ -16568,10 +17308,24 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
     _gArrangeLines(raw, groups);
     // Floats and the blocks after them that flow beside them, through `beside.last`.
     var beside = null;
+    var floated = false;
+    var cleared = null;
     for (var i = 0; i < groups.length; ++i) {
         var group = groups[i];
         if (beside && i > beside.last) {
-            y = Math.max(y, beside.bottom);
+            var clearing = !_gFloatSide(group) && group.kid ? group.kid : null;
+            var cs = clearing && _gStyle(clearing);
+            var mt = clearing && cs.display !== "none" ? _gEdges(clearing, cs, innerW).mt || 0 : 0;
+            if (!clearing) {
+                y = Math.max(y, beside.bottom);
+            } else if (y + _gMerge(pending, mt) < beside.bottom) {
+                // Clearance puts its border edge at the floats' bottom, where the
+                // margins before it would leave it higher (CSS 2 §9.5.2).
+                y = beside.bottom;
+                pending = 0;
+                first = false;
+                cleared = clearing;
+            }
             beside = null;
         }
         var side = _gFloatSide(group);
@@ -16585,17 +17339,17 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
                 ++last;
             }
             --i;
-            // Margins do not collapse with a float's: the floats and what is
-            // beside them start below the margin before them.
-            y += pending;
-            pending = 0;
-            first = false;
-            beside = _gPlaceFloats(floats, side, innerW, innerH, x, y);
+            // A float is placed past the margins so far, which go on to collapse
+            // with the next block's: a float is not between them (CSS 2 §8.3.1).
+            // Margins escaping through the box's top move it, and the floats
+            // with it.
+            floated = true;
+            beside = _gPlaceFloats(floats, side, innerW, innerH, x, first && collapseTop ? y : y + pending);
             beside.last = last;
             continue;
         }
         if (group.run) {
-            var height = _gLayOutRun(group, s, innerW, x, first && collapseTop ? y : y + pending);
+            var height = _gLayOutRun(group, s, innerW, x, first && collapseTop ? y : y + pending, beside || around);
             if (height > 0) {
                 if (first && collapseTop) {
                     through = pending;
@@ -16622,7 +17376,7 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
             : ke.ml === null ? innerW - kidWidth - (ke.mr || 0)
             : ke.ml;
         kid.x = x + left;
-        var merged = _gMerge(pending, got.mt);
+        var merged = kid === cleared ? 0 : _gMerge(pending, got.mt);
         if (got.empty) {
             // Its margins joining the box's own top, it starts where the box
             // does (CSS 2 §8.3.1).
@@ -16636,15 +17390,19 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
         } else {
             kid.y = y + merged;
         }
-        // The box's own lines are the ones beside the floats; the converter
-        // shortens those of a text block, not of blocks inside it.
-        var own = _isPlainTextItem(kid) ? kid : _gTextOf(kid);
-        var at = own === kid ? { x: 0, y: 0 } : kid;
-        if (own && own.text !== "" && (beside || _meta(own).gBeside) && _gBeside(own, beside, at.x, at.y)) {
-            if (own !== kid) {
-                _gPlace(kid, innerW, null, innerH);
-            } else if (ks.height === "auto") {
+        var cut = beside || around;
+        if (_isPlainTextItem(kid)) {
+            if (kid.text !== "" && (cut || _meta(kid).gBeside) && _gBeside(kid, cut, 0, 0) && ks.height === "auto") {
                 _gSet(kid, "height", kid.implicitHeight);
+            }
+        } else if (_gTakesAround(kid, ks)) {
+            // Its lines, and those of the blocks in it, are cut where they pass
+            // the floats: they are laid out again when that changes.
+            var inKid = cut ? [cut.left, cut.from - kid.x, cut.to - kid.x, cut.top - kid.y, cut.bottom - kid.y] : null;
+            if (String(_meta(kid).gAroundKey || null) !== String(inKid)) {
+                _meta(kid).gAroundKey = inKid;
+                _meta(kid).gAround = inKid && { left: inKid[0], from: inKid[1], to: inKid[2], top: inKid[3], bottom: inKid[4] };
+                _gPlace(kid, innerW, null, innerH);
             }
         }
         y = kid.y + kid.height;
@@ -16654,6 +17412,8 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
     if (beside) {
         y = Math.max(y, beside.bottom);
     }
+    // The floats' room is the box's: it has a height its margins can't pass.
+    first = first && !floated;
     var bottom = 0;
     if (collapseBottom && !first) {
         bottom = pending;
@@ -16671,6 +17431,13 @@ function _gFloatSide(group) {
     }
     var ks = _gStyle(group.kid);
     return ks.display === "none" || ks.float === "none" ? null : ks.float;
+}
+
+// A block in the same formatting context as its parent: one that starts its own
+// keeps its lines whole.
+function _gTakesAround(kid, ks) {
+    return (ks.display === "block" || ks.display === "list-item") && ks.float === "none" && !_gOutOfFlow(ks)
+        && ks["overflow-y"] === "visible" && ks["overflow-x"] === "visible" && _gIsBox(kid);
 }
 
 function _gClears(group, side) {
@@ -16734,29 +17501,49 @@ function _gBeside(text, beside, dx, dy) {
     if (!m.gBesideHooked) {
         m.gBesideHooked = true;
         text.lineLaidOut.connect(function(line) {
-            var at = _meta(text).gBeside;
-            var fixed = text.lineHeightMode === 1; // Text.FixedHeight
-            if (fixed) {
-                line.y = line.number * text.lineHeight;
-            }
-            if (!at) {
-                return;
-            }
-            var top = text.y + (fixed ? line.number * text.lineHeight : line.y);
-            var bottom = top + (fixed ? text.lineHeight : line.height);
-            if (top < at[4] && bottom > at[3]) {
-                var cut = at[0] ? at[2] - text.x : text.x + text.width - at[1];
-                if (cut > 0) {
-                    line.width -= cut;
-                    if (at[0]) {
-                        line.x += cut;
-                    }
-                }
-            }
+            _gCutLine(text, line);
         });
     }
     text.forceLayout();
+    // Its hidden copy says where its runs are: its lines are cut the same.
+    var model = _vModelOf(text);
+    if (model && model.twin) {
+        _gCutTwin(text, model.twin);
+    }
     return true;
+}
+
+function _gCutLine(text, line) {
+    var at = _meta(text).gBeside;
+    var fixed = text.lineHeightMode === 1; // Text.FixedHeight
+    if (fixed) {
+        line.y = line.number * text.lineHeight;
+    }
+    if (!at) {
+        return;
+    }
+    var top = text.y + (fixed ? line.number * text.lineHeight : line.y);
+    var bottom = top + (fixed ? text.lineHeight : line.height);
+    if (top < at[4] && bottom > at[3]) {
+        var cut = at[0] ? at[2] - text.x : text.x + text.width - at[1];
+        if (cut > 0) {
+            line.width -= cut;
+            if (at[0]) {
+                line.x += cut;
+            }
+        }
+    }
+}
+
+function _gCutTwin(text, twin) {
+    var m = _meta(twin);
+    if (!m.gCutHooked) {
+        m.gCutHooked = true;
+        twin.lineLaidOut.connect(function(line) {
+            _gCutLine(text, line);
+        });
+    }
+    twin.forceLayout();
 }
 
 // A browser centres the glyphs in a line on a whole-pixel baseline; a fixed QML
@@ -17107,6 +17894,7 @@ function _gPaintTextLines(text, owner, s) {
 
 function _gPaintText(text, s, innerW, owner) {
     text.font = _gFontOf(s);
+    _vInheritFont(text, s);
     text.color = _gQtColor(s["color"]);
     _gPaintTextLines(text, owner, s);
     var own = _gLineHeight(s);
@@ -17117,7 +17905,10 @@ function _gPaintText(text, s, innerW, owner) {
     _gSet(text, "horizontalAlignment", align === "center" ? 4 : align === "right" || align === "end" ? 2 : align === "justify" ? 8 : 1);
     // A line as wide as its advances still has its ink to draw, which Qt
     // would otherwise break off onto another line; CSS lets ink overflow.
-    var fits = text.text !== "" && text.implicitWidth > innerW && innerW >= _gTextAdvance(text) - 0.01;
+    // A table snaps its columns to whole pixels, so a cell can be up to one short
+    // of the exact width its column was sized for.
+    var slack = owner && _gIsCell(owner) ? 1 : 0.01;
+    var fits = text.text !== "" && text.implicitWidth > innerW && innerW >= _gTextAdvance(text) - slack;
     _gSet(text, "width", fits ? text.implicitWidth : innerW);
     // A Text that was hidden has not counted its lines.
     if (text.text !== "") {
@@ -17641,7 +18432,7 @@ function _gPaintDecor(raw, s, e, radius) {
     }
     // Only a child with a negative z is below what the box holds, and that is
     // below the box's own fill too: with layers to show, they take the fill over.
-    var shade = _gQtColor(s["background-color"]);
+    var shade = _meta(raw).tableShade !== undefined ? _meta(raw).tableShade : _gQtColor(s["background-color"]);
     var clips = _gCommaList(s["background-clip"]);
     var colourClip = clips[clips.length - 1];
     var colourKept = colourClip === "padding-box" || colourClip === "content-box";
@@ -20149,6 +20940,7 @@ function _gLineMargins(raw, e) {
 
 function _gLayoutRoots() {
     var containers = [];
+    var tables = [];
     var outOfFlow = [];
     for (var i = 0; i < _gLive.length; ++i) {
         var raw = _gLive[i];
@@ -20169,6 +20961,13 @@ function _gLayoutRoots() {
             continue;
         }
         raw.visible = true;
+        if (_gIsCell(raw)) {
+            var table = _tableHost(raw.parent);
+            if (table && tables.indexOf(table) < 0) {
+                tables.push(table);
+            }
+            continue;
+        }
         var abs = _gOutOfFlow(s);
         // A new line has its width once the layout holding it is polished.
         var avail = _isLines(raw.parent) && raw.parent.width === 0 && raw.parent.parent
@@ -20200,6 +20999,7 @@ function _gLayoutRoots() {
             containers.push(raw.parent);
         }
     }
+    tables.forEach(_tableLayout);
     _gMarginPass();
     return outOfFlow;
 }

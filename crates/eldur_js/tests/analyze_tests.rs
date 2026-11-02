@@ -1022,6 +1022,61 @@ fn created_elements_record_class_sets_type_and_parents() {
 }
 
 #[test]
+fn table_methods_create_their_parts_in_the_receiver() {
+    let res = analyze(&[classic(
+        "rows.js",
+        r#"
+        const items = document.getElementById("items");
+        const tr = items.insertRow(-1);
+        tr.insertCell(0).textContent = "text";
+        const x = tr.insertCell(1);
+        x.className = "x";
+        const t = document.getElementById("t");
+        t.createTHead();
+        t.createTFoot();
+        t.createTBody();
+        t.createCaption();
+        "#,
+    )]);
+    let made: Vec<_> = res
+        .created
+        .iter()
+        .map(|c| (c.tag.as_str(), c.parents.clone()))
+        .collect();
+    assert_eq!(
+        made,
+        vec![
+            ("tr", vec![by_id("items")]),
+            ("td", vec![ElementRef::Created(CreatedId(0))]),
+            ("td", vec![ElementRef::Created(CreatedId(0))]),
+            ("thead", vec![by_id("t")]),
+            ("tfoot", vec![by_id("t")]),
+            ("tbody", vec![by_id("t")]),
+            ("caption", vec![by_id("t")]),
+        ]
+    );
+    // A class given after the cell is in place is a change, as for any element.
+    assert!(res.class_writes.iter().any(|w| {
+        w.target == ElementRef::Created(CreatedId(2)) && w.names == names(&["x"]) && w.assigns
+    }));
+}
+
+#[test]
+fn object_assign_gives_a_created_element_its_class() {
+    let res = analyze(&[classic(
+        "assign.js",
+        r#"
+        document.getElementById("bar").appendChild(
+            Object.assign(document.createElement("span"), { className: "dot", id: "dot" }));
+        "#,
+    )]);
+    assert_eq!(res.created.len(), 1);
+    assert_eq!(res.created[0].parents, vec![by_id("bar")]);
+    assert_eq!(res.created[0].class_sets, vec![names(&["dot"])]);
+    assert!(!res.created[0].open_classes);
+}
+
+#[test]
 fn created_element_through_two_returns_is_not_attributed() {
     let res = analyze(&[classic(
         "returns.js",

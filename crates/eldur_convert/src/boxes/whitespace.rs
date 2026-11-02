@@ -23,11 +23,15 @@ pub(crate) enum Raw<'a> {
         children: Vec<Raw<'a>>,
     },
     Atomic(Box<LayoutBox<'a>>),
+    /// Inside an empty element a script reaches: the element keeps its place
+    /// in the line, and the line its model, though nothing shows.
+    Kept,
 }
 
 enum Token<'a> {
     Open(Option<NodeId>, &'a ComputedStyle),
     Close,
+    Kept,
     /// `collapsible` marks text whose spaces may be removed at line edges.
     Text {
         text: String,
@@ -43,11 +47,13 @@ pub(crate) fn collapse<'a>(raw: Vec<Raw<'a>>, parent: &ComputedStyle) -> Vec<Inl
     let mut tokens = Vec::new();
     flatten(raw, &mut tokens);
     let mut tokens = remove_line_edge_spaces(tokens);
-    // A run that is only empty spans renders nothing.
-    if !tokens
-        .iter()
-        .any(|t| matches!(t, Token::Text { .. } | Token::Break | Token::Atomic(_)))
-    {
+    // A run that is only empty spans renders nothing, and has nothing to keep.
+    if !tokens.iter().any(|t| {
+        matches!(
+            t,
+            Token::Text { .. } | Token::Break | Token::Atomic(_) | Token::Kept
+        )
+    }) {
         tokens.clear();
     }
     // Between boxes an empty span still has a place on the line: a script can
@@ -62,6 +68,7 @@ fn flatten<'a>(raw: Vec<Raw<'a>>, out: &mut Vec<Token<'a>>) {
             Raw::Text { text, white_space } => segment(&text, white_space, out),
             Raw::LineBreak => out.push(Token::Break),
             Raw::Atomic(b) => out.push(Token::Atomic(b)),
+            Raw::Kept => out.push(Token::Kept),
             Raw::Span {
                 node,
                 style,
@@ -180,7 +187,10 @@ fn remove_line_edge_spaces(tokens: Vec<Token<'_>>) -> Vec<Token<'_>> {
             }
             // The model keeps this space for when the span gets text; the
             // `Text` drops it again while the span is empty.
-            Token::Close if keep_empty && matches!(out.last(), Some(Token::Open(Some(_), _))) => {
+            Token::Close
+                if keep_empty
+                    && matches!(out.last(), Some(Token::Open(Some(_), _) | Token::Kept)) =>
+            {
                 after_space = false;
                 out.push(Token::Close);
             }
@@ -195,7 +205,7 @@ fn remove_line_edge_spaces(tokens: Vec<Token<'_>>) -> Vec<Token<'_>> {
 fn trim_trailing_space(out: &mut Vec<Token<'_>>) {
     for i in (0..out.len()).rev() {
         match &mut out[i] {
-            Token::Open(..) | Token::Close => {}
+            Token::Open(..) | Token::Close | Token::Kept => {}
             Token::Break | Token::Atomic(_) => return,
             Token::Text { text, collapsible } => {
                 if *collapsible && text.ends_with(' ') {
@@ -221,6 +231,7 @@ fn changes_line(parent: &ComputedStyle, span: &ComputedStyle) -> bool {
 
 fn rebuild<'a>(tokens: Vec<Token<'a>>, keep_empty: bool, block: &ComputedStyle) -> Vec<Inline<'a>> {
     let mut stack: Vec<Span<'_>> = Vec::new();
+    let mut kept: Vec<bool> = Vec::new();
     let mut root: Vec<Inline<'_>> = Vec::new();
     for token in tokens {
         let item = match token {
@@ -230,13 +241,21 @@ fn rebuild<'a>(tokens: Vec<Token<'a>>, keep_empty: bool, block: &ComputedStyle) 
                     style,
                     children: Vec::new(),
                 });
+                kept.push(false);
                 continue;
             }
-            Token::Close => match stack.pop() {
-                Some(span)
+            Token::Kept => {
+                if let Some(last) = kept.last_mut() {
+                    *last = true;
+                }
+                continue;
+            }
+            Token::Close => match (stack.pop(), kept.pop().unwrap_or(false)) {
+                (Some(span), held)
                     if span.children.is_empty()
                         && !(span.node.is_some()
                             && (keep_empty
+                                || held
                                 || changes_line(
                                     stack.last().map_or(block, |s| s.style),
                                     span.style,
@@ -244,8 +263,8 @@ fn rebuild<'a>(tokens: Vec<Token<'a>>, keep_empty: bool, block: &ComputedStyle) 
                 {
                     continue;
                 }
-                Some(span) => Inline::Span(span),
-                None => continue,
+                (Some(span), _) => Inline::Span(span),
+                (None, _) => continue,
             },
             Token::Text { text, .. } => Inline::Text(text),
             Token::Break => Inline::LineBreak,

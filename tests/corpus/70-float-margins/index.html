@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Floats and margins</title>
+<style>
+  body { margin: 8px; font: 14px Arial, sans-serif; color: #222; }
+  .note { margin-bottom: 20px; padding: 4px 8px; background: #e8f4e8; }
+  .thumb { float: left; width: 60px; height: 40px; margin: 3px; background: #9ab; }
+  .badge { float: right; width: 50px; height: 30px; background: #d9a; }
+  h2 { margin: 30px 0 0; font-size: 18px; }
+  p { margin: 14px 0; }
+  .clear { clear: both; }
+  footer { height: 12px; background: #333; }
+</style>
+</head>
+<body>
+  <section>
+    <div class="note">Margins collapse past the floats between them.</div>
+    <div class="thumb"></div><div class="thumb"></div>
+    <h2>Heading beside two thumbnails</h2>
+    <div class="clear"></div>
+  </section>
+  <section>
+    <div class="thumb"></div>
+    <div><p><b>First words</b> and some more text that wraps around the thumbnail a few times over, enough for a second line in a column this narrow, if the window is not too wide for it to reach the edge.</p></div>
+    <div class="clear"></div>
+  </section>
+  <section>
+    <div class="badge"></div>
+    <div><div><em>Inner</em> lines in a nested block</div>and the outer block's own line, both cut by the badge.</div>
+    <div class="clear"></div>
+  </section>
+  <footer></footer>
+</body>
+</html>

@@ -309,6 +309,8 @@ Qt's document layout has no per-line box of this kind and no fractional heights,
 
 **Lines with boxes.** `EldurLines.qml` is one line layouter for static and script pages, written beside `Main.qml` when the page uses it or has a runtime. Its children are the content in order. Text is cut only at boxes: each run between two boxes stays one `Text`, shaped whole, so no ligature or kerning is lost at a word boundary, and `lineLaidOut` places that `Text`'s lines. The tradeoff is that a scriptless page with such a line now has JavaScript functions in QML, though not `eldur_runtime.js`. Heights follow CSS 2.2 §10.8 with Chromium's rounding: the strut is `round(ascent) + floor(leading / 2)` above and `round(descent) + ceil(leading / 2)` below, and `normal` is the rule in §1.3 (`EldurLines` reads it from `EldurFonts`). A box's baseline is its text's (rounded ascent), the bottom border edge for a check box, radio or slider, the bottom margin edge for a textarea or a box with no line. A line with nothing on it has no strut. The layouter runs a frame after a width change, because a table reads implicit sizes while working out that width; a script's read settles it first.
 
+A run's edge space is the space CSS has there: Qt draws a trailing space in rich text and before a closing tag in styled text but drops a leading one, and `EldurLines` takes off only what Qt drew. A run's natural width is no more than its measured lines end to end, since once a narrower room has broken a word Qt's implicit width stays past the text's.
+
 A justified line with boxes shares what it has left across its spaces, those between items and those in its text: a Text's one line by word spacing, the lines of a longer Text by Qt's own justification. **Not done:** the last line of a longer Text keeps its words' spacing when a box follows it on a justified line; the box itself is still placed as CSS says.
 
 A created box's own inline children are on the same layouter: the runtime groups a box's children into runs and blocks at each layout and gives each run an anonymous `EldurLines`, which the DOM does not see. A flex or grid container's children leave their lines again. A block's anonymous static text becomes a line where a created box lands next to it, and is not a `Text` any more. A run's own `line-height` counts in its line's height. A press beside a run's short line is not on the run: its box is the bounding box of its lines, and hit testing asks the layouter which lines it covers.
@@ -769,6 +771,13 @@ Item {                                            // slot: keeps the layout posi
 |---|---|---|---|
 | `float: left/right` next to text | `RowLayout` of the float box and a text block (reverse with `layoutDirection` for `right`) | Emulated | Text wraps beside the float but not under it. Wrap-around past the float's bottom edge is not reproduced. |
 | `clear: both` | End the float group | Full | The next block is a sibling after the `RowLayout`; no spacer is needed. |
+
+The float group is an `Item` holding the floats' `Flow` over a column of the blocks beside them (`emit/flow.rs` `float_group`); the runtime's `_gLayoutFlow` does the same for floats a script makes. Both follow these rules, which were checked against Chromium (`rule_float_margins_static`, `rule_float_margins_created`, corpus 70-float-margins):
+
+- **Margins collapse past floats.** A float is placed after the margins pending so far, and those margins still collapse with the next block's. The group takes the joined margin as its top margin, and its floats move back up by the part that came after them.
+- **Floats that come first wait for escaping margins.** When the margins escape through the parent's top, the floats sit at the parent's top, beside its first child.
+- **Clearance absorbs the margins.** A block that clears the floats has its border edge at their bottom, unless the margins above it already take it further down (CSS 2.2 §9.5.2). The group's height is the larger of the column plus those margins and the floats' bottom.
+- **Every line in the context is cut.** That includes the lines of nested blocks, but not those of a box that starts its own formatting context. Each `Text` cuts its lines in `eldurCut(line)`, which maps the text into the floats' coordinates. The runtime's measuring twin calls the same function, so element rects match what is drawn. Line boxes (`EldurLines`) take the floats as their `exclusion`.
 
 ## 6. Overflow
 

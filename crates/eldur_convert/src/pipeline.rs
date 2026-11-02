@@ -149,8 +149,19 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     // 6: page.js, with the ids chosen in step 5.
     if !scripts.is_empty() {
         scripts::report_missing(&doc, &scripts, &targets, &inline_covered, &mut diags);
-        let follows_generated = !scripts.analysis.class_writes.is_empty()
-            && !eldur_css::pseudo_rules(&sheets, &options.viewport).is_empty();
+        let pseudo = eldur_css::pseudo_rules(&sheets, &options.viewport);
+        // Numbers in generated text move when a script adds or removes an element.
+        let counts = pseudo.iter().any(|r| {
+            r.content.iter().any(|p| {
+                matches!(
+                    p,
+                    eldur_css::PseudoPart::Counter(..) | eldur_css::PseudoPart::Counters(..)
+                )
+            })
+        });
+        let follows_generated = (!scripts.analysis.class_writes.is_empty()
+            && pseudo.iter().any(|r| r.sets_content))
+            || (counts && scripts.analysis.mutates_dom);
         let resolver = scripts::Resolver::new(&scripts, &targets, &inline_covered)
             .with_generated_text(follows_generated);
         let js = eldur_js::rewrite(&scripts.inputs, &scripts.analysis, &resolver);
@@ -202,10 +213,11 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
             if scripts.analysis.reads_template_content {
                 decls.extend(metadata::html_templates_decl(&doc));
             }
-            if !scripts.analysis.class_writes.is_empty() {
-                let pseudo = eldur_css::pseudo_rules(&sheets, &options.viewport);
-                if !pseudo.is_empty() {
-                    decls.push(metadata::pseudo_rules_decl(&pseudo));
+            if follows_generated {
+                decls.push(metadata::pseudo_rules_decl(&pseudo));
+                if counts {
+                    let counters = eldur_css::counter_rules(&sheets, &options.viewport);
+                    decls.push(metadata::counter_rules_decl(&counters));
                 }
             }
             if scripts.analysis.needs_cascade() {
@@ -520,18 +532,8 @@ fn selectors_outrun_templates(
         names_written_id(selector, analysis)
             || names_written_attribute(selector, analysis)
             || class_takes_out_of_flow(rule, analysis)
-            || class_found_at_run_time(selector, analysis)
             || (changes_form(rule) && form_depends_on_page(doc, scripts, selector))
     })
-}
-
-/// A class written on an element no analysis can name, with a name it can't either,
-/// can be any class on any element.
-fn class_found_at_run_time(selector: &str, analysis: &eldur_js::Analysis) -> bool {
-    selector.contains('.')
-        && analysis.class_writes.iter().any(|w| {
-            w.open && w.names.is_empty() && matches!(w.target, eldur_js::ElementRef::Unknown)
-        })
 }
 
 /// A template's conditions reach paint, height and margins. Its width and what

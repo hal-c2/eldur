@@ -1,0 +1,21 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+p.mark{color:#c00}
+.big{height:40px;background:#eee;width:200px}
+.wide{display:inline-block;width:90px;height:12px}
+</style></head><body>
+<p id="p">a paragraph</p><div id="a">static a</div><div id="b">static <span id="bs">span</span> b</div><div id="c">c</div>
+<script>
+// One write, two kinds of name: a literal one the converter sees, and names it
+// can't. The element is found by a query it can't follow either, so a computed
+// name can land on any element, not only those the literal one styles.
+// The ids are looked up as written, before and after the elements change.
+const els=[document.getElementById('p'),document.getElementById('a'),document.getElementById('b'),document.getElementById('bs'),document.getElementById('c')];
+const R=(e,i)=>{const q=e.getBoundingClientRect();console.log('CS '+i+' '+[q.x,q.y,q.width,q.height].join(','))};
+const names=['bi','wi'].map(s=>s=='bi'?'big':'wide');
+function put(sel,i){document.querySelector(sel).className='mark '+(i<0?'':names[i])}
+put('#p',-1);put('#a',0);put('#bs',1);
+els.forEach(R);
+const late=()=>[document.getElementById('p'),document.getElementById('a'),document.getElementById('b'),document.getElementById('bs'),document.getElementById('c')];
+setTimeout(()=>{els.forEach(R);late().forEach(R);document.body.appendChild(document.createElement('div')).id='csdone'},50);
+</script></body></html>

@@ -1,0 +1,1 @@
+{"steps":[{"name":"more","click":"#more"}],"watch":[{"sel":"p"},{"sel":"span"},{"sel":"b"},{"sel":"i"},{"sel":"table"},{"sel":"tr"},{"sel":"td","paint":true},{"sel":"#after"}]}

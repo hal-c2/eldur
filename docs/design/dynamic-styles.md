@@ -346,6 +346,8 @@ follows the variable it is assigned to within its function, through
   `+` and template-literal enumeration (`'todo-item' + (d ? ' done' : '')`
   gives `{todo-item}` and `{todo-item, done}`); plus `open` if part of the
   value is not literal;
+  `Object.assign(el, {className, id, textContent, innerHTML})` writes as the
+  assignments would, and returns `el`;
 - **parents**: the targets of `appendChild`/`append`/`prepend`/
   `insertBefore`/`replaceChild`/`before`/`after` on it, each a `Query` (a
   static element), a `Created(id)` or `Unknown`.
@@ -995,7 +997,10 @@ change after conversion.** That is the case when the rule:
 A class name computed on a known element doesn't open the page by itself any more
 (the "is not followed" diagnostic is gone): the runtime cascade runs on the
 elements a computed lookup finds, and the converter emits an item for each
-element with an id when the script looks ids up by computed names.
+element with an id when the script looks ids up by computed names. An open
+class write opens the page in the analysis; a target it can't name came from a
+query it can't follow, which stays live, so an item a class swaps is found again
+by any lookup (`rule_computed_mixed`).
 
 `el.style.position` also opens the page: it is no longer written in place.
 
@@ -1036,17 +1041,38 @@ At run time:
   wrapping when one doesn't fit, and cuts the lines of each following block's own
   text beside them (`_gBeside`, which moves Qt's lines in `lineLaidOut`). A
   container with a float in it is adopted even when the page wrote elements in it,
-  since what flows beside a float is placed by a pass, not by a column. The
-  approximations are the static ones: margins don't collapse through a float group
-  (Chromium collapses a first child's top margin through its parent beside a
-  float), and only a block's own lines are cut, not those of blocks nested in it
-  or of inline runs.
+  since what flows beside a float is placed by a pass, not by a column. Margins,
+  clearance and line cutting follow the rules in layout.md §5.5, as the static
+  layout does. A block in the same formatting context gets the floats in its own
+  coordinates (`gAround`), and line boxes get them as `exclusion`. A text the
+  script filled before the element was in the page takes the cascade's font into
+  its inline model when the element is painted (`_vInheritFont`).
 - **Generated text is the element's for a read.** A class change that gives an
   element `::before`/`::after` content is applied at the next turn
   (`_pseudoTouch`), but a read (`getBoundingClientRect`, `offsetWidth`,
   `getComputedStyle`) applies it first, as a browser lays out before it answers.
   A table's column widths read right after a sort are measured with the arrow the
   sorted header gains.
+- **Generated text is drawn as the rules say and counts as they count.** The
+  converter emits `eldurPseudoRules` (text parts, and the paint declarations of
+  each `::before`/`::after` rule; a rule that only paints is `drawOnly`) when a
+  class write can change generated text, or when the page counts and changes
+  its DOM; `eldurCounterRules` then carries `counter-reset`, `counter-increment`
+  and `counter-set`. `_pseudoFlush` lets the rules compete per side by
+  importance, specificity and order, and works counters out over the whole tree
+  (`_counterValues`: a reset nests a counter, an increment or a set goes to the
+  innermost one) before each flush; an insert or a removal asks for one
+  (`_counterTouch`). Text drawn other than the element's own font or colour is a
+  `gen` node of the element's inline model (in its own `<span>` font when its
+  size or family differs); a plain `Text` takes a model only then. An element
+  whose content is on lines holds it as a run at that side of the lines whose
+  model has only the `gen` node, so a script sees no node: the converter's run
+  is reused, and a box the runtime lays out gets one (`_pseudoNewRun`) that
+  `_gFlowGroups` keeps first or last on its lines. The converter's own
+  generated text is adopted as the rules' until they say otherwise.
+  Not followed: a pseudo-element laid out as a box (`display`, `position`,
+  `float`), `content` other than strings, `attr()` and counters, the
+  `list-item` counter, and counters on the pseudo-element itself.
 - **An inline model first built after a write has no baseline.** It can't tell which
   matches changed, so it runs the cascade rather than trusting the converter's values.
 

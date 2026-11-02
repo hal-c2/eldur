@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>A sortable table</title>
+<style>
+body { margin: 8px; font: 14px Arial, sans-serif; color: #222; }
+h1 { font-size: 20px; margin: 0 0 8px; }
+table { border-collapse: collapse; width: 420px; }
+th, td { border: 1px solid #bbb; padding: 4px 8px; text-align: left; }
+th { background: #e4e8f0; cursor: pointer; }
+th.asc::after { content: " \25B2"; font-size: 10px; }
+th.desc::after { content: " \25BC"; font-size: 10px; }
+tbody tr:nth-child(odd) td { background: #f6f8fb; }
+td.num { text-align: right; }
+.total { margin-top: 6px; font-weight: bold; }
+</style></head>
+<body>
+<h1>Fruit stock</h1>
+<table id="t"><thead><tr><th id="hn" data-k="name">Name</th><th id="hq" data-k="qty">Qty</th><th id="hp" data-k="price">Price</th></tr></thead><tbody id="rows"></tbody></table>
+<p class="total" id="total"></p>
+<script>
+const data = [
+  { name: "Cherry", qty: 12, price: 4.5 },
+  { name: "Apple", qty: 30, price: 1.2 },
+  { name: "Banana bread loaf", qty: 2, price: 6 },
+  { name: "Date", qty: 7, price: 3.25 },
+];
+let key = null, dir = 1;
+function render() {
+  const rows = document.getElementById("rows");
+  while (rows.firstChild) rows.removeChild(rows.firstChild);
+  const sorted = data.slice();
+  if (key) sorted.sort((a, b) => (a[key] < b[key] ? -1 : a[key] > b[key] ? 1 : 0) * dir);
+  sorted.forEach((d, i) => {
+    const tr = document.createElement("tr");
+    tr.id = "r" + i;
+    for (const k of ["name", "qty", "price"]) {
+      const td = document.createElement("td");
+      if (k !== "name") td.className = "num";
+      td.textContent = k === "price" ? d[k].toFixed(2) : String(d[k]);
+      tr.appendChild(td);
+    }
+    rows.appendChild(tr);
+  });
+  for (const th of document.querySelectorAll("th")) {
+    th.className = th.dataset.k === key ? (dir > 0 ? "asc" : "desc") : "";
+  }
+  document.getElementById("total").textContent = "Total items: " + data.reduce((s, d) => s + d.qty, 0);
+}
+for (const th of document.querySelectorAll("th")) {
+  th.addEventListener("click", () => {
+    if (key === th.dataset.k) dir = -dir; else { key = th.dataset.k; dir = 1; }
+    render();
+  });
+}
+render();
+</script>
+</body>
+</html>

@@ -147,6 +147,9 @@ pub(crate) struct Emitter<'a, 'd> {
     fragment_links: bool,
     /// The box being emitted is one of a run of floats that share a line.
     in_float_run: bool,
+    /// The floats whose lines the block formatting context being emitted
+    /// cuts.
+    wrap: Option<flow::Wrap>,
     /// QML modules the emitted objects need beyond the default imports.
     pub imports: std::collections::BTreeSet<&'static str>,
     /// The file each `<img>` shows.
@@ -257,6 +260,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             fragments: BTreeMap::new(),
             fragment_links: false,
             in_float_run: false,
+            wrap: None,
             imports: std::collections::BTreeSet::new(),
             images: BTreeMap::new(),
             background_images: BTreeMap::new(),
@@ -509,7 +513,17 @@ impl<'a, 'd> Emitter<'a, 'd> {
         };
         let outer_given = std::mem::replace(&mut self.own_given, given);
         let outer = std::mem::replace(&mut self.line_align, b.style.text_align);
+        // Floats cut every line of their block formatting context, nested
+        // blocks' too, and none of another's (CSS 2.2 §9.5).
+        let own_context = b.kind != BoxKind::Block
+            || independent
+            || establishes_bfc(&b.style)
+            || (b.node.is_some() && b.node == self.root_node);
+        let outer_wrap = if own_context { self.wrap.take() } else { None };
         let e = self.block_box_in_lines(b, inherited, independent);
+        if outer_wrap.is_some() {
+            self.wrap = outer_wrap;
+        }
         self.line_align = outer;
         self.own_given = outer_given;
         e
@@ -548,7 +562,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 Display::Table | Display::InlineTable => {
                     self.has_table = true;
                     self.positioned_child = false;
-                    let e = if self.table_to_fill(b) {
+                    let e = if self.table_to_fill(b) && !self.is_live_table(b) {
                         self.column_to_fill(b, inherited, line)
                     } else {
                         self.table(b, inherited, line)
@@ -748,10 +762,15 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     || (b.marker.as_ref().is_some_and(|m| m.in_line)
                         && text::needs_html(items, &text::font_family(&style.font_family))) =>
             {
-                Some((self.inline_flow(b, decoration, items, line), "Content"))
+                let mut flow = self.inline_flow(b, decoration, items, line);
+                if flow.type_name == "EldurLines" {
+                    self.wrap_flow(&mut flow);
+                }
+                Some((flow, "Content"))
             }
             Content::Inline(items) => {
                 let mut text = self.text(style, decoration, items, line);
+                self.wrap_lines(&mut text);
                 if self.runtime_dom {
                     self.declare_inline_model(&mut text, b, decoration, items);
                 }

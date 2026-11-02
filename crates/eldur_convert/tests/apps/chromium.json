@@ -96117,6 +96117,3220 @@
    }
   }
  ],
+ "made_inline": [
+  {
+   "name": "load",
+   "log": [
+    "#text SPAN #text"
+   ],
+   "state": {
+    "p": [
+     {
+      "box": [
+       8,
+       14,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Count: 12 items"
+     },
+     {
+      "box": [
+       8,
+       44,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "Tag: new end"
+     },
+     {
+      "box": [
+       8,
+       78,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Box: 5 end"
+     },
+     {
+      "box": [
+       8,
+       108,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Nest: bold x end7"
+     },
+     {
+      "box": [
+       8,
+       138,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Mid: aa it9 zz"
+     },
+     {
+      "box": [
+       8,
+       249,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "span": [
+     {
+      "box": [
+       53.14,
+       14,
+       15.58,
+       16
+      ],
+      "shown": true,
+      "text": "12"
+     },
+     {
+      "box": [
+       38.36,
+       44,
+       41.69,
+       20
+      ],
+      "shown": true,
+      "text": "new"
+     },
+     {
+      "box": [
+       39.91,
+       78,
+       22,
+       16
+      ],
+      "shown": true,
+      "text": "5"
+     },
+     {
+      "box": [
+       39.91,
+       78,
+       22,
+       16
+      ],
+      "shown": true,
+      "text": "5"
+     },
+     {
+      "box": [
+       44.58,
+       108,
+       40.44,
+       16
+      ],
+      "shown": true,
+      "text": "bold x"
+     },
+     {
+      "box": [
+       112.27,
+       108,
+       22,
+       16
+      ],
+      "shown": true,
+      "text": "7"
+     },
+     {
+      "box": [
+       38.34,
+       138,
+       48.47,
+       16
+      ],
+      "shown": true,
+      "text": "aa it9"
+     },
+     {
+      "box": [
+       64.81,
+       138,
+       22,
+       16
+      ],
+      "shown": true,
+      "text": "9"
+     },
+     {
+      "box": [
+       8,
+       168,
+       52.14,
+       16
+      ],
+      "shown": true,
+      "text": "only text"
+     }
+    ],
+    "b": [
+     {
+      "box": [
+       44.58,
+       108,
+       29.55,
+       16
+      ],
+      "shown": true,
+      "text": "bold"
+     }
+    ],
+    "i": [
+     {
+      "box": [
+       57.81,
+       138,
+       29,
+       16
+      ],
+      "shown": true,
+      "text": "it9"
+     }
+    ],
+    "table": [
+     {
+      "box": [
+       8,
+       192,
+       234.7,
+       22
+      ],
+      "shown": true,
+      "text": "firstsecondthird cell"
+     }
+    ],
+    "tr": [
+     {
+      "box": [
+       8.5,
+       192.5,
+       233.7,
+       21
+      ],
+      "shown": true,
+      "text": "firstsecondthird cell"
+     }
+    ],
+    "td": [
+     {
+      "box": [
+       8.5,
+       192.5,
+       35.56,
+       21
+      ],
+      "shown": true,
+      "text": "first",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       44.06,
+       192.5,
+       133,
+       21
+      ],
+      "shown": true,
+      "text": "second",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       177.06,
+       192.5,
+       65.14,
+       21
+      ],
+      "shown": true,
+      "text": "third cell",
+      "paint": "rgb(255, 255, 255)"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       249,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "more",
+   "log": [
+    "#text SPAN #text"
+   ],
+   "state": {
+    "p": [
+     {
+      "box": [
+       8,
+       14,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Count: 12 items"
+     },
+     {
+      "box": [
+       8,
+       44,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "Tag: new end"
+     },
+     {
+      "box": [
+       8,
+       78,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Box: 56 end"
+     },
+     {
+      "box": [
+       8,
+       108,
+       1264,
+       20
+      ],
+      "shown": true,
+      "text": "Nest: boldin x end7"
+     },
+     {
+      "box": [
+       8,
+       142,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Mid: aa it9 zz"
+     },
+     {
+      "box": [
+       8,
+       253,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "span": [
+     {
+      "box": [
+       53.14,
+       14,
+       15.58,
+       16
+      ],
+      "shown": true,
+      "text": "12"
+     },
+     {
+      "box": [
+       38.36,
+       44,
+       41.69,
+       20
+      ],
+      "shown": true,
+      "text": "new"
+     },
+     {
+      "box": [
+       39.91,
+       78,
+       44,
+       16
+      ],
+      "shown": true,
+      "text": "56"
+     },
+     {
+      "box": [
+       39.91,
+       78,
+       22,
+       16
+      ],
+      "shown": true,
+      "text": "5"
+     },
+     {
+      "box": [
+       61.91,
+       78,
+       22,
+       16
+      ],
+      "shown": true,
+      "text": "6"
+     },
+     {
+      "box": [
+       44.58,
+       110,
+       68.89,
+       16
+      ],
+      "shown": true,
+      "text": "boldin x"
+     },
+     {
+      "box": [
+       74.13,
+       108,
+       28.45,
+       20
+      ],
+      "shown": true,
+      "text": "in"
+     },
+     {
+      "box": [
+       140.72,
+       110,
+       22,
+       16
+      ],
+      "shown": true,
+      "text": "7"
+     },
+     {
+      "box": [
+       38.34,
+       142,
+       48.47,
+       16
+      ],
+      "shown": true,
+      "text": "aa it9"
+     },
+     {
+      "box": [
+       64.81,
+       142,
+       22,
+       16
+      ],
+      "shown": true,
+      "text": "9"
+     },
+     {
+      "box": [
+       8,
+       172,
+       52.14,
+       16
+      ],
+      "shown": true,
+      "text": "only text"
+     }
+    ],
+    "b": [
+     {
+      "box": [
+       44.58,
+       110,
+       58,
+       16
+      ],
+      "shown": true,
+      "text": "boldin"
+     }
+    ],
+    "i": [
+     {
+      "box": [
+       57.81,
+       142,
+       29,
+       16
+      ],
+      "shown": true,
+      "text": "it9"
+     }
+    ],
+    "table": [
+     {
+      "box": [
+       8,
+       196,
+       297.52,
+       22
+      ],
+      "shown": true,
+      "text": "firstinsertedsecondthird cell"
+     }
+    ],
+    "tr": [
+     {
+      "box": [
+       8.5,
+       196.5,
+       296.52,
+       21
+      ],
+      "shown": true,
+      "text": "firstinsertedsecondthird cell"
+     }
+    ],
+    "td": [
+     {
+      "box": [
+       8.5,
+       196.5,
+       35.56,
+       21
+      ],
+      "shown": true,
+      "text": "first",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       44.06,
+       196.5,
+       62.81,
+       21
+      ],
+      "shown": true,
+      "text": "inserted",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       106.88,
+       196.5,
+       133,
+       21
+      ],
+      "shown": true,
+      "text": "second",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       239.88,
+       196.5,
+       65.14,
+       21
+      ],
+      "shown": true,
+      "text": "third cell",
+      "paint": "rgb(255, 255, 255)"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       253,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "after"
+     }
+    ],
+    "(focus)": "more"
+   }
+  }
+ ],
+ "made_tables": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "table": [
+     {
+      "box": [
+       8,
+       8,
+       159.06,
+       85
+      ],
+      "shown": true,
+      "text": "r0c0r0c1r0c2r1c0r1c1r1c2r2c0r2c1 widerr2c2r3c0r3c1r3c2"
+     },
+     {
+      "box": [
+       8,
+       101,
+       167.86,
+       98
+      ],
+      "shown": true,
+      "text": "NameQtyApple3Banana bread12Total over both columns"
+     },
+     {
+      "box": [
+       8,
+       207,
+       234.7,
+       22
+      ],
+      "shown": true,
+      "text": "firstsecondthird cell"
+     },
+     {
+      "box": [
+       8,
+       237,
+       110.16,
+       98
+      ],
+      "shown": true,
+      "text": "KeyValueaonebbtwo twocccthree"
+     },
+     {
+      "box": [
+       8,
+       343,
+       114.95,
+       85
+      ],
+      "shown": true,
+      "text": "Headx00x01longer textx11x20x21"
+     }
+    ],
+    "tr": [
+     {
+      "box": [
+       8.5,
+       8.5,
+       158.06,
+       21
+      ],
+      "shown": true,
+      "text": "r0c0r0c1r0c2"
+     },
+     {
+      "box": [
+       8.5,
+       29.5,
+       158.06,
+       21
+      ],
+      "shown": true,
+      "text": "r1c0r1c1r1c2"
+     },
+     {
+      "box": [
+       8.5,
+       50.5,
+       158.06,
+       21
+      ],
+      "shown": true,
+      "text": "r2c0r2c1 widerr2c2"
+     },
+     {
+      "box": [
+       8.5,
+       71.5,
+       158.06,
+       21
+      ],
+      "shown": true,
+      "text": "r3c0r3c1r3c2"
+     },
+     {
+      "box": [
+       11,
+       103,
+       161.86,
+       22
+      ],
+      "shown": true,
+      "text": "NameQty"
+     },
+     {
+      "box": [
+       11,
+       127,
+       161.86,
+       22
+      ],
+      "shown": true,
+      "text": "Apple3"
+     },
+     {
+      "box": [
+       11,
+       151,
+       161.86,
+       22
+      ],
+      "shown": true,
+      "text": "Banana bread12"
+     },
+     {
+      "box": [
+       11,
+       175,
+       161.86,
+       22
+      ],
+      "shown": true,
+      "text": "Total over both columns"
+     },
+     {
+      "box": [
+       8.5,
+       207.5,
+       233.7,
+       21
+      ],
+      "shown": true,
+      "text": "firstsecondthird cell"
+     },
+     {
+      "box": [
+       11,
+       239,
+       104.16,
+       22
+      ],
+      "shown": true,
+      "text": "KeyValue"
+     },
+     {
+      "box": [
+       11,
+       263,
+       104.16,
+       22
+      ],
+      "shown": true,
+      "text": "aone"
+     },
+     {
+      "box": [
+       11,
+       287,
+       104.16,
+       22
+      ],
+      "shown": true,
+      "text": "bbtwo two"
+     },
+     {
+      "box": [
+       11,
+       311,
+       104.16,
+       22
+      ],
+      "shown": true,
+      "text": "cccthree"
+     },
+     {
+      "box": [
+       8.5,
+       343.5,
+       113.95,
+       21
+      ],
+      "shown": true,
+      "text": "Head"
+     },
+     {
+      "box": [
+       8.5,
+       364.5,
+       113.95,
+       21
+      ],
+      "shown": true,
+      "text": "x00x01"
+     },
+     {
+      "box": [
+       8.5,
+       385.5,
+       113.95,
+       21
+      ],
+      "shown": true,
+      "text": "longer textx11"
+     },
+     {
+      "box": [
+       8.5,
+       406.5,
+       113.95,
+       21
+      ],
+      "shown": true,
+      "text": "x20x21"
+     }
+    ],
+    "td": [
+     {
+      "box": [
+       8.5,
+       8.5,
+       40.23,
+       21
+      ],
+      "shown": true,
+      "text": "r0c0",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       48.73,
+       8.5,
+       77.59,
+       21
+      ],
+      "shown": true,
+      "text": "r0c1",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       126.33,
+       8.5,
+       40.23,
+       21
+      ],
+      "shown": true,
+      "text": "r0c2",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       29.5,
+       40.23,
+       21
+      ],
+      "shown": true,
+      "text": "r1c0",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       48.73,
+       29.5,
+       77.59,
+       21
+      ],
+      "shown": true,
+      "text": "r1c1",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       126.33,
+       29.5,
+       40.23,
+       21
+      ],
+      "shown": true,
+      "text": "r1c2",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       50.5,
+       40.23,
+       21
+      ],
+      "shown": true,
+      "text": "r2c0",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       48.73,
+       50.5,
+       77.59,
+       21
+      ],
+      "shown": true,
+      "text": "r2c1 wider",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       126.33,
+       50.5,
+       40.23,
+       21
+      ],
+      "shown": true,
+      "text": "r2c2",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       71.5,
+       40.23,
+       21
+      ],
+      "shown": true,
+      "text": "r3c0",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       48.73,
+       71.5,
+       77.59,
+       21
+      ],
+      "shown": true,
+      "text": "r3c1",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       126.33,
+       71.5,
+       40.23,
+       21
+      ],
+      "shown": true,
+      "text": "r3c2",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       11,
+       127,
+       116.27,
+       22
+      ],
+      "shown": true,
+      "text": "Apple",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       130.27,
+       127,
+       42.59,
+       22
+      ],
+      "shown": true,
+      "text": "3",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       11,
+       151,
+       116.27,
+       22
+      ],
+      "shown": true,
+      "text": "Banana bread",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       130.27,
+       151,
+       42.59,
+       22
+      ],
+      "shown": true,
+      "text": "12",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       11,
+       175,
+       161.86,
+       22
+      ],
+      "shown": true,
+      "text": "Total over both columns",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       207.5,
+       35.56,
+       21
+      ],
+      "shown": true,
+      "text": "first",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       44.06,
+       207.5,
+       133,
+       21
+      ],
+      "shown": true,
+      "text": "second",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       177.06,
+       207.5,
+       65.14,
+       21
+      ],
+      "shown": true,
+      "text": "third cell",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       11,
+       263,
+       39.69,
+       22
+      ],
+      "shown": true,
+      "text": "a",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       53.69,
+       263,
+       61.47,
+       22
+      ],
+      "shown": true,
+      "text": "one",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       11,
+       287,
+       39.69,
+       22
+      ],
+      "shown": true,
+      "text": "bb",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       53.69,
+       287,
+       61.47,
+       22
+      ],
+      "shown": true,
+      "text": "two two",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       11,
+       311,
+       39.69,
+       22
+      ],
+      "shown": true,
+      "text": "ccc",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       53.69,
+       311,
+       61.47,
+       22
+      ],
+      "shown": true,
+      "text": "three",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       343.5,
+       78.38,
+       21
+      ],
+      "shown": true,
+      "text": "Head",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       364.5,
+       78.38,
+       21
+      ],
+      "shown": true,
+      "text": "x00",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       86.88,
+       364.5,
+       35.58,
+       21
+      ],
+      "shown": true,
+      "text": "x01",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       385.5,
+       78.38,
+       21
+      ],
+      "shown": true,
+      "text": "longer text",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       86.88,
+       385.5,
+       35.58,
+       21
+      ],
+      "shown": true,
+      "text": "x11",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       406.5,
+       78.38,
+       21
+      ],
+      "shown": true,
+      "text": "x20",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       86.88,
+       406.5,
+       35.58,
+       21
+      ],
+      "shown": true,
+      "text": "x21",
+      "paint": "rgb(255, 255, 255)"
+     }
+    ],
+    "th": [
+     {
+      "box": [
+       11,
+       103,
+       116.27,
+       22
+      ],
+      "shown": true,
+      "text": "Name"
+     },
+     {
+      "box": [
+       130.27,
+       103,
+       42.59,
+       22
+      ],
+      "shown": true,
+      "text": "Qty"
+     },
+     {
+      "box": [
+       11,
+       239,
+       39.69,
+       22
+      ],
+      "shown": true,
+      "text": "Key"
+     },
+     {
+      "box": [
+       53.69,
+       239,
+       61.47,
+       22
+      ],
+      "shown": true,
+      "text": "Value"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       442,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "After the tables."
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "drop",
+   "log": [],
+   "state": {
+    "table": [
+     {
+      "box": [
+       8,
+       8,
+       159.06,
+       64
+      ],
+      "shown": true,
+      "text": "r1c0r1c1r1c2r2c0r2c1 widerr2c2r3c0r3c1r3c2"
+     },
+     {
+      "box": [
+       8,
+       80,
+       167.86,
+       98
+      ],
+      "shown": true,
+      "text": "NameQtyApple3Banana bread12Total over both columns"
+     },
+     {
+      "box": [
+       8,
+       186,
+       234.7,
+       22
+      ],
+      "shown": true,
+      "text": "firstsecondthird cell"
+     },
+     {
+      "box": [
+       8,
+       216,
+       110.16,
+       98
+      ],
+      "shown": true,
+      "text": "KeyValueaonebbtwo twocccthree"
+     },
+     {
+      "box": [
+       8,
+       322,
+       114.95,
+       64
+      ],
+      "shown": true,
+      "text": "Headlonger textx11x20x21"
+     }
+    ],
+    "tr": [
+     {
+      "box": [
+       8.5,
+       8.5,
+       158.06,
+       21
+      ],
+      "shown": true,
+      "text": "r1c0r1c1r1c2"
+     },
+     {
+      "box": [
+       8.5,
+       29.5,
+       158.06,
+       21
+      ],
+      "shown": true,
+      "text": "r2c0r2c1 widerr2c2"
+     },
+     {
+      "box": [
+       8.5,
+       50.5,
+       158.06,
+       21
+      ],
+      "shown": true,
+      "text": "r3c0r3c1r3c2"
+     },
+     {
+      "box": [
+       11,
+       82,
+       161.86,
+       22
+      ],
+      "shown": true,
+      "text": "NameQty"
+     },
+     {
+      "box": [
+       11,
+       106,
+       161.86,
+       22
+      ],
+      "shown": true,
+      "text": "Apple3"
+     },
+     {
+      "box": [
+       11,
+       130,
+       161.86,
+       22
+      ],
+      "shown": true,
+      "text": "Banana bread12"
+     },
+     {
+      "box": [
+       11,
+       154,
+       161.86,
+       22
+      ],
+      "shown": true,
+      "text": "Total over both columns"
+     },
+     {
+      "box": [
+       8.5,
+       186.5,
+       233.7,
+       21
+      ],
+      "shown": true,
+      "text": "firstsecondthird cell"
+     },
+     {
+      "box": [
+       11,
+       218,
+       104.16,
+       22
+      ],
+      "shown": true,
+      "text": "KeyValue"
+     },
+     {
+      "box": [
+       11,
+       242,
+       104.16,
+       22
+      ],
+      "shown": true,
+      "text": "aone"
+     },
+     {
+      "box": [
+       11,
+       266,
+       104.16,
+       22
+      ],
+      "shown": true,
+      "text": "bbtwo two"
+     },
+     {
+      "box": [
+       11,
+       290,
+       104.16,
+       22
+      ],
+      "shown": true,
+      "text": "cccthree"
+     },
+     {
+      "box": [
+       8.5,
+       322.5,
+       113.95,
+       21
+      ],
+      "shown": true,
+      "text": "Head"
+     },
+     {
+      "box": [
+       8.5,
+       343.5,
+       113.95,
+       21
+      ],
+      "shown": true,
+      "text": "longer textx11"
+     },
+     {
+      "box": [
+       8.5,
+       364.5,
+       113.95,
+       21
+      ],
+      "shown": true,
+      "text": "x20x21"
+     }
+    ],
+    "td": [
+     {
+      "box": [
+       8.5,
+       8.5,
+       40.23,
+       21
+      ],
+      "shown": true,
+      "text": "r1c0",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       48.73,
+       8.5,
+       77.59,
+       21
+      ],
+      "shown": true,
+      "text": "r1c1",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       126.33,
+       8.5,
+       40.23,
+       21
+      ],
+      "shown": true,
+      "text": "r1c2",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       29.5,
+       40.23,
+       21
+      ],
+      "shown": true,
+      "text": "r2c0",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       48.73,
+       29.5,
+       77.59,
+       21
+      ],
+      "shown": true,
+      "text": "r2c1 wider",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       126.33,
+       29.5,
+       40.23,
+       21
+      ],
+      "shown": true,
+      "text": "r2c2",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       50.5,
+       40.23,
+       21
+      ],
+      "shown": true,
+      "text": "r3c0",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       48.73,
+       50.5,
+       77.59,
+       21
+      ],
+      "shown": true,
+      "text": "r3c1",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       126.33,
+       50.5,
+       40.23,
+       21
+      ],
+      "shown": true,
+      "text": "r3c2",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       11,
+       106,
+       116.27,
+       22
+      ],
+      "shown": true,
+      "text": "Apple",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       130.27,
+       106,
+       42.59,
+       22
+      ],
+      "shown": true,
+      "text": "3",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       11,
+       130,
+       116.27,
+       22
+      ],
+      "shown": true,
+      "text": "Banana bread",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       130.27,
+       130,
+       42.59,
+       22
+      ],
+      "shown": true,
+      "text": "12",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       11,
+       154,
+       161.86,
+       22
+      ],
+      "shown": true,
+      "text": "Total over both columns",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       186.5,
+       35.56,
+       21
+      ],
+      "shown": true,
+      "text": "first",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       44.06,
+       186.5,
+       133,
+       21
+      ],
+      "shown": true,
+      "text": "second",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       177.06,
+       186.5,
+       65.14,
+       21
+      ],
+      "shown": true,
+      "text": "third cell",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       11,
+       242,
+       39.69,
+       22
+      ],
+      "shown": true,
+      "text": "a",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       53.69,
+       242,
+       61.47,
+       22
+      ],
+      "shown": true,
+      "text": "one",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       11,
+       266,
+       39.69,
+       22
+      ],
+      "shown": true,
+      "text": "bb",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       53.69,
+       266,
+       61.47,
+       22
+      ],
+      "shown": true,
+      "text": "two two",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       11,
+       290,
+       39.69,
+       22
+      ],
+      "shown": true,
+      "text": "ccc",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       53.69,
+       290,
+       61.47,
+       22
+      ],
+      "shown": true,
+      "text": "three",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       322.5,
+       78.38,
+       21
+      ],
+      "shown": true,
+      "text": "Head",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       343.5,
+       78.38,
+       21
+      ],
+      "shown": true,
+      "text": "longer text",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       86.88,
+       343.5,
+       35.58,
+       21
+      ],
+      "shown": true,
+      "text": "x11",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       364.5,
+       78.38,
+       21
+      ],
+      "shown": true,
+      "text": "x20",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       86.88,
+       364.5,
+       35.58,
+       21
+      ],
+      "shown": true,
+      "text": "x21",
+      "paint": "rgb(238, 238, 255)"
+     }
+    ],
+    "th": [
+     {
+      "box": [
+       11,
+       82,
+       116.27,
+       22
+      ],
+      "shown": true,
+      "text": "Name"
+     },
+     {
+      "box": [
+       130.27,
+       82,
+       42.59,
+       22
+      ],
+      "shown": true,
+      "text": "Qty"
+     },
+     {
+      "box": [
+       11,
+       218,
+       39.69,
+       22
+      ],
+      "shown": true,
+      "text": "Key"
+     },
+     {
+      "box": [
+       53.69,
+       218,
+       61.47,
+       22
+      ],
+      "shown": true,
+      "text": "Value"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       400,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "After the tables."
+     }
+    ],
+    "(focus)": "drop"
+   }
+  },
+  {
+   "name": "grow",
+   "log": [],
+   "state": {
+    "table": [
+     {
+      "box": [
+       8,
+       8,
+       159.86,
+       85
+      ],
+      "shown": true,
+      "text": "newrowherer1c0r1c1r1c2r2c0r2c1 widerr2c2r3c0r3c1r3c2"
+     },
+     {
+      "box": [
+       8,
+       101,
+       167.86,
+       98
+      ],
+      "shown": true,
+      "text": "NameQtyApple3Banana bread12Total over both columns"
+     },
+     {
+      "box": [
+       8,
+       207,
+       297.52,
+       22
+      ],
+      "shown": true,
+      "text": "firstinsertedsecondthird cell"
+     },
+     {
+      "box": [
+       8,
+       237,
+       110.16,
+       98
+      ],
+      "shown": true,
+      "text": "KeyValueaonebbtwo twocccthree"
+     },
+     {
+      "box": [
+       8,
+       343,
+       114.95,
+       64
+      ],
+      "shown": true,
+      "text": "Headlonger textx11x20x21"
+     }
+    ],
+    "tr": [
+     {
+      "box": [
+       8.5,
+       8.5,
+       158.86,
+       21
+      ],
+      "shown": true,
+      "text": "newrowhere"
+     },
+     {
+      "box": [
+       8.5,
+       29.5,
+       158.86,
+       21
+      ],
+      "shown": true,
+      "text": "r1c0r1c1r1c2"
+     },
+     {
+      "box": [
+       8.5,
+       50.5,
+       158.86,
+       21
+      ],
+      "shown": true,
+      "text": "r2c0r2c1 widerr2c2"
+     },
+     {
+      "box": [
+       8.5,
+       71.5,
+       158.86,
+       21
+      ],
+      "shown": true,
+      "text": "r3c0r3c1r3c2"
+     },
+     {
+      "box": [
+       11,
+       103,
+       161.86,
+       22
+      ],
+      "shown": true,
+      "text": "NameQty"
+     },
+     {
+      "box": [
+       11,
+       127,
+       161.86,
+       22
+      ],
+      "shown": true,
+      "text": "Apple3"
+     },
+     {
+      "box": [
+       11,
+       151,
+       161.86,
+       22
+      ],
+      "shown": true,
+      "text": "Banana bread12"
+     },
+     {
+      "box": [
+       11,
+       175,
+       161.86,
+       22
+      ],
+      "shown": true,
+      "text": "Total over both columns"
+     },
+     {
+      "box": [
+       8.5,
+       207.5,
+       296.52,
+       21
+      ],
+      "shown": true,
+      "text": "firstinsertedsecondthird cell"
+     },
+     {
+      "box": [
+       11,
+       239,
+       104.16,
+       22
+      ],
+      "shown": true,
+      "text": "KeyValue"
+     },
+     {
+      "box": [
+       11,
+       263,
+       104.16,
+       22
+      ],
+      "shown": true,
+      "text": "aone"
+     },
+     {
+      "box": [
+       11,
+       287,
+       104.16,
+       22
+      ],
+      "shown": true,
+      "text": "bbtwo two"
+     },
+     {
+      "box": [
+       11,
+       311,
+       104.16,
+       22
+      ],
+      "shown": true,
+      "text": "cccthree"
+     },
+     {
+      "box": [
+       8.5,
+       343.5,
+       113.95,
+       21
+      ],
+      "shown": true,
+      "text": "Head"
+     },
+     {
+      "box": [
+       8.5,
+       364.5,
+       113.95,
+       21
+      ],
+      "shown": true,
+      "text": "longer textx11"
+     },
+     {
+      "box": [
+       8.5,
+       385.5,
+       113.95,
+       21
+      ],
+      "shown": true,
+      "text": "x20x21"
+     }
+    ],
+    "td": [
+     {
+      "box": [
+       8.5,
+       8.5,
+       40.23,
+       21
+      ],
+      "shown": true,
+      "text": "new",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       48.73,
+       8.5,
+       77.59,
+       21
+      ],
+      "shown": true,
+      "text": "row",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       126.33,
+       8.5,
+       41.03,
+       21
+      ],
+      "shown": true,
+      "text": "here",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       29.5,
+       40.23,
+       21
+      ],
+      "shown": true,
+      "text": "r1c0",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       48.73,
+       29.5,
+       77.59,
+       21
+      ],
+      "shown": true,
+      "text": "r1c1",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       126.33,
+       29.5,
+       41.03,
+       21
+      ],
+      "shown": true,
+      "text": "r1c2",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       50.5,
+       40.23,
+       21
+      ],
+      "shown": true,
+      "text": "r2c0",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       48.73,
+       50.5,
+       77.59,
+       21
+      ],
+      "shown": true,
+      "text": "r2c1 wider",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       126.33,
+       50.5,
+       41.03,
+       21
+      ],
+      "shown": true,
+      "text": "r2c2",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       71.5,
+       40.23,
+       21
+      ],
+      "shown": true,
+      "text": "r3c0",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       48.73,
+       71.5,
+       77.59,
+       21
+      ],
+      "shown": true,
+      "text": "r3c1",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       126.33,
+       71.5,
+       41.03,
+       21
+      ],
+      "shown": true,
+      "text": "r3c2",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       11,
+       127,
+       116.27,
+       22
+      ],
+      "shown": true,
+      "text": "Apple",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       130.27,
+       127,
+       42.59,
+       22
+      ],
+      "shown": true,
+      "text": "3",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       11,
+       151,
+       116.27,
+       22
+      ],
+      "shown": true,
+      "text": "Banana bread",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       130.27,
+       151,
+       42.59,
+       22
+      ],
+      "shown": true,
+      "text": "12",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       11,
+       175,
+       161.86,
+       22
+      ],
+      "shown": true,
+      "text": "Total over both columns",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       207.5,
+       35.56,
+       21
+      ],
+      "shown": true,
+      "text": "first",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       44.06,
+       207.5,
+       62.81,
+       21
+      ],
+      "shown": true,
+      "text": "inserted",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       106.88,
+       207.5,
+       133,
+       21
+      ],
+      "shown": true,
+      "text": "second",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       239.88,
+       207.5,
+       65.14,
+       21
+      ],
+      "shown": true,
+      "text": "third cell",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       11,
+       263,
+       39.69,
+       22
+      ],
+      "shown": true,
+      "text": "a",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       53.69,
+       263,
+       61.47,
+       22
+      ],
+      "shown": true,
+      "text": "one",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       11,
+       287,
+       39.69,
+       22
+      ],
+      "shown": true,
+      "text": "bb",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       53.69,
+       287,
+       61.47,
+       22
+      ],
+      "shown": true,
+      "text": "two two",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       11,
+       311,
+       39.69,
+       22
+      ],
+      "shown": true,
+      "text": "ccc",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       53.69,
+       311,
+       61.47,
+       22
+      ],
+      "shown": true,
+      "text": "three",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       343.5,
+       78.38,
+       21
+      ],
+      "shown": true,
+      "text": "Head",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       364.5,
+       78.38,
+       21
+      ],
+      "shown": true,
+      "text": "longer text",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       86.88,
+       364.5,
+       35.58,
+       21
+      ],
+      "shown": true,
+      "text": "x11",
+      "paint": "rgb(255, 255, 255)"
+     },
+     {
+      "box": [
+       8.5,
+       385.5,
+       78.38,
+       21
+      ],
+      "shown": true,
+      "text": "x20",
+      "paint": "rgb(238, 238, 255)"
+     },
+     {
+      "box": [
+       86.88,
+       385.5,
+       35.58,
+       21
+      ],
+      "shown": true,
+      "text": "x21",
+      "paint": "rgb(238, 238, 255)"
+     }
+    ],
+    "th": [
+     {
+      "box": [
+       11,
+       103,
+       116.27,
+       22
+      ],
+      "shown": true,
+      "text": "Name"
+     },
+     {
+      "box": [
+       130.27,
+       103,
+       42.59,
+       22
+      ],
+      "shown": true,
+      "text": "Qty"
+     },
+     {
+      "box": [
+       11,
+       239,
+       39.69,
+       22
+      ],
+      "shown": true,
+      "text": "Key"
+     },
+     {
+      "box": [
+       53.69,
+       239,
+       61.47,
+       22
+      ],
+      "shown": true,
+      "text": "Value"
+     }
+    ],
+    "#after": [
+     {
+      "box": [
+       8,
+       421,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "After the tables."
+     }
+    ],
+    "(focus)": "grow"
+   }
+  }
+ ],
+ "made_tabs": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "ul": [
+     {
+      "box": [
+       8,
+       8,
+       1264,
+       22
+      ],
+      "shown": true,
+      "text": "AlphaBetaGamma"
+     },
+     {
+      "box": [
+       8,
+       36,
+       1264,
+       22
+      ],
+      "shown": true,
+      "text": "AlphaBetaGamma"
+     },
+     {
+      "box": [
+       8,
+       64,
+       1264,
+       28
+      ],
+      "shown": true,
+      "text": "AlphaBetaGamma"
+     },
+     {
+      "box": [
+       8,
+       98,
+       1264,
+       27
+      ],
+      "shown": true,
+      "text": "AlphaBetaGamma"
+     },
+     {
+      "box": [
+       8,
+       131,
+       1264,
+       22
+      ],
+      "shown": true,
+      "text": "AlphaBetaGamma"
+     }
+    ],
+    "li": [
+     {
+      "box": [
+       8,
+       8,
+       53.81,
+       22
+      ],
+      "shown": true,
+      "text": "Alpha"
+     },
+     {
+      "box": [
+       65.81,
+       8,
+       48.36,
+       22
+      ],
+      "shown": true,
+      "text": "Beta"
+     },
+     {
+      "box": [
+       118.17,
+       8,
+       67.8,
+       22
+      ],
+      "shown": true,
+      "text": "Gamma"
+     },
+     {
+      "box": [
+       8,
+       36,
+       53.81,
+       22
+      ],
+      "shown": true,
+      "text": "Alpha"
+     },
+     {
+      "box": [
+       65.81,
+       36,
+       68.81,
+       22
+      ],
+      "shown": true,
+      "text": "Beta"
+     },
+     {
+      "box": [
+       138.63,
+       36,
+       67.8,
+       22
+      ],
+      "shown": true,
+      "text": "Gamma"
+     },
+     {
+      "box": [
+       8,
+       67,
+       53.81,
+       22
+      ],
+      "shown": true,
+      "text": "Alpha"
+     },
+     {
+      "box": [
+       65.81,
+       64,
+       52.81,
+       28
+      ],
+      "shown": true,
+      "text": "Beta"
+     },
+     {
+      "box": [
+       122.63,
+       67,
+       67.8,
+       22
+      ],
+      "shown": true,
+      "text": "Gamma"
+     },
+     {
+      "box": [
+       8,
+       101,
+       53.81,
+       22
+      ],
+      "shown": true,
+      "text": "Alpha"
+     },
+     {
+      "box": [
+       65.81,
+       98,
+       55.03,
+       27
+      ],
+      "shown": true,
+      "text": "Beta"
+     },
+     {
+      "box": [
+       124.84,
+       101,
+       67.8,
+       22
+      ],
+      "shown": true,
+      "text": "Gamma"
+     },
+     {
+      "box": [
+       8,
+       131,
+       53.81,
+       22
+      ],
+      "shown": true,
+      "text": "Alpha"
+     },
+     {
+      "box": [
+       65.81,
+       131,
+       48.36,
+       22
+      ],
+      "shown": true,
+      "text": "Beta"
+     },
+     {
+      "box": [
+       118.17,
+       131,
+       67.8,
+       22
+      ],
+      "shown": true,
+      "text": "Gamma"
+     }
+    ],
+    ".wrap": [
+     {
+      "box": [
+       18,
+       169,
+       54.25,
+       24
+      ],
+      "shown": true,
+      "text": "Inbox"
+     }
+    ],
+    ".badge": [
+     {
+      "box": [
+       64.25,
+       163,
+       14,
+       14
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#none": [
+     {
+      "box": [
+       8,
+       205,
+       0,
+       16
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "button": [
+     {
+      "box": [
+       8,
+       203,
+       48.59,
+       21
+      ],
+      "shown": true,
+      "text": "Move"
+     },
+     {
+      "box": [
+       60.48,
+       203,
+       45.64,
+       21
+      ],
+      "shown": true,
+      "text": "Back"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "move",
+   "log": [],
+   "state": {
+    "ul": [
+     {
+      "box": [
+       8,
+       8,
+       1264,
+       22
+      ],
+      "shown": true,
+      "text": "AlphaBetaGamma"
+     },
+     {
+      "box": [
+       8,
+       36,
+       1264,
+       22
+      ],
+      "shown": true,
+      "text": "AlphaBetaGamma"
+     },
+     {
+      "box": [
+       8,
+       64,
+       1264,
+       28
+      ],
+      "shown": true,
+      "text": "AlphaBetaGamma"
+     },
+     {
+      "box": [
+       8,
+       98,
+       1264,
+       27
+      ],
+      "shown": true,
+      "text": "AlphaBetaGamma"
+     },
+     {
+      "box": [
+       8,
+       131,
+       1264,
+       22
+      ],
+      "shown": true,
+      "text": "AlphaBeGamma"
+     }
+    ],
+    "li": [
+     {
+      "box": [
+       8,
+       8,
+       53.81,
+       22
+      ],
+      "shown": true,
+      "text": "Alpha"
+     },
+     {
+      "box": [
+       65.81,
+       8,
+       46.81,
+       22
+      ],
+      "shown": true,
+      "text": "Beta"
+     },
+     {
+      "box": [
+       116.63,
+       8,
+       69.36,
+       22
+      ],
+      "shown": true,
+      "text": "Gamma"
+     },
+     {
+      "box": [
+       8,
+       36,
+       53.81,
+       22
+      ],
+      "shown": true,
+      "text": "Alpha"
+     },
+     {
+      "box": [
+       65.81,
+       36,
+       46.81,
+       22
+      ],
+      "shown": true,
+      "text": "Beta"
+     },
+     {
+      "box": [
+       116.63,
+       36,
+       89.8,
+       22
+      ],
+      "shown": true,
+      "text": "Gamma"
+     },
+     {
+      "box": [
+       8,
+       67,
+       53.81,
+       22
+      ],
+      "shown": true,
+      "text": "Alpha"
+     },
+     {
+      "box": [
+       65.81,
+       67,
+       46.81,
+       22
+      ],
+      "shown": true,
+      "text": "Beta"
+     },
+     {
+      "box": [
+       116.63,
+       64,
+       73.8,
+       28
+      ],
+      "shown": true,
+      "text": "Gamma"
+     },
+     {
+      "box": [
+       8,
+       101,
+       53.81,
+       22
+      ],
+      "shown": true,
+      "text": "Alpha"
+     },
+     {
+      "box": [
+       65.81,
+       101,
+       46.81,
+       22
+      ],
+      "shown": true,
+      "text": "Beta"
+     },
+     {
+      "box": [
+       116.63,
+       98,
+       82.02,
+       27
+      ],
+      "shown": true,
+      "text": "Gamma"
+     },
+     {
+      "box": [
+       8,
+       131,
+       53.81,
+       22
+      ],
+      "shown": true,
+      "text": "Alpha"
+     },
+     {
+      "box": [
+       65.81,
+       131,
+       35.91,
+       22
+      ],
+      "shown": true,
+      "text": "Be"
+     },
+     {
+      "box": [
+       105.72,
+       131,
+       67.8,
+       22
+      ],
+      "shown": true,
+      "text": "Gamma"
+     }
+    ],
+    ".wrap": [
+     {
+      "box": [
+       18,
+       169,
+       54.25,
+       24
+      ],
+      "shown": true,
+      "text": "Inbox3"
+     }
+    ],
+    ".badge": [
+     {
+      "box": [
+       64.25,
+       163,
+       14,
+       14
+      ],
+      "shown": true,
+      "text": "3"
+     }
+    ],
+    "#none": [
+     {
+      "box": [
+       8,
+       205,
+       0,
+       16
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "button": [
+     {
+      "box": [
+       8,
+       203,
+       48.59,
+       21
+      ],
+      "shown": true,
+      "text": "Move"
+     },
+     {
+      "box": [
+       60.48,
+       203,
+       45.64,
+       21
+      ],
+      "shown": true,
+      "text": "Back"
+     }
+    ],
+    "(focus)": "move"
+   }
+  },
+  {
+   "name": "back",
+   "log": [],
+   "state": {
+    "ul": [
+     {
+      "box": [
+       8,
+       8,
+       1264,
+       22
+      ],
+      "shown": true,
+      "text": "AlphaBetaGamma"
+     },
+     {
+      "box": [
+       8,
+       36,
+       1264,
+       22
+      ],
+      "shown": true,
+      "text": "AlphaBetaGamma"
+     },
+     {
+      "box": [
+       8,
+       64,
+       1264,
+       28
+      ],
+      "shown": true,
+      "text": "AlphaBetaGamma"
+     },
+     {
+      "box": [
+       8,
+       98,
+       1264,
+       27
+      ],
+      "shown": true,
+      "text": "AlphaBetaGamma"
+     },
+     {
+      "box": [
+       8,
+       131,
+       1264,
+       22
+      ],
+      "shown": true,
+      "text": "AlphaBeta betaGamma"
+     }
+    ],
+    "li": [
+     {
+      "box": [
+       8,
+       8,
+       56.89,
+       22
+      ],
+      "shown": true,
+      "text": "Alpha"
+     },
+     {
+      "box": [
+       68.89,
+       8,
+       46.81,
+       22
+      ],
+      "shown": true,
+      "text": "Beta"
+     },
+     {
+      "box": [
+       119.7,
+       8,
+       67.8,
+       22
+      ],
+      "shown": true,
+      "text": "Gamma"
+     },
+     {
+      "box": [
+       8,
+       36,
+       75.81,
+       22
+      ],
+      "shown": true,
+      "text": "Alpha"
+     },
+     {
+      "box": [
+       87.81,
+       36,
+       46.81,
+       22
+      ],
+      "shown": true,
+      "text": "Beta"
+     },
+     {
+      "box": [
+       138.63,
+       36,
+       67.8,
+       22
+      ],
+      "shown": true,
+      "text": "Gamma"
+     },
+     {
+      "box": [
+       8,
+       64,
+       59.81,
+       28
+      ],
+      "shown": true,
+      "text": "Alpha"
+     },
+     {
+      "box": [
+       71.81,
+       67,
+       46.81,
+       22
+      ],
+      "shown": true,
+      "text": "Beta"
+     },
+     {
+      "box": [
+       122.63,
+       67,
+       67.8,
+       22
+      ],
+      "shown": true,
+      "text": "Gamma"
+     },
+     {
+      "box": [
+       8,
+       98,
+       64.05,
+       27
+      ],
+      "shown": true,
+      "text": "Alpha"
+     },
+     {
+      "box": [
+       76.05,
+       101,
+       46.81,
+       22
+      ],
+      "shown": true,
+      "text": "Beta"
+     },
+     {
+      "box": [
+       126.86,
+       101,
+       67.8,
+       22
+      ],
+      "shown": true,
+      "text": "Gamma"
+     },
+     {
+      "box": [
+       8,
+       131,
+       53.81,
+       22
+      ],
+      "shown": true,
+      "text": "Alpha"
+     },
+     {
+      "box": [
+       65.81,
+       131,
+       81.03,
+       22
+      ],
+      "shown": true,
+      "text": "Beta beta"
+     },
+     {
+      "box": [
+       150.84,
+       131,
+       67.8,
+       22
+      ],
+      "shown": true,
+      "text": "Gamma"
+     }
+    ],
+    ".wrap": [
+     {
+      "box": [
+       18,
+       169,
+       54.25,
+       24
+      ],
+      "shown": true,
+      "text": "Inbox"
+     }
+    ],
+    ".badge": [
+     {
+      "box": [
+       64.25,
+       163,
+       14,
+       14
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "#none": [
+     {
+      "box": [
+       8,
+       205,
+       0,
+       16
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "button": [
+     {
+      "box": [
+       8,
+       203,
+       48.59,
+       21
+      ],
+      "shown": true,
+      "text": "Move"
+     },
+     {
+      "box": [
+       60.48,
+       203,
+       45.64,
+       21
+      ],
+      "shown": true,
+      "text": "Back"
+     }
+    ],
+    "(focus)": "back"
+   }
+  }
+ ],
  "modal": [
   {
    "name": "load",
@@ -98098,6 +101312,3103 @@
      }
     ],
     "(focus)": "btn"
+   }
+  }
+ ],
+ "own_counters": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "ol": [
+     {
+      "box": [
+       8,
+       8,
+       360,
+       75
+      ],
+      "shown": true,
+      "text": "Inbox3Work0Family and friends12"
+     }
+    ],
+    "li": [
+     {
+      "box": [
+       8,
+       8,
+       360,
+       25
+      ],
+      "shown": true,
+      "text": "Inbox3"
+     },
+     {
+      "box": [
+       8,
+       33,
+       360,
+       25
+      ],
+      "shown": true,
+      "text": "Work0"
+     },
+     {
+      "box": [
+       8,
+       58,
+       360,
+       25
+      ],
+      "shown": true,
+      "text": "Family and friends12"
+     }
+    ],
+    ".badge": [
+     {
+      "box": [
+       69.83,
+       15,
+       20,
+       12
+      ],
+      "shown": true,
+      "text": "3"
+     },
+     {
+      "box": [
+       68,
+       40,
+       20,
+       12
+      ],
+      "shown": true,
+      "text": "0"
+     },
+     {
+      "box": [
+       149.97,
+       65,
+       22.25,
+       12
+      ],
+      "shown": true,
+      "text": "12"
+     }
+    ],
+    "#sum": [
+     {
+      "box": [
+       8,
+       89,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Unread: 15"
+     }
+    ],
+    "#unread": [
+     {
+      "box": [
+       61.7,
+       89,
+       15.58,
+       16
+      ],
+      "shown": true,
+      "text": "15"
+     }
+    ],
+    "button": [
+     {
+      "box": [
+       8,
+       119,
+       74.52,
+       21
+      ],
+      "shown": true,
+      "text": "More mail"
+     },
+     {
+      "box": [
+       86.41,
+       119,
+       73.05,
+       21
+      ],
+      "shown": true,
+      "text": "Read first"
+     },
+     {
+      "box": [
+       163.34,
+       119,
+       91.58,
+       21
+      ],
+      "shown": true,
+      "text": "Drop second"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "more",
+   "log": [],
+   "state": {
+    "ol": [
+     {
+      "box": [
+       8,
+       8,
+       360,
+       100
+      ],
+      "shown": true,
+      "text": "Inbox4Work0Family and friends12Newsletters104"
+     }
+    ],
+    "li": [
+     {
+      "box": [
+       8,
+       8,
+       360,
+       25
+      ],
+      "shown": true,
+      "text": "Inbox4"
+     },
+     {
+      "box": [
+       8,
+       33,
+       360,
+       25
+      ],
+      "shown": true,
+      "text": "Work0"
+     },
+     {
+      "box": [
+       8,
+       58,
+       360,
+       25
+      ],
+      "shown": true,
+      "text": "Family and friends12"
+     },
+     {
+      "box": [
+       8,
+       83,
+       360,
+       25
+      ],
+      "shown": true,
+      "text": "Newsletters104"
+     }
+    ],
+    ".badge": [
+     {
+      "box": [
+       69.83,
+       15,
+       20,
+       12
+      ],
+      "shown": true,
+      "text": "4"
+     },
+     {
+      "box": [
+       68,
+       40,
+       20,
+       12
+      ],
+      "shown": true,
+      "text": "0"
+     },
+     {
+      "box": [
+       149.97,
+       65,
+       22.25,
+       12
+      ],
+      "shown": true,
+      "text": "12"
+     },
+     {
+      "box": [
+       108.72,
+       90,
+       28.36,
+       12
+      ],
+      "shown": true,
+      "text": "104"
+     }
+    ],
+    "#sum": [
+     {
+      "box": [
+       8,
+       114,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Unread: 120"
+     }
+    ],
+    "#unread": [
+     {
+      "box": [
+       61.7,
+       114,
+       23.36,
+       16
+      ],
+      "shown": true,
+      "text": "120"
+     }
+    ],
+    "button": [
+     {
+      "box": [
+       8,
+       144,
+       74.52,
+       21
+      ],
+      "shown": true,
+      "text": "More mail"
+     },
+     {
+      "box": [
+       86.41,
+       144,
+       73.05,
+       21
+      ],
+      "shown": true,
+      "text": "Read first"
+     },
+     {
+      "box": [
+       163.34,
+       144,
+       91.58,
+       21
+      ],
+      "shown": true,
+      "text": "Drop second"
+     }
+    ],
+    "(focus)": "more"
+   }
+  },
+  {
+   "name": "read",
+   "log": [],
+   "state": {
+    "ol": [
+     {
+      "box": [
+       8,
+       8,
+       360,
+       100
+      ],
+      "shown": true,
+      "text": "Inbox0Work0Family and friends12Newsletters104"
+     }
+    ],
+    "li": [
+     {
+      "box": [
+       8,
+       8,
+       360,
+       25
+      ],
+      "shown": true,
+      "text": "Inbox0"
+     },
+     {
+      "box": [
+       8,
+       33,
+       360,
+       25
+      ],
+      "shown": true,
+      "text": "Work0"
+     },
+     {
+      "box": [
+       8,
+       58,
+       360,
+       25
+      ],
+      "shown": true,
+      "text": "Family and friends12"
+     },
+     {
+      "box": [
+       8,
+       83,
+       360,
+       25
+      ],
+      "shown": true,
+      "text": "Newsletters104"
+     }
+    ],
+    ".badge": [
+     {
+      "box": [
+       69.83,
+       15,
+       20,
+       12
+      ],
+      "shown": true,
+      "text": "0"
+     },
+     {
+      "box": [
+       68,
+       40,
+       20,
+       12
+      ],
+      "shown": true,
+      "text": "0"
+     },
+     {
+      "box": [
+       149.97,
+       65,
+       22.25,
+       12
+      ],
+      "shown": true,
+      "text": "12"
+     },
+     {
+      "box": [
+       108.72,
+       90,
+       28.36,
+       12
+      ],
+      "shown": true,
+      "text": "104"
+     }
+    ],
+    "#sum": [
+     {
+      "box": [
+       8,
+       114,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Unread: 116"
+     }
+    ],
+    "#unread": [
+     {
+      "box": [
+       61.7,
+       114,
+       22.33,
+       16
+      ],
+      "shown": true,
+      "text": "116"
+     }
+    ],
+    "button": [
+     {
+      "box": [
+       8,
+       144,
+       74.52,
+       21
+      ],
+      "shown": true,
+      "text": "More mail"
+     },
+     {
+      "box": [
+       86.41,
+       144,
+       73.05,
+       21
+      ],
+      "shown": true,
+      "text": "Read first"
+     },
+     {
+      "box": [
+       163.34,
+       144,
+       91.58,
+       21
+      ],
+      "shown": true,
+      "text": "Drop second"
+     }
+    ],
+    "(focus)": "read"
+   }
+  },
+  {
+   "name": "drop",
+   "log": [],
+   "state": {
+    "ol": [
+     {
+      "box": [
+       8,
+       8,
+       360,
+       75
+      ],
+      "shown": true,
+      "text": "Inbox0Family and friends12Newsletters104"
+     }
+    ],
+    "li": [
+     {
+      "box": [
+       8,
+       8,
+       360,
+       25
+      ],
+      "shown": true,
+      "text": "Inbox0"
+     },
+     {
+      "box": [
+       8,
+       33,
+       360,
+       25
+      ],
+      "shown": true,
+      "text": "Family and friends12"
+     },
+     {
+      "box": [
+       8,
+       58,
+       360,
+       25
+      ],
+      "shown": true,
+      "text": "Newsletters104"
+     }
+    ],
+    ".badge": [
+     {
+      "box": [
+       69.83,
+       15,
+       20,
+       12
+      ],
+      "shown": true,
+      "text": "0"
+     },
+     {
+      "box": [
+       149.97,
+       40,
+       22.25,
+       12
+      ],
+      "shown": true,
+      "text": "12"
+     },
+     {
+      "box": [
+       108.72,
+       65,
+       28.36,
+       12
+      ],
+      "shown": true,
+      "text": "104"
+     }
+    ],
+    "#sum": [
+     {
+      "box": [
+       8,
+       89,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Unread: 116"
+     }
+    ],
+    "#unread": [
+     {
+      "box": [
+       61.7,
+       89,
+       22.33,
+       16
+      ],
+      "shown": true,
+      "text": "116"
+     }
+    ],
+    "button": [
+     {
+      "box": [
+       8,
+       119,
+       74.52,
+       21
+      ],
+      "shown": true,
+      "text": "More mail"
+     },
+     {
+      "box": [
+       86.41,
+       119,
+       73.05,
+       21
+      ],
+      "shown": true,
+      "text": "Read first"
+     },
+     {
+      "box": [
+       163.34,
+       119,
+       91.58,
+       21
+      ],
+      "shown": true,
+      "text": "Drop second"
+     }
+    ],
+    "(focus)": "drop"
+   }
+  }
+ ],
+ "own_sortable": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "table": [
+     {
+      "box": [
+       8,
+       39,
+       420,
+       126
+      ],
+      "shown": true,
+      "text": "NameQtyPriceCherry124.50Apple301.20Banana bread loaf26.00Date73.25"
+     }
+    ],
+    "th": [
+     {
+      "box": [
+       8.5,
+       39.5,
+       246.92,
+       25
+      ],
+      "shown": true,
+      "text": "Name"
+     },
+     {
+      "box": [
+       255.42,
+       39.5,
+       75.78,
+       25
+      ],
+      "shown": true,
+      "text": "Qty"
+     },
+     {
+      "box": [
+       331.2,
+       39.5,
+       96.3,
+       25
+      ],
+      "shown": true,
+      "text": "Price"
+     }
+    ],
+    "tr": [
+     {
+      "box": [
+       8.5,
+       39.5,
+       419,
+       25
+      ],
+      "shown": true,
+      "text": "NameQtyPrice"
+     },
+     {
+      "box": [
+       8.5,
+       64.5,
+       419,
+       25
+      ],
+      "shown": true,
+      "text": "Cherry124.50"
+     },
+     {
+      "box": [
+       8.5,
+       89.5,
+       419,
+       25
+      ],
+      "shown": true,
+      "text": "Apple301.20"
+     },
+     {
+      "box": [
+       8.5,
+       114.5,
+       419,
+       25
+      ],
+      "shown": true,
+      "text": "Banana bread loaf26.00"
+     },
+     {
+      "box": [
+       8.5,
+       139.5,
+       419,
+       25
+      ],
+      "shown": true,
+      "text": "Date73.25"
+     }
+    ],
+    "td": [
+     {
+      "box": [
+       8.5,
+       64.5,
+       246.92,
+       25
+      ],
+      "shown": true,
+      "text": "Cherry"
+     },
+     {
+      "box": [
+       255.42,
+       64.5,
+       75.78,
+       25
+      ],
+      "shown": true,
+      "text": "12"
+     },
+     {
+      "box": [
+       331.2,
+       64.5,
+       96.3,
+       25
+      ],
+      "shown": true,
+      "text": "4.50"
+     },
+     {
+      "box": [
+       8.5,
+       89.5,
+       246.92,
+       25
+      ],
+      "shown": true,
+      "text": "Apple"
+     },
+     {
+      "box": [
+       255.42,
+       89.5,
+       75.78,
+       25
+      ],
+      "shown": true,
+      "text": "30"
+     },
+     {
+      "box": [
+       331.2,
+       89.5,
+       96.3,
+       25
+      ],
+      "shown": true,
+      "text": "1.20"
+     },
+     {
+      "box": [
+       8.5,
+       114.5,
+       246.92,
+       25
+      ],
+      "shown": true,
+      "text": "Banana bread loaf"
+     },
+     {
+      "box": [
+       255.42,
+       114.5,
+       75.78,
+       25
+      ],
+      "shown": true,
+      "text": "2"
+     },
+     {
+      "box": [
+       331.2,
+       114.5,
+       96.3,
+       25
+      ],
+      "shown": true,
+      "text": "6.00"
+     },
+     {
+      "box": [
+       8.5,
+       139.5,
+       246.92,
+       25
+      ],
+      "shown": true,
+      "text": "Date"
+     },
+     {
+      "box": [
+       255.42,
+       139.5,
+       75.78,
+       25
+      ],
+      "shown": true,
+      "text": "7"
+     },
+     {
+      "box": [
+       331.2,
+       139.5,
+       96.3,
+       25
+      ],
+      "shown": true,
+      "text": "3.25"
+     }
+    ],
+    "#total": [
+     {
+      "box": [
+       8,
+       171,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Total items: 51"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "by name",
+   "log": [],
+   "state": {
+    "table": [
+     {
+      "box": [
+       8,
+       39,
+       420,
+       126
+      ],
+      "shown": true,
+      "text": "NameQtyPriceApple301.20Banana bread loaf26.00Cherry124.50Date73.25"
+     }
+    ],
+    "th": [
+     {
+      "box": [
+       8.5,
+       39.5,
+       246.92,
+       25
+      ],
+      "shown": true,
+      "text": "Name"
+     },
+     {
+      "box": [
+       255.42,
+       39.5,
+       75.78,
+       25
+      ],
+      "shown": true,
+      "text": "Qty"
+     },
+     {
+      "box": [
+       331.2,
+       39.5,
+       96.3,
+       25
+      ],
+      "shown": true,
+      "text": "Price"
+     }
+    ],
+    "tr": [
+     {
+      "box": [
+       8.5,
+       39.5,
+       419,
+       25
+      ],
+      "shown": true,
+      "text": "NameQtyPrice"
+     },
+     {
+      "box": [
+       8.5,
+       64.5,
+       419,
+       25
+      ],
+      "shown": true,
+      "text": "Apple301.20"
+     },
+     {
+      "box": [
+       8.5,
+       89.5,
+       419,
+       25
+      ],
+      "shown": true,
+      "text": "Banana bread loaf26.00"
+     },
+     {
+      "box": [
+       8.5,
+       114.5,
+       419,
+       25
+      ],
+      "shown": true,
+      "text": "Cherry124.50"
+     },
+     {
+      "box": [
+       8.5,
+       139.5,
+       419,
+       25
+      ],
+      "shown": true,
+      "text": "Date73.25"
+     }
+    ],
+    "td": [
+     {
+      "box": [
+       8.5,
+       64.5,
+       246.92,
+       25
+      ],
+      "shown": true,
+      "text": "Apple"
+     },
+     {
+      "box": [
+       255.42,
+       64.5,
+       75.78,
+       25
+      ],
+      "shown": true,
+      "text": "30"
+     },
+     {
+      "box": [
+       331.2,
+       64.5,
+       96.3,
+       25
+      ],
+      "shown": true,
+      "text": "1.20"
+     },
+     {
+      "box": [
+       8.5,
+       89.5,
+       246.92,
+       25
+      ],
+      "shown": true,
+      "text": "Banana bread loaf"
+     },
+     {
+      "box": [
+       255.42,
+       89.5,
+       75.78,
+       25
+      ],
+      "shown": true,
+      "text": "2"
+     },
+     {
+      "box": [
+       331.2,
+       89.5,
+       96.3,
+       25
+      ],
+      "shown": true,
+      "text": "6.00"
+     },
+     {
+      "box": [
+       8.5,
+       114.5,
+       246.92,
+       25
+      ],
+      "shown": true,
+      "text": "Cherry"
+     },
+     {
+      "box": [
+       255.42,
+       114.5,
+       75.78,
+       25
+      ],
+      "shown": true,
+      "text": "12"
+     },
+     {
+      "box": [
+       331.2,
+       114.5,
+       96.3,
+       25
+      ],
+      "shown": true,
+      "text": "4.50"
+     },
+     {
+      "box": [
+       8.5,
+       139.5,
+       246.92,
+       25
+      ],
+      "shown": true,
+      "text": "Date"
+     },
+     {
+      "box": [
+       255.42,
+       139.5,
+       75.78,
+       25
+      ],
+      "shown": true,
+      "text": "7"
+     },
+     {
+      "box": [
+       331.2,
+       139.5,
+       96.3,
+       25
+      ],
+      "shown": true,
+      "text": "3.25"
+     }
+    ],
+    "#total": [
+     {
+      "box": [
+       8,
+       171,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Total items: 51"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "by qty",
+   "log": [],
+   "state": {
+    "table": [
+     {
+      "box": [
+       8,
+       39,
+       420,
+       126
+      ],
+      "shown": true,
+      "text": "NameQtyPriceBanana bread loaf26.00Date73.25Cherry124.50Apple301.20"
+     }
+    ],
+    "th": [
+     {
+      "box": [
+       8.5,
+       39.5,
+       233.63,
+       25
+      ],
+      "shown": true,
+      "text": "Name"
+     },
+     {
+      "box": [
+       242.13,
+       39.5,
+       94.25,
+       25
+      ],
+      "shown": true,
+      "text": "Qty"
+     },
+     {
+      "box": [
+       336.38,
+       39.5,
+       91.13,
+       25
+      ],
+      "shown": true,
+      "text": "Price"
+     }
+    ],
+    "tr": [
+     {
+      "box": [
+       8.5,
+       39.5,
+       419,
+       25
+      ],
+      "shown": true,
+      "text": "NameQtyPrice"
+     },
+     {
+      "box": [
+       8.5,
+       64.5,
+       419,
+       25
+      ],
+      "shown": true,
+      "text": "Banana bread loaf26.00"
+     },
+     {
+      "box": [
+       8.5,
+       89.5,
+       419,
+       25
+      ],
+      "shown": true,
+      "text": "Date73.25"
+     },
+     {
+      "box": [
+       8.5,
+       114.5,
+       419,
+       25
+      ],
+      "shown": true,
+      "text": "Cherry124.50"
+     },
+     {
+      "box": [
+       8.5,
+       139.5,
+       419,
+       25
+      ],
+      "shown": true,
+      "text": "Apple301.20"
+     }
+    ],
+    "td": [
+     {
+      "box": [
+       8.5,
+       64.5,
+       233.63,
+       25
+      ],
+      "shown": true,
+      "text": "Banana bread loaf"
+     },
+     {
+      "box": [
+       242.13,
+       64.5,
+       94.25,
+       25
+      ],
+      "shown": true,
+      "text": "2"
+     },
+     {
+      "box": [
+       336.38,
+       64.5,
+       91.13,
+       25
+      ],
+      "shown": true,
+      "text": "6.00"
+     },
+     {
+      "box": [
+       8.5,
+       89.5,
+       233.63,
+       25
+      ],
+      "shown": true,
+      "text": "Date"
+     },
+     {
+      "box": [
+       242.13,
+       89.5,
+       94.25,
+       25
+      ],
+      "shown": true,
+      "text": "7"
+     },
+     {
+      "box": [
+       336.38,
+       89.5,
+       91.13,
+       25
+      ],
+      "shown": true,
+      "text": "3.25"
+     },
+     {
+      "box": [
+       8.5,
+       114.5,
+       233.63,
+       25
+      ],
+      "shown": true,
+      "text": "Cherry"
+     },
+     {
+      "box": [
+       242.13,
+       114.5,
+       94.25,
+       25
+      ],
+      "shown": true,
+      "text": "12"
+     },
+     {
+      "box": [
+       336.38,
+       114.5,
+       91.13,
+       25
+      ],
+      "shown": true,
+      "text": "4.50"
+     },
+     {
+      "box": [
+       8.5,
+       139.5,
+       233.63,
+       25
+      ],
+      "shown": true,
+      "text": "Apple"
+     },
+     {
+      "box": [
+       242.13,
+       139.5,
+       94.25,
+       25
+      ],
+      "shown": true,
+      "text": "30"
+     },
+     {
+      "box": [
+       336.38,
+       139.5,
+       91.13,
+       25
+      ],
+      "shown": true,
+      "text": "1.20"
+     }
+    ],
+    "#total": [
+     {
+      "box": [
+       8,
+       171,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Total items: 51"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "qty down",
+   "log": [],
+   "state": {
+    "table": [
+     {
+      "box": [
+       8,
+       39,
+       420,
+       126
+      ],
+      "shown": true,
+      "text": "NameQtyPriceApple301.20Cherry124.50Date73.25Banana bread loaf26.00"
+     }
+    ],
+    "th": [
+     {
+      "box": [
+       8.5,
+       39.5,
+       233.63,
+       25
+      ],
+      "shown": true,
+      "text": "Name"
+     },
+     {
+      "box": [
+       242.13,
+       39.5,
+       94.25,
+       25
+      ],
+      "shown": true,
+      "text": "Qty"
+     },
+     {
+      "box": [
+       336.38,
+       39.5,
+       91.13,
+       25
+      ],
+      "shown": true,
+      "text": "Price"
+     }
+    ],
+    "tr": [
+     {
+      "box": [
+       8.5,
+       39.5,
+       419,
+       25
+      ],
+      "shown": true,
+      "text": "NameQtyPrice"
+     },
+     {
+      "box": [
+       8.5,
+       64.5,
+       419,
+       25
+      ],
+      "shown": true,
+      "text": "Apple301.20"
+     },
+     {
+      "box": [
+       8.5,
+       89.5,
+       419,
+       25
+      ],
+      "shown": true,
+      "text": "Cherry124.50"
+     },
+     {
+      "box": [
+       8.5,
+       114.5,
+       419,
+       25
+      ],
+      "shown": true,
+      "text": "Date73.25"
+     },
+     {
+      "box": [
+       8.5,
+       139.5,
+       419,
+       25
+      ],
+      "shown": true,
+      "text": "Banana bread loaf26.00"
+     }
+    ],
+    "td": [
+     {
+      "box": [
+       8.5,
+       64.5,
+       233.63,
+       25
+      ],
+      "shown": true,
+      "text": "Apple"
+     },
+     {
+      "box": [
+       242.13,
+       64.5,
+       94.25,
+       25
+      ],
+      "shown": true,
+      "text": "30"
+     },
+     {
+      "box": [
+       336.38,
+       64.5,
+       91.13,
+       25
+      ],
+      "shown": true,
+      "text": "1.20"
+     },
+     {
+      "box": [
+       8.5,
+       89.5,
+       233.63,
+       25
+      ],
+      "shown": true,
+      "text": "Cherry"
+     },
+     {
+      "box": [
+       242.13,
+       89.5,
+       94.25,
+       25
+      ],
+      "shown": true,
+      "text": "12"
+     },
+     {
+      "box": [
+       336.38,
+       89.5,
+       91.13,
+       25
+      ],
+      "shown": true,
+      "text": "4.50"
+     },
+     {
+      "box": [
+       8.5,
+       114.5,
+       233.63,
+       25
+      ],
+      "shown": true,
+      "text": "Date"
+     },
+     {
+      "box": [
+       242.13,
+       114.5,
+       94.25,
+       25
+      ],
+      "shown": true,
+      "text": "7"
+     },
+     {
+      "box": [
+       336.38,
+       114.5,
+       91.13,
+       25
+      ],
+      "shown": true,
+      "text": "3.25"
+     },
+     {
+      "box": [
+       8.5,
+       139.5,
+       233.63,
+       25
+      ],
+      "shown": true,
+      "text": "Banana bread loaf"
+     },
+     {
+      "box": [
+       242.13,
+       139.5,
+       94.25,
+       25
+      ],
+      "shown": true,
+      "text": "2"
+     },
+     {
+      "box": [
+       336.38,
+       139.5,
+       91.13,
+       25
+      ],
+      "shown": true,
+      "text": "6.00"
+     }
+    ],
+    "#total": [
+     {
+      "box": [
+       8,
+       171,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Total items: 51"
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
+ "own_tabs": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    ".tabs": [
+     {
+      "box": [
+       8,
+       8,
+       1264,
+       31
+      ],
+      "shown": true,
+      "text": "OverviewDetailsHistory"
+     }
+    ],
+    ".tab": [
+     {
+      "box": [
+       8,
+       8,
+       96.27,
+       29
+      ],
+      "shown": true,
+      "text": "Overview"
+     },
+     {
+      "box": [
+       106.27,
+       8,
+       68.8,
+       29
+      ],
+      "shown": true,
+      "text": "Details"
+     },
+     {
+      "box": [
+       177.06,
+       8,
+       69.56,
+       29
+      ],
+      "shown": true,
+      "text": "History"
+     }
+    ],
+    ".note": [
+     {
+      "box": [
+       25,
+       15,
+       62.27,
+       16
+      ],
+      "shown": true,
+      "text": "Overview"
+     },
+     {
+      "box": [
+       119.27,
+       15,
+       42.8,
+       16
+      ],
+      "shown": true,
+      "text": "Details"
+     },
+     {
+      "box": [
+       190.06,
+       15,
+       43.56,
+       16
+      ],
+      "shown": true,
+      "text": "History"
+     }
+    ],
+    "#dot": [
+     {
+      "box": [
+       233.63,
+       11,
+       8,
+       8
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    ".panel": [
+     {
+      "box": [
+       8,
+       39,
+       1264,
+       83
+      ],
+      "shown": true,
+      "text": "OverviewA short overview of the project, long enough to wrap onto a second line in this panel when the window is narrow."
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "DetailsThe details: three paragraphs would go here."
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "HistoryChanged twice."
+     }
+    ],
+    "h2": [
+     {
+      "box": [
+       19,
+       49,
+       1242,
+       18
+      ],
+      "shown": true,
+      "text": "Overview"
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "Details"
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "History"
+     }
+    ],
+    "p": [
+     {
+      "box": [
+       19,
+       81,
+       1242,
+       16
+      ],
+      "shown": true,
+      "text": "A short overview of the project, long enough to wrap onto a second line in this panel when the window is narrow."
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "The details: three paragraphs would go here."
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "Changed twice."
+     }
+    ],
+    "footer": [
+     {
+      "box": [
+       8,
+       132,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Footer under the panels."
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "details",
+   "log": [],
+   "state": {
+    ".tabs": [
+     {
+      "box": [
+       8,
+       8,
+       1264,
+       31
+      ],
+      "shown": true,
+      "text": "OverviewDetailsHistory"
+     }
+    ],
+    ".tab": [
+     {
+      "box": [
+       8,
+       8,
+       84.36,
+       29
+      ],
+      "shown": true,
+      "text": "Overview"
+     },
+     {
+      "box": [
+       94.36,
+       8,
+       79.92,
+       29
+      ],
+      "shown": true,
+      "text": "Details"
+     },
+     {
+      "box": [
+       176.28,
+       8,
+       69.56,
+       29
+      ],
+      "shown": true,
+      "text": "History"
+     }
+    ],
+    ".note": [
+     {
+      "box": [
+       21,
+       15,
+       58.36,
+       16
+      ],
+      "shown": true,
+      "text": "Overview"
+     },
+     {
+      "box": [
+       111.36,
+       15,
+       45.92,
+       16
+      ],
+      "shown": true,
+      "text": "Details"
+     },
+     {
+      "box": [
+       189.28,
+       15,
+       43.56,
+       16
+      ],
+      "shown": true,
+      "text": "History"
+     }
+    ],
+    "#dot": [
+     {
+      "box": [
+       232.84,
+       11,
+       8,
+       8
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    ".panel": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "OverviewA short overview of the project, long enough to wrap onto a second line in this panel when the window is narrow."
+     },
+     {
+      "box": [
+       8,
+       39,
+       1264,
+       83
+      ],
+      "shown": true,
+      "text": "DetailsThe details: three paragraphs would go here."
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "HistoryChanged twice."
+     }
+    ],
+    "h2": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "Overview"
+     },
+     {
+      "box": [
+       19,
+       49,
+       1242,
+       18
+      ],
+      "shown": true,
+      "text": "Details"
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "History"
+     }
+    ],
+    "p": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "A short overview of the project, long enough to wrap onto a second line in this panel when the window is narrow."
+     },
+     {
+      "box": [
+       19,
+       81,
+       1242,
+       16
+      ],
+      "shown": true,
+      "text": "The details: three paragraphs would go here."
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "Changed twice."
+     }
+    ],
+    "footer": [
+     {
+      "box": [
+       8,
+       132,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Footer under the panels."
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "history",
+   "log": [],
+   "state": {
+    ".tabs": [
+     {
+      "box": [
+       8,
+       8,
+       1264,
+       31
+      ],
+      "shown": true,
+      "text": "OverviewDetailsHistory"
+     }
+    ],
+    ".tab": [
+     {
+      "box": [
+       8,
+       8,
+       84.36,
+       29
+      ],
+      "shown": true,
+      "text": "Overview"
+     },
+     {
+      "box": [
+       94.36,
+       8,
+       68.8,
+       29
+      ],
+      "shown": true,
+      "text": "Details"
+     },
+     {
+      "box": [
+       165.16,
+       8,
+       82.23,
+       29
+      ],
+      "shown": true,
+      "text": "History"
+     }
+    ],
+    ".note": [
+     {
+      "box": [
+       21,
+       15,
+       58.36,
+       16
+      ],
+      "shown": true,
+      "text": "Overview"
+     },
+     {
+      "box": [
+       107.36,
+       15,
+       42.8,
+       16
+      ],
+      "shown": true,
+      "text": "Details"
+     },
+     {
+      "box": [
+       182.16,
+       15,
+       48.23,
+       16
+      ],
+      "shown": true,
+      "text": "History"
+     }
+    ],
+    "#dot": [],
+    ".panel": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "OverviewA short overview of the project, long enough to wrap onto a second line in this panel when the window is narrow."
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "DetailsThe details: three paragraphs would go here."
+     },
+     {
+      "box": [
+       8,
+       39,
+       1264,
+       83
+      ],
+      "shown": true,
+      "text": "HistoryChanged twice."
+     }
+    ],
+    "h2": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "Overview"
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "Details"
+     },
+     {
+      "box": [
+       19,
+       49,
+       1242,
+       18
+      ],
+      "shown": true,
+      "text": "History"
+     }
+    ],
+    "p": [
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "A short overview of the project, long enough to wrap onto a second line in this panel when the window is narrow."
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "The details: three paragraphs would go here."
+     },
+     {
+      "box": [
+       19,
+       81,
+       1242,
+       16
+      ],
+      "shown": true,
+      "text": "Changed twice."
+     }
+    ],
+    "footer": [
+     {
+      "box": [
+       8,
+       132,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Footer under the panels."
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "overview",
+   "log": [],
+   "state": {
+    ".tabs": [
+     {
+      "box": [
+       8,
+       8,
+       1264,
+       31
+      ],
+      "shown": true,
+      "text": "OverviewDetailsHistory"
+     }
+    ],
+    ".tab": [
+     {
+      "box": [
+       8,
+       8,
+       96.27,
+       29
+      ],
+      "shown": true,
+      "text": "Overview"
+     },
+     {
+      "box": [
+       106.27,
+       8,
+       68.8,
+       29
+      ],
+      "shown": true,
+      "text": "Details"
+     },
+     {
+      "box": [
+       177.06,
+       8,
+       69.56,
+       29
+      ],
+      "shown": true,
+      "text": "History"
+     }
+    ],
+    ".note": [
+     {
+      "box": [
+       25,
+       15,
+       62.27,
+       16
+      ],
+      "shown": true,
+      "text": "Overview"
+     },
+     {
+      "box": [
+       119.27,
+       15,
+       42.8,
+       16
+      ],
+      "shown": true,
+      "text": "Details"
+     },
+     {
+      "box": [
+       190.06,
+       15,
+       43.56,
+       16
+      ],
+      "shown": true,
+      "text": "History"
+     }
+    ],
+    "#dot": [],
+    ".panel": [
+     {
+      "box": [
+       8,
+       39,
+       1264,
+       83
+      ],
+      "shown": true,
+      "text": "OverviewA short overview of the project, long enough to wrap onto a second line in this panel when the window is narrow."
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "DetailsThe details: three paragraphs would go here."
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "HistoryChanged twice."
+     }
+    ],
+    "h2": [
+     {
+      "box": [
+       19,
+       49,
+       1242,
+       18
+      ],
+      "shown": true,
+      "text": "Overview"
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "Details"
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "History"
+     }
+    ],
+    "p": [
+     {
+      "box": [
+       19,
+       81,
+       1242,
+       16
+      ],
+      "shown": true,
+      "text": "A short overview of the project, long enough to wrap onto a second line in this panel when the window is narrow."
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "The details: three paragraphs would go here."
+     },
+     {
+      "box": [
+       0,
+       0,
+       0,
+       0
+      ],
+      "shown": false,
+      "text": "Changed twice."
+     }
+    ],
+    "footer": [
+     {
+      "box": [
+       8,
+       132,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Footer under the panels."
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
+ "own_todo": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "table": [
+     {
+      "box": [
+       8,
+       37,
+       219.13,
+       50
+      ],
+      "shown": true,
+      "text": "Buy milkxCall the bank about the cardx"
+     }
+    ],
+    "tr": [
+     {
+      "box": [
+       8,
+       39,
+       219.13,
+       22
+      ],
+      "shown": true,
+      "text": "Buy milkx"
+     },
+     {
+      "box": [
+       8,
+       63,
+       219.13,
+       22
+      ],
+      "shown": true,
+      "text": "Call the bank about the cardx"
+     }
+    ],
+    "td": [
+     {
+      "box": [
+       8,
+       39,
+       187.13,
+       22
+      ],
+      "shown": true,
+      "text": "Buy milk"
+     },
+     {
+      "box": [
+       195.13,
+       39,
+       32,
+       22
+      ],
+      "shown": true,
+      "text": "x"
+     },
+     {
+      "box": [
+       8,
+       63,
+       187.13,
+       22
+      ],
+      "shown": true,
+      "text": "Call the bank about the card"
+     },
+     {
+      "box": [
+       195.13,
+       63,
+       32,
+       22
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    ".count": [
+     {
+      "box": [
+       8,
+       93,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Left: 2"
+     }
+    ],
+    "#left": [
+     {
+      "box": [
+       39.14,
+       93,
+       7.8,
+       16
+      ],
+      "shown": true,
+      "text": "2"
+     }
+    ],
+    "button": [
+     {
+      "box": [
+       219.89,
+       8,
+       39.72,
+       21
+      ],
+      "shown": true,
+      "text": "Add"
+     },
+     {
+      "box": [
+       8,
+       123,
+       76.73,
+       21
+      ],
+      "shown": true,
+      "text": "Finish first"
+     },
+     {
+      "box": [
+       88.63,
+       123,
+       81.2,
+       21
+      ],
+      "shown": true,
+      "text": "Clear done"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "add",
+   "log": [],
+   "state": {
+    "table": [
+     {
+      "box": [
+       8,
+       37,
+       219.13,
+       74
+      ],
+      "shown": true,
+      "text": "Buy milkxCall the bank about the cardxWater the plantsx"
+     }
+    ],
+    "tr": [
+     {
+      "box": [
+       8,
+       39,
+       219.13,
+       22
+      ],
+      "shown": true,
+      "text": "Buy milkx"
+     },
+     {
+      "box": [
+       8,
+       63,
+       219.13,
+       22
+      ],
+      "shown": true,
+      "text": "Call the bank about the cardx"
+     },
+     {
+      "box": [
+       8,
+       87,
+       219.13,
+       22
+      ],
+      "shown": true,
+      "text": "Water the plantsx"
+     }
+    ],
+    "td": [
+     {
+      "box": [
+       8,
+       39,
+       187.13,
+       22
+      ],
+      "shown": true,
+      "text": "Buy milk"
+     },
+     {
+      "box": [
+       195.13,
+       39,
+       32,
+       22
+      ],
+      "shown": true,
+      "text": "x"
+     },
+     {
+      "box": [
+       8,
+       63,
+       187.13,
+       22
+      ],
+      "shown": true,
+      "text": "Call the bank about the card"
+     },
+     {
+      "box": [
+       195.13,
+       63,
+       32,
+       22
+      ],
+      "shown": true,
+      "text": "x"
+     },
+     {
+      "box": [
+       8,
+       87,
+       187.13,
+       22
+      ],
+      "shown": true,
+      "text": "Water the plants"
+     },
+     {
+      "box": [
+       195.13,
+       87,
+       32,
+       22
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    ".count": [
+     {
+      "box": [
+       8,
+       117,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Left: 3"
+     }
+    ],
+    "#left": [
+     {
+      "box": [
+       39.14,
+       117,
+       7.8,
+       16
+      ],
+      "shown": true,
+      "text": "3"
+     }
+    ],
+    "button": [
+     {
+      "box": [
+       219.89,
+       8,
+       39.72,
+       21
+      ],
+      "shown": true,
+      "text": "Add"
+     },
+     {
+      "box": [
+       8,
+       147,
+       76.73,
+       21
+      ],
+      "shown": true,
+      "text": "Finish first"
+     },
+     {
+      "box": [
+       88.63,
+       147,
+       81.2,
+       21
+      ],
+      "shown": true,
+      "text": "Clear done"
+     }
+    ],
+    "(focus)": "add"
+   }
+  },
+  {
+   "name": "finish",
+   "log": [],
+   "state": {
+    "table": [
+     {
+      "box": [
+       8,
+       37,
+       219.13,
+       74
+      ],
+      "shown": true,
+      "text": "Buy milkxCall the bank about the cardxWater the plantsx"
+     }
+    ],
+    "tr": [
+     {
+      "box": [
+       8,
+       39,
+       219.13,
+       22
+      ],
+      "shown": true,
+      "text": "Buy milkx"
+     },
+     {
+      "box": [
+       8,
+       63,
+       219.13,
+       22
+      ],
+      "shown": true,
+      "text": "Call the bank about the cardx"
+     },
+     {
+      "box": [
+       8,
+       87,
+       219.13,
+       22
+      ],
+      "shown": true,
+      "text": "Water the plantsx"
+     }
+    ],
+    "td": [
+     {
+      "box": [
+       8,
+       39,
+       187.13,
+       22
+      ],
+      "shown": true,
+      "text": "Buy milk"
+     },
+     {
+      "box": [
+       195.13,
+       39,
+       32,
+       22
+      ],
+      "shown": true,
+      "text": "x"
+     },
+     {
+      "box": [
+       8,
+       63,
+       187.13,
+       22
+      ],
+      "shown": true,
+      "text": "Call the bank about the card"
+     },
+     {
+      "box": [
+       195.13,
+       63,
+       32,
+       22
+      ],
+      "shown": true,
+      "text": "x"
+     },
+     {
+      "box": [
+       8,
+       87,
+       187.13,
+       22
+      ],
+      "shown": true,
+      "text": "Water the plants"
+     },
+     {
+      "box": [
+       195.13,
+       87,
+       32,
+       22
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    ".count": [
+     {
+      "box": [
+       8,
+       117,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Left: 2"
+     }
+    ],
+    "#left": [
+     {
+      "box": [
+       39.14,
+       117,
+       7.8,
+       16
+      ],
+      "shown": true,
+      "text": "2"
+     }
+    ],
+    "button": [
+     {
+      "box": [
+       219.89,
+       8,
+       39.72,
+       21
+      ],
+      "shown": true,
+      "text": "Add"
+     },
+     {
+      "box": [
+       8,
+       147,
+       76.73,
+       21
+      ],
+      "shown": true,
+      "text": "Finish first"
+     },
+     {
+      "box": [
+       88.63,
+       147,
+       81.2,
+       21
+      ],
+      "shown": true,
+      "text": "Clear done"
+     }
+    ],
+    "(focus)": "finish"
+   }
+  },
+  {
+   "name": "finish again",
+   "log": [],
+   "state": {
+    "table": [
+     {
+      "box": [
+       8,
+       37,
+       219.13,
+       74
+      ],
+      "shown": true,
+      "text": "Buy milkxCall the bank about the cardxWater the plantsx"
+     }
+    ],
+    "tr": [
+     {
+      "box": [
+       8,
+       39,
+       219.13,
+       22
+      ],
+      "shown": true,
+      "text": "Buy milkx"
+     },
+     {
+      "box": [
+       8,
+       63,
+       219.13,
+       22
+      ],
+      "shown": true,
+      "text": "Call the bank about the cardx"
+     },
+     {
+      "box": [
+       8,
+       87,
+       219.13,
+       22
+      ],
+      "shown": true,
+      "text": "Water the plantsx"
+     }
+    ],
+    "td": [
+     {
+      "box": [
+       8,
+       39,
+       187.13,
+       22
+      ],
+      "shown": true,
+      "text": "Buy milk"
+     },
+     {
+      "box": [
+       195.13,
+       39,
+       32,
+       22
+      ],
+      "shown": true,
+      "text": "x"
+     },
+     {
+      "box": [
+       8,
+       63,
+       187.13,
+       22
+      ],
+      "shown": true,
+      "text": "Call the bank about the card"
+     },
+     {
+      "box": [
+       195.13,
+       63,
+       32,
+       22
+      ],
+      "shown": true,
+      "text": "x"
+     },
+     {
+      "box": [
+       8,
+       87,
+       187.13,
+       22
+      ],
+      "shown": true,
+      "text": "Water the plants"
+     },
+     {
+      "box": [
+       195.13,
+       87,
+       32,
+       22
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    ".count": [
+     {
+      "box": [
+       8,
+       117,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Left: 1"
+     }
+    ],
+    "#left": [
+     {
+      "box": [
+       39.14,
+       117,
+       7.8,
+       16
+      ],
+      "shown": true,
+      "text": "1"
+     }
+    ],
+    "button": [
+     {
+      "box": [
+       219.89,
+       8,
+       39.72,
+       21
+      ],
+      "shown": true,
+      "text": "Add"
+     },
+     {
+      "box": [
+       8,
+       147,
+       76.73,
+       21
+      ],
+      "shown": true,
+      "text": "Finish first"
+     },
+     {
+      "box": [
+       88.63,
+       147,
+       81.2,
+       21
+      ],
+      "shown": true,
+      "text": "Clear done"
+     }
+    ],
+    "(focus)": "finish"
+   }
+  },
+  {
+   "name": "clear",
+   "log": [],
+   "state": {
+    "table": [
+     {
+      "box": [
+       8,
+       37,
+       145.42,
+       26
+      ],
+      "shown": true,
+      "text": "Water the plantsx"
+     }
+    ],
+    "tr": [
+     {
+      "box": [
+       8,
+       39,
+       145.42,
+       22
+      ],
+      "shown": true,
+      "text": "Water the plantsx"
+     }
+    ],
+    "td": [
+     {
+      "box": [
+       8,
+       39,
+       113.42,
+       22
+      ],
+      "shown": true,
+      "text": "Water the plants"
+     },
+     {
+      "box": [
+       121.42,
+       39,
+       32,
+       22
+      ],
+      "shown": true,
+      "text": "x"
+     }
+    ],
+    ".count": [
+     {
+      "box": [
+       8,
+       69,
+       1264,
+       16
+      ],
+      "shown": true,
+      "text": "Left: 1"
+     }
+    ],
+    "#left": [
+     {
+      "box": [
+       39.14,
+       69,
+       7.8,
+       16
+      ],
+      "shown": true,
+      "text": "1"
+     }
+    ],
+    "button": [
+     {
+      "box": [
+       219.89,
+       8,
+       39.72,
+       21
+      ],
+      "shown": true,
+      "text": "Add"
+     },
+     {
+      "box": [
+       8,
+       99,
+       76.73,
+       21
+      ],
+      "shown": true,
+      "text": "Finish first"
+     },
+     {
+      "box": [
+       88.63,
+       99,
+       81.2,
+       21
+      ],
+      "shown": true,
+      "text": "Clear done"
+     }
+    ],
+    "(focus)": "clear"
    }
   }
  ],

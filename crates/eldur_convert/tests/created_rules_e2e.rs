@@ -616,6 +616,21 @@ fn rule_computed_static() {
 }
 
 #[test]
+fn rule_computed_mixed() {
+    page("rule_computed_mixed");
+}
+
+#[test]
 fn rule_empty_found() {
     page("rule_empty_found");
+}
+
+#[test]
+fn rule_float_margins_created() {
+    page("rule_float_margins_created");
+}
+
+#[test]
+fn rule_float_margins_static() {
+    page("rule_float_margins_static");
 }

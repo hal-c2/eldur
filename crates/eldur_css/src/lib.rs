@@ -7,7 +7,7 @@
 
 pub mod values;
 
-pub use inline_rules::{InlineRule, PaintValue, PseudoPart, PseudoRule, RuntimeRule};
+pub use inline_rules::{CounterRule, InlineRule, PaintValue, PseudoPart, PseudoRule, RuntimeRule};
 
 pub use values::*;
 
@@ -482,6 +482,13 @@ pub fn background_parts(value: &str) -> Option<(Option<String>, Option<String>)>
 /// follows when a script changes what an element's classes match.
 pub fn pseudo_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<PseudoRule> {
     inline_rules::pseudo_rules(sheets, viewport)
+}
+
+/// The `counter-reset`, `counter-increment` and `counter-set` of each
+/// selector, for the runtime to number generated text with.
+#[must_use]
+pub fn counter_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<CounterRule> {
+    inline_rules::counter_rules(sheets, viewport)
 }
 
 /// The structural pseudo-classes (without `of S`) some selector in `sheets`

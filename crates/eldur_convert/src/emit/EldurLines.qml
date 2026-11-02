@@ -22,6 +22,9 @@ Item {
     property real spacing: 0
     property real firstBaseline: 0
     property real lastBaseline: 0
+    // Floats beside the lines, in this item's terms: `left`, `from`, `to`, `top`,
+    // `bottom`. A line that passes them is shortened by them (CSS 2.2 §9.5).
+    property var exclusion: null
     // Where the box of an inline element this is lies: its font's, on the first line.
     readonly property var fontExtents: EldurFonts.extents(font, cssSize > 0 ? cssSize : undefined)
     readonly property real fontTop: firstBaseline - fontExtents.ascent
@@ -172,6 +175,9 @@ Item {
         }
         if (line.number === 0) {
             line.width = Math.max(1, run.room);
+        } else if (exclusion && !run.place) {
+            const cut = _cut(run.firstLine + line.number);
+            line.width = Math.max(1, run.wraps - cut.start - cut.end);
         }
         // A last word that cannot part from what comes next goes down with it.
         if (run.squeeze && run.squeeze.number === line.number) {
@@ -352,6 +358,22 @@ Item {
         return { texts: [], boxes: [], blanks: [], end: 0, empty: true };
     }
 
+    // What the floats take from line `index` at its start and end. Where it
+    // lies is counted in the strut's line heights, as the lines are not built yet.
+    function _cut(index) {
+        const ex = exclusion;
+        if (!ex) {
+            return { start: 0, end: 0 };
+        }
+        const box = lineStrut();
+        const step = box.above + box.below;
+        const top = index * step;
+        if (top >= ex.bottom || top + step <= ex.top) {
+            return { start: 0, end: 0 };
+        }
+        return ex.left ? { start: Math.max(0, ex.to), end: 0 } : { start: 0, end: Math.max(0, width - ex.from) };
+    }
+
     function layout() {
         if (_running) {
             return;
@@ -370,6 +392,11 @@ Item {
         let natural = 0;
         let naturalPending = false;
         const runs = new Map();
+        // The room on the line being filled, past what the floats take.
+        const roomAt = function(index) {
+            const cut = _cut(index);
+            return room - (wraps ? cut.start + cut.end : 0);
+        };
 
         for (const item of children) {
             _watch(item);
@@ -385,7 +412,7 @@ Item {
                 const margin = item.Layout;
                 const across = margin.leftMargin + margin.rightMargin;
                 let start = line.end + (pending && !line.empty ? space : 0);
-                if (wraps && !line.empty && start + across + item.width > room) {
+                if (wraps && !line.empty && start + across + item.width > roomAt(built.length)) {
                     built.push(line);
                     line = _newLine();
                     start = 0;
@@ -429,7 +456,11 @@ Item {
             const lead = !preserveSpace && /^\s/.test(plain) && plain[0] !== "\n";
             const trail = !preserveSpace && /\s$/.test(plain) && !/\n$/.test(plain);
             const leadWidth = lead && keeps ? space : 0;
-            const trailWidth = trail && keeps ? space : 0;
+            // Rich text drops a leading space but draws a trailing one, and
+            // styled text draws one that a tag closes after.
+            const keepsTrail = keeps || item.textFormat === Text.RichText && item.text.indexOf("<") !== -1
+                || item.textFormat === Text.StyledText && /\s(<[^>]*>)+$/.test(item.text);
+            const trailWidth = trail && keepsTrail ? space : 0;
             const before = (pending || lead) && !line.empty ? space : 0;
             let start = line.end + before + marginLeft;
 
@@ -437,11 +468,12 @@ Item {
             if (justified && item.font.wordSpacing !== 0) {
                 item.font.wordSpacing = 0;
             }
-            const run = { room: room, measured: [], place: null, squeeze: null };
+            const run = { room: room, measured: [], place: null, squeeze: null,
+                          firstLine: built.length, wraps: room };
             runs.set(item, run);
             _runs.set(item, run);
             item.width = room;
-            run.room = room - start + leadWidth;
+            run.room = roomAt(built.length) - start + leadWidth;
             _measure(item, run);
             let first = run.measured[0];
             const glued = wraps && !trail ? _glued(children, children.indexOf(item)) : 0;
@@ -449,17 +481,18 @@ Item {
             // No break inside a word that runs over from the last run.
             if (wraps && !line.empty && first && !(inWord && !lead && !pending)
                 && start + first.width - leadWidth - (single ? trailWidth : 0)
-                   + (single && !/\s/.test(plain.trim()) ? glued : 0) > room + 0.01) {
+                   + (single && !/\s/.test(plain.trim()) ? glued : 0) > roomAt(built.length) + 0.01) {
                 built.push(line);
                 line = _newLine();
                 start = marginLeft;
-                run.room = room + leadWidth - marginLeft;
+                run.firstLine = built.length;
+                run.room = roomAt(built.length) + leadWidth - marginLeft;
                 _measure(item, run);
                 first = run.measured[0];
             }
             if (glued > 0 && first) {
                 const last = run.measured.length - 1;
-                const left = last === 0 ? run.room : room;
+                const left = last === 0 ? run.room : roomAt(run.firstLine + last);
                 if (run.measured[last].width + glued > left + 0.01 && /\s/.test(plain.trim())) {
                     run.squeeze = { number: last, width: left - glued };
                     _measure(item, run);
@@ -505,7 +538,14 @@ Item {
             }
             pending = trail;
             inWord = !trail && !broken;
-            natural += item.implicitWidth - leadWidth - trailWidth
+            // Once a narrower room has broken a word, Qt's implicit width can be
+            // well past the text's: on one line it is no wider than its lines end to end.
+            let unbroken = ((lead ? 1 : 0) + (trail ? 1 : 0) - 1) * space;
+            for (const m of run.measured) {
+                unbroken += m.width + space;
+            }
+            const own = run.measured.length > 0 ? Math.min(item.implicitWidth, unbroken) : item.implicitWidth;
+            natural += own - leadWidth - trailWidth
                 + ((naturalPending || lead && keeps) && natural > 0 ? space : 0);
             naturalPending = trail;
         }
@@ -622,17 +662,18 @@ Item {
             if (index === 0) {
                 firstBaseline = baseline;
             }
-            let shift = 0;
-            const free = width - l.end;
+            const cut = _cut(index);
+            let shift = cut.start;
+            const free = width - cut.start - cut.end - l.end;
             // The last line stays as it is, as a browser leaves it.
             if (free > 0 && textAlign === Text.AlignJustify && !noWrap && index < built.length - 1) {
                 _justify(l, free);
             }
             if (free > 0 && !(noWrap && textAlign === Text.AlignLeft)) {
                 if (textAlign === Text.AlignHCenter) {
-                    shift = free / 2;
+                    shift += free / 2;
                 } else if (textAlign === Text.AlignRight) {
-                    shift = free;
+                    shift += free;
                 }
             }
             for (const b of l.boxes) {
@@ -730,5 +771,6 @@ Item {
     // Not at once: a table reads implicit sizes while working out this width.
     onWidthChanged: schedule()
     onFontChanged: schedule()
+    onExclusionChanged: schedule()
     Component.onCompleted: layout()
 }

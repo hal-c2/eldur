@@ -28,6 +28,12 @@ pub(crate) fn parse_content_value(value: &str) -> Option<Option<Vec<crate::Conte
 }
 mod transform;
 
+/// A `counter-*` value's changes, `default` for a name with no number.
+pub(crate) fn parse_counter_value(value: &str, default: i32) -> Option<Vec<crate::CounterChange>> {
+    let cvs = cursor::parse_component_values(value).ok()?;
+    text::parse_counter_changes(cursor::trim_ws(&cvs), default).ok()
+}
+
 use crate::{
     BackgroundAttachment, BackgroundClip, BackgroundOrigin, BackgroundRepeat, ComputedStyle,
     LengthPercentage, Size, TransformFn, Viewport,

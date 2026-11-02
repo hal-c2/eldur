@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Empty spans and inline elements a script fills</title>
+<style>
+body { margin: 8px; font: 14px Arial, sans-serif; }
+.pill { display: inline-block; padding: 2px 8px; background: #cde; border-radius: 8px; }
+.badge { display: inline-block; min-width: 14px; padding: 0 4px; background: #c00; color: #fff; }
+b { color: #060; }
+table { border-collapse: collapse; margin-top: 8px; }
+td { border: 1px solid #888; padding: 2px 6px; }
+td.wide { width: 120px; }
+</style></head>
+<body>
+<p id="pc">Count: <span id="c"></span> items</p>
+<p id="pt">Tag: <span id="t"></span> end</p>
+<p id="pb">Box: <span id="b"></span> end</p>
+<p id="pn">Nest: <span id="n"><b id="bb">bold</b> x</span> end</p>
+<p id="pm">Mid: <span id="m">aa <i id="ii">it</i></span> zz</p>
+<div id="lonely"><span id="lone"></span></div>
+<table id="cells"><tbody><tr id="cr"><td id="first">first</td></tr></tbody></table>
+<button id="more">More</button>
+<p id="after">after</p>
+<script>
+function el(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const k in attrs) { if (k === "class") e.className = attrs[k]; else e.setAttribute(k, attrs[k]); }
+  for (const c of kids) e.append(typeof c === "string" ? document.createTextNode(c) : c);
+  return e;
+}
+document.getElementById("c").textContent = "12";
+document.getElementById("t").className = "pill";
+document.getElementById("t").textContent = "new";
+document.getElementById("b").append(el("span", { class: "badge" }, "5"));
+document.getElementById("pn").append(el("span", { class: "badge" }, "7"));
+document.getElementById("ii").append(el("span", { class: "badge", id: "g3" }, "9"));
+document.getElementById("lone").append("only text");
+document.getElementById("cr").append(el("td", { class: "wide" }, "second"), el("td", {}, "third cell"));
+document.getElementById("more").addEventListener("click", () => {
+  document.getElementById("b").append(el("span", { class: "badge" }, "6"));
+  document.getElementById("bb").append(el("span", { class: "pill" }, "in"));
+  document.getElementById("cr").insertCell(1).textContent = "inserted";
+  console.log([...document.getElementById("pb").childNodes].map((n) => n.nodeName).join(" "));
+});
+console.log([...document.getElementById("pb").childNodes].map((n) => n.nodeName).join(" "));
+</script>
+</body>
+</html>

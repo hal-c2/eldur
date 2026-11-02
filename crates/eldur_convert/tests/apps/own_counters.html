@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>A list with counters and badges</title>
+<style>
+body { margin: 8px; font: 14px Arial, sans-serif; color: #222; }
+ol { counter-reset: n; list-style: none; padding: 0; margin: 0; width: 360px; }
+li { counter-increment: n; padding: 4px 6px; border-bottom: 1px solid #ddd; }
+li::before { content: counter(n) ". "; color: #888; }
+li:nth-child(even) { background: #f6f6fa; }
+.badge { display: inline-block; min-width: 10px; padding: 0 5px; margin-left: 6px; border-radius: 8px; background: #c33; color: #fff; font-size: 11px; text-align: center; }
+.badge.zero { background: #999; }
+.new { position: relative; }
+.new::after { content: "new"; position: absolute; top: 2px; right: 4px; font-size: 10px; color: #070; }
+#sum { margin-top: 6px; }
+</style></head>
+<body>
+<ol id="list"></ol>
+<p id="sum">Unread: <span id="unread"></span></p>
+<button id="more">More mail</button>
+<button id="read">Read first</button>
+<button id="drop">Drop second</button>
+<script>
+const list = document.getElementById("list");
+const boxes = [["Inbox", 3], ["Work", 0], ["Family and friends", 12]];
+function badge(n) {
+  const b = document.createElement("span");
+  b.className = "badge" + (n === 0 ? " zero" : "");
+  b.textContent = String(n);
+  return b;
+}
+function add(name, n) {
+  const li = document.createElement("li");
+  li.id = "b" + list.children.length;
+  li.append(name, badge(n));
+  list.appendChild(li);
+  return li;
+}
+boxes.forEach(([name, n]) => add(name, n));
+function total() {
+  let t = 0;
+  for (const b of document.querySelectorAll(".badge")) t += Number(b.textContent);
+  document.getElementById("unread").textContent = String(t);
+}
+total();
+document.getElementById("more").addEventListener("click", () => {
+  add("Newsletters", 104).classList.add("new");
+  const first = list.querySelector(".badge");
+  first.textContent = String(Number(first.textContent) + 1);
+  total();
+});
+document.getElementById("read").addEventListener("click", () => {
+  const first = list.querySelector(".badge");
+  first.textContent = "0";
+  first.classList.add("zero");
+  total();
+});
+document.getElementById("drop").addEventListener("click", () => {
+  list.removeChild(list.children[1]);
+  total();
+});
+</script>
+</body>
+</html>
