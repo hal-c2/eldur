@@ -552,13 +552,16 @@ impl<'a> Builder<'a, '_> {
                 let (inline, blocks): (Vec<_>, Vec<_>) = children
                     .into_iter()
                     .partition(|c| matches!(c, Child::Inline(_)));
-                let children = inline
+                let mut children: Vec<_> = inline
                     .into_iter()
                     .filter_map(|c| match c {
                         Child::Inline(raw) => Some(raw),
                         Child::Block(_) => None,
                     })
                     .collect();
+                if children.is_empty() && self.keep.is_some_and(|k| k.contains(&node)) {
+                    children.push(whitespace::Raw::Kept);
+                }
                 out.push(Child::Inline(whitespace::Raw::Span {
                     node: Some(node),
                     style,

@@ -629,6 +629,11 @@ fn motion_keyframes() {
 }
 
 #[test]
+fn motion_slow_frame() {
+    page("motion_slow_frame");
+}
+
+#[test]
 fn motion_transitions() {
     page("motion_transitions");
 }
@@ -851,4 +856,39 @@ for (const e of [still, port])
 #[test]
 fn pseudo_read() {
     page("pseudo_read");
+}
+
+#[test]
+fn made_tables() {
+    page("made_tables");
+}
+
+#[test]
+fn made_tabs() {
+    page("made_tabs");
+}
+
+#[test]
+fn made_inline() {
+    page("made_inline");
+}
+
+#[test]
+fn own_sortable() {
+    page("own_sortable");
+}
+
+#[test]
+fn own_todo() {
+    page("own_todo");
+}
+
+#[test]
+fn own_tabs() {
+    page("own_tabs");
+}
+
+#[test]
+fn own_counters() {
+    page("own_counters");
 }

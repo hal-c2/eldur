@@ -5,8 +5,9 @@ use oxc_ast::AstKind;
 use oxc_ast::ast::{
     Argument, ArrowFunctionExpression, AssignmentExpression, AssignmentTarget, BindingPattern,
     CallExpression, Class, ComputedMemberExpression, Expression, Function, IdentifierReference,
-    MethodDefinition, ObjectProperty, ReturnStatement, SimpleAssignmentTarget, Statement,
-    StaticMemberExpression, ThisExpression, UnaryExpression, UpdateExpression, VariableDeclarator,
+    MethodDefinition, ObjectProperty, ObjectPropertyKind, ReturnStatement, SimpleAssignmentTarget,
+    Statement, StaticMemberExpression, ThisExpression, UnaryExpression, UpdateExpression,
+    VariableDeclarator,
 };
 use oxc_ast_visit::{Visit, walk};
 use oxc_semantic::{IsGlobalReference, Scoping, SymbolId};
@@ -19,8 +20,8 @@ use crate::parse::{
 };
 use crate::resolve::{
     ScriptQueryBindings, build_cross_script_query_map, extract_dom_query_from_call,
-    extract_string_literal, is_global_document, kebab_to_camel, known_dom_event_from_on_prop,
-    resolve_module_specifier, unwrap_parens,
+    extract_string_literal, is_global_document, is_global_ident, kebab_to_camel,
+    known_dom_event_from_on_prop, resolve_module_specifier, unwrap_parens,
 };
 use crate::{
     Analysis, ClassWrite, CreatedElement, CreatedId, Diagnostic, DomQuery, ElementRef, ScriptInput,
@@ -525,7 +526,11 @@ impl AnalysisVisitor<'_, '_> {
             match arg.as_expression() {
                 Some(e) => {
                     if let ElementRef::Created(id) = self.target(e) {
-                        let pos = self.pos(span);
+                        // The child goes in once the arguments have run.
+                        let pos = Pos {
+                            path: self.path.clone(),
+                            at: span.end,
+                        };
                         self.dynamic.inserts.push((id, parent.clone(), pos));
                     } else if !is_text_node(e, self.scoping) {
                         self.record_opaque(parent);
@@ -802,6 +807,47 @@ impl AnalysisVisitor<'_, '_> {
         }
     }
 
+    /// `Object.assign(el, { className: …, id: … })` writes those as `el.className = …` would.
+    fn record_assigned_props(&mut self, it: &CallExpression<'_>) {
+        let Some(target) = it.arguments.first().and_then(|a| a.as_expression()) else {
+            return;
+        };
+        for source in it.arguments.iter().skip(1) {
+            let Some(Expression::ObjectExpression(object)) =
+                source.as_expression().map(unwrap_parens)
+            else {
+                continue;
+            };
+            for prop in &object.properties {
+                let ObjectPropertyKind::ObjectProperty(prop) = prop else {
+                    continue;
+                };
+                let Some(key) = prop.key.static_name() else {
+                    continue;
+                };
+                match key.as_ref() {
+                    "className" => {
+                        let value = self.class_value(&prop.value, false);
+                        self.record_class_write(target, ClassOp::Assign(value), true, it.span);
+                    }
+                    "id" => match extract_string_literal(&prop.value) {
+                        Some(id) => {
+                            self.analysis.written_ids.insert(id);
+                        }
+                        None => self.analysis.writes_computed_id = true,
+                    },
+                    "textContent" | "innerText" => self.record_mutated(target, false),
+                    "innerHTML" => {
+                        self.record_mutated(target, false);
+                        let parent = self.target(target);
+                        self.record_markup(&parent, &prop.value, it.span);
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
     fn inspect_dynamic_call(
         &mut self,
         it: &CallExpression<'_>,
@@ -929,6 +975,17 @@ impl AnalysisVisitor<'_, '_> {
                 self.record_inserts(&parent, args.first(), it.span);
             }
             "removeChild" => self.record_mutated(&member.object, false),
+            "assign" if is_global_ident(&member.object, "Object", self.scoping) => {
+                self.record_assigned_props(it);
+            }
+            m if table_part_made(m).is_some() => {
+                self.record_mutated(&member.object, false);
+                if let Some(id) = self.eval.created_at.get(&span_key(it.span)) {
+                    let parent = self.target(&member.object);
+                    let pos = self.pos(it.span);
+                    self.dynamic.inserts.push((*id, parent, pos));
+                }
+            }
             "append" | "prepend" | "replaceChildren" if dom_receiver => {
                 self.record_mutated(&member.object, false);
                 let parent = self.target(&member.object);
@@ -1520,6 +1577,14 @@ impl Eval<'_, '_> {
                 if let Some(id) = self.created_at.get(&span_key(call.span)) {
                     return ElemExpr::Ref(ElementRef::Created(*id));
                 }
+                // `Object.assign` returns its target.
+                if let Expression::StaticMemberExpression(m) = unwrap_parens(&call.callee)
+                    && m.property.name == "assign"
+                    && is_global_ident(&m.object, "Object", self.scoping)
+                    && let Some(target) = call.arguments.first().and_then(|a| a.as_expression())
+                {
+                    return self.elem(target);
+                }
                 if let Expression::Identifier(callee) = unwrap_parens(&call.callee)
                     && let Some(sym) = self.stable_symbol(callee)
                 {
@@ -1657,17 +1722,39 @@ struct CreatedSiteCollector<'a, 'b> {
     sites: &'b mut Vec<CreatedSite>,
 }
 
+/// The part a table method makes and puts in its receiver: HTML's
+/// `insertRow`, `insertCell` and `create*` are `createElement` with the
+/// insertion done, and what they make is styled as any created element.
+fn table_part_made(method: &str) -> Option<&'static str> {
+    Some(match method {
+        "insertRow" => "tr",
+        "insertCell" => "td",
+        "createTHead" => "thead",
+        "createTFoot" => "tfoot",
+        "createTBody" => "tbody",
+        "createCaption" => "caption",
+        _ => return None,
+    })
+}
+
 impl<'a> Visit<'a> for CreatedSiteCollector<'_, '_> {
     fn visit_call_expression(&mut self, it: &CallExpression<'a>) {
-        if let Expression::StaticMemberExpression(member) = unwrap_parens(&it.callee)
-            && member.property.name == "createElement"
-            && is_global_document(&member.object, self.scoping)
-            && let Some(tag) = it
-                .arguments
-                .first()
-                .and_then(|a| a.as_expression())
-                .and_then(extract_string_literal)
-        {
+        let tag = match unwrap_parens(&it.callee) {
+            Expression::StaticMemberExpression(member)
+                if member.property.name == "createElement"
+                    && is_global_document(&member.object, self.scoping) =>
+            {
+                it.arguments
+                    .first()
+                    .and_then(|a| a.as_expression())
+                    .and_then(extract_string_literal)
+            }
+            Expression::StaticMemberExpression(member) => {
+                table_part_made(&member.property.name).map(str::to_owned)
+            }
+            _ => None,
+        };
+        if let Some(tag) = tag {
             let id = CreatedId(u32::try_from(self.sites.len()).unwrap_or(u32::MAX));
             self.created_at.insert(span_key(it.span), id);
             self.sites.push(CreatedSite {

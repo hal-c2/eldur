@@ -194,7 +194,7 @@ ApplicationWindow {
 
                             Layout.fillWidth: true
                             implicitWidth: floats.implicitWidth
-                            implicitHeight: Math.max(wrapped.implicitHeight, floats.implicitHeight)
+                            implicitHeight: Math.max(wrapped.implicitHeight, floats.y + floats.implicitHeight - 24)
                             Layout.topMargin: 28 - meta.eldurCarry
                             Layout.preferredHeight: implicitHeight
 
@@ -225,19 +225,24 @@ ApplicationWindow {
                                     Layout.fillWidth: true
                                     renderType: Text.NativeRendering
 
-                                    onLineLaidOut: (line) => {
+                                    function eldurCut(line) {
                                         const fixed = lineHeightMode === Text.FixedHeight;
                                         if (fixed) {
                                             line.y = line.number * lineHeight;
                                         }
-                                        const top = y + (fixed ? line.number * lineHeight : line.y);
+                                        const at = mapToItem(floats, 0, 0);
+                                        const top = at.y + (fixed ? line.number * lineHeight : line.y);
                                         const bottom = top + (fixed ? lineHeight : line.height);
                                         if (top < floats.childrenRect.y + floats.childrenRect.height && bottom > floats.childrenRect.y) {
-                                            const cut = x + width - floats.childrenRect.x;
+                                            const cut = at.x + width - floats.childrenRect.x;
                                             if (cut > 0) {
                                                 line.width -= cut;
                                             }
                                         }
+                                    }
+
+                                    onLineLaidOut: (line) => {
+                                        eldurCut(line)
                                     }
                                     onYChanged: Qt.callLater(forceLayout)
                                 }
@@ -263,19 +268,24 @@ ApplicationWindow {
                                     Layout.topMargin: 18 - intro.eldurCarry
                                     renderType: Text.NativeRendering
 
-                                    onLineLaidOut: (line) => {
+                                    function eldurCut(line) {
                                         const fixed = lineHeightMode === Text.FixedHeight;
                                         if (fixed) {
                                             line.y = line.number * lineHeight;
                                         }
-                                        const top = y + (fixed ? line.number * lineHeight : line.y);
+                                        const at = mapToItem(floats, 0, 0);
+                                        const top = at.y + (fixed ? line.number * lineHeight : line.y);
                                         const bottom = top + (fixed ? lineHeight : line.height);
                                         if (top < floats.childrenRect.y + floats.childrenRect.height && bottom > floats.childrenRect.y) {
-                                            const cut = x + width - floats.childrenRect.x;
+                                            const cut = at.x + width - floats.childrenRect.x;
                                             if (cut > 0) {
                                                 line.width -= cut;
                                             }
                                         }
+                                    }
+
+                                    onLineLaidOut: (line) => {
+                                        eldurCut(line)
                                     }
                                     onYChanged: Qt.callLater(forceLayout)
                                 }
@@ -300,19 +310,24 @@ ApplicationWindow {
                                     Layout.preferredHeight: implicitHeight
                                     renderType: Text.NativeRendering
 
-                                    onLineLaidOut: (line) => {
+                                    function eldurCut(line) {
                                         const fixed = lineHeightMode === Text.FixedHeight;
                                         if (fixed) {
                                             line.y = line.number * lineHeight;
                                         }
-                                        const top = y + (fixed ? line.number * lineHeight : line.y);
+                                        const at = mapToItem(floats, 0, 0);
+                                        const top = at.y + (fixed ? line.number * lineHeight : line.y);
                                         const bottom = top + (fixed ? lineHeight : line.height);
                                         if (top < floats.childrenRect.y + floats.childrenRect.height && bottom > floats.childrenRect.y) {
-                                            const cut = x + width - floats.childrenRect.x;
+                                            const cut = at.x + width - floats.childrenRect.x;
                                             if (cut > 0) {
                                                 line.width -= cut;
                                             }
                                         }
+                                    }
+
+                                    onLineLaidOut: (line) => {
+                                        eldurCut(line)
                                     }
                                     onYChanged: Qt.callLater(forceLayout)
                                 }

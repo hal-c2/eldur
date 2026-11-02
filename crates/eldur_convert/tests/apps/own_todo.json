@@ -1,0 +1,1 @@
+{"steps":[{"name":"add","click":"#add"},{"name":"finish","click":"#finish"},{"name":"finish again","click":"#finish"},{"name":"clear","click":"#clear"}],"watch":[{"sel":"table"},{"sel":"tr"},{"sel":"td"},{"sel":".count"},{"sel":"#left"},{"sel":"button"}]}

@@ -1,0 +1,1 @@
+{"steps":[{"name":"by name","click":"#hn"},{"name":"by qty","click":"#hq"},{"name":"qty down","click":"#hq"}],"watch":[{"sel":"table"},{"sel":"th"},{"sel":"tr"},{"sel":"td"},{"sel":"#total"}]}

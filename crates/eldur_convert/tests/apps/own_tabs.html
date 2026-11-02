@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>A tab widget</title>
+<style>
+body { margin: 8px; font: 14px Arial, sans-serif; color: #222; }
+.tabs { border-bottom: 2px solid #468; }
+.tab { display: inline-block; padding: 6px 12px; margin-right: 2px; background: #dde; border: 1px solid #aab; border-bottom: none; }
+.tab.active { background: #468; color: #fff; font-weight: bold; padding: 6px 16px; }
+.panel { display: none; padding: 10px; border: 1px solid #ccd; border-top: none; }
+.panel.active { display: block; }
+.panel h2 { margin: 0 0 6px; font-size: 16px; }
+.note { position: relative; }
+.dot { position: absolute; top: -4px; right: -8px; width: 8px; height: 8px; border-radius: 4px; background: #e33; }
+footer { margin-top: 10px; color: #666; }
+</style></head>
+<body>
+<div class="tabs" id="bar"></div>
+<div id="panels"></div>
+<footer id="foot">Footer under the panels.</footer>
+<script>
+const tabs = [
+  { t: "Overview", body: "A short overview of the project, long enough to wrap onto a second line in this panel when the window is narrow." },
+  { t: "Details", body: "The details: three paragraphs would go here." },
+  { t: "History", body: "Changed twice." },
+];
+const bar = document.getElementById("bar"), panels = document.getElementById("panels");
+tabs.forEach((x, i) => {
+  const tab = document.createElement("span");
+  tab.className = "tab" + (i === 0 ? " active" : "");
+  tab.id = "tab" + i;
+  const label = document.createElement("span");
+  label.className = "note";
+  label.textContent = x.t;
+  tab.appendChild(label);
+  tab.addEventListener("click", () => show(i));
+  bar.appendChild(tab);
+  const p = document.createElement("div");
+  p.className = "panel" + (i === 0 ? " active" : "");
+  p.id = "panel" + i;
+  p.innerHTML = "<h2>" + x.t + "</h2><p>" + x.body + "</p>";
+  panels.appendChild(p);
+});
+document.querySelector("#tab2 .note").appendChild(Object.assign(document.createElement("span"), { className: "dot", id: "dot" }));
+function show(i) {
+  document.querySelectorAll(".tab").forEach((t, j) => t.classList.toggle("active", i === j));
+  document.querySelectorAll(".panel").forEach((p, j) => p.classList.toggle("active", i === j));
+  if (i === 2) { const d = document.getElementById("dot"); if (d) d.remove(); }
+}
+</script>
+</body>
+</html>

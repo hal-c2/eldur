@@ -1,0 +1,29 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+.fl{float:left;width:60px;height:40px;background:#aaa;margin:3px}
+.fr{float:right;width:50px;height:30px;background:#caa}
+.a{margin-bottom:20px;height:10px;background:#cfc}
+.b{margin-top:30px;height:10px;background:#ccf}
+p{margin:14px 0}
+.c{clear:both}
+</style></head><body>
+<div id="g1"></div>
+<div id="g2"></div>
+<div id="g3"></div>
+<div id="after" style="height:9px;background:#000"></div>
+<script>
+// Margins collapse past floats; a first child's goes through its parent beside
+// one; the lines of a block inside a block beside a float are cut by it too.
+const mk=(t,p,c,id,tx)=>{const e=document.createElement(t);if(c)e.className=c;if(id)e.id=id;if(tx)e.textContent=tx;p.appendChild(e);return e};
+// Margins collapse past floats between them.
+mk('div',g1,'a','a1');mk('div',g1,'fl','f1');mk('div',g1,'fl','f2');mk('div',g1,'b','b1');mk('div',g1,'c','c1');
+// A first child's margin goes through its parent beside a float.
+mk('div',g2,'fl','f3');const d=mk('div',g2,'','d1');const p=mk('p',d,'','p1');mk('span',p,'','s1','first words');p.append(' and some more text to wrap around the float a few times over, enough for three lines at least in a narrow column of this page, which is wide.');mk('div',g2,'c','c2');
+// Lines of blocks in a block beside a float are cut too.
+mk('div',g3,'fr','f4');const e=mk('div',g3,'','e1');const q=mk('div',e,'','e2');mk('span',q,'','s2','inner');q.append(' text');mk('span',e,'','s3','own');mk('div',g3,'c','c3');
+const R=n=>{const q=document.getElementById(n).getBoundingClientRect();console.log('CS '+n+' '+[q.x,q.y,q.width,q.height].join(','))};
+setTimeout(()=>{
+ const ids=['g1','a1','f1','f2','b1','c1','g2','f3','d1','p1','s1','c2','g3','f4','e1','e2','s2','s3','c3','after'];
+ ids.forEach(R);document.body.appendChild(document.createElement('div')).id='csdone'
+},50);
+</script></body></html>

@@ -1,0 +1,1 @@
+{"steps":[{"name":"more","click":"#more"},{"name":"read","click":"#read"},{"name":"drop","click":"#drop"}],"watch":[{"sel":"ol"},{"sel":"li"},{"sel":".badge"},{"sel":"#sum"},{"sel":"#unread"},{"sel":"button"}]}

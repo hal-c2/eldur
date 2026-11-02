@@ -441,10 +441,24 @@ impl Emitter<'_, '_> {
                 } else {
                     format!("{id}.implicitWidth")
                 };
-                wrapper.set(
-                    "implicitWidth",
-                    Value::expr(plus(&width, insets.horizontal())),
-                );
+                // A box no narrower than `min-width` is wider than what it holds.
+                let min = match &style.min_width {
+                    Size::Length(l) => l.as_px().filter(|px| *px > 0.0),
+                    _ => None,
+                };
+                let width = match (min, style.box_sizing) {
+                    (Some(px), BoxSizing::ContentBox) => plus(
+                        &format!("Math.max({width}, {})", fmt_number(round(px))),
+                        insets.horizontal(),
+                    ),
+                    (Some(px), BoxSizing::BorderBox) => format!(
+                        "Math.max({}, {})",
+                        plus(&width, insets.horizontal()),
+                        fmt_number(round(px))
+                    ),
+                    (None, _) => plus(&width, insets.horizontal()),
+                };
+                wrapper.set("implicitWidth", Value::expr(width));
                 // An empty Text a script may write into still sets a line; an
                 // empty box has none.
                 let height = if content.type_name == "Text"

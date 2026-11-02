@@ -47,6 +47,12 @@ impl HiddenRun {
     }
 }
 
+/// Floats beside the blocks being emitted (`Emitter::float_group`).
+pub(crate) struct Wrap {
+    row: String,
+    left: bool,
+}
+
 /// The condition on which an item that only holds hidden boxes has content.
 fn shown_when(obj: &Object, b: &LayoutBox<'_>, cx: &mut Emitter<'_, '_>) -> Option<String> {
     let line = b.node.and_then(|n| node_line(cx.doc, n));
@@ -186,12 +192,20 @@ impl Emitter<'_, '_> {
                 let floats = &rest[..run];
                 let around = &rest[run..run + wrapped];
                 rest = &rest[run + wrapped..];
-                let (mut obj, bottom) = self.float_group(floats, around, decoration);
-                // Margins do not collapse with a float's.
-                if last.is_none() && top_open && pending == MarginSet::default() {
-                    escaped_top = Some(pending);
+                let escapes = last.is_none() && top_open;
+                let clearing = rest
+                    .first()
+                    .filter(|b| float_run(std::slice::from_ref(b)) == 0);
+                let clear_top = clearing.map(|b| {
+                    let line = b.node.and_then(|n| node_line(self.doc, n));
+                    MarginSet::of(self.vertical_margin(&b.style.margin.top, line))
+                });
+                let (mut obj, top, bottom) =
+                    self.float_group(floats, around, decoration, pending, escapes, clear_top);
+                if escapes {
+                    escaped_top = Some(top);
                 } else {
-                    self.set_margin(&mut obj, "Layout.topMargin", pending.value());
+                    self.set_margin(&mut obj, "Layout.topMargin", top.value());
                 }
                 layout.push_child(obj);
                 last = Some(layout.members.len() - 1);
@@ -374,16 +388,26 @@ impl Emitter<'_, '_> {
     }
 
     /// Floats and the blocks after them that wrap around them: the floats'
-    /// row over a column of the blocks, where each line of a paragraph
-    /// beside the floats' margin box is shortened by it (CSS 2.2 §9.5).
-    /// Blocks themselves are not narrowed: only their lines move. Returns
-    /// the group and the margins escaping through its bottom.
+    /// row over a column of the blocks, where each line beside the floats'
+    /// margin box is shortened by it, in nested blocks too (CSS 2.2 §9.5).
+    /// Blocks themselves are not narrowed: only their lines move.
+    ///
+    /// A float is placed past the margins `pending` so far, which still
+    /// collapse with the first block's beside it; when they escape through
+    /// the parent (`escapes`) the floats wait for them at its top. A block
+    /// that clears them after (`clear_top`, its top margin) has its border
+    /// edge at their bottom unless the margins above it take it further,
+    /// which absorbs them (§9.5.2). Returns the group, the margins above
+    /// it, and those escaping through its bottom.
     fn float_group(
         &mut self,
         floats: &[LayoutBox<'_>],
         around: &[LayoutBox<'_>],
         decoration: TextDecorationLine,
-    ) -> (Object, MarginSet) {
+        pending: MarginSet,
+        escapes: bool,
+        clear_top: Option<MarginSet>,
+    ) -> (Object, MarginSet, MarginSet) {
         let left = floats[0].style.float == Float::Left;
         let mut row = self.float_row(floats, decoration);
         let row_id = row.id.clone().expect("a float row has an id");
@@ -395,7 +419,12 @@ impl Emitter<'_, '_> {
                 Value::expr(format!("parent.{edge}")),
             );
         }
-        let column = self.column(around, decoration, false, true);
+        let outer = self.wrap.replace(Wrap {
+            row: row_id.clone(),
+            left,
+        });
+        let column = self.column(around, decoration, true, true);
+        self.wrap = outer;
         let mut group = Object::new("Item");
         group.set("Layout.fillWidth", true);
         let Some(mut col) = column.obj else {
@@ -404,8 +433,20 @@ impl Emitter<'_, '_> {
                 Value::expr(format!("{row_id}.implicitHeight")),
             );
             group.push_child(row);
-            return (group, column.escaped_bottom);
+            // Every block beside the floats collapsed through: their margins
+            // go on past the floats.
+            return (group, pending, column.escaped_top);
         };
+        let mut top = pending;
+        top.join(column.escaped_top);
+        let shift = if escapes {
+            0.0
+        } else {
+            pending.value() - top.value()
+        };
+        if shift != 0.0 {
+            row.set("anchors.topMargin", number(shift));
+        }
         let col_id = self.ids.claim("wrapped");
         col.id = Some(col_id.clone());
         for edge in ["left", "right", "top"] {
@@ -414,58 +455,8 @@ impl Emitter<'_, '_> {
                 Value::expr(format!("parent.{edge}")),
             );
         }
-        let rect = format!("{row_id}.childrenRect");
-        let cut = if left {
-            format!("{rect}.x + {rect}.width - x")
-        } else {
-            format!("x + width - {rect}.x")
-        };
         let mut texts = Vec::new();
-        for text in col.children_mut().filter(|c| c.type_name == "Text") {
-            let id = match &text.id {
-                Some(id) => id.clone(),
-                None => {
-                    let id = self.ids.claim("wrapped text");
-                    text.id = Some(id.clone());
-                    id
-                }
-            };
-            texts.push(id);
-            // A fixed line height spaces lines evenly from the top. With
-            // this handler Qt puts a fixed line's leading above its glyphs
-            // (`line.y` is offset within the line), where without it the
-            // leading is below, which the `Text`'s half-leading shift
-            // assumes: the line goes back to the top.
-            let mut body = vec![
-                "const fixed = lineHeightMode === Text.FixedHeight;".to_owned(),
-                "if (fixed) {".to_owned(),
-                "    line.y = line.number * lineHeight;".to_owned(),
-                "}".to_owned(),
-                "const top = y + (fixed ? line.number * lineHeight : line.y);".to_owned(),
-                "const bottom = top + (fixed ? lineHeight : line.height);".to_owned(),
-                format!("if (top < {rect}.y + {rect}.height && bottom > {rect}.y) {{"),
-                format!("    const cut = {cut};"),
-                "    if (cut > 0) {".to_owned(),
-                "        line.width -= cut;".to_owned(),
-            ];
-            if left {
-                body.push("        line.x += cut;".to_owned());
-            }
-            body.extend(["    }".to_owned(), "}".to_owned()]);
-            text.members.push(Member::Handler {
-                name: "onLineLaidOut".to_owned(),
-                params: vec!["line".to_owned()],
-                body,
-            });
-            // Lines are laid out for the place the text had then. Later:
-            // the handler above reads geometry whose change would relayout
-            // the text under it.
-            text.members.push(Member::Handler {
-                name: "onYChanged".to_owned(),
-                params: Vec::new(),
-                body: vec!["Qt.callLater(forceLayout)".to_owned()],
-            });
-        }
+        self.cut_texts(&mut col, &row_id, &mut texts);
         if !texts.is_empty() {
             row.members.push(Member::Handler {
                 name: "onChildrenRectChanged".to_owned(),
@@ -485,17 +476,141 @@ impl Emitter<'_, '_> {
             "implicitWidth",
             Value::expr(format!("{row_id}.implicitWidth")),
         );
-        group.set(
-            "implicitHeight",
-            Value::expr(format!(
-                "Math.max({col_id}.implicitHeight, {row_id}.implicitHeight)"
-            )),
-        );
+        let (height, bottom) = match clear_top {
+            // The clearing block keeps its own top margin, which the group
+            // leaves room for.
+            Some(clear) => {
+                let mut merged = column.escaped_bottom;
+                merged.join(clear);
+                let below = |px: f32| match round(px) {
+                    0.0 => String::new(),
+                    px if px < 0.0 => format!(" + {}", fmt_number(-px)),
+                    px => format!(" - {}", fmt_number(px)),
+                };
+                (
+                    format!(
+                        "Math.max({col_id}.implicitHeight{}, {row_id}.y + {row_id}.implicitHeight{})",
+                        below(clear.value() - merged.value()),
+                        below(clear.value())
+                    ),
+                    MarginSet::default(),
+                )
+            }
+            None => (
+                format!("Math.max({col_id}.implicitHeight, {row_id}.y + {row_id}.implicitHeight)"),
+                column.escaped_bottom,
+            ),
+        };
+        group.set("implicitHeight", Value::expr(height));
         // Floats are painted over the blocks' backgrounds (CSS 2.2
         // Appendix E); the lines beside them do not reach them.
         group.push_child(col);
         group.push_child(row);
-        (group, column.escaped_bottom)
+        (group, top, bottom)
+    }
+
+    /// Gives line boxes the floats around them as their `exclusion`, in
+    /// their own terms.
+    pub(super) fn wrap_flow(&mut self, flow: &mut Object) {
+        let Some(wrap) = &self.wrap else {
+            return;
+        };
+        let (row_id, left) = (&wrap.row, wrap.left);
+        // The arguments are what the place depends on, which a binding on
+        // `mapToItem` alone would not follow.
+        flow.set(
+            "exclusion",
+            Value::expr(format!("eldurExclusion({row_id}.childrenRect, y)")),
+        );
+        flow.members.push(Member::Function {
+            name: "eldurExclusion".to_owned(),
+            params: vec!["rect".to_owned(), "top".to_owned()],
+            body: vec![
+                format!("const at = mapToItem({row_id}, 0, 0);"),
+                format!(
+                    "return {{ left: {left}, from: rect.x - at.x, to: rect.x + rect.width - at.x, \
+                     top: rect.y - at.y, bottom: rect.y + rect.height - at.y }};"
+                ),
+            ],
+        });
+    }
+
+    /// Shortens each line of `text` that is beside the floats around it.
+    pub(super) fn wrap_lines(&mut self, text: &mut Object) {
+        let Some(wrap) = &self.wrap else {
+            return;
+        };
+        let (row_id, left) = (wrap.row.clone(), wrap.left);
+        let rect = format!("{row_id}.childrenRect");
+        let cut = if left {
+            format!("{rect}.x + {rect}.width - at.x")
+        } else {
+            format!("at.x + width - {rect}.x")
+        };
+        // A fixed line height spaces lines evenly from the top. With this
+        // handler Qt puts a fixed line's leading above its glyphs (`line.y`
+        // is offset within the line), where without it the leading is
+        // below, which the `Text`'s half-leading shift assumes: the line
+        // goes back to the top.
+        let mut body = vec![
+            "const fixed = lineHeightMode === Text.FixedHeight;".to_owned(),
+            "if (fixed) {".to_owned(),
+            "    line.y = line.number * lineHeight;".to_owned(),
+            "}".to_owned(),
+            format!("const at = mapToItem({row_id}, 0, 0);"),
+            "const top = at.y + (fixed ? line.number * lineHeight : line.y);".to_owned(),
+            "const bottom = top + (fixed ? lineHeight : line.height);".to_owned(),
+            format!("if (top < {rect}.y + {rect}.height && bottom > {rect}.y) {{"),
+            format!("    const cut = {cut};"),
+            "    if (cut > 0) {".to_owned(),
+            "        line.width -= cut;".to_owned(),
+        ];
+        if left {
+            body.push("        line.x += cut;".to_owned());
+        }
+        body.extend(["    }".to_owned(), "}".to_owned()]);
+        // A function, so the runtime's measuring twin cuts its lines the same.
+        text.members.push(Member::Function {
+            name: "eldurCut".to_owned(),
+            params: vec!["line".to_owned()],
+            body,
+        });
+        text.members.push(Member::Handler {
+            name: "onLineLaidOut".to_owned(),
+            params: vec!["line".to_owned()],
+            body: vec!["eldurCut(line)".to_owned()],
+        });
+        // Lines are laid out for the place the text had then. Later: the
+        // handler above reads geometry whose change would relayout the text
+        // under it.
+        text.members.push(Member::Handler {
+            name: "onYChanged".to_owned(),
+            params: Vec::new(),
+            body: vec!["Qt.callLater(forceLayout)".to_owned()],
+        });
+    }
+
+    /// The ids of the `Text`s in `obj` whose lines `row_id`'s floats cut,
+    /// given one where the block had none: the floats tell them to relayout.
+    fn cut_texts(&mut self, obj: &mut Object, row_id: &str, out: &mut Vec<String>) {
+        let mark = format!("const at = mapToItem({row_id}, 0, 0);");
+        let cut = obj.members.iter().any(|m| {
+            matches!(m, Member::Function { name, body, .. } if name == "eldurCut" && body.contains(&mark))
+        });
+        if cut {
+            let id = match &obj.id {
+                Some(id) => id.clone(),
+                None => {
+                    let id = self.ids.claim("wrapped text");
+                    obj.id = Some(id.clone());
+                    id
+                }
+            };
+            out.push(id);
+        }
+        for child in obj.children_mut() {
+            self.cut_texts(child, row_id, out);
+        }
     }
 
     /// A run of floats to one side as a `Flow`: each takes its margin box

@@ -443,19 +443,82 @@ pub(crate) fn pseudo_rules_decl(rules: &[eldur_css::PseudoRule]) -> Member {
                 .map(|p| match p {
                     eldur_css::PseudoPart::Text(t) => serde_json::json!(t),
                     eldur_css::PseudoPart::Attr(a) => serde_json::json!({ "attr": a }),
+                    eldur_css::PseudoPart::Counter(name, style) => {
+                        serde_json::json!({ "counter": name, "style": list_style_name(*style) })
+                    }
+                    eldur_css::PseudoPart::Counters(name, sep, style) => serde_json::json!({
+                        "counters": name, "sep": sep, "style": list_style_name(*style)
+                    }),
                 })
                 .collect();
-            serde_json::json!({
+            let mut rule = serde_json::json!({
                 "sel": r.selector,
                 "after": r.after,
                 "spec": [r.specificity.0, r.specificity.1, r.specificity.2],
                 "parts": parts,
-            })
+            });
+            // Most rules only give text: the fields stay out of their JSON.
+            if !r.sets_content {
+                rule["drawOnly"] = serde_json::json!(true);
+            }
+            if !r.declarations.is_empty() {
+                rule["decls"] = serde_json::json!(r.declarations);
+            }
+            rule
         })
         .collect();
     decl(
         "string",
         "eldurPseudoRules",
+        Value::String(serde_json::Value::Array(list).to_string()),
+    )
+}
+
+fn list_style_name(style: eldur_css::ListStyleType) -> &'static str {
+    use eldur_css::ListStyleType as L;
+    match style {
+        L::Disc => "disc",
+        L::Circle => "circle",
+        L::Square => "square",
+        L::Decimal => "decimal",
+        L::DecimalLeadingZero => "decimal-leading-zero",
+        L::LowerAlpha => "lower-alpha",
+        L::UpperAlpha => "upper-alpha",
+        L::LowerRoman => "lower-roman",
+        L::UpperRoman => "upper-roman",
+        L::DisclosureClosed => "disclosure-closed",
+        L::DisclosureOpen => "disclosure-open",
+        L::None => "none",
+    }
+}
+
+/// `root.eldurCounterRules`: what each selector does to the counters that
+/// generated text shows, for the runtime to number elements a script moves.
+pub(crate) fn counter_rules_decl(rules: &[eldur_css::CounterRule]) -> Member {
+    let list: Vec<serde_json::Value> = rules
+        .iter()
+        .map(|r| {
+            let changes: Vec<serde_json::Value> = r
+                .changes
+                .iter()
+                .map(|(prop, list, important)| {
+                    let list: Vec<_> = list
+                        .iter()
+                        .map(|c| serde_json::json!([c.name, c.value]))
+                        .collect();
+                    serde_json::json!([prop, list, important])
+                })
+                .collect();
+            serde_json::json!({
+                "sel": r.selector,
+                "spec": [r.specificity.0, r.specificity.1, r.specificity.2],
+                "changes": changes,
+            })
+        })
+        .collect();
+    decl(
+        "string",
+        "eldurCounterRules",
         Value::String(serde_json::Value::Array(list).to_string()),
     )
 }

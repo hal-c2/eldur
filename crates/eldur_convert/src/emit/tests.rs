@@ -166,6 +166,25 @@ fn min_width_beats_a_shrink_to_fit_cap() {
 }
 
 #[test]
+fn min_width_widens_a_shrink_to_fit_box() {
+    let (qml, _) = convert(&page(
+        ".b{display:inline-block;min-width:10px;padding:0 5px;background:red}\
+         .c{box-sizing:border-box}",
+        r#"<p>x<span class="b">3</span><span class="b c">4</span></p>"#,
+    ));
+    let content = object_after(&qml, r#"<span class="b">"#);
+    assert!(
+        content.contains("implicitWidth: Math.max(bText.implicitWidth, 10) + 10"),
+        "{content}"
+    );
+    let border = object_after(&qml, r#"<span class="b c">"#);
+    assert!(
+        border.contains("implicitWidth: Math.max(bText2.implicitWidth + 10, 10)"),
+        "{border}"
+    );
+}
+
+#[test]
 fn growing_items_fill_without_spacers() {
     let (qml, diags) = convert(&page(
         ".row{display:flex;gap:12px;justify-content:center} .a{flex:1} .b{flex:1}",

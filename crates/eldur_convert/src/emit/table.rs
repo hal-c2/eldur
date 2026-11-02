@@ -1028,7 +1028,7 @@ impl<'a> Emitter<'a, '_> {
 
     /// Whether this table's rows and sections are objects of their own. A
     /// table made of `display` values has no such elements to hand a script.
-    fn is_live_table(&self, b: &LayoutBox<'_>) -> bool {
+    pub(super) fn is_live_table(&self, b: &LayoutBox<'_>) -> bool {
         let tag = |p: &LayoutBox<'_>| {
             p.node
                 .and_then(|n| self.doc.element(n))

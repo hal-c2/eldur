@@ -1,0 +1,22 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+.fl{float:left;width:60px;height:40px;background:#aaa;margin:3px}
+.fr{float:right;width:50px;height:30px;background:#caa}
+.a{margin-bottom:20px;height:10px;background:#cfc}
+.b{margin-top:30px;height:10px;background:#ccf}
+p{margin:14px 0}
+.c{clear:both}
+</style></head><body>
+<div id="g1"><div class="a" id="a1"></div><div class="fl" id="f1"></div><div class="fl" id="f2"></div><div class="b" id="b1"></div><div class="c" id="c1"></div></div>
+<div id="g2"><div class="fl" id="f3"></div><div id="d1"><p id="p1"><span id="s1">first words</span> and some more text to wrap around the float a few times over, enough for three lines at least in a narrow column of this page, which is wide.</p></div><div class="c" id="c2"></div></div>
+<div id="g3"><div class="fr" id="f4"></div><div id="e1"><div id="e2"><span id="s2">inner</span> text</div><span id="s3">own</span></div><div class="c" id="c3"></div></div>
+<div id="after" style="height:9px;background:#000"></div>
+<script>
+// Margins collapse past floats; a first child's goes through its parent beside
+// one; the lines of a block inside a block beside a float are cut by it too.
+const R=n=>{const q=document.getElementById(n).getBoundingClientRect();console.log('CS '+n+' '+[q.x,q.y,q.width,q.height].join(','))};
+setTimeout(()=>{
+ const ids=['g1','a1','f1','f2','b1','c1','g2','f3','d1','p1','s1','c2','g3','f4','e1','e2','s2','s3','c3','after'];
+ ids.forEach(R);document.body.appendChild(document.createElement('div')).id='csdone'
+},50);
+</script></body></html>

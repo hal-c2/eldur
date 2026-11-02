@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Tables an el() helper builds</title>
+<style>
+body { margin: 8px; font: 14px Arial, sans-serif; }
+table { margin-top: 8px; }
+table.c { border-collapse: collapse; }
+table.s { border-spacing: 3px 2px; }
+td, th { border: 1px solid #888; padding: 2px 6px; }
+th { background: #ccd; }
+tr:nth-child(even) td { background: #eef; }
+td.wide { width: 120px; }
+</style></head>
+<body>
+<table class="c" id="empty"><tbody id="eb"></tbody></table>
+<table class="s" id="half"><thead><tr id="hh"><th>Name</th><th>Qty</th></tr></thead><tbody id="hb"><tr id="h0"><td>Apple</td><td>3</td></tr></tbody></table>
+<table class="c" id="cells"><tbody><tr id="cr"><td>first</td></tr></tbody></table>
+<div id="spot"></div>
+<p id="after">After the tables.</p>
+<button id="drop">Drop</button>
+<button id="grow">Grow</button>
+<script>
+function el(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const k in attrs) { if (k === "class") e.className = attrs[k]; else e.setAttribute(k, attrs[k]); }
+  for (const c of kids) e.append(typeof c === "string" ? document.createTextNode(c) : c);
+  return e;
+}
+const eb = document.getElementById("eb");
+for (let r = 0; r < 4; r++) {
+  const tr = el("tr", { id: "e" + r });
+  for (let c = 0; c < 3; c++) tr.append(el("td", {}, "r" + r + "c" + c + (c === 1 && r === 2 ? " wider" : "")));
+  eb.append(tr);
+}
+const hb = document.getElementById("hb");
+hb.append(el("tr", { id: "h1" }, el("td", {}, "Banana bread"), el("td", {}, "12")));
+hb.append(el("tr", { id: "h2" }, el("td", { colspan: "2" }, "Total over both columns")));
+document.getElementById("cr").append(el("td", { class: "wide" }, "second"), el("td", {}, "third cell"));
+const made = el("table", { class: "s", id: "made" },
+  el("thead", {}, el("tr", {}, el("th", {}, "Key"), el("th", {}, "Value"))),
+  el("tbody", { id: "mb" }));
+for (const [k, v] of [["a", "one"], ["bb", "two two"], ["ccc", "three"]]) made.tBodies[0].append(el("tr", {}, el("td", {}, k), el("td", {}, v)));
+document.getElementById("spot").append(made);
+const api = document.createElement("table");
+api.id = "api";
+api.className = "c";
+for (let r = 0; r < 3; r++) {
+  const row = api.insertRow();
+  row.id = "a" + r;
+  for (let c = 0; c < 2; c++) row.insertCell().textContent = (r === 1 && c === 0) ? "longer text" : "x" + r + c;
+}
+api.createTHead().insertRow(0).insertCell(0).textContent = "Head";
+document.getElementById("spot").append(api);
+document.getElementById("drop").addEventListener("click", () => {
+  eb.removeChild(document.getElementById("e0"));
+  document.getElementById("api").deleteRow(1);
+});
+document.getElementById("grow").addEventListener("click", () => {
+  eb.insertBefore(el("tr", { id: "e9" }, el("td", {}, "new"), el("td", {}, "row"), el("td", {}, "here")), eb.firstChild);
+  document.getElementById("cr").insertCell(1).textContent = "inserted";
+});
+</script>
+</body>
+</html>

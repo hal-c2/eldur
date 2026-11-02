@@ -1,0 +1,1 @@
+{"steps":[{"name":"details","click":"#tab1"},{"name":"history","click":"#tab2"},{"name":"overview","click":"#tab0"}],"watch":[{"sel":".tabs"},{"sel":".tab"},{"sel":".note"},{"sel":"#dot"},{"sel":".panel"},{"sel":"h2"},{"sel":"p"},{"sel":"footer"}]}

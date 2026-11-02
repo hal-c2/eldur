@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>A class moves between inline-block siblings</title>
+<style>
+body { margin: 8px; font: 14px Arial, sans-serif; }
+ul { list-style: none; padding: 0; margin: 0 0 6px; }
+li { display: inline-block; padding: 3px 9px; margin-right: 4px; background: #ddd; }
+li.on { background: #333; color: #fff; font-weight: bold; }
+#pad li.on { padding: 3px 20px; font-weight: normal; }
+#bord li.on { border: 3px solid #a00; font-weight: normal; }
+#size li.on { font-size: 18px; font-weight: normal; }
+.wrap { position: relative; display: inline-block; padding: 4px 10px; background: #cdf; margin: 10px; }
+.badge { position: absolute; top: -6px; right: -6px; width: 14px; height: 14px; border-radius: 7px; background: red; }
+</style></head>
+<body>
+<ul id="bold"></ul>
+<ul id="pad"></ul>
+<ul id="bord"></ul>
+<ul id="size"></ul>
+<ul id="text"></ul>
+<div id="bw"></div>
+<span id="none"></span>
+<button id="move">Move</button>
+<button id="back">Back</button>
+<script>
+function el(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const k in attrs) { if (k === "class") e.className = attrs[k]; else e.setAttribute(k, attrs[k]); }
+  for (const c of kids) e.append(typeof c === "string" ? document.createTextNode(c) : c);
+  return e;
+}
+const names = ["Alpha", "Beta", "Gamma"];
+for (const list of ["bold", "pad", "bord", "size", "text"]) {
+  names.forEach((t, i) => document.getElementById(list).append(el("li", { id: list + i, class: i === 1 ? "on" : "" }, t)));
+}
+const w = el("span", { class: "wrap", id: "w" }, "Inbox");
+w.append(el("span", { class: "badge", id: "bd" }));
+document.getElementById("bw").append(w);
+document.getElementById("none").textContent = "";
+function move(from, to) {
+  for (const list of ["bold", "pad", "bord", "size"]) {
+    document.getElementById(list + from).className = "";
+    document.getElementById(list + to).className = "on";
+  }
+  document.getElementById("text1").textContent = to === 2 ? "Be" : "Beta beta";
+  document.getElementById("bd").textContent = to === 2 ? "3" : "";
+}
+document.getElementById("move").addEventListener("click", () => move(1, 2));
+document.getElementById("back").addEventListener("click", () => move(2, 0));
+</script>
+</body>
+</html>

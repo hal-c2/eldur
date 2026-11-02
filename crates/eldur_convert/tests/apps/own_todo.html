@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>A todo list in a table</title>
+<style>
+body { margin: 8px; font: 14px Arial, sans-serif; color: #222; }
+form { margin-bottom: 8px; }
+input { width: 200px; }
+table { border-collapse: separate; border-spacing: 0 2px; }
+td { padding: 3px 6px; background: #f2f2f2; }
+tr.done td { color: #888; text-decoration: line-through; background: #e8f0e8; }
+td.x { width: 20px; text-align: center; color: #a00; }
+.count { margin-top: 6px; }
+</style></head>
+<body>
+<form id="f"><input id="what" value="Water the plants"> <button id="add" type="submit">Add</button></form>
+<table id="list"><tbody id="items"><tr id="i0"><td>Buy milk</td><td class="x">x</td></tr></tbody></table>
+<p class="count">Left: <span id="left">1</span></p>
+<button id="finish">Finish first</button>
+<button id="clear">Clear done</button>
+<script>
+const items = document.getElementById("items");
+let n = 1;
+function count() {
+  document.getElementById("left").textContent = String(items.querySelectorAll("tr:not(.done)").length);
+}
+function row(text) {
+  const tr = items.insertRow(-1);
+  tr.id = "i" + n++;
+  tr.insertCell(0).textContent = text;
+  const x = tr.insertCell(1);
+  x.className = "x";
+  x.textContent = "x";
+  x.addEventListener("click", () => { tr.remove(); count(); });
+  count();
+  return tr;
+}
+row("Call the bank about the card");
+document.getElementById("f").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const v = document.getElementById("what");
+  row(v.value);
+  v.value = "";
+});
+document.getElementById("finish").addEventListener("click", () => {
+  const first = items.querySelector("tr:not(.done)");
+  if (first) first.className = "done";
+  count();
+});
+document.getElementById("clear").addEventListener("click", () => {
+  for (const tr of Array.from(items.querySelectorAll("tr.done"))) items.removeChild(tr);
+  count();
+});
+</script>
+</body>
+</html>

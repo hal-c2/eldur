@@ -5,7 +5,9 @@
 use crate::cascade::layer_ranks;
 use crate::parse::{CustomDeclValue, DeclValue};
 use crate::properties::{CssWide, Longhand};
-use crate::{ContentItem, Origin, Stylesheet, Viewport, user_agent_stylesheet};
+use crate::{
+    ContentItem, CounterChange, ListStyleType, Origin, Stylesheet, Viewport, user_agent_stylesheet,
+};
 
 /// One selector of a rule, with the declarations the runtime can paint.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -45,12 +47,34 @@ pub struct PseudoRule {
     pub specificity: (u32, u32, u32),
     /// The text, with `attr(x)` as [`PseudoPart::Attr`]; empty for `content: none`.
     pub content: Vec<PseudoPart>,
+    /// Whether the rule declares `content`; one that does not only draws
+    /// the text another rule gives.
+    pub sets_content: bool,
+    /// `(property, value, important)` the generated text is painted with, as
+    /// in [`InlineRule::declarations`].
+    pub declarations: Vec<(String, String, bool)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PseudoPart {
     Text(String),
     Attr(String),
+    /// `counter(name, style)`.
+    Counter(String, ListStyleType),
+    /// `counters(name, separator, style)`.
+    Counters(String, String, ListStyleType),
+}
+
+/// What one selector does to the counters, for generated text that numbers
+/// the elements a script adds, moves or removes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CounterRule {
+    pub selector: String,
+    /// `(id, class, type)`.
+    pub specificity: (u32, u32, u32),
+    /// `(property, changes, important)`, the property one of `counter-reset`,
+    /// `counter-increment` and `counter-set`; `none` is no changes.
+    pub changes: Vec<(String, Vec<CounterChange>, bool)>,
 }
 
 fn property(longhand: Longhand) -> Option<&'static str> {
@@ -360,6 +384,21 @@ pub(crate) fn runtime_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<R
     out
 }
 
+/// The declarations of a rule the runtime paints inline text with.
+fn paint_declarations(declarations: &[crate::parse::ParsedDecl]) -> Vec<(String, String, bool)> {
+    declarations
+        .iter()
+        .filter_map(|d| {
+            let (longhand, value) = match &d.value {
+                DeclValue::Expanded(l, v) => (*l, v.clone()),
+                DeclValue::Wide(l, w) => (*l, wide(w).to_owned()),
+                _ => return None,
+            };
+            Some((property(longhand)?.to_owned(), value, d.important))
+        })
+        .collect()
+}
+
 pub(crate) fn inline_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<InlineRule> {
     let ua = user_agent_stylesheet();
     let mut out = Vec::new();
@@ -371,18 +410,7 @@ pub(crate) fn inline_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<In
             if !rule.media.iter().all(|m| m.matches(viewport)) {
                 continue;
             }
-            let declarations: Vec<_> = rule
-                .declarations
-                .iter()
-                .filter_map(|d| {
-                    let (longhand, value) = match &d.value {
-                        DeclValue::Expanded(l, v) => (*l, v.clone()),
-                        DeclValue::Wide(l, w) => (*l, wide(w).to_owned()),
-                        _ => return None,
-                    };
-                    Some((property(longhand)?.to_owned(), value, d.important))
-                })
-                .collect();
+            let declarations = paint_declarations(&rule.declarations);
             if declarations.is_empty() {
                 continue;
             }
@@ -413,7 +441,8 @@ pub(crate) fn inline_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<In
 
 /// The page's `content` declarations on `::before` and `::after`. Only inline
 /// generated text can follow a class at run time: a rule that also lays the
-/// pseudo-element out as a box, or counts, is not listed.
+/// pseudo-element out as a box, or whose text is not text or a counter, is not
+/// listed.
 pub(crate) fn pseudo_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<PseudoRule> {
     let mut out = Vec::new();
     for sheet in sheets {
@@ -429,12 +458,23 @@ pub(crate) fn pseudo_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<Ps
                     if matches!(l, Longhand::Display | Longhand::Position | Longhand::Float))
             });
             let content = rule.declarations.iter().rev().find_map(|d| match &d.value {
-                DeclValue::Expanded(Longhand::Content, v) => pseudo_content(v),
+                DeclValue::Expanded(Longhand::Content, v) => Some(pseudo_content(v)),
                 _ => None,
             });
-            let (Some(content), false) = (content, boxed) else {
+            // Text the runtime cannot make stays as the converter wrote it.
+            let Some(content) = content.map_or(Some(None), |c| c.map(Some)) else {
                 continue;
             };
+            // A rule may say only how the text another rule gives is drawn.
+            let declarations: Vec<_> = paint_declarations(&rule.declarations)
+                .into_iter()
+                .filter(|(p, ..)| p != "display")
+                .collect();
+            if boxed || (content.is_none() && declarations.is_empty()) {
+                continue;
+            }
+            let sets_content = content.is_some();
+            let content = content.unwrap_or_default();
             for part in split_list(text) {
                 let part = part.trim();
                 let (element, after) = if let Some(e) = strip_pseudo(part, "after") {
@@ -453,6 +493,58 @@ pub(crate) fn pseudo_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<Ps
                     after,
                     specificity,
                     content: content.clone(),
+                    sets_content,
+                    declarations: declarations.clone(),
+                });
+            }
+        }
+    }
+    out
+}
+
+pub(crate) fn counter_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<CounterRule> {
+    let mut out = Vec::new();
+    for sheet in sheets {
+        for rule in &sheet.inner.rules {
+            let Some(text) = &rule.selector_text else {
+                continue;
+            };
+            if !rule.media.iter().all(|m| m.matches(viewport)) {
+                continue;
+            }
+            let changes: Vec<_> = rule
+                .declarations
+                .iter()
+                .filter_map(|d| {
+                    let DeclValue::Expanded(longhand, v) = &d.value else {
+                        return None;
+                    };
+                    let (property, default) = match longhand {
+                        Longhand::CounterReset => ("counter-reset", 0),
+                        Longhand::CounterIncrement => ("counter-increment", 1),
+                        Longhand::CounterSet => ("counter-set", 0),
+                        _ => return None,
+                    };
+                    let changes = crate::properties::parse_counter_value(v, default)?;
+                    Some((property.to_owned(), changes, d.important))
+                })
+                .collect();
+            if changes.is_empty() {
+                continue;
+            }
+            for part in split_list(text) {
+                let part = part.trim();
+                // A pseudo-element's own counters are not followed.
+                if part.contains("::") || part.ends_with(":before") || part.ends_with(":after") {
+                    continue;
+                }
+                let Some(specificity) = part_specificity(part) else {
+                    continue;
+                };
+                out.push(CounterRule {
+                    selector: part.to_owned(),
+                    specificity,
+                    changes: changes.clone(),
                 });
             }
         }
@@ -476,6 +568,10 @@ fn pseudo_content(value: &str) -> Option<Vec<PseudoPart>> {
             ContentItem::Attr(name) => PseudoPart::Attr(name.clone()),
             ContentItem::OpenQuote => PseudoPart::Text("\u{201c}".to_owned()),
             ContentItem::CloseQuote => PseudoPart::Text("\u{201d}".to_owned()),
+            ContentItem::Counter(name, style) => PseudoPart::Counter(name.clone(), *style),
+            ContentItem::Counters(name, sep, style) => {
+                PseudoPart::Counters(name.clone(), sep.clone(), *style)
+            }
             _ => return None,
         });
     }
