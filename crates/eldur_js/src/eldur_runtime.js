@@ -1807,7 +1807,7 @@ function _unwrap(item) {
         }
         // The script's id still names what the box replaced.
         if (_gAdopted.size > 0 && _gAdopted.has(item)) {
-            return _gAdopted.get(item);
+            return _gAdopted.get(item).raw;
         }
     }
     return item;
@@ -1879,9 +1879,27 @@ function _meta(item) {
             connected: {},
             wrapper: null
         };
+        // An item: what Qt destroys reads `parent` as undefined.
+        entry.item = typeof raw.objectName === "string" && raw.parent !== undefined;
         _itemMeta.set(raw, entry);
+        if (_itemMeta.size > _itemMetaSweepAt) {
+            _sweepItemMeta();
+        }
     }
     return entry;
+}
+
+// Reads walk past items being swapped out and record them again, so records
+// of items Qt has destroyed are dropped each time there are twice as many
+// records as after the last sweep.
+var _itemMetaSweepAt = 256;
+function _sweepItemMeta() {
+    _itemMeta.forEach(function(entry, item) {
+        if (entry.item && item.parent === undefined) {
+            _itemMeta.delete(item);
+        }
+    });
+    _itemMetaSweepAt = Math.max(256, 2 * _itemMeta.size);
 }
 
 // A boolean property is its attribute's presence, which `[hidden]` reads.
@@ -3396,6 +3414,18 @@ function _settleLayouts() {
 // after an insert already counts it. The settle above works upwards, so the
 // widths the top hands back down are polished afterwards.
 function _layoutForRead() {
+    if (_gReadDepth === 0) {
+        _gReplaced.clear();
+    }
+    ++_gReadDepth;
+    try {
+        _layoutForReadNow();
+    } finally {
+        --_gReadDepth;
+    }
+}
+
+function _layoutForReadNow() {
     _aRead();
     if (_layoutDirty.length === 0) {
         // Lines lay out once when complete, which may be after a page's script.
@@ -4806,12 +4836,13 @@ function getComputedStyle(item) {
     if (raw && raw.__eldurInline) {
         return _vComputedStyle(raw);
     }
+    // The declaration is live: it reads the element, whichever item it has then.
+    var held = raw && typeof raw === "object" ? _meta(raw) : null;
     function computeProp(prop) {
         var p = String(prop);
         if (_gHasCascade() && raw && typeof raw === "object") {
             _layoutForRead();
-            // Settling may have replaced the item.
-            raw = _gCurrent(raw);
+            raw = held.raw || _gCurrent(raw);
             var settled = _gComputed(raw, p);
             if (settled !== null) {
                 return _gInFlight(raw, p, settled);
@@ -15334,10 +15365,14 @@ var _gStaticControls = [];
 var _G_MOVES = /^(button|input|textarea|select|img|canvas|video|audio|svg|iframe)$/;
 var _gClosedHidden = null;
 var _gStaticRoot = "";
-// Weak: only a read holding the old item still asks, and that may be some passes later.
-// Kept past a settle, as a page's own variable can name the old item at any later
-// time. Not a WeakMap: Qt's crashes in a lookup once a key has been collected.
+// The items swapped since a read or a settle of its own started, for what took
+// an item before the settles the read asked for. What holds an element for
+// longer holds its record (`_meta`), whose `raw` follows every swap: a page's
+// variables hold wrappers, its ids name adopted items through `_gAdopted`.
+// Emptied as the next starts, so swapping an item over and over keeps nothing.
+// Not a WeakMap: Qt's crashes in a lookup once a key has been collected.
 var _gReplaced = new Map();
+var _gReadDepth = 0;
 var _gAdopted = new Map();
 var _gLayoutReader = null;
 var _gGrave = null;
@@ -20346,6 +20381,9 @@ function _gSettle() {
     _gRunning = true;
     _gDirty = false;
     ++_gGen;
+    if (_gReadDepth === 0) {
+        _gReplaced.clear();
+    }
     _gPrune();
     _gClosedHiddenBoxes();
     _gStaticChanges();
@@ -21020,7 +21058,8 @@ function _gAdopt(raw) {
     m.gKeepReplaced = true;
     var next = _swapRawItem(raw, null, _gBoxSource(tag, false));
     delete m.gKeepReplaced;
-    _gAdopted.set(raw, next);
+    // The element's record, which follows every later swap of its item.
+    _gAdopted.set(raw, m);
     next.objectName = name;
     next.eldurGapT = place.top;
     next.eldurGapL = place.left;
