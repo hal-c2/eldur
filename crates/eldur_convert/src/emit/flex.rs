@@ -557,7 +557,7 @@ impl Emitter<'_, '_> {
                 obj.set("Layout.preferredWidth", Value::expr(CONTROL_ROW_WIDTH));
                 CONTROL_ROW_WIDTH.to_owned()
             } else {
-                "Math.ceil(implicitWidth)".to_owned()
+                natural_width(obj).to_owned()
             };
             let cap = basis.as_ref().map_or(natural, value_text);
             if let Some(v) = &basis {
@@ -655,9 +655,9 @@ impl Emitter<'_, '_> {
                         obj.set("Layout.fillWidth", true);
                         let cap = match &max_cross {
                             Some(m) => {
-                                format!("Math.min(Math.ceil(implicitWidth), {})", value_text(m))
+                                format!("Math.min({}, {})", natural_width(obj), value_text(m))
                             }
-                            None => "Math.ceil(implicitWidth)".to_owned(),
+                            None => natural_width(obj).to_owned(),
                         };
                         obj.set("Layout.maximumWidth", Value::expr(cap));
                     }
@@ -824,7 +824,7 @@ impl Emitter<'_, '_> {
                 None if holds_control_row(&obj) => {
                     Value::expr(format!("Math.min({CONTROL_ROW_WIDTH}, parent.width)"))
                 }
-                None => Value::expr("Math.min(Math.ceil(implicitWidth), parent.width)"),
+                None => Value::expr(format!("Math.min({}, parent.width)", natural_width(&obj))),
             };
             obj.set("width", width);
             match &cs.height {
@@ -954,6 +954,18 @@ fn horizontal_margin(margin: &LengthAuto) -> Option<Value> {
 
 const CONTROL_ROW_WIDTH: &str =
     "Math.ceil(Array.from(children).reduce((sum, item) => sum + item.implicitWidth, 0))";
+
+/// A wrapping Text given a hair less than its fractional implicit width
+/// breaks its last word, so text boxes are capped at the whole pixel above.
+/// A button's label doesn't wrap, and Chromium sizes buttons to the
+/// fraction (a 45.72px "Add"), so a button keeps its exact width.
+fn natural_width(obj: &Object) -> &'static str {
+    if obj.type_name == "Button" {
+        "implicitWidth"
+    } else {
+        "Math.ceil(implicitWidth)"
+    }
+}
 
 /// Controls are items of a `Flow` only when they are all its line holds.
 pub(super) fn holds_control_row(obj: &Object) -> bool {

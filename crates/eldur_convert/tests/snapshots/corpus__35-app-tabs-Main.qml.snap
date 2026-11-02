@@ -203,7 +203,7 @@ ApplicationWindow {
                                     }
                                     objectName: "tab-profile"
                                     Layout.fillWidth: true
-                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                    Layout.maximumWidth: implicitWidth
                                     Layout.fillHeight: true
                                 }
 
@@ -246,7 +246,7 @@ ApplicationWindow {
                                     }
                                     objectName: "tab-billing"
                                     Layout.fillWidth: true
-                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                    Layout.maximumWidth: implicitWidth
                                     Layout.fillHeight: true
                                     Layout.leftMargin: 4
                                     font.weight: tabBilling.cls_active ? 700 : 400
@@ -292,7 +292,7 @@ ApplicationWindow {
                                     }
                                     objectName: "tab-alerts"
                                     Layout.fillWidth: true
-                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                    Layout.maximumWidth: implicitWidth
                                     Layout.fillHeight: true
                                     Layout.leftMargin: 4
                                     font.weight: tabAlerts.cls_active ? 700 : 400

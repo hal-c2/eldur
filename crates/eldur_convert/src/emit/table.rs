@@ -712,7 +712,8 @@ impl<'a> Emitter<'a, '_> {
             style.table_layout == TableLayout::Fixed && matches!(&style.width, Size::Length(_));
 
         let edges = collapse.then(|| self.collapsed_edges(b, &parts, &slots, columns));
-        let specs = self.column_specs(&parts, &slots, columns, fixed, line);
+        let made = b.node.is_some_and(|n| self.made_tables.contains(&n));
+        let specs = self.column_specs(&parts, &slots, columns, fixed, made, line);
 
         let live = self.is_live_table(b);
         let grid_id = self.ids.claim(&format!("{} grid", hint(self.doc, b)));
@@ -1050,9 +1051,9 @@ impl<'a> Emitter<'a, '_> {
             }
             _ => row_hides(part),
         });
-        b.node
-            .is_some_and(|n| hides || self.live_tables.contains(&n))
-            && tag(b) == Some("table")
+        b.node.is_some_and(|n| {
+            hides || self.live_tables.contains(&n) || self.made_tables.contains(&n)
+        }) && tag(b) == Some("table")
             && boxes(b).iter().all(|part| match tag(part) {
                 Some("thead" | "tbody" | "tfoot") => boxes(part).iter().all(row_fits),
                 Some("caption" | "colgroup" | "col") => true,
@@ -1416,6 +1417,7 @@ impl<'a> Emitter<'a, '_> {
         slots: &[Vec<Slot>],
         columns: usize,
         fixed: bool,
+        made: bool,
         line: Option<u32>,
     ) -> Vec<ColumnSpec> {
         let mut specs = vec![ColumnSpec::Auto; columns];
@@ -1440,7 +1442,9 @@ impl<'a> Emitter<'a, '_> {
         // have none. Fixed layout reads the first row alone (CSS 2.1 §17.5.2.1).
         let declared: Vec<bool> = specs.iter().map(|s| *s != ColumnSpec::Auto).collect();
         for (r, row) in parts.rows.iter().enumerate() {
-            if fixed && r > 0 {
+            // A made table's probe rows stand for any row: its cells' widths
+            // are counted by the runtime from the cells a script makes.
+            if fixed && r > 0 || made {
                 break;
             }
             for (cell, &slot) in boxes(row.row).iter().zip(&slots[r]) {

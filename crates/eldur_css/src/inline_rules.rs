@@ -109,6 +109,7 @@ fn box_property(longhand: Longhand) -> Option<&'static str> {
         L::BoxSizing => "box-sizing",
         L::BorderCollapse => "border-collapse",
         L::BorderSpacing => "border-spacing",
+        L::TableLayout => "table-layout",
         L::Width => "width",
         L::Height => "height",
         L::MinWidth => "min-width",

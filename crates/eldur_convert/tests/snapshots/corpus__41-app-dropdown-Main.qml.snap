@@ -180,7 +180,7 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             renderType: Text.NativeRendering
                                         }
-                                        implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
+                                        implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                                         objectName: "btn"
                                         width: Math.min(implicitWidth, Math.max(blockFlow.width, Math.ceil(Math.max(...btn.text.split(/\s+/).map(w => btnWords.advanceWidth(w))) * 1.0256385) + leftPadding + rightPadding))
 

@@ -169,6 +169,9 @@ pub(crate) struct Emitter<'a, 'd> {
     gains: HashSet<NodeId>,
     /// See `scripts::live_tables`.
     live_tables: HashSet<NodeId>,
+    /// Tables a script creates, probed for their templates: live, and with
+    /// columns only from what the script's rows bring at run time.
+    made_tables: HashSet<NodeId>,
     /// A script inserts into something found at run time: any empty box.
     gains_any_empty: bool,
     /// `text-align` of the box whose lines are being laid out: what places
@@ -270,6 +273,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             cascade_rules: false,
             gains: HashSet::new(),
             live_tables: HashSet::new(),
+            made_tables: HashSet::new(),
             gains_any_empty: false,
             line_align: eldur_css::TextAlign::Start,
             by_path: false,

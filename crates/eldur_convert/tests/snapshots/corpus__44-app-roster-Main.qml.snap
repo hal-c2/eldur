@@ -1755,7 +1755,7 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
                             }
-                            implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
+                            implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                             objectName: "prev"
                             width: Math.min(implicitWidth, Math.max(pagerFlow.width - 4, Math.ceil(Math.max(...prev.text.split(/\s+/).map(w => prevWords.advanceWidth(w))) * 1.0256385) + leftPadding + rightPadding))
 
@@ -1812,7 +1812,7 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
                             }
-                            implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
+                            implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                             objectName: "next"
                             width: Math.min(implicitWidth, Math.max(pagerFlow.width - 4, Math.ceil(Math.max(...next.text.split(/\s+/).map(w => nextWords.advanceWidth(w))) * 1.0256385) + leftPadding + rightPadding))
 

@@ -2625,15 +2625,16 @@ function dataset(item) {
 // An empty box has only the `Text` for its `textContent`, and the column
 // made here takes its place in the box's height.
 function _appendTarget(raw) {
+    // A table styled as a box still lays its rows out in its grid.
+    if (_meta(raw).tableGrid) {
+        return _meta(raw).tableGrid;
+    }
     if (_gIsBox(raw)) {
         return raw;
     }
     // What a scroller holds moves with it, so children belong in its content.
     if (raw.eldurScroller) {
         return _childContainer(raw);
-    }
-    if (_meta(raw).tableGrid) {
-        return _meta(raw).tableGrid;
     }
     if (raw.contentItem) {
         return raw.contentItem;
@@ -3057,6 +3058,7 @@ function _tableLayout(host) {
             return;
         }
         lm.tablePlacing = true;
+        _tableLiftCaptions(host);
         _tableOrderSections(host);
         _tablePlaceAll(host, live);
         lm.tablePlacing = false;
@@ -3175,6 +3177,7 @@ function _tablePlaceAll(host, live) {
     var sharedRight = function(c) {
         return collapsed && paintsRight(c) ? c.item.border.width : 0;
     };
+    _tableOuterPads(host, placed, rows.length);
     var adapters = measure().map(function(a, i) {
         var over = sharedAcross(placed.cells[i]);
         return Object.assign({}, a, {
@@ -3186,7 +3189,11 @@ function _tablePlaceAll(host, live) {
     if (isStatic) {
         host.eldurCreatedCells = adapters;
         if (live) {
-            _tableLiveSpecs(host, placed.columns);
+            if (_meta(host).tableMade) {
+                _tableMadeSpecs(host, placed);
+            } else {
+                _tableLiveSpecs(host, placed.columns);
+            }
             _tableWatchHost(host);
             var specsNow = host.columnSpecs;
             // Written, not bound: the width follows from these, and these from
@@ -3246,7 +3253,8 @@ function _tablePlaceAll(host, live) {
         _meta(c.item).tableBorderOver = last ? 0 : sharedRight(c);
         // A collapsed cell reaches to the middle of its borders. A written table's
         // columns start on whole pixels, so a cell made into it keeps to that grid.
-        _meta(c.item).tableCellInset = collapsed && !isStatic && (_tableOwnBorders(c.item) || paintsRight(c))
+        _meta(c.item).tableCellInset = collapsed && (!isStatic || _meta(host).tableMade)
+            && (_tableOwnBorders(c.item) || paintsRight(c))
             ? c.item.border.width / 2 : 0;
         c.item.width = acrossFrom(c) + _meta(c.item).tableBorderOver;
         if (_gIsBox(c.item)) {
@@ -3457,20 +3465,213 @@ function _tableLiveHosts() {
 // under the box with its border, and beside the captions.
 function _tableSetUp() {
     _tableHosts = _tableLiveHosts();
-    _tableHosts.forEach(function(host) {
-        for (var cur = host; cur; cur = cur.parent) {
-            if (cur.eldurTag === "table") {
-                if (cur !== host) {
-                    _meta(cur).tableGrid = host;
-                    _meta(host).hostBox = cur;
-                }
-                break;
-            }
-        }
-        _tableBaseline(host);
-        _layoutChanged(host);
-    });
+    _tableHosts.forEach(_tableJoin);
     _tableHosts.forEach(function(host) { _tableLayout(host); });
+}
+
+function _tableJoin(host) {
+    for (var cur = host; cur; cur = cur.parent) {
+        if (cur.eldurTag === "table") {
+            if (cur !== host) {
+                _meta(cur).tableGrid = host;
+                _meta(host).hostBox = cur;
+            }
+            break;
+        }
+    }
+    _tableBaseline(host);
+    _layoutChanged(host);
+}
+
+// A table whose classes only a script knows has no template, but takes the form
+// `emit/table.rs` gives a written one a script fills: its captions in a column
+// above the box that paints it, and its grid in that box. `_tableStyleMade`
+// writes what its style says, from the cascade.
+var _TABLE_MADE_SOURCE = "import QtQuick; import QtQuick.Layouts; ColumnLayout { id: table; spacing: 0; "
+    + "property string eldurTag: \"table\"; property bool eldurMadeTable: true; "
+    + "property real eldurInL: 2; property real eldurInR: 2; property real eldurInT: 2; property real eldurInB: 2; "
+    + "property real eldurGivenW: -1; property real eldurRoom: Number.POSITIVE_INFINITY; "
+    + "property real eldurMinW: 0; property real eldurMaxW: Number.POSITIVE_INFINITY; "
+    + "Layout.fillWidth: false; "
+    + "Rectangle { id: body; color: \"transparent\"; border.width: 0; Layout.fillWidth: true; "
+    // Over the cells: collapsed, the table's wider border is the one shown.
+    + "Rectangle { anchors.fill: parent; z: 1; color: \"transparent\"; border.width: 0 } "
+    // CSS 2.1 §17.5.2: a table is never narrower than its content's narrowest,
+    // and min-width wins over max-width.
+    + "implicitWidth: Math.max(grid.minContentWidth + table.eldurInL + table.eldurInR, table.eldurMinW, "
+    + "Math.min(table.eldurMaxW, table.eldurGivenW >= 0 ? table.eldurGivenW "
+    + ": Math.min(grid.maxContentWidth + table.eldurInL + table.eldurInR, table.eldurRoom))); "
+    + "implicitHeight: grid.implicitHeight + table.eldurInT + table.eldurInB; "
+    + "Layout.maximumHeight: grid.eldurEmpty ? 0 : Number.POSITIVE_INFINITY; "
+    + "ColumnLayout { id: grid; property real columnSpacing: 2; property real rowSpacing: 2; "
+    + "property var columnSpecs: [null]; property var eldurCreatedCells: []; property var columnWidths: []; "
+    + "property bool eldurEmpty: false; property real maxContentWidth: 0; property real minContentWidth: 0; "
+    + "property bool eldurFixed: false; property real eldurOuterEdge: 0; spacing: 0; "
+    + "anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; "
+    + "anchors.leftMargin: table.eldurInL; anchors.rightMargin: table.eldurInR; anchors.topMargin: table.eldurInT } } }";
+
+// What the cascade says of a made table's box, written where its form reads it.
+function _tableStyleMade(table, grid) {
+    var s = _gStyle(table);
+    var avail = table.parent ? table.parent.width : 0;
+    var e = _gEdges(table, s, avail);
+    var px = function(prop) {
+        return _gPx(s[prop], avail, s.fontSize, s.rootSize);
+    };
+    var collapse = String(s["border-collapse"]).trim() === "collapse";
+    var before = [grid.eldurFixed, grid.columnSpacing, grid.rowSpacing].join();
+    var spacing = String(s["border-spacing"] || "").split(/\s+/).map(parseFloat)
+        .filter(function(v) { return !isNaN(v); });
+    var across = collapse ? 0 : spacing.length > 0 ? spacing[0] : 0;
+    var down = collapse ? 0 : spacing.length > 1 ? spacing[1] : across;
+    _gSet(grid, "columnSpacing", across);
+    _gSet(grid, "rowSpacing", down);
+    // Collapsed, padding does not apply and the outer border lies half inside
+    // the cells (CSS 2.1 §17.6.2). A made cell paints its own border whole: the
+    // table's wider one takes the difference, and is painted over it.
+    var cellBorder = 0;
+    _walkItems(grid, function(kid) {
+        if (/^t[dh]$/.test(_tablePartTag(kid)) && _tableOwnBorders(kid)) {
+            cellBorder = Math.max(cellBorder, kid.border.width);
+        }
+        return false;
+    });
+    var outer = function(side) {
+        return Math.max(side - cellBorder, 0) / 2;
+    };
+    _gSet(table, "eldurInL", collapse ? outer(e.bl) : e.bl + e.pl + across);
+    _gSet(table, "eldurInR", collapse ? outer(e.br) : e.br + e.pr + across);
+    _gSet(table, "eldurInT", collapse ? outer(e.bt) : e.bt + e.pt + down);
+    _gSet(table, "eldurInB", collapse ? outer(e.bb) : e.bb + e.pb + down);
+    var width = px("width");
+    var minW = px("min-width");
+    var maxW = px("max-width");
+    _gSet(table, "eldurGivenW", width === null ? -1 : _gOuterWidth(s, e, width));
+    _gSet(table, "eldurMinW", minW === null ? 0 : _gOuterWidth(s, e, minW));
+    _gSet(table, "eldurMaxW", maxW === null ? Number.POSITIVE_INFINITY : _gOuterWidth(s, e, maxW));
+    _gSet(table, "eldurRoom", Math.max(avail - (e.ml || 0) - (e.mr || 0), 0));
+    // Fixed layout needs a width to share out (CSS 2.1 §17.5.2.1).
+    _gSet(grid, "eldurFixed", s["table-layout"] === "fixed" && width !== null);
+    var body = grid.parent;
+    body.color = _gQtColor(s["background-color"]);
+    var edge = body.children[0];
+    var uniform = e.bt === e.br && e.bt === e.bb && e.bt === e.bl;
+    _gSet(edge.border, "width", uniform ? e.bt : 0);
+    if (uniform && e.bt > 0) {
+        edge.border.color = _gQtColor(s["border-top-color"]);
+    }
+    if ([grid.eldurFixed, grid.columnSpacing, grid.rowSpacing].join() !== before) {
+        _layoutChanged(grid);
+    }
+}
+
+// A made table's captions sit above the box with its border, at the table's
+// whole width, whichever way a script put them in.
+function _tableLiftCaptions(grid) {
+    var table = _meta(grid).hostBox;
+    if (!table || table.eldurMadeTable !== true) {
+        return;
+    }
+    var body = grid.parent;
+    var kids = [];
+    for (var i = 0; i < grid.children.length; ++i) {
+        kids.push(grid.children[i]);
+    }
+    var lifted = false;
+    kids.forEach(function(kid) {
+        if (_tablePartTag(kid) === "caption") {
+            kid.parent = null;
+            kid.parent = table;
+            lifted = true;
+        }
+    });
+    if (lifted) {
+        body.parent = null;
+        body.parent = table;
+    }
+}
+
+// A table made from a template is the converter's table with no rows yet, as a
+// written one a script fills: its grid takes the rows the script puts in.
+function _tableAdoptMade(item) {
+    var host = null;
+    _walkItems(item, function(kid) {
+        if (!host && kid.columnSpecs !== undefined && _tableIsLive(kid)) {
+            host = kid;
+        }
+        return Boolean(host);
+    });
+    if (!host || _tableHosts.indexOf(host) >= 0) {
+        return;
+    }
+    _meta(host).tableMade = true;
+    _tableHosts.push(host);
+    _tableJoin(host);
+    // The box that paints a table with no template is no element of its own,
+    // and what goes in it goes in the grid.
+    var table = _meta(host).hostBox;
+    if (table && host.parent !== table) {
+        _meta(host.parent).hostBox = table;
+        _meta(host.parent).tableGrid = host;
+    }
+}
+
+// Collapsed, a made table's outer border wins over its cells' where it is wider
+// (CSS 2.1 §17.6.2.1): half of it lies inside the cells along that edge. The
+// table paints it over theirs, and they make room for the rest.
+function _tableOuterPads(host, placed, rowCount) {
+    var table = _meta(host).hostBox;
+    if (!table || table.eldurMadeTable !== true || !_tableCollapses(host)) {
+        return;
+    }
+    var ts = _gStyle(table);
+    var columns = placed.columns;
+    placed.cells.forEach(function(c) {
+        if (!_gIsBox(c.item)) {
+            return;
+        }
+        var cs = _gStyle(c.item);
+        var extra = function(onEdge, side) {
+            return onEdge ? Math.max(ts["border-" + side + "-px"] - cs["border-" + side + "-px"], 0) / 2 : 0;
+        };
+        var pads = [
+            extra(c.row === 0, "top"),
+            extra(c.column + c.columnSpan >= columns, "right"),
+            extra(c.row + c.rowSpan >= rowCount, "bottom"),
+            extra(c.column === 0, "left")
+        ];
+        var m = _meta(c.item);
+        var had = m.tableOuterPad;
+        if (pads.some(function(v) { return v > 0; })) {
+            m.tableOuterPad = pads;
+        } else if (had) {
+            delete m.tableOuterPad;
+        }
+    });
+}
+
+// A made table's columns: in fixed layout its first row's cell widths
+// (CSS 2.1 §17.5.2.1), otherwise only what its cells hold.
+function _tableMadeSpecs(host, placed) {
+    var specs = [];
+    for (var c = 0; c < Math.max(placed.columns, 1); ++c) {
+        specs.push(null);
+    }
+    if (host.eldurFixed && _gHasCascade()) {
+        placed.cells.forEach(function(cell) {
+            if (cell.row !== 0 || cell.columnSpan !== 1) {
+                return;
+            }
+            var s = _gStyle(cell.item);
+            var px = _gPx(s.width, host.width, s.fontSize, s.rootSize);
+            if (px !== null) {
+                specs[cell.column] = _gOuterWidth(s, _gEdges(cell.item, s, host.width), px);
+            }
+        });
+    }
+    if (JSON.stringify(specs) !== JSON.stringify(host.columnSpecs)) {
+        host.columnSpecs = specs;
+    }
 }
 
 // What a cell's own rule, its row's, its section's and its column's add up to,
@@ -3618,6 +3819,10 @@ function _tableBaseline(host) {
 
 function _tableRepaintAll() {
     _tableHosts.forEach(function(host) {
+        var made = _meta(host).hostBox;
+        if (made && made.eldurMadeTable === true && _isConnected(made)) {
+            _tableStyleMade(made, host);
+        }
         if (_isConnected(host)) {
             _tableRepaint(host, false);
         }
@@ -7788,7 +7993,8 @@ function _genericElementSource(tag, inputType) {
         return "import QtQuick; import QtQuick.Layouts; Item { Layout.fillWidth: true; Layout.preferredHeight: implicitHeight; property real eldurSide: 0; property real eldurTop: 0; property real eldurBottom: 0; Layout.leftMargin: eldurSide; Layout.rightMargin: eldurSide; Layout.topMargin: eldurTop; Layout.bottomMargin: eldurBottom; }";
     }
     if (tag === "table") {
-        return "import QtQuick; import QtQuick.Layouts; ColumnLayout { Layout.fillWidth: false; spacing: 0 }";
+        return _gActive() ? _TABLE_MADE_SOURCE
+            : "import QtQuick; import QtQuick.Layouts; ColumnLayout { Layout.fillWidth: false; spacing: 0 }";
     }
     if (tag === "thead" || tag === "tbody" || tag === "tfoot") {
         return "import QtQuick; import QtQuick.Layouts; ColumnLayout { Layout.fillWidth: true; spacing: 0; property real eldurSide: 0; property real eldurTop: 0; property real eldurBottom: 0; Layout.leftMargin: eldurSide; Layout.rightMargin: eldurSide; Layout.topMargin: eldurTop; Layout.bottomMargin: eldurBottom; }";
@@ -7925,9 +8131,12 @@ function _lookupTemplate(raw) {
     if (!_root || !_root.eldurTemplates || typeof _root.eldurTemplates !== "object") {
         return null;
     }
-    // A row has no form of its own for a template to describe, nor has a table
-    // whose rows are not there yet.
-    if (_TABLE_PARTS[_meta(raw).createdTag]) {
+    // A row or a section has no form of its own for a template to describe; a
+    // table's is the converter's with no rows, which `_tableAdoptMade` fills.
+    // An open page's cascade sizes the made form from every rule and its own
+    // style, where a template's spacing is fixed.
+    var tag = _meta(raw).createdTag;
+    if (_TABLE_PARTS[tag] && (tag !== "table" || _gActive())) {
         return null;
     }
     var templates = _root.eldurTemplates;
@@ -8165,9 +8374,18 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
     if (oldRaw.objectName && !next.objectName) {
         next.objectName = oldRaw.objectName;
     }
+    var oldGrid = _tableHosts.indexOf(m.tableGrid);
     _itemMeta.delete(oldRaw);
     _itemMeta.set(next, m);
     m.raw = next;
+    // Before its rows come back: they go in the grid it holds.
+    if (m.createdTag === "table") {
+        if (oldGrid >= 0) {
+            _tableHosts.splice(oldGrid, 1);
+        }
+        delete m.tableGrid;
+        _tableAdoptMade(next);
+    }
     if (_gActive()) {
         _gReplaced.set(oldRaw, next);
         _aSwapped(oldRaw, next);
@@ -15808,6 +16026,9 @@ var document = {
         var qmlSrc = _genericElementSource(tag, "text");
         var created = Qt.createQmlObject(qmlSrc, _qobjectParent(), "eldur_el_" + tag);
         _meta(created).createdTag = tag;
+        if (tag === "table") {
+            _tableAdoptMade(created);
+        }
         if (_gActive()) {
             _gLive.push(created);
         }
@@ -16023,7 +16244,7 @@ var _G_INITIAL = {
     "background-position-x": "0%", "background-position-y": "0%", "background-repeat": "repeat",
     "text-shadow": "none", "outline-style": "none", "outline-width": "medium",
     "outline-color": "currentcolor", "outline-offset": "0px", "object-fit": "fill", "object-position": "50% 50%", "background-origin": "padding-box", "background-clip": "border-box", "background-attachment": "scroll",
-    "float": "none", "clear": "none", "vertical-align": "baseline"
+    "float": "none", "clear": "none", "vertical-align": "baseline", "table-layout": "auto"
 };
 // The controls whose box the UA sheet in the rule table describes: padding and
 // border are the control's insets.
@@ -16093,7 +16314,7 @@ function _gBoxSource(tag, outOfFlow) {
 // A cell is a box too: what it holds flows as in any block, and `_tableLayout`
 // gives it its width and its row's height.
 function _gWantsBox(tag) {
-    return (!_G_CONTROL.test(tag) || /^t[dh]$/.test(tag))
+    return (!_G_CONTROL.test(tag) || /^(t[dh]|caption)$/.test(tag))
         && !/^(#text|option|optgroup|script|style|template)$/.test(tag);
 }
 
@@ -16790,11 +17011,21 @@ function _gEdges(raw, s, basis) {
     var at = function(prop) {
         return _gPx(s[prop], basis, s.fontSize, s.rootSize);
     };
-    return {
+    var e = {
         mt: at("margin-top"), mr: at("margin-right"), mb: at("margin-bottom"), ml: at("margin-left"),
         pt: at("padding-top") || 0, pr: at("padding-right") || 0, pb: at("padding-bottom") || 0, pl: at("padding-left") || 0,
         bt: s["border-top-px"], br: s["border-right-px"], bb: s["border-bottom-px"], bl: s["border-left-px"]
     };
+    // A collapsed table's wider outer border takes room in the cells along it,
+    // which paint only their own: see `_tableOuterPads`.
+    var pads = (s.tag === "td" || s.tag === "th") ? _meta(raw).tableOuterPad : undefined;
+    if (pads) {
+        e.pt += pads[0];
+        e.pr += pads[1];
+        e.pb += pads[2];
+        e.pl += pads[3];
+    }
+    return e;
 }
 
 function _gKids(raw) {

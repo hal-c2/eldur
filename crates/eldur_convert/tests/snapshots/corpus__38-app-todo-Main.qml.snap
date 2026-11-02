@@ -202,10 +202,10 @@ ApplicationWindow {
                                     verticalAlignment: Text.AlignVCenter
                                     renderType: Text.NativeRendering
                                 }
-                                implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
+                                implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                                 objectName: "add"
                                 Layout.fillWidth: true
-                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                Layout.maximumWidth: implicitWidth
                                 Layout.fillHeight: true
 
                                 onClicked: {
@@ -360,7 +360,7 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             renderType: Text.NativeRendering
                                         }
-                                        implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
+                                        implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                                         objectName: "f-all"
                                         width: Math.min(implicitWidth, Math.max(filtersFlow.width, Math.ceil(Math.max(...fAll.text.split(/\s+/).map(w => fAllWords.advanceWidth(w))) * 1.0256385) + leftPadding + rightPadding))
 
@@ -410,7 +410,7 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             renderType: Text.NativeRendering
                                         }
-                                        implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
+                                        implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                                         objectName: "f-active"
                                         width: Math.min(implicitWidth, Math.max(filtersFlow.width, Math.ceil(Math.max(...fActive.text.split(/\s+/).map(w => fActiveWords.advanceWidth(w))) * 1.0256385) + leftPadding + rightPadding))
 
@@ -460,7 +460,7 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             renderType: Text.NativeRendering
                                         }
-                                        implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
+                                        implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                                         objectName: "f-done"
                                         width: Math.min(implicitWidth, Math.max(filtersFlow.width, Math.ceil(Math.max(...fDone.text.split(/\s+/).map(w => fDoneWords.advanceWidth(w))) * 1.0256385) + leftPadding + rightPadding))
 

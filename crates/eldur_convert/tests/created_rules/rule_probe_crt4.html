@@ -1,0 +1,42 @@
+<!doctype html><html><head><style>
+body{margin:10px;font:15px Helvetica,Arial,sans-serif}
+.toolbar{display:flex;align-items:center;gap:10px;padding:6px;background:#f4f4f4;border-bottom:2px solid #ccc}
+.toolbar .sp{flex:1}
+.btn{padding:4px 10px;border:1px solid #888;border-radius:3px;background:#fff}
+.btn.primary{background:#036;color:#fff;border-color:#036;padding:6px 14px}
+.grid{width:500px;border-collapse:separate;border-spacing:4px;margin-top:10px}
+.grid th{text-align:left;background:#ddd;padding:3px}
+.grid td{padding:3px 8px;border:1px solid #bbb}
+.grid tr.sel td{background:#ffd;font-weight:bold}
+.grid td.num{text-align:right;width:60px}
+.note{margin:12px 0;padding:8px 12px;border-left:4px solid #c90;background:#fff8e8}
+.note:empty{display:none}
+.tags span{display:inline-block;margin:2px;padding:1px 6px;border-radius:8px;background:#def;font-size:12px}
+.tags span + span{margin-left:6px}
+.foot{margin-top:14px;font-size:12px;color:#666}
+</style></head><body>
+<div class="toolbar" id="tb"><span id="ttl">Orders</span><span class="sp"></span></div>
+<div class="note" id="note"></div>
+<div class="tags" id="tags"></div>
+<div class="foot" id="foot">footer</div>
+<script>
+const tb=document.getElementById('tb');
+['Add','Remove','Save'].forEach((t,i)=>{const b=document.createElement('button');b.className='btn'+(i===2?' primary':'');b.id='b'+i;b.textContent=t;tb.appendChild(b)});
+const t=document.createElement('table');t.className='grid';t.id='g';
+const th=t.createTHead().insertRow();['Item','Qty','Price'].forEach(h=>{const c=document.createElement('th');c.textContent=h;th.appendChild(c)});
+const body=t.createTBody();
+[['Apples',3,1.2],['Pears with a long name that wraps maybe',10,0.8],['Plums',7,2.5]].forEach((r,i)=>{const tr=body.insertRow();tr.id='r'+i;r.forEach((v,j)=>{const c=tr.insertCell();c.textContent=v;if(j>0)c.className='num'})});
+document.getElementById('note').after(t);
+const tags=document.getElementById('tags');
+['red','green','blue'].forEach(x=>tags.insertAdjacentHTML('beforeend','<span id="tag-'+x+'">'+x+'</span>'));
+setTimeout(()=>{
+ const ids=['tb','ttl','b0','b1','b2','note','g','r0','r1','r2','tags','tag-red','tag-green','tag-blue','foot'];
+ for(const n of ids){const q=document.getElementById(n).getBoundingClientRect();console.log('CS '+n+' '+[q.x,q.y,q.width,q.height].join(','))}
+ document.getElementById('r1').classList.add('sel');
+ document.getElementById('note').textContent='Saved 3 orders.';
+ document.getElementById('b2').classList.remove('primary');
+ tags.removeChild(document.getElementById('tag-red'));
+ setTimeout(()=>{for(const n of ['b2','note','g','r0','r1','r2','tags','tag-green','tag-blue','foot']){const q=document.getElementById(n).getBoundingClientRect();console.log('CS 2'+n+' '+[q.x,q.y,q.width,q.height].join(','))}
+  console.log('CS cs '+getComputedStyle(document.querySelector('#r1 td')).fontWeight+' '+getComputedStyle(document.getElementById('note')).display+' '+getComputedStyle(document.getElementById('tag-blue')).marginLeft);document.body.appendChild(document.createElement('div')).id='csdone'},100);
+},100);
+</script></body></html>

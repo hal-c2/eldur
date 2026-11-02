@@ -75,14 +75,24 @@ TestCase {
 
 /// `(page, Chromium's line, ours, why)`: what is known to differ, in full, so a
 /// changed difference and one that went away both fail.
-const KNOWN: &[(&str, &str, &str, &str)] = &[(
-    "rule_probe_crt2",
-    "CS a2 143.328125,8,129.328125,56",
-    "CS a2 143,8,130,56",
-    "a static grid no script fills is a GridLayout, which gives its 1fr tracks whole \
+const KNOWN: &[(&str, &str, &str, &str)] = &[
+    (
+        "rule_probe_crt2",
+        "CS a2 143.328125,8,129.328125,56",
+        "CS a2 143,8,130,56",
+        "a static grid no script fills is a GridLayout, which gives its 1fr tracks whole \
      pixels (129, 129, 130 of 388); it was so before created elements were laid out \
      by the runtime, and a page with no script keeps its converted QML",
-)];
+    ),
+    (
+        "rule_table_widths",
+        "CS t6c00 9,324.5,225.078125,21",
+        "CS t6c00 9,325,226,21",
+        "the table solver (`tableColumnWidths`, `tableRowHeights`) gives columns and rows \
+     whole pixels so cell borders are drawn sharp: Chromium's 225.08px column becomes \
+     226, and the 21.5px head row above it 22",
+    ),
+];
 
 /// Pixels a logged number may be off: glyph widths differ a little between the two
 /// text engines. Whole numbers rounded by a page's helper are held exactly.
@@ -633,4 +643,14 @@ fn rule_float_margins_created() {
 #[test]
 fn rule_float_margins_static() {
     page("rule_float_margins_static");
+}
+
+#[test]
+fn rule_probe_crt4() {
+    page("rule_probe_crt4");
+}
+
+#[test]
+fn rule_table_widths() {
+    page("rule_table_widths");
 }

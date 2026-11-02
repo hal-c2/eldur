@@ -363,7 +363,7 @@ ApplicationWindow {
                                     wrapMode: Text.WordWrap
                                     renderType: Text.NativeRendering
                                 }
-                                implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
+                                implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                                 objectName: "compact"
                                 width: Math.min(implicitWidth, Math.max(divFlow.width, Math.ceil(Math.max(...compact.text.split(/\s+/).map(w => compactWords.advanceWidth(w))) * 1.0256385) + leftPadding + rightPadding))
 
@@ -415,7 +415,7 @@ ApplicationWindow {
                                     wrapMode: Text.WordWrap
                                     renderType: Text.NativeRendering
                                 }
-                                implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
+                                implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                                 objectName: "toggle"
                                 width: Math.min(implicitWidth, Math.max(divFlow.width, Math.ceil(Math.max(...toggle.text.split(/\s+/).map(w => toggleWords.advanceWidth(w))) * 1.0256385) + leftPadding + rightPadding))
 

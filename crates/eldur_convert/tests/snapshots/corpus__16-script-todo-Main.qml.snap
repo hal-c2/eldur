@@ -262,7 +262,7 @@ ApplicationWindow {
                                     }
                                     objectName: "add-btn"
                                     Layout.fillWidth: true
-                                    Layout.maximumWidth: Math.ceil(implicitWidth)
+                                    Layout.maximumWidth: implicitWidth
                                     Layout.fillHeight: true
                                     hoverEnabled: true
 
@@ -540,7 +540,7 @@ ApplicationWindow {
                 renderType: Text.NativeRendering
             }
             Layout.fillWidth: true
-            Layout.maximumWidth: Math.ceil(implicitWidth)
+            Layout.maximumWidth: implicitWidth
             Layout.alignment: Qt.AlignVCenter
             hoverEnabled: true
 

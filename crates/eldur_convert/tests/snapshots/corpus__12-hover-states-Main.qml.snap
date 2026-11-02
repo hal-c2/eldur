@@ -229,7 +229,7 @@ ApplicationWindow {
                                         }
                                     }
                                 }
-                                width: Math.min(Math.ceil(implicitWidth), parent.width)
+                                width: Math.min(implicitWidth, parent.width)
                                 hoverEnabled: true
 
                                 PointHandler {
@@ -302,7 +302,7 @@ ApplicationWindow {
                                         }
                                     }
                                 }
-                                width: Math.min(Math.ceil(implicitWidth), parent.width)
+                                width: Math.min(implicitWidth, parent.width)
                                 hoverEnabled: true
 
                                 PointHandler {
@@ -375,7 +375,7 @@ ApplicationWindow {
                                         }
                                     }
                                 }
-                                width: Math.min(Math.ceil(implicitWidth), parent.width)
+                                width: Math.min(implicitWidth, parent.width)
                                 hoverEnabled: true
 
                                 PointHandler {
@@ -422,7 +422,7 @@ ApplicationWindow {
                                     renderType: Text.NativeRendering
                                 }
                                 enabled: false
-                                width: Math.min(Math.ceil(implicitWidth), parent.width)
+                                width: Math.min(implicitWidth, parent.width)
                             }
                         }
                     }
