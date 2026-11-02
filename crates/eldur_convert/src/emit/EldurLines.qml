@@ -545,8 +545,10 @@ Item {
                 unbroken += m.width + space;
             }
             const own = run.measured.length > 0 ? Math.min(item.implicitWidth, unbroken) : item.implicitWidth;
+            // An edge space is the lines' to count: one Qt drew is taken off above,
+            // and styled and rich text drop a leading one.
             natural += own - leadWidth - trailWidth
-                + ((naturalPending || lead && keeps) && natural > 0 ? space : 0);
+                + ((naturalPending || lead) && natural > 0 ? space : 0);
             naturalPending = trail;
         }
         built.push(line);
