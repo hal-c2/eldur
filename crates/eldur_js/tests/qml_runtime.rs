@@ -112,12 +112,14 @@ fn run_qml6_offscreen(main_qml: &PathBuf, timeout: Duration) -> String {
         .expect("failed to spawn qml6");
 
     let start = Instant::now();
+    let mut killed = false;
     loop {
         match child.try_wait().expect("failed polling qml6 process") {
             Some(_) => break,
             None => {
                 if start.elapsed() >= timeout {
                     let _ = child.kill();
+                    killed = true;
                     break;
                 }
                 std::thread::sleep(Duration::from_millis(20));
@@ -130,8 +132,16 @@ fn run_qml6_offscreen(main_qml: &PathBuf, timeout: Duration) -> String {
         .expect("failed reading qml6 output");
     let mut combined = String::from_utf8_lossy(&output.stdout).into_owned();
     combined.push_str(&String::from_utf8_lossy(&output.stderr));
+    if killed {
+        combined.push_str(&format!("\n[qml6 killed after {timeout:?}]\n"));
+    }
     combined
 }
+
+/// Every page quits once it has said what it checks, so the deadline only
+/// catches one that hangs. A loaded machine can take seconds just to start
+/// qml6, and a page killed then has said nothing.
+const QML6_DEADLINE: Duration = Duration::from_secs(60);
 
 /// These pages exercise the resolved lowering and its operand order. They also
 /// write through open receivers, so the analysis alone would send their lookups
@@ -395,7 +405,7 @@ Item {
 "#,
     );
 
-    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
     assert!(
         output.contains("ELDUR_OK_SYNC inline:a:KeyA"),
         "missing ELDUR_OK_SYNC in qml6 output:\n{output}"
@@ -564,7 +574,7 @@ Item {
         }
     }
 
-    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
     assert!(
         output.contains(
             "ELDUR_OK_MOD_CONTROLS TRK=27|Admin|true|75|#224466|1|2|win|9|ControlsMod|500 true"
@@ -669,7 +679,7 @@ Item {
 "#,
     );
 
-    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
     assert!(
         output.contains(
             "ELDUR_OK_UNIFIED_LISTEN 2|click:1,once:click,click:2 2|click:1,once:click,click:2"
@@ -737,7 +747,7 @@ Item {
 "#,
     );
 
-    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
     assert!(
         output.contains("ELDUR_OK_TOP_LET undefined|ready|undefined"),
         "unexpected qml6 top-level let output:\n{output}\npage.js:\n{}",
@@ -903,7 +913,7 @@ Item {
         }
     }
 
-    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
     assert!(
         output.contains(
             "ELDUR_OK_COMPOUND_LOGICAL Doc:v1|true|false|false|true|Editor|2|card primary|true|true|<u>OK</u>|Alice!|#123456|5|tagged|11"
@@ -1088,7 +1098,7 @@ Item {
         }
     }
 
-    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
     assert!(
         output.contains(
             "ELDUR_OK_ASSIGN_EXPR default|default|default:v2|Fresh|false|false|true|true|false|true|Editor|Editor|Admin||Viewer|1|card|card active|card active|<b>A</b>|<b>A</b><i>B</i>|<b>A</b><i>B</i>|#111|#111222|#111222|none|none|flex|true|Ada|Ada|Ada!|Alpha|Alpha+Beta|Alpha+Beta|<em>Z</em>|<em>Z</em>!|recv:1,rhs:1,recv:2,rhs:2,recv:3,recv:4,rhs:4,recv:5,rhs:5|24"
@@ -1203,7 +1213,7 @@ Item {
         }
     }
 
-    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
     assert!(
         output.contains(
             "ELDUR_OK_BLOCK_VAR true:true:ready:3:y:true|ready|3|y|local:2|undefined true:true:ready:3:y:true"
@@ -1402,7 +1412,7 @@ Item {
         }
     }
 
-    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
     assert!(
         output.contains(
             "ELDUR_OK_COLLIDING_MODULES A:19:8|B:117:8|14:12|classic:1501|12+103+7+8|S@2,A@4,B@6,M@8 classic:1502"
@@ -1505,7 +1515,7 @@ Item {
         }
     }
 
-    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
     assert!(
         output.contains(
             "ELDUR_OK_DESTRUCTURED_VAR s1-pre:1:u:u|s1-mid:2:20:30|s1-post:3:40:30|s2-scalar:4:40:30=>a=5,b=50,c=60,d=70"
@@ -1613,7 +1623,7 @@ Item {
         }
     }
 
-    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
     assert!(
         output.contains(
             "ELDUR_OK_UNINIT_NESTED_VAR single:true,newline:true|set|2|n|true|true|true|3"
@@ -1784,7 +1794,7 @@ Item {
         }
     }
 
-    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
     assert!(
         output.contains(
             "ELDUR_OK_MIXED_ON_LISTEN true,false,false,true,false|f1:false,f2:false,f1:false,f2:true,f1:false,f2:true,f1:false,f1:false,f2:false||f1:false,f2:true:true||f2:false:false||2:5"
@@ -1942,7 +1952,7 @@ Item {
         }
     }
 
-    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
     assert!(
         output.contains("ELDUR_OK_SHORTHAND_KEYS true:true"),
         "unexpected qml6 shorthand property key output:\n{output}\npage.js:\n{}",
@@ -2033,7 +2043,7 @@ Item {
         }
     }
 
-    let output = run_qml6_offscreen(&main_qml, Duration::from_secs(3));
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
     assert!(
         output.contains("ELDUR_OK_MOD_BLOCK_VAR 10 undefined 10 undefined"),
         "unexpected qml6 module block-nested var output:\n{output}\npage.js:\n{}",
@@ -2073,7 +2083,7 @@ fn run_page_allowing_unsupported(
              import \"eldur_runtime.js\" as Eldur\n\n{main}\n"
         ),
     );
-    (run_qml6_offscreen(&main_qml, Duration::from_secs(3)), out)
+    (run_qml6_offscreen(&main_qml, QML6_DEADLINE), out)
 }
 
 fn run_page(resolver: &FakeResolver, script: &str, main: &str) -> (String, JsOutput) {
@@ -2097,7 +2107,7 @@ fn run_page(resolver: &FakeResolver, script: &str, main: &str) -> (String, JsOut
              import \"eldur_runtime.js\" as Eldur\n\n{main}\n"
         ),
     );
-    (run_qml6_offscreen(&main_qml, Duration::from_secs(3)), out)
+    (run_qml6_offscreen(&main_qml, QML6_DEADLINE), out)
 }
 
 #[test]
