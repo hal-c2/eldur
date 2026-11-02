@@ -1,0 +1,18 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;font:16px/20px sans-serif}
+.f{display:flex;gap:4px}.i{background:rgb(0,128,0)}.t{height:80px;width:10px}.sm{height:10px;width:10px}.top{align-self:flex-start}.col{display:flex;flex-direction:column;width:100px}.grow{flex:1}.w{display:flex;flex-wrap:wrap;width:100px}.w>div{width:60px}
+</style></head><body>
+<div class="f" id="f"></div><div class="col" id="col" style="height:90px"></div><div class="w" id="wr"></div><div id="end">e</div>
+<script>
+function rc(id){var b=document.getElementById(id).getBoundingClientRect();return id+":"+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)+","+Math.round(b.height)}
+function geo(){console.log("CS "+Array.prototype.map.call(arguments,rc).join(" "))}
+function cs(id){var s=getComputedStyle(document.getElementById(id)),o=[];for(var i=1;i<arguments.length;i++)o.push(arguments[i]+"="+s[arguments[i]]);console.log("CS "+id+" "+o.join(" "))}
+function mk(par,c,id){var d=document.createElement("div");d.className=c;d.id=id;par.append(d);return d}
+var f=document.getElementById("f");
+var a=mk(f,"i","a");mk(a,"t","at");
+var b=mk(f,"i","b");mk(b,"sm","bs");
+var c=mk(f,"i top","c");mk(c,"sm","cs");
+var col=document.getElementById("col");mk(col,"i","ca");mk(col,"i grow","cb");
+var wr=document.getElementById("wr");mk(wr,"t","w1");mk(wr,"sm","w2");mk(wr,"sm","w3");
+geo("f","a","b","c","col","ca","cb","wr","w1","w2","w3","end");
+</script></body></html>

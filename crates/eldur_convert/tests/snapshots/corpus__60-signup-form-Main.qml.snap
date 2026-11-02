@@ -216,12 +216,32 @@ ApplicationWindow {
                                     property string eldurTag: "div"
                                     property string eldurClasses: "hint"
 
-                                    implicitWidth: 0
-                                    implicitHeight: 0
+                                    implicitWidth: userHintText.implicitWidth
+                                    implicitHeight: (userHintText.text === "" ? 0 : userHintText.implicitHeight)
                                     objectName: "user-hint"
                                     Layout.fillWidth: true
                                     Layout.minimumHeight: 18
                                     Layout.topMargin: -blockFlow.eldurCarry
+
+                                    Text {
+                                        id: userHintText
+                                        text: ""
+                                        textFormat: Text.PlainText
+                                        color: "#c0392b"
+                                        font.family: EldurFonts.family("Arial, sans-serif")
+                                        font.pixelSize: 13
+                                        lineHeight: EldurFonts.normalLine(font)
+                                        lineHeightMode: Text.FixedHeight
+                                        transform: Translate {
+                                            y: EldurFonts.shift("Arial, sans-serif", 13, 400, false, 0)
+                                        }
+                                        bottomPadding: EldurFonts.slack(font, lineHeight)
+                                        wrapMode: Text.WordWrap
+                                        anchors.left: parent.left
+                                        anchors.right: parent.right
+                                        anchors.top: parent.top
+                                        renderType: Text.NativeRendering
+                                    }
                                 }
                             }
 
@@ -317,12 +337,32 @@ ApplicationWindow {
                                     property string eldurTag: "div"
                                     property string eldurClasses: "hint"
 
-                                    implicitWidth: 0
-                                    implicitHeight: 0
+                                    implicitWidth: mailHintText.implicitWidth
+                                    implicitHeight: (mailHintText.text === "" ? 0 : mailHintText.implicitHeight)
                                     objectName: "mail-hint"
                                     Layout.fillWidth: true
                                     Layout.minimumHeight: 18
                                     Layout.topMargin: -blockFlow2.eldurCarry
+
+                                    Text {
+                                        id: mailHintText
+                                        text: ""
+                                        textFormat: Text.PlainText
+                                        color: "#c0392b"
+                                        font.family: EldurFonts.family("Arial, sans-serif")
+                                        font.pixelSize: 13
+                                        lineHeight: EldurFonts.normalLine(font)
+                                        lineHeightMode: Text.FixedHeight
+                                        transform: Translate {
+                                            y: EldurFonts.shift("Arial, sans-serif", 13, 400, false, 0)
+                                        }
+                                        bottomPadding: EldurFonts.slack(font, lineHeight)
+                                        wrapMode: Text.WordWrap
+                                        anchors.left: parent.left
+                                        anchors.right: parent.right
+                                        anchors.top: parent.top
+                                        renderType: Text.NativeRendering
+                                    }
                                 }
                             }
 
@@ -418,12 +458,32 @@ ApplicationWindow {
                                     property string eldurTag: "div"
                                     property string eldurClasses: "hint"
 
-                                    implicitWidth: 0
-                                    implicitHeight: 0
+                                    implicitWidth: passHintText.implicitWidth
+                                    implicitHeight: (passHintText.text === "" ? 0 : passHintText.implicitHeight)
                                     objectName: "pass-hint"
                                     Layout.fillWidth: true
                                     Layout.minimumHeight: 18
                                     Layout.topMargin: -blockFlow3.eldurCarry
+
+                                    Text {
+                                        id: passHintText
+                                        text: ""
+                                        textFormat: Text.PlainText
+                                        color: "#c0392b"
+                                        font.family: EldurFonts.family("Arial, sans-serif")
+                                        font.pixelSize: 13
+                                        lineHeight: EldurFonts.normalLine(font)
+                                        lineHeightMode: Text.FixedHeight
+                                        transform: Translate {
+                                            y: EldurFonts.shift("Arial, sans-serif", 13, 400, false, 0)
+                                        }
+                                        bottomPadding: EldurFonts.slack(font, lineHeight)
+                                        wrapMode: Text.WordWrap
+                                        anchors.left: parent.left
+                                        anchors.right: parent.right
+                                        anchors.top: parent.top
+                                        renderType: Text.NativeRendering
+                                    }
                                 }
                             }
 

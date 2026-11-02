@@ -720,6 +720,32 @@ impl AnalysisVisitor<'_, '_> {
     /// Everything on the page can depend on the root's attributes, through a
     /// descendant selector or a custom property, and no variant of an element
     /// says how: the runtime has to resolve the page from its rules.
+    /// What an `el.id = …` or `el.dataset.x = …` leaves for a selector to ask.
+    fn inspect_attribute_write(&mut self, it: &AssignmentExpression<'_>) {
+        let AssignmentTarget::StaticMemberExpression(member) = &it.left else {
+            return;
+        };
+        if member.property.name == "id" {
+            match extract_string_literal(&it.right) {
+                Some(id) => {
+                    self.analysis.written_ids.insert(id);
+                }
+                None => self.analysis.writes_computed_id = true,
+            }
+        } else if let Expression::StaticMemberExpression(inner) = unwrap_parens(&member.object)
+            && inner.property.name == "dataset"
+        {
+            let mut name = String::from("data-");
+            for c in member.property.name.chars() {
+                if c.is_ascii_uppercase() {
+                    name.push('-');
+                }
+                name.push(c.to_ascii_lowercase());
+            }
+            self.analysis.written_attributes.insert(name);
+        }
+    }
+
     fn note_root_write(&mut self, object: &Expression<'_>) {
         if self.target(object) == ElementRef::Query(DomQuery::Selector("html".to_string())) {
             self.analysis.open_elements = true;
@@ -834,6 +860,22 @@ impl AnalysisVisitor<'_, '_> {
             "setAttribute" | "removeAttribute" | "toggleAttribute"
         ) {
             let attr = literal_arg(0).map(|a| a.to_ascii_lowercase());
+            match attr.as_deref() {
+                Some("id") => match literal_arg(1) {
+                    Some(id) => {
+                        self.analysis.written_ids.insert(id);
+                    }
+                    None => self.analysis.writes_computed_id = true,
+                },
+                Some("class" | "style") => {}
+                Some(name) => {
+                    self.analysis.written_attributes.insert(name.to_owned());
+                }
+                None => {
+                    self.analysis.writes_computed_id = true;
+                    self.analysis.writes_computed_attribute = true;
+                }
+            }
             self.analysis.touches_inline_style |= attr
                 .as_deref()
                 .is_none_or(|a| matches!(a, "style" | "hidden"));
@@ -933,6 +975,7 @@ impl AnalysisVisitor<'_, '_> {
                     || extract_dom_query_from_call(it, self.scoping).is_none() =>
             {
                 self.analysis.runtime_dom = true;
+                self.analysis.computed_lookups = true;
             }
             _ => {}
         }
@@ -1150,6 +1193,7 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
             self.analysis.open_elements = true;
         }
         self.inspect_lookup_write(it);
+        self.inspect_attribute_write(it);
         self.inspect_dynamic_assignment(it);
         match &it.left {
             AssignmentTarget::StaticMemberExpression(member) => {
@@ -1303,7 +1347,6 @@ fn inline_holds_in_place(prop: &str) -> bool {
                 | "top"
                 | "right"
                 | "bottom"
-                | "position"
                 | "cursor"
                 | "pointerEvents"
                 | "pointer-events"

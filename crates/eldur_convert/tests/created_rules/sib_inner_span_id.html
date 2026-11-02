@@ -1,0 +1,12 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;font:16px/20px sans-serif}
+#b span{font-weight:bold;font-size:30px;color:rgb(0,128,0)}
+</style></head><body>
+<div id="p"></div>
+<script>
+function rc(id){var b=document.getElementById(id).getBoundingClientRect();return id+":"+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)+","+Math.round(b.height)}
+function geo(){console.log("CS "+Array.prototype.map.call(arguments,rc).join(" "))}
+function cs(id){var s=getComputedStyle(document.getElementById(id)),o=[];for(var i=1;i<arguments.length;i++)o.push(arguments[i]+"="+s[arguments[i]]);console.log("CS "+id+" "+o.join(" "))}
+function mk(p,id,cl){var c=document.createElement("div");c.className=cl||"";c.id=id;document.getElementById(p).append(c);return c}
+var b=mk("p","a");b.id="b";b.innerHTML='x <span id="s">after</span> y';geo("b","s");cs("s","color","fontWeight");
+</script></body></html>

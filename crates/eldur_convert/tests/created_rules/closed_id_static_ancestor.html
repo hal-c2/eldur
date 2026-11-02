@@ -1,0 +1,14 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;font:16px/20px sans-serif}
+#host .a{height:15px;color:rgb(255,0,0)}#host>div{margin-left:3px}.none .a{height:99px}
+</style></head><body>
+<div id="host"><div id="inner"></div></div><div id="other" class="none"></div>
+<script>
+function rc(id){var b=document.getElementById(id).getBoundingClientRect();return id+":"+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)+","+Math.round(b.height)}
+function geo(){console.log("CS "+Array.prototype.map.call(arguments,rc).join(" "))}
+function cs(id){var s=getComputedStyle(document.getElementById(id)),o=[];for(var i=1;i<arguments.length;i++)o.push(arguments[i]+"="+s[arguments[i]]);console.log("CS "+id+" "+o.join(" "))}
+var a=document.createElement("div");a.className="a";a.id="a1";document.getElementById("inner").append(a);
+var b=document.createElement("div");b.id="b1";document.getElementById("host").append(b);
+var c=document.createElement("div");c.className="a";c.id="c1";document.getElementById("other").append(c);
+geo("a1","b1","c1");cs("a1","color");
+</script></body></html>

@@ -14,6 +14,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { loadPlaywright } from "../../../../tools/visual/playwright.mjs";
+import { writeRecording, waitForLine } from "../../../../tools/visual/record.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -134,11 +135,13 @@ const body = CASES.map((c) => `<p id="${c.id}"${c.block ? ` style="${c.block}"` 
 const READER = `function rect(n){const r=n.getBoundingClientRect();return [r.x,r.y,r.width,r.height]}
 function rects(n){return Array.from(n.getClientRects()).map(r=>[r.x,r.y,r.width,r.height])}
 function report(tag,ids){for(const id of ids){const n=document.getElementById(id);if(n)console.log("LC "+tag+" "+id+" "+JSON.stringify({b:rect(n),l:rects(n)}))}}`;
+// The last line a page logs: what it said is recorded only once this arrives.
+const END = "LE end";
 const OPEN_SCRIPT = `<script>${READER}
-setTimeout(function(){const all=document.querySelectorAll("[id]");console.log("LC count "+all.length);console.log("LC order "+Array.from(all).slice(0,8).map(n=>n.id).join(","));report("open",Array.from(all).map(n=>n.id))},100)</script>`;
+setTimeout(function(){const all=document.querySelectorAll("[id]");console.log("LC count "+all.length);console.log("LC order "+Array.from(all).slice(0,8).map(n=>n.id).join(","));report("open",Array.from(all).map(n=>n.id));console.log("${END}")},100)</script>`;
 
-fs.writeFileSync(path.join(here, "closed.html"), `<!DOCTYPE html>\n<html><head><style>${STYLE}</style></head><body>\n${body}\n</body></html>\n`);
-fs.writeFileSync(path.join(here, "open.html"), `<!DOCTYPE html>\n<html><head><style>${STYLE}</style></head><body>\n${body}\n${OPEN_SCRIPT}\n</body></html>\n`);
+writeRecording(path.join(here, "closed.html"), `<!DOCTYPE html>\n<html><head><style>${STYLE}</style></head><body>\n${body}\n</body></html>\n`);
+writeRecording(path.join(here, "open.html"), `<!DOCTYPE html>\n<html><head><style>${STYLE}</style></head><body>\n${body}\n${OPEN_SCRIPT}\n</body></html>\n`);
 
 // A script that changes a run: each step does one thing and every box is read back.
 const CHANGES = [
@@ -179,26 +182,28 @@ const $=(id)=>document.getElementById(id);
 const ids=[];for(let i=1;i<=14;i++){ids.push("s"+i,"s"+i+"r")}ids.push("s11i","s13n");
 report("start",ids);
 ${CHANGES.map(([name, code]) => `{${code};report(${JSON.stringify(name)},ids)}`).join("\n")}
+console.log("${END}");
 </script>
 </body></html>
 `;
-fs.writeFileSync(path.join(here, "changes.html"), CHANGE_PAGE);
+writeRecording(path.join(here, "changes.html"), CHANGE_PAGE);
 
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
-const collect = async (file, wait) => {
+const collect = async (file) => {
   const log = [];
   const listen = (m) => { if (m.text().startsWith("LC ")) log.push(m.text()); };
   page.on("console", listen);
+  const done = waitForLine(page, END);
   await page.goto("file://" + path.join(here, file), { waitUntil: "load" });
-  await page.waitForTimeout(wait);
+  await done;
   page.off("console", listen);
   return log;
 };
-const openLog = await collect("open.html", 300);
-const changesLog = await collect("changes.html", 50);
+const openLog = await collect("open.html");
+const changesLog = await collect("changes.html");
 const cases = CASES.map((c) => ({ id: c.id, block: c.block, inner: c.inner }));
 await browser.close();
 const lines = (l) => l.map((s) => JSON.stringify(s)).join(",\n");
-fs.writeFileSync(path.join(here, "chromium.json"), `{"cases":[\n${lines(cases)}\n],\n"open":[\n${lines(openLog)}\n],\n"changes":[\n${lines(changesLog)}\n]}\n`);
+writeRecording(path.join(here, "chromium.json"), `{"cases":[\n${lines(cases)}\n],\n"open":[\n${lines(openLog)}\n],\n"changes":[\n${lines(changesLog)}\n]}\n`);

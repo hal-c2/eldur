@@ -12,6 +12,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { requireAll, writeRecording } from "../../../../tools/visual/record.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../../..");
@@ -75,7 +76,7 @@ const cases = computed.map(([name, page, run, select, props]) => ({
   after: SETTLED,
 }));
 const casesFile = path.join(here, "cases.json");
-fs.writeFileSync(casesFile, `${JSON.stringify(cases, null, 1)}\n`);
+writeRecording(casesFile, `${JSON.stringify(cases, null, 1)}\n`);
 
 const out = {};
 const lines = execFileSync("node", [path.join(tools, "computed.mjs"), casesFile], { encoding: "utf8" });
@@ -83,6 +84,7 @@ for (const line of lines.split("\n").filter(Boolean)) {
   const { name, ...values } = JSON.parse(line);
   out[name] = values;
 }
+requireAll(cases.map((c) => c.name), out, "computed.mjs");
 for (const [name, page, run, selectors] of geometry) {
   const lines = execFileSync(
     "node",
@@ -96,4 +98,4 @@ for (const [name, page, run, selectors] of geometry) {
   }
   out[name] = boxes;
 }
-fs.writeFileSync(path.join(here, "chromium.json"), `${JSON.stringify(out, null, 1)}\n`);
+writeRecording(path.join(here, "chromium.json"), `${JSON.stringify(out, null, 1)}\n`);

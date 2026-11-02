@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;font:16px/20px sans-serif}
+.host{position:relative;margin:30px 0 0 40px;width:300px;height:100px;padding:10px;border:2px solid black}.pop{position:absolute;left:5px;top:6px;width:20px;height:20px;background:rgb(255,0,0)}.in{height:30px}.deep{position:absolute;right:1px;bottom:2px;width:3px;height:4px}
+</style></head><body>
+<div id="p"></div>
+<script>
+function rc(id){var b=document.getElementById(id).getBoundingClientRect();return id+":"+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)+","+Math.round(b.height)}
+function geo(){console.log("CS "+Array.prototype.map.call(arguments,rc).join(" "))}
+function cs(id){var s=getComputedStyle(document.getElementById(id)),o=[];for(var i=1;i<arguments.length;i++)o.push(arguments[i]+"="+s[arguments[i]]);console.log("CS "+id+" "+o.join(" "))}
+var p=document.getElementById("p");
+var u=document.createElement("div");u.className="in";u.id="u";p.append(u);
+var h=document.createElement("div");h.className="host";h.id="h";p.append(h);
+var a=document.createElement("div");a.className="pop";a.id="a";a.dataset.probe="2,2";h.append(a);
+var w=document.createElement("div");w.id="w";h.append(w);
+var d=document.createElement("div");d.className="deep";d.id="d";w.append(d);
+geo("u","h","a","d");
+</script></body></html>

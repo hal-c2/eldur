@@ -138,16 +138,34 @@ TestCase {
     function position(item) {
         return item.mapToItem(page, item.width / 2, item.height / 2)
     }
+    // What the tests read of the scene: where each item is and how it looks.
+    function look() {
+        return items(page, []).map(i => [i.x, i.y, i.width, i.height, i.visible, String(i.color),
+            typeof i.text === "string" ? i.text : ""].join(",")).join(";")
+    }
+    // An input's effects run over several turns of the event loop (the event, the
+    // page's handler, the layout after it): the scene is read when a few more
+    // turns change nothing, however long a loaded machine takes to turn them.
+    function quiet() {
+        wait(settled)
+        let was = look()
+        for (let round = 0; round < 20; round++) {
+            for (let turn = 0; turn < 3; turn++) wait(0)
+            const now = look()
+            if (now === was) return
+            was = now
+        }
+    }
     function hover(item) {
         const p = position(item)
         mouseMove(page, p.x, p.y)
-        wait(settled)
+        quiet()
     }
     function click(item) {
         const p = position(item)
         mouseMove(page, p.x, p.y)
         mouseClick(page, p.x, p.y)
-        wait(settled)
+        quiet()
     }
 
     function css(text) {

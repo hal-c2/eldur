@@ -1,0 +1,13 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;font:16px/20px sans-serif}
+*{box-sizing:border-box}.g{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.c{border:1px solid rgb(0,0,0);padding:5px}.c p{margin:0 0 8px}.c button{display:block;width:100%;margin-top:6px;padding:4px;border:none}.top{align-self:start}
+</style></head><body>
+<div class="g" id="g"></div><div id="end">e</div>
+<script>
+function rc(id){var b=document.getElementById(id).getBoundingClientRect();return id+":"+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)+","+Math.round(b.height)}
+function geo(){console.log("CS "+Array.prototype.map.call(arguments,rc).join(" "))}
+function cs(id){var s=getComputedStyle(document.getElementById(id)),o=[];for(var i=1;i<arguments.length;i++)o.push(arguments[i]+"="+s[arguments[i]]);console.log("CS "+id+" "+o.join(" "))}
+var items=[["a","one"],["b","two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two two"],["c","three"]];
+document.getElementById("g").innerHTML=items.map(function(i){return '<article class="c" id="'+i[0]+'"><p>'+i[1]+'</p><button id="b'+i[0]+'">x</button></article>'}).join("")+'<div class="c top" id="tp">t</div>';
+geo("g","a","b","c","tp","ba","bb","end");
+</script></body></html>

@@ -1,0 +1,2 @@
+{"steps":[{"name":"on","click":"#go"},{"name":"off","click":"#go"},{"name":"on again","click":"#go"}],
+ "watch":[{"sel":"#h"},{"sel":"#tag"}]}

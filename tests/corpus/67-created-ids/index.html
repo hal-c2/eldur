@@ -1,0 +1,41 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Created ids</title>
+<style>
+body { margin: 16px; font: 15px/20px Arial, sans-serif; background: #f4f5f7; color: #223; }
+#list { display: block; }
+#first { color: #b00020; padding: 8px; background: #fde7ea; margin-bottom: 8px; }
+#second { color: #005a9c; padding: 12px; background: #e5f1fb; border: 2px solid #005a9c; margin-bottom: 8px; }
+#second span { color: #0a7d32; font-weight: bold; }
+[data-kind="warn"] { background: #fff4d6; padding: 6px; border-left: 4px solid #d98a00; margin-bottom: 8px; }
+.row:first-child { border-top: 3px solid #333; }
+.row:last-child { border-bottom: 3px solid #777; }
+</style></head><body>
+<div id="list"></div>
+<div id="rows"></div>
+<script>
+const list = document.getElementById('list');
+const a = document.createElement('div');
+a.id = 'first';
+a.textContent = 'id set before insertion';
+list.append(a);
+const b = document.createElement('div');
+list.append(b);
+b.id = 'second';
+b.innerHTML = 'id set <span>after</span> insertion';
+const c = document.createElement('div');
+c.setAttribute('data-kind', 'warn');
+c.textContent = 'attribute selector';
+list.append(c);
+const d = document.createElement('div');
+d.id = 'first-to-be';
+d.textContent = 'id changed later';
+list.append(d);
+d.id = 'second';
+const rows = document.getElementById('rows');
+['one', 'two', 'three'].forEach((t) => {
+  const r = document.createElement('div');
+  r.className = 'row';
+  r.textContent = t;
+  rows.append(r);
+});
+</script></body></html>

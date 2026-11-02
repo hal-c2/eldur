@@ -252,22 +252,24 @@ fn leave_flow(
         None if fixed => Value::string("window"),
         None => Value::string("initial"),
         Some(b) if doc.parent(inst.node) == Some(b) => Value::string("parent"),
+        // A created ancestor is in another template, where this one can't name it.
         Some(b) => match targets.get(&b) {
             Some(t) => Value::expr(t.qml_id.clone()),
-            None => {
-                diags.warning(
-                    "css",
-                    line,
-                    format!(
-                        "a script's {} is placed against the page: nothing identifies its containing block, {}, at run time",
-                        describe(doc, inst.node),
-                        describe(doc, b)
-                    ),
-                );
-                Value::string("initial")
-            }
+            None => Value::string("containing"),
         },
     };
+    // The template is made with no parent yet.
+    for m in &mut obj.members {
+        if let Member::Property {
+            name,
+            value: Value::Expr(e),
+        } = m
+            && name.starts_with("anchors.")
+            && e.starts_with("parent.")
+        {
+            *e = format!("parent ? {e} : undefined");
+        }
+    }
     obj.members
         .insert(0, decl("var", "eldurBlock", value, true));
     // The runtime makes the slot when the DOM first takes the box.
@@ -332,6 +334,41 @@ fn each_value_expr(value: &mut Value, f: &mut dyn FnMut(&mut String)) {
 
 /// Removes the objects of nested probes and the source comment before each.
 fn prune(obj: &mut Object, probes: &HashSet<usize>) {
+    prune_children(obj, probes);
+    let mut here = HashSet::new();
+    ids_in(obj, &mut here);
+    drop_slots(obj, &here);
+}
+
+fn ids_in(obj: &Object, ids: &mut HashSet<String>) {
+    ids.extend(obj.id.clone());
+    for m in &obj.members {
+        if let Member::Child(c) = m {
+            ids_in(c, ids);
+        }
+    }
+}
+
+/// A slot names its box, which may be a probe now in a template of its own, where
+/// this one can't reach it. The runtime makes a slot when the DOM takes the box.
+fn drop_slots(obj: &mut Object, here: &HashSet<String>) {
+    obj.members.retain(|m| {
+        let Member::Child(c) = m else {
+            return true;
+        };
+        !c.members.iter().any(|m| {
+            matches!(m, Member::PropertyDecl { name, value: Some(Value::Expr(e)), .. }
+                if name == lists::BOX_PROPERTY && !here.contains(e))
+        })
+    });
+    for m in &mut obj.members {
+        if let Member::Child(c) = m {
+            drop_slots(c, here);
+        }
+    }
+}
+
+fn prune_children(obj: &mut Object, probes: &HashSet<usize>) {
     let members = std::mem::take(&mut obj.members);
     for m in members {
         if let Member::Child(c) = &m
@@ -346,7 +383,7 @@ fn prune(obj: &mut Object, probes: &HashSet<usize>) {
     }
     for m in &mut obj.members {
         if let Member::Child(c) = m {
-            prune(c, probes);
+            prune_children(c, probes);
         }
     }
 }

@@ -958,3 +958,102 @@ Attribute selectors on script-written attributes (`[aria-expanded=true]`,
    - **`http(s)` inputs:** the source URL.
    - **`<base href>`:** overrides both, resolved against them, as in
      HTML.
+
+## 15. Where a template stops: what makes a page open
+
+A template is probed at each place the analysis knows (§6): appended under each
+static element a query names and under each created parent, and cascaded there.
+What the page holds when it is converted is therefore in the template. What it
+can't hold is what only running the script decides, and a page whose stylesheet
+asks about that is converted open (`selectors_outrun_templates` in
+`pipeline.rs`), so the runtime cascade answers instead. There is one rule, not a
+list of selector shapes: **a rule outruns templates when what it matches can
+change after conversion.** That is the case when the rule:
+
+- names an id a script writes (or the script computes an id);
+- names an attribute a script writes, on a page that creates elements. A page's
+  own elements keep the converter's variants, so a theme switch on
+  `<html data-theme>` stays closed;
+- gives an element a class that takes it out of flow;
+- names a class at all, when a script writes a computed class name on an element
+  the analysis can't name (it can be any class on any element);
+- changes a created element's width or kind of box, and matches that element by
+  more than its tag and the classes it is created with. Paint, margins and height
+  stay template conditions (§5.5). "More than" is decided per created element:
+  - the subject has a state, an id, or an `input[type]` the analysis didn't see;
+  - the subject's classes are computed (`open_classes`);
+  - the context can come to fit later. Each compound left of the subject is
+    checked against the ancestors the element can have (`Around`): a static
+    element and its ancestors, with the classes a script may add to it; a created
+    parent, with the classes all its class sets share as fixed and the rest as
+    written; or anything at all where the analysis lost the place. A compound
+    that no ancestor can fit means the rule never matches that element. A
+    compound fitted only through a written class or id, an unknown place, or a
+    sibling compound means the answer comes at run time. When every compound is
+    fitted by what is already there, the probe saw it and the page stays closed.
+
+A class name computed on a known element doesn't open the page by itself any more
+(the "is not followed" diagnostic is gone): the runtime cascade runs on the
+elements a computed lookup finds, and the converter emits an item for each
+element with an id when the script looks ids up by computed names.
+
+`el.style.position` also opens the page: it is no longer written in place.
+
+At run time:
+
+- **A script-filled container is laid out by the runtime.** Stretch and alignment
+  between items whose sizes come from a pass can't be said to a QML layout, and a
+  static block's column is measured by no one once a box holds it, so `_gFillsLine`
+  adopts the container, unless the page wrote text in it that a box would lose. A
+  page's own items in it are adopted with it, since they share lines and tracks with
+  the created ones. Clearing such a box (`textContent = ""`) detaches every element
+  in it, as clearing a layout did.
+- **Out-of-flow is a state of any element.** `_leaveFlow` keeps a slot where the
+  element was. A template's block is `"containing"` and is resolved when it connects,
+  because the template is written before its parent is known. A control keeps its item
+  (`_G_MOVES`), with the slot held in its meta, as a control's type has no property for
+  it. `_gSyncFlowForm` and `_gSyncControlFlow` keep the slot in DOM order.
+- **An id or attribute that a selector names is noticed on a static element**:
+  `_gAttrsSig` is part of what `_gUncovered` compares. Attributes no author selector
+  names don't count, so `hidden` leaves an element in its converted form.
+- **`innerHTML` with inline elements on a created box makes elements**, not one styled
+  `Text`, so they answer to selectors and `getElementById`.
+- **An element is its record, not its item.** A swap of forms (`_gReplace`) moves
+  the element's record to the new item, and a wrapper resolves through the record
+  (`_unwrap`), so a page's variable that holds the old item still reaches the
+  element at any later time. `_gReplaced` (old item to new) is only for a raw item
+  captured during one read: it is cleared when the outermost read starts, and when
+  a settle starts outside a read, so a page that swaps an element's form over and
+  over keeps nothing of the old items. It is a `Map`: Qt's `WeakMap` crashes in a
+  lookup once a key has been collected. The record table (`_itemMeta`) drops the
+  records of destroyed items when it has doubled since its last sweep (Qt destroys
+  an item at the next turn of the event loop, after which its `parent` reads as
+  undefined). Earlier the map was kept forever, which grew by one entry per swap.
+- **Floats a script makes are laid out as the page's own** (layout.md §5.5).
+  `float` and `clear` are in the runtime's rule table. As CSS 2 §9.7 says, an
+  absolute box or a flex or grid item doesn't float, and a float is blockified.
+  `_gLayoutFlow` places a same-side run of floats along a line from its side,
+  wrapping when one doesn't fit, and cuts the lines of each following block's own
+  text beside them (`_gBeside`, which moves Qt's lines in `lineLaidOut`). A
+  container with a float in it is adopted even when the page wrote elements in it,
+  since what flows beside a float is placed by a pass, not by a column. The
+  approximations are the static ones: margins don't collapse through a float group
+  (Chromium collapses a first child's top margin through its parent beside a
+  float), and only a block's own lines are cut, not those of blocks nested in it
+  or of inline runs.
+- **Generated text is the element's for a read.** A class change that gives an
+  element `::before`/`::after` content is applied at the next turn
+  (`_pseudoTouch`), but a read (`getBoundingClientRect`, `offsetWidth`,
+  `getComputedStyle`) applies it first, as a browser lays out before it answers.
+  A table's column widths read right after a sort are measured with the arrow the
+  sorted header gains.
+- **An inline model first built after a write has no baseline.** It can't tell which
+  matches changed, so it runs the cascade rather than trusting the converter's values.
+
+
+Two rules every box the runtime lays out now keeps, because a script-filled grid
+or flex container brings its items onto this path. Paint the runtime makes as a
+child (`_gReplaceShape`) is no child of the element: a script does not see it and
+a box's layout does not put it on a line. A grid item, a flex item and an
+out-of-flow box each start a block formatting context, so their children's margins
+stay inside them.

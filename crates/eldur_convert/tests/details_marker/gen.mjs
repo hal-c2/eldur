@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../../..");
 const { loadPlaywright } = await import(path.join(root, "tools/visual/playwright.mjs"));
+const { writeRecording } = await import(path.join(root, "tools/visual/record.mjs"));
 const pw = await loadPlaywright();
 const chromium = pw.chromium || pw;
 
@@ -110,4 +111,4 @@ await press();
 out.states.again = await state();
 await browser.close();
 
-fs.writeFileSync(path.join(here, "chromium.json"), JSON.stringify(out, null, 1) + "\n");
+writeRecording(path.join(here, "chromium.json"), JSON.stringify(out, null, 1) + "\n");

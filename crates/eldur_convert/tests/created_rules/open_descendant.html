@@ -1,0 +1,19 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;font:16px/20px sans-serif}
+.o .i{height:14px}.o>.j{height:25px}section div{height:8px}.o .i .w{margin-left:9px}.i{height:3px}.j{height:3px}
+</style></head><body>
+<div id="p"></div>
+<script>
+function rc(id){var b=document.getElementById(id).getBoundingClientRect();return id+":"+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)+","+Math.round(b.height)}
+function geo(){console.log("CS "+Array.prototype.map.call(arguments,rc).join(" "))}
+function cs(id){var s=getComputedStyle(document.getElementById(id)),o=[];for(var i=1;i<arguments.length;i++)o.push(arguments[i]+"="+s[arguments[i]]);console.log("CS "+id+" "+o.join(" "))}
+var kinds=["div"];document.createElement(kinds[0]);
+var o=document.createElement("div");o.className="o";o.id="o";
+var i=document.createElement("div");i.className="i";i.id="i";o.append(i);
+var w=document.createElement("div");w.className="w";w.id="w";i.append(w);
+var j=document.createElement("div");j.className="j";j.id="j";o.append(j);
+var s=document.createElement("section");s.id="s";var t=document.createElement("div");t.id="t";s.append(t);
+var p=document.getElementById("p");p.append(o);p.append(s);
+var late=document.createElement("div");late.className="i";late.id="late";p.append(late);
+geo("o","i","w","j","s","t","late");
+</script></body></html>

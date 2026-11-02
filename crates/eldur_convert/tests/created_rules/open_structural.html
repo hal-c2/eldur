@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;font:16px/20px sans-serif}
+.it{height:10px}.it:first-child{height:21px}.it:last-child{height:32px}.it:nth-child(2){margin-left:4px}.it:not(.z){padding-left:2px}.it:only-child{width:9px}
+</style></head><body>
+<div id="p"></div><div id="q"></div>
+<script>
+function rc(id){var b=document.getElementById(id).getBoundingClientRect();return id+":"+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)+","+Math.round(b.height)}
+function geo(){console.log("CS "+Array.prototype.map.call(arguments,rc).join(" "))}
+function cs(id){var s=getComputedStyle(document.getElementById(id)),o=[];for(var i=1;i<arguments.length;i++)o.push(arguments[i]+"="+s[arguments[i]]);console.log("CS "+id+" "+o.join(" "))}
+var kinds=["div"];document.createElement(kinds[0]);
+var p=document.getElementById("p");
+for(var i=0;i<3;i++){var d=document.createElement("div");d.className="it";d.id="i"+i;p.append(d)}
+var o=document.createElement("div");o.className="it";o.id="o";document.getElementById("q").append(o);
+geo("i0","i1","i2","o");
+document.getElementById("i0").remove();
+geo("i1","i2");
+</script></body></html>

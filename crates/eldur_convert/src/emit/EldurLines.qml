@@ -196,6 +196,17 @@ Item {
         run.measured = [];
         run.place = null;
         item.forceLayout();
+        // Qt's width of a line reaches past the last glyph's advance to its ink;
+        // CSS puts what follows at the advance. One line in one font is known.
+        const plain = _plain(item);
+        if (run.measured.length === 1 && !/\n/.test(plain)
+            && (item.textFormat === Text.PlainText || item.text.indexOf("<") === -1)) {
+            const keeps = item.textFormat === Text.PlainText || preserveSpace
+                || item.textFormat === Text.AutoText;
+            runMetrics.font = item.font;
+            run.measured[0].width = runMetrics.advanceWidth(
+                keeps ? plain : plain.trim().replace(/\s+/g, " "));
+        }
     }
 
     function _plain(item) {
@@ -269,9 +280,10 @@ Item {
         }
         if (_isText(item)) {
             const count = Math.max(1, item.lineCount);
-            // A box's Text is moved to where a browser puts its half-leading.
+            // A box's Text is moved to where a browser puts its half-leading, from
+            // Qt's baseline, which is the font's rounded ascent as a run's is here.
             const moved = item.transform.length === 1 ? item.transform[0].y || 0 : 0;
-            return moved + item.baselineOffset + (count - 1) * item.contentHeight / count;
+            return moved + Math.round(item.baselineOffset) + (count - 1) * item.contentHeight / count;
         }
         // Chromium rounds a font's ascent, so a control's text sits on a whole pixel.
         if (item.contentItem && item.contentItem.baselineOffset > 0) {

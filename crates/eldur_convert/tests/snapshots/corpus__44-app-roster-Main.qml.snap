@@ -1613,7 +1613,7 @@ ApplicationWindow {
 
                                         color: "#eeeeee"
                                         implicitWidth: td14Text.implicitWidth + 20
-                                        implicitHeight: td14Text.implicitHeight + 13
+                                        implicitHeight: (td14Text.text === "" ? 0 : td14Text.implicitHeight) + 13
                                         anchors.alignWhenCentered: false
 
                                         Rectangle {

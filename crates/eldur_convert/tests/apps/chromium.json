@@ -98101,6 +98101,141 @@
    }
   }
  ],
+ "pseudo_read": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#h": [
+     {
+      "box": [
+       20.5,
+       20.5,
+       47.45,
+       32.59
+      ],
+      "shown": true,
+      "text": "Age"
+     }
+    ],
+    "#tag": [
+     {
+      "box": [
+       20,
+       67.59,
+       37.59,
+       27.59
+      ],
+      "shown": true,
+      "text": "label"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "on",
+   "log": [
+    "th grew true",
+    "tag grew true"
+   ],
+   "state": {
+    "#h": [
+     {
+      "box": [
+       20.5,
+       20.5,
+       99.44,
+       32.59
+      ],
+      "shown": true,
+      "text": "Age"
+     }
+    ],
+    "#tag": [
+     {
+      "box": [
+       20,
+       67.59,
+       71.06,
+       27.59
+      ],
+      "shown": true,
+      "text": "label"
+     }
+    ],
+    "(focus)": "go"
+   }
+  },
+  {
+   "name": "off",
+   "log": [
+    "th shrank true",
+    "tag shrank true"
+   ],
+   "state": {
+    "#h": [
+     {
+      "box": [
+       20.5,
+       20.5,
+       47.45,
+       32.59
+      ],
+      "shown": true,
+      "text": "Age"
+     }
+    ],
+    "#tag": [
+     {
+      "box": [
+       20,
+       67.59,
+       37.59,
+       27.59
+      ],
+      "shown": true,
+      "text": "label"
+     }
+    ],
+    "(focus)": "go"
+   }
+  },
+  {
+   "name": "on again",
+   "log": [
+    "th grew true",
+    "tag grew true"
+   ],
+   "state": {
+    "#h": [
+     {
+      "box": [
+       20.5,
+       20.5,
+       99.44,
+       32.59
+      ],
+      "shown": true,
+      "text": "Age"
+     }
+    ],
+    "#tag": [
+     {
+      "box": [
+       20,
+       67.59,
+       71.06,
+       27.59
+      ],
+      "shown": true,
+      "text": "label"
+     }
+    ],
+    "(focus)": "go"
+   }
+  }
+ ],
  "roster": [
   {
    "name": "load",

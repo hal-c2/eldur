@@ -40,7 +40,6 @@
     "pad": 24
   },
   {
-    "selector": "#r-margin",
-    "known": "a created grid item from a template lets its first child margin out: layout, not paint"
+    "selector": "#r-margin"
   }
 ]

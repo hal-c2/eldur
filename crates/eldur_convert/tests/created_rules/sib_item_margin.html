@@ -1,0 +1,14 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;font:16px/20px sans-serif}
+#g{display:grid;grid-template-columns:100px}#f{display:flex}#a{position:relative;height:80px}#o{}
+.i{height:60px;width:100px}.k{margin:10px;height:20px}
+#a .i{position:absolute;left:0;top:0}#o .i{overflow:hidden}.fl{float:left}.ib{display:inline-block}#n{}#n .i{}
+</style></head><body>
+<div id="g"></div><div id="f"></div><div id="a"></div><div id="o"></div><div id="n"></div><div style="clear:both" id="e"></div>
+<script>
+function rc(id){var b=document.getElementById(id).getBoundingClientRect();return id+":"+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)+","+Math.round(b.height)}
+function geo(){console.log("CS "+Array.prototype.map.call(arguments,rc).join(" "))}
+function pair(p,n,cl){var d=document.createElement("div");d.className="i "+(cl||"");d.id=n;var k=document.createElement("div");k.className="k";k.id=n+"k";d.append(k);document.getElementById(p).append(d)}
+pair("g","gi");pair("f","fi");pair("a","ai");pair("o","oi");pair("n","ni");
+geo("g","gi","gik");geo("f","fi","fik");geo("a","ai","aik");geo("o","oi","oik");geo("n","ni","nik");
+</script></body></html>

@@ -352,7 +352,7 @@ fn conditions(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Vec<Cond> {
         );
     }
     if let Some(scripts) = cx.scripts {
-        class_conditions(cx, scripts, &mut out, diags);
+        class_conditions(cx, scripts, &mut out);
     }
     structural_conditions(cx, &mut out, diags);
     if let Some(probe) = cx.probe {
@@ -377,12 +377,7 @@ fn conditions(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Vec<Cond> {
 /// Classes scripts write on static elements (dynamic-styles §5.1): a
 /// literal query's elements, or every element the class would restyle
 /// when the target is not known.
-fn class_conditions(
-    cx: &Inputs<'_>,
-    scripts: &Scripts,
-    out: &mut BTreeMap<Condition, bool>,
-    diags: &mut Diagnostics,
-) {
+fn class_conditions(cx: &Inputs<'_>, scripts: &Scripts, out: &mut BTreeMap<Condition, bool>) {
     let doc = cx.doc;
     let styled = eldur_css::styled_classes(cx.sheets);
     let own = |node: NodeId| -> Vec<String> {
@@ -413,13 +408,6 @@ fn class_conditions(
                         add(node, name, out);
                         nodes.insert(node);
                     }
-                }
-                if write.open && write.names.is_empty() {
-                    diags.info(
-                        "js",
-                        write.line,
-                        "a class written on an element the script finds at run time, with a computed name, is not followed".to_owned(),
-                    );
                 }
                 nodes.into_iter().collect()
             }

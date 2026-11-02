@@ -251,8 +251,8 @@ ApplicationWindow {
                         property string eldurWs: "\n"
 
                         color: "#3b82f6"
-                        implicitWidth: 0
-                        implicitHeight: 0
+                        implicitWidth: xEmText.implicitWidth
+                        implicitHeight: (xEmText.text === "" ? 0 : xEmText.implicitHeight)
                         objectName: "x-em"
                         Layout.row: 0
                         Layout.column: 0
@@ -260,6 +260,26 @@ ApplicationWindow {
                         Layout.preferredWidth: 80
                         Layout.preferredHeight: 80
                         Layout.alignment: Qt.AlignTop
+
+                        Text {
+                            id: xEmText
+                            text: ""
+                            textFormat: Text.PlainText
+                            color: "#111111"
+                            font.family: EldurFonts.family("sans-serif")
+                            font.pixelSize: 20
+                            lineHeight: 30
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("sans-serif", 20, 400, false, 30)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
+                            wrapMode: Text.WordWrap
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            renderType: Text.NativeRendering
+                        }
                     }
 
                     // <div id="x-flat" class="box">
@@ -269,8 +289,8 @@ ApplicationWindow {
                         property string eldurClasses: "box"
 
                         color: "#3b82f6"
-                        implicitWidth: 0
-                        implicitHeight: 0
+                        implicitWidth: xFlatText.implicitWidth
+                        implicitHeight: (xFlatText.text === "" ? 0 : xFlatText.implicitHeight)
                         objectName: "x-flat"
                         Layout.row: 0
                         Layout.column: 1
@@ -278,6 +298,26 @@ ApplicationWindow {
                         Layout.preferredWidth: 80
                         Layout.preferredHeight: 80
                         Layout.alignment: Qt.AlignTop
+
+                        Text {
+                            id: xFlatText
+                            text: ""
+                            textFormat: Text.PlainText
+                            color: "#111111"
+                            font.family: EldurFonts.family("sans-serif")
+                            font.pixelSize: 16
+                            lineHeight: 24
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
+                            wrapMode: Text.WordWrap
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            renderType: Text.NativeRendering
+                        }
                     }
 
                     // <p id="x-grow">
@@ -343,8 +383,8 @@ ApplicationWindow {
                         property string eldurWs: "\n"
 
                         color: "#3b82f6"
-                        implicitWidth: 0
-                        implicitHeight: 0
+                        implicitWidth: xCornerText.implicitWidth
+                        implicitHeight: (xCornerText.text === "" ? 0 : xCornerText.implicitHeight)
                         objectName: "x-corner"
                         Layout.row: 1
                         Layout.column: 0
@@ -352,6 +392,26 @@ ApplicationWindow {
                         Layout.preferredWidth: 80
                         Layout.preferredHeight: 80
                         Layout.alignment: Qt.AlignTop
+
+                        Text {
+                            id: xCornerText
+                            text: ""
+                            textFormat: Text.PlainText
+                            color: "#111111"
+                            font.family: EldurFonts.family("sans-serif")
+                            font.pixelSize: 16
+                            lineHeight: 24
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
+                            wrapMode: Text.WordWrap
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            renderType: Text.NativeRendering
+                        }
                     }
 
                     // <div id="x-both" class="box">
@@ -361,8 +421,8 @@ ApplicationWindow {
                         property string eldurClasses: "box"
 
                         color: "#3b82f6"
-                        implicitWidth: 0
-                        implicitHeight: 0
+                        implicitWidth: xBothText.implicitWidth
+                        implicitHeight: (xBothText.text === "" ? 0 : xBothText.implicitHeight)
                         objectName: "x-both"
                         Layout.row: 1
                         Layout.column: 1
@@ -370,6 +430,26 @@ ApplicationWindow {
                         Layout.preferredWidth: 80
                         Layout.preferredHeight: 80
                         Layout.alignment: Qt.AlignTop
+
+                        Text {
+                            id: xBothText
+                            text: ""
+                            textFormat: Text.PlainText
+                            color: "#111111"
+                            font.family: EldurFonts.family("sans-serif")
+                            font.pixelSize: 16
+                            lineHeight: 24
+                            lineHeightMode: Text.FixedHeight
+                            transform: Translate {
+                                y: EldurFonts.shift("sans-serif", 16, 400, false, 24)
+                            }
+                            bottomPadding: EldurFonts.slack(font, lineHeight)
+                            wrapMode: Text.WordWrap
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            renderType: Text.NativeRendering
+                        }
                     }
 
                     // <p id="x-pem" class="big">

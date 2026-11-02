@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;font:16px/20px sans-serif}
+#x span{color:rgb(255,0,0);padding-left:3px}#x .k{height:17px}#x>.m{margin-left:6px}
+</style></head><body>
+<div id="p"></div>
+<script>
+function rc(id){var b=document.getElementById(id).getBoundingClientRect();return id+":"+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)+","+Math.round(b.height)}
+function geo(){console.log("CS "+Array.prototype.map.call(arguments,rc).join(" "))}
+function cs(id){var s=getComputedStyle(document.getElementById(id)),o=[];for(var i=1;i<arguments.length;i++)o.push(arguments[i]+"="+s[arguments[i]]);console.log("CS "+id+" "+o.join(" "))}
+var kinds=["div"];document.createElement(kinds[0]);
+var d=document.createElement("div");d.id="x";
+var k=document.createElement("div");k.className="k";k.id="k1";d.append(k);
+var m=document.createElement("div");m.className="m";m.id="m1";m.textContent="m";d.append(m);
+var s=document.createElement("span");s.id="s1";s.textContent="s";d.append(s);
+document.getElementById("p").append(d);
+geo("x","k1","m1");cs("s1","color");
+</script></body></html>

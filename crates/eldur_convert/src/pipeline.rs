@@ -60,6 +60,16 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     for d in &scripts.analysis.diagnostics {
         diags.push(js_diagnostic(d));
     }
+    if !scripts.is_empty()
+        && selectors_outrun_templates(
+            &doc,
+            &scripts,
+            &eldur_css::runtime_rules(&sheets, &options.viewport),
+        )
+    {
+        scripts.analysis.open_elements = true;
+        scripts.analysis.adopts_for_inline = true;
+    }
 
     // 4–5: boxes, then QML.
     let no_scripts = HashSet::new();
@@ -101,6 +111,13 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         let mut all = wanted.clone();
         all.extend(crate::boxes::hidden_elements(&doc, &styles));
         all.extend(crate::scripts::text_areas(&doc));
+        // `getElementById` finds items by the name only a wanted element gets.
+        if scripts.analysis.computed_lookups {
+            all.extend(
+                doc.descendants(doc.root())
+                    .filter(|&n| doc.element(n).is_some_and(|e| e.id().is_some())),
+            );
+        }
         all
     } else {
         HashSet::new()
@@ -486,4 +503,372 @@ fn js_diagnostic(d: &eldur_js::Diagnostic) -> Diagnostic {
         line: d.line,
         message: d.message.clone(),
     }
+}
+
+/// A template is written for a tag and the classes the analysis saw. Everything
+/// else a rule asks is known only once the page runs: an id or attribute a script
+/// writes, a class it computes, and, for what kind of box the element is, anything
+/// but its own tag and classes.
+fn selectors_outrun_templates(
+    doc: &Document,
+    scripts: &scripts::Scripts,
+    rules: &[eldur_css::RuntimeRule],
+) -> bool {
+    let analysis = &scripts.analysis;
+    rules.iter().filter(|r| !r.user_agent).any(|rule| {
+        let selector = rule.selector.as_str();
+        names_written_id(selector, analysis)
+            || names_written_attribute(selector, analysis)
+            || class_takes_out_of_flow(rule, analysis)
+            || class_found_at_run_time(selector, analysis)
+            || (changes_form(rule) && form_depends_on_page(doc, scripts, selector))
+    })
+}
+
+/// A class written on an element no analysis can name, with a name it can't either,
+/// can be any class on any element.
+fn class_found_at_run_time(selector: &str, analysis: &eldur_js::Analysis) -> bool {
+    selector.contains('.')
+        && analysis.class_writes.iter().any(|w| {
+            w.open && w.names.is_empty() && matches!(w.target, eldur_js::ElementRef::Unknown)
+        })
+}
+
+/// A template's conditions reach paint, height and margins. Its width and what
+/// kind of box it is are one answer per template, whatever its place in the list.
+fn changes_form(rule: &eldur_css::RuntimeRule) -> bool {
+    rule.declarations.iter().any(|(p, _, _)| {
+        p.ends_with("width") && !p.starts_with("border") && !p.starts_with("outline")
+            || matches!(p.as_str(), "display" | "position" | "float")
+            || p.starts_with("flex")
+            || p.starts_with("grid")
+    })
+}
+
+/// A class variant changes what a form paints, and can't move it out of a layout.
+fn class_takes_out_of_flow(rule: &eldur_css::RuntimeRule, analysis: &eldur_js::Analysis) -> bool {
+    rule.declarations
+        .iter()
+        .any(|(p, v, _)| p == "position" && (v == "absolute" || v == "fixed"))
+        && names_after(&rule.selector, '.').any(|name| {
+            analysis
+                .class_writes
+                .iter()
+                .any(|w| w.names.iter().any(|n| n == name))
+        })
+}
+
+fn names_after(selector: &str, mark: char) -> impl Iterator<Item = &str> {
+    selector.match_indices(mark).map(move |(at, _)| {
+        let rest = &selector[at + mark.len_utf8()..];
+        let rest = rest.trim_start();
+        let end = rest
+            .find(|c: char| !(c.is_alphanumeric() || c == '-' || c == '_'))
+            .unwrap_or(rest.len());
+        &rest[..end]
+    })
+}
+
+fn names_written_id(selector: &str, analysis: &eldur_js::Analysis) -> bool {
+    names_after(selector, '#')
+        .any(|name| analysis.writes_computed_id || analysis.written_ids.contains(name))
+}
+
+/// The converter's variants answer for an attribute on a page's own elements; a
+/// template is written before anyone has set one on it.
+fn names_written_attribute(selector: &str, analysis: &eldur_js::Analysis) -> bool {
+    !analysis.created.is_empty()
+        && names_after(selector, '[').any(|name| {
+            analysis.writes_computed_attribute
+                || analysis
+                    .written_attributes
+                    .contains(&name.to_ascii_lowercase())
+        })
+}
+
+/// Whether a selector could style an element a script creates, by more than the
+/// tag and classes its template was written for.
+fn form_depends_on_page(doc: &Document, scripts: &scripts::Scripts, selector: &str) -> bool {
+    let analysis = &scripts.analysis;
+    let subject = last_compound(selector);
+    // An id no script writes is on no element a script creates.
+    if names_after(subject, '#')
+        .any(|name| !analysis.writes_computed_id && !analysis.written_ids.contains(name))
+    {
+        return false;
+    }
+    let (tag, classes) = compound_names(subject);
+    // A state or an id, or an attribute the template has no value for. Written
+    // attributes open the page on their own (`names_written_attribute`).
+    let own = |created: &eldur_js::CreatedElement| {
+        subject.contains([':', '#'])
+            || names_after(subject, '[').any(|name| {
+                name.eq_ignore_ascii_case("type")
+                    && created.tag == "input"
+                    && created.input_type.is_none()
+            })
+    };
+    let context = &selector.trim()[..selector.trim().len() - subject.len()];
+    analysis.created.iter().any(|created| {
+        (tag.is_empty() || tag == "*" || tag.eq_ignore_ascii_case(&created.tag))
+            && (created.open_classes
+                || classes.iter().all(|class| {
+                    created
+                        .class_sets
+                        .iter()
+                        .any(|set| set.iter().any(|c| c == class))
+                }))
+            && match context_fit(doc, scripts, context, created) {
+                Fit::Never => false,
+                Fit::Later => true,
+                Fit::Always => own(created) || (created.open_classes && !classes.is_empty()),
+            }
+    })
+}
+
+/// What an element a script creates may have around it. A template is probed
+/// at each place the analysis knows, so what is there when the page is converted
+/// is in it; what a script writes there later, or a place it can't name, is not.
+enum Around {
+    Anything,
+    Known {
+        tag: String,
+        id: Option<String>,
+        /// On it in every copy of the page.
+        classes: Vec<String>,
+        /// A script may add these.
+        written: Vec<String>,
+        any_class: bool,
+    },
+}
+
+/// How a compound of a selector's context can fit the ancestors of an element.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum Fit {
+    Never,
+    /// Only once a script writes it, or where the analysis lost the place.
+    Later,
+    Always,
+}
+
+impl Around {
+    fn fit(&self, compound: &str, analysis: &eldur_js::Analysis) -> Fit {
+        let Around::Known {
+            tag,
+            id,
+            classes,
+            written,
+            any_class,
+        } = self
+        else {
+            return Fit::Later;
+        };
+        let (want_tag, want_classes) = compound_names(compound);
+        if !(want_tag.is_empty() || want_tag == "*" || want_tag.eq_ignore_ascii_case(tag)) {
+            return Fit::Never;
+        }
+        let mut fit = Fit::Always;
+        for want in &want_classes {
+            if !classes.contains(want) {
+                if *any_class || written.contains(want) {
+                    fit = Fit::Later;
+                } else {
+                    return Fit::Never;
+                }
+            }
+        }
+        for want in names_after(compound, '#') {
+            if id.as_deref() != Some(want) {
+                if analysis.writes_computed_id || analysis.written_ids.contains(want) {
+                    fit = Fit::Later;
+                } else {
+                    return Fit::Never;
+                }
+            }
+        }
+        fit
+    }
+}
+
+/// How a selector's context fits a created element: its worst compound against
+/// the best of the ancestors the element may have.
+fn context_fit(
+    doc: &Document,
+    scripts: &scripts::Scripts,
+    context: &str,
+    created: &eldur_js::CreatedElement,
+) -> Fit {
+    let (ancestral, siblings) = context_compounds(context);
+    if ancestral.is_empty() && !siblings {
+        return Fit::Always;
+    }
+    let mut around = Vec::new();
+    ancestors_of(doc, scripts, created, 0, &mut around);
+    let worst = ancestral
+        .iter()
+        .map(|compound| {
+            around
+                .iter()
+                .map(|a| a.fit(compound, &scripts.analysis))
+                .max()
+                .unwrap_or(Fit::Later)
+        })
+        .min()
+        .unwrap_or(Fit::Always);
+    // A sibling is where it lands among others, known only when it runs.
+    if siblings {
+        worst.min(Fit::Later)
+    } else {
+        worst
+    }
+}
+
+/// A context's compounds that are ancestors of the subject, and whether any are
+/// siblings (of it or of an ancestor). Each compound's role is the combinator to
+/// its right.
+fn context_compounds<'a>(context: &'a str) -> (Vec<&'a str>, bool) {
+    let mut ancestral = Vec::new();
+    let mut siblings = false;
+    let mut pending: Option<&str> = None;
+    let mut combinator = None;
+    let mut push = |compound: Option<&'a str>, combinator: Option<char>| {
+        if let Some(compound) = compound {
+            match combinator {
+                Some('+' | '~') => siblings = true,
+                _ => ancestral.push(compound),
+            }
+        }
+    };
+    let mut rest = context.trim();
+    while !rest.is_empty() {
+        let end = rest
+            .find(|c: char| c.is_whitespace() || matches!(c, '>' | '+' | '~'))
+            .unwrap_or(rest.len());
+        if end > 0 {
+            push(pending.take(), combinator.take());
+            pending = Some(&rest[..end]);
+            combinator = Some(' ');
+            rest = &rest[end..];
+        } else {
+            let c = rest.chars().next().unwrap_or(' ');
+            if !c.is_whitespace() {
+                combinator = Some(c);
+            }
+            rest = &rest[c.len_utf8()..];
+        }
+    }
+    push(pending, combinator);
+    (ancestral, siblings)
+}
+
+fn ancestors_of(
+    doc: &Document,
+    scripts: &scripts::Scripts,
+    created: &eldur_js::CreatedElement,
+    depth: u32,
+    out: &mut Vec<Around>,
+) {
+    let analysis = &scripts.analysis;
+    // Writes to an element the analysis can't name may land on any.
+    let written = |target: &dyn Fn(&eldur_js::ElementRef) -> bool| {
+        let mut names = Vec::new();
+        let mut open = false;
+        for w in &analysis.class_writes {
+            if matches!(w.target, eldur_js::ElementRef::Unknown) || target(&w.target) {
+                names.extend(w.names.iter().cloned());
+                open |= w.open;
+            }
+        }
+        (names, open)
+    };
+    if created.parents.is_empty() || depth > 16 {
+        out.push(Around::Anything);
+        return;
+    }
+    for parent in &created.parents {
+        match parent {
+            eldur_js::ElementRef::Unknown => out.push(Around::Anything),
+            eldur_js::ElementRef::Created(id) => {
+                let Some(made) = analysis.created.iter().find(|c| c.id == *id) else {
+                    out.push(Around::Anything);
+                    continue;
+                };
+                let (mut written, open) = written(&|t| t == parent);
+                written.extend(made.class_sets.iter().flatten().cloned());
+                let classes = made
+                    .class_sets
+                    .iter()
+                    .map(|set| set.to_vec())
+                    .reduce(|mut all, set| {
+                        all.retain(|c| set.contains(c));
+                        all
+                    })
+                    .unwrap_or_default();
+                out.push(Around::Known {
+                    tag: made.tag.clone(),
+                    id: None,
+                    classes,
+                    written,
+                    any_class: open || made.open_classes,
+                });
+                ancestors_of(doc, scripts, made, depth + 1, out);
+            }
+            eldur_js::ElementRef::Query(query) => {
+                let nodes = scripts.matches(query);
+                if nodes.is_empty() {
+                    out.push(Around::Anything);
+                }
+                for &node in nodes {
+                    for at in std::iter::once(node).chain(doc.ancestors(node)) {
+                        let Some(element) = doc.element(at) else {
+                            continue;
+                        };
+                        let (written, open) = written(&|t| match t {
+                            eldur_js::ElementRef::Query(q) => scripts.matches(q).contains(&at),
+                            _ => false,
+                        });
+                        out.push(Around::Known {
+                            tag: element.local_name().to_owned(),
+                            id: element.id().map(str::to_owned),
+                            classes: element.classes().map(str::to_owned).collect(),
+                            written,
+                            any_class: open,
+                        });
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn last_compound(selector: &str) -> &str {
+    let mut depth = 0_u32;
+    let mut start = 0;
+    for (at, c) in selector.char_indices() {
+        match c {
+            '(' | '[' => depth += 1,
+            ')' | ']' => depth = depth.saturating_sub(1),
+            ' ' | '>' | '+' | '~' if depth == 0 => start = at + c.len_utf8(),
+            _ => {}
+        }
+    }
+    &selector[start..]
+}
+
+/// A compound's type and required classes. What is inside `:not()` and the like
+/// says nothing about what the element has to be.
+fn compound_names(compound: &str) -> (String, Vec<String>) {
+    let mut outer = String::new();
+    let mut depth = 0_u32;
+    for c in compound.chars() {
+        match c {
+            '(' | '[' => depth += 1,
+            ')' | ']' => depth = depth.saturating_sub(1),
+            _ if depth == 0 => outer.push(c),
+            _ => {}
+        }
+    }
+    let tag_end = outer.find(['.', '#', ':']).unwrap_or(outer.len());
+    let classes = names_after(&outer, '.').map(str::to_owned).collect();
+    (outer[..tag_end].to_owned(), classes)
 }

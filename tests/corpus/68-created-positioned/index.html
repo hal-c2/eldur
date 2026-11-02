@@ -1,0 +1,33 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Created positioned</title>
+<style>
+body { margin: 20px; font: 14px/18px Arial, sans-serif; color: #222; }
+#box { position: relative; width: 420px; height: 150px; margin-left: 40px; background: #eef; border: 2px solid #446; }
+.badge { position: absolute; top: 8px; right: 8px; width: 90px; height: 30px; background: #c33; color: #fff; }
+.foot { position: absolute; left: 10px; bottom: 6px; background: #3a3; color: #fff; padding: 2px 6px; }
+.nudged { position: relative; left: 14px; top: 6px; background: #fd6; width: 200px; }
+#stuck { position: fixed; right: 16px; bottom: 16px; width: 120px; height: 40px; background: #639; color: #fff; }
+#field { margin: 6px; width: 120px; }
+#go { margin: 6px; }
+</style></head><body>
+<div id="box"></div>
+<input id="field" value="absolute field"><button id="go">moved button</button>
+<script>
+const box = document.getElementById('box');
+const add = (cls, text) => { const e = document.createElement('div'); e.className = cls; e.textContent = text; box.append(e); return e; };
+add('nudged', 'relative');
+add('badge', 'badge');
+add('foot', 'foot');
+const stuck = document.createElement('div');
+stuck.id = 'stuck';
+stuck.textContent = 'fixed';
+document.body.append(stuck);
+const field = document.getElementById('field');
+field.style.position = 'absolute';
+field.style.left = '540px';
+field.style.top = '30px';
+const go = document.getElementById('go');
+go.style.position = 'absolute';
+go.style.left = '540px';
+go.style.top = '80px';
+</script></body></html>

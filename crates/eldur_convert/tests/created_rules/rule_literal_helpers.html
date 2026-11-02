@@ -1,0 +1,24 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+.sp span{display:block;height:19px;padding:2px}
+.sq span{display:inline-block;width:50px;height:19px}
+.dv b{display:block;background:#eee}
+.kind{display:block;height:21px}
+.n1 + span{display:block;margin:3px}
+.wrap .box{display:flex;height:17px}
+</style></head><body>
+<div class="sp" id="p1"></div><div class="sq" id="q1"></div><div class="dv" id="d1"></div><div id="k1"></div><div id="s1"></div><div class="wrap" id="w1"></div>
+<div id="end" style="height:5px"></div>
+<script>
+const R=n=>{const q=document.getElementById(n).getBoundingClientRect();console.log('CS '+n+' '+[q.x,q.y,q.width,q.height].join(','))};
+const $=i=>document.getElementById(i);
+function span(p,c,id,tx){const e=document.createElement('span');e.className=c;e.id=id;e.textContent=tx;p.appendChild(e);return e}
+function bold(p,id,tx){const e=document.createElement('b');e.id=id;e.textContent=tx;p.appendChild(e);return e}
+const kinds=['kind','other'];
+span($('p1'),'','sd','deep');span($('q1'),'','q2','ib');bold($('d1'),'d2','bold');
+span($('k1'),kinds[0],'k2','kind');span($('k1'),kinds[1],'k3','other');
+span($('s1'),'n1','s2','a');span($('s1'),'','s3','b');
+span($('w1'),'box','w2','flex');
+const ids=['p1','sd','q1','q2','d1','d2','k1','k2','k3','s1','s2','s3','w1','w2','end'];ids.forEach(R);
+setTimeout(()=>{ids.forEach(R);document.body.appendChild(document.createElement('div')).id='csdone'},50);
+</script></body></html>

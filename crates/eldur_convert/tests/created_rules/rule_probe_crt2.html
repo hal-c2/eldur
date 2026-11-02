@@ -1,0 +1,31 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+.gr{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:400px}
+.gr > div{background:#fc0;padding:4px}
+.st{width:200px;background:#fc0}
+.sp span{display:block;height:19px;padding:2px}
+.sq span{display:inline-block;width:50px;height:19px}
+.dv b{display:block;background:#eee}
+.hid .x{display:none}
+</style></head><body>
+<div class="gr" id="g1"><div id="a1">static<br>two<br>three</div><div id="a2">one</div></div>
+<div class="gr" id="g2"><div id="b1">static<br>two<br>three</div></div>
+<div class="st" id="st1">static<br>two</div>
+<div class="sp" id="p1"></div>
+<div class="sp" id="p2"><span id="ps">static</span></div>
+<div class="sq" id="q1"></div>
+<div class="dv" id="d1"></div>
+<div class="hid" id="h1"></div>
+<div id="end" style="height:5px"></div>
+<script>
+const $=i=>document.getElementById(i);
+const mk=(t,p,c,id,tx)=>{const e=document.createElement(t);if(c)e.className=c;if(id)e.id=id;if(tx)e.textContent=tx;p.appendChild(e);return e};
+mk('div',$('g2'),'','b2','one');mk('div',$('g2'),'','b3','two');
+mk('span',$('p1'),'','s1','deep');mk('span',$('p2'),'','s2','more');
+mk('span',$('q1'),'','q2','ib');mk('b',$('d1'),'','d2','bold');mk('span',$('h1'),'x','h2','gone');mk('span',$('h1'),'','h3','here');
+setTimeout(()=>{
+ for(const n of ['g1','a1','a2','g2','b1','b2','b3','st1','p1','s1','p2','ps','s2','q1','q2','d1','d2','h1','h2','h3','end']){const q=$(n).getBoundingClientRect();console.log('CS '+n+' '+[q.x,q.y,q.width,q.height].join(','))}
+ console.log('CS CH '+$('g2').children.length+' '+$('p2').children.length+' '+$('h1').children.length+' '+$('h1').children[0].id);
+ console.log('CS CS '+getComputedStyle($('s1')).display+' '+getComputedStyle($('q2')).display+' '+getComputedStyle($('h2')).display);document.body.appendChild(document.createElement('div')).id='csdone';
+},100);
+</script></body></html>

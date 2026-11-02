@@ -184,6 +184,13 @@ pub(crate) fn collect(
     }
 
     let mut analysis = eldur_js::analyze(&inputs);
+    let ids: std::collections::BTreeSet<String> = doc
+        .descendants(doc.root())
+        .filter_map(|n| doc.element(n)?.attr("id").map(str::to_owned))
+        .collect();
+    if eldur_js::resolve_named_elements(&mut inputs, &ids, &analysis) {
+        analysis = eldur_js::analyze(&inputs);
+    }
     note_inline_listeners(doc, &mut analysis);
     // Its controls are held by the attribute, which only the runtime turns back.
     if doc.descendants(doc.root()).any(|node| {

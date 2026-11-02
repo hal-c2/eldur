@@ -1,0 +1,13 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;font:16px/20px sans-serif}
+.a .k{height:11px}.b .k{height:22px}#b2 .k{margin-left:7px}
+</style></head><body data-clicks="#go">
+<div class="a" id="a2"></div><div class="b" id="b2"></div><button id="go" style="display:block">go</button>
+<script>
+function rc(id){var b=document.getElementById(id).getBoundingClientRect();return id+":"+Math.round(b.left)+","+Math.round(b.top)+","+Math.round(b.width)+","+Math.round(b.height)}
+function geo(){console.log("CS "+Array.prototype.map.call(arguments,rc).join(" "))}
+function cs(id){var s=getComputedStyle(document.getElementById(id)),o=[];for(var i=1;i<arguments.length;i++)o.push(arguments[i]+"="+s[arguments[i]]);console.log("CS "+id+" "+o.join(" "))}
+var kinds=["div"];document.createElement(kinds[0]);
+var k=document.createElement("div");k.className="k";k.id="k";document.getElementById("a2").append(k);geo("k");
+document.getElementById("go").addEventListener("click",function(){document.getElementById("b2").append(k);geo("k")});
+</script></body></html>

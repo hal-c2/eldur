@@ -445,9 +445,18 @@ impl Emitter<'_, '_> {
                     "implicitWidth",
                     Value::expr(plus(&width, insets.horizontal())),
                 );
+                // An empty Text a script may write into still sets a line; an
+                // empty box has none.
+                let height = if content.type_name == "Text"
+                    && matches!(content.get("text"), Some(Value::String(t)) if t.is_empty())
+                {
+                    format!("({id}.text === \"\" ? 0 : {id}.implicitHeight)")
+                } else {
+                    format!("{id}.implicitHeight")
+                };
                 wrapper.set(
                     "implicitHeight",
-                    Value::expr(plus(&format!("{id}.implicitHeight"), insets.vertical())),
+                    Value::expr(plus(&height, insets.vertical())),
                 );
             }
             None => {
