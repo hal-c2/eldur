@@ -14,6 +14,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { loadPlaywright } from "../../../../tools/visual/playwright.mjs";
+import { writeRecording } from "../../../../tools/visual/record.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -91,7 +92,7 @@ const document_ = (probe) => {
   body.push(`<section>\n${placed.join("\n")}\n</section>`);
   return `<!DOCTYPE html>\n<html><body style="margin:0">\n${body.join("\n")}\n</body></html>\n`;
 };
-fs.writeFileSync(path.join(here, "page.html"), document_(""));
+writeRecording(path.join(here, "page.html"), document_(""));
 const html = document_(PROBE);
 
 const { chromium } = await loadPlaywright();
@@ -158,4 +159,4 @@ for (const family of FACES) {
   }
 }
 await browser.close();
-fs.writeFileSync(path.join(here, "chromium.json"), `${JSON.stringify({ lines, placed, stacks, faces }, null, 0).replaceAll('},{', '},\n{')}\n`);
+writeRecording(path.join(here, "chromium.json"), `${JSON.stringify({ lines, placed, stacks, faces }, null, 0).replaceAll('},{', '},\n{')}\n`);

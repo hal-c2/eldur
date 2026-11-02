@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Generated text a script reads</title>
+<style>
+body { margin: 20px; font: 14px/1.4 Arial, sans-serif; }
+table { border-collapse: collapse; }
+th { border: 1px solid #ddd; padding: 6px 10px; text-align: left; }
+th.on::after { content: " \25B2 more"; }
+#tag { display: inline-block; padding: 4px; background: #eee; }
+#tag.on::before { content: "new: "; }
+</style>
+</head>
+<body>
+<table><thead><tr><th id="h">Age</th><th>City</th></tr></thead></table>
+<p><span id="tag">label</span></p>
+<button id="go">toggle</button>
+<script>
+const h = document.getElementById('h');
+const tag = document.getElementById('tag');
+document.getElementById('go').addEventListener('click', () => {
+  const hw = h.getBoundingClientRect().width, tw = tag.offsetWidth;
+  h.classList.toggle('on');
+  tag.classList.toggle('on');
+  const on = h.classList.contains('on');
+  console.log('th', on ? 'grew' : 'shrank', on ? h.getBoundingClientRect().width > hw + 20 : h.getBoundingClientRect().width < hw - 20);
+  console.log('tag', on ? 'grew' : 'shrank', on ? tag.offsetWidth > tw + 20 : tag.offsetWidth < tw - 20);
+});
+</script>
+</body>
+</html>

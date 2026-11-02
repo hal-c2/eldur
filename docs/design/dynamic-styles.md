@@ -1018,9 +1018,35 @@ At run time:
   names don't count, so `hidden` leaves an element in its converted form.
 - **`innerHTML` with inline elements on a created box makes elements**, not one styled
   `Text`, so they answer to selectors and `getElementById`.
-- **`_gReplaced` lasts past a settle**, as a page's variable can hold the old item
-  at any later time. It is a `Map`: Qt's `WeakMap` crashes in a lookup once a key
-  has been collected.
+- **An element is its record, not its item.** A swap of forms (`_gReplace`) moves
+  the element's record to the new item, and a wrapper resolves through the record
+  (`_unwrap`), so a page's variable that holds the old item still reaches the
+  element at any later time. `_gReplaced` (old item to new) is only for a raw item
+  captured during one read: it is cleared when the outermost read starts, and when
+  a settle starts outside a read, so a page that swaps an element's form over and
+  over keeps nothing of the old items. It is a `Map`: Qt's `WeakMap` crashes in a
+  lookup once a key has been collected. The record table (`_itemMeta`) drops the
+  records of destroyed items when it has doubled since its last sweep (Qt destroys
+  an item at the next turn of the event loop, after which its `parent` reads as
+  undefined). Earlier the map was kept forever, which grew by one entry per swap.
+- **Floats a script makes are laid out as the page's own** (layout.md §5.5).
+  `float` and `clear` are in the runtime's rule table. As CSS 2 §9.7 says, an
+  absolute box or a flex or grid item doesn't float, and a float is blockified.
+  `_gLayoutFlow` places a same-side run of floats along a line from its side,
+  wrapping when one doesn't fit, and cuts the lines of each following block's own
+  text beside them (`_gBeside`, which moves Qt's lines in `lineLaidOut`). A
+  container with a float in it is adopted even when the page wrote elements in it,
+  since what flows beside a float is placed by a pass, not by a column. The
+  approximations are the static ones: margins don't collapse through a float group
+  (Chromium collapses a first child's top margin through its parent beside a
+  float), and only a block's own lines are cut, not those of blocks nested in it
+  or of inline runs.
+- **Generated text is the element's for a read.** A class change that gives an
+  element `::before`/`::after` content is applied at the next turn
+  (`_pseudoTouch`), but a read (`getBoundingClientRect`, `offsetWidth`,
+  `getComputedStyle`) applies it first, as a browser lays out before it answers.
+  A table's column widths read right after a sort are measured with the arrow the
+  sorted header gains.
 - **An inline model first built after a write has no baseline.** It can't tell which
   matches changed, so it runs the cascade rather than trusting the converter's values.
 

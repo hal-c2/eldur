@@ -13,6 +13,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeRecording } from "../../../../tools/visual/record.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../../..");
@@ -54,4 +55,4 @@ for (const [name, run] of Object.entries(steps)) {
   }
   out[name] = boxes;
 }
-fs.writeFileSync(path.join(here, "chromium.json"), `${JSON.stringify(out, null, 1)}\n`);
+writeRecording(path.join(here, "chromium.json"), `${JSON.stringify(out, null, 1)}\n`);

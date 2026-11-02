@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../../..");
 const { loadPlaywright } = await import(path.join(root, "tools/visual/playwright.mjs"));
+const { writeRecording, drainConsole } = await import(path.join(root, "tools/visual/record.mjs"));
 
 // How far each page is scrolled before measuring.
 const SCROLL = { scrolled: 300, dyn_created_rel_scrolled: 300 };
@@ -55,6 +56,7 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
       return boxes;
     });
   }
+  await drainConsole(page);
   out[name].log = log;
   if (name.startsWith("paint_")) {
     out[name].hits = await page.evaluate(() => {
@@ -71,4 +73,4 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
   }
 }
 await browser.close();
-fs.writeFileSync(path.join(here, "chromium.json"), JSON.stringify(out, null, 1) + "\n");
+writeRecording(path.join(here, "chromium.json"), JSON.stringify(out, null, 1) + "\n");

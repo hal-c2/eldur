@@ -129,6 +129,9 @@ TestCase {
 
     // A test log line has a length limit.
     function report(name) {
+        // What the runtime still owes the scene is painted before the grab, as a
+        // browser's frame shows the state a script read would see.
+        Eldur.document.body.getBoundingClientRect()
         const image = spec().watch.some(w => w.paint) ? grabImage(page) : null
         const pixel = (x, y) => {
             const c = image.pixel(x, y)
@@ -140,6 +143,20 @@ TestCase {
         console.log("APPSTATE")
     }
     function spec() { return SPEC }
+    // A step's effects run over several turns of the event loop (a tap, its
+    // handler, the focus a browser moves after the script): the state is read when
+    // a few more turns change nothing, however long a loaded machine takes to
+    // turn them. A page that never stops moving is read after a bounded number.
+    function quiet() {
+        const look = () => JSON.stringify(eldurSnapshot(Eldur.document, Eldur.getComputedStyle, spec().watch, () => ""))
+        let was = look()
+        for (let round = 0; round < 20; round++) {
+            for (let turn = 0; turn < 3; turn++) wait(0)
+            const now = look()
+            if (now === was) return
+            was = now
+        }
+    }
     function center(selector) {
         const e = Eldur.document.querySelector(selector)
         verify(e !== null, "nothing matches " + selector)
@@ -218,10 +235,12 @@ TestCase {
         mouseMove(page, 1200, 790)
         waitForRendering(page)
         wait(50)
+        quiet()
         report("load")
         for (const s of spec().steps) {
             act(s)
             wait(100)
+            quiet()
             report(s.name)
         }
         SHOT
@@ -827,4 +846,9 @@ for (const e of [still, port])
         // An instant drag lets go at speed, and flicks on towards the end, at 700.
         assert!((100.0..=700.0).contains(&top), "{id} at {top}");
     }
+}
+
+#[test]
+fn pseudo_read() {
+    page("pseudo_read");
 }

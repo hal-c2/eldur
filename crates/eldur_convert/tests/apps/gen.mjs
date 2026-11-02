@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../../..");
 const { loadPlaywright } = await import(path.join(root, "tools/visual/playwright.mjs"));
+const { writeRecording, drainConsole, isMark } = await import(path.join(root, "tools/visual/record.mjs"));
 const shots = process.argv.includes("--shots") ? process.argv[process.argv.indexOf("--shots") + 1] : null;
 
 const only = process.argv.includes("--only") ? process.argv[process.argv.indexOf("--only") + 1].split(",") : null;
@@ -24,7 +25,9 @@ const browser = await chromium.launch();
 let log = [];
 async function openTab() {
   const tab = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
-  tab.on("console", (m) => log.push(m.text()));
+  tab.on("console", (m) => {
+    if (!isMark(m.text())) log.push(m.text());
+  });
   tab.on("pageerror", (e) => {
     throw new Error(`page threw: ${e.message}`);
   });
@@ -101,6 +104,7 @@ async function state(name, watch) {
   const read = await page.evaluate(
     `(() => { ${snapshot}; return eldurSnapshot(document, getComputedStyle, ${JSON.stringify(watch)}, ${canvas}); })()`,
   );
+  await drainConsole(page);
   const lines = log;
   log = [];
   return { name, log: lines, state: read };
@@ -143,4 +147,4 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
   }
 }
 await browser.close();
-fs.writeFileSync(recorded, JSON.stringify(out, null, 1) + "\n");
+writeRecording(recorded, JSON.stringify(out, null, 1) + "\n");

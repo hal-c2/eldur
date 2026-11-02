@@ -3426,6 +3426,12 @@ function _layoutForRead() {
 }
 
 function _layoutForReadNow() {
+    // Generated text is the element's own for a read: a class that gave it some
+    // is measured with it, as a browser lays out before it answers.
+    if (_pseudoPending) {
+        _pseudoPending = false;
+        _pseudoFlush(false);
+    }
     _aRead();
     if (_layoutDirty.length === 0) {
         // Lines lay out once when complete, which may be after a page's script.

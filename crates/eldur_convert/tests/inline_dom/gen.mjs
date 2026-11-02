@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../../..");
 const { loadPlaywright } = await import(path.join(root, "tools/visual/playwright.mjs"));
+const { writeRecording, drainConsole } = await import(path.join(root, "tools/visual/record.mjs"));
 
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();
@@ -67,7 +68,8 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
     // Console events arrive asynchronously; the next page must not steal these.
     await page.waitForTimeout(30);
   }
+  await drainConsole(page);
   out[file.slice(0, -5)] = { log, clicks };
 }
 await browser.close();
-fs.writeFileSync(path.join(here, "chromium.json"), JSON.stringify(out, null, 1) + "\n");
+writeRecording(path.join(here, "chromium.json"), JSON.stringify(out, null, 1) + "\n");
