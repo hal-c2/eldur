@@ -3244,7 +3244,9 @@ function _tablePlaceAll(host, live) {
         var last = c.column + c.columnSpan >= widths.length;
         c.item.x = left[c.column] || 0;
         _meta(c.item).tableBorderOver = last ? 0 : sharedRight(c);
-        _meta(c.item).tableCellInset = collapsed && (_tableOwnBorders(c.item) || paintsRight(c))
+        // A collapsed cell reaches to the middle of its borders. A written table's
+        // columns start on whole pixels, so a cell made into it keeps to that grid.
+        _meta(c.item).tableCellInset = collapsed && !isStatic && (_tableOwnBorders(c.item) || paintsRight(c))
             ? c.item.border.width / 2 : 0;
         c.item.width = acrossFrom(c) + _meta(c.item).tableBorderOver;
         if (_gIsBox(c.item)) {
