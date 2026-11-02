@@ -16142,7 +16142,7 @@ function _gIntrinsic(raw, s) {
     var best = 0;
     var text = _gTextOf(raw);
     if (text && text.text !== "") {
-        best = Math.ceil(text.implicitWidth);
+        best = _gTextAdvance(text);
     }
     var kids = _gBoxKids(raw);
     var row = _gIsFlex(s) && String(s["flex-direction"]).indexOf("row") === 0;
@@ -16166,6 +16166,21 @@ function _gIntrinsic(raw, s) {
         }
     }
     return Math.max(best, line) + frame;
+}
+
+// Qt's implicit width reaches past a line's last advance to its ink; CSS sizes
+// a box to the advances. One line of plain text in one font is known.
+function _gTextAdvance(text) {
+    var plain = String(text.text);
+    var flat = text.textFormat === 0; // Text.PlainText
+    if (/\n/.test(plain) || !flat && /</.test(plain)) {
+        return text.implicitWidth;
+    }
+    var metrics = _vMetrics(text);
+    metrics.font = text.font;
+    // Text.RichText and Text.StyledText take off a run's edge spaces.
+    var styled = text.textFormat === 1 || text.textFormat === 4;
+    return metrics.advanceWidth(styled ? plain.trim().replace(/\s+/g, " ") : plain);
 }
 
 // A button's label wraps, unless the white-space it inherits forbids it.
@@ -16908,7 +16923,10 @@ function _gPaintText(text, s, innerW, owner) {
     _gSet(text, "lineHeight", line);
     var align = s["text-align"];
     _gSet(text, "horizontalAlignment", align === "center" ? 4 : align === "right" || align === "end" ? 2 : align === "justify" ? 8 : 1);
-    _gSet(text, "width", innerW);
+    // A line as wide as its advances still has its ink to draw, which Qt
+    // would otherwise break off onto another line; CSS lets ink overflow.
+    var fits = text.text !== "" && text.implicitWidth > innerW && innerW >= _gTextAdvance(text) - 0.01;
+    _gSet(text, "width", fits ? text.implicitWidth : innerW);
     // A Text that was hidden has not counted its lines.
     if (text.text !== "") {
         text.forceLayout();
@@ -20259,8 +20277,16 @@ function _gFillsLine(raw) {
         var text = n.vtext ? n.data : _isPlainTextItem(n) && !n.objectName ? n.text : "";
         return !scripted(n) && /\S/.test(String(text || ""));
     };
+    // A Text holding what a script inserted has a model; the page wrote only
+    // what in it no script made.
     var ownText = _findTextChild(parent);
-    if (!items && (ownText && written(ownText) || _rawChildNodes(parent).some(written))) {
+    var ownModel = ownText ? _vModelOf(ownText) : null;
+    var wroteOwn = ownModel
+        ? ownModel.kids.some(function(k) {
+            return _vIsRendered(k) && !scripted(k) && /\S/.test(_vText(k));
+        })
+        : ownText && written(ownText);
+    if (!items && (wroteOwn || _rawChildNodes(parent).some(written))) {
         return;
     }
     for (var i = 0; i < all.length; ++i) {

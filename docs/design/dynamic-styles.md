@@ -961,28 +961,53 @@ Attribute selectors on script-written attributes (`[aria-expanded=true]`,
 
 ## 15. Where a template stops: what makes a page open
 
-A template answers for a tag, classes and a place, and its conditions reach paint,
-height and margins. Some of what a stylesheet can say about a created element is
-outside that, and such a page is converted open (`selectors_outrun_templates` in
-`pipeline.rs`) so the runtime cascade answers instead:
+A template is probed at each place the analysis knows (§6): appended under each
+static element a query names and under each created parent, and cascaded there.
+What the page holds when it is converted is therefore in the template. What it
+can't hold is what only running the script decides, and a page whose stylesheet
+asks about that is converted open (`selectors_outrun_templates` in
+`pipeline.rs`), so the runtime cascade answers instead. There is one rule, not a
+list of selector shapes: **a rule outruns templates when what it matches can
+change after conversion.** That is the case when the rule:
 
-- a selector names an id a script writes (or the script computes an id);
-- a selector names an attribute a script writes, on a page that creates elements.
-  A page's own elements keep the converter's variants, so a theme switch on
+- names an id a script writes (or the script computes an id);
+- names an attribute a script writes, on a page that creates elements. A page's
+  own elements keep the converter's variants, so a theme switch on
   `<html data-theme>` stays closed;
-- a class a script toggles takes an element out of flow;
-- a structural pseudo-class on something a script creates changes its width or the
-  kind of box it is. Structural paint, margins and height stay template conditions
-  (§5.5).
+- gives an element a class that takes it out of flow;
+- names a class at all, when a script writes a computed class name on an element
+  the analysis can't name (it can be any class on any element);
+- changes a created element's width or kind of box, and matches that element by
+  more than its tag and the classes it is created with. Paint, margins and height
+  stay template conditions (§5.5). "More than" is decided per created element:
+  - the subject has a state, an id, or an `input[type]` the analysis didn't see;
+  - the subject's classes are computed (`open_classes`);
+  - the context can come to fit later. Each compound left of the subject is
+    checked against the ancestors the element can have (`Around`): a static
+    element and its ancestors, with the classes a script may add to it; a created
+    parent, with the classes all its class sets share as fixed and the rest as
+    written; or anything at all where the analysis lost the place. A compound
+    that no ancestor can fit means the rule never matches that element. A
+    compound fitted only through a written class or id, an unknown place, or a
+    sibling compound means the answer comes at run time. When every compound is
+    fitted by what is already there, the probe saw it and the page stays closed.
+
+A class name computed on a known element doesn't open the page by itself any more
+(the "is not followed" diagnostic is gone): the runtime cascade runs on the
+elements a computed lookup finds, and the converter emits an item for each
+element with an id when the script looks ids up by computed names.
 
 `el.style.position` also opens the page: it is no longer written in place.
 
 At run time:
 
-- **A script-filled flex or grid container is laid out by the runtime.** Stretch and
-  alignment between items whose sizes come from a pass can't be said to a QML layout,
-  so `_gFillsLine` adopts the container. A page's own items in it are adopted with it,
-  since they share lines and tracks with the created ones.
+- **A script-filled container is laid out by the runtime.** Stretch and alignment
+  between items whose sizes come from a pass can't be said to a QML layout, and a
+  static block's column is measured by no one once a box holds it, so `_gFillsLine`
+  adopts the container, unless the page wrote text in it that a box would lose. A
+  page's own items in it are adopted with it, since they share lines and tracks with
+  the created ones. Clearing such a box (`textContent = ""`) detaches every element
+  in it, as clearing a layout did.
 - **Out-of-flow is a state of any element.** `_leaveFlow` keeps a slot where the
   element was. A template's block is `"containing"` and is resolved when it connects,
   because the template is written before its parent is known. A control keeps its item

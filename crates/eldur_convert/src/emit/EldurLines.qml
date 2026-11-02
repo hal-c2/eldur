@@ -196,6 +196,17 @@ Item {
         run.measured = [];
         run.place = null;
         item.forceLayout();
+        // Qt's width of a line reaches past the last glyph's advance to its ink;
+        // CSS puts what follows at the advance. One line in one font is known.
+        const plain = _plain(item);
+        if (run.measured.length === 1 && !/\n/.test(plain)
+            && (item.textFormat === Text.PlainText || item.text.indexOf("<") === -1)) {
+            const keeps = item.textFormat === Text.PlainText || preserveSpace
+                || item.textFormat === Text.AutoText;
+            runMetrics.font = item.font;
+            run.measured[0].width = runMetrics.advanceWidth(
+                keeps ? plain : plain.trim().replace(/\s+/g, " "));
+        }
     }
 
     function _plain(item) {

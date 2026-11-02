@@ -75,7 +75,14 @@ TestCase {
 
 /// `(page, Chromium's line, ours, why)`: what is known to differ, in full, so a
 /// changed difference and one that went away both fail.
-const KNOWN: &[(&str, &str, &str, &str)] = &[];
+const KNOWN: &[(&str, &str, &str, &str)] = &[(
+    "rule_probe_crt2",
+    "CS a2 143.328125,8,129.328125,56",
+    "CS a2 143,8,130,56",
+    "a static grid no script fills is a GridLayout, which gives its 1fr tracks whole \
+     pixels (129, 129, 130 of 388); it was so before created elements were laid out \
+     by the runtime, and a page with no script keeps its converted QML",
+)];
 
 /// Pixels a logged number may be off: glyph widths differ a little between the two
 /// text engines. Whole numbers rounded by a page's helper are held exactly.
