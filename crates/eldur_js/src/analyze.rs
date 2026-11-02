@@ -975,6 +975,7 @@ impl AnalysisVisitor<'_, '_> {
                     || extract_dom_query_from_call(it, self.scoping).is_none() =>
             {
                 self.analysis.runtime_dom = true;
+                self.analysis.computed_lookups = true;
             }
             _ => {}
         }

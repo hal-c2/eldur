@@ -32,6 +32,10 @@ const out = {};
 for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort()) {
   log = [];
   await page.goto("file://" + path.join(here, file), { waitUntil: "load" });
+  // A page whose logging runs in timers says it has finished by making `#csdone`.
+  if (fs.readFileSync(path.join(here, file), "utf8").includes("csdone")) {
+    await page.waitForSelector("#csdone", { state: "attached", timeout: 30000 });
+  }
   const names = (await page.getAttribute("body", "data-clicks")) || "";
   const clicks = [];
   for (const name of names.split(/\s+/).filter(Boolean)) {

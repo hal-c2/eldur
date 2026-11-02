@@ -114,6 +114,7 @@ fn tracks_listeners_and_property_writes_across_variables_functions_and_loops() {
         writes_computed_id: _,
         written_attributes: _,
         writes_computed_attribute: _,
+        computed_lookups: _,
     } = analyze(&[s1, s2]);
     // Nothing here can add, remove or rename an element, but
     // `setAttribute("class", …)` can take any class off one.

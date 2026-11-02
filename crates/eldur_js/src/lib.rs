@@ -191,6 +191,8 @@ pub struct Analysis {
     pub static_tables: bool,
     /// Every id a script gives an element, when it says a literal one.
     pub written_ids: BTreeSet<String>,
+    /// A lookup whose id or selector is computed: any element may be what it finds.
+    pub computed_lookups: bool,
     /// Some script gives an element an id no literal names.
     pub writes_computed_id: bool,
     /// Every attribute other than `id`, `class` and `style` a script sets or
@@ -401,6 +403,8 @@ pub fn analyze(scripts: &[ScriptInput]) -> Analysis {
     analyze::analyze(scripts)
 }
 
+pub use named::resolve_named_elements;
+
 /// Pass 2: rewrite all scripts into one `page.js`.
 #[must_use]
 pub fn rewrite(
@@ -417,6 +421,7 @@ mod analyze;
 mod computed;
 mod edit;
 mod lower;
+mod named;
 mod parse;
 mod resolve;
 mod rewrite;

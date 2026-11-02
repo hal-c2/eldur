@@ -1,0 +1,22 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+.hid .x{display:none}
+.hide2{display:none}
+</style></head><body>
+<div class="hid" id="h1"></div>
+<p id="h2"></p>
+<div id="h3"><span id="st">static</span></div>
+<script>
+const $=i=>document.getElementById(i);
+const mk=(t,p,c,id,tx)=>{const e=document.createElement(t);if(c)e.className=c;if(id)e.id=id;if(tx)e.textContent=tx;p.appendChild(e);return e};
+const a=mk('span',$('h1'),'x','a','gone');const b=mk('span',$('h1'),'','b','here');
+const c=mk('b',$('h2'),'hide2','c','gone');const d=mk('b',$('h2'),'','d','here');
+const e=mk('i',$('h3'),'hide2','e','gone');const f=mk('i',$('h3'),'','f','here');
+const g=mk('span',$('h1'),'x','g');mk('em',g,'','gk','deep');
+const show=(p)=>{const k=$(p);console.log('CS '+p+' '+k.children.length+' '+[...k.children].map(c=>c.id).join()+' '+(k.firstElementChild&&k.firstElementChild.id)+' '+(k.lastElementChild&&k.lastElementChild.id)+' '+k.childElementCount+' '+k.childNodes.length)};
+const nav=(i)=>{const n=$(i);console.log('CS n '+i+' '+n.parentNode.id+' '+n.parentElement.id+' '+(n.nextElementSibling&&n.nextElementSibling.id)+' '+(n.previousElementSibling&&n.previousElementSibling.id)+' '+getComputedStyle(n).display+' '+n.textContent)};
+const all=()=>{['h1','h2','h3'].forEach(show);['a','b','c','d','e','f','g','gk'].forEach(nav);
+ console.log('CS q '+$('h1').querySelector('.x').id+' '+$('h1').querySelectorAll('span').length+' '+document.querySelector('#h2 .hide2').id+' '+document.querySelectorAll('.hide2').length+' '+$('h1').contains(a)+' '+$('h1').textContent+' '+g.querySelector('em').id)};
+all();
+setTimeout(()=>{all();a.className='';setTimeout(()=>{show('h1');nav('a');$('h1').removeChild(a);show('h1');document.body.appendChild(document.createElement('div')).id='csdone'},30)},30);
+</script></body></html>

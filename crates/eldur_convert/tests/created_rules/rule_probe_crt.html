@@ -1,0 +1,50 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+#late{color:red;padding:6px;background:#eef}
+#renamed{border:2px solid blue;padding:3px}
+.box{position:relative;width:300px;height:120px;background:#ddd;margin:10px 0 0 20px;padding:5px}
+.over{position:absolute;top:7px;right:9px;width:40px;height:30px;background:#c00}
+[data-k="v"]{margin-left:17px;height:21px;background:#0c0}
+.list > div:first-child{height:33px}
+.list > div:last-child{height:44px}
+.list div{background:#ccf;margin:2px}
+.deep .in span{display:block;height:19px;padding:2px}
+.gr{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:400px}
+.gr > div{background:#fc0;padding:4px}
+.fx{display:flex;gap:4px;width:400px;height:60px}
+.fx > div{background:#0cf;flex:1}
+.fx > .tall{height:25px;align-self:center}
+.rel{position:relative;left:11px;top:6px;width:50px;height:20px;background:#f0f}
+.fl{float:left;width:60px;height:40px;background:#aaa}
+.clear{clear:both;height:10px}
+#ctl{width:80px}
+.pctl{position:relative;width:300px;height:60px;background:#eee}
+</style></head><body>
+<div id="host"></div><div class="box" id="b"></div><div class="list" id="l"></div><div class="deep" id="dp"></div>
+<div class="gr" id="g"><div id="g0">static<br>two<br>three</div></div>
+<div class="fx" id="f"><div id="f0">s</div></div>
+<div id="fl"></div><div class="pctl" id="pc"><input id="ctl" value="x"><div id="af" style="height:12px;background:#333"></div></div>
+<div id="after" style="height:9px;background:#000"></div>
+<script>
+const mk=(t,p,c,id,tx)=>{const e=document.createElement(t);if(c)e.className=c;if(id)e.id=id;if(tx)e.textContent=tx;p.appendChild(e);return e};
+mk('div',host,'', 'late','before id');
+const r=mk('div',host,'','tmp','to rename');r.id='renamed';
+const o=mk('div',b,'over','ov');
+const a=mk('div',host,'','attr','attr');a.setAttribute('data-k','v');
+mk('div',l,'','l1','a');mk('div',l,'','l2','b');mk('div',l,'','l3','c');
+const i=mk('div',dp,'in','i1');mk('span',i,'','s1','deep');
+mk('div',g,'','g1','one');mk('div',g,'','g2','two');mk('div',g,'','g3','wrap');
+mk('div',f,'','f1','x');mk('div',f,'tall','f2','y');
+mk('div',fl,'fl','fl1');mk('div',fl,'','flt','beside');mk('div',fl,'clear','fl2');
+mk('div',host,'rel','rl');
+const cc=document.getElementById('ctl');cc.style.position='absolute';cc.style.left='100px';cc.style.top='10px';
+setTimeout(()=>{
+ const ids=['late','renamed','ov','attr','l1','l2','l3','i1','s1','g','g0','g1','g2','g3','f','f0','f1','f2','fl1','flt','fl2','rl','ctl','af','pc','after'];
+ for(const n of ids){const e=document.getElementById(n);const q=e.getBoundingClientRect();console.log('CS '+n+' '+[q.x,q.y,q.width,q.height].join(','))}
+ console.log('CS CS '+getComputedStyle(document.getElementById('late')).color+' '+getComputedStyle(document.getElementById('renamed')).borderLeftWidth+' '+l.children.length+' '+g.children.length);
+ // later rename and removal
+ document.getElementById('late').id='nolonger';l.removeChild(document.getElementById('l3'));
+ setTimeout(()=>{for(const n of ['nolonger','l1','l2','attr','renamed']){const q=document.getElementById(n).getBoundingClientRect();console.log('CS H2'+n+' '+[q.x,q.y,q.width,q.height].join(','))}
+  console.log('CS H2CS '+getComputedStyle(document.getElementById('nolonger')).color);document.body.appendChild(document.createElement('div')).id='csdone'},100);
+},100);
+</script></body></html>

@@ -1,0 +1,45 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+.a em{display:block;height:20px;background:#eee}
+.b > i{display:inline-block;width:70px;height:18px;background:#ddd}
+section article span{display:flex;height:22px;padding:1px}
+.c + u{display:block;margin:3px}
+.d[data-x] s{display:block;height:17px}
+.e :first-child{display:block;height:15px}
+.f{display:block;height:13px}
+.g code{display:grid;height:12px}
+.h a{display:inline-block;height:25px;width:40px}
+.j span:not(.k){display:block;height:14px}
+.m span{display:inline}
+.plain span{color:red}
+</style></head><body>
+<div id="a"></div><div id="b"></div><section id="sec"></section><div id="c"></div><div id="d"></div><div class="e" id="e"></div>
+<div id="f"></div><div class="g" id="g"></div><div class="h" id="h"></div><div class="j" id="j"></div><div class="m" id="m"></div><div class="plain" id="pl"></div>
+<div id="end" style="height:5px"></div>
+<script>
+const R=n=>{const q=document.getElementById(n).getBoundingClientRect();console.log('CS '+n+' '+[q.x,q.y,q.width,q.height].join(','))};const done=()=>{document.body.appendChild(document.createElement('div')).id='csdone'};
+const $=i=>document.getElementById(i);
+const pick=n=>['one','two','three'][n];
+const mk=(t,p,c,id,tx)=>{const e=document.createElement(t);if(c)e.className=c;if(id)e.id=id;if(tx)e.textContent=tx;p.appendChild(e);return e};
+$('a').className='a'+'';mk('em',$('a'),'','a1','block em');
+$('b').className=['b'].join('');mk('i',$('b'),'','b1','ib');mk('i',$('b'),'','b2','ib');
+const art=mk('article',$('sec'),'','art');mk('span',art,'','s1','flex');
+mk('div',$('c'),'c','c1','x');mk('u',$('c'),'','u1','under');
+$('d').className='d';$('d').setAttribute('data-x','1');mk('s',$('d'),'','s2','struck');
+mk('b',$('e'),'','e1','first');mk('b',$('e'),'','e2','second');
+const later=mk('span',$('f'),'','f1','later');const later2=mk('span',$('f'),'','f2','stays');later.className='f';
+mk('code',$('g'),'','g1','code');
+const det=document.createElement('div');det.id='det';const dets=document.createElement('a');dets.id='h1';dets.textContent='link';det.appendChild(dets);$('h').appendChild(det);
+mk('span',$('j'),'k','j1','k');mk('span',$('j'),'','j2','notk');
+mk('span',$('m'),'','m1','in');mk('span',$('m'),'','m2','line');
+mk('span',$('pl'),'','p1','red');mk('span',$('pl'),'','p2','words');
+const ids=['a','a1','b','b1','b2','sec','art','s1','c','c1','u1','d','s2','e','e1','e2','f','f1','f2','g','g1','h','det','h1','j','j1','j2','m','m1','m2','pl','p1','p2','end'];
+ids.forEach(R);
+setTimeout(()=>{
+ ids.forEach(R);
+ console.log('CS d '+['a1','b1','s1','u1','s2','e1','e2','f1','f2','g1','h1','j1','j2','m1','p1'].map(i=>getComputedStyle($(i)).display).join());
+ // Back to inline, and from inline to a box, once the page has been laid out.
+ later.className='';$('m').className='a';mk('em',$('m'),'','m3','now block');$('j').className='';
+ setTimeout(()=>{['f','f1','m','m1','m3','j','j1','j2','end'].forEach(R);done()},50);
+},50);
+</script></body></html>

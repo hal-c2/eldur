@@ -33,11 +33,23 @@ TestCase {
     name: "CreatedRules"
     when: windowShown
 
+    // A page whose logging runs in timers says it has finished by making `#csdone`.
+    function named(item, name) {
+        if (item.objectName === name)
+            return true
+        for (const kid of item.children) {
+            if (named(kid, name))
+                return true
+        }
+        return false
+    }
+
     function test_page() {
         const component = Qt.createComponent("Main.qml")
         verify(component.status === Component.Ready, component.errorString())
         const page = createTemporaryObject(component, host, { width: 1280, height: 800 })
         waitForRendering(page)
+        if (TIMED) tryVerify(() => named(page, "csdone"), 30000, "the page's timers ran")
         for (const [x, y] of CLICKS) {
             if (typeof x === "string") {
                 const named = { Tab: Qt.Key_Tab, Enter: Qt.Key_Return, ArrowDown: Qt.Key_Down }
@@ -65,6 +77,35 @@ TestCase {
 /// changed difference and one that went away both fail.
 const KNOWN: &[(&str, &str, &str, &str)] = &[];
 
+/// Pixels a logged number may be off: glyph widths differ a little between the two
+/// text engines. Whole numbers rounded by a page's helper are held exactly.
+const NUMBER_TOLERANCE: f64 = 0.5;
+
+/// Same text between the numbers, and each number within [`NUMBER_TOLERANCE`].
+fn same_line(got: &str, chromium: &str) -> bool {
+    fn parts(line: &str) -> Vec<&str> {
+        let number = |c: char| c.is_ascii_digit() || c == '.' || c == '-';
+        let mut out = Vec::new();
+        let mut rest = line;
+        while let Some(c) = rest.chars().next() {
+            let run = rest
+                .find(|d: char| number(d) != number(c))
+                .unwrap_or(rest.len());
+            out.push(&rest[..run]);
+            rest = &rest[run..];
+        }
+        out
+    }
+    let (got, chromium) = (parts(got), parts(chromium));
+    got.len() == chromium.len()
+        && got.iter().zip(&chromium).all(|(a, b)| {
+            a == b
+                || matches!((a.parse::<f64>(), b.parse::<f64>()),
+                    (Ok(x), Ok(y)) if (x - y).abs() <= NUMBER_TOLERANCE
+                        && (a.contains('.') || b.contains('.')))
+        })
+}
+
 /// Runs one page; `Err` has what went wrong.
 fn run(name: &str, html: &str, want: &[&str], clicks: &str, probes: &str) -> Result<(), String> {
     let options = Options {
@@ -79,7 +120,16 @@ fn run(name: &str, html: &str, want: &[&str], clicks: &str, probes: &str) -> Res
     }
     std::fs::write(
         dir.join("tst_rules.qml"),
-        TEST.replace("CLICKS", clicks).replace("PROBES", probes),
+        TEST.replace("CLICKS", clicks)
+            .replace("PROBES", probes)
+            .replace(
+                "TIMED",
+                if html.contains("csdone") {
+                    "true"
+                } else {
+                    "false"
+                },
+            ),
     )
     .expect("write test");
     let output = Command::new(RUNNER)
@@ -119,7 +169,8 @@ fn run(name: &str, html: &str, want: &[&str], clicks: &str, probes: &str) -> Res
         let listed = known
             .iter()
             .any(|k| chromium == Some(&k.1) && got == Some(&k.2));
-        if got != chromium && !listed {
+        let same = matches!((got, chromium), (Some(a), Some(b)) if same_line(a, b));
+        if !same && !listed {
             problems.push(format!(
                 "line {i}\n    got      {}\n    Chromium {}",
                 got.unwrap_or(&"(nothing)"),
@@ -510,4 +561,49 @@ fn sib_literal_fixed() {
 #[test]
 fn sib_literal_child() {
     page("sib_literal_child");
+}
+
+#[test]
+fn rule_probe_crt() {
+    page("rule_probe_crt");
+}
+
+#[test]
+fn rule_probe_crt2() {
+    page("rule_probe_crt2");
+}
+
+#[test]
+fn rule_bare_ids() {
+    page("rule_bare_ids");
+}
+
+#[test]
+fn rule_helper_selectors() {
+    page("rule_helper_selectors");
+}
+
+#[test]
+fn rule_created_floats() {
+    page("rule_created_floats");
+}
+
+#[test]
+fn rule_hidden_nav() {
+    page("rule_hidden_nav");
+}
+
+#[test]
+fn rule_literal_helpers() {
+    page("rule_literal_helpers");
+}
+
+#[test]
+fn rule_computed_static() {
+    page("rule_computed_static");
+}
+
+#[test]
+fn rule_empty_found() {
+    page("rule_empty_found");
 }

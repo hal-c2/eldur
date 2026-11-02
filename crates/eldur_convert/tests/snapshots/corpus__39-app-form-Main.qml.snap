@@ -445,7 +445,7 @@ ApplicationWindow {
                             property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 16) - Layout.topMargin - 16 + 0.000001) : blockFlow3.eldurCarry
 
                             implicitWidth: strengthText.implicitWidth
-                            implicitHeight: strengthText.implicitHeight
+                            implicitHeight: (strengthText.text === "" ? 0 : strengthText.implicitHeight)
                             objectName: "strength"
                             Layout.fillWidth: true
                             Layout.preferredHeight: 16
@@ -687,13 +687,14 @@ ApplicationWindow {
 
                     color: "#e6ffed"
                     implicitWidth: doneText.implicitWidth + 26
-                    implicitHeight: doneText.implicitHeight + 26
+                    implicitHeight: (doneText.text === "" ? 0 : doneText.implicitHeight) + 26
                     border.width: 1
                     border.color: "#2c974b"
                     objectName: "done"
                     visible: false
                     Layout.fillWidth: true
                     Layout.topMargin: 16 - signup.eldurCarry
+                    Layout.preferredHeight: implicitHeight
 
                     Text {
                         id: doneText

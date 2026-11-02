@@ -3531,10 +3531,12 @@ function _clearAppended(raw) {
         child.parent = null;
     }
     // The page's own elements in a laid-out container (a list's items) go
-    // too; spacers, decoration and text runs are not elements.
+    // too; spacers, decoration and text runs are not elements. A box the
+    // runtime lays out holds them as a layout did.
     var container = _childContainer(raw);
     if (container && container !== flow
-        && (typeof container.spacing === "number" || typeof container.columnSpacing === "number")) {
+        && (typeof container.spacing === "number" || typeof container.columnSpacing === "number"
+            || _gIsBox(raw))) {
         var kids = _rawElementChildren(raw);
         for (var i = 0; i < kids.length; ++i) {
             var kid = kids[i];
@@ -3726,7 +3728,8 @@ function _rawElementChildren(raw) {
     }
     var own = raw ? _vModelOf(raw) : null;
     if (own && (own.select || _vIsTagged(raw))) {
-        return own.kids.filter(_vIsElement);
+        // A column under the text holds what came after it that is not a line.
+        return own.kids.filter(_vIsElement).concat(_meta(raw).flow ? _rawKids(raw, false) : []);
     }
     return _rawKids(raw, false);
 }
@@ -3758,6 +3761,13 @@ function _rawKids(raw, withText) {
     }
     var isLayout = typeof container.spacing === "number" || typeof container.columnSpacing === "number";
     var out = [];
+    // The page's column beside an element's own Text holds what follows the
+    // text; what a script put in that text comes first.
+    var ownText = container !== raw && container.parent === raw ? _findTextChild(raw) : null;
+    var ownModel = ownText && ownText.parent === raw ? _vModelOf(ownText) : null;
+    if (ownModel && !ownModel.select) {
+        out = ownModel.kids.filter(withText ? _vIsRendered : _vIsElement);
+    }
     for (var i = 0; i < container.children.length; ++i) {
         var child = container.children[i];
         if (!child) {
@@ -3848,6 +3858,9 @@ function _isAnonLines(raw) {
 }
 
 function _logicalParent(raw) {
+    if (_gGoingInto && _gGoingInto.node === raw) {
+        return _gGoingInto.parent;
+    }
     if (raw && raw.__eldurInline) {
         return raw.parent;
     }
@@ -6887,7 +6900,7 @@ function _lineToJoin(raw, nodes, ref) {
     if (ref && _isLines(ref.parent)) {
         return { lines: ref.parent, ref: ref };
     }
-    var boxes = nodes.some(function(n) { return !_isTextNode(n) && !_vStaysInline(n); });
+    var boxes = nodes.some(function(n) { return !_isTextNode(n) && !_vStaysInline(n, raw, ref); });
     // A box inside a created inline element: the element becomes the line.
     if (_meta(raw).createdTag && _isPlainTextItem(raw)) {
         return boxes ? { lines: _inlineBecomesLines(raw), ref: ref } : null;
@@ -7085,7 +7098,7 @@ function _insertChildren(raw, nodes, ref) {
         });
         return;
     }
-    if (_gIsBox(raw) && !nodes.every(_vStaysInline)) {
+    if (_gIsBox(raw) && !nodes.every(function(n) { return _vStaysInline(n, raw, ref); })) {
         _gBoxTextToKids(raw);
         ref = ref ? _gCurrent(ref) : ref;
     }
@@ -7488,6 +7501,23 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
         m.explicitChecked = oldRaw.checked;
     }
     var childElements = _rawElementChildren(oldRaw);
+    // A model's elements stand among its text: taking them alone loses the text.
+    var carried = null;
+    if (childElements.some(function(k) { return k.__eldurInline; })) {
+        var oldText = _vModelOf(oldRaw) ? oldRaw : _findTextChild(oldRaw);
+        carried = oldText ? _vModelOf(oldText) : null;
+        childElements = _rawChildNodes(oldRaw);
+    }
+    // A Text that was its own model leaves it behind: the meta goes on to an item
+    // that is no Text, and the nodes go on as they are carried. `null`, not
+    // absent: the markup's model would be read again from `eldurInline`.
+    if (m.vModel) {
+        var leftAt = _vModels.indexOf(m.vModel);
+        if (leftAt !== -1) {
+            _vModels.splice(leftAt, 1);
+        }
+        m.vModel = null;
+    }
     var savedText = (childElements.length === 0 && m.createdTag !== "input" && m.createdTag !== "textarea")
         ? (m.explicitText !== undefined ? m.explicitText : getText(oldRaw))
         : m.explicitText;
@@ -7615,7 +7645,7 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
         }
     }
 
-    if (childElements.length > 0) {
+    if (childElements.length > 0 && !(carried && _vCarryModel(next, carried, childElements))) {
         // Before the template's trailing spacers, renumbered.
         _insertChildren(next, childElements, null);
     }
@@ -9429,7 +9459,9 @@ function _vModelOf(item) {
     if (known && known.vModel !== undefined) {
         return known.vModel;
     }
-    if (typeof item.eldurInline !== "string") {
+    // What a swap put in the grave is no longer the page's: its markup's model
+    // went on with the element.
+    if (typeof item.eldurInline !== "string" || _gGrave && item.parent === _gGrave) {
         return null;
     }
     // A run can go on an element an earlier one started, which must be there.
@@ -13660,6 +13692,8 @@ function _vFromCreated(raw) {
         m._setRaw(v);
     }
     delete m.createdTag;
+    // Still the script's, which is what leaves the page's container nothing of its own.
+    m.vCreated = true;
     m.connected = {};
     delete m.flow;
     if (raw.objectName) {
@@ -14061,7 +14095,7 @@ function _vInlineTag(tag) {
     return /^(#text|a|abbr|b|bdi|bdo|br|cite|code|data|del|dfn|em|font|i|ins|kbd|label|mark|q|s|samp|small|span|strike|strong|sub|sup|time|tt|u|var|wbr)$/.test(tag);
 }
 
-function _vStaysInline(node) {
+function _vStaysInline(node, into, ref) {
     // An inline element holding a box is a line, not a node of a model.
     if (_isLines(node)) {
         return false;
@@ -14072,10 +14106,24 @@ function _vStaysInline(node) {
     }
     // A span the page's CSS makes a box is a box.
     if (!node.__eldurInline && tag !== "#text" && _gActive()) {
-        ++_gGen;
-        return _gStyle(node).display === "inline";
+        return _gStyleInto(node, into, ref).display === "inline";
     }
     return true;
+}
+
+// What an element will compute to once it is in `into` before `ref`: being
+// asked before the insertion, a selector through its parent or siblings has to
+// see the place it is going to.
+var _gGoingInto = null;
+
+function _gStyleInto(node, into, ref) {
+    var m = _meta(node);
+    m.gStyle = null;
+    _gGoingInto = into && into !== _logicalParent(node) ? { node: node, parent: into, ref: ref || null } : null;
+    var style = _gStyle(node);
+    _gGoingInto = null;
+    m.gStyle = null;
+    return style;
 }
 
 // Where `nodes` go, if a line of text takes them; else they are real items.
@@ -14083,7 +14131,7 @@ function _vHostOf(raw, nodes, ref) {
     if (!_vHasRules() && !raw.__eldurInline) {
         return null;
     }
-    if (ref && ref.__eldurInline && nodes.every(function(n) { return n.__eldurInline || _vStaysInline(n); })) {
+    if (ref && ref.__eldurInline && nodes.every(function(n) { return n.__eldurInline || _vStaysInline(n, raw, ref); })) {
         return ref.vparent || ref.model;
     }
     if (raw.__eldurInline) {
@@ -14095,24 +14143,42 @@ function _vHostOf(raw, nodes, ref) {
     // A block breaks out of a line of text; what is a node of a model has no box
     // to break out with.
     var joinsModel = function(n) {
-        return n.__eldurInline || _vStaysInline(n);
+        return n.__eldurInline || _vStaysInline(n, raw, ref);
     };
     var known = _vExisting(raw);
     if (known && nodes.every(joinsModel)) {
         return known;
     }
-    if (!nodes.every(_vStaysInline)) {
+    if (!nodes.every(function(n) { return _vStaysInline(n, raw, ref); })) {
         return null;
     }
     var hasNode = nodes.some(function(n) { return n.__eldurInline; });
     if (_meta(raw).createdTag && hasNode && _vStaysInline(raw)) {
         return _vFromCreated(raw);
     }
-    // A line after the box's blocks: a model's one Text cannot stand below them.
-    if (_gActive() && _gIsBox(raw) && _rawElementChildren(raw).length > 0) {
+    // A line after an element's items: a model's one Text cannot stand below them.
+    if (_gActive() && _rawElementChildren(raw).length > 0) {
         return null;
     }
     return _vOwnModel(raw) || (_markupMakesElements(raw) ? null : _vBoxModel(raw));
+}
+
+// A model's nodes going to the item that replaces its element's: they stay one
+// text, drawn as before until the next pass restyles the item. One that became
+// a box is still the model's here, for that pass to take out as an item.
+function _vCarryModel(raw, old, nodes) {
+    var text = _findTextChild(raw);
+    if (!text || _vModelOf(text) || text.text !== "" || !nodes.every(function(n) { return n.__eldurInline; })) {
+        return false;
+    }
+    text.font = old.text.font;
+    text.color = old.text.color;
+    var model = _vEnsureModel(text);
+    model.k = old.k;
+    model.pre = old.pre;
+    _vInsert(model, nodes, null);
+    _vChanged(model);
+    return true;
 }
 
 // `true` when the nodes went into a line of text.
@@ -14132,10 +14198,10 @@ function _rawChildNodes(raw) {
         return raw.kids ? raw.kids.filter(_vIsRendered) : [];
     }
     var own = _vOwnModel(raw);
-    if (own) {
+    if (own && !_meta(raw).flow) {
         return own.kids.filter(_vIsRendered);
     }
-    var out = [];
+    var out = own ? own.kids.filter(_vIsRendered) : [];
     var withLeaves = function(leaves, leaf) {
         leaves.forEach(function(l) {
             l.vparent = raw;
@@ -14306,9 +14372,14 @@ function _elementParent(node) {
 
 function _elementSiblings(node) {
     var parent = _elementParent(node);
-    return parent ? _rawElementChildren(parent).filter(function(k) {
+    var sibs = parent ? _rawElementChildren(parent).filter(function(k) {
         return !_isInternalHelperNode(k);
     }) : [node];
+    if (_gGoingInto && _gGoingInto.node === node && sibs.indexOf(node) === -1) {
+        var at = _gGoingInto.ref ? sibs.indexOf(_gGoingInto.ref) : -1;
+        sibs.splice(at === -1 ? sibs.length : at, 0, node);
+    }
+    return sibs;
 }
 
 function _siblingsOfType(node) {
@@ -15227,6 +15298,16 @@ var window = {
         return dispatchEvent(window, ev);
     }
 };
+// HTML's named access: the window answers to the id of an element, after its own
+// properties, and a name nothing has is undefined.
+window = new Proxy(window, {
+    get: function(target, name) {
+        if (name in target || typeof name !== "string") {
+            return target[name];
+        }
+        return document.getElementById(name) || undefined;
+    }
+});
 
 // ---------------------------------------------------------------------------
 // Created elements (docs/spec/dom-api.md, Created elements).
@@ -16141,7 +16222,7 @@ function _gPlace(raw, avail, opts, heightBasis) {
         used = opts.forceW;
     } else if (width !== null) {
         used = _gOuterWidth(s, e, width);
-    } else if (opts.shrink || !box && _gInlineLevel(s)) {
+    } else if (opts.shrink || !box && _gInlineLevel(s) || s.display === "table") {
         used = Math.min(_gIntrinsic(raw, s), Math.max(avail - (e.ml || 0) - (e.mr || 0), 0));
         if (opts.shrink === "max") {
             used = _gIntrinsic(raw, s);
@@ -16444,7 +16525,9 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
         kid.x = x + left;
         var merged = _gMerge(pending, got.mt);
         if (got.empty) {
-            kid.y = y + merged;
+            // Its margins joining the box's own top, it starts where the box
+            // does (CSS 2 §8.3.1).
+            kid.y = first && collapseTop ? y : y + merged;
             pending = _gMerge(merged, got.mb);
             continue;
         }
@@ -20104,6 +20187,7 @@ function _gSettle() {
     _gPrune();
     _gClosedHiddenBoxes();
     _gStaticChanges();
+    _vBoxesLeaveModels();
     var snapshot = _gLive.slice();
     for (var i = 0; i < snapshot.length; ++i) {
         if (_isConnected(snapshot[i])) {
@@ -20127,11 +20211,38 @@ function _gSettle() {
     _gRunning = false;
 }
 
-// Lines are only made inside a box. A page's empty container that a script
-// fills with inline-level children becomes one, as nothing of its own is lost.
-// So does a flex or grid container: what its items do to each other is the
-// layout of `_gLayoutFlex` and `_gLayoutGrid`, which a QML layout has no way to
-// say for items whose size comes from a pass, not a binding.
+// A model only holds what computes to inline. What it was given can stop being
+// that at any time, by a class, a new sibling or a rule that only matched once
+// it was in place, and then its box's runs have to become items and flow.
+function _vBoxesLeaveModels() {
+    var isBox = function(k) {
+        if (!_vIsElement(k)) {
+            return false;
+        }
+        var shown = _vStyle(k).display;
+        return shown !== "inline" && shown !== "none" || k.kids.some(isBox);
+    };
+    _vModels.slice().forEach(function(model) {
+        if (!model.text || model.select || !model.kids.some(isBox)) {
+            return;
+        }
+        var host = _vHostElement(model);
+        if (!host || host.__eldurInline || !_isConnected(host) || !_linesAvailable()) {
+            return;
+        }
+        var box = _gIsBox(host) ? host : _gAdopt(host);
+        if (box) {
+            _gBoxTextToKids(box);
+        }
+    });
+}
+
+// Lines are only made inside a box, and a static item's column is measured by
+// nobody once a box holds it. A page's empty container that a script fills
+// becomes one, as nothing of its own is lost. So does a flex or grid container:
+// what its items do to each other is the layout of `_gLayoutFlex` and
+// `_gLayoutGrid`, which a QML layout has no way to say for items whose size
+// comes from a pass, not a binding.
 function _gFillsLine(raw) {
     if (!raw.parent || _gIsBox(raw.parent) || _isLines(raw.parent)) {
         return;
@@ -20141,20 +20252,26 @@ function _gFillsLine(raw) {
         return;
     }
     var parentStyle = _gStyle(parent);
-    if (!_gInlineLevel(_gStyle(raw)) && !_gIsFlex(parentStyle) && !_gIsGrid(parentStyle)) {
-        return;
-    }
     var all = _rawElementChildren(parent);
     var items = _gIsFlex(parentStyle) || _gIsGrid(parentStyle);
+    var scripted = function(k) { return _meta(k).createdTag || _meta(k).vCreated; };
+    var written = function(n) {
+        var text = n.vtext ? n.data : _isPlainTextItem(n) && !n.objectName ? n.text : "";
+        return !scripted(n) && /\S/.test(String(text || ""));
+    };
+    var ownText = _findTextChild(parent);
+    if (!items && (ownText && written(ownText) || _rawChildNodes(parent).some(written))) {
+        return;
+    }
     for (var i = 0; i < all.length; ++i) {
-        if (!_meta(all[i]).createdTag && !items) {
+        if (!scripted(all[i]) && !items) {
             return;
         }
     }
     // The page's own items share their lines and tracks with the created ones,
     // so the same pass has to place them all.
     for (var k = 0; k < all.length; ++k) {
-        if (!_meta(all[k]).createdTag) {
+        if (!scripted(all[k]) && !all[k].__eldurInline) {
             _gAdopt(all[k]);
         }
     }
@@ -20737,6 +20854,8 @@ function _gAdopt(raw) {
         _gLayoutCell(next, place.cell);
     }
     _gLive.push(next);
+    // What was computed before matched against the tree the swap reshaped.
+    ++_gGen;
     return next;
 }
 

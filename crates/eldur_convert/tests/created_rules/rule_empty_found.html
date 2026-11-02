@@ -1,0 +1,13 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+.box{width:80px;background:#eee}
+.pad{padding:3px;border:1px solid #888}
+</style></head><body>
+<div id="a" class="box"></div><div id="p" class="pad"></div><div id="b">b</div><div id="e"></div><div id="t">t</div>
+<script>
+// Empty elements a script finds keep no line until it writes into them.
+const R=n=>{const q=document.getElementById(n).getBoundingClientRect();console.log('CS '+n+' '+[q.x,q.y,q.width,q.height].join(','))};
+const ids=['a','p','b','e','t'];for (const id of ids) document.getElementById(id).dataset.k='1';
+ids.forEach(R);
+setTimeout(()=>{ids.forEach(R);document.body.appendChild(document.createElement('div')).id='csdone'},50);
+</script></body></html>

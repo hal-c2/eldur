@@ -1,0 +1,30 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+.pctl{position:relative;width:300px;height:60px;background:#eee}
+#l div{height:10px}
+#root{height:7px;background:#eee}
+</style></head><body>
+<div id="host"></div>
+<div id="root"></div>
+<div id="l"><div id="l0">s</div></div>
+<div class="pctl" id="pc"><input id="ctl" value="x"><div id="af" style="height:12px;background:#333"></div></div>
+<script>
+const R=n=>{const q=document.getElementById(n).getBoundingClientRect();console.log('CS '+n+' '+[q.x,q.y,q.width,q.height].join(','))};const done=()=>{document.body.appendChild(document.createElement('div')).id='csdone'};
+const mk=(t,p,c,id,tx)=>{const e=document.createElement(t);if(c)e.className=c;if(id)e.id=id;if(tx)e.textContent=tx;p.appendChild(e);return e};
+mk('div',l,'','l1','a');mk('div',host,'','h1','h');
+ctl.style.position='absolute';ctl.style.left='100px';ctl.style.top='10px';
+mk('div',host,'','made','m');made.textContent='changed';made.style.height='30px';
+const o={l,n:1};
+function take(e){return e.children.length}
+setTimeout(()=>{
+ R('ctl');R('made');R('root');
+ console.log('CS a '+l.children.length+' '+l.id+' '+window.l.id+' '+host.firstElementChild.id+' '+o.l.id+' '+take(l)+' '+root.id);
+ l.classList.add('zz');console.log('CS b '+l.className+' '+ctl.value+' '+pc.querySelector('#af').id);
+ const m=l;console.log('CS c '+m.children.length+' '+[l,host].map(e=>e.id).join());
+ console.log('CS d '+typeof l+' '+typeof nosuch+' '+(window.nosuch===undefined));
+ const shadow=(l)=>l*2;console.log('CS e '+shadow(2));
+ var s=0;for(const k of l.children)s+=k.id.length;console.log('CS f '+s);
+ l.removeChild(l1);console.log('CS g '+l.children.length);
+ host.appendChild(l0);R('l0');done();
+},50);
+</script></body></html>

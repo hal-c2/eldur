@@ -1,0 +1,23 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+.fl{float:left;width:60px;height:40px;background:#aaa}
+.fr{float:right;width:50px;height:30px;background:#bbb}
+.clear{clear:both;height:10px}
+.w{width:400px}
+</style></head><body>
+<div id="sa" class="w"><div class="fl" id="s1"></div><div id="s2">beside</div><div class="clear" id="s3"></div></div>
+<div id="ca" class="w"></div>
+<div id="cb" class="w"></div>
+<div id="cc" class="w"></div>
+<div id="cd" class="w"><div class="fl" id="d1"></div></div>
+<div id="end" style="height:5px"></div>
+<script>
+const R=n=>{const q=document.getElementById(n).getBoundingClientRect();console.log('CS '+n+' '+[q.x,q.y,q.width,q.height].join(','))};const done=()=>{document.body.appendChild(document.createElement('div')).id='csdone'};
+const $=i=>document.getElementById(i);
+const mk=(t,p,c,id,tx)=>{const e=document.createElement(t);if(c)e.className=c;if(id)e.id=id;if(tx)e.textContent=tx;p.appendChild(e);return e};
+mk('div',$('ca'),'fl','a1');mk('div',$('ca'),'','a2','beside');mk('div',$('ca'),'clear','a3');
+mk('div',$('cb'),'fr','b1');mk('div',$('cb'),'','b2','text');mk('div',$('cb'),'clear','b3');
+mk('div',$('cc'),'fl','c1');mk('div',$('cc'),'fl','c2');mk('div',$('cc'),'clear','c3');
+mk('div',$('cd'),'','d2','after static float');mk('div',$('cd'),'clear','d3');
+setTimeout(()=>{['sa','s1','s2','s3','ca','a1','a2','a3','cb','b1','b2','b3','cc','c1','c2','c3','cd','d1','d2','d3','end'].forEach(R);done()},50);
+</script></body></html>
