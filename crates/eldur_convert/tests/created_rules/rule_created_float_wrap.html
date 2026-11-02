@@ -1,0 +1,20 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+.fl{float:left;width:100px;height:60px;background:#aaa;margin-right:10px}
+.fr{float:right;width:80px;height:20px;background:#bbb}
+.w{width:300px;background:#eee}
+</style></head><body>
+<div id="sa" class="w"><div class="fl" id="s1"></div><div id="s2">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</div></div>
+<div id="ca" class="w"></div>
+<div id="cb" class="w"></div>
+<div id="end" style="height:5px"></div>
+<script>
+const R=n=>{const q=document.getElementById(n).getBoundingClientRect();console.log('CS '+n+' '+[q.x,q.y,q.width,q.height].join(','))};const done=()=>{document.body.appendChild(document.createElement('div')).id='csdone'};
+const $=i=>document.getElementById(i);
+const mk=(t,p,c,id,tx)=>{const e=document.createElement(t);if(c)e.className=c;if(id)e.id=id;if(tx)e.textContent=tx;p.appendChild(e);return e};
+// A text block beside a float has its lines shortened, so it is as tall as the page's own.
+mk('div',$('ca'),'fl','a1');mk('div',$('ca'),'','a2','Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.');
+// A float made of an inline element is a block; the lines it cuts are on the right.
+mk('span',$('cb'),'fr','b1');mk('div',$('cb'),'','b2','Short');mk('div',$('cb'),'','b3','Second block of words that is long enough to wrap around');
+setTimeout(()=>{['sa','s1','s2','ca','a1','a2','cb','b1','b2','b3','end'].forEach(R);console.log('CS d '+getComputedStyle($('b1')).display+' '+getComputedStyle($('b1')).float);done()},50);
+</script></body></html>

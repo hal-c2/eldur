@@ -127,6 +127,9 @@ fn box_property(longhand: Longhand) -> Option<&'static str> {
         L::FlexBasis => "flex-basis",
         L::Order => "order",
         L::GridTemplateColumns => "grid-template-columns",
+        // A created box beside floats is laid out by the runtime.
+        L::Float => "float",
+        L::Clear => "clear",
         L::OverflowX => "overflow-x",
         L::OverflowY => "overflow-y",
         // Not painted on a created box: an element they match keeps its

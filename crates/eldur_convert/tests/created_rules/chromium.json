@@ -541,6 +541,24 @@
   "clicks": [],
   "probes": []
  },
+ "rule_created_float_wrap": {
+  "log": [
+   "CS sa 8,8,300,80",
+   "CS s1 8,8,100,60",
+   "CS s2 8,8,300,80",
+   "CS ca 8,88,300,80",
+   "CS a1 8,88,100,60",
+   "CS a2 8,88,300,80",
+   "CS cb 8,168,300,48",
+   "CS b1 228,168,80,20",
+   "CS b2 8,168,300,16",
+   "CS b3 8,184,300,32",
+   "CS end 8,216,1264,5",
+   "CS d block right"
+  ],
+  "clicks": [],
+  "probes": []
+ },
  "rule_created_floats": {
   "log": [
    "CS sa 8,8,400,50",

@@ -15369,7 +15369,8 @@ var _G_INITIAL = {
     "transition-delay": "0s", "transition-timing-function": "ease", "background-size": "auto",
     "background-position-x": "0%", "background-position-y": "0%", "background-repeat": "repeat",
     "text-shadow": "none", "outline-style": "none", "outline-width": "medium",
-    "outline-color": "currentcolor", "outline-offset": "0px", "object-fit": "fill", "object-position": "50% 50%", "background-origin": "padding-box", "background-clip": "border-box", "background-attachment": "scroll"
+    "outline-color": "currentcolor", "outline-offset": "0px", "object-fit": "fill", "object-position": "50% 50%", "background-origin": "padding-box", "background-clip": "border-box", "background-attachment": "scroll",
+    "float": "none", "clear": "none"
 };
 // The controls whose box the UA sheet in the rule table describes: padding and
 // border are the control's insets.
@@ -15992,6 +15993,15 @@ function _gStyle(raw) {
     if ((s.position === "absolute" || s.position === "fixed") && (s.display === "inline" || s.display === "inline-block")) {
         s.display = "block";
     }
+    // CSS 2 §9.7: an absolutely positioned box does not float, and a float is a block.
+    if (s.position === "absolute" || s.position === "fixed" || flexParent) {
+        s.float = "none";
+    } else if (s.float === "inline-start" || s.float === "inline-end") {
+        s.float = s.float === "inline-start" ? "left" : "right";
+    }
+    if (s.float !== "none" && _gInlineLevel(s)) {
+        s.display = s.display === "inline" || s.display === "inline-block" ? "block" : s.display.slice(7);
+    }
     m.gStyle = s;
     m.gStyleGen = _gGen;
     return s;
@@ -16508,8 +16518,34 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
     }
     var groups = _gFlowGroups(raw);
     _gArrangeLines(raw, groups);
+    // Floats and the blocks after them that flow beside them, through `beside.last`.
+    var beside = null;
     for (var i = 0; i < groups.length; ++i) {
         var group = groups[i];
+        if (beside && i > beside.last) {
+            y = Math.max(y, beside.bottom);
+            beside = null;
+        }
+        var side = _gFloatSide(group);
+        if (side) {
+            var floats = [];
+            for (; i < groups.length && _gFloatSide(groups[i]) === side; ++i) {
+                floats.push(groups[i].kid);
+            }
+            var last = i - 1;
+            while (last + 1 < groups.length && !_gFloatSide(groups[last + 1]) && !_gClears(groups[last + 1], side)) {
+                ++last;
+            }
+            --i;
+            // Margins do not collapse with a float's: the floats and what is
+            // beside them start below the margin before them.
+            y += pending;
+            pending = 0;
+            first = false;
+            beside = _gPlaceFloats(floats, side, innerW, innerH, x, y);
+            beside.last = last;
+            continue;
+        }
         if (group.run) {
             var height = _gLayOutRun(group, s, innerW, x, first && collapseTop ? y : y + pending);
             if (height > 0) {
@@ -16552,9 +16588,23 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
         } else {
             kid.y = y + merged;
         }
+        // The box's own lines are the ones beside the floats; the converter
+        // shortens those of a text block, not of blocks inside it.
+        var own = _isPlainTextItem(kid) ? kid : _gTextOf(kid);
+        var at = own === kid ? { x: 0, y: 0 } : kid;
+        if (own && own.text !== "" && (beside || _meta(own).gBeside) && _gBeside(own, beside, at.x, at.y)) {
+            if (own !== kid) {
+                _gPlace(kid, innerW, null, innerH);
+            } else if (ks.height === "auto") {
+                _gSet(kid, "height", kid.implicitHeight);
+            }
+        }
         y = kid.y + kid.height;
         pending = got.mb;
         first = false;
+    }
+    if (beside) {
+        y = Math.max(y, beside.bottom);
     }
     var bottom = 0;
     if (collapseBottom && !first) {
@@ -16565,6 +16615,100 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
         through = pending;
     }
     return { height: y - top, top: through, bottom: bottom, through: first && collapseTop && collapseBottom };
+}
+
+function _gFloatSide(group) {
+    if (!group.kid) {
+        return null;
+    }
+    var ks = _gStyle(group.kid);
+    return ks.display === "none" || ks.float === "none" ? null : ks.float;
+}
+
+function _gClears(group, side) {
+    var clear = group.kid ? _gStyle(group.kid).clear : "none";
+    return clear === "both" || clear === side
+        || clear === "inline-start" && side === "left" || clear === "inline-end" && side === "right";
+}
+
+// A run of floats to one side as the converter lays out a static one
+// (layout.md §5.5): each takes its margin box along a line from its side, and
+// one that does not fit starts a line below. Returns the run's rectangle.
+function _gPlaceFloats(floats, side, innerW, innerH, x, top) {
+    var left = side === "left";
+    var along = 0;
+    var lineTop = 0;
+    var lineHeight = 0;
+    var from = Infinity;
+    var to = -Infinity;
+    floats.forEach(function(kid) {
+        var ks = _gStyle(kid);
+        kid.visible = true;
+        var ke = _gEdges(kid, ks, innerW);
+        // A float's `auto` margins are zero.
+        var ml = ke.ml || 0;
+        var mr = ke.mr || 0;
+        var mt = ke.mt || 0;
+        var mb = ke.mb || 0;
+        _gPlace(kid, innerW, { shrink: true }, innerH);
+        var outer = ml + kid.width + mr;
+        if (along > 0 && along + outer > innerW) {
+            lineTop += lineHeight;
+            along = 0;
+            lineHeight = 0;
+        }
+        var at = left ? along : innerW - along - outer;
+        kid.x = x + at + ml;
+        kid.y = top + lineTop + mt;
+        // Painted over the blocks beside it, under positioned boxes (CSS 2.2 Appendix E).
+        if (ks["z-index"] === "auto" && ks.position === "static") {
+            _gSet(kid, "z", 0.5);
+        }
+        from = Math.min(from, x + at);
+        to = Math.max(to, x + at + outer);
+        along += outer;
+        lineHeight = Math.max(lineHeight, mt + kid.height + mb);
+    });
+    return { left: left, from: from, to: to, top: top, bottom: top + lineTop + lineHeight };
+}
+
+// A text block's lines beside floats are shortened by them, as the converter's
+// are. A handler on `lineLaidOut` changes where Qt puts a fixed line's leading,
+// so it puts the line back at the top, where the text's shift expects it.
+function _gBeside(text, beside, dx, dy) {
+    var m = _meta(text);
+    // The floats' rectangle in the text's parent, and where the text is.
+    var now = beside ? [beside.left, beside.from - dx, beside.to - dx, beside.top - dy, beside.bottom - dy, text.x, text.y] : null;
+    if (String(m.gBeside || null) === String(now)) {
+        return false;
+    }
+    m.gBeside = now;
+    if (!m.gBesideHooked) {
+        m.gBesideHooked = true;
+        text.lineLaidOut.connect(function(line) {
+            var at = _meta(text).gBeside;
+            var fixed = text.lineHeightMode === 1; // Text.FixedHeight
+            if (fixed) {
+                line.y = line.number * text.lineHeight;
+            }
+            if (!at) {
+                return;
+            }
+            var top = text.y + (fixed ? line.number * text.lineHeight : line.y);
+            var bottom = top + (fixed ? text.lineHeight : line.height);
+            if (top < at[4] && bottom > at[3]) {
+                var cut = at[0] ? at[2] - text.x : text.x + text.width - at[1];
+                if (cut > 0) {
+                    line.width -= cut;
+                    if (at[0]) {
+                        line.x += cut;
+                    }
+                }
+            }
+        });
+    }
+    text.forceLayout();
+    return true;
 }
 
 // A browser centres the glyphs in a line on a whole-pixel baseline; a fixed QML
@@ -20289,13 +20433,18 @@ function _gFillsLine(raw) {
     if (!items && (wroteOwn || _rawChildNodes(parent).some(written))) {
         return;
     }
+    // A column only stacks: what flows beside a float is placed by a pass.
+    var floats = all.some(function(k) {
+        var ks = _gStyle(k);
+        return ks.float !== "none" && ks.display !== "none";
+    });
     for (var i = 0; i < all.length; ++i) {
-        if (!scripted(all[i]) && !items) {
+        if (!scripted(all[i]) && !items && !floats) {
             return;
         }
     }
-    // The page's own items share their lines and tracks with the created ones,
-    // so the same pass has to place them all.
+    // The page's own items share their lines, tracks and floats with the
+    // created ones, so the same pass has to place them all.
     for (var k = 0; k < all.length; ++k) {
         if (!scripted(all[k]) && !all[k].__eldurInline) {
             _gAdopt(all[k]);

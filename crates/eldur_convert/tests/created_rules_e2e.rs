@@ -596,6 +596,11 @@ fn rule_created_floats() {
 }
 
 #[test]
+fn rule_created_float_wrap() {
+    page("rule_created_float_wrap");
+}
+
+#[test]
 fn rule_hidden_nav() {
     page("rule_hidden_nav");
 }
